@@ -1,6 +1,6 @@
 {
   "mode": "runtime-incremental",
-  "algorithm": "cdt",
+  "algorithm": "recast",
   "profiles": [
     {
       "id": "Small",

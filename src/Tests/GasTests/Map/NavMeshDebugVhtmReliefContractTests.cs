@@ -50,7 +50,7 @@ namespace Ludots.Tests.Gas
             File.WriteAllText(Path.Combine(_bakeConfigModRoot, "assets", "Navigation", "navmesh.json"), """
             {
               "mode": "runtime-incremental",
-              "algorithm": "cdt",
+              "algorithm": "recast",
               "profiles": [{ "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }],
               "layers": [{ "id": "ground", "layer": 0 }],
               "areas": [
@@ -104,14 +104,11 @@ namespace Ludots.Tests.Gas
         }
 
         /// <summary>
-        /// 已确诊缺陷（refs #413）：runtime-incremental 强制 CDT，而 CDT 管线在
-        /// 高度层量化的起伏地形上退化为近空瓦片（2 三角/4 顶点；同输入下离线
-        /// recast 烤出 516 三角满起伏）。障碍触发的运行时重烤因此把离线 recast
-        /// 的起伏 navmesh 整体替换成退化残片——即“obstacle 更新把地形起伏的
-        /// navmesh 都忽略了”的根因。本合同在 CDT 退化修复前保持 Explicit，
-        /// 修复后移除特性标记即可作为 vhtm board 的验收闸门。
+        /// vhtm board 的验收闸门（refs #413）：运行时障碍增量重烤必须保留
+        /// VisualHeightmap 起伏语义。历史缺陷（runtime-incremental 强制 CDT，
+        /// CDT 在量化起伏地形上退化为近空瓦片，把离线 recast 的起伏 navmesh
+        /// 整体替换成残片）已通过运行时改用 recast 烘焙器修复；本合同锁死该回归。
         /// </summary>
-        [Explicit("runtime-incremental CDT 在起伏地形上产出退化瓦片（详见测试体诊断）；修复后移除本标记")]
         [Test]
         public void RuntimeObstacleRebake_OnVhtmRelief_PreservesTerrainNavMesh()
         {
@@ -128,11 +125,6 @@ namespace Ludots.Tests.Gas
             Assert.That(beforeRangeCm, Is.GreaterThan(0), "初始烘焙瓦片必须携带起伏高度（否则投影链路已断）");
 
             uint storeRevisionBefore = store.Revision;
-
-            // 已确诊证据链（2026-08-23）：引擎投影地形高度层正确（level(0,0)=3 等符合生成公式），
-            // WalkMaskBuilder 同参构建得满可行 8192 三角；但 BakePipeline.Execute（CDT）对同一输入
-            // 返回 success=True 且仅 2 三角/4 顶点——退化发生在 CDT 轮廓/三角化阶段，
-            // 而离线 recast 同瓦片为 516 三角、高度范围 1200cm。
 
             engine.World.Create(
                 WorldPositionCm.FromCm(3200, 3200),
@@ -156,8 +148,10 @@ namespace Ludots.Tests.Gas
             Assert.That(store.Revision, Is.GreaterThan(storeRevisionBefore), "障碍生成后增量重烤队列必须推进 store revision");
 
             Assert.That(after.Checksum, Is.Not.EqualTo(before.Checksum), "障碍所在瓦片必须被重烤");
-            Assert.That(after.TriangleCount, Is.LessThanOrEqualTo(before.TriangleCount),
-                "加障碍只会挖洞（减三角形）；三角数增加意味着重烤用了不同的地形/障碍输入");
+            Assert.That(after.TriangleCount, Is.LessThanOrEqualTo(before.TriangleCount * 2),
+                "障碍重烤只允许边界细分级别的三角形变化；翻倍以上意味着重烤输入异常");
+            Assert.That(TileCoversPointXz(after, 3200, 3200), Is.False,
+                "障碍圆心 (3200,3200) 处不得残留可行三角形——运行时障碍必须真正从 navmesh 挖洞");
 
             int afterRangeCm = TileHeightRangeCm(after);
             Assert.That(afterRangeCm, Is.GreaterThanOrEqualTo((int)(beforeRangeCm * 0.8f)),
@@ -211,6 +205,39 @@ namespace Ludots.Tests.Gas
             }
 
             return max;
+        }
+
+        private static bool TileCoversPointXz(NavTile tile, int xCm, int zCm)
+        {
+            for (int t = 0; t < tile.TriangleCount; t++)
+            {
+                int a = tile.TriA[t];
+                int b = tile.TriB[t];
+                int c = tile.TriC[t];
+                int ax = tile.VertexXcm[a] + tile.OriginXcm;
+                int az = tile.VertexZcm[a] + tile.OriginZcm;
+                int bx = tile.VertexXcm[b] + tile.OriginXcm;
+                int bz = tile.VertexZcm[b] + tile.OriginZcm;
+                int cx = tile.VertexXcm[c] + tile.OriginXcm;
+                int cz = tile.VertexZcm[c] + tile.OriginZcm;
+
+                int d1 = SignXz(xCm, zCm, ax, az, bx, bz);
+                int d2 = SignXz(xCm, zCm, bx, bz, cx, cz);
+                int d3 = SignXz(xCm, zCm, cx, cz, ax, az);
+                bool hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
+                bool hasPos = d1 > 0 || d2 > 0 || d3 > 0;
+                if (!(hasNeg && hasPos))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int SignXz(int px, int pz, int ax, int az, int bx, int bz)
+        {
+            return ((px - ax) * (bz - az)) - ((pz - az) * (bx - ax));
         }
 
         private static int TileMinHeightCm(NavTile tile)

@@ -3171,7 +3171,7 @@ namespace Ludots.Core.Engine
                     Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
                 };
                 var runtimeQueue = new RuntimeIncrementalNavMeshRebuildQueue(
-                    new NavBakeService(new CdtNavBakeAlgorithm()),
+                    new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()),
                     runtimeContext,
                     navRegistry,
                     profileRegistry);

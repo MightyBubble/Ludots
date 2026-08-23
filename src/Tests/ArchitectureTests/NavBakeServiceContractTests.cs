@@ -10,7 +10,6 @@ using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
-using Ludots.NavBake.Recast;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
 
@@ -276,17 +275,20 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void NavBakeService_RuntimeIncremental_RequiresCdtAlgorithm()
+        public void NavBakeService_RuntimeIncremental_AcceptsCdtAndRecastOnly()
         {
-            var context = CreateRuntimeIncrementalContext(
-                new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
-                algorithm: NavBakeAlgorithmKind.Recast);
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            var service = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm());
 
-            var service = new NavBakeService(new CdtNavBakeAlgorithm());
+            Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Recast)),
+                "runtime-incremental + recast 是受纳组合（vhtm 起伏地形的运行时重烤口径）");
+            Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Cdt)),
+                "runtime-incremental + cdt 是受纳组合");
 
+            var context = CreateRuntimeIncrementalContext(terrain, algorithm: (NavBakeAlgorithmKind)99);
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Bake(context))!;
             Assert.That(ex.Message, Does.Contain("runtime-incremental"));
-            Assert.That(ex.Message, Does.Contain("cdt"));
+            Assert.That(ex.Message, Does.Contain("cdt' or 'recast'"));
         }
 
         [Test]

@@ -90,9 +90,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException("RuntimeIncrementalNavMeshRebuildQueue requires NavBakeContext.mode 'runtime-incremental'.");
             }
 
-            if (_baseContext.Algorithm != NavBakeAlgorithmKind.Cdt)
+            if (_baseContext.Algorithm != NavBakeAlgorithmKind.Cdt &&
+                _baseContext.Algorithm != NavBakeAlgorithmKind.Recast)
             {
-                throw new InvalidOperationException("RuntimeIncrementalNavMeshRebuildQueue requires NavBakeContext.algorithm 'cdt'.");
+                throw new InvalidOperationException("RuntimeIncrementalNavMeshRebuildQueue requires NavBakeContext.algorithm 'cdt' or 'recast'.");
             }
         }
 
@@ -246,7 +247,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 BuildConfig = _baseContext.BuildConfig,
                 TileVersion = _baseContext.TileVersion + 1u,
                 Mode = NavBakeMode.RuntimeIncremental,
-                Algorithm = NavBakeAlgorithmKind.Cdt,
+                Algorithm = _baseContext.Algorithm,
                 Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
             };
         }

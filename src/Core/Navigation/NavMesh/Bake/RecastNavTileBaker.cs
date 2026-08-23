@@ -10,11 +10,11 @@ using DotRecast.Recast.Geom;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
-using Ludots.Core.Navigation.NavMesh.Bake;
+
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 
-namespace Ludots.NavBake.Recast
+namespace Ludots.Core.Navigation.NavMesh.Bake
 {
     public sealed class RecastNavBakeAlgorithm : INavBakeAlgorithm
     {
