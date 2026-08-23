@@ -18,6 +18,21 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Map.Road（kind: Query）
+{
+  "id": "Graph.Map.Road", "kind": "Query", "entry": "roadState",
+  "nodes": [
+    { "id": "roadState", "op": "LoadSelfAttribute", "attribute": "Map.Road.State" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "roadState", "destination": "Summary", "type": "Int", "source": "roadState", "key": "road.state" }
+  ]
+}
+```
+
 ```text
 世界锚点（路径上）┌──────────────────────────┐
                   │ ═══ 通畅 ═══   拥堵=黄闪   │ 行军路线高亮，状态决定颜色

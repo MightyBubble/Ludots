@@ -19,6 +19,33 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Relation.Indicator（kind: Query）
+{
+  "id": "Graph.Relation.Indicator", "kind": "Query", "entry": "caster",
+  "nodes": [
+    { "id": "caster",   "op": "LoadCaster" },
+    { "id": "edges",    "op": "RelationshipQueryOutgoing", "relationshipType": "Ally" },
+    { "id": "edge",     "op": "AggCount" },
+    { "id": "strength", "op": "RelationshipAggSumMetric", "relationshipType": "Ally", "metric": "Strength" }
+  ],
+  "controlEdges": [
+    { "from": "caster", "fromPort": "next", "to": "edges" },
+    { "from": "edges",  "fromPort": "next", "to": "edge" },
+    { "from": "edge",   "fromPort": "next", "to": "strength" }
+  ],
+  "valueEdges": [
+    { "from": "caster", "fromPort": "value", "to": "edges",    "toPort": "source" },
+    { "from": "edges",  "fromPort": "list",  "to": "edge",     "toPort": "list" },
+    { "from": "edges",  "fromPort": "list",  "to": "strength", "toPort": "list" }
+  ],
+  "outputs": [
+    { "id": "edge",     "destination": "Summary", "type": "Int",   "source": "edge",     "key": "relation.edge" },
+    { "id": "strength", "destination": "Summary", "type": "Float", "source": "strength", "key": "relation.strength" }
+  ]
+}
+```
+
 ```text
 世界锚点（关系边两端）┌──── 虚线 ────┐
    城市A ─················· 城市B     同盟蓝线/敌对红线，线宽随 strength（皮层渲染）

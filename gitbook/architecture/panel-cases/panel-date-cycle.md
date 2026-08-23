@@ -13,7 +13,31 @@
   "id": "panel.date.cycle",
   "graph": "Graph.Time.Date",                 // 时钟输出 dayIndex；年/季由图内 TableLookup 换算
   "pins": [
-    { "name": "dayIndex", "key": "clock.dayIndex", "mode": "realtime", "default": 1 }
+    { "name": "dayIndex", "key": "clock.dayIndex", "mode": "realtime", "default": 1 },
+    { "name": "year",     "key": "date.year",      "mode": "realtime", "default": 1 },
+    { "name": "season",   "key": "date.season",    "mode": "realtime", "default": 1 }
+  ]
+}
+```
+
+```jsonc
+// 值图 Graph.Time.Date（kind: Query）
+{
+  "id": "Graph.Time.Date", "kind": "Query", "entry": "dayIndex",
+  "nodes": [
+    { "id": "dayIndex", "op": "LoadSelfAttribute", "attribute": "Clock.DayIndex" },
+    { "id": "year",     "op": "LoadSelfAttribute", "attribute": "Clock.Year" },
+    { "id": "season",   "op": "LoadSelfAttribute", "attribute": "Clock.Season" }
+  ],
+  "controlEdges": [
+    { "from": "dayIndex", "fromPort": "next", "to": "year" },
+    { "from": "year",     "fromPort": "next", "to": "season" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "dayIndex", "destination": "Summary", "type": "Int", "source": "dayIndex", "key": "clock.dayIndex" },
+    { "id": "year",     "destination": "Summary", "type": "Int", "source": "year",     "key": "date.year" },
+    { "id": "season",   "destination": "Summary", "type": "Int", "source": "season",   "key": "date.season" }
   ]
 }
 ```

@@ -35,6 +35,21 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Clock（kind: Query）
+{
+  "id": "Graph.Clock", "kind": "Query", "entry": "speed",
+  "nodes": [
+    { "id": "speed", "op": "LoadSelfAttribute", "attribute": "Clock.Speed" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "speed", "destination": "Summary", "type": "Float", "source": "speed", "key": "clock.speed" }
+  ]
+}
+```
+
 ### B3 线框
 
 ```text

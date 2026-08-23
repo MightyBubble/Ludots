@@ -19,6 +19,21 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.View.Filter（kind: Query）
+{
+  "id": "Graph.View.Filter", "kind": "Query", "entry": "filterState",
+  "nodes": [
+    { "id": "filterState", "op": "LoadSelfAttribute", "attribute": "View.FilterState" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "filterState", "destination": "Summary", "type": "Int", "source": "filterState", "key": "view.filterState" }
+  ]
+}
+```
+
 ```text
 screen.topLeft（tab 下方）┌─────────────────────────────┐
                           │【兵】【建】【资源】【敌方】    │ 高亮=filterState 回读

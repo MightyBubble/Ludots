@@ -19,6 +19,21 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.UI.Tabs（kind: Query）
+{
+  "id": "Graph.UI.Tabs", "kind": "Query", "entry": "activeTab",
+  "nodes": [
+    { "id": "activeTab", "op": "LoadSelfAttribute", "attribute": "UI.ActiveTab" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "activeTab", "destination": "Summary", "type": "Int", "source": "activeTab", "key": "ui.activeTab" }
+  ]
+}
+```
+
 ```text
 screen.topLeft（信息聚合下方）┌────────────────────────────┐
                              │【信息】【科技】【外交】【生产】│ ← activeTab 高亮

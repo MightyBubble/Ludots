@@ -19,6 +19,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Map.Offscreen（kind: Query）
+{
+  "id": "Graph.Map.Offscreen", "kind": "Query", "entry": "dir",
+  "nodes": [
+    { "id": "dir",  "op": "ConstFloat", "floatValue": 45 },
+    { "id": "dist", "op": "ConstFloat", "floatValue": 120 }
+  ],
+  "controlEdges": [
+    { "from": "dir", "fromPort": "next", "to": "dist" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "dir",  "destination": "Summary", "type": "Float", "source": "dir",  "key": "offscreen.dir" },
+    { "id": "dist", "destination": "Summary", "type": "Float", "source": "dist", "key": "offscreen.dist" }
+  ]
+}
+```
+
 ```text
 屏幕边缘（世界锚点投影）┌──────────────────────────────┐
                         │        ↗ 敌军编队 120m       │ 箭头贴边旋转指向

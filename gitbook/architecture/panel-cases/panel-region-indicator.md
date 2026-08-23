@@ -19,6 +19,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Map.Region（kind: Query）
+{
+  "id": "Graph.Map.Region", "kind": "Query", "entry": "regionId",
+  "nodes": [
+    { "id": "regionId",    "op": "LoadSelfAttribute", "attribute": "Map.Region.Id" },
+    { "id": "regionLevel", "op": "LoadSelfAttribute", "attribute": "Map.Region.Level" }
+  ],
+  "controlEdges": [
+    { "from": "regionId", "fromPort": "next", "to": "regionLevel" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "regionId",    "destination": "Summary", "type": "Int", "source": "regionId",    "key": "region.id" },
+    { "id": "regionLevel", "destination": "Summary", "type": "Int", "source": "regionLevel", "key": "region.level" }
+  ]
+}
+```
+
 ```text
 世界锚点（区域边界）┌────────────────────────┐
                     │ ⚠ 危险区（红框）       │ 威胁级决定框色

@@ -20,6 +20,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Collection.Book（kind: Query）
+{
+  "id": "Graph.Collection.Book", "kind": "Query", "entry": "collected",
+  "nodes": [
+    { "id": "collected", "op": "LoadSelfAttribute", "attribute": "Book.Collected" },
+    { "id": "total",     "op": "ConstInt", "intValue": 40 }
+  ],
+  "controlEdges": [
+    { "from": "collected", "fromPort": "next", "to": "total" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "collected", "destination": "Summary", "type": "Int", "source": "collected", "key": "book.collected" },
+    { "id": "total",     "destination": "Summary", "type": "Int", "source": "total",     "key": "book.total" }
+  ]
+}
+```
+
 ```text
 modal.center（G5）┌─────────────────────────────────────┐
                   │ 图鉴 12/40  ▦▦▦▦▦▦▦▦▦▦▦▦░░░░░░░░  │ 条目网格=图中收集集合

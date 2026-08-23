@@ -19,6 +19,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Info.Banner（kind: Query）
+{
+  "id": "Graph.Info.Banner", "kind": "Query", "entry": "bannerText",
+  "nodes": [
+    { "id": "bannerText",  "op": "LoadSelfAttribute", "attribute": "Info.Banner.Current" },
+    { "id": "bannerLevel", "op": "LoadSelfAttribute", "attribute": "Info.Banner.Level" }
+  ],
+  "controlEdges": [
+    { "from": "bannerText", "fromPort": "next", "to": "bannerLevel" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "bannerText",  "destination": "Summary", "type": "Int", "source": "bannerText",  "key": "banner.current" },
+    { "id": "bannerLevel", "destination": "Summary", "type": "Int", "source": "bannerLevel", "key": "banner.level" }
+  ]
+}
+```
+
 ```text
 screen.topCenter ┌───────────────────────────────────┐
                  │ ⚠ 敌军逼近北门（level=2 红底）     │  平静时 HidePanel、事件时 ShowPanel（图驱动）

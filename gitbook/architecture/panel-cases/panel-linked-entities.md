@@ -16,6 +16,29 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Entity.Linked（kind: Query）
+{
+  "id": "Graph.Entity.Linked", "kind": "Query", "entry": "caster",
+  "nodes": [
+    { "id": "caster", "op": "LoadCaster" },
+    { "id": "members", "op": "RelationshipQueryOutgoing", "relationshipType": "Squad" },
+    { "id": "linkedCount", "op": "AggCount" }
+  ],
+  "controlEdges": [
+    { "from": "caster", "fromPort": "next", "to": "members" },
+    { "from": "members", "fromPort": "next", "to": "linkedCount" }
+  ],
+  "valueEdges": [
+    { "from": "caster", "fromPort": "value", "to": "members", "toPort": "source" },
+    { "from": "members", "fromPort": "list", "to": "linkedCount", "toPort": "list" }
+  ],
+  "outputs": [
+    { "id": "linkedCount", "destination": "Summary", "type": "Int", "source": "linkedCount", "key": "linked.count" }
+  ]
+}
+```
+
 ```text
 screen.leftCenter（列表下方）┌──────────────────────┐
                             │ 关联：A 班·B 班        │ 点击跳转属案17 路由机制

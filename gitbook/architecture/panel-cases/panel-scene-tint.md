@@ -19,6 +19,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Scene.Tint（kind: Query）
+{
+  "id": "Graph.Scene.Tint", "kind": "Query", "entry": "tintColor",
+  "nodes": [
+    { "id": "tintColor", "op": "ConstInt", "intValue": 0 },
+    { "id": "tintAlpha", "op": "LoadSelfAttribute", "attribute": "Scene.Tint.Alpha" }
+  ],
+  "controlEdges": [
+    { "from": "tintColor", "fromPort": "next", "to": "tintAlpha" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "tintColor", "destination": "Summary", "type": "Int",   "source": "tintColor", "key": "scene.tint.color" },
+    { "id": "tintAlpha", "destination": "Summary", "type": "Float", "source": "tintAlpha", "key": "scene.tint.alpha" }
+  ]
+}
+```
+
 ```text
 全屏覆盖（非框）┌───────────────────────────────────────────┐
                │ ░░ 入夜整屏叠蓝黑（alpha 渐入渐出）░░     │

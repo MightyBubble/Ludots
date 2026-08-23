@@ -22,6 +22,28 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Production.Queue（kind: Query）
+{
+  "id": "Graph.Production.Queue", "kind": "Query", "entry": "progressPercent",
+  "nodes": [
+    { "id": "progressPercent", "op": "LoadSelfAttribute", "attribute": "Queue.ProgressPercent" },
+    { "id": "queueCount",      "op": "LoadSelfAttribute", "attribute": "Queue.Count" },
+    { "id": "queueCap",        "op": "ConstInt", "intValue": 5 }
+  ],
+  "controlEdges": [
+    { "from": "progressPercent", "fromPort": "next", "to": "queueCount" },
+    { "from": "queueCount",      "fromPort": "next", "to": "queueCap" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "progressPercent", "destination": "Summary", "type": "Float", "source": "progressPercent", "key": "queue.progressPercent" },
+    { "id": "queueCount",      "destination": "Summary", "type": "Int",   "source": "queueCount",      "key": "queue.count" },
+    { "id": "queueCap",        "destination": "Summary", "type": "Int",   "source": "queueCap",        "key": "queue.cap" }
+  ]
+}
+```
+
 ```text
 screen.bottomRight 上方 ┌───────────────────────────────┐
                         │ ▓▓▓▓░░ 66% ▍弩手▍弩手▍▢       │ 进度=progressPercent 回读；满员置灰=皮读 queueCap 自比

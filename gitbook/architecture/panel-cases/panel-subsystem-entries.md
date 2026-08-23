@@ -19,6 +19,21 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.UI.Subsystems（kind: Query）
+{
+  "id": "Graph.UI.Subsystems", "kind": "Query", "entry": "techUnread",
+  "nodes": [
+    { "id": "techUnread", "op": "LoadSelfAttribute", "attribute": "UI.Tech.Unread" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "techUnread", "destination": "Summary", "type": "Int", "source": "techUnread", "key": "tech.unread" }
+  ]
+}
+```
+
 ```text
 screen.bottomRight 竖条 ┌────┐
                         │【🔬3】│ ← 角标=techUnread（超 9 显示 9+）

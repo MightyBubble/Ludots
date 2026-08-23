@@ -16,6 +16,21 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Extra.Text（kind: Query）
+{
+  "id": "Graph.Extra.Text", "kind": "Query", "entry": "textId",
+  "nodes": [
+    { "id": "textId", "op": "LoadSelfAttribute", "attribute": "Extra.TextId" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "textId", "destination": "Summary", "type": "Int", "source": "textId", "key": "extra.textId" }
+  ]
+}
+```
+
 ```text
 screen.bottomLeft ┌─────────────────────────────┐
                   │ 版本 0.9.2 · 教程：按 U 造兵  │ 锚点由实例 op 覆盖（水印/提示通用）

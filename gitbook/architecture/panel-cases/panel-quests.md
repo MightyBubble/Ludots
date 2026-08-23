@@ -20,10 +20,29 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Quests（kind: Query）
+{
+  "id": "Graph.Quests", "kind": "Query", "entry": "questCount",
+  "nodes": [
+    { "id": "questCount",  "op": "LoadSelfAttribute", "attribute": "Quests.Count" },
+    { "id": "activeIndex", "op": "LoadSelfAttribute", "attribute": "Quests.Active" }
+  ],
+  "controlEdges": [
+    { "from": "questCount", "fromPort": "next", "to": "activeIndex" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "questCount",  "destination": "Summary", "type": "Int", "source": "questCount",  "key": "quests.count" },
+    { "id": "activeIndex", "destination": "Summary", "type": "Int", "source": "activeIndex", "key": "quests.active" }
+  ]
+}
+```
+
 ```text
 screen.rightCenter ┌──────────────────────────┐
-                   │ ☑ 守住北门 2/3 【追踪】    │ 进度=图内聚合；追踪高亮回读
-                   │ ☐ 招募 10 兵 0/10【追踪】  │
+                   │ ☑ 主线：夺回北门 2/3【追踪】 │ 进度=图内聚合；追踪高亮回读
+                   │ ☐ 支线：粮草 完成         │
                    └──────────────────────────┘
 ```
 

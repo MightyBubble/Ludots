@@ -19,10 +19,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Unit.Loadout（kind: Query）
+{
+  "id": "Graph.Unit.Loadout", "kind": "Query", "entry": "slotCount",
+  "nodes": [
+    { "id": "slotCount", "op": "LoadSelfAttribute", "attribute": "Loadout.SlotCount" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "slotCount", "destination": "Summary", "type": "Int", "source": "slotCount", "key": "loadout.slotCount" }
+  ]
+}
+```
+
 ```text
 screen.rightCenter（聚合下方）┌────────────────────────┐
-                             │ 武器 圣剑 +12  │ 点击槽位=装备/卸下（携带物清单在图内）
-                             │ 防具 板甲 +8   │
+                             │ 武器 铁剑 ATK+5 │ 点击槽位=装备/卸下（携带物清单在图内）
+                             │ 护甲 皮甲 HP+20 │
                              └────────────────────────┘
 ```
 

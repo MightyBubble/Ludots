@@ -26,6 +26,38 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Economy.Aggregate（kind: Query）
+{
+  "id": "Graph.Economy.Aggregate", "kind": "Query", "entry": "owner",
+  "nodes": [
+    { "id": "owner",   "op": "LoadCaster" },
+    { "id": "allMap",  "op": "QueryAllMapEntities" },
+    { "id": "team",    "op": "QueryFilterTeam", "teamId": 2147483646 },
+    { "id": "gold",    "op": "AggSumAttribute", "attribute": "Economy.Gold" },
+    { "id": "popUsed", "op": "AggCount" },
+    { "id": "popCap",  "op": "ConstInt", "intValue": 20 }
+  ],
+  "controlEdges": [
+    { "from": "owner",   "fromPort": "next", "to": "allMap" },
+    { "from": "allMap",  "fromPort": "next", "to": "team" },
+    { "from": "team",    "fromPort": "next", "to": "gold" },
+    { "from": "gold",    "fromPort": "next", "to": "popUsed" },
+    { "from": "popUsed", "fromPort": "next", "to": "popCap" }
+  ],
+  "valueEdges": [
+    { "from": "allMap", "fromPort": "list", "to": "team",    "toPort": "list" },
+    { "from": "team",   "fromPort": "list", "to": "gold",    "toPort": "list" },
+    { "from": "team",   "fromPort": "list", "to": "popUsed", "toPort": "list" }
+  ],
+  "outputs": [
+    { "id": "gold",    "destination": "Summary", "type": "Float", "source": "gold",    "key": "economy.gold" },
+    { "id": "popUsed", "destination": "Summary", "type": "Float", "source": "popUsed", "key": "pop.used" },
+    { "id": "popCap",  "destination": "Summary", "type": "Float", "source": "popCap",  "key": "pop.cap" }
+  ]
+}
+```
+
 ### A3 线框
 
 ```text

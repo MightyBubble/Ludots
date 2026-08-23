@@ -13,16 +13,38 @@
   "id": "panel.unit.status",
   "graph": "Graph.Unit.Status",               // 图内 LoadSelfAttribute → hp/hpMax/mp
   "pins": [
-    { "name": "hp",    "key": "unit.hp",    "mode": "realtime", "default": 100 },
+    { "name": "hp",    "key": "unit.hp",    "mode": "realtime", "default": 0 },
     { "name": "hpMax", "key": "unit.hpMax", "mode": "realtime", "default": 100 },
     { "name": "mp",    "key": "unit.mp",    "mode": "realtime", "default": 0 }
   ]
 }
 ```
 
+```jsonc
+// 值图 Graph.Unit.Status（kind: Query）
+{
+  "id": "Graph.Unit.Status", "kind": "Query", "entry": "hp",
+  "nodes": [
+    { "id": "hp",    "op": "LoadSelfAttribute", "attribute": "Health" },
+    { "id": "hpMax", "op": "ConstFloat", "floatValue": 100 },
+    { "id": "mp",    "op": "LoadSelfAttribute", "attribute": "Mana" }
+  ],
+  "controlEdges": [
+    { "from": "hp", "fromPort": "next", "to": "hpMax" },
+    { "from": "hpMax", "fromPort": "next", "to": "mp" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "hp",    "destination": "Summary", "type": "Float", "source": "hp",    "key": "unit.hp" },
+    { "id": "hpMax", "destination": "Summary", "type": "Float", "source": "hpMax", "key": "unit.hpMax" },
+    { "id": "mp",    "destination": "Summary", "type": "Float", "source": "mp",    "key": "unit.mp" }
+  ]
+}
+```
+
 ```text
 世界锚点（单位头顶）┌───────────────┐
-                    │ ▓▓▓▓▓░░ 78  │ 血条溢出屏外自动收起（皮读 hp/hpMax 自比）
+                    │ ▓▓▓▓▓░░ 72  │ 血条溢出屏外自动收起（皮读 hp/hpMax 自比）
                     └───────────────┘
 ```
 

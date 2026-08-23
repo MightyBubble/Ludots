@@ -20,6 +20,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Time.Elapsed（kind: Query）
+{
+  "id": "Graph.Time.Elapsed", "kind": "Query", "entry": "elapsedMin",
+  "nodes": [
+    { "id": "elapsedMin", "op": "LoadSelfAttribute", "attribute": "Clock.ElapsedMin" },
+    { "id": "dayPhase",   "op": "LoadSelfAttribute", "attribute": "Clock.DayPhase" }
+  ],
+  "controlEdges": [
+    { "from": "elapsedMin", "fromPort": "next", "to": "dayPhase" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "elapsedMin", "destination": "Summary", "type": "Float", "source": "elapsedMin", "key": "clock.elapsedMin" },
+    { "id": "dayPhase",   "destination": "Summary", "type": "Int",   "source": "dayPhase",   "key": "clock.dayPhase" }
+  ]
+}
+```
+
 ```text
 screen.topRight（信息聚合左侧）┌──────────────┐
                               │ ☀ 12:34      │  dayPhase=2 换 ☾（皮层换肤）

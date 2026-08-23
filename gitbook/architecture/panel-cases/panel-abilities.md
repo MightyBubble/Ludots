@@ -19,6 +19,21 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Unit.Abilities（kind: Query）
+{
+  "id": "Graph.Unit.Abilities", "kind": "Query", "entry": "cooldown",
+  "nodes": [
+    { "id": "cooldown", "op": "LoadSelfAttribute", "attribute": "Ability.Cooldown" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "cooldown", "destination": "Summary", "type": "Float", "source": "cooldown", "key": "ability.cooldown" }
+  ]
+}
+```
+
 ```text
 screen.bottomCenter ┌────────────────────────────────────┐
                     │ 【⚔】【🛡】【✨】【💥】              │ 冷却=cooldown 回读置灰转圈

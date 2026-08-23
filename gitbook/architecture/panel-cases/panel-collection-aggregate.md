@@ -5,7 +5,7 @@
 > **高保真预期**（门户面板矩阵页可交互预览）：
 
 ```mock
-{"type": "stat", "items": ["队总 HP 1,240", "均 78"]}
+{"type": "stat", "items": ["队总 HP 1,872", "均 78"]}
 ```
 
 ```jsonc
@@ -20,9 +20,36 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Collection.Aggregate（kind: Query）
+{
+  "id": "Graph.Collection.Aggregate", "kind": "Query", "entry": "squad",
+  "nodes": [
+    { "id": "squad", "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 400 },
+    { "id": "count", "op": "AggCount" },
+    { "id": "avgHp", "op": "AggAverageAttribute", "attribute": "Health" },
+    { "id": "cap",   "op": "ConstInt", "intValue": 30 }
+  ],
+  "controlEdges": [
+    { "from": "squad", "fromPort": "next", "to": "count" },
+    { "from": "count", "fromPort": "next", "to": "avgHp" },
+    { "from": "avgHp", "fromPort": "next", "to": "cap" }
+  ],
+  "valueEdges": [
+    { "from": "squad", "fromPort": "list", "to": "count", "toPort": "list" },
+    { "from": "squad", "fromPort": "list", "to": "avgHp", "toPort": "list" }
+  ],
+  "outputs": [
+    { "id": "count", "destination": "Summary", "type": "Int",   "source": "count", "key": "collection.count" },
+    { "id": "avgHp", "destination": "Summary", "type": "Float", "source": "avgHp", "key": "collection.avgHp" },
+    { "id": "cap",   "destination": "Summary", "type": "Int",   "source": "cap",   "key": "collection.cap" }
+  ]
+}
+```
+
 ```text
 screen.topLeft（tab 下方）┌───────────────────┐
-                          │ 部队 24/30 均血 82% │
+                          │ 部队 24/30 均血 78% │
                           └───────────────────┘
 ```
 

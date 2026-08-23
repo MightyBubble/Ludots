@@ -17,6 +17,31 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Map.Minimap（kind: Query）
+{
+  "id": "Graph.Map.Minimap", "kind": "Query", "entry": "owner",
+  "nodes": [
+    { "id": "owner",  "op": "LoadCaster" },
+    { "id": "allMap", "op": "QueryAllMapEntities" },
+    { "id": "own",    "op": "QueryFilterTeam", "teamId": 2147483646 },
+    { "id": "layer",  "op": "AggCount" }
+  ],
+  "controlEdges": [
+    { "from": "owner",  "fromPort": "next", "to": "allMap" },
+    { "from": "allMap", "fromPort": "next", "to": "own" },
+    { "from": "own",    "fromPort": "next", "to": "layer" }
+  ],
+  "valueEdges": [
+    { "from": "allMap", "fromPort": "list", "to": "own",   "toPort": "list" },
+    { "from": "own",    "fromPort": "list", "to": "layer", "toPort": "list" }
+  ],
+  "outputs": [
+    { "id": "layer", "destination": "Summary", "type": "Int", "source": "layer", "key": "minimap.layer" }
+  ]
+}
+```
+
 ```text
 screen.bottomLeft ┌──────────┐
                   │ ▦▦  ▦▦▦  │  己方蓝点/敌方红点（皮分层渲染）

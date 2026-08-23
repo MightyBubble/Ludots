@@ -19,6 +19,29 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Formation.Info（kind: Query）
+{
+  "id": "Graph.Formation.Info", "kind": "Query", "entry": "formation",
+  "nodes": [
+    { "id": "formation",     "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 300 },
+    { "id": "formationKind", "op": "ConstInt", "intValue": 0 },
+    { "id": "avgSpeed",      "op": "AggAverageAttribute", "attribute": "MoveSpeed" }
+  ],
+  "controlEdges": [
+    { "from": "formation",     "fromPort": "next", "to": "formationKind" },
+    { "from": "formationKind", "fromPort": "next", "to": "avgSpeed" }
+  ],
+  "valueEdges": [
+    { "from": "formation", "fromPort": "list", "to": "avgSpeed", "toPort": "list" }
+  ],
+  "outputs": [
+    { "id": "formationKind", "destination": "Summary", "type": "Int",   "source": "formationKind", "key": "formation.kind" },
+    { "id": "avgSpeed",      "destination": "Summary", "type": "Float", "source": "avgSpeed",      "key": "formation.avgSpeed" }
+  ]
+}
+```
+
 ```text
 screen.bottomLeft 上方 ┌─────────────────────────┐
                        │ 楔形阵 均速 3.2 士气 80  │ 阵型名查表=图内节点

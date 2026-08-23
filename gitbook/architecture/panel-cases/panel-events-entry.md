@@ -18,9 +18,24 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Events.Entry（kind: Query）
+{
+  "id": "Graph.Events.Entry", "kind": "Query", "entry": "unread",
+  "nodes": [
+    { "id": "unread", "op": "LoadSelfAttribute", "attribute": "Events.Unread" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "unread", "destination": "Summary", "type": "Int", "source": "unread", "key": "events.unread" }
+  ]
+}
+```
+
 ```text
 screen.bottomRight（子系统入口上方）┌──────┐
-                                   │【📜3】│ ← unread 角标；点击开案21 日志
+                                   │【📜7】│ ← unread 角标；点击开案21 日志
                                    └──────┘
 ```
 

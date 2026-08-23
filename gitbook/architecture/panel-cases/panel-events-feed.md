@@ -16,10 +16,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Events.Feed（kind: Query）
+{
+  "id": "Graph.Events.Feed", "kind": "Query", "entry": "feedCount",
+  "nodes": [
+    { "id": "feedCount", "op": "LoadSelfAttribute", "attribute": "Events.FeedCount" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "feedCount", "destination": "Summary", "type": "Int", "source": "feedCount", "key": "events.feedCount" }
+  ]
+}
+```
+
 ```text
 screen.topRight 下方 ┌─────────────────────────┐
-                     │ ⚔ 遭遇战开始 08:12      │ 新事件顶入，超 N 条溢出
-                     │ ⚒ 铁矿 +50     08:11   │
+                     │ ⚔ 北门遇袭     12:01    │ 新事件顶入，超 N 条溢出
+                     │ ⚒ 援军抵达     12:03    │
                      └─────────────────────────┘
 ```
 

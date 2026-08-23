@@ -19,6 +19,29 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Selection.Marker（kind: Query）
+{
+  "id": "Graph.Selection.Marker", "kind": "Query", "entry": "selection",
+  "nodes": [
+    { "id": "selection",     "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 200 },
+    { "id": "selectedCount", "op": "AggCount" },
+    { "id": "selectionKind", "op": "ConstInt", "intValue": 0 }
+  ],
+  "controlEdges": [
+    { "from": "selection",     "fromPort": "next", "to": "selectedCount" },
+    { "from": "selectedCount", "fromPort": "next", "to": "selectionKind" }
+  ],
+  "valueEdges": [
+    { "from": "selection", "fromPort": "list", "to": "selectedCount", "toPort": "list" }
+  ],
+  "outputs": [
+    { "id": "selectedCount", "destination": "Summary", "type": "Int", "source": "selectedCount", "key": "selection.count" },
+    { "id": "selectionKind", "destination": "Summary", "type": "Int", "source": "selectionKind", "key": "selection.kind" }
+  ]
+}
+```
+
 ```text
 世界锚点（选中单位脚下）┌───────────┐
                         │ ◉ 光圈      │ 单选=光圈；框选=三角阵（皮按 kind 画）

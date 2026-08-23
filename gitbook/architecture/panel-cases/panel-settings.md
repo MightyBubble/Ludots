@@ -36,6 +36,21 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Settings（kind: Query）
+{
+  "id": "Graph.Settings", "kind": "Query", "entry": "volume",
+  "nodes": [
+    { "id": "volume", "op": "LoadSelfAttribute", "attribute": "Settings.Volume" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "volume", "destination": "Summary", "type": "Float", "source": "volume", "key": "settings.volume" }
+  ]
+}
+```
+
 ### C3 线框
 
 ```text

@@ -19,10 +19,39 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Entity.List（kind: Query）
+{
+  "id": "Graph.Entity.List", "kind": "Query", "entry": "caster",
+  "nodes": [
+    { "id": "caster",  "op": "LoadCaster" },
+    { "id": "all",     "op": "QueryAllMapEntities" },
+    { "id": "team",    "op": "QueryFilterTeam", "teamId": 2147483646 },
+    { "id": "sorted",  "op": "QuerySortByAttribute", "attribute": "Health", "descending": true },
+    { "id": "rowCount", "op": "AggCount" }
+  ],
+  "controlEdges": [
+    { "from": "caster",  "fromPort": "next", "to": "all" },
+    { "from": "all",     "fromPort": "next", "to": "team" },
+    { "from": "team",    "fromPort": "next", "to": "sorted" },
+    { "from": "sorted",  "fromPort": "next", "to": "rowCount" }
+  ],
+  "valueEdges": [
+    { "from": "all",     "fromPort": "list", "to": "team",     "toPort": "list" },
+    { "from": "team",    "fromPort": "list", "to": "sorted",   "toPort": "list" },
+    { "from": "sorted",  "fromPort": "list", "to": "rowCount", "toPort": "list" }
+  ],
+  "outputs": [
+    { "id": "rowCount", "destination": "Summary", "type": "Int", "source": "rowCount", "key": "list.rowCount" }
+  ]
+}
+```
+
 ```text
 screen.leftCenter ┌──────────────────────┐
-                  │ ▸ 步兵班 A   8/8     │ 点击行→选中对应实体（行→实体映射在图内）
-                  │   弓手班 B   5/6     │
+                  │ ▸ 长枪兵    HP 82%   │ 点击行→选中对应实体（行→实体映射在图内）
+                  │ ▸ 弓手      HP 64%   │
+                  │ ▸ 医师      HP 97%   │
                   └──────────────────────┘
 ```
 

@@ -20,6 +20,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Progress.Tree（kind: Query）
+{
+  "id": "Graph.Progress.Tree", "kind": "Query", "entry": "nodeCount",
+  "nodes": [
+    { "id": "nodeCount", "op": "LoadSelfAttribute", "attribute": "Tree.NodeCount" },
+    { "id": "unlocked",  "op": "LoadSelfAttribute", "attribute": "Tree.Unlocked" }
+  ],
+  "controlEdges": [
+    { "from": "nodeCount", "fromPort": "next", "to": "unlocked" }
+  ],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "nodeCount", "destination": "Summary", "type": "Int", "source": "nodeCount", "key": "tree.nodeCount" },
+    { "id": "unlocked",  "destination": "Summary", "type": "Int", "source": "unlocked",  "key": "tree.unlocked" }
+  ]
+}
+```
+
 ```text
 modal.center（G5）┌───────────────────────────────┐
                   │  ◉──◯──◯                    │ ◉已解锁 ◯可解锁

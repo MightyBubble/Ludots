@@ -21,10 +21,25 @@
 }
 ```
 
+```jsonc
+// 值图 Graph.Events.Log（kind: Query）
+{
+  "id": "Graph.Events.Log", "kind": "Query", "entry": "pageCount",
+  "nodes": [
+    { "id": "pageCount", "op": "LoadSelfAttribute", "attribute": "Events.PageCount" }
+  ],
+  "controlEdges": [],
+  "valueEdges": [],
+  "outputs": [
+    { "id": "pageCount", "destination": "Summary", "type": "Int", "source": "pageCount", "key": "events.pageCount" }
+  ]
+}
+```
+
 ```text
 modal.center（G5）┌──────────────────────────────────┐
                   │ 日志 【全部】【战斗】【✕】        │
-                  │ ⚔ 遭遇战 08:12 · ⚒ 铁矿+50 08:11 │
+                  │ ⚔ 春 7 丰收 +200 · ⚒ 春 6 暴风 −50│
                   └──────────────────────────────────┘
 ```
 
