@@ -352,7 +352,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             possessed = -3;
             Console.WriteLine("[PROBE] seat registry error: " + ex.Message);
         }
-        Console.WriteLine($"[PROBE] connecting gates: hsAccepted={handshake.Accepted} hsPlayer={(handshake.PlayerId.HasValue ? handshake.PlayerId.Value : -1)} epochEmpty={handshake.SessionEpoch.IsEmpty} established={_clientStatus?.HasEstablishedSession} connState={_clientStatus?.ConnectionState} awaitingSnap={_clientStatus?.IsAwaitingFullSnapshot} roomSnap={_observer.HasRoomSnapshot} faults={_observer.FaultCount} seats={seatCount} possessedPlayer={possessed}");
+        Console.WriteLine($"[PROBE] connecting gates: hsAccepted={handshake.Accepted} hsPlayer={handshake.PlayerId.Value} epochEmpty={handshake.SessionEpoch.IsEmpty} established={_clientStatus?.HasEstablishedSession} connState={_clientStatus?.ConnectionState} awaitingSnap={_clientStatus?.IsAwaitingFullSnapshot} roomSnap={_observer.HasRoomSnapshot} faults={_observer.FaultCount} seats={seatCount} possessedPlayer={possessed}");
     }
 
     private void UpdateConnecting()
