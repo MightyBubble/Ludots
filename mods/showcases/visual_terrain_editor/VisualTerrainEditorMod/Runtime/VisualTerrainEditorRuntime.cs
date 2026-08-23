@@ -172,10 +172,18 @@ internal sealed class VisualTerrainEditorRuntime
         ApplyPendingAssetReplacement(engine);
         UpdateSharedTerrainOverviewDebug(engine);
 
+        // 远距全景期间画面完全交给宿主全景粗网格：清空并停更编辑器窗口块，
+        // 回到细节距离时 EnsureChunkWindowLoaded/SyncRenderedChunks 按需重建。
+        bool sharedTerrainOverview = ShouldUseSharedTerrainOverview(engine);
+        if (sharedTerrainOverview && _renderedChunks.Count > 0)
+        {
+            ClearRenderedChunks(engine);
+        }
+
         bool viewportChanged = TrackViewport(engine);
 
         int loadedBefore = _document.LoadedChunkCount;
-        bool chunkWindowChanged = EnsureChunkWindowLoaded(engine);
+        bool chunkWindowChanged = sharedTerrainOverview ? false : EnsureChunkWindowLoaded(engine);
         if (loadedBefore != _document.LoadedChunkCount || chunkWindowChanged)
         {
             _panelDirty = true;
@@ -190,7 +198,11 @@ internal sealed class VisualTerrainEditorRuntime
         HandleWorldPainting(engine);
 
         bool terrainChanged = _document.Update();
-        SyncRenderedChunks(engine);
+        if (!sharedTerrainOverview)
+        {
+            SyncRenderedChunks(engine);
+        }
+
         PublishBrushWorldFact(engine);
 
         if (_panelDirty)
