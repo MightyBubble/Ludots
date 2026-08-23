@@ -355,6 +355,53 @@ internal sealed class AcceptanceDriver : ISystem<float>
         Console.WriteLine($"[PROBE] connecting gates: hsAccepted={handshake.Accepted} hsPlayer={handshake.PlayerId.Value} epochEmpty={handshake.SessionEpoch.IsEmpty} established={_clientStatus?.HasEstablishedSession} connState={_clientStatus?.ConnectionState} awaitingSnap={_clientStatus?.IsAwaitingFullSnapshot} roomSnap={_observer.HasRoomSnapshot} faults={_observer.FaultCount} seats={seatCount} possessedPlayer={possessed}");
     }
 
+    private long _probeDeepNextTimestamp;
+
+    private void ProbeConnectingDeep(int localPlayerId, int sideIndex)
+    {
+        long now = Stopwatch.GetTimestamp();
+        if (now < _probeDeepNextTimestamp)
+        {
+            return;
+        }
+        _probeDeepNextTimestamp = now + (Stopwatch.Frequency * 2);
+        try
+        {
+            bool ownCore = TryResolveOwnCore(localPlayerId, out _);
+            int harvesters = CountOwned<ClientHarvesterMarker>(localPlayerId);
+            int infantry = CountOwned<ClientInfantryMarker>(localPlayerId);
+            int crystals = CountClientCrystals();
+            bool matchState = TryGetClientMatchState(out _);
+            bool bothSeats = BothSeatsConnected();
+            FrontlineOpeningViewSnapshot ov = _frontlineRuntime.OpeningView;
+            CameraCullingDebugState culling = _engine.GetService(CoreServiceKeys.CameraCullingDebugState);
+            string camInfo;
+            if (culling.CameraTargetCm.X == 0 && culling.CameraTargetCm.Y == 0 && culling.VisibleEntityCount == 0)
+            {
+                camInfo = "culling-empty";
+            }
+            else
+            {
+                camInfo = $"cullTarget=({culling.CameraTargetCm.X},{culling.CameraTargetCm.Y}) visRev={culling.VisibilityRevision} readyRev={ov.ReadyVisibilityRevision} visible={culling.VisibleEntityCount}";
+            }
+            string presentCam;
+            try
+            {
+                var cam = ClientLocalSeatAccess.RequireSolePresentCamera(_engine).State.TargetCm;
+                presentCam = $"({cam.X},{cam.Y})";
+            }
+            catch (Exception ex)
+            {
+                presentCam = "ERR:" + ex.GetType().Name;
+            }
+            Console.WriteLine($"[PROBE] deep gates: side={sideIndex} ownCore={ownCore} harvesters={harvesters} infantry={infantry} crystals={crystals} matchState={matchState} bothSeats={bothSeats} ovFocus={ov.HasFocusTarget} ovReady={ov.IsReady} ovTarget=({ov.FocusTargetCm.X},{ov.FocusTargetCm.Y}) presentCam={presentCam} {camInfo}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[PROBE] deep probe error: " + ex.GetType().Name + ": " + ex.Message);
+        }
+    }
+
     private void UpdateConnecting()
     {
         SessionHandshakeResponse handshake = _observer.LastClientHandshake;
@@ -387,6 +434,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
 
         int sideIndex = _frontline.ResolveSideIndexForPlayer(localPlayerId);
+        ProbeConnectingDeep(localPlayerId, sideIndex);
         if (!TryResolveOwnCore(localPlayerId, out Entity core) ||
             CountOwned<ClientHarvesterMarker>(localPlayerId) != _plan.Expected.InitialHarvesterCount ||
             CountOwned<ClientInfantryMarker>(localPlayerId) != _plan.Expected.InitialInfantryCount ||
