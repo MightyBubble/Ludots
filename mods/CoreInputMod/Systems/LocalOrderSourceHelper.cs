@@ -22,9 +22,11 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Networking.Runtime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -140,7 +142,7 @@ namespace CoreInputMod.Systems
             });
             mapping.SetActorProvider((out Entity entity) =>
             {
-                entity = TryGetLocalPlayerId(out int playerId)
+                entity = TryGetSolePossessedPlayerId(out int playerId)
                     ? _context.GetControlledActor(playerId)
                     : default;
                 return _world.IsAlive(entity);
@@ -363,28 +365,28 @@ namespace CoreInputMod.Systems
                 TryGetCommandSourceOwner);
         }
 
-        public bool TryGetLocalPlayerId(out int playerId)
+        public bool TryGetSolePossessedPlayerId(out int playerId)
         {
-            return _context.TryGetLocalPlayerId(out playerId);
+            return _context.TryGetSolePossessedPlayerId(out playerId);
         }
 
-        public bool TrySetLocalPlayer(InputOrderMappingSystem mapping, Entity actor)
+        public bool TryBindSoleSeatActor(InputOrderMappingSystem mapping, Entity actor)
         {
             if (mapping == null ||
                 actor == Entity.Null ||
                 !_world.IsAlive(actor) ||
-                !TryGetLocalPlayerId(out int playerId))
+                !TryGetSolePossessedPlayerId(out int playerId))
             {
                 return false;
             }
 
-            mapping.SetLocalPlayer(actor, playerId);
+            mapping.SetSolePossessedActor(actor, playerId);
             return true;
         }
 
         public Entity GetControlledActor()
         {
-            return TryGetLocalPlayerId(out int playerId)
+            return TryGetSolePossessedPlayerId(out int playerId)
                 ? _context.GetControlledActor(playerId)
                 : default;
         }
@@ -414,15 +416,6 @@ namespace CoreInputMod.Systems
                 }
 
                 owner = frame.ContextEntity;
-                return true;
-            }
-
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity local &&
-                local != Entity.Null &&
-                _world.IsAlive(local))
-            {
-                owner = local;
                 return true;
             }
 
@@ -532,7 +525,9 @@ namespace CoreInputMod.Systems
                 !_globals.TryGetValue(CoreServiceKeys.GraphProgramRegistry.Name, out var graphsObj) ||
                 graphsObj is not Ludots.Core.GraphRuntime.GraphProgramRegistry graphPrograms ||
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
-                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries)
+                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries ||
+                !_globals.TryGetValue(CoreServiceKeys.GasGraphOpHandlerTable.Name, out var graphHandlersObj) ||
+                graphHandlersObj is not GasGraphOpHandlerTable graphHandlers)
             {
                 return false;
             }
@@ -545,7 +540,7 @@ namespace CoreInputMod.Systems
             }
 
             KnowledgeCommandTargetGate candidateGate = RequireCommandTargetGate();
-            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
+            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget, graphHandlers);
             return true;
         }
 
@@ -666,28 +661,8 @@ namespace CoreInputMod.Systems
                 }
 
                 int slotIndex = mapping.ArgsTemplate.I0.Value;
-                ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-                if ((uint)slotIndex >= (uint)abilities.Count)
-                {
-                    return false;
-                }
-
-                bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-                AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-                bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-                ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-                bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-                GrantedSlotBuffer grantedSlots = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-                AbilitySlotState slot = AbilitySlotResolver.Resolve(
-                    in abilities,
-                    in formSlots,
-                    hasForm,
-                    in itemGrantedSlots,
-                    hasItemGranted,
-                    in grantedSlots,
-                    hasGranted,
-                    slotIndex);
-                if (slot.AbilityId <= 0 ||
+                if (!AbilitySlotResolver.TryResolve(_world, actor, slotIndex, out AbilitySlotState slot) ||
+                    slot.AbilityId <= 0 ||
                     !_abilityDefinitions.TryGet(slot.AbilityId, out var abilityDefinition) ||
                     !abilityDefinition.HasInputBindingOverride)
                 {

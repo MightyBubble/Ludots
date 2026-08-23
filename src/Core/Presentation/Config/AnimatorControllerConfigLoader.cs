@@ -2,7 +2,7 @@ using System;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -146,7 +146,7 @@ namespace Ludots.Core.Presentation.Config
                         throw new InvalidOperationException($"{context} uses invalid sentinel '{key}'. Use lowercase 'none'.");
                     }
 
-                    return PerformerParamKeyRegistry.Register(key);
+                    return PresenterParamKeyRegistry.Register(key);
                 }
             }
 

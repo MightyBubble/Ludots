@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.MovePlanning;
+using Ludots.Core.Movement;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Systems;
@@ -24,7 +25,7 @@ public sealed class MassNavigationRuntime
     public bool HandleMapFocused(GameEngine engine, MapId mapId)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine, out MassNavigationConfig config) ||
+        if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
             !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
         {
             return false;
@@ -76,7 +77,7 @@ public sealed class MassNavigationRuntime
     private bool ReleaseMapState(GameEngine engine, MapId mapId, bool unloadScenario)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine, out MassNavigationConfig config) ||
+        if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
             !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
         {
             return false;
@@ -89,6 +90,11 @@ public sealed class MassNavigationRuntime
 
         if (_simulation is MassNavigationSimulationRuntime simulation)
         {
+            // 地图挂起/卸载时批量取消全部位姿写权窗口：必须发生在 binding 清除之前，
+            // 桥此刻还能解析到运行时并做求解器侧的幂等清理；活跃位移效果会在下一 tick
+            // 识别到窗口消失并合法终止。
+            PoseAuthorityArbiter? poseAuthorityArbiter = engine.GetService(CoreServiceKeys.PoseAuthorityArbiter);
+            poseAuthorityArbiter?.CancelAllWindows(engine.World);
             RequireRuntimeBinding(engine).Clear(mapId, simulation);
         }
 
@@ -115,6 +121,12 @@ public sealed class MassNavigationRuntime
             engine.SetService(MassNavigationKeys.RuntimeBinding, new MassNavigationRuntimeBinding());
         }
 
+        PoseAuthorityArbiter poseAuthorityArbiter = engine.GetService(CoreServiceKeys.PoseAuthorityArbiter)
+            ?? throw new InvalidOperationException("MassNavigation runtime requires the PoseAuthorityArbiter service.");
+        poseAuthorityArbiter.AddListener(new MassNavigationPoseAuthorityBridge(
+            () => MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out MassNavigationSimulationRuntime simulation)
+                ? simulation
+                : null));
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, config), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine), SystemGroup.PostMovement);
         engine.RegisterSystem(
@@ -153,7 +165,7 @@ public sealed class MassNavigationRuntime
         return simulation;
     }
 
-    private bool TryEnsureConfig(GameEngine engine, out MassNavigationConfig config)
+    private bool TryEnsureConfig(GameEngine engine, out MassNavigationConfig? config)
     {
         if (_config != null)
         {
@@ -163,7 +175,7 @@ public sealed class MassNavigationRuntime
 
         if (_configResolved)
         {
-            config = null!;
+            config = null;
             return false;
         }
 
@@ -173,10 +185,11 @@ public sealed class MassNavigationRuntime
         }
 
         var loader = new MassNavigationConfigLoader(engine.ConfigPipeline);
-        if (!loader.TryLoad(engine.ConfigCatalog, engine.ConfigConflictReport, out MassNavigationConfig? loaded))
+        if (!loader.TryLoad(engine.ConfigCatalog, engine.ConfigConflictReport, out MassNavigationConfig? loaded) ||
+            loaded is null)
         {
             _configResolved = true;
-            config = null!;
+            config = null;
             return false;
         }
 

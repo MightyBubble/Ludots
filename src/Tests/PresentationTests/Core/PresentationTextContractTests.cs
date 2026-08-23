@@ -9,7 +9,7 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -263,26 +263,22 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ResolvesTextTokenBindings_ToStableIds()
+        public void PresenterDefinitionConfigLoader_ResolvesTextTokenBindings_ToStableIds()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
-            WriteFile("Core", "Presentation/performers.json",
+                @"[{ ""Path"": ""Presentation/presenters.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/presenters.json",
                 @"[
   {
     ""id"": ""entity_world_text"",
-    ""worldTextMode"": ""AttributeCurrentOverBase"",
     ""behaviors"": [
       {
         ""slot"": ""body"",
-        ""kind"": ""AssetBinding"",
+        ""kind"": ""WorldText"",
         ""activeByDefault"": true,
-        ""assetBinding"": {
-          ""assetKind"": ""WorldText"",
-          ""assetId"": ""hud.current_over_base"",
-          ""renderPath"": ""None"",
-          ""mobility"": ""Movable"",
-          ""localScale"": [1, 1, 1]
+        ""worldText"": {
+          ""textToken"": ""hud.current_over_base"",
+          ""mode"": ""AttributeCurrentOverBase""
         }
       }
     ],
@@ -293,8 +289,8 @@ namespace Ludots.Tests.Presentation
 ]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
                 resolveTextTokenId: key => string.Equals(key, "hud.current_over_base", StringComparison.Ordinal) ? 42 : 0);
@@ -306,7 +302,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(defId, out var definition), Is.True);
 
             bool found = false;
-            int textTokenParamKey = PerformerParamKeyRegistry.Register("worldText.tokenId");
+            int textTokenParamKey = PresenterParamKeyRegistry.Register("worldText.tokenId");
             for (int i = 0; i < definition.Bindings.Length; i++)
             {
                 if (definition.Bindings[i].ParamKey != textTokenParamKey)
@@ -323,11 +319,11 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ParsesAssetBindingAndSemanticParamBindings()
+        public void PresenterDefinitionConfigLoader_ParsesAssetAndAttributeBindingBehaviors()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
-            WriteFile("Core", "Presentation/performers.json",
+                @"[{ ""Path"": ""Presentation/presenters.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/presenters.json",
                 @"[
   {
     ""id"": ""scorch_decal"",
@@ -344,17 +340,24 @@ namespace Ludots.Tests.Presentation
           ""mobility"": ""Movable"",
           ""colorParamKey"": ""decal.tint""
         }
+      },
+      {
+        ""slot"": ""attribute"",
+        ""kind"": ""AttributeBinding"",
+        ""activeByDefault"": true,
+        ""attributeBinding"": {
+          ""attributeId"": ""burn"",
+          ""targetParamKey"": ""decal.intensity"",
+          ""mode"": ""Attribute""
+        }
       }
-    ],
-    ""bindings"": [
-      { ""paramKey"": ""decal.intensity"", ""source"": ""attribute"", ""attributeId"": ""burn"" }
     ]
   }
 ]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
                 resolveAttributeName: key => string.Equals(key, "burn", StringComparison.Ordinal) ? 9 : -1,
@@ -366,7 +369,7 @@ namespace Ludots.Tests.Presentation
 
             int defId = registry.GetId("scorch_decal");
             Assert.That(registry.TryGet(defId, out var def), Is.True);
-            Assert.That(def.Behaviors, Has.Length.EqualTo(1));
+            Assert.That(def.Behaviors, Has.Length.EqualTo(2));
             Assert.That(def.Behaviors[0].SlotIndex, Is.EqualTo(0));
             Assert.That(def.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.AssetBinding));
             Assert.That(def.Behaviors[0].ActiveByDefault, Is.True);
@@ -377,11 +380,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(def.Behaviors[0].AssetBinding.Mobility, Is.EqualTo(VisualMobility.Movable));
             Assert.That(
                 def.Behaviors[0].AssetBinding.ColorParamKey,
-                Is.EqualTo(PerformerParamKeyRegistry.Register("decal.tint")));
-            Assert.That(def.Bindings, Has.Length.EqualTo(1));
-            Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("decal.intensity")));
-            Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.Attribute));
-            Assert.That(def.Bindings[0].Value.SourceId, Is.EqualTo(9));
+                Is.EqualTo(PresenterParamKeyRegistry.Register("decal.tint")));
+            Assert.That(def.Bindings, Is.Empty);
+            Assert.That(def.Behaviors[1].Kind, Is.EqualTo(BehaviorKind.AttributeBinding));
+            Assert.That(def.Behaviors[1].AttributeBinding.AttributeId, Is.EqualTo(9));
+            Assert.That(def.Behaviors[1].AttributeBinding.TargetParamKey, Is.EqualTo(PresenterParamKeyRegistry.Register("decal.intensity")));
+            Assert.That(def.Behaviors[1].AttributeBinding.Mode, Is.EqualTo(ValueSourceKind.Attribute));
         }
 
         [Test]
@@ -856,7 +860,7 @@ namespace Ludots.Tests.Presentation
 
         private void WriteFile(string modId, string relativePath, string content)
         {
-            string dir = Path.Combine(_root, modId, "Configs", Path.GetDirectoryName(relativePath) ?? string.Empty);
+            string dir = Path.Combine(_root, modId, Path.GetDirectoryName(relativePath) ?? string.Empty);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }

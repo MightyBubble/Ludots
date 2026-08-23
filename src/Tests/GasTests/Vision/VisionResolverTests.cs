@@ -9,6 +9,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Vision;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

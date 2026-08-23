@@ -33,7 +33,7 @@ Phase Graph:
 
 - **需要**: `QueryFilterNotRadius` 或 `QueryRing` Graph op (排除内圆)
 - **替代**: 用两次 QueryRadius 然后 list 差集
-- Performer: `GroundOverlay` (Ring, inner_radius, outer_radius)
+- Presenter: `GroundOverlay` (Ring, inner_radius, outer_radius)
 
 ## 依赖组件
 
@@ -41,7 +41,7 @@ Phase Graph:
 |------|------|
 | SpatialBlackboardKey | ✅ 已有 |
 | QueryRadius Graph op | ✅ 已有 |
-| GroundOverlay Performer | ✅ 已有 |
+| GroundOverlay Presenter | ✅ 已有 |
 
 ## 新增需求
 

@@ -1,0 +1,8 @@
+{
+  "scene": "water",
+  "frames": 30,
+  "avgFrameMs": 6.009,
+  "p95FrameMs": 4.43,
+  "maxFrameMs": 93.051,
+  "wallMs": 745.6
+}

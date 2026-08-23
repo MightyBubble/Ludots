@@ -3,9 +3,11 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphQuery;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -54,6 +56,68 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer);
         SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer);
         SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer);
+
+        int ResolveTableRow(int tableId, int key)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        int TableReadInt(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        float TableReadFloat(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        void ShowPanel(int panelTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        void HidePanel(int panelTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        void DestroyPanel(int templateKeyId, Entity scope)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        // ── Map-scoped variables ──
+
+        int ReadMapVarInt(int varKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        float ReadMapVarFloat(int varKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        void WriteMapVarInt(int varKeyId, MapId mapId, int value)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
         int CollectMapEntities(Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
@@ -202,22 +266,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -357,6 +421,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveGraphLookupTable(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup table '{name}', but no GraphLookupTableRegistry resolver is available.");
+        }
+
+        int ResolveGraphLookupField(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup field '{name}', but no GraphLookupTableRegistry resolver is available.");
+        }
+
         int ResolveRelationshipType(string name);
         int ResolveRelationshipMetric(string name);
         int ResolveRelationshipFlag(string name);

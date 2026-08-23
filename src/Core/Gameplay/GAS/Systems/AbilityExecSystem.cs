@@ -16,6 +16,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -37,7 +38,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly InputResponseBuffer _inputResponses;
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasPresentationEventBuffer _presentationEvents;
-        private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
         private readonly TagOps _tagOps;
@@ -78,7 +78,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int castAbilityOrderTypeId = 0,
             int castAbilityStartOrderTypeId = 0,
             GasPresentationEventBuffer presentationEvents = null,
-            EffectPhaseExecutor phaseExecutor = null,
             GraphProgramRegistry graphPrograms = null,
             IGraphRuntimeApi graphApi = null,
             TagOps tagOps = null,
@@ -102,7 +101,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _castAbilityOrderTypeId = castAbilityOrderTypeId;
             _castAbilityStartOrderTypeId = castAbilityStartOrderTypeId;
             _presentationEvents = presentationEvents;
-            _phaseExecutor = phaseExecutor;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
             _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
@@ -186,21 +184,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
                     
-                    ref var abilities = ref World.Get<AbilityStateBuffer>(actor);
-                    if ((uint)slotIndex >= (uint)abilities.Count)
+                    if (!AbilitySlotResolver.TryResolve(World, actor, slotIndex, out AbilitySlotState slot))
                     {
                         FailAbilityStart(actor, slotIndex, 0, AbilityCastFailReason.InvalidSlot, OrderFailureReason.AbilitySlotOutOfRange);
                         continue;
                     }
-
-                    // Resolve effective ability: granted override > base slot
-                    bool hasForm = World.Has<AbilityFormSlotBuffer>(actor);
-                    AbilityFormSlotBuffer formSlots = hasForm ? World.Get<AbilityFormSlotBuffer>(actor) : default;
-                    bool hasItemGranted = World.Has<ItemGrantedSlotBuffer>(actor);
-                    ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? World.Get<ItemGrantedSlotBuffer>(actor) : default;
-                    bool hasGranted = World.Has<GrantedSlotBuffer>(actor);
-                    GrantedSlotBuffer grantedSlots = hasGranted ? World.Get<GrantedSlotBuffer>(actor) : default;
-                    var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, slotIndex);
                     
                     // Read target from Blackboard (Cast_TargetEntity = 111)
                     Entity targetEntity = default;
@@ -262,12 +250,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     if (hasBlockTags)
                     {
-                        if (!blockTags.RequiredAll.IsEmpty && (!hasActorTags || !actorTags.ContainsAll(in blockTags.RequiredAll)))
-                        {
-                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.BlockedByTag);
-                            continue;
-                        }
-                        if (hasActorTags && !blockTags.BlockedAny.IsEmpty && actorTags.Intersects(in blockTags.BlockedAny))
+                        if (!AbilityActivationBlockTagEvaluator.Passes(World, actor, _tagOps, in blockTags))
                         {
                             CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.BlockedByTag);
                             continue;
@@ -456,9 +439,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                ref var abilities = ref World.Get<AbilityStateBuffer>(actor);
-
-                if (instance.AbilitySlot < 0 || instance.AbilitySlot >= abilities.Count)
+                if (!AbilitySlotResolver.TryResolve(World, actor, instance.AbilitySlot, out AbilitySlotState slot))
                 {
                     AbilityExecInstance failedInstance = instance;
                     FailActiveExecution(
@@ -471,20 +452,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                // Resolve effective ability: granted override > base slot
-                bool hasFormP2 = World.Has<AbilityFormSlotBuffer>(actor);
-                AbilityFormSlotBuffer formSlotsP2 = hasFormP2 ? World.Get<AbilityFormSlotBuffer>(actor) : default;
-                bool hasItemGrantedP2 = World.Has<ItemGrantedSlotBuffer>(actor);
-                ItemGrantedSlotBuffer itemGrantedSlotsP2 = hasItemGrantedP2 ? World.Get<ItemGrantedSlotBuffer>(actor) : default;
-                bool hasGrantedP2 = World.Has<GrantedSlotBuffer>(actor);
-                GrantedSlotBuffer grantedSlotsP2 = hasGrantedP2 ? World.Get<GrantedSlotBuffer>(actor) : default;
-                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlotsP2, hasFormP2, in itemGrantedSlotsP2, hasItemGrantedP2, in grantedSlotsP2, hasGrantedP2, instance.AbilitySlot);
-
                 AbilityExecSpec spec;
                 AbilityExecCallerParamsPool callerPool = default;
                 bool hasCallerPool = false;
-                AbilityOnActivateEffects onActivateEffects = default;
-                bool hasOnActivate = false;
 
                 AbilityDefinition def = default;
                 bool hasDefinition = slot.AbilityId > 0 &&
@@ -528,8 +498,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     callerPool = def.ExecCallerParamsPool;
                     hasCallerPool = def.HasExecCallerParamsPool;
-                    hasOnActivate = def.HasOnActivateEffects;
-                    onActivateEffects = def.OnActivateEffects;
                 }
                 else
                 {
@@ -537,12 +505,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         callerPool = World.Get<AbilityExecCallerParamsPool>(templateEntity);
                         hasCallerPool = true;
-                    }
-
-                    if (World.Has<AbilityOnActivateEffects>(templateEntity))
-                    {
-                        onActivateEffects = World.Get<AbilityOnActivateEffects>(templateEntity);
-                        hasOnActivate = true;
                     }
                 }
 
@@ -560,7 +522,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     int now = ClockNow(instance.ActiveClockId, actor);
                     instance.CurrentTick = now - instance.StartAbsoluteTick;
-                    AdvanceItems(actor, ref spec, ref callerPool, hasCallerPool, hasOnActivate, ref onActivateEffects, ref instance);
+                    AdvanceItems(actor, ref spec, ref callerPool, hasCallerPool, ref instance);
                 }
                 else if (instance.State == AbilityExecRunState.GateWaiting)
                 {
@@ -905,9 +867,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void AdvanceItems(Entity actor, ref AbilityExecSpec spec,
             ref AbilityExecCallerParamsPool callerPool, bool hasCallerPool,
-            bool hasOnActivate, ref AbilityOnActivateEffects onActivateEffects,
             ref AbilityExecInstance inst)
         {
+            if (!CanPublishDueEffectItems(actor, ref spec, in inst, out OrderFailureReason dispatchFailure))
+            {
+                MarkActiveExecutionFailed(
+                    actor,
+                    ref inst,
+                    AbilityCastFailReason.PreconditionFailed,
+                    dispatchFailure);
+                return;
+            }
+
             for (int guard = 0; guard < AbilityExecSpec.MAX_ITEMS; guard++)
             {
                 if (inst.NextItemIndex >= spec.ItemCount)
@@ -985,15 +956,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         inst.NextItemIndex++;
                         continue;
 
-                    case ExecItemKind.GraphSignal:
-                        EnsurePotentialTimelineTerminalCapacity(actor, in inst);
-                        if (!ExecuteGraphSignal(actor, ref spec, idx, ref inst))
-                        {
-                            return;
-                        }
-                        inst.NextItemIndex++;
-                        continue;
-
                     case ExecItemKind.TagSignal:
                         EnsurePotentialTimelineTerminalCapacity(actor, in inst);
                         FireTagSignal(actor, ref spec, idx);
@@ -1035,6 +997,58 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // If we exhaust the guard, treat as finished
             EnsureTerminalTransitionCapacity(actor, in inst, OrderTerminalState.Completed, GasPresentationEventKind.CastFinished);
             inst.State = AbilityExecRunState.Finished;
+        }
+
+        private bool CanPublishDueEffectItems(
+            Entity actor,
+            ref AbilityExecSpec spec,
+            in AbilityExecInstance inst,
+            out OrderFailureReason failureReason)
+        {
+            failureReason = OrderFailureReason.None;
+            int requiredCapacity = 0;
+            for (int index = inst.NextItemIndex; index < spec.ItemCount; index++)
+            {
+                ExecItemKind kind = spec.GetKind(index);
+                if (spec.GetTick(index) > inst.CurrentTick ||
+                    kind == ExecItemKind.End ||
+                    kind == ExecItemKind.InputGate ||
+                    kind == ExecItemKind.EventGate ||
+                    kind == ExecItemKind.TargetCollectionGate)
+                {
+                    break;
+                }
+                if (inst.PendingProgressionUseRequirement != 0)
+                {
+                    break;
+                }
+                if (kind != ExecItemKind.EffectClip && kind != ExecItemKind.EffectSignal)
+                {
+                    continue;
+                }
+                if (spec.GetTemplateId(index) <= 0 ||
+                    !TryResolveEffectDispatchTarget(
+                        actor,
+                        (ExecEffectDispatchTarget)spec.GetPayloadA(index),
+                        in inst,
+                        out _))
+                {
+                    failureReason = OrderFailureReason.PreconditionFailed;
+                    return false;
+                }
+                requiredCapacity++;
+            }
+
+            if (requiredCapacity == 0)
+            {
+                return true;
+            }
+            if (_effectRequests == null || requiredCapacity > _effectRequests.AvailableCapacity)
+            {
+                failureReason = OrderFailureReason.SubmissionQueueFull;
+                return false;
+            }
+            return true;
         }
 
         // Effect dispatch (shared for EffectClip & EffectSignal)
@@ -1278,28 +1292,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 Target = inst.Target,
                 Magnitude = spec.GetPayloadA(idx)
             });
-            return true;
-        }
-
-        private bool ExecuteGraphSignal(Entity actor, ref AbilityExecSpec spec, int idx,
-            ref AbilityExecInstance inst)
-        {
-            if (_phaseExecutor == null || _graphApi == null)
-            {
-                MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
-                return false;
-            }
-            int graphProgramId = spec.GetPayloadA(idx);
-            if (graphProgramId <= 0)
-            {
-                MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
-                return false;
-            }
-
-            Entity target = inst.Target;
-            // TargetPos resolution is deferred to the graph itself via LoadAttribute or spatial queries.
-            // AbilityExecSystem does not depend on Physics2D position components.
-            _phaseExecutor.ExecuteGraph(World, _graphApi, actor, target, default, default, graphProgramId);
             return true;
         }
 

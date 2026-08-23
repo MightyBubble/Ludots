@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -54,6 +55,16 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = dmgMods
                 });
+
+                var presetTypes = new PresetTypeRegistry();
+                var builtinHandlers = new BuiltinHandlerRegistry();
+                BuiltinHandlers.RegisterAll(builtinHandlers);
+                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                    templates,
+                    presetTypes,
+                    builtinHandlers,
+                    new GraphProgramRegistry(),
+                    "Test/InteractiveWindowStressTests.Stress.json");
 
                 var listenerEntity = world.Create();
                 unsafe

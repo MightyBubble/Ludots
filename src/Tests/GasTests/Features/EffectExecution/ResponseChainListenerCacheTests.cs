@@ -3,6 +3,8 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
+using Ludots.Tests.GAS;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Features.EffectExecution
@@ -29,6 +31,16 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 ParticipatesInResponse = true,
                 Modifiers = modifiers,
             });
+
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/ResponseChainListenerCacheTests.RuntimeRegistration.json");
 
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(healthAttributeId, 100f);

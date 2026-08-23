@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -34,7 +35,7 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -249,12 +250,12 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             Assert.That(engine.TriggerManager.Errors, Is.Empty);
             Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(MapId));
             Assert.That(engine.GetService(CoreServiceKeys.ViewController), Is.Null);
-            Assert.That(engine.GetService(CoreServiceKeys.LocalPlayerId), Is.Zero);
-            Assert.That(engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity _), Is.False);
-            Assert.That(engine.GameSession.Camera.IsRuntimeConfigured, Is.False);
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity _), Is.False);
+            Assert.That(ClientLocalSeatAccess.RequireRegistry(engine).Count, Is.Zero);
+            Assert.That(ClientLocalSeatAccess.RequireLogicViews(engine).Count, Is.Zero);
             Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
             Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False);
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.HasActiveCamera, Is.False);
+            Assert.That(ClientLocalSeatAccess.RequireRegistry(engine).PresentBindingCount, Is.Zero);
         });
     }
 
@@ -350,8 +351,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(
             engine.CurrentMapSession!.PlayerEntityLookup.TryGet(side.PlayerId, out Entity localPlayer),
             Is.True);
-        engine.SetService(CoreServiceKeys.LocalPlayerId, side.PlayerId);
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
+        BindSoleLocalSeat(engine, side.PlayerId, localPlayer);
 
         FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
         var templates = new FrontlineClientTemplateFactory(
@@ -455,27 +455,27 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             throw new InvalidOperationException("Frontline map has no complete default camera target.");
         }
         Vector2 defaultTargetCm = new(defaultTargetXCm, defaultTargetYCm);
-        engine.GameSession.Camera.State.TargetCm = defaultTargetCm;
+        ClientLocalSeatAccess.RequireSolePresentCamera(engine).State.TargetCm = defaultTargetCm;
         culling.CameraTargetCm = defaultTargetCm;
         culling.VisibleEntityCount = 1;
         culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision + 1;
         engine.World.Get<CullState>(mirrors[0]).IsVisible = true;
-        if (engine.World.Has<PresentationOwnerHasPerformerPayload>(mirrors[0]))
+        if (engine.World.Has<PresentationOwnerHasPresenterPayload>(mirrors[0]))
         {
-            engine.World.Get<PresentationOwnerHasPerformerPayload>(mirrors[0]).Count = 1;
+            engine.World.Get<PresentationOwnerHasPresenterPayload>(mirrors[0]).Count = 1;
         }
         else
         {
-            engine.World.Add(mirrors[0], new PresentationOwnerHasPerformerPayload { Count = 1 });
+            engine.World.Add(mirrors[0], new PresentationOwnerHasPresenterPayload { Count = 1 });
         }
 
         presentation.Update(1f / 60f);
         Assert.That(runtime.OpeningView.IsReady, Is.False,
             "The default map-center camera must not satisfy opening-view readiness.");
 
-        engine.GameSession.Camera.ApplyPose(request);
+        ClientLocalSeatAccess.RequireSolePresentCamera(engine).ApplyPose(request);
         engine.GlobalContext.Remove(CoreServiceKeys.CameraPoseRequest.Name);
-        engine.GameSession.Camera.Update(0f);
+        ClientLocalSeatAccess.RequireSolePresentCamera(engine).Update(0f);
         culling.CameraTargetCm = authoredFocusTarget;
         culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision;
         presentation.Update(1f / 60f);
@@ -491,7 +491,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         });
 
         var viewport = new StubViewController(1280f, 720f);
-        var projector = new CoreScreenProjector(engine.GameSession.Camera, viewport);
+        var projector = new CoreScreenProjector(ClientLocalSeatAccess.RequireSolePresentCamera(engine), viewport);
         engine.SetService(CoreServiceKeys.ScreenProjector, projector);
         for (int roleIndex = 0; roleIndex < mirrors.Length; roleIndex++)
         {
@@ -605,8 +605,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     {
         using GameEngine engine = CreateStartedReplicatedClientEngine();
         engine.LoadStartupMap();
-        Assert.That(engine.GetService(CoreServiceKeys.LocalPlayerId), Is.Zero);
-        Assert.That(engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity _), Is.False);
+        Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity _), Is.False);
+        Assert.That(ClientLocalSeatAccess.RequireRegistry(engine).Count, Is.Zero);
         engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
         {
             Id = "Rts.Frontline",
@@ -619,7 +619,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.Multiple(() =>
         {
             Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo("Rts.Frontline"));
+            Assert.That(ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain?.ActiveCameraId, Is.EqualTo("Rts.Frontline"));
         });
     }
 
@@ -835,16 +835,15 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(
             engine.CurrentMapSession!.PlayerEntityLookup.TryGet(config.Sides[0].PlayerId, out Entity viewer),
             Is.True);
-        engine.SetService(CoreServiceKeys.LocalPlayerId, config.Sides[0].PlayerId);
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
+        BindSoleLocalSeat(engine, config.Sides[0].PlayerId, viewer);
         IViewController view = engine.GetService(CoreServiceKeys.ViewController)
             ?? throw new InvalidOperationException("Frontline replication test requires a view controller.");
         engine.SetService(
             CoreServiceKeys.ScreenProjector,
-            (IScreenProjector)new CoreScreenProjector(engine.GameSession.Camera, view));
+            (IScreenProjector)new CoreScreenProjector(ClientLocalSeatAccess.RequireSolePresentCamera(engine), view));
         engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(new CameraCullingSystem(
             engine.World,
-            engine.GameSession.Camera,
+            ClientLocalSeatAccess.RequireSolePresentCamera(engine),
             engine.SpatialQueries,
             view,
             cullingConfig: engine.MergedConfig!.Presentation.CameraCulling));
@@ -1036,10 +1035,10 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         engine.Tick(1f / 60f);
         engine.Tick(1f / 60f);
 
-        PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-            ?? throw new InvalidOperationException("PerformerDefinitionRegistry is unavailable.");
-        PerformerEntityRuntime performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-            ?? throw new InvalidOperationException("PerformerEntityRuntime is unavailable.");
+        PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("PresenterDefinitionRegistry is unavailable.");
+        PresenterEntityRuntime performers = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+            ?? throw new InvalidOperationException("PresenterEntityRuntime is unavailable.");
         for (int i = 0; i < mirrors.Length; i++)
         {
             Entity mirror = mirrors[i];
@@ -2119,7 +2118,33 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         engine.SetService(CoreServiceKeys.NetworkRuntimePort, runtimePort);
         engine.SetService(CoreServiceKeys.ReplicatedClientCommandPort, commandPort);
         engine.SetService(CoreServiceKeys.NetworkRuntimeStateObserver, observer);
-        engine.SetService(CoreServiceKeys.LocalPlayerId, config.Sides[0].PlayerId);
+        if (!engine.CurrentMapSession!.PlayerEntityLookup.TryGet(config.Sides[0].PlayerId, out Entity sideRep))
+        {
+            throw new InvalidOperationException(
+                $"Frontline client feedback requires player {config.Sides[0].PlayerId} to exist in the loaded map session.");
+        }
+
+        BindSoleLocalSeat(engine, config.Sides[0].PlayerId, sideRep);
+    }
+
+    private static void BindSoleLocalSeat(GameEngine engine, int playerId, Entity possessedRep)
+    {
+        ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine);
+        seats.ReplaceAll(new[]
+        {
+            new ClientLocalSeat("seat.0")
+            {
+                PossessedPlayerId = playerId,
+                PossessedRep = possessedRep,
+            },
+        });
+        LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(engine);
+        string viewId = views.EnsureDefaultView(possessedRep);
+        seats.SetPresentBinding("seat.0", PresentBinding.FullScreen(viewId, new Vector2(1280f, 720f)));
+        engine.CurrentMapSession!.LocalSeats = new[]
+        {
+            new ResolvedLocalSeatPossession("seat.0", playerId, possessedRep, ControlSchemeId: null),
+        };
     }
 
     private static void AddMatchMirror(

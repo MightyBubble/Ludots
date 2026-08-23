@@ -9,7 +9,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -560,7 +560,8 @@ namespace Ludots.Core.Presentation.Minimap
             var clamped = new Vector2(
                 Math.Clamp(worldCm.X, bounds.Left, bounds.Right),
                 Math.Clamp(worldCm.Y, bounds.Top, bounds.Bottom));
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest { TargetCm = clamped });
+            Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine)
+                .ApplyPose(new CameraPoseRequest { TargetCm = clamped });
             _cameraTargetXcm = clamped.X;
             _cameraTargetYcm = clamped.Y;
         }
@@ -721,7 +722,7 @@ namespace Ludots.Core.Presentation.Minimap
 
             if (Preset == MinimapPreset.FollowCamera)
             {
-                Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+                Vector2 cameraTarget = Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
                 _centerXcm = cameraTarget.X;
                 _centerYcm = cameraTarget.Y;
                 _viewportInitialized = true;
@@ -1031,7 +1032,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            CameraState state = engine.GameSession.Camera.State;
+            CameraState state = Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State;
             WorldPlane2D.CameraMinimapBasisFromYawDegrees(state.Yaw, out Vector2 right, out Vector2 forward);
             _mapUp = WorldPlane2D.NormalizeOrDefault(forward, Vector2.UnitY);
             _mapRight = WorldPlane2D.NormalizeOrDefault(right, Vector2.UnitX);
@@ -1040,7 +1041,7 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void UpdateCameraFrustum(GameEngine engine)
         {
-            CameraState state = engine.GameSession.Camera.State;
+            CameraState state = Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State;
             _cameraTargetXcm = state.TargetCm.X;
             _cameraTargetYcm = state.TargetCm.Y;
             _cameraFrustumVisible = false;
@@ -1074,10 +1075,10 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            if (engine.World.TryGet(entity, out PerformerWorldPlanePosition performerPlanePosition))
+            if (engine.World.TryGet(entity, out PresenterWorldPlanePosition presenterPlanePosition))
             {
-                worldXcm = performerPlanePosition.ValueCm.X;
-                worldYcm = performerPlanePosition.ValueCm.Y;
+                worldXcm = presenterPlanePosition.ValueCm.X;
+                worldYcm = presenterPlanePosition.ValueCm.Y;
                 return true;
             }
 
@@ -1405,7 +1406,7 @@ namespace Ludots.Core.Presentation.Minimap
 
         private bool TryProjectCameraCorner(
             Vector2 screenCorner,
-            in Ludots.Core.Presentation.Camera.CameraRenderState3D camera,
+            in Ludots.Platform.Abstractions.CameraRenderState3D camera,
             Vector2 resolution,
             float aspect,
             int index)

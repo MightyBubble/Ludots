@@ -9,6 +9,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -523,6 +524,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     $"Order type {order.OrderTypeId} references missing validation graph {config.ValidationGraphId}.");
             }
 
+            GraphKind kind = _graphProgramRegistry.RequireKind(config.ValidationGraphId, GraphKind.Validation);
             var targetPos = new IntVector2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
             bool passed = GasGraphExecutor.ExecuteValidation(
                 World,
@@ -530,7 +532,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 order.Target,
                 targetPos,
                 validationProgram,
-                _graphApi);
+                _graphApi,
+                kind,
+                programs: _graphProgramRegistry);
             return passed ? OrderSubmitResult.Activated : OrderSubmitResult.RejectedValidation;
         }
 

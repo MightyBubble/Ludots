@@ -6,17 +6,18 @@ using CoreInputMod;
 using CoreInputMod.ViewMode;
 using CoreInputMod.Triggers;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -24,6 +25,7 @@ using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
+using Ludots.Platform.Abstractions;
 
 namespace CameraAcceptanceMod.Runtime
 {
@@ -39,8 +41,6 @@ namespace CameraAcceptanceMod.Runtime
 
         private CameraAcceptancePanelController? _panelController;
         private bool _commandSourceAcquiredCallbacksInstalled;
-        private const string ProjectionCueFixturePrefabKey = "camera_acceptance_projection_cue_fixture_prefab";
-        private int _cueMarkerPrefabId;
         private string _lastConfiguredMapId = string.Empty;
 
         internal static void InitializeProjectionSpawnCount(GameEngine engine)
@@ -146,42 +146,16 @@ namespace CameraAcceptanceMod.Runtime
                 return false;
             }
 
-            if (!TryFindEntityByName(engine.World, CameraAcceptanceIds.HeroName, out Entity hero))
+            owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
             {
-                return false;
-            }
-
-            owner = hero;
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            if (engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = owner;
-            }
-
-            if (TryResolvePlayerId(engine.World, owner, out int playerId))
-            {
-                engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
-                if (engine.CurrentMapSession != null)
-                {
-                    engine.CurrentMapSession.LocalPlayerId = playerId;
-                }
+                throw new System.InvalidOperationException(
+                    "Camera acceptance requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
             PublishEmptyCommandSourceCollection(engine, owner);
             PublishLocalKnowledge(engine, owner);
             return true;
-        }
-
-        private static bool TryResolvePlayerId(World world, Entity owner, out int playerId)
-        {
-            playerId = 0;
-            if (owner == Entity.Null || !world.IsAlive(owner) || !world.Has<PlayerOwner>(owner))
-            {
-                return false;
-            }
-
-            playerId = world.Get<PlayerOwner>(owner).PlayerId;
-            return playerId > 0;
         }
 
         private static void PublishEmptyCommandSourceCollection(GameEngine engine, Entity owner)
@@ -487,18 +461,41 @@ namespace CameraAcceptanceMod.Runtime
 
         private void EmitCueMarker(GameEngine engine, in WorldCmInt2 worldCm)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markersObj) ||
-                markersObj is not TransientMarkerBuffer markers)
+            if (engine.GetService(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
             {
-                throw new System.InvalidOperationException("TransientMarkerBuffer is required for projection verification.");
+                throw new System.InvalidOperationException("PresenterCommandBuffer is required for projection verification.");
             }
 
-            markers.TryAddPrefab(
-                ResolveCueMarkerPrefabId(engine),
-                WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
-                new Vector3(0.45f),
-                new Vector4(0.15f, 0.88f, 1f, 1f),
-                0.45f);
+            if (engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry) is not PresenterDefinitionRegistry definitions)
+            {
+                throw new System.InvalidOperationException("PresenterDefinitionRegistry is required for projection verification.");
+            }
+
+            int defId = definitions.GetId(CameraAcceptanceIds.ProjectionCueFixturePresenterId);
+            if (defId <= 0 || !definitions.TryGet(defId, out PresenterDefinition definition))
+            {
+                throw new System.InvalidOperationException(
+                    $"Presenter '{CameraAcceptanceIds.ProjectionCueFixturePresenterId}' is required for projection verification.");
+            }
+
+            if (definition.DefaultLifetime <= 0f || !float.IsFinite(definition.DefaultLifetime))
+            {
+                throw new System.InvalidOperationException(
+                    $"Presenter '{CameraAcceptanceIds.ProjectionCueFixturePresenterId}' lifecycle.durationSeconds must be > 0.");
+            }
+
+            if (!commands.TryAdd(new PresenterCommand
+            {
+                CommandKind = PresenterCommandKind.CreatePresenter,
+                PresenterDefinitionId = defId,
+                Source = Entity.Null,
+                AnchorKind = PresentationAnchorKind.WorldPosition,
+                Position = WorldUnits.WorldCmToVisualMeters(worldCm),
+            }))
+            {
+                throw new System.InvalidOperationException(
+                    "PresenterCommandBuffer overflowed while emitting the projection verification cue presenter tree.");
+            }
         }
 
         private static void EnqueueProjectionSpawnBatch(GameEngine engine, in WorldCmInt2 worldCm)
@@ -567,27 +564,6 @@ namespace CameraAcceptanceMod.Runtime
         private static float Hash01(uint seed)
         {
             return (Hash(seed) & 0x00FFFFFFu) / 16777216f;
-        }
-
-        private int ResolveCueMarkerPrefabId(GameEngine engine)
-        {
-            if (_cueMarkerPrefabId != 0)
-            {
-                return _cueMarkerPrefabId;
-            }
-
-            if (engine.GetService(CoreServiceKeys.PresentationPrefabRegistry) is not PrefabRegistry prefabs)
-            {
-                throw new System.InvalidOperationException("PresentationPrefabRegistry is required for projection verification.");
-            }
-
-            _cueMarkerPrefabId = prefabs.GetId(ProjectionCueFixturePrefabKey);
-            if (_cueMarkerPrefabId == 0)
-            {
-                throw new System.InvalidOperationException($"Prefab '{ProjectionCueFixturePrefabKey}' is required for projection verification.");
-            }
-
-            return _cueMarkerPrefabId;
         }
 
         private static string ResolveActiveBlendCameraId(GameEngine engine)

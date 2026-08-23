@@ -45,7 +45,16 @@ try
 
             Console.WriteLine($"adapter={result.Plan?.AdapterId ?? ResolveRequestedAdapter(service, command)}");
             Console.WriteLine($"pid={result.Pid}");
-            Console.WriteLine($"bootstrap={result.BootstrapPath}");
+            if (result.Plan is { IsExecutableTarget: true })
+            {
+                Console.WriteLine($"executable={result.Plan.AppAssemblyPath}");
+                Console.WriteLine($"executableArgs={JoinExecutableArgs(result.Plan.ExecutableArgs)}");
+            }
+            else
+            {
+                Console.WriteLine($"bootstrap={result.BootstrapPath}");
+            }
+
             foreach (LauncherStartedProcess process in result.Processes)
             {
                 Console.WriteLine(
@@ -346,6 +355,11 @@ static async Task<int> RunRecordedLaunchAsync(
     string[] rawArgs)
 {
     var resolveResult = service.Resolve(selectors, adapterId, command.BuildMode);
+    if (resolveResult.Plan.IsExecutableTarget)
+    {
+        return await RunRecordedExecutableLaunchAsync(service, selectors, adapterId, resolveResult.Plan, command);
+    }
+
     var buildResults = await service.BuildAsync(selectors, adapterId, command.BuildMode);
     int buildExitCode = PrintBuildResults(buildResults);
     if (buildExitCode != 0)
@@ -380,6 +394,38 @@ static async Task<int> RunRecordedLaunchAsync(
     return 0;
 }
 
+static async Task<int> RunRecordedExecutableLaunchAsync(
+    LauncherService service,
+    IReadOnlyList<string> selectors,
+    string adapterId,
+    LauncherLaunchPlan plan,
+    CliCommand command)
+{
+    var buildResults = await service.BuildAsync(selectors, adapterId, command.BuildMode);
+    int buildExitCode = PrintBuildResults(buildResults);
+    if (buildExitCode != 0)
+    {
+        return buildExitCode;
+    }
+
+    var run = await service.ExecuteExecutableTargetAsync(plan);
+    Console.WriteLine($"adapter={plan.AdapterId}");
+    Console.WriteLine($"executableProject={plan.ExecutableProjectPath}");
+    Console.WriteLine($"command={run.CommandLine}");
+    if (!string.IsNullOrWhiteSpace(run.Output))
+    {
+        Console.WriteLine(run.Output);
+    }
+
+    Console.WriteLine($"exitCode={run.ExitCode}");
+    return run.ExitCode;
+}
+
+static string JoinExecutableArgs(IReadOnlyList<string>? args)
+{
+    return args == null || args.Count == 0 ? string.Empty : string.Join(' ', args);
+}
+
 static void PrintResolveResult(LauncherResolveResult result, bool asJson)
 {
     if (asJson)
@@ -393,7 +439,17 @@ static void PrintResolveResult(LauncherResolveResult result, bool asJson)
     Console.WriteLine($"selectors={string.Join(", ", result.Plan.Selectors)}");
     Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
     Console.WriteLine($"orderedMods={string.Join(", ", result.Plan.OrderedModIds)}");
-    Console.WriteLine($"bootstrap={result.Plan.BootstrapArtifactPath}");
+    if (result.Plan.IsExecutableTarget)
+    {
+        Console.WriteLine($"executableProject={result.Plan.ExecutableProjectPath}");
+        Console.WriteLine($"executableAssembly={result.Plan.AppAssemblyPath}");
+        Console.WriteLine($"executableArgs={JoinExecutableArgs(result.Plan.ExecutableArgs)}");
+    }
+    else
+    {
+        Console.WriteLine($"bootstrap={result.Plan.BootstrapArtifactPath}");
+    }
+
     PrintPlanDiagnostics(result.Plan.Diagnostics);
     Console.WriteLine();
     foreach (var mod in result.Plan.Mods)
@@ -596,7 +652,7 @@ Commands
   workspace list
   workspace add --path <mod-root-parent>
   binding list
-  binding set <name> (--path <modRoot> | --mod <modId>) [--project <relativeOrAbsoluteCsproj>]
+  binding set <name> (--path <modRoot> | --mod <modId> | --target-type project --target <repoRelativeCsproj>) [--project <relativeOrAbsoluteCsproj>]
   binding delete <name>
   preset list
   preset save --name <name> [selectors...] [--adapter raylib|web] [--build auto|always|never]
@@ -619,6 +675,8 @@ Examples
   .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter web
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
+  .\scripts\run-mod-launcher.cmd cli resolve engine_gallery
+  .\scripts\run-mod-launcher.cmd cli launch preset:engine_gallery_skybox --record artifacts/acceptance/engine-gallery-skybox
   .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod
   .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
 """);

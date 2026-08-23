@@ -7,13 +7,14 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
+using Ludots.Platform.Abstractions;
 
 namespace AnimationAcceptanceMod.UI
 {
@@ -414,28 +415,28 @@ namespace AnimationAcceptanceMod.UI
             var definitionLookup = new Dictionary<int, AnimationAcceptanceRigDefinition>();
             for (int i = 0; i < AnimationAcceptanceRigCatalog.All.Length; i++)
             {
-                string performerKey = AnimationAcceptanceRigCatalog.All[i].RigId switch
+                string presenterKey = AnimationAcceptanceRigCatalog.All[i].RigId switch
                 {
-                    AnimationAcceptanceRigId.Tank => AnimationAcceptanceIds.TankPerformerDefinitionId,
-                    AnimationAcceptanceRigId.Humanoid => AnimationAcceptanceIds.HumanoidPerformerDefinitionId,
+                    AnimationAcceptanceRigId.Tank => AnimationAcceptanceIds.TankPresenterDefinitionId,
+                    AnimationAcceptanceRigId.Humanoid => AnimationAcceptanceIds.HumanoidPresenterDefinitionId,
                     _ => string.Empty,
                 };
 
-                int definitionId = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                    ?.GetId(performerKey) ?? 0;
+                int definitionId = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                    ?.GetId(presenterKey) ?? 0;
                 if (definitionId > 0)
                 {
                     definitionLookup[definitionId] = AnimationAcceptanceRigCatalog.All[i];
                 }
             }
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-                ?? throw new InvalidOperationException("Animation acceptance requires PerformerEntityRuntime.");
-            var animatorStates = engine.GetService(CoreServiceKeys.PerformerAnimatorStateBuffer)
-                ?? throw new InvalidOperationException("Animation acceptance requires PerformerAnimatorStateBuffer.");
+            var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+                ?? throw new InvalidOperationException("Animation acceptance requires PresenterEntityRuntime.");
+            var animatorStates = engine.GetService(CoreServiceKeys.PresenterAnimatorStateBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance requires PresenterAnimatorStateBuffer.");
             var result = new Dictionary<AnimationAcceptanceRigId, RigRuntimeSample>();
-            var query = new QueryDescription().WithAll<PerformerState>();
-            engine.World.Query(in query, (Entity entity, ref PerformerState instance) =>
+            var query = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in query, (Entity entity, ref PresenterState instance) =>
             {
                 if (!animatorStates.IsAllocated(entity))
                 {
@@ -582,18 +583,19 @@ namespace AnimationAcceptanceMod.UI
             return stateIndex < 0 ? "None" : $"[{stateIndex}] Unknown";
         }
 
-        private static string BuildClipLine(string slotLabel, AnimatorBuiltinClipState clip)
+        private static string BuildClipLine(string slotLabel, AnimationChannelState clip)
         {
             if (!clip.IsActive)
             {
                 return $"{slotLabel} = None";
             }
 
-            string scalar0 = clip.ClipId == AnimatorBuiltinClipId.AimYawOffset
+            string channelName = AnimationChannelRegistry.GetName(clip.ChannelId);
+            string scalar0 = clip.ChannelId == AnimationChannelRegistry.Register(AnimationChannelRegistry.AimYaw)
                 ? $"{ToDegrees(clip.Scalar0):0.0} deg"
                 : $"{clip.Scalar0:0.00}";
 
-            return $"{slotLabel} = {clip.ClipId}  time = {clip.NormalizedTime01:0.000}  weight = {clip.Weight01:0.00}  s0 = {scalar0}";
+            return $"{slotLabel} = {channelName}  time = {clip.NormalizedTime01:0.000}  weight = {clip.Weight01:0.00}  s0 = {scalar0}";
         }
 
         private static string[] BuildFeedbackLines(AnimatorFeedbackBuffer feedback, string[] stateLabels)

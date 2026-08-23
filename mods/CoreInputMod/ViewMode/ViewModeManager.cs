@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CoreInputMod.ViewMode
@@ -205,8 +206,7 @@ namespace CoreInputMod.ViewMode
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    local != Entity.Null &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;

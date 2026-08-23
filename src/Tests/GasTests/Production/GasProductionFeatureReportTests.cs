@@ -18,6 +18,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Spatial;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -157,13 +158,12 @@ namespace Ludots.Tests.GAS.Production
                 var budget = new RootBudgetTable(64);
                 var ctx = new EffectContext { RootId = 123, Source = hero, Target = enemy1, TargetContext = default };
                 var tmpBuf = new Entity[64];
-                int dropped = 0;
                 int cand = TargetResolverFanOutHelper.ResolveTargets(world, in ctx, in eTpl.TargetQuery, engine.SpatialQueries, tmpBuf);
                 steps.Add(new StepResult("TargetResolver ResolveTargets returns candidates", cand >= 2, $"Count={cand}"));
                 TargetResolverFanOutHelper.CollectFanOutTargets(
                     world, in ctx, in eTpl.TargetQuery, in eTpl.TargetFilter, in eTpl.TargetDispatch,
-                    engine.SpatialQueries, budget, cmds, tmpBuf, ref dropped);
-                steps.Add(new StepResult("TargetResolver creates fan-out commands", cmds.Count >= 2, $"Count={cmds.Count} Dropped={dropped}"));
+                    engine.SpatialQueries, budget, cmds, tmpBuf);
+                steps.Add(new StepResult("TargetResolver creates fan-out commands", cmds.Count >= 2, $"Count={cmds.Count}"));
             }
 
             CastAbility(engine, hero, enemy1, slot: 2);
@@ -175,10 +175,11 @@ namespace Ludots.Tests.GAS.Production
 
             var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
             int dotId = EffectTemplateIdRegistry.GetId("Effect.Moba.DOT.Burn");
-            effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy1, TargetContext = default, TemplateId = dotId });
-            Tick(engine, 25);
-            float e1AfterDot = world.Get<AttributeBuffer>(enemy1).GetCurrent(healthId);
-            steps.Add(CheckNear("DoT Burn applies immediately and ticks once", e1AfterE - 6f, e1AfterDot));
+            effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy2, TargetContext = default, TemplateId = dotId });
+            GameplayEffect dotEffect = TickUntilCommittedEffect(engine, enemy2, dotId);
+            TickUntilFixedFrame(engine, dotEffect.NextTickAtTick);
+            float e2AfterDot = world.Get<AttributeBuffer>(enemy2).GetCurrent(healthId);
+            steps.Add(CheckNear("DoT Burn applies immediately and ticks once", e2AfterE - 6f, e2AfterDot));
 
             int hotId = EffectTemplateIdRegistry.GetId("Effect.Moba.HOT.Regen");
             int qId = EffectTemplateIdRegistry.GetId("Effect.Moba.Damage.Q");
@@ -358,6 +359,43 @@ namespace Ludots.Tests.GAS.Production
 
                 engine.Tick(1f / 60f);
             }
+        }
+
+        private static GameplayEffect TickUntilCommittedEffect(
+            GameEngine engine,
+            Entity target,
+            int templateId)
+        {
+            World world = engine.World;
+            for (int guard = 0; guard < 10_000; guard++)
+            {
+                if (world.Has<ActiveEffectContainer>(target))
+                {
+                    ActiveEffectContainer container = world.Get<ActiveEffectContainer>(target);
+                    for (int i = 0; i < container.Count; i++)
+                    {
+                        Entity effectEntity = container.GetEntity(i);
+                        if (!world.IsAlive(effectEntity) ||
+                            !world.Has<EffectTemplateRef>(effectEntity) ||
+                            world.Get<EffectTemplateRef>(effectEntity).TemplateId != templateId ||
+                            !world.Has<GameplayEffect>(effectEntity))
+                        {
+                            continue;
+                        }
+
+                        GameplayEffect effect = world.Get<GameplayEffect>(effectEntity);
+                        if (effect.State == EffectState.Committed && effect.NextTickAtTick > 0)
+                        {
+                            return effect;
+                        }
+                    }
+                }
+
+                engine.Tick(1f / 60f);
+            }
+
+            throw new InvalidOperationException(
+                $"Effect template {templateId} did not reach a committed periodic state on target {target.Id}.");
         }
 
         private static int RequireTimedTagExpiration(World world, Entity entity, int tagId)

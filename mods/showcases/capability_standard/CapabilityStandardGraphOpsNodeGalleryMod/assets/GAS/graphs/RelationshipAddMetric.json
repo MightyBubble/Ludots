@@ -1,0 +1,126 @@
+[
+  {
+    "id": "showcase.graph_op.RelationshipAddMetric",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "baseLoyalty",
+        "op": "ConstInt",
+        "intValue": 40
+      },
+      {
+        "id": "delta",
+        "op": "ConstInt",
+        "intValue": 30
+      },
+      {
+        "id": "ensure",
+        "op": "RelationshipEnsureLink",
+        "relationshipType": "SocialBond"
+      },
+      {
+        "id": "setMetric",
+        "op": "RelationshipSetMetric",
+        "relationshipType": "SocialBond",
+        "metric": "Loyalty"
+      },
+      {
+        "id": "addMetric",
+        "op": "RelationshipAddMetric",
+        "relationshipType": "SocialBond",
+        "metric": "Loyalty"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "baseLoyalty"
+      },
+      {
+        "from": "baseLoyalty",
+        "fromPort": "next",
+        "to": "delta"
+      },
+      {
+        "from": "delta",
+        "fromPort": "next",
+        "to": "ensure"
+      },
+      {
+        "from": "ensure",
+        "fromPort": "next",
+        "to": "setMetric"
+      },
+      {
+        "from": "setMetric",
+        "fromPort": "next",
+        "to": "addMetric"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "ensure",
+        "toPort": "source"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "ensure",
+        "toPort": "target"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "setMetric",
+        "toPort": "source"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "setMetric",
+        "toPort": "target"
+      },
+      {
+        "from": "baseLoyalty",
+        "fromPort": "value",
+        "to": "setMetric",
+        "toPort": "value"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "addMetric",
+        "toPort": "source"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "addMetric",
+        "toPort": "target"
+      },
+      {
+        "from": "delta",
+        "fromPort": "value",
+        "to": "addMetric",
+        "toPort": "value"
+      }
+    ]
+  }
+]

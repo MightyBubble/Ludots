@@ -1,0 +1,100 @@
+[
+  {
+    "id": "showcase.graph_op.SelectEntity",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "cond",
+        "op": "CompareEqEntity"
+      },
+      {
+        "id": "pick",
+        "op": "SelectEntity"
+      },
+      {
+        "id": "strike",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.GraphOps.Strike"
+      },
+      {
+        "id": "done",
+        "op": "ConstFloat",
+        "floatValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "cond"
+      },
+      {
+        "from": "cond",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "strike"
+      },
+      {
+        "from": "strike",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "cond",
+        "toPort": "a"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "cond",
+        "toPort": "b"
+      },
+      {
+        "from": "cond",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "condition"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "a"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "b"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "strike",
+        "toPort": "target"
+      }
+    ]
+  }
+]

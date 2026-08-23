@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/camera-baseline.yml'
+      - 'global.json'
       - 'assets/Configs/Camera/**'
       - 'mods/LudotsCoreMod/assets/Entities/templates.json'
       - 'mods/capabilities/camera/**'
@@ -19,6 +20,7 @@ on:
       - main
     paths:
       - '.github/workflows/camera-baseline.yml'
+      - 'global.json'
       - 'assets/Configs/Camera/**'
       - 'mods/LudotsCoreMod/assets/Entities/templates.json'
       - 'mods/capabilities/camera/**'
@@ -45,10 +47,6 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
-
-      - name: Pin camera baseline SDK
-        shell: pwsh
-        run: dotnet new globaljson --sdk-version 9.0.100 --roll-forward latestFeature --force
 
       - name: Build core
         shell: pwsh

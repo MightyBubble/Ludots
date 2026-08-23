@@ -5,10 +5,11 @@ using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Scripting;
 using SplineSurfaceUatMod.Runtime;
+using Ludots.Platform.Abstractions;
 
 namespace SplineSurfaceUatMod.Systems
 {
@@ -16,23 +17,23 @@ namespace SplineSurfaceUatMod.Systems
     {
         private readonly GameEngine _engine;
         private readonly SplineSurfaceUatRuntime _runtime;
-        private readonly PerformerCommandBuffer? _commands;
+        private readonly PresenterCommandBuffer? _commands;
         private readonly SurfaceSourcePayloadRegistry? _payloads;
-        private readonly PerformerDefinitionRegistry? _performers;
+        private readonly PresenterDefinitionRegistry? _presenters;
         private readonly PresentationMaterialRegistry? _materials;
         private bool _bound;
-        private int _roadPerformerId;
-        private int _riverPerformerId;
-        private int _lakePerformerId;
-        private int _rawPerformerId;
+        private int _roadPresenterId;
+        private int _riverPresenterId;
+        private int _lakePresenterId;
+        private int _rawPresenterId;
 
         public SplineSurfaceUatPresentationSystem(GameEngine engine, SplineSurfaceUatRuntime runtime)
         {
             _engine = engine;
             _runtime = runtime;
-            _commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer);
+            _commands = engine.GetService(CoreServiceKeys.PresenterCommandBuffer);
             _payloads = engine.GetService(CoreServiceKeys.SurfaceSourcePayloadRegistry);
-            _performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
+            _presenters = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry);
             _materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
         }
 
@@ -46,7 +47,7 @@ namespace SplineSurfaceUatMod.Systems
 
         public void Update(in float dt)
         {
-            if (_commands == null || _payloads == null || _performers == null || _materials == null)
+            if (_commands == null || _payloads == null || _presenters == null || _materials == null)
             {
                 return;
             }
@@ -67,17 +68,17 @@ namespace SplineSurfaceUatMod.Systems
                 return;
             }
 
-            ResolvePerformerIds();
-            BindSurface(SplineSurfaceUatIds.RoadScopeId, _roadPerformerId, SplineSurfaceUatIds.RoadAnchorWorld);
+            ResolvePresenterIds();
+            BindSurface(SplineSurfaceUatIds.RoadScopeId, _roadPresenterId, SplineSurfaceUatIds.RoadAnchorWorld);
             _payloads.SetSplineRibbon(SplineSurfaceUatIds.RoadScopeId, BuildRoadSegments());
 
-            BindSurface(SplineSurfaceUatIds.RiverScopeId, _riverPerformerId, SplineSurfaceUatIds.RiverAnchorWorld);
+            BindSurface(SplineSurfaceUatIds.RiverScopeId, _riverPresenterId, SplineSurfaceUatIds.RiverAnchorWorld);
             _payloads.SetSplineRibbon(SplineSurfaceUatIds.RiverScopeId, BuildRiverSegments());
 
-            BindSurface(SplineSurfaceUatIds.LakeScopeId, _lakePerformerId, SplineSurfaceUatIds.LakeAnchorWorld);
+            BindSurface(SplineSurfaceUatIds.LakeScopeId, _lakePresenterId, SplineSurfaceUatIds.LakeAnchorWorld);
             _payloads.SetClosedArea(SplineSurfaceUatIds.LakeScopeId, BuildLakeBoundary());
 
-            BindSurface(SplineSurfaceUatIds.RawScopeId, _rawPerformerId, SplineSurfaceUatIds.RawAnchorWorld);
+            BindSurface(SplineSurfaceUatIds.RawScopeId, _rawPresenterId, SplineSurfaceUatIds.RawAnchorWorld);
             _payloads.SetRawProceduralMesh(SplineSurfaceUatIds.RawScopeId, BuildRawMesh(), SplineSurfaceUatIds.RawAnchorWorld);
 
             _bound = true;
@@ -92,32 +93,32 @@ namespace SplineSurfaceUatMod.Systems
         {
         }
 
-        private void ResolvePerformerIds()
+        private void ResolvePresenterIds()
         {
-            _roadPerformerId = _performers!.GetId(SplineSurfaceUatIds.RoadPerformerId);
-            _riverPerformerId = _performers.GetId(SplineSurfaceUatIds.RiverPerformerId);
-            _lakePerformerId = _performers.GetId(SplineSurfaceUatIds.LakePerformerId);
-            _rawPerformerId = _performers.GetId(SplineSurfaceUatIds.RawPerformerId);
+            _roadPresenterId = _presenters!.GetId(SplineSurfaceUatIds.RoadPresenterId);
+            _riverPresenterId = _presenters.GetId(SplineSurfaceUatIds.RiverPresenterId);
+            _lakePresenterId = _presenters.GetId(SplineSurfaceUatIds.LakePresenterId);
+            _rawPresenterId = _presenters.GetId(SplineSurfaceUatIds.RawPresenterId);
         }
 
-        private void BindSurface(int scopeId, int performerDefinitionId, in Vector3 worldAnchor)
+        private void BindSurface(int scopeId, int presenterDefinitionId, in Vector3 worldAnchor)
         {
-            if (performerDefinitionId <= 0)
+            if (presenterDefinitionId <= 0)
             {
-                throw new InvalidOperationException("Spline surface UAT performer definitions must be registered before presentation bind.");
+                throw new InvalidOperationException("Spline surface UAT presenter definitions must be registered before presentation bind.");
             }
 
-            if (!_commands!.TryAdd(new PerformerCommand
+            if (!_commands!.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.CreatePerformer,
-                    PerformerDefinitionId = performerDefinitionId,
+                    CommandKind = PresenterCommandKind.CreatePresenter,
+                    PresenterDefinitionId = presenterDefinitionId,
                     ScopeTag = scopeId,
                     Source = Entity.Null,
                     AnchorKind = PresentationAnchorKind.WorldPosition,
                     Position = worldAnchor,
                 }))
             {
-                throw new InvalidOperationException($"Spline surface UAT failed to create performer scope {scopeId}.");
+                throw new InvalidOperationException($"Spline surface UAT failed to create presenter scope {scopeId}.");
             }
         }
 
@@ -133,13 +134,13 @@ namespace SplineSurfaceUatMod.Systems
         private void RemoveSurface(int scopeId)
         {
             _payloads!.Remove(scopeId);
-            if (!_commands!.TryAdd(new PerformerCommand
+            if (!_commands!.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                    CommandKind = PresenterCommandKind.DestroyPresenterScope,
                     ScopeTag = scopeId,
                 }))
             {
-                throw new InvalidOperationException($"Spline surface UAT failed to destroy performer scope {scopeId}.");
+                throw new InvalidOperationException($"Spline surface UAT failed to destroy presenter scope {scopeId}.");
             }
         }
 

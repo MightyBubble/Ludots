@@ -21,12 +21,13 @@ namespace Ludots.Core.Knowledge
         public static bool TryResolve(
             World world,
             Dictionary<string, object> globals,
-            Entity fallbackViewer,
+            Entity viewer,
             Entity target,
             out KnowledgeProjection projection)
         {
             projection = default;
-            if (!TryResolveViewer(world, globals, fallbackViewer, out Entity viewer) ||
+            if (viewer == Entity.Null ||
+                !world.IsAlive(viewer) ||
                 !TryGetResolver(globals, out KnowledgeProjectionResolver resolver))
             {
                 return false;
@@ -55,12 +56,12 @@ namespace Ludots.Core.Knowledge
         public static bool CanReadPosition(
             World world,
             Dictionary<string, object> globals,
-            Entity fallbackViewer,
+            Entity viewer,
             Entity target,
             KnowledgePositionAccess requiredPosition,
             out KnowledgeProjection projection)
         {
-            return TryResolve(world, globals, fallbackViewer, target, out projection) &&
+            return TryResolve(world, globals, viewer, target, out projection) &&
                    projection.CanReadPosition(requiredPosition);
         }
 
@@ -129,19 +130,19 @@ namespace Ludots.Core.Knowledge
                    projection.CanReadPosition(requiredPosition);
         }
 
-        public static bool TryResolveViewer(
+        public static bool TryResolveSoleLocalSeatViewer(
             World world,
             Dictionary<string, object> globals,
-            Entity fallbackViewer,
             out Entity viewer)
         {
-            if (TryResolveViewerFromKey(world, globals, CoreServiceKeys.LocalPlayerEntity.Name, out viewer))
+            if (Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out viewer) &&
+                world.IsAlive(viewer))
             {
                 return true;
             }
 
-            viewer = fallbackViewer;
-            return viewer != Entity.Null && world.IsAlive(viewer);
+            viewer = Entity.Null;
+            return false;
         }
 
         public static int ResolveCurrentTick(Dictionary<string, object> globals)
@@ -165,18 +166,5 @@ namespace Ludots.Core.Knowledge
                    (resolver = candidate) != null;
         }
 
-        private static bool TryResolveViewerFromKey(
-            World world,
-            Dictionary<string, object> globals,
-            string key,
-            out Entity viewer)
-        {
-            viewer = default;
-            return globals.TryGetValue(key, out object? viewerObj) &&
-                   viewerObj is Entity candidate &&
-                   candidate != Entity.Null &&
-                   world.IsAlive(candidate) &&
-                   (viewer = candidate) != Entity.Null;
-        }
     }
 }

@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_graph_op_RelationshipHasLink",
+  "windowTitle": "Ludots - 我们有没有连着",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

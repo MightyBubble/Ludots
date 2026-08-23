@@ -1,0 +1,34 @@
+{
+  "op": "CompareLtInt",
+  "driver": "attr",
+  "title": "血量过线没：过线轻击，没过线全力",
+  "beat": "木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。",
+  "detailTemplate": "木桩 {healthBefore} 低于 80，打{style}，掉到 {healthAfter}。",
+  "assertDetailContains": [
+    "全力"
+  ],
+  "featuredNodeId": "canFull",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 50,
+      "healthMax": 100
+    }
+  ]
+}

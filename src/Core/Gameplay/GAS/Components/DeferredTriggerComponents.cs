@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Registry;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
@@ -40,7 +41,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     /// </summary>
     public unsafe struct DirtyFlags
     {
-        public const int MAX_ATTRS = 64;
+        public const int MAX_ATTRS = AttributeRegistry.MaxAttributes;
         public const int TAG_DIRTY_BYTES = 32; // 256 tags / 8
         
         public ulong AttributeDirtyMask;

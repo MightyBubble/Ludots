@@ -1,0 +1,13 @@
+{
+  "op": "AggCount",
+  "driver": "spatial",
+  "title": "扇形里数出几个人",
+  "beat": "扇内每人头顶弹一下，刻痕一道道加上去。",
+  "detailTemplate": "扇形内共{count}人。",
+  "assertDetailContains": [
+    "扇形内共"
+  ],
+  "featuredNodeId": "count",
+  "graphKind": "Query",
+  "field": "spatial"
+}

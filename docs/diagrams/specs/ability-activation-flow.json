@@ -159,22 +159,10 @@
       ]
     },
     {
-      "id": "clip-graph",
-      "title": "GraphSignal",
-      "tint": "clay",
-      "x": 1130,
-      "y": 685,
-      "w": 220,
-      "h": 110,
-      "items": [
-        "调用 GraphProgram"
-      ]
-    },
-    {
       "id": "clip-inputgate",
       "title": "InputGate",
       "tint": "clay",
-      "x": 1380,
+      "x": 1130,
       "y": 685,
       "w": 220,
       "h": 110,
@@ -296,12 +284,6 @@
     },
     {
       "from": "clip-eventsig",
-      "to": "effectsys",
-      "style": "dashed",
-      "arrow": true
-    },
-    {
-      "from": "clip-graph",
       "to": "effectsys",
       "style": "dashed",
       "arrow": true

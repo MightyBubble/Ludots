@@ -4,6 +4,7 @@
     "components": {
       "Name": { "Value": "Peasant" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -31,6 +32,7 @@
     "components": {
       "Name": { "Value": "Barracks" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -56,6 +58,7 @@
     "components": {
       "Name": { "Value": "Lumber Mill" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -74,6 +77,7 @@
     "components": {
       "Name": { "Value": "Guard Tower" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -100,6 +104,7 @@
     "components": {
       "Name": { "Value": "Footman" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -125,6 +130,7 @@
     "components": {
       "Name": { "Value": "Construction Yard" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -152,6 +158,7 @@
     "components": {
       "Name": { "Value": "Power Plant" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -170,6 +177,7 @@
     "components": {
       "Name": { "Value": "Refinery" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -188,6 +196,7 @@
     "components": {
       "Name": { "Value": "War Factory" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -213,6 +222,7 @@
     "components": {
       "Name": { "Value": "Battle Bunker" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -239,6 +249,7 @@
     "components": {
       "Name": { "Value": "Rhino Tank" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -262,6 +273,7 @@
     "components": {
       "Name": { "Value": "Rocket Trooper" },
       "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -287,6 +299,7 @@
     "components": {
       "Name": { "Value": "Gateway" },
       "Team": { "Id": 3 },
+      "PlayerOwner": { "PlayerId": 3 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -314,6 +327,7 @@
     "components": {
       "Name": { "Value": "Probe" },
       "Team": { "Id": 3 },
+      "PlayerOwner": { "PlayerId": 3 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -337,6 +351,7 @@
     "components": {
       "Name": { "Value": "Zealot" },
       "Team": { "Id": 3 },
+      "PlayerOwner": { "PlayerId": 3 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -360,6 +375,7 @@
     "components": {
       "Name": { "Value": "Drone" },
       "Team": { "Id": 2 },
+      "PlayerOwner": { "PlayerId": 2 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -383,6 +399,7 @@
     "components": {
       "Name": { "Value": "Spawning Pool" },
       "Team": { "Id": 2 },
+      "PlayerOwner": { "PlayerId": 2 },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },

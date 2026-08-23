@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_UnknownOnActivateEffect_IsRejected()
+        public void Load_RemovedOnActivateEffectsField_IsRejected()
         {
             string root = CreateTempRoot();
             try
@@ -80,7 +80,8 @@ namespace Ludots.Tests.GAS
                 var ex = Throws<AggregateException>(() => loader.Load(CreateAbilitiesCatalog(), relativePath: "GAS/abilities.json"));
 
                 That(ex!.Flatten().InnerExceptions[0].Message, Does.Contain("onActivateEffects"));
-                That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("Effect.Test.Missing"));
+                That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("removed"));
+                That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("EffectSignal or EffectClip"));
             }
             finally
             {
@@ -342,7 +343,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CompileAbility_GraphSignalUnknownGraph_IsRejected()
+        public void CompileAbility_GraphSignal_IsRejectedAsUnknownExecutionKind()
         {
             var ex = Throws<InvalidOperationException>(() =>
                 Compile(
@@ -357,7 +358,8 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("Graph.Missing"));
+            That(ex!.Message, Does.Contain("Unknown ExecItemKind 'GraphSignal'"));
+            That(ex.Message, Does.Not.Contain("Graph.Missing"));
         }
 
         [Test]
@@ -734,8 +736,8 @@ namespace Ludots.Tests.GAS
 
         private static void WriteAbilities(string root, string json)
         {
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "abilities.json"), json);
+            Directory.CreateDirectory(Path.Combine(root, "GAS"));
+            File.WriteAllText(Path.Combine(root, "GAS", "abilities.json"), json);
         }
 
         private static string CreateTempRoot()

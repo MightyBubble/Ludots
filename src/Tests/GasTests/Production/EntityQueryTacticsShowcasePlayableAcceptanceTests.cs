@@ -13,6 +13,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
@@ -34,6 +35,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using NUnit.Framework;
 using SkiaSharp;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -466,7 +468,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
             engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
 
@@ -590,6 +592,7 @@ namespace Ludots.Tests.GAS.Production
 
             DateTime latest = DateTime.MinValue;
             foreach (string path in Directory.EnumerateFiles(modRoot, "*.cs", SearchOption.AllDirectories)
+                         .Where(path => IsAuthoredShowcaseSourcePath(modRoot, path))
                          .Concat(Directory.EnumerateFiles(modRoot, "*.csproj", SearchOption.TopDirectoryOnly)))
             {
                 DateTime writeTime = File.GetLastWriteTimeUtc(path);
@@ -600,6 +603,16 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return latest;
+        }
+
+        private static bool IsAuthoredShowcaseSourcePath(string modRoot, string path)
+        {
+            string relativePath = Path.GetRelativePath(modRoot, path);
+            return !relativePath
+                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Any(segment =>
+                    string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase));
         }
 
         private static string GetShowcaseAssemblyPath(string repoRoot)
@@ -850,7 +863,7 @@ namespace Ludots.Tests.GAS.Production
             var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
                 ?? throw new InvalidOperationException("ScreenProjector was not installed.");
             ref WorldPositionCm position = ref engine.World.Get<WorldPositionCm>(entity);
-            return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+            return projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(position.Value, yMeters: 0f));
         }
 
         private static void CaptureSnapshot(
@@ -1985,7 +1998,19 @@ namespace Ludots.Tests.GAS.Production
                     continue;
                 }
 
-                GraphConfig? graph = merged[i].Node.Deserialize<GraphConfig>(options);
+                JsonObject node = merged[i].Node;
+                if (node.ContainsKey("controlEdges") || node.ContainsKey("valueEdges"))
+                {
+                    GraphControlFlowDocument? document = node.Deserialize<GraphControlFlowDocument>(options);
+                    if (document == null)
+                    {
+                        throw new InvalidOperationException($"ControlFlow graph config '{graphId}' failed to deserialize.");
+                    }
+
+                    return MaterializeGraphConfigFromControlFlow(document);
+                }
+
+                GraphConfig? graph = node.Deserialize<GraphConfig>(options);
                 if (graph == null)
                 {
                     throw new InvalidOperationException($"Graph config '{graphId}' failed to deserialize.");
@@ -1995,6 +2020,111 @@ namespace Ludots.Tests.GAS.Production
             }
 
             throw new InvalidOperationException($"Graph config '{graphId}' was not found in production graph catalog.");
+        }
+
+        private static GraphConfig MaterializeGraphConfigFromControlFlow(GraphControlFlowDocument document)
+        {
+            var graph = new GraphConfig
+            {
+                Id = document.Id,
+                Kind = document.Kind,
+                Entry = document.Entry,
+                Outputs = document.Outputs ?? new List<GraphOutputConfig>()
+            };
+
+            for (int i = 0; i < document.Nodes.Count; i++)
+            {
+                GraphControlFlowNode source = document.Nodes[i];
+                graph.Nodes.Add(new GraphNodeConfig
+                {
+                    Id = source.Id,
+                    Op = source.Op,
+                    IntValue = source.IntValue,
+                    FloatValue = source.FloatValue,
+                    BoolValue = source.BoolValue,
+                    Attribute = source.Attribute,
+                    Tag = source.Tag,
+                    Template = source.Template,
+                    CollectionKey = source.CollectionKey,
+                    RelationshipType = source.RelationshipType,
+                    Metric = source.Metric,
+                    Flag = source.Flag,
+                    TeamId = source.TeamId,
+                    Descending = source.Descending
+                });
+            }
+
+            Dictionary<string, GraphNodeConfig> nodesById = graph.Nodes.ToDictionary(
+                static n => n.Id,
+                StringComparer.OrdinalIgnoreCase);
+            List<GraphControlFlowValueEdge> valueEdges = document.ValueEdges ?? new List<GraphControlFlowValueEdge>();
+            for (int i = 0; i < valueEdges.Count; i++)
+            {
+                GraphControlFlowValueEdge edge = valueEdges[i];
+                if (!nodesById.TryGetValue(edge.To, out GraphNodeConfig? target))
+                {
+                    continue;
+                }
+
+                if (string.Equals(edge.ToPort, GraphControlFlowPorts.Source, StringComparison.Ordinal) ||
+                    string.Equals(edge.ToPort, GraphControlFlowPorts.Min, StringComparison.Ordinal) ||
+                    string.Equals(edge.ToPort, GraphControlFlowPorts.Max, StringComparison.Ordinal) ||
+                    string.Equals(edge.ToPort, GraphControlFlowPorts.TeamId, StringComparison.Ordinal) ||
+                    string.Equals(edge.ToPort, GraphControlFlowPorts.B, StringComparison.Ordinal))
+                {
+                    target.Inputs.Add(edge.From);
+                }
+            }
+
+            // Range nodes expect [..., min, max] order for ResolveFloatRangeInputs.
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                GraphNodeConfig node = graph.Nodes[i];
+                if (!string.Equals(node.Op, nameof(GraphNodeOp.QueryFilterAttributeRange), StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(node.Op, nameof(GraphNodeOp.RelationshipFilterMetricRange), StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string? minSource = null;
+                string? maxSource = null;
+                string? source = null;
+                for (int e = 0; e < valueEdges.Count; e++)
+                {
+                    GraphControlFlowValueEdge edge = valueEdges[e];
+                    if (!string.Equals(edge.To, node.Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (string.Equals(edge.ToPort, GraphControlFlowPorts.Min, StringComparison.Ordinal))
+                    {
+                        minSource = edge.From;
+                    }
+                    else if (string.Equals(edge.ToPort, GraphControlFlowPorts.Max, StringComparison.Ordinal))
+                    {
+                        maxSource = edge.From;
+                    }
+                    else if (string.Equals(edge.ToPort, GraphControlFlowPorts.Source, StringComparison.Ordinal))
+                    {
+                        source = edge.From;
+                    }
+                }
+
+                node.Inputs.Clear();
+                if (!string.IsNullOrWhiteSpace(source))
+                {
+                    node.Inputs.Add(source);
+                }
+
+                if (!string.IsNullOrWhiteSpace(minSource) && !string.IsNullOrWhiteSpace(maxSource))
+                {
+                    node.Inputs.Add(minSource);
+                    node.Inputs.Add(maxSource);
+                }
+            }
+
+            return graph;
         }
 
         private static GraphNodeConfig RequireGraphNode(GraphConfig graph, string op)
@@ -2261,8 +2391,8 @@ namespace Ludots.Tests.GAS.Production
             {
                 "EntityQueryTacticsShowcaseConfig.json",
                 Path.Combine("Frontend", "entity_query_tactics_frontend.json"),
-                Path.Combine("Presentation", "performers.json"),
-                Path.Combine("Configs", "Camera", "virtual_cameras.json"),
+                Path.Combine("Presentation", "presenters.json"),
+                Path.Combine("Camera", "virtual_cameras.json"),
                 Path.Combine("GAS", "graphs.json"),
                 Path.Combine("GAS", "attribute_constraints.json"),
                 Path.Combine("GAS", "tag_rules.json"),

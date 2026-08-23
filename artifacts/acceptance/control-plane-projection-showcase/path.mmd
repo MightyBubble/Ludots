@@ -1,0 +1,16 @@
+﻿flowchart TD
+    A["Preflight: launcher binding + packaged WebApp"] -->|ok| B["Load control_plane_projection map"]
+    A -->|missing| X["Fail: launcher/WebApp evidence incomplete"]
+    B --> C["Bootstrap Owns/MemberOf/Ally topology"]
+    C --> D["O key: toggle participant.offline on P2Rep"]
+    D --> E{"Association profile grants Controls + Granted flag?"}
+    E -->|yes| F["Mixed selection committed to P1 formal selection"]
+    E -->|no| Y["Fail: proxy control bypassed profile engine"]
+    F --> G["DomainRoutedCollectionWriter splits P1/P2 command rows"]
+    G --> H["ControlPlaneView partitions owned vs proxied projections"]
+    H --> I{"IBrowserRuntime + visible GUI available?"}
+    I -->|no in this run| J["Headless evidence only; GUI recording remains manual"]
+    I -->|yes in manual UAT| K["Record raylib markers + CEF panel topic/command"]
+    H --> L["O key: toggle proxy off"]
+    L --> M["Profile revokes Controls; proxied marker bucket clears"]
+    M --> N["Write battle-report, trace, path, visible checklist"]

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "entity_world_text",
+    "__delete": true
+  },
+  {
+    "id": "performance_visualization.benchmark_cube",
+    "bindings": [
+      {
+        "paramKey": "worldBar.width",
+        "source": "constant",
+        "constantValue": 46
+      },
+      {
+        "paramKey": "worldBar.height",
+        "source": "constant",
+        "constantValue": 6
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            0.85,
+            0.85,
+            0.85
+          ]
+        }
+      },
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.1,
+            0
+          ],
+          "localScale": [
+            46,
+            6,
+            1
+          ],
+          "materialParamKey": "worldBar.fillRatio"
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "worldBar.fillRatio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
+  }
+]

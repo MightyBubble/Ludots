@@ -80,7 +80,7 @@ namespace Ludots.Tests.GAS.Production
             var state = GetState(engine);
             Assert.That(state.IsActive, Is.True);
             Assert.That(state.RoutedTargetCount, Is.EqualTo(2));
-            Assert.That(state.LocalPlayer, Is.Not.EqualTo(Entity.Null));
+            Assert.That(state.SolePossessedRep, Is.Not.EqualTo(Entity.Null));
             Assert.That(state.Commander, Is.Not.EqualTo(Entity.Null));
             Assert.That(state.Arcweaver, Is.Not.EqualTo(Entity.Null));
             Assert.That(state.Vanguard, Is.Not.EqualTo(Entity.Null));
@@ -118,7 +118,7 @@ namespace Ludots.Tests.GAS.Production
             int targetMarkerKey = stack.CollectionKeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey);
 
             Entity[] abilityTargets = CopyCollection(store, state.Commander, abilityTargetsKey);
-            Entity[] rawTargets = CopyCollection(store, state.LocalPlayer, rawKey);
+            Entity[] rawTargets = CopyCollection(store, state.SolePossessedRep, rawKey);
             Entity[] casterMarkers = CopyCollection(store, state.Commander, casterMarkerKey);
             Entity[] targetMarkers = CopyCollection(store, state.Commander, targetMarkerKey);
             Assert.That(abilityTargets, Is.EqualTo(new[] { state.Arcweaver, state.Vanguard }));
@@ -132,7 +132,7 @@ namespace Ludots.Tests.GAS.Production
                 commandSourceDuringAbility,
                 Is.EqualTo(commandSourceBeforeTargets),
                 "ability-frame target acquisition must not rewrite collection.command.source.");
-            AssertPerformerRules(repoRoot);
+            AssertPresenterRules(repoRoot);
 
             Assert.That(state.ConfirmInputObserved, Is.False);
             PressAndRelease(engine, backend, "<Keyboard>/enter");
@@ -150,7 +150,7 @@ namespace Ludots.Tests.GAS.Production
 
             var writer = engine.GetService(CoreServiceKeys.ContextBoundCollectionWriter)
                 ?? throw new InvalidOperationException("ContextBoundCollectionWriter service is missing.");
-            writer.CommitCast(state.LocalPlayer, new[] { state.Commander }, EntityCollectionSourceKind.UiAcquisition);
+            writer.CommitCast(state.SolePossessedRep, new[] { state.Commander }, EntityCollectionSourceKind.UiAcquisition);
             Entity[] commandSource = CopyCollection(store, state.Commander, commandSourceKey);
             Assert.That(commandSource, Is.EqualTo(new[] { state.Commander }));
 
@@ -237,9 +237,9 @@ namespace Ludots.Tests.GAS.Production
                 "The dependent mod must assemble the transient granted-slot state before map runtime starts.");
         }
 
-        private static void AssertPerformerRules(string repoRoot)
+        private static void AssertPresenterRules(string repoRoot)
         {
-            string performerConfigPath = Path.Combine(
+            string presenterConfigPath = Path.Combine(
                 repoRoot,
                 "mods",
                 "showcases",
@@ -247,32 +247,32 @@ namespace Ludots.Tests.GAS.Production
                 "SuperweaponContextShowcaseMod",
                 "assets",
                 "Presentation",
-                "performers.json");
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(performerConfigPath, Encoding.UTF8));
+                "presenters.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(presenterConfigPath, Encoding.UTF8));
             Assert.That(HasCollectionRule(
                 document,
                 "EntityCollectionMemberAdded",
                 SuperweaponContextShowcaseIds.CasterMarkerCollectionKey,
-                "CreatePerformer",
-                SuperweaponContextShowcaseIds.CasterMarkerPerformerId), Is.True);
+                "CreatePresenter",
+                SuperweaponContextShowcaseIds.CasterMarkerPresenterId), Is.True);
             Assert.That(HasCollectionRule(
                 document,
                 "EntityCollectionMemberRemoved",
                 SuperweaponContextShowcaseIds.CasterMarkerCollectionKey,
-                "DestroyScopedPerformer",
-                SuperweaponContextShowcaseIds.CasterMarkerPerformerId), Is.True);
+                "DestroyScopedPresenter",
+                SuperweaponContextShowcaseIds.CasterMarkerPresenterId), Is.True);
             Assert.That(HasCollectionRule(
                 document,
                 "EntityCollectionMemberAdded",
                 SuperweaponContextShowcaseIds.TargetMarkerCollectionKey,
-                "CreatePerformer",
-                SuperweaponContextShowcaseIds.TargetMarkerPerformerId), Is.True);
+                "CreatePresenter",
+                SuperweaponContextShowcaseIds.TargetMarkerPresenterId), Is.True);
             Assert.That(HasCollectionRule(
                 document,
                 "EntityCollectionMemberRemoved",
                 SuperweaponContextShowcaseIds.TargetMarkerCollectionKey,
-                "DestroyScopedPerformer",
-                SuperweaponContextShowcaseIds.TargetMarkerPerformerId), Is.True);
+                "DestroyScopedPresenter",
+                SuperweaponContextShowcaseIds.TargetMarkerPresenterId), Is.True);
         }
 
         private static bool HasCollectionRule(
@@ -280,7 +280,7 @@ namespace Ludots.Tests.GAS.Production
             string eventKind,
             string collectionKey,
             string commandKind,
-            string performerDefinitionId)
+            string presenterDefinitionId)
         {
             foreach (JsonElement definition in document.RootElement.EnumerateArray())
             {
@@ -296,7 +296,7 @@ namespace Ludots.Tests.GAS.Production
                     if (string.Equals(evt.GetProperty("kind").GetString(), eventKind, StringComparison.Ordinal) &&
                         string.Equals(evt.GetProperty("key").GetString(), collectionKey, StringComparison.Ordinal) &&
                         string.Equals(command.GetProperty("kind").GetString(), commandKind, StringComparison.Ordinal) &&
-                        string.Equals(command.GetProperty("definitionId").GetString(), performerDefinitionId, StringComparison.Ordinal))
+                        string.Equals(command.GetProperty("definitionId").GetString(), presenterDefinitionId, StringComparison.Ordinal))
                     {
                         return true;
                     }
@@ -454,7 +454,7 @@ namespace Ludots.Tests.GAS.Production
             builder.AppendLine("| Field | Value |");
             builder.AppendLine("|-------|-------|");
             builder.AppendLine($"| Ability id | {state.AbilityId.ToString(System.Globalization.CultureInfo.InvariantCulture)} |");
-            builder.AppendLine($"| Local player | {state.LocalPlayer} |");
+            builder.AppendLine($"| Local player | {state.SolePossessedRep} |");
             builder.AppendLine($"| Commander context entity | {state.Commander} |");
             builder.AppendLine($"| Ability targets | {string.Join(", ", abilityTargets.Select(static e => e.ToString()))} |");
             builder.AppendLine($"| Raw local targets | {string.Join(", ", rawTargets.Select(static e => e.ToString()))} |");

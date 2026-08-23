@@ -12,6 +12,7 @@ Ludots GitHub Pages 门户站点组装脚本（纯标准库，无第三方依赖
 输出：
   _site/                    完整静态站点（含 .nojekyll），供 Pages 流水线原样发布
   _site/site-assets/docs-nav.js       由 gitbook/SUMMARY.md 解析生成的文档目录树
+  _site/site-assets/graph-op-nav.js   由 graph-node-op-wiki/README.md 解析的节点画廊目录
   _site/site-assets/gallery-data.js   由 showcase.registry.json 注入的画廊数据
   _site/site-assets/evidence-data.js  由 artifacts/acceptance/ 实扫生成的证据索引
 
@@ -49,10 +50,15 @@ REPO_ROOT = SCRIPT_DIR.parent
 DOCS_DIR = REPO_ROOT / "docs"
 GITBOOK_DIR = REPO_ROOT / "gitbook"
 SUMMARY_MD = GITBOOK_DIR / "SUMMARY.md"
+PRD_README = GITBOOK_DIR / "reference" / "mod-editor-prd" / "README.md"
+PRD_TODO_DIR = GITBOOK_DIR / "reference" / "mod-editor-prd" / "todo"
 ACCEPTANCE_DIR = REPO_ROOT / "artifacts" / "acceptance"
+GRAPH_OP_EVIDENCE_GLOB = "capability_standard_graph_op_*"
+EVIDENCE_DIR = REPO_ROOT / "artifacts" / "evidence"
 REGISTRY_JSON = REPO_ROOT / "showcase.registry.json"
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+GRAPH_OP_MEDIA_NAMES = ("play.mp4", "poster.png")
 
 WARNINGS: list[str] = []
 
@@ -103,13 +109,143 @@ def parse_summary(summary_path: Path) -> tuple[list[dict], int]:
 
 
 # ---------------------------------------------------------------------------
+# 1b. mod-editor-prd/README.md 分篇目录 -> prd-nav.js
+# ---------------------------------------------------------------------------
+
+PRD_VOLUME_HEADING = re.compile(r"^### (卷 \d+ · .+?)\s*$")
+PRD_TABLE_ROW = re.compile(r"^\|\s*`(?P<file>[^`|]+\.md)`\s*\|(?P<rest>.+)\|$")
+
+
+def parse_prd_catalog(readme_path: Path) -> dict:
+    """解析 PRD 总篇 README 的分篇目录区块为卷/篇树（站点侧栏数据源）。"""
+    nav: dict = {"volumes": [], "total": 0, "written": 0}
+    if not readme_path.exists():
+        warn("mod-editor-prd/README.md 不存在 -> PRD 页目录为空")
+        return nav
+
+    lines = readme_path.read_text(encoding="utf-8").splitlines()
+    in_section = False
+    current_volume = None
+
+    for raw in lines:
+        line = raw.rstrip()
+        if line.startswith("## "):
+            in_section = "分篇目录" in line
+            continue
+        if not in_section:
+            continue
+
+        vol = PRD_VOLUME_HEADING.match(line)
+        if vol:
+            current_volume = {"title": vol.group(1), "children": []}
+            nav["volumes"].append(current_volume)
+            continue
+
+        row = PRD_TABLE_ROW.match(line)
+        if not row or current_volume is None:
+            continue
+
+        rest = row.group("rest").split("|")
+        if len(rest) < 4:
+            warn(f"PRD 目录行字段数异常，已跳过：{row.group('file')}")
+            continue
+
+        title = rest[0].strip()
+        priority = rest[2].strip()
+        status = rest[3].strip().strip("*").strip()
+        written = "已写" in status
+        child = {
+            "file": row.group("file").strip(),
+            "title": title,
+            "priority": priority,
+            "status": status or "未写",
+            "written": written,
+        }
+        current_volume["children"].append(child)
+        nav["total"] += 1
+        if written:
+            nav["written"] += 1
+
+    if nav["total"] == 0:
+        warn("PRD 分篇目录解析结果为 0 篇 -> 检查 README 目录表格式")
+
+    handbook_dir = readme_path.parent
+    layer_dirs = [handbook_dir / layer for layer in ("prd", "config", "uxd", "spec-runtime", "spec-editor", "reference")]
+    missing = [
+        f"{layer.name}/{child['file']}"
+        for layer in layer_dirs
+        for vol in nav["volumes"]
+        for child in vol["children"]
+        if not (layer / child["file"]).is_file()
+    ]
+    if missing:
+        raise SystemExit(
+            "PRD 分篇目录与磁盘文件不一致（站点导航会 404），先修 README 或补文件：%s"
+            % "、".join(missing[:12])
+        )
+    return nav
+
+
+# ---------------------------------------------------------------------------
+# 1c. graph-node-op-wiki/README.md 家族目录 -> graph-op-nav.js
+# ---------------------------------------------------------------------------
+
+GRAPH_OP_WIKI_DIR = GITBOOK_DIR / "reference" / "graph-node-op-wiki"
+WIKI_FAMILY_HEADING = re.compile(r"^## (.+?)\s*$")
+WIKI_OP_ITEM = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<file>[^)]+?\.md)\)\s*(?:—|-)\s*(?P<desc>.*)$")
+
+
+def parse_graph_op_wiki(readme_path: Path) -> dict:
+    """解析节点 Wiki 总目录为家族树（站点 Graph 节点画廊页数据源）。"""
+    nav: dict = {"families": [], "total": 0}
+    if not readme_path.exists():
+        warn("graph-node-op-wiki/README.md 不存在 -> 节点画廊目录为空")
+        return nav
+
+    current_family = None
+    seen_files: set[str] = set()
+    for raw in readme_path.read_text(encoding="utf-8").splitlines():
+        fam = WIKI_FAMILY_HEADING.match(raw)
+        if fam:
+            current_family = {"title": fam.group(1), "ops": []}
+            nav["families"].append(current_family)
+            continue
+        item = WIKI_OP_ITEM.match(raw)
+        if not item or current_family is None:
+            continue
+        current_family["ops"].append({
+            "file": item.group("file").strip(),
+            "title": item.group("title").strip(),
+            "desc": item.group("desc").strip(),
+        })
+        seen_files.add(item.group("file").strip())
+        nav["total"] += 1
+
+    if nav["total"] == 0:
+        warn("graph-node-op-wiki/README.md 未解析到任何 op 条目 -> 检查家族列表格式")
+
+    missing = [f for f in sorted(seen_files) if not (readme_path.parent / f).is_file()]
+    if missing:
+        raise SystemExit(
+            "Graph 节点 Wiki 目录链接了不存在的页面（站点会 404）：%s" % "、".join(missing[:12])
+        )
+    orphans = sorted(
+        p.name for p in readme_path.parent.glob("*.md")
+        if p.name != "README.md" and p.name not in seen_files
+    )
+    if orphans:
+        warn("graph-node-op-wiki 存在未被 README 收录的孤儿页面：%s" % "、".join(orphans[:12]))
+    return nav
+
+
+# ---------------------------------------------------------------------------
 # 2. showcase.registry.json → gallery-data.js
 # ---------------------------------------------------------------------------
 
 REGISTRY_FIELDS = [
     "id", "path", "projectPath", "title", "summary", "tier", "category",
     "tags", "binding", "preset", "docsPath", "readmePath",
-    "acceptanceTest", "artifactDir", "screenshot", "status",
+    "acceptanceTest", "artifactDir", "screenshot", "video", "status",
 ]
 
 
@@ -260,6 +396,28 @@ def copy_tree(src: Path, dst: Path, label: str) -> int:
     return count
 
 
+def copy_graph_op_media(src: Path, dst: Path) -> int:
+    """只拷贝 GraphNodeOp 画廊的 play.mp4 / poster.png，供 Pages 与 wiki 嵌入。"""
+    if not src.is_dir():
+        warn("artifacts/evidence/ 不存在 → GraphNodeOp 画廊媒体为空")
+        return 0
+
+    count = 0
+    for child in sorted(src.glob(GRAPH_OP_EVIDENCE_GLOB)):
+        if not child.is_dir():
+            continue
+        for name in GRAPH_OP_MEDIA_NAMES:
+            file = child / name
+            if not file.is_file():
+                warn(f"GraphNodeOp 媒体缺失：{file.relative_to(REPO_ROOT)}")
+                continue
+            target = dst / child.name / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(file, target)
+            count += 1
+    return count
+
+
 def build(out_dir: Path) -> int:
     now = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
 
@@ -292,6 +450,35 @@ def build(out_dir: Path) -> int:
         "tree": nav_tree,
     }
 
+    todo_docs = []
+    if PRD_TODO_DIR.is_dir():
+        tf = [f for f in PRD_TODO_DIR.glob("*.md") if f.name != "README.md"]
+        readme = PRD_TODO_DIR / "README.md"
+        if readme.exists(): tf.append(readme)
+        for f in sorted(tf):
+            first = ""
+            for line in f.read_text(encoding="utf-8").splitlines():
+                if line.startswith("# "):
+                    first = line[2:].strip()
+                    break
+            todo_docs.append({"file": "todo/" + f.name, "title": first or f.stem})
+
+    print("-- 解析 mod-editor-prd/README.md 分篇目录 -> prd-nav.js")
+    prd_catalog = parse_prd_catalog(PRD_README)
+    prd_nav = {
+        "generatedAt": now,
+        "source": "gitbook/reference/mod-editor-prd/README.md",
+        **prd_catalog,
+        "todo": todo_docs,
+    }
+
+    print("-- 解析 graph-node-op-wiki/README.md 家族目录 -> graph-op-nav.js")
+    graph_op_nav = {
+        "generatedAt": now,
+        "source": "gitbook/reference/graph-node-op-wiki/README.md",
+        **parse_graph_op_wiki(GRAPH_OP_WIKI_DIR / "README.md"),
+    }
+
     print("-- 读取 showcase.registry.json → gallery-data.js")
     showcases, schema_version = load_registry(REGISTRY_JSON)
     gallery_data = {
@@ -321,12 +508,17 @@ def build(out_dir: Path) -> int:
     print("-- 拷贝 artifacts/acceptance/ → _site/artifacts/acceptance/")
     n_acc = copy_tree(ACCEPTANCE_DIR, out_dir / "artifacts" / "acceptance", "artifacts/acceptance/")
 
+    print("-- 拷贝 GraphNodeOp 画廊 play.mp4/poster.png → _site/artifacts/evidence/")
+    n_graph_media = copy_graph_op_media(EVIDENCE_DIR, out_dir / "artifacts" / "evidence")
+
     if REGISTRY_JSON.exists():
         shutil.copy2(REGISTRY_JSON, out_dir / "showcase.registry.json")
         print("-- 拷贝 showcase.registry.json → _site/")
 
     # --- 生成数据 JS（覆盖/补充 site-assets） ---
     write_js(out_dir / "site-assets" / "docs-nav.js", "DOCS_NAV", docs_nav)
+    write_js(out_dir / "site-assets" / "prd-nav.js", "PRD_NAV", prd_nav)
+    write_js(out_dir / "site-assets" / "graph-op-nav.js", "GRAPH_OP_NAV", graph_op_nav)
     write_js(out_dir / "site-assets" / "gallery-data.js", "GALLERY_DATA", gallery_data)
     write_js(out_dir / "site-assets" / "evidence-data.js", "EVIDENCE_DATA", evidence_data)
 
@@ -337,8 +529,10 @@ def build(out_dir: Path) -> int:
     print("-- 结构自验")
     required = [
         "index.html", "gallery.html", "tests.html", "diagrams.html",
+        "graph-op-wiki.html", "agent-bridge.html",
         "site-assets/site.css", "site-assets/site.js",
-        "site-assets/docs-nav.js", "site-assets/gallery-data.js", "site-assets/evidence-data.js",
+        "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/graph-op-nav.js",
+        "site-assets/gallery-data.js", "site-assets/evidence-data.js",
         ".nojekyll",
     ]
     missing = [r for r in required if not (out_dir / r).exists()]
@@ -364,7 +558,10 @@ def build(out_dir: Path) -> int:
     print(f"  docs/ 文件          : {n_docs}")
     print(f"  gitbook/ 文件       : {n_gitbook}")
     print(f"  acceptance/ 文件    : {n_acc}")
+    print(f"  GraphOp 媒体文件    : {n_graph_media}")
     print(f"  文档目录树 md 条目  : {md_count}")
+    print('  PRD 手册篇目        : {}/{} 已写（{} 卷）'.format(prd_nav['written'], prd_nav['total'], len(prd_nav['volumes'])))
+    print('  Graph 节点 Wiki op  : {}（{} 家族）'.format(graph_op_nav['total'], len(graph_op_nav['families'])))
     print(f"  注册 showcase       : {len(showcases)}")
     print(f"  验收证据条目        : {len(evidence)}（目录 {sum(1 for e in evidence if e['kind'] == 'dir')} + 散装报告 {sum(1 for e in evidence if e['kind'] == 'report')}）")
     print(f"  diagrams SVG        : {svg_count}")

@@ -89,40 +89,51 @@ focused map 切换时，lookup object identity 必须稳定；系统拿到的是
 - `src/Core/Gameplay/Teams/TeamManager.cs`
 - `src/Core/Engine/GameEngine.MapLoadLifecycle.cs`
 
-## 5. Local Player Binding
+## 5. Local Seats & Possession
 
-正式 local player 链路如下：
+本机驾驶权不再使用全局 `LocalPlayerId` / `LocalPlayerEntity`。正式合同见 [ClientLocalSeat · Possession · LogicView · PresentBinding](client-local-seat-and-logic-view.md)（总看板 #902 / 原 #896）。
+
+### 5.1 配置分层（SSOT）
+
+| 层 | 配置 | 角色 |
+|---|---|---|
+| 地图身份 | `MapConfig.Entities` → `Players` / `Teams` | Participant 真相（**先刷实体，再绑定身份**） |
+| 冷启动默认 | `GameConfig.startupLocalSeats[]` | 默认座位配方；经 `CreateStartupLaunchContext()` 注入 |
+| 本次进图 | `MapLaunchContext.LocalSeats[]` | **进图座位表 SSOT** |
+| 运行时 | `ClientLocalSeatRegistry` | 开局后占有 / PresentBinding |
+
+`LocalSeats` 属于 map load launch context，不属于 map identity。  
+Mod 自定义 launch payload 只能走 `MapLaunchContext.Metadata`；座位表本身是 Core 顶层合同字段。
+
+### 5.2 最小链路
 
 ```text
-MapLaunchContext.SelectedPlayerId
-  -> PlayerEntityLookup
-  -> CoreServiceKeys.LocalPlayerId
-  -> CoreServiceKeys.LocalPlayerEntity
-  -> input / order systems
+GameConfig.startupLocalSeats | LoadMapCommand.LocalSeats | save localSeats | lobby
+  -> MapLaunchContext.LocalSeats[]
+  -> PlayerEntityLookup（解析每个 seat.playerId）
+  -> ClientLocalSeatRegistry（Possession + 可选 PresentBinding）
+  -> 输入 / Cast / 下令显式按 seat（或 RequireSolePossessedRep）
 ```
 
-`SelectedPlayerId` 属于 map load launch context，不属于 map identity。启动入口通过 `GameConfig.StartupSelectedPlayerId` 声明默认本地玩家，并由 `GameEngine.LoadStartupMap()` 注入 launch context。
-
-Mod 自定义 launch payload 只能走 `MapLaunchContext.Metadata`，Core 不为单个 Mod 需求新增顶层强类型字段。
+进图顺序：`LoadEntitiesAndIndex` → `ParticipantBindingResolver.Resolve` → `PublishFocused` / `PublishLocalSeats`。  
+LogicView **不是**每个 Participant 的必有字段；当前实现对有本机占有的 seat 自动 `EnsureDefaultView`。
 
 正式路径禁止：
 
-- 扫描 `PlayerOwner.PlayerId == 1`
-- `_playerId = 1` 之类的隐式默认
-- map load 之后再靠 post-scan 猜测 local player
+- 全局 `LocalPlayerId` / `LocalPlayerEntity` 服务槽
+- `GameConfig.startupLocalPlayerId` / 存档 `launchContext.localPlayerId`
+- 扫描 `PlayerOwner` 猜本地
+- 手写旁路 / 镜像旧键
 - 在 `MapConfig.Players` 里声明静态 local player 标记
-
-兼容边界：
-
-- 旧 showcase/runtime 若仍显式手动写 `LocalPlayerEntity`，Core 会在 focused map session 上回收并恢复这条显式绑定
-- 但只要走正式 participant path，就必须同时依赖显式 `LocalPlayerId`
 
 相关源码：
 
-- `src/Core/Input/Systems/LocalPlayerEntityResolverSystem.cs`
-- `src/Core/Input/Orders/InputOrderMappingSystem.cs`
-- `mods/CoreInputMod/Systems/InputInteractionContextAccessor.cs`
-- `mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs`
+- `src/Core/Config/GameConfig.cs` / `StartupLocalSeatConfig.cs`
+- `src/Core/Client/ClientLocalSeatRegistry.cs`
+- `src/Core/Map/MapLaunchContext.cs`
+- `src/Core/Commands/LoadMapCommand.cs`
+- `src/Core/Gameplay/Teams/ParticipantBindingResolver.cs`
+- `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`
 
 ## 6. Validation Rules
 
@@ -134,7 +145,7 @@ Core 必须在 map load 期间显式失败，禁止 silent fallback：
 - unresolved representative `InstanceId`
 - blank / whitespace / non-trimmed authored `InstanceId`
 - player 引用未绑定 `TeamId`
-- launch context `SelectedPlayerId` 引用未绑定 player
+- launch context `LocalSeats[].playerId` 引用未绑定 player
 - participant relationship 缺少有效 `TypeId`
 
 相关源码：
@@ -148,12 +159,11 @@ participant-focused runtime state属于 map session：
 
 - `MapSession.TeamEntityLookup`
 - `MapSession.PlayerEntityLookup`
-- `MapSession.LocalPlayerId`
-- `MapSession.LocalPlayerEntity`
+- `MapSession` 上的 seat/possession 快照（见 ClientLocalSeat 合同）
 - `MapSession.TeamRelationships`
 - `MapSession.LaunchContext`
 
-focused map 切换、push/pop、resume 时，Core 必须发布当前 session 的 participant state；map unload 时必须清理 focused lookup/local-player service，避免把上一张图的 participant cache 当成当前图真相。
+focused map 切换、push/pop、resume 时，Core 必须发布当前 session 的 participant state；map unload 时必须清理 focused lookup 与 ClientLocalSeatRegistry 的 map-scoped possession，避免把上一张图的 participant cache 当成当前图真相。
 
 相关源码：
 
@@ -175,7 +185,7 @@ focused map 切换、push/pop、resume 时，Core 必须发布当前 session 的
 
 - logical participant entity 可通过正常 map path 加载
 - representative identity/component 写入正确
-- lookup 和 local player publish 正确
+- lookup 与 LocalSeats → Possession publish 正确
 - invalid authoring 明确失败
 - map inheritance 不会丢 participant authoring
 - input/order 正式链路不依赖默认 player 1

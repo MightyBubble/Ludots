@@ -1,6 +1,7 @@
 using Ludots.Core.Mathematics;
 using Ludots.Core.Vision;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -92,26 +93,11 @@ namespace Ludots.Tests.GAS
             }
 
             field.ClearDirty();
-            Span<FogCell> dirty = stackalloc FogCell[256];
+            var dirty = new FogCell[256];
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            GC.GetAllocatedBytesForCurrentThread();
-
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            int visible = 0;
-            for (int i = 0; i < 10_000; i++)
-            {
-                FogCell cell = new(i & 15, (i >> 4) & 15);
-                if (field.GetVisibility(cell) == CellVisibility.Visible)
-                {
-                    visible++;
-                }
-
-                field.EnumerateDirtyCells(dirty);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureReadDirtyAllocations(field, dirty, out int visible);
             Assert.That(visible, Is.GreaterThan(0));
             Assert.That(allocated, Is.EqualTo(0));
         }
@@ -129,8 +115,8 @@ namespace Ludots.Tests.GAS
             }
 
             field.ClearDirty();
-            Span<FogCell> dirty = stackalloc FogCell[256];
-            Span<FogCellState> states = stackalloc FogCellState[256];
+            var dirty = new FogCell[256];
+            var states = new FogCellState[256];
             field.SetExplored(new FogCell(0, 0));
             field.SetVisible(new FogCell(0, 0));
             field.AgeVisibleToExplored();
@@ -141,10 +127,45 @@ namespace Ludots.Tests.GAS
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            GC.GetAllocatedBytesForCurrentThread();
+            long allocated = MeasureWriteAgeCopyDirtyAllocations(
+                field,
+                dirty,
+                states,
+                out int copied);
+            Assert.That(copied, Is.GreaterThan(0));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureReadDirtyAllocations(FogField field, FogCell[] dirty, out int visible)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
-            int copied = 0;
+            visible = 0;
+            for (int i = 0; i < 10_000; i++)
+            {
+                FogCell cell = new(i & 15, (i >> 4) & 15);
+                if (field.GetVisibility(cell) == CellVisibility.Visible)
+                {
+                    visible++;
+                }
+
+                field.EnumerateDirtyCells(dirty);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureWriteAgeCopyDirtyAllocations(
+            FogField field,
+            FogCell[] dirty,
+            FogCellState[] states,
+            out int copied)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            copied = 0;
             for (int iteration = 0; iteration < 1_000; iteration++)
             {
                 for (int i = 0; i < 256; i++)
@@ -157,9 +178,7 @@ namespace Ludots.Tests.GAS
                 field.EnumerateDirtyCells(dirty);
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(copied, Is.GreaterThan(0));
-            Assert.That(allocated, Is.EqualTo(0));
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
     }
 }

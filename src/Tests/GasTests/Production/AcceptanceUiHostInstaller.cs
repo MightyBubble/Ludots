@@ -24,6 +24,7 @@ internal static class AcceptanceUiHostInstaller
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, imageSizeProvider);
         engine.SetService(CoreServiceKeys.UiSurfaceHost, surfaceHost);
         engine.SetService(CoreServiceKeys.ViewController, new FixedViewController(width, height));
+        Ludots.UI.Panels.PanelPresentationInstaller.Install(engine);
         return uiRoot;
     }
 

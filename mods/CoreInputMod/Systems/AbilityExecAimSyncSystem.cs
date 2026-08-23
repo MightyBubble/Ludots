@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Systems
 {
@@ -28,7 +29,7 @@ namespace CoreInputMod.Systems
 
         public override void Update(in float dt)
         {
-            if (!_context.TryGetLocalPlayerId(out int playerId))
+            if (!_context.TryGetSolePossessedPlayerId(out int playerId))
             {
                 return;
             }
@@ -106,7 +107,7 @@ namespace CoreInputMod.Systems
                 : default;
             floats.Set(
                 OrderBlackboardKeys.Cast_Facing,
-                WorldPlane2D.NormalizeDegreesPositive(WorldPlane2D.RadToDegValue(facingRad)));
+                WorldPlane2D.NormalizeDegreesPositive(VisualMath.RadToDegValue(facingRad)));
             if (World.Has<BlackboardFloatBuffer>(entity))
             {
                 World.Set(entity, floats);

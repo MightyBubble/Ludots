@@ -7,8 +7,9 @@ using Ludots.Core.Components;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Surfaces;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -21,9 +22,10 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SurfaceSourceRuntimeRegistry _runtime;
         private readonly MeshAssetRegistry _meshes;
         private readonly PresentationMaterialRegistry _materials;
-        private readonly PerformerDefinitionRegistry _performerDefinitions;
-        private readonly PerformerCommandBuffer _commands;
-        private readonly PerformerEntityRuntime _performerRuntime;
+        private readonly PresentationLodProfileRegistry _lodProfiles;
+        private readonly PresenterDefinitionRegistry _presenterDefinitions;
+        private readonly PresenterCommandBuffer _commands;
+        private readonly PresenterEntityRuntime _presenterRuntime;
         private readonly List<int> _completedRemovals = new(64);
 
         public ChunkSurfaceBakeSystem(
@@ -31,17 +33,19 @@ namespace Ludots.Core.Presentation.Systems
             SurfaceSourceRuntimeRegistry runtime,
             MeshAssetRegistry meshes,
             PresentationMaterialRegistry materials,
-            PerformerDefinitionRegistry performerDefinitions,
-            PerformerCommandBuffer commands,
-            PerformerEntityRuntime performerRuntime)
+            PresentationLodProfileRegistry lodProfiles,
+            PresenterDefinitionRegistry presenterDefinitions,
+            PresenterCommandBuffer commands,
+            PresenterEntityRuntime presenterRuntime)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
-            _performerDefinitions = performerDefinitions ?? throw new ArgumentNullException(nameof(performerDefinitions));
+            _lodProfiles = lodProfiles ?? throw new ArgumentNullException(nameof(lodProfiles));
+            _presenterDefinitions = presenterDefinitions ?? throw new ArgumentNullException(nameof(presenterDefinitions));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
-            _performerRuntime = performerRuntime ?? throw new ArgumentNullException(nameof(performerRuntime));
+            _presenterRuntime = presenterRuntime ?? throw new ArgumentNullException(nameof(presenterRuntime));
         }
 
         public override void Update(in float dt)
@@ -61,7 +65,7 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (!record.Dirty && record.Entity != Entity.Null && World.IsAlive(record.Entity))
                 {
-                    EnsureRenderPerformer(record);
+                    EnsureRenderPresenter(record);
                     continue;
                 }
 
@@ -80,7 +84,7 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 worldOrigin;
             switch (record.Request.SurfaceKind)
             {
-                case PerformerSurfaceKind.SplineRibbon:
+                case PresenterSurfaceKind.SplineRibbon:
                     mesh = BuildSplineRibbonMesh(
                         record.Payload.SplineRibbon,
                         record.Request.Authoring,
@@ -88,7 +92,7 @@ namespace Ludots.Core.Presentation.Systems
                     worldOrigin = ComputeSplineOrigin(record.Payload.SplineRibbon);
                     break;
 
-                case PerformerSurfaceKind.ClosedArea:
+                case PresenterSurfaceKind.ClosedArea:
                     mesh = BuildClosedAreaMesh(
                         record.Payload.ClosedArea,
                         record.Request.Authoring,
@@ -96,7 +100,7 @@ namespace Ludots.Core.Presentation.Systems
                     worldOrigin = ComputeClosedAreaOrigin(record.Payload.ClosedArea);
                     break;
 
-                case PerformerSurfaceKind.RawProceduralMesh:
+                case PresenterSurfaceKind.RawProceduralMesh:
                     mesh = record.Payload.RawProceduralMesh.ProceduralMesh;
                     worldOrigin = record.Payload.RawProceduralMesh.WorldOrigin;
                     break;
@@ -113,15 +117,15 @@ namespace Ludots.Core.Presentation.Systems
             record.MeshAssetId = meshAssetId;
 
             int renderDefinitionId = RegisterRenderDefinition(record, mesh.UsageHint, meshAssetId, materialId);
-            record.RenderPerformerDefinitionId = renderDefinitionId;
+            record.RenderPresenterDefinitionId = renderDefinitionId;
             record.RenderScopeId = ComposeRenderScopeId(record.ScopeId, record.SourceStableId);
 
-            Entity renderEntity = EnsureRenderPerformer(record);
+            Entity renderEntity = EnsureRenderPresenter(record);
             if (renderEntity != Entity.Null && World.IsAlive(renderEntity))
             {
-                _performerRuntime.SetParam(renderEntity, SurfaceMeshParamKey, ParamLane.Int, 0f, meshAssetId, Vector4.Zero);
-                _performerRuntime.SetParam(renderEntity, SurfaceMaterialParamKey, ParamLane.Int, 0f, materialId, Vector4.Zero);
-                _performerRuntime.SetParam(renderEntity, SurfaceVisibilityParamKey, ParamLane.Int, 0f, 1, Vector4.Zero);
+                _presenterRuntime.SetParam(renderEntity, SurfaceMeshParamKey, ParamLane.Int, 0f, meshAssetId, Vector4.Zero);
+                _presenterRuntime.SetParam(renderEntity, SurfaceMaterialParamKey, ParamLane.Int, 0f, materialId, Vector4.Zero);
+                _presenterRuntime.SetParam(renderEntity, SurfaceVisibilityParamKey, ParamLane.Int, 0f, 1, Vector4.Zero);
             }
 
             record.Dirty = false;
@@ -217,7 +221,7 @@ namespace Ludots.Core.Presentation.Systems
         private int RegisterRenderDefinition(SurfaceSourceRecord record, ProceduralMeshUsageHint usageHint, int meshAssetId, int materialId)
         {
             string definitionKey = $"surface_baked.render.{record.SourceStableId}";
-            var definition = new PerformerDefinition
+            var definition = new PresenterDefinition
             {
                 Key = definitionKey,
                 ParamDefaults = new[]
@@ -265,59 +269,59 @@ namespace Ludots.Core.Presentation.Systems
                     },
                 },
             };
-            return _performerDefinitions.Register(definitionKey, definition);
+            return _presenterDefinitions.Register(definitionKey, definition);
         }
 
-        private Entity EnsureRenderPerformer(SurfaceSourceRecord record)
+        private Entity EnsureRenderPresenter(SurfaceSourceRecord record)
         {
             if (record.Entity == Entity.Null || !World.IsAlive(record.Entity))
             {
                 throw new InvalidOperationException(
-                    $"SurfaceSource stableId={record.SourceStableId} requires a baked entity before render performer creation.");
+                    $"SurfaceSource stableId={record.SourceStableId} requires a baked entity before render presenter creation.");
             }
 
-            if (record.RenderPerformerEntity != Entity.Null && World.IsAlive(record.RenderPerformerEntity) && World.Has<PerformerState>(record.RenderPerformerEntity))
+            if (record.RenderPresenterEntity != Entity.Null && World.IsAlive(record.RenderPresenterEntity) && World.Has<PresenterState>(record.RenderPresenterEntity))
             {
-                ref PerformerState active = ref World.Get<PerformerState>(record.RenderPerformerEntity);
+                ref PresenterState active = ref World.Get<PresenterState>(record.RenderPresenterEntity);
                 if (active.OwnerEntity == record.Entity &&
-                    active.DefId == record.RenderPerformerDefinitionId &&
+                    active.DefId == record.RenderPresenterDefinitionId &&
                     active.ScopeId == record.RenderScopeId)
                 {
-                    return record.RenderPerformerEntity;
+                    return record.RenderPresenterEntity;
                 }
 
-                record.RenderPerformerEntity = Entity.Null;
+                record.RenderPresenterEntity = Entity.Null;
             }
 
-            if (_performerRuntime.TryGetActiveScopedInstance(
-                    record.RenderPerformerDefinitionId,
+            if (_presenterRuntime.TryGetActiveScopedInstance(
+                    record.RenderPresenterDefinitionId,
                     record.Entity,
                     record.RenderScopeId,
                     PresentationAnchorKind.Entity,
                     Vector3.Zero,
                     out Entity existing))
             {
-                record.RenderPerformerEntity = existing;
+                record.RenderPresenterEntity = existing;
                 return existing;
             }
 
-            if (record.RenderPerformerDefinitionId <= 0)
+            if (record.RenderPresenterDefinitionId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"SurfaceSource stableId={record.SourceStableId} is missing render performer definition registration.");
+                    $"SurfaceSource stableId={record.SourceStableId} is missing render presenter definition registration.");
             }
 
-            if (!_commands.TryAdd(new PerformerCommand
+            if (!_commands.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.CreatePerformer,
-                    PerformerDefinitionId = record.RenderPerformerDefinitionId,
+                    CommandKind = PresenterCommandKind.CreatePresenter,
+                    PresenterDefinitionId = record.RenderPresenterDefinitionId,
                     ScopeTag = record.RenderScopeId,
                     Source = record.Entity,
                     AnchorKind = PresentationAnchorKind.Entity,
                 }))
             {
                 throw new InvalidOperationException(
-                    $"SurfaceSource stableId={record.SourceStableId} failed to queue baked render performer creation.");
+                    $"SurfaceSource stableId={record.SourceStableId} failed to queue baked render presenter creation.");
             }
 
             return Entity.Null;
@@ -337,15 +341,12 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException("SurfaceSource authoring must declare a non-empty lodProfileId.");
             }
 
-            if (!string.Equals(authoring.LodProfileId, "default_surface_lod", StringComparison.Ordinal))
+            if (!_lodProfiles.TryGet(authoring.LodProfileId, out PresentationLodProfile profile))
             {
                 throw new InvalidOperationException($"SurfaceSource authoring references unknown lodProfileId '{authoring.LodProfileId}'.");
             }
 
-            return new PresentationLodProfile(
-                new PresentationLodEntry(maxDistanceCm: 4000f, minScreenCoverage01: 0.30f),
-                new PresentationLodEntry(maxDistanceCm: 12000f, minScreenCoverage01: 0.05f),
-                new PresentationLodEntry(maxDistanceCm: 30000f, minScreenCoverage01: 0.01f));
+            return profile;
         }
 
         private int ResolvePrimaryMaterialId(SurfaceAuthoringBlock authoring)

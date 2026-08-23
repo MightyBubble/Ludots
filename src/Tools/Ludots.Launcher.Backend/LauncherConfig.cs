@@ -58,6 +58,9 @@ public sealed class LauncherBindingTarget
 
     [JsonPropertyName("projectPath")]
     public string? ProjectPath { get; set; }
+
+    [JsonPropertyName("args")]
+    public List<string>? Args { get; set; }
 }
 
 public sealed class LauncherProjectHint
@@ -127,6 +130,9 @@ public sealed class LauncherPresetDefinition
 
     [JsonPropertyName("buildMode")]
     public string BuildMode { get; set; } = LauncherBuildMode.Auto.ToString().ToLowerInvariant();
+
+    [JsonPropertyName("args")]
+    public List<string>? Args { get; set; }
 
     [JsonPropertyName("browserRuntime")]
     public BrowserRuntimeConfig? BrowserRuntime { get; set; }

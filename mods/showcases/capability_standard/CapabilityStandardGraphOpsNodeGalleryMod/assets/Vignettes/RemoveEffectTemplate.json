@@ -1,0 +1,34 @@
+{
+  "op": "RemoveEffectTemplate",
+  "driver": "attr",
+  "title": "把身上的状态摘掉",
+  "beat": "木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。",
+  "detailTemplate": "木桩身上的标记被卸掉了，血量保持 {healthAfter}。",
+  "assertDetailContains": [
+    "卸"
+  ],
+  "featuredNodeId": "remove",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

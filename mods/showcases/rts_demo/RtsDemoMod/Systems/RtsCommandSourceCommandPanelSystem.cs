@@ -1,8 +1,8 @@
+using Arch.System;
 using System;
 using Arch.Core;
-using Arch.System;
 using CoreInputMod.Systems;
-using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
@@ -23,8 +23,6 @@ namespace RtsDemoMod.Systems
         private EntityCommandPanelHandle _commandDeckHandle = EntityCommandPanelHandle.Invalid;
         private EntityCommandPanelHandle _orderMonitorHandle = EntityCommandPanelHandle.Invalid;
         private Entity _lastTarget = Entity.Null;
-        private bool _seededDefaultCommandSource;
-        private int _lastLocalPlayerId;
         private MapConfig? _cachedMapConfig;
         private RtsCommandSourceUiMapConfig? _cachedUiConfig;
         private bool _skillBarVisibilityOwned;
@@ -56,35 +54,18 @@ namespace RtsDemoMod.Systems
             {
                 ClosePanel(service);
                 RestoreSkillBarVisibility();
-                _seededDefaultCommandSource = false;
                 return;
             }
 
             RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(_engine);
 
-            int localPlayerId = _engine.GetService(CoreServiceKeys.LocalPlayerId);
-            if (_lastLocalPlayerId != localPlayerId)
-            {
-                _lastLocalPlayerId = localPlayerId;
-                _seededDefaultCommandSource = false;
-            }
-
+            int localPlayerId = ResolveLocalPlayerId();
             RtsCommandSourceUiMapConfig uiConfig = ResolveUiConfig();
             ApplySkillBarVisibility(uiConfig.SkillBarVisible);
 
             Entity commandSource = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity current)
                 ? current
                 : Entity.Null;
-            if (!IsPanelTarget(commandSource, localPlayerId) && !_seededDefaultCommandSource)
-            {
-                Entity fallback = FindFallbackTarget(localPlayerId);
-                if (IsPanelTarget(fallback, localPlayerId) &&
-                    RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(_engine, fallback, snapCamera: true))
-                {
-                    _seededDefaultCommandSource = true;
-                    commandSource = fallback;
-                }
-            }
 
             if (!IsPanelTarget(commandSource, localPlayerId))
             {
@@ -152,84 +133,15 @@ namespace RtsDemoMod.Systems
                    owner.PlayerId == localPlayerId;
         }
 
-        private Entity FindFallbackTarget(int localPlayerId)
+        // TODO(#711-merge): main removed the name-based default command source seeding (FindFallbackTarget
+        // chain) — ownership is authored in map data and initial selection comes from the quick-select
+        // toolbar; the PR's per-player seeding path was not resurrected under the seat model.
+        private int ResolveLocalPlayerId()
         {
-            Entity result = FindFirstByNameContains("Peasant", localPlayerId);
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Barracks", localPlayerId);
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("War Factory", localPlayerId);
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Gateway", localPlayerId);
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("ConYard", localPlayerId);
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Construction Yard", localPlayerId);
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Drone", localPlayerId);
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            return FindFirstAbilityTarget(localPlayerId);
-        }
-
-        private Entity FindFirstByNameContains(string nameToken, int localPlayerId)
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name, PlayerOwner>();
-            _engine.World.Query(in query, (Entity entity, ref Name name, ref PlayerOwner owner) =>
-            {
-                if (result == Entity.Null &&
-                    owner.PlayerId == localPlayerId &&
-                    !string.IsNullOrWhiteSpace(name.Value) &&
-                    name.Value.IndexOf(nameToken, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    result = entity;
-                }
-            });
-
-            return result;
-        }
-
-        private Entity FindFirstAbilityTarget(int localPlayerId)
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name, AbilityStateBuffer, PlayerOwner>();
-            _engine.World.Query(in query, (Entity entity, ref Name _, ref AbilityStateBuffer _, ref PlayerOwner owner) =>
-            {
-                if (result == Entity.Null && owner.PlayerId == localPlayerId)
-                {
-                    result = entity;
-                }
-            });
-
-            return result;
+            return ClientLocalSeatAccess.RequireRegistry(_engine).TryGetSoleSeat(out ClientLocalSeat seat) &&
+                   seat.HasPossession
+                ? seat.PossessedPlayerId
+                : 0;
         }
 
         private RtsCommandSourceUiMapConfig ResolveUiConfig()

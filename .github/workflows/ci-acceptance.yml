@@ -10,6 +10,7 @@ on:
       - main
     paths:
       - '.github/workflows/ci-acceptance.yml'
+      - 'global.json'
       - 'scripts/build-acceptance-index.py'
       - 'scripts/acceptance/**'
       - 'showcase.registry.json'
@@ -31,10 +32,6 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
-
-      - name: Pin acceptance SDK
-        shell: pwsh
-        run: dotnet new globaljson --sdk-version 9.0.100 --roll-forward latestFeature --force
 
       - name: Check acceptance index is in sync with registry
         shell: pwsh

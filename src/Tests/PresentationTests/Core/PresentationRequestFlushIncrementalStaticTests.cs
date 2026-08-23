@@ -4,10 +4,12 @@ using Arch.Core;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {
@@ -30,13 +32,12 @@ namespace Ludots.Tests.Presentation
                 using var flush = new PresentationRequestFlushSystem(
                     world,
                     requests,
-                    new PrefabRegistry(),
                     new MeshAssetRegistry(),
                     stableDrawCache,
                     drawBuffer,
                     new GroundOverlayBuffer(),
                     new WorldHudBatchBuffer(),
-                    new RoadSplineBuffer(),
+                    new SplineRibbonBuffer(),
                     snapshotBuffer,
                     proxyBuffer,
                     skinnedBatchBuffer);
@@ -80,13 +81,12 @@ namespace Ludots.Tests.Presentation
                 using var flush = new PresentationRequestFlushSystem(
                     world,
                     requests,
-                    new PrefabRegistry(),
                     new MeshAssetRegistry(),
                     stableDrawCache,
                     new PrimitiveDrawBuffer(),
                     new GroundOverlayBuffer(),
                     new WorldHudBatchBuffer(),
-                    new RoadSplineBuffer(),
+                    new SplineRibbonBuffer(),
                     new PrimitiveDrawBuffer(),
                     proxyBuffer,
                     new SkinnedVisualBatchBuffer());
@@ -123,13 +123,12 @@ namespace Ludots.Tests.Presentation
                 using var flush = new PresentationRequestFlushSystem(
                     world,
                     requests,
-                    new PrefabRegistry(),
                     new MeshAssetRegistry(),
                     stableDrawCache,
                     new PrimitiveDrawBuffer(),
                     new GroundOverlayBuffer(),
                     new WorldHudBatchBuffer(),
-                    new RoadSplineBuffer(),
+                    new SplineRibbonBuffer(),
                     snapshotBuffer,
                     proxyBuffer,
                     new SkinnedVisualBatchBuffer());
@@ -183,7 +182,7 @@ namespace Ludots.Tests.Presentation
         {
             return new PresentationVisualProxy
             {
-                ProxyKind = PresentationVisualProxyKind.Performer,
+                ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = 10,
                 MaterialId = 1,
                 StableId = stableId,

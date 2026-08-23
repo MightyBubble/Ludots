@@ -8,8 +8,9 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Navigation.GraphWorld;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
@@ -172,16 +173,16 @@ public sealed class MassNavigationSimulationRuntime
     public float SimStepMs => Telemetry.SimStepMs;
     public float HardResolveMs => Telemetry.HardResolveMs;
     public float EntitySyncMs => Telemetry.EntitySyncMs;
-    public float PerformerCommandMs => Telemetry.PerformerCommandMs;
+    public float PresenterCommandMs => Telemetry.PresenterCommandMs;
     public float ControlHzObserved => Telemetry.ControlHzObserved;
     public float CommandHzObserved => Telemetry.CommandHzObserved;
     public float SimHzObserved => Telemetry.SimHzObserved;
-    public float PerformerHzObserved => Telemetry.PerformerHzObserved;
+    public float PresenterHzObserved => Telemetry.PresenterHzObserved;
     public float PanelHzObserved => Telemetry.PanelHzObserved;
     public int CrowdInViewCount => Telemetry.CrowdInViewCount;
     public int CrowdSubmittedCount => Telemetry.CrowdSubmittedCount;
     public int ObstacleSubmittedCount => Telemetry.ObstacleSubmittedCount;
-    public int PerformerDroppedCount => Telemetry.PerformerDroppedCount;
+    public int PresenterDroppedCount => Telemetry.PresenterDroppedCount;
     public int StreamingWindowUpdatesFrame => Telemetry.StreamingWindowUpdatesFrame;
     public int FocusBudgetUpdatesTotal => Telemetry.FocusBudgetUpdatesTotal;
     public int SolverWindowMovesTotal => Telemetry.SolverWindowMovesTotal;
@@ -267,6 +268,7 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
         MassNavigationFlow.PreallocateAgentCapacity(membershipCapacity);
         MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
+        MassNavigationFlow.PreallocateDisplacedAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
         _activeHotZoneId = activeHotZone.Id;
@@ -397,7 +399,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ObserveSimStep(double sampleMs) => Telemetry.ObserveSimStep(sampleMs);
     public void ObserveHardResolve(double sampleMs) => Telemetry.ObserveHardResolve(sampleMs);
     public void ObserveEntitySync(double sampleMs) => Telemetry.ObserveEntitySync(sampleMs);
-    public void ObservePerformerCommand(double sampleMs) => Telemetry.ObservePerformerCommand(sampleMs);
+    public void ObservePresenterCommand(double sampleMs) => Telemetry.ObservePresenterCommand(sampleMs);
 
     public MassNavigationSolverDiagnostics CaptureSolverDiagnostics()
     {
@@ -496,19 +498,19 @@ public sealed class MassNavigationSimulationRuntime
             PlayAreaMaxYCm: MassNavigationFlow.PlayAreaMaxYCm);
     }
 
-    public void ObservePerformerCoverage(int crowdInViewCount, int crowdSubmittedCount, int obstacleSubmittedCount, int performerDroppedCount)
+    public void ObservePresenterCoverage(int crowdInViewCount, int crowdSubmittedCount, int obstacleSubmittedCount, int presenterDroppedCount)
     {
-        Telemetry.ObservePerformerCoverage(
+        Telemetry.ObservePresenterCoverage(
             crowdInViewCount,
             crowdSubmittedCount,
             obstacleSubmittedCount,
-            performerDroppedCount);
+            presenterDroppedCount);
     }
 
     public void ObserveControlTick() => Telemetry.ObserveControlTick();
     public void ObserveCommandTick() => Telemetry.ObserveCommandTick();
     public void ObserveSimTick() => Telemetry.ObserveSimTick();
-    public void ObservePerformerTick() => Telemetry.ObservePerformerTick();
+    public void ObservePresenterTick() => Telemetry.ObservePresenterTick();
     public void ObservePanelTick() => Telemetry.ObservePanelTick();
 
     public void MarkStructuralChange()
@@ -810,6 +812,11 @@ public sealed class MassNavigationSimulationRuntime
     public MassNavigationGroupSemantics GetRuntimeGroupSemantics()
     {
         return MassNavigationFlow.Semantics.Group;
+    }
+
+    public MassNavigationRouteSemantics GetRuntimeRouteSemantics()
+    {
+        return MassNavigationFlow.Semantics.Route;
     }
 
     public MassNavigationFlowSolverState GetFlowSolverForTests()
@@ -1133,6 +1140,15 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation spawned agent entity {entity.Id} requires a resolved positive profileId.");
         }
 
+        // Participation contract: a Dynamic physics presence derives Physics pose
+        // authority, which cannot coexist with a nav-agent binding in this increment.
+        if (world.TryGet(entity, out Ludots.Core.Components.MovementParticipation participation) &&
+            participation.PhysicsPresence == Ludots.Core.Components.PhysicsPresenceKind.Dynamic)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation cannot bind entity {entity.Id} as a nav agent: MovementParticipation.physicsPresence 'dynamic' assigns pose authority to Physics.");
+        }
+
         if (!allowExistingRuntimeBinding)
         {
             AgentState.ValidateAgentRegistration(agentIndex, controllable);
@@ -1163,7 +1179,7 @@ public sealed class MassNavigationSimulationRuntime
 
     public static int ResolveAgentLocomotionSpeedParamKey()
     {
-        return PerformerParamKeyRegistry.Register(AgentLocomotionSpeedParamKey);
+        return PresenterParamKeyRegistry.Register(AgentLocomotionSpeedParamKey);
     }
 
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)
@@ -1535,18 +1551,6 @@ public sealed class MassNavigationSimulationRuntime
         maxY = MathF.Max(maxY, y);
     }
 
-    private static void UpsertComponent<T>(World world, Entity entity, T component)
-    {
-        if (world.Has<T>(entity))
-        {
-            world.Set(entity, component);
-        }
-        else
-        {
-            world.Add(entity, component);
-        }
-    }
-
     private WorldSizeSpec RequireBoardWorldSize()
     {
         if (!_boardWorldBound)
@@ -1575,19 +1579,6 @@ public sealed class MassNavigationSimulationRuntime
         {
             throw new InvalidOperationException(
                 $"MassNavigation agent index {agentIndex} exceeds current agent count {MassNavigationFlow.UnitCount}.");
-        }
-    }
-
-    private void RequireAgentRange(int firstAgentIndex, int agentCount, string fieldName)
-    {
-        int end = firstAgentIndex + agentCount;
-        if (firstAgentIndex < 0 ||
-            agentCount <= 0 ||
-            end < firstAgentIndex ||
-            end > MassNavigationFlow.UnitCount)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation agent range '{fieldName}' [{firstAgentIndex}, {end}) must be within current agent count {MassNavigationFlow.UnitCount}.");
         }
     }
 

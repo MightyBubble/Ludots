@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Config
 {
@@ -55,6 +57,30 @@ namespace Ludots.Core.Config
         public List<string> TriggerTypes { get; set; } = new List<string>();
 
         /// <summary>
+        /// TriggerGraph mounts declared by this map. Raw authoring nodes;
+        /// strict parsing happens at mount time (Ludots.Core.Gameplay.MapTriggers).
+        /// </summary>
+        public JsonNode TriggerGraphs { get; set; }
+
+        /// <summary>
+        /// Fixed ticks per think wave for this map (integer &gt;= 1).
+        /// Null means the engine default interval applies.
+        /// </summary>
+        public int? HeartbeatIntervalTicks { get; set; }
+
+        /// <summary>
+        /// Data-declared trigger regions for this map. Raw authoring nodes;
+        /// strict parsing happens at region-mount time (Ludots.Core.Gameplay.MapTriggers).
+        /// </summary>
+        public JsonNode Regions { get; set; }
+
+        /// <summary>
+        /// Map-scoped variable declarations. The JSON field is strict-parsed at map-config
+        /// load (MapManager); the per-session store is built by MapSession (Ludots.Core.Gameplay.MapTriggers).
+        /// </summary>
+        public List<MapVariableDeclaration> Variables { get; set; } = new List<MapVariableDeclaration>();
+
+        /// <summary>
         /// Default camera state when this map is loaded.
         /// If null, the engine uses CameraState defaults.
         /// Editor reads/writes this to ensure camera consistency across tools.
@@ -89,7 +115,7 @@ namespace Ludots.Core.Config
         public string Template { get; set; }
         public IntVector2 Position { get; set; }
         public Dictionary<string, JsonNode> Overrides { get; set; }
-        public List<ParamOverrideData> PerformerParamOverrides { get; set; } = new List<ParamOverrideData>();
+        public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
     }
 
     public class TeamBindingData

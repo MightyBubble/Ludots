@@ -1,0 +1,3 @@
+{"step":"buy-success","snapshot":{"BuyerName":"Quartermaster Rhea","MarketName":"Amber Exchange","Gold":7,"Relics":1,"Bonuses":0,"LastStatus":0,"Status":"Bought the configured market relic.","SuccessfulPurchases":1,"FailedPurchases":0}}
+{"step":"insufficient-funds","snapshot":{"BuyerName":"Quartermaster Rhea","MarketName":"Amber Exchange","Gold":7,"Relics":1,"Bonuses":0,"LastStatus":4,"Status":"Purchase blocked: InsufficientInput.","SuccessfulPurchases":1,"FailedPurchases":1}}
+{"step":"atomic-rollback","snapshot":{"BuyerName":"Quartermaster Rhea","MarketName":"Amber Exchange","Gold":7,"Relics":1,"Bonuses":0,"LastStatus":6,"Status":"Purchase blocked: OutputBlocked.","SuccessfulPurchases":1,"FailedPurchases":2}}

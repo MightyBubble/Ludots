@@ -12,11 +12,14 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Systems
 {
@@ -79,8 +82,7 @@ namespace CoreInputMod.Systems
         public bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
         }
@@ -97,17 +99,16 @@ namespace CoreInputMod.Systems
             return AuthoritativeGroundPointerHelper.TryRead(input, out worldCm);
         }
 
-        public bool TryGetLocalPlayerId(out int playerId)
+        public bool TryGetSolePossessedPlayerId(out int playerId)
         {
             playerId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
-                value is not int candidate ||
-                candidate <= 0)
+            Ludots.Core.Client.ClientLocalSeatRegistry seats = Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out Ludots.Core.Client.ClientLocalSeat seat) || !seat.HasPossession)
             {
                 return false;
             }
 
-            playerId = candidate;
+            playerId = seat.PossessedPlayerId;
             return true;
         }
 
@@ -139,20 +140,12 @@ namespace CoreInputMod.Systems
                 return collectionPrimary;
             }
 
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                localObj is Entity local &&
-                _world.IsAlive(local))
-            {
-                return local;
-            }
-
             return default;
         }
 
-        public Entity GetLocalPlayerEntityOrNull()
+        public Entity GetSolePossessedRepOrNull()
         {
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local)
                 ? local
                 : Entity.Null;
@@ -369,6 +362,16 @@ namespace CoreInputMod.Systems
                                                    graphProgramsObj is GraphProgramRegistry resolvedGraphPrograms
                 ? resolvedGraphPrograms
                 : null;
+            GasGraphOpHandlerTable? graphHandlers = _globals.TryGetValue(CoreServiceKeys.GasGraphOpHandlerTable.Name, out var graphHandlersObj) &&
+                                                     graphHandlersObj is GasGraphOpHandlerTable resolvedGraphHandlers
+                ? resolvedGraphHandlers
+                : null;
+            if (graphPrograms != null && graphHandlers == null)
+            {
+                throw new InvalidOperationException(
+                    "Ability aim presentation graph support requires CoreServiceKeys.GasGraphOpHandlerTable.");
+            }
+
             GasGraphRuntimeApi? graphApi = null;
             if (graphPrograms != null)
             {
@@ -391,8 +394,10 @@ namespace CoreInputMod.Systems
                 events,
                 session,
                 graphPrograms,
-                graphApi);
+                graphApi,
+                graphHandlers);
             return true;
         }
+
     }
 }

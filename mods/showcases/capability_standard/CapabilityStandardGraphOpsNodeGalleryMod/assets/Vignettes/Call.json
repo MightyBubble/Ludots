@@ -1,0 +1,34 @@
+{
+  "op": "Call",
+  "driver": "script",
+  "title": "出门办事，办完回家",
+  "beat": "人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。",
+  "detailTemplate": "出了趟门办件差事。人在{place}，原点{homeState}。",
+  "assertDetailContains": [
+    "差事"
+  ],
+  "featuredNodeId": "call",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "stop",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "驿站",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

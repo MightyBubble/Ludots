@@ -1,0 +1,13 @@
+{
+  "op": "LoadTargetPosX",
+  "driver": "event",
+  "title": "读出落点在东西标尺上的读数",
+  "beat": "虚线打到标尺上，亮出 360。",
+  "detailTemplate": "落点东西读数 {result}。",
+  "assertDetailContains": [
+    "东西"
+  ],
+  "featuredNodeId": "posX",
+  "graphKind": "Validation",
+  "field": "pos"
+}

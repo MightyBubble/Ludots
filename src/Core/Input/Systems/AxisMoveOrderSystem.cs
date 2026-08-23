@@ -7,6 +7,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Scripting;
 
@@ -89,16 +90,17 @@ namespace Ludots.Core.Input.Systems
                 return;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object playerIdObj) ||
-                playerIdObj is not int playerId ||
-                playerId <= 0 ||
-                !_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object localObj) ||
-                localObj is not Entity local ||
-                !_world.IsAlive(local) ||
-                !_world.Has<WorldPositionCm>(local))
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out ClientLocalSeat soleSeat) ||
+                !soleSeat.HasPossession ||
+                !_world.IsAlive(soleSeat.PossessedRep) ||
+                !_world.Has<WorldPositionCm>(soleSeat.PossessedRep))
             {
                 return;
             }
+
+            Entity local = soleSeat.PossessedRep;
+            int playerId = soleSeat.PossessedPlayerId;
 
             Vector2 current = _world.Get<WorldPositionCm>(local).Value.ToVector2();
             Vector2 direction = Vector2.Normalize(axis);

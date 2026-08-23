@@ -15,7 +15,7 @@
 
 1. **事务边界**：哪些步骤必须 all-or-nothing rollback？（仅 Layer 1 壳承担）
 2. **坐标 SSOT**：是否复用 `EffectTargetPointResolver`？placement 校验是否在 propose 阶段？
-3. **物化 SSOT**：是否复用 `EntityBuilder` + `PerformerEntitySpawnBootstrap`？是否新建第二套物化？
+3. **物化 SSOT**：是否复用 `EntityBuilder` + `PresenterEntitySpawnBootstrap`？是否新建第二套物化？
 4. **配置 SSOT**：行为是 `effect template` + `graph` 组合，还是新 JSON schema？
 5. **变体扩展**：下一个 Mod 变体改连线还是改 Core enum？
 

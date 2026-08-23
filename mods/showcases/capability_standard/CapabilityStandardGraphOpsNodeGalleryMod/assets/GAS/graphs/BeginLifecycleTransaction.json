@@ -1,0 +1,26 @@
+[
+  {
+    "id": "showcase.graph_op.BeginLifecycleTransaction",
+    "kind": "Effect",
+    "entry": "beginTx",
+    "nodes": [
+      {
+        "id": "beginTx",
+        "op": "BeginLifecycleTransaction"
+      },
+      {
+        "id": "materialize",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "MaterializeTemplate"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "beginTx",
+        "fromPort": "next",
+        "to": "materialize"
+      }
+    ],
+    "valueEdges": []
+  }
+]

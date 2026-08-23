@@ -74,21 +74,19 @@ namespace GasTests
         }
 
         [Test]
-        public void EffectTemplateRegistry_DuplicateRegister_RecordsConflict()
+        public void EffectTemplateRegistry_DuplicateRegister_RecordsConflictAndFailsFast()
         {
             var etr = new EffectTemplateRegistry();
             etr.SetConflictReport(_report);
 
             var data = new EffectTemplateData { TagId = 1 };
             etr.Register(10, in data, "ModA");
-            etr.Register(10, in data, "ModB");
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => etr.Register(10, in data, "ModB"))!;
 
-#if DEBUG
             Assert.That(_report.Count, Is.EqualTo(1));
             Assert.That(_report.Conflicts[0].Key, Is.EqualTo("10"));
-#else
-            Assert.Pass("Conflict detection only active in DEBUG builds.");
-#endif
+            Assert.That(ex.Message, Does.StartWith(EffectTemplateRegistry.DuplicateRegistrationError));
         }
 
         [Test]

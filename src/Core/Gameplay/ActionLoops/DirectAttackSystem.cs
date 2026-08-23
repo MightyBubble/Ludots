@@ -1,3 +1,4 @@
+using Ludots.Platform.Abstractions;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.Core;
@@ -155,17 +156,12 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
                     continue;
                 }
 
-                int droppedBefore = _effects.DroppedCount;
                 _effects.Publish(new EffectRequest
                 {
                     Source = actor,
                     Target = state.Target,
                     TemplateId = profile.EffectTemplateId,
                 });
-                if (_effects.DroppedCount != droppedBefore)
-                {
-                    throw new InvalidOperationException("EffectRequestQueue cannot accept a direct attack effect.");
-                }
 
                 state.CooldownTicks = profile.CooldownTicks;
             }

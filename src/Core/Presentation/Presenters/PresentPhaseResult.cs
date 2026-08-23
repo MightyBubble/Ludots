@@ -1,0 +1,27 @@
+using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Presentation.Components;
+using Ludots.Platform.Abstractions;
+
+namespace Ludots.Core.Presentation.Presenters
+{
+    /// <summary>
+    /// Resolved presenter-facing phase result derived from normalized audience and ownership facts.
+    /// </summary>
+    public struct PresentPhaseResult
+    {
+        public bool ShouldPresent;
+        public bool AllowWorldHudProjection;
+        public bool IsVisible;
+        public bool IsCulled;
+        public bool HasVision;
+        public bool HasKnowledgeProjection;
+        public bool RequiresAttributeProjection;
+        public bool HasAttributeProjection;
+        public LODLevel LOD;
+        public TeamRelationship TeamRelationship;
+        public bool IsOwnedByAudience;
+        public bool HasRelationshipLink;
+        public bool IsFriendly;
+        public bool IsHostile;
+    }
+}

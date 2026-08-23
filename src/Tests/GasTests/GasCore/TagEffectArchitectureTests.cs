@@ -26,6 +26,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS.Features.EffectExecution
 {
@@ -1139,7 +1140,8 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 {
                     receivedEffect = effectEntity;
                     receivedRootId = context.RootId;
-                });
+                },
+                EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
             var executor = new EffectPhaseExecutor(
                 new GraphProgramRegistry(),
                 presetTypes,
@@ -1186,7 +1188,8 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                     Op = (ushort)GraphNodeOp.InvokeBuiltin,
                     Imm = (int)BuiltinHandlerId.ApplyModifiers,
                 },
-            });
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            }, GraphKind.Effect);
             var templates = new EffectTemplateRegistry();
             templates.Register(2304, new EffectTemplateData { PresetType = EffectPresetType.None });
             var presetTypes = new PresetTypeRegistry();
@@ -1200,7 +1203,8 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 {
                     receivedEffect = effectEntity;
                     receivedRootId = context.RootId;
-                });
+                },
+                EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
             var executor = new EffectPhaseExecutor(
                 programs,
                 presetTypes,
@@ -1337,7 +1341,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 That(previous.Value, Is.EqualTo(Fix64Vec2.FromInt(420, 840)));
                 That(transform.Scale, Is.EqualTo(System.Numerics.Vector3.One));
                 That(cull.IsVisible, Is.False);
-                That(cull.LOD, Is.EqualTo(Ludots.Core.Presentation.Components.LODLevel.Low));
+                That(cull.LOD, Is.EqualTo(Ludots.Platform.Abstractions.LODLevel.Low));
             });
 
             That(spawnCount, Is.EqualTo(1));
@@ -2987,11 +2991,11 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         {
             var json = "[" + effectJson + "]";
             var root = Path.Combine(Path.GetTempPath(), $"TagEffectTest_{Guid.NewGuid():N}");
-            var gasDir = Path.Combine(root, "Configs", "GAS");
+            var gasDir = Path.Combine(root, "GAS");
             Directory.CreateDirectory(gasDir);
             File.WriteAllText(Path.Combine(gasDir, "effects.json"), json);
             File.WriteAllText(
-                Path.Combine(root, "Configs", "config_catalog.json"),
+                Path.Combine(root, "config_catalog.json"),
                 @"[
   { ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
   { ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }

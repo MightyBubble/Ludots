@@ -1,3 +1,4 @@
+using Ludots.Platform.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +10,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
@@ -31,7 +33,7 @@ using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -222,10 +224,10 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         LoadMap(engine);
         Tick(engine, 2);
 
-        PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-            ?? throw new InvalidOperationException("PerformerDefinitionRegistry service is missing.");
-        PerformerEntityRuntime performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-            ?? throw new InvalidOperationException("PerformerEntityRuntime service is missing.");
+        PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
+        PresenterEntityRuntime performers = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+            ?? throw new InvalidOperationException("PresenterEntityRuntime service is missing.");
         PrimitiveDrawBuffer primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
             ?? throw new InvalidOperationException("PrimitiveDrawBuffer service is missing.");
         IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
@@ -260,7 +262,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         int visiblePrimitiveCount = 0;
         foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
         {
-            if (item.Visibility == Ludots.Core.Presentation.Components.VisualVisibility.Visible)
+            if (item.Visibility == VisualVisibility.Visible)
             {
                 visiblePrimitiveCount++;
             }
@@ -1176,8 +1178,14 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             ?? throw new InvalidOperationException("PlayerEntityLookup missing.");
         Entity localPlayer = players.Get(1);
         Assert.That(engine.World.IsAlive(localPlayer), Is.True);
-        engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = 1;
-        engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer;
+        ClientLocalSeatAccess.RequireRegistry(engine).ReplaceAll(new[]
+        {
+            new ClientLocalSeat("seat.0")
+            {
+                PossessedPlayerId = 1,
+                PossessedRep = localPlayer,
+            },
+        });
 
         using var commandPanel = new RtsCommandSourceCommandPanelSystem(engine);
         commandPanel.Update(DeltaTime);
@@ -1481,8 +1489,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
     private static void AssertReadablePresentation(
         World world,
-        PerformerDefinitionRegistry definitions,
-        PerformerEntityRuntime performers,
+        PresenterDefinitionRegistry definitions,
+        PresenterEntityRuntime performers,
         string performerKey,
         string entityNameFragment)
     {

@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.WebUI.DataPlane;
@@ -231,21 +232,9 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
                 return default;
             }
 
-            bool hasForm = _engine.World.Has<AbilityFormSlotBuffer>(owner);
-            AbilityFormSlotBuffer formSlots = hasForm ? _engine.World.Get<AbilityFormSlotBuffer>(owner) : default;
-            bool hasItemGranted = _engine.World.Has<ItemGrantedSlotBuffer>(owner);
-            ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? _engine.World.Get<ItemGrantedSlotBuffer>(owner) : default;
-            bool hasGranted = _engine.World.Has<GrantedSlotBuffer>(owner);
-            GrantedSlotBuffer grantedSlots = hasGranted ? _engine.World.Get<GrantedSlotBuffer>(owner) : default;
-            return AbilitySlotResolver.Resolve(
-                in abilities,
-                in formSlots,
-                hasForm,
-                in itemGrantedSlots,
-                hasItemGranted,
-                in grantedSlots,
-                hasGranted,
-                slotIndex);
+            return AbilitySlotResolver.TryResolve(_engine.World, owner, slotIndex, out AbilitySlotState slot)
+                ? slot
+                : default;
         }
 
         private string ResolveAbilityLabel(AbilitySlotState slot)
@@ -373,7 +362,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
             owner = Entity.Null;
             error = string.Empty;
 
-            if (!_engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity localPlayer) ||
                 localPlayer == Entity.Null ||
                 !_engine.World.IsAlive(localPlayer))
             {

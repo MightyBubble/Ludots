@@ -183,8 +183,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_GasStrictness_AttributeBindings");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "attribute_bindings.json"), bindingsJson);
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "attribute_bindings.json"), bindingsJson);
 
                 var pipeline = BuildCorePipeline(root);
                 var catalog = BuildCatalog("GAS/attribute_bindings.json");
@@ -246,8 +246,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_GasStrictness_TargetDispatch");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "target_dispatch_presets.json"), presetsJson);
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "target_dispatch_presets.json"), presetsJson);
 
                 var pipeline = BuildCorePipeline(root);
                 var catalog = BuildCatalog("GAS/target_dispatch_presets.json");
@@ -280,8 +280,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_GasStrictness_Clock");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "clock.json"), clockJson);
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "clock.json"), clockJson);
 
                 var pipeline = BuildCorePipeline(root);
                 var catalog = new ConfigCatalog();
@@ -353,9 +353,11 @@ namespace Ludots.Tests.GAS
                 E = entities,
                 Targets = targets,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
         }
 
         private static string CreateTempRoot(string prefix)

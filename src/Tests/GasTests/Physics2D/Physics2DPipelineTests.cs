@@ -22,10 +22,19 @@ namespace Ludots.Tests.GAS.Physics2D
                 world,
                 solverConfig,
                 tickPolicy,
-                shapeStorage);
+                shapeStorage,
+                new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64),
+                new ContactEventQueue2D(contactEventQueueCapacity: 256),
+                new Physics2DKinematicConfig
+                {
+                    KinematicBodyCapacity = 64,
+                    ContactEventQueueCapacity = 256,
+                    ContactEventEmitterLayers = new List<string>()
+                });
 
             Assert.That(pipeline.StepNames.ToArray(), Is.EqualTo(new[]
             {
+                "KinematicDrive",
                 "ForceInputWake",
                 "BuildPhysicsWorld",
                 "SpatialBroadphase",
@@ -38,11 +47,12 @@ namespace Ludots.Tests.GAS.Physics2D
                 "UpdateMotion",
                 "BuildIslands",
                 "Sleeping",
+                "ContactEvents",
                 "Cleanup"
             }));
             Assert.That(pipeline.Systems.Length, Is.EqualTo(pipeline.StepNames.Length));
-            Assert.That(pipeline.Build, Is.SameAs(pipeline.Systems[1]));
-            Assert.That(pipeline.Spatial, Is.SameAs(pipeline.Systems[2]));
+            Assert.That(pipeline.Build, Is.SameAs(pipeline.Systems[2]));
+            Assert.That(pipeline.Spatial, Is.SameAs(pipeline.Systems[3]));
         }
     }
 }

@@ -9,6 +9,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -48,6 +49,7 @@ namespace Ludots.Core.Input.Orders
         private readonly ContextGroupRegistry _contextGroups;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable _graphHandlers;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly ContextScoredCandidateGate _candidateGate;
         private readonly Entity[] _queryBuffer = new Entity[256];
@@ -58,7 +60,8 @@ namespace Ludots.Core.Input.Orders
             GraphProgramRegistry graphPrograms,
             ISpatialQueryService spatialQueries,
             Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
-            ContextScoredCandidateGate candidateGate)
+            ContextScoredCandidateGate candidateGate,
+            Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable graphHandlers)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _contextGroups = contextGroups ?? throw new ArgumentNullException(nameof(contextGroups));
@@ -66,6 +69,7 @@ namespace Ludots.Core.Input.Orders
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
             _candidateGate = candidateGate ?? throw new ArgumentNullException(nameof(candidateGate));
+            _graphHandlers = graphHandlers ?? throw new ArgumentNullException(nameof(graphHandlers));
         }
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
@@ -168,44 +172,15 @@ namespace Ludots.Core.Input.Orders
         private bool TryResolveContextGroup(Entity actor, int rootSlotIndex, out ContextGroupDefinition group)
         {
             group = default;
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            if ((uint)rootSlotIndex >= (uint)abilities.Count)
-            {
-                return false;
-            }
-
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGranted, hasItemGranted, in granted, hasGranted, rootSlotIndex);
-            return slot.AbilityId > 0 && _contextGroups.TryGetByRootAbility(slot.AbilityId, out group);
+            return AbilitySlotResolver.TryResolve(_world, actor, rootSlotIndex, out AbilitySlotState slot) &&
+                   slot.AbilityId > 0 &&
+                   _contextGroups.TryGetByRootAbility(slot.AbilityId, out group);
         }
 
         private bool TryFindSlotIndexForAbility(Entity actor, int abilityId, out int slotIndex)
         {
             slotIndex = -1;
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-
-            for (int i = 0; i < abilities.Count; i++)
-            {
-                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGranted, hasItemGranted, in granted, hasGranted, i);
-                if (slot.AbilityId == abilityId)
-                {
-                    slotIndex = i;
-                    return true;
-                }
-            }
-
-            return false;
+            return AbilitySlotResolver.TryFindAbility(_world, actor, abilityId, out slotIndex);
         }
 
         private bool TryScoreCandidate(
@@ -268,7 +243,16 @@ namespace Ludots.Core.Input.Orders
                     throw new InvalidOperationException($"Missing precondition graph id {candidate.PreconditionGraphId}.");
                 }
 
-                if (!GasGraphExecutor.ExecuteValidation(_world, actor, target, default, preconditionProgram, _graphApi))
+                GraphKind preconditionKind = _graphPrograms.RequireKind(candidate.PreconditionGraphId, GraphKind.Validation);
+                if (!GasGraphExecutor.ExecuteValidation(
+                        _world,
+                        actor,
+                        target,
+                        default,
+                        preconditionProgram,
+                        _graphApi,
+                        preconditionKind,
+                        _graphHandlers, _graphPrograms))
                 {
                     return false;
                 }
@@ -281,7 +265,16 @@ namespace Ludots.Core.Input.Orders
                     throw new InvalidOperationException($"Missing score graph id {candidate.ScoreGraphId}.");
                 }
 
-                totalScore += GasGraphExecutor.ExecuteScore(_world, actor, target, default, scoreProgram, _graphApi);
+                GraphKind scoreKind = _graphPrograms.RequireKind(candidate.ScoreGraphId, GraphKind.Score);
+                totalScore += GasGraphExecutor.ExecuteScore(
+                    _world,
+                    actor,
+                    target,
+                    default,
+                    scoreProgram,
+                    _graphApi,
+                    scoreKind,
+                    _graphHandlers, _graphPrograms);
             }
 
             return true;
@@ -343,7 +336,7 @@ namespace Ludots.Core.Input.Orders
             float dx = targetWorldCm.X - actorWorldCm.X;
             float dy = targetWorldCm.Y - actorWorldCm.Y;
             float targetAngle = WorldPlane2D.FacingRadFromDirection(dx, dy);
-            return WorldPlane2D.RadToDegValue(WorldPlane2D.AngleDistanceRad(targetAngle, facingAngleRad));
+            return VisualMath.RadToDegValue(WorldPlane2D.AngleDistanceRad(targetAngle, facingAngleRad));
         }
     }
 }

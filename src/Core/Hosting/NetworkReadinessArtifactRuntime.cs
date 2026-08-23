@@ -229,7 +229,7 @@ namespace Ludots.Core.Hosting
 
         private static readonly QueryDescription RenderableMirrorCandidateQuery = new QueryDescription()
             .WithAll<ReplicationMirrorIdentity, WorldPositionCm, PreviousWorldPositionCm, VisualTransform,
-                PresentationOwnerHasPerformerPayload>()
+                PresentationOwnerHasPresenterPayload>()
             .WithNone<SuspendedTag, PresentationDestroyPending>();
 
         private readonly World _world;
@@ -441,8 +441,8 @@ namespace Ludots.Core.Hosting
             renderableMirrorCount = 0;
             foreach (ref readonly Chunk chunk in _world.Query(in RenderableMirrorCandidateQuery))
             {
-                Span<PresentationOwnerHasPerformerPayload> payloads =
-                    chunk.GetSpan<PresentationOwnerHasPerformerPayload>();
+                Span<PresentationOwnerHasPresenterPayload> payloads =
+                    chunk.GetSpan<PresentationOwnerHasPresenterPayload>();
                 foreach (int index in chunk)
                 {
                     if (payloads[index].Count > 0 && payloads[index].RootCount > 0)

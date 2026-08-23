@@ -1,3 +1,4 @@
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Networking.Commands;
@@ -71,9 +72,19 @@ internal sealed class ClientIdentityBindingNetworkRuntimeObserver : INetworkRunt
                 $"Replicated client map requires one live PlayerIdentity representative for assigned player {playerId}.");
         }
 
-        session.LocalPlayerId = playerId;
-        session.LocalPlayerEntity = player;
-        _engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
-        _engine.SetService(CoreServiceKeys.LocalPlayerEntity, player);
+        ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_engine);
+        seats.ReplaceAll(new[]
+        {
+            new ClientLocalSeat("seat.0")
+            {
+                PossessedPlayerId = playerId,
+                PossessedRep = player,
+            },
+        });
+        ClientLocalSeatAccess.RequireLogicViews(_engine).EnsureDefaultView(player);
+        session.LocalSeats = new[]
+        {
+            new Ludots.Core.Gameplay.Teams.ResolvedLocalSeatPossession("seat.0", playerId, player, ControlSchemeId: null),
+        };
     }
 }

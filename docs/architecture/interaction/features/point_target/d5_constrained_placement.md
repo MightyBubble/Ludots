@@ -35,7 +35,7 @@ OrderSubmitter 将点击位置写入 `SpatialBlackboardKey`。
 ```
 
 - 已有: `OrderTypeConfig.ValidationGraphId`, `GraphExecutor.ExecuteValidation()`
-- Performer: GroundOverlay 根据 validation 结果显示绿色(合法)/红色(非法)
+- Presenter: GroundOverlay 根据 validation 结果显示绿色(合法)/红色(非法)
 
 ## 依赖组件
 
@@ -44,7 +44,7 @@ OrderSubmitter 将点击位置写入 `SpatialBlackboardKey`。
 | SpatialBlackboardKey | ✅ 已有 |
 | ValidationGraphId | ✅ 已有 |
 | GraphExecutor.ExecuteValidation() | ✅ 已有 |
-| GroundOverlay Performer | ✅ 已有 |
+| GroundOverlay Presenter | ✅ 已有 |
 
 ## 新增需求
 

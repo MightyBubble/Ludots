@@ -1,5 +1,7 @@
 using System;
 using Ludots.Core.Presentation.Components;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -38,12 +40,6 @@ namespace Ludots.Core.Presentation.Rendering
 
         public void Emit(in PresentationVisualProxy proxy)
         {
-            if (_proxyBuffer != null && !_proxyBuffer.TryAdd(proxy))
-            {
-                throw new InvalidOperationException(
-                    $"Presentation visual proxy buffer overflowed while emitting stableId={proxy.StableId}, renderPath={proxy.RenderPath}.");
-            }
-
             var primitive = new PrimitiveDrawItem
             {
                 Payload = proxy.Payload,
@@ -51,6 +47,38 @@ namespace Ludots.Core.Presentation.Rendering
                 Flags = proxy.Flags,
                 LOD = proxy.LOD,
             };
+
+            if (proxy.Visibility == VisualVisibility.Visible &&
+                _drawBuffer.Count >= _drawBuffer.Capacity)
+            {
+                throw _drawBuffer.CreateOverflowException(proxy.StableId, proxy.RenderPath);
+            }
+
+            if (_proxyBuffer != null && _proxyBuffer.Count >= _proxyBuffer.Capacity)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation visual proxy buffer overflowed while emitting stableId={proxy.StableId}, renderPath={proxy.RenderPath}.");
+            }
+
+            if (_snapshotBuffer != null && _snapshotBuffer.Count >= _snapshotBuffer.Capacity)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation visual snapshot buffer overflowed while emitting stableId={proxy.StableId}, renderPath={proxy.RenderPath}.");
+            }
+
+            if (proxy.RenderPath.IsSkinnedLane() &&
+                _skinnedBatchBuffer != null &&
+                _skinnedBatchBuffer.Count >= _skinnedBatchBuffer.Capacity)
+            {
+                throw new InvalidOperationException(
+                    $"Skinned visual batch buffer overflowed while emitting stableId={proxy.StableId}, controllerId={proxy.Animator.GetControllerId()}.");
+            }
+
+            if (_proxyBuffer != null && !_proxyBuffer.TryAdd(proxy))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation visual proxy buffer overflowed while emitting stableId={proxy.StableId}, renderPath={proxy.RenderPath}.");
+            }
 
             if (_snapshotBuffer != null && !_snapshotBuffer.TryAdd(primitive))
             {
@@ -72,7 +100,7 @@ namespace Ludots.Core.Presentation.Rendering
 
             if (proxy.Visibility == VisualVisibility.Visible)
             {
-                _drawBuffer.TryAdd(primitive);
+                _drawBuffer.Add(primitive);
             }
         }
     }

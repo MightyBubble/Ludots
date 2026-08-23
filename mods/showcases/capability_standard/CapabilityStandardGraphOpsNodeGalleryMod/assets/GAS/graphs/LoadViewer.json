@@ -1,0 +1,15 @@
+[
+  {
+    "id": "showcase.graph_op.LoadViewer",
+    "kind": "Validation",
+    "entry": "viewer",
+    "nodes": [
+      {
+        "id": "viewer",
+        "op": "LoadViewer"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

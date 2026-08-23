@@ -18,6 +18,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -92,11 +93,14 @@ namespace Ludots.Core.Input.Orders
         private readonly AbilityDefinitionRegistry _abilities;
         private readonly EffectTemplateRegistry _effects;
         private readonly EntityCollectionStore _collections;
+        private readonly int _aimHoverCollectionKeyId;
+        private readonly int _aimAffectedCollectionKeyId;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly PresentationEventStream _events;
         private readonly GameSession? _session;
         private readonly GraphProgramRegistry? _graphPrograms;
         private readonly GasGraphRuntimeApi? _graphApi;
+        private readonly GasGraphOpHandlerTable? _graphHandlers;
         private readonly Entity[] _candidateBuffer = new Entity[MaxPreviewTargets];
         private readonly int[] _rowRoleIdBuffer = new int[MaxPreviewTargets];
         private readonly EntityCollectionRowFlags[] _rowFlagBuffer = new EntityCollectionRowFlags[MaxPreviewTargets];
@@ -137,17 +141,21 @@ namespace Ludots.Core.Input.Orders
             PresentationEventStream events,
             GameSession? session = null,
             GraphProgramRegistry? graphPrograms = null,
-            GasGraphRuntimeApi? graphApi = null)
+            GasGraphRuntimeApi? graphApi = null,
+            GasGraphOpHandlerTable? graphHandlers = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
             _effects = effects ?? throw new ArgumentNullException(nameof(effects));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
+            _aimHoverCollectionKeyId = _collections.KeyRegistry.Register(EntityCollectionKeys.AbilityAimHover);
+            _aimAffectedCollectionKeyId = _collections.KeyRegistry.Register(EntityCollectionKeys.AbilityAimAffected);
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _session = session;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _graphHandlers = graphHandlers;
         }
 
         public void UpdateAiming(Entity actor, InputOrderMapping mapping, in AbilityAimInputState input)
@@ -214,8 +222,8 @@ namespace Ludots.Core.Input.Orders
             }
 
             Entity viewer = ResolveActiveViewer(actor);
-            _collections.Remove(actor, EntityCollectionKeys.AbilityAimAffected);
-            _collections.Remove(actor, EntityCollectionKeys.AbilityAimHover);
+            _collections.Remove(actor, _aimAffectedCollectionKeyId);
+            _collections.Remove(actor, _aimHoverCollectionKeyId);
             ClearAimSessionState(actor);
             PublishEnded(actor, viewer, AbilityAimPresentationEventKeys.Range, RangeScopeOffset);
             PublishEnded(actor, viewer, AbilityAimPresentationEventKeys.AreaCircle, AreaScopeOffset);
@@ -246,6 +254,7 @@ namespace Ludots.Core.Input.Orders
             {
                 _collections.Replace(
                     actor,
+                    _aimAffectedCollectionKeyId,
                     EntityCollectionDescriptor.Create(
                         EntityCollectionKeys.AbilityAimAffected,
                         EntityCollectionSourceKind.Explicit,
@@ -285,6 +294,7 @@ namespace Ludots.Core.Input.Orders
 
             _collections.Replace(
                 actor,
+                _aimAffectedCollectionKeyId,
                 EntityCollectionDescriptor.Create(
                     EntityCollectionKeys.AbilityAimAffected,
                     ResolveCollectionSourceKind(in impact),
@@ -336,8 +346,7 @@ namespace Ludots.Core.Input.Orders
                     _candidateBuffer,
                     candidateCount,
                     _budget,
-                    _fanOutCommands,
-                    ref dropped);
+                    _fanOutCommands);
             }
 
             for (int i = 0; i < _fanOutCommands.Count; i++)
@@ -362,10 +371,10 @@ namespace Ludots.Core.Input.Orders
                 throw new InvalidOperationException("Ability aim GraphProgram target query requires a positive graph program id.");
             }
 
-            if (_graphPrograms == null || _graphApi == null)
+            if (_graphPrograms == null || _graphApi == null || _graphHandlers == null)
             {
                 throw new InvalidOperationException(
-                    $"Ability aim GraphProgram target query '{query.GraphProgramId}' requires {nameof(GraphProgramRegistry)} and {nameof(GasGraphRuntimeApi)}.");
+                    $"Ability aim GraphProgram target query '{query.GraphProgramId}' requires {nameof(GraphProgramRegistry)}, {nameof(GasGraphRuntimeApi)}, and {nameof(GasGraphOpHandlerTable)}.");
             }
 
             if (!_graphPrograms.TryGetProgram(query.GraphProgramId, out ReadOnlySpan<GraphInstruction> program))
@@ -378,36 +387,41 @@ namespace Ludots.Core.Input.Orders
                 return 0;
             }
 
+            _graphPrograms.RequireKind(query.GraphProgramId, GraphKind.Query);
+            GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Query,
+                program,
+                _graphHandlers,
+                query.GraphProgramId,
+                nameof(AbilityAimPresentationRuntime));
+
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             Span<Entity> targets = _candidateBuffer;
-            entities[0] = actor;
-            entities[1] = previewTarget;
-            entities[2] = previewTarget;
-            var targetList = new GraphTargetList(targets);
-            var state = new GraphExecutionState
-            {
-                World = _world,
-                Caster = actor,
-                ExplicitTarget = previewTarget,
-                TargetContext = previewTarget,
-                TargetPosCm = ToGraphTargetPos(aimWorldCm),
-                Api = _graphApi,
-                F = floats,
-                I = ints,
-                B = bools,
-                E = entities,
-                Targets = targets,
-                TargetList = targetList,
-            };
+            GraphFrame frame = GraphFrame.Bind(
+                GraphKind.Query,
+                GraphEntityPreset.PreviewTarget(previewTarget),
+                _world,
+                actor,
+                previewTarget,
+                ToGraphTargetPos(aimWorldCm),
+                _graphApi,
+                _graphPrograms,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                callStack);
 
             _graphApi.SetConfigContext(in previewParams);
             try
             {
-                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-                return state.TargetList.Count;
+                GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true, _graphHandlers);
+                return frame.TargetList.Count;
             }
             finally
             {
@@ -652,11 +666,11 @@ namespace Ludots.Core.Input.Orders
                 rowRoleIds[0] = PrimaryAimTargetRoleId;
                 Span<EntityCollectionRowFlags> rowFlags = stackalloc EntityCollectionRowFlags[1];
                 rowFlags[0] = EntityCollectionRowFlags.Primary;
-                _collections.Replace(actor, descriptor, single, rowRoleIds, rowFlags);
+                _collections.Replace(actor, _aimHoverCollectionKeyId, descriptor, single, rowRoleIds, rowFlags);
                 return;
             }
 
-            _collections.Replace(actor, descriptor, ReadOnlySpan<Entity>.Empty);
+            _collections.Replace(actor, _aimHoverCollectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
         }
 
         private void PublishLifecycleEvents(
@@ -863,29 +877,13 @@ namespace Ludots.Core.Input.Orders
                 return 0;
             }
 
-            int slotIndex = mapping.ArgsTemplate.I0.Value;
-            ref AbilityStateBuffer abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            if ((uint)slotIndex >= (uint)abilities.Count)
-            {
-                return 0;
-            }
-
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            AbilitySlotState slot = AbilitySlotResolver.Resolve(
-                in abilities,
-                in formSlots,
-                hasForm,
-                in itemGranted,
-                hasItemGranted,
-                in granted,
-                hasGranted,
-                slotIndex);
-            return slot.AbilityId;
+            return AbilitySlotResolver.TryResolve(
+                _world,
+                actor,
+                mapping.ArgsTemplate.I0.Value,
+                out AbilitySlotState slot)
+                ? slot.AbilityId
+                : 0;
         }
 
         private static byte ResolveInputSlotIndex(AbilityAimInputSlot slot)
@@ -1181,29 +1179,13 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            int slotIndex = mapping.ArgsTemplate.I0.Value;
-            ref AbilityStateBuffer abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            if ((uint)slotIndex >= (uint)abilities.Count)
-            {
-                return false;
-            }
-
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            AbilitySlotState slot = AbilitySlotResolver.Resolve(
-                in abilities,
-                in formSlots,
-                hasForm,
-                in itemGranted,
-                hasItemGranted,
-                in granted,
-                hasGranted,
-                slotIndex);
-            return slot.AbilityId > 0 && _abilities.TryGet(slot.AbilityId, out definition);
+            return AbilitySlotResolver.TryResolve(
+                       _world,
+                       actor,
+                       mapping.ArgsTemplate.I0.Value,
+                       out AbilitySlotState slot) &&
+                   slot.AbilityId > 0 &&
+                   _abilities.TryGet(slot.AbilityId, out definition);
         }
 
         private bool TryResolveActorWorld(Entity actor, out Vector3 worldCm)

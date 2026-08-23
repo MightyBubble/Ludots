@@ -80,9 +80,15 @@ namespace Ludots.Adapter.Raylib
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
             engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
+            Ludots.UI.Panels.PanelPresentationInstaller.Install(engine);
+            if (browserRuntime != null)
+            {
+                Ludots.WebUI.Browser.PanelWebSkinInstaller.TryInstall(engine, browserRuntime);
+            }
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-            IInputBackend inputBackend = new RaylibInputBackend();
+            var syntheticInput = new SyntheticInputDevice();
+            IInputBackend inputBackend = new RaylibInputBackend(syntheticInput);
             var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
             if (config.StartupInputContexts != null)
             {
@@ -96,6 +102,8 @@ namespace Ludots.Adapter.Raylib
             }
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (Core.Input.Runtime.IInputBackend)inputBackend);
+            engine.SetService(CoreServiceKeys.SyntheticInput, syntheticInput);
+            engine.SetService(CoreServiceKeys.HostFrameCapture, (IHostFrameCapture)new Services.RaylibFrameCaptureService());
 
             ValidateRequiredContextBeforeStart(engine);
 

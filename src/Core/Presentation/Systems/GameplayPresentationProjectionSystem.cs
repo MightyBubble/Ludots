@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Presentation.Events;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -55,7 +56,7 @@ namespace Ludots.Core.Presentation.Systems
 
             int tick = _session.CurrentTick;
 
-            // Project gameplay events into the presentation event stream for performer rules.
+            // Project gameplay events into the presentation event stream for presenter rules.
             var events = _eventBus.Events;
             for (int i = 0; i < events.Count; i++)
             {

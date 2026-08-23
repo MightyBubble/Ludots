@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Progression
 {
@@ -168,13 +169,19 @@ namespace Ludots.Core.Gameplay.Progression
                 return false;
             }
 
-            ref var state = ref _world.TryGetRef<ProgressionStateBuffer>(scopeHost, out bool hasState);
-            if (!hasState)
+            if (!_world.Has<ProgressionStateBuffer>(scopeHost))
             {
                 return false;
             }
 
-            return ApplyChange(ref state, progressionId, in change);
+            ProgressionStateBuffer next = _world.Get<ProgressionStateBuffer>(scopeHost);
+            if (!ApplyChange(ref next, progressionId, in change))
+            {
+                return false;
+            }
+
+            _world.Set(scopeHost, next);
+            return true;
         }
 
         public bool TryComplete(Entity actor, ScopeKey scope, int progressionId)
@@ -378,6 +385,7 @@ namespace Ludots.Core.Gameplay.Progression
                 throw new InvalidOperationException($"Progression requirement references missing graph {node.GraphProgramId}.");
             }
 
+            GraphKind kind = _graphPrograms.RequireKind(node.GraphProgramId, GraphKind.Validation);
             Entity graphTarget = ResolveEntitySource(node.EntitySource, in node.Scope, in context);
             return Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.ExecuteValidation(
                 _world,
@@ -385,7 +393,9 @@ namespace Ludots.Core.Gameplay.Progression
                 graphTarget,
                 default(IntVector2),
                 program,
-                _graphApi);
+                _graphApi,
+                kind,
+                programs: _graphPrograms);
         }
 
         private int CountMatchingEntities(in ProgressionRequirementNode node, in RoleResolverContext context)

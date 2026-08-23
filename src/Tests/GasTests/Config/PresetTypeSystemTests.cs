@@ -3,6 +3,9 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -112,7 +115,7 @@ namespace Ludots.Tests.GAS
         {
             var reg = new BuiltinHandlerRegistry();
             _handlerCallCount = 0;
-            reg.Register(BuiltinHandlerId.ApplyModifiers, TestHandler);
+            reg.Register(BuiltinHandlerId.ApplyModifiers, TestHandler, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
 
             That(reg.IsRegistered(BuiltinHandlerId.ApplyModifiers), Is.True);
 
@@ -149,7 +152,39 @@ namespace Ludots.Tests.GAS
         {
             var reg = new BuiltinHandlerRegistry();
             Assert.Throws<ArgumentOutOfRangeException>(() =>
-                reg.Register((BuiltinHandlerId)999, NoOpHandler));
+                reg.Register(
+                    (BuiltinHandlerId)999,
+                    NoOpHandler,
+                    EffectOperationMetadata.GasTransactional("OverflowTest")));
+        }
+
+        [Test]
+        public void BuiltinHandlerRegistry_Freeze_BlocksNewModHandler()
+        {
+            var reg = new BuiltinHandlerRegistry();
+
+            reg.Freeze();
+
+            Assert.Throws<InvalidOperationException>(() =>
+                reg.Register("ExampleMod.FixedAfterFreeze", NoOpHandler, EffectOperationMetadata.GasTransactional("FixedAfterFreeze")));
+        }
+
+        [Test]
+        public void BuiltinHandlerRegistry_Freeze_BlocksAnyDuplicateEnumHandler()
+        {
+            var reg = new BuiltinHandlerRegistry();
+            BuiltinHandlerFn handler = TestHandler;
+            reg.Register(BuiltinHandlerId.ApplyModifiers, handler, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
+
+            reg.Freeze();
+
+            InvalidOperationException differentHandler = Assert.Throws<InvalidOperationException>(() =>
+                reg.Register(BuiltinHandlerId.ApplyModifiers, NoOpHandler, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers))))!;
+            Assert.That(differentHandler.Message, Does.Contain("already registered"));
+
+            InvalidOperationException sameHandler = Assert.Throws<InvalidOperationException>(() =>
+                reg.Register(BuiltinHandlerId.ApplyModifiers, handler, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers))))!;
+            Assert.That(sameHandler.Message, Does.Contain("already registered"));
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -338,6 +373,18 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void PresetTypeRegistry_DuplicateRegistration_FailsFast()
+        {
+            var reg = new PresetTypeRegistry();
+            var first = new PresetTypeDefinition { Type = EffectPresetType.Buff };
+            var duplicate = new PresetTypeDefinition { Type = EffectPresetType.Buff };
+            reg.Register(in first);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => reg.Register(in duplicate))!;
+            That(ex.Message, Does.StartWith(PresetTypeRegistry.DuplicateRegistrationError));
+        }
+
+        [Test]
         public void PresetTypeRegistry_Clear_RemovesAll()
         {
             var reg = new PresetTypeRegistry();
@@ -349,8 +396,20 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.Buff), Is.False);
         }
 
+        [Test]
+        public void PresetTypeRegistry_Freeze_BlocksDefinitionMutation()
+        {
+            var reg = new PresetTypeRegistry();
+            var def = new PresetTypeDefinition { Type = EffectPresetType.Buff };
+
+            reg.Freeze();
+
+            Assert.Throws<InvalidOperationException>(() =>
+                reg.Register(in def));
+        }
+
         // ════════════════════════════════════════════════════════════════════
-        //  PresetTypeLoader (JSON → Registry)
+        //  PresetTypeLoader (JSON �?Registry)
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -370,7 +429,7 @@ namespace Ludots.Tests.GAS
             ]";
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.LoadFromJson(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json, CreateBuiltinHandlers());
 
             That(reg.IsRegistered(EffectPresetType.Search), Is.True);
             ref readonly var def = ref reg.Get(EffectPresetType.Search);
@@ -405,7 +464,7 @@ namespace Ludots.Tests.GAS
             ]";
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.LoadFromJson(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json, CreateBuiltinHandlers());
 
             That(reg.IsRegistered(EffectPresetType.InstantDamage), Is.True);
             That(reg.IsRegistered(EffectPresetType.Buff), Is.True);
@@ -431,7 +490,7 @@ namespace Ludots.Tests.GAS
             ]";
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.LoadFromJson(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json, CreateBuiltinHandlers());
 
             ref readonly var def = ref reg.Get(EffectPresetType.Heal);
             var h = def.DefaultPhaseHandlers[EffectPhaseId.OnCalculate];
@@ -443,24 +502,97 @@ namespace Ludots.Tests.GAS
         public void PresetTypeLoader_EmptyJson_DoesNotThrow()
         {
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.LoadFromJson(reg, "[]");
+            PresetTypeLoader.LoadFromJson(reg, "[]", CreateBuiltinHandlers());
             That(reg.IsRegistered(EffectPresetType.None), Is.False);
         }
 
         [Test]
-        public void PresetTypeLoader_UnknownPresetId_IsRejected()
+        public void PresetTypeLoader_CustomPresetId_IsRegistered()
         {
             const string json = @"[
-              { ""id"": ""FutureMagicType"", ""components"": [], ""activePhases"": [], ""allowedLifetimes"": [], ""defaultPhaseHandlers"": {} }
+              {
+                ""id"": ""ExampleMod.FutureMagicType"",
+                ""components"": [""ModifierParams""],
+                ""activePhases"": [""OnApply""],
+                ""allowedLifetimes"": [""Instant""],
+                ""defaultPhaseHandlers"": {}
+              }
             ]";
 
             var reg = new PresetTypeRegistry();
-            Throws<InvalidOperationException>(() => PresetTypeLoader.LoadFromJson(reg, json));
+            PresetTypeLoader.LoadFromJson(reg, json, CreateBuiltinHandlers());
+
+            int typeId = reg.GetId("ExampleMod.FutureMagicType");
+            That(typeId, Is.GreaterThanOrEqualTo(PresetTypeRegistry.FirstModPresetTypeId));
+            That(reg.IsRegistered(typeId), Is.True);
+            ref readonly var def = ref reg.Get(typeId);
+            That(def.Type, Is.EqualTo(EffectPresetType.None));
+            That(def.TypeKey, Is.EqualTo("ExampleMod.FutureMagicType"));
+            That(def.HasComponent(ComponentFlags.ModifierParams), Is.True);
         }
 
         // ════════════════════════════════════════════════════════════════════
         //  EffectParamKeys
         // ════════════════════════════════════════════════════════════════════
+
+        [Test]
+        public void EffectPhaseExecutor_CustomPresetType_InvokesRegisteredBuiltinHandler()
+        {
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            int handlerId = builtinHandlers.Register("ExampleMod.ApplyCustomStatus", TestHandler, EffectOperationMetadata.GasTransactional("ExampleMod.ApplyCustomStatus"));
+
+            var presetTypes = new PresetTypeRegistry();
+            int typeId = presetTypes.RegisterKey("ExampleMod.CustomStatus");
+            var phaseHandlers = new PhaseHandlerMap();
+            phaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(handlerId);
+            presetTypes.Register(new PresetTypeDefinition
+            {
+                TypeId = typeId,
+                TypeKey = "ExampleMod.CustomStatus",
+                Type = EffectPresetType.None,
+                ActivePhases = PhaseFlags.InstantCore,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+                DefaultPhaseHandlers = phaseHandlers,
+            });
+
+            var templates = new EffectTemplateRegistry();
+            templates.Register(1, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.None,
+                PresetTypeId = typeId,
+                LifetimeKind = EffectLifetimeKind.Instant,
+            });
+
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                new GasGraphOpHandlerTable(),
+                templates);
+
+            _handlerCallCount = 0;
+            using var world = World.Create();
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            var behavior = new EffectPhaseGraphBindings();
+            EffectConfigParams mergedParams = default;
+
+            executor.ExecutePhase(
+                world,
+                null!,
+                caster,
+                target,
+                default,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                typeId,
+                effectTagId: 0,
+                effectTemplateId: 1,
+                in mergedParams);
+
+            That(_handlerCallCount, Is.EqualTo(1));
+        }
 
         [Test]
         public void EffectParamKeys_Initialize_AssignsDistinctNonZeroIds()
@@ -660,14 +792,14 @@ namespace Ludots.Tests.GAS
         public void PresetTypeLoader_FullPresetTypesJson_LoadsAllConfiguredTypes()
         {
             string json = System.IO.File.ReadAllText(
-                System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
+                System.IO.Path.Combine(FindRepoRoot(), "assets", "GAS", "preset_types.json"));
             GraphIdRegistry.Clear();
             int lifecycleGraphId = GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.LoadFromJson(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json, CreateBuiltinHandlers());
 
-            // None (0) is not a real preset type — it should NOT be in the JSON
+            // None (0) is not a real preset type �?it should NOT be in the JSON
             That(reg.IsRegistered(EffectPresetType.None), Is.False);
 
             // All configured real preset types should be registered
@@ -685,7 +817,6 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.Relation), Is.True);
             That(reg.IsRegistered(EffectPresetType.Exchange), Is.True);
             That(reg.IsRegistered(EffectPresetType.DeployConsumeSource), Is.True);
-            That(reg.IsRegistered(EffectPresetType.RevealArea), Is.True);
 
             // Spot-check ApplyForce2D builtin handler
             ref readonly var af = ref reg.Get(EffectPresetType.ApplyForce2D);
@@ -693,7 +824,7 @@ namespace Ludots.Tests.GAS
             That(hApply.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
             That(hApply.HandlerId, Is.EqualTo((int)BuiltinHandlerId.ApplyForce));
 
-            // Spot-check PeriodicSearch — JSON only defines OnPeriod handler
+            // Spot-check PeriodicSearch �?JSON only defines OnPeriod handler
             ref readonly var ps = ref reg.Get(EffectPresetType.PeriodicSearch);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].IsValid, Is.True);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
@@ -712,30 +843,29 @@ namespace Ludots.Tests.GAS
             That(deploy.DefaultPhaseHandlers[EffectPhaseId.OnApply].Kind, Is.EqualTo(PhaseHandlerKind.Graph));
             That(deploy.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId, Is.EqualTo(lifecycleGraphId));
 
-            ref readonly var reveal = ref reg.Get(EffectPresetType.RevealArea);
-            That(reveal.HasComponent(ComponentFlags.RevealAreaParams), Is.True);
-            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.RevealArea));
-            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.RevealArea));
-            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnRemove].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.DecayRevealArea));
         }
 
         // ════════════════════════════════════════════════════════════════════
         //  Helper
         // ════════════════════════════════════════════════════════════════════
 
+        private static BuiltinHandlerRegistry CreateBuiltinHandlers()
+        {
+            var handlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(handlers);
+            return handlers;
+        }
+
         private static string FindRepoRoot()
         {
             string dir = AppDomain.CurrentDomain.BaseDirectory;
             while (dir != null)
             {
-                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "Configs", "GAS", "preset_types.json")))
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "GAS", "preset_types.json")))
                     return dir;
                 dir = System.IO.Directory.GetParent(dir)?.FullName;
             }
-            throw new InvalidOperationException("Cannot find repo root (looking for assets/Configs/GAS/preset_types.json).");
+            throw new InvalidOperationException("Cannot find repo root (looking for assets/GAS/preset_types.json).");
         }
     }
 }

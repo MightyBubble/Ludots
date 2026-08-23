@@ -12,9 +12,6 @@ namespace Ludots.Core.Gameplay.GAS
         public int ResponseStepBudgetFused;
         public int ResponseQueueOverflowDropped;
 
-        public int EffectProposalFanOutDropped;
-        public int EffectApplicationFanOutDropped;
-        public int EffectLifetimeFanOutDropped;
         public int TagCountOverflowDropped;
         public int ActiveEffectContainerAttachDropped;
         public int PhaseListenerRegistrationDropped;
@@ -31,9 +28,6 @@ namespace Ludots.Core.Gameplay.GAS
             ResponseDepthDropped = 0;
             ResponseStepBudgetFused = 0;
             ResponseQueueOverflowDropped = 0;
-            EffectProposalFanOutDropped = 0;
-            EffectApplicationFanOutDropped = 0;
-            EffectLifetimeFanOutDropped = 0;
             TagCountOverflowDropped = 0;
             ActiveEffectContainerAttachDropped = 0;
             PhaseListenerRegistrationDropped = 0;
@@ -46,9 +40,6 @@ namespace Ludots.Core.Gameplay.GAS
             ResponseDepthDropped != 0 ||
             ResponseStepBudgetFused != 0 ||
             ResponseQueueOverflowDropped != 0 ||
-            EffectProposalFanOutDropped != 0 ||
-            EffectApplicationFanOutDropped != 0 ||
-            EffectLifetimeFanOutDropped != 0 ||
             TagCountOverflowDropped != 0 ||
             ActiveEffectContainerAttachDropped != 0 ||
             PhaseListenerRegistrationDropped != 0 ||

@@ -1,3 +1,4 @@
+
 namespace RaylibIsmBenchmarkShowcaseMod;
 
 internal static class RaylibIsmBenchmarkShowcaseIds

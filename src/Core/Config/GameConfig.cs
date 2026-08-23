@@ -1,7 +1,11 @@
-using System.Text.Json.Serialization;
+using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Networking.Configuration;
 
@@ -29,11 +33,34 @@ namespace Ludots.Core.Config
         public string StartupMapId { get; set; }
 
         /// <summary>
-        /// Initial local player for startup map load. Provided by CoreMod via game.json merge.
+        /// Cold-start local seat recipe. Injected into <see cref="MapLaunchContext.LocalSeats"/> on
+        /// <c>LoadStartupMap</c>. Not map identity; not runtime seat truth after load.
         /// </summary>
-        public int StartupLocalPlayerId { get; set; }
+        public List<StartupLocalSeatConfig> StartupLocalSeats { get; set; } = new();
 
         public List<string> StartupInputContexts { get; set; } = new List<string>();
+
+        public bool HasStartupLocalSeats => StartupLocalSeats != null && StartupLocalSeats.Count > 0;
+
+        /// <summary>Build launch context from <see cref="StartupLocalSeats"/> (Epic #896 SSOT).</summary>
+        public MapLaunchContext? CreateStartupLaunchContext(
+            IReadOnlyDictionary<string, object>? metadata = null)
+        {
+            if (!HasStartupLocalSeats)
+            {
+                return MapLaunchContext.Create(Array.Empty<LocalSeatLaunchBinding>(), metadata);
+            }
+
+            var bindings = new LocalSeatLaunchBinding[StartupLocalSeats.Count];
+            for (int i = 0; i < StartupLocalSeats.Count; i++)
+            {
+                StartupLocalSeatConfig seat = StartupLocalSeats[i]
+                    ?? throw new InvalidOperationException($"GameConfig.startupLocalSeats[{i}] is null.");
+                bindings[i] = seat.ToLaunchBinding();
+            }
+
+            return MapLaunchContext.Create(bindings, metadata);
+        }
 
         // Engine-level defaults (these stay in Core's game.json)
         public int WindowWidth { get; set; } = 1280;
@@ -66,6 +93,27 @@ namespace Ludots.Core.Config
         public NetworkRuntimeConfig? Networking { get; set; }
 
         /// <summary>
+        /// Skin id for engine-side panel presentation (e.g. "default", "markup", "compose",
+        /// "reactive", "web"). Null means the built-in default skin. Authors never write C#
+        /// to change skins — this is the whole selection surface.
+        /// </summary>
+        public string? PanelSkin { get; set; }
+
+        /// <summary>
+        /// Visual theme pack id for engine-side panel presentation (orthogonal to
+        /// PanelSkin: skin = which backend renders, theme = what it looks like).
+        /// Resolved through the merged PanelThemes/themes.json catalog; the entry's
+        /// mod-scoped root points at theme.css + images/ + fonts/.
+        /// </summary>
+        public string? PanelTheme { get; set; }
+
+        /// <summary>
+        /// For the "web" panel skin: mod-VFS path of the overlay app index.html
+        /// (e.g. "PanelSkinWebMod:Assets/overlay-app/index.html").
+        /// </summary>
+        public string? PanelWebApp { get; set; }
+
+        /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.
         /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>
@@ -82,6 +130,7 @@ namespace Ludots.Core.Config
         public int AbilityExecSnapshotCapacity { get; set; }
         public int EffectLifetimeSnapshotCapacity { get; set; }
         public int EffectFanOutCommandCapacity { get; set; }
+        public int EffectRequestQueueCapacity { get; set; }
         public int OrderQueueCapacity { get; set; }
         public int ResponseChainOrderQueueCapacity { get; set; }
         public int OrderAdmissionResultCapacity { get; set; }
@@ -114,6 +163,14 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.effectFanOutCommandCapacity must be positive.");
+            }
+
+            if (EffectRequestQueueCapacity < GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectRequestQueueCapacity must be at least " +
+                    "GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME so a single frame can publish the full " +
+                    "effect request batch without silent expansion.");
             }
 
             if (OrderQueueCapacity <= 0)

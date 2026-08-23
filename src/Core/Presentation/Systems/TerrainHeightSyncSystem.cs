@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -46,9 +47,6 @@ namespace Ludots.Core.Presentation.Systems
         private readonly CommandBuffer _commandBuffer = new();
         private bool _warnedMissingHeightmap;
         private int _sampledThisFrame;
-
-        /// <summary>地形高度缩放（米/高度单位），需与地形渲染器一致，默认 2.0。</summary>
-        public float HeightScale { get; set; } = 2.0f;
 
         public TerrainHeightSyncSystem(
             World world,

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "showcase.graph_op.QueryHexNeighbors",
+    "kind": "Effect",
+    "entry": "hexN",
+    "nodes": [
+      {
+        "id": "hexN",
+        "op": "QueryHexNeighbors",
+        "queryCapacityPolicy": "RequireComplete"
+      },
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "notSelf",
+        "op": "QueryFilterNotEntity"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "hexN",
+        "fromPort": "next",
+        "to": "self"
+      },
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "notSelf"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "notSelf",
+        "toPort": "source"
+      }
+    ]
+  }
+]

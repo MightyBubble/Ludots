@@ -1,0 +1,48 @@
+[
+  {
+    "id": "showcase.graph_op.MoveInt",
+    "kind": "Script",
+    "entry": "three",
+    "nodes": [
+      {
+        "id": "three",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "move",
+        "op": "MoveInt"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "three",
+        "fromPort": "next",
+        "to": "move"
+      },
+      {
+        "from": "move",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "three",
+        "fromPort": "value",
+        "to": "move",
+        "toPort": "value"
+      },
+      {
+        "from": "move",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

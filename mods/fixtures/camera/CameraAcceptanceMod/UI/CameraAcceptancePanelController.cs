@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -684,12 +685,12 @@ namespace CameraAcceptanceMod.UI
                 mapId,
                 CameraAcceptanceIds.DescribeMap(mapId),
                 CameraAcceptanceIds.DescribeControls(mapId),
-                engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "none",
+                ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain?.ActiveCameraId ?? "none",
                 ResolveActiveModeId(engine),
                 ResolveSelectedEntityName(engine) ?? "none",
                 SummarizeSelectedIds(selectedIds),
                 selectedIds,
-                FormatVector(engine.GameSession.Camera.FollowTargetPositionCm),
+                FormatVector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine).FollowTargetPositionCm),
                 ResolveActiveBlendCameraId(engine),
                 CameraAcceptanceRuntime.ResolveProjectionSpawnCount(engine),
                 BuildVisibleEntitySummary(visibleEntityRows),
@@ -1056,8 +1057,8 @@ namespace CameraAcceptanceMod.UI
         private void ApplyHotpathAvatarTarget(Vector2 targetCm)
         {
             GameEngine engine = RequireEngine();
-            if (!TryResolveLocalPlayerEntity(engine, out Entity localPlayer) ||
-                !engine.World.Has<WorldPositionCm>(localPlayer))
+            if (!TryResolveSolePossessedRep(engine, out Entity solePossessedRep) ||
+                !engine.World.Has<WorldPositionCm>(solePossessedRep))
             {
                 return;
             }
@@ -1067,16 +1068,16 @@ namespace CameraAcceptanceMod.UI
                 engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds,
                 out _);
 
-            ref var position = ref engine.World.Get<WorldPositionCm>(localPlayer);
+            ref var position = ref engine.World.Get<WorldPositionCm>(solePossessedRep);
             position = WorldPositionCm.FromCm(clamped.X, clamped.Y);
-            if (engine.World.Has<FacingDirection>(localPlayer))
+            if (engine.World.Has<FacingDirection>(solePossessedRep))
             {
-                ref var facing = ref engine.World.Get<FacingDirection>(localPlayer);
+                ref var facing = ref engine.World.Get<FacingDirection>(solePossessedRep);
                 facing.AngleRad = 0f;
             }
             else
             {
-                engine.World.Add(localPlayer, new FacingDirection { AngleRad = 0f });
+                engine.World.Add(solePossessedRep, new FacingDirection { AngleRad = 0f });
             }
 
             SyncMountedRoot();
@@ -1244,17 +1245,16 @@ namespace CameraAcceptanceMod.UI
                 : CameraAcceptanceIds.BlendSmoothCameraId;
         }
 
-        private static bool TryResolveLocalPlayerEntity(GameEngine engine, out Entity localPlayer)
+        private static bool TryResolveSolePossessedRep(GameEngine engine, out Entity solePossessedRep)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity local &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                 engine.World.IsAlive(local))
             {
-                localPlayer = local;
+                solePossessedRep = local;
                 return true;
             }
 
-            localPlayer = Entity.Null;
+            solePossessedRep = Entity.Null;
             return false;
         }
 
@@ -1273,7 +1273,7 @@ namespace CameraAcceptanceMod.UI
         private static bool TryResolveCommandSourcePrimary(GameEngine engine, out Entity entity)
         {
             entity = Entity.Null;
-            return TryResolveLocalPlayerEntity(engine, out Entity owner) &&
+            return TryResolveSolePossessedRep(engine, out Entity owner) &&
                    EntityCollectionContextRuntime.TryGetPrimary(
                        engine.World,
                        engine.GlobalContext,
@@ -1306,7 +1306,7 @@ namespace CameraAcceptanceMod.UI
                 throw new InvalidOperationException("Camera acceptance hotpath panel requires IViewController.");
             }
 
-            var camera = CameraViewportUtil.StateToRenderState(engine.GameSession.Camera.State);
+            var camera = CameraViewportUtil.StateToRenderState(ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State);
             Vector2 resolution = view.Resolution;
             if (camera.FovYDeg <= 0f || view.Fov <= 0f || resolution.X <= 0f || resolution.Y <= 0f)
             {

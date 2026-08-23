@@ -1,9 +1,7 @@
 using System;
 using System.Linq;
 using System.Numerics;
-using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Diagnostics;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -229,12 +227,12 @@ namespace Ludots.Tests.Presentation
         {
             const int ownerStableId = 37;
             const int templateId = 7;
-            int firstVisualStableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+            int firstVisualStableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
                 ownerStableId,
                 slotIndex: 0,
                 AssetKind.Mesh,
                 discriminator: templateId);
-            int secondVisualStableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+            int secondVisualStableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
                 ownerStableId,
                 slotIndex: 1,
                 AssetKind.Mesh,

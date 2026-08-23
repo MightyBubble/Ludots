@@ -152,9 +152,26 @@ namespace Ludots.Tests.GAS
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            GC.GetAllocatedBytesForCurrentThread();
+            int initialSink = sink;
+            long allocated = MeasureMaskRecordAllocations(
+                in record,
+                in required,
+                initialSink,
+                out sink);
+            Assert.That(sink, Is.GreaterThan(0));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureMaskRecordAllocations(
+            in KnowledgeDisclosureRecord record,
+            in KnowledgeIdMask256 required,
+            int initialSink,
+            out int sink)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
+            sink = initialSink;
             for (int i = 0; i < 10_000; i++)
             {
                 if (record.AttributeMask.ContainsId(2))
@@ -178,9 +195,7 @@ namespace Ludots.Tests.GAS
                 }
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(sink, Is.GreaterThan(0));
-            Assert.That(allocated, Is.EqualTo(0));
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
     }
 }

@@ -1,0 +1,8 @@
+{
+  "scene": "sky_daynight",
+  "frames": 30,
+  "avgFrameMs": 1.965,
+  "p95FrameMs": 21.75,
+  "maxFrameMs": 31.931,
+  "wallMs": 600.1
+}

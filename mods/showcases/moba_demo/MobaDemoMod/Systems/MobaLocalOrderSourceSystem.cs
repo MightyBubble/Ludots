@@ -19,10 +19,12 @@ using Ludots.Core.Modding;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using MobaDemoMod.Triggers;
+using Ludots.Platform.Abstractions;
 
 namespace MobaDemoMod.Systems
 {
@@ -146,7 +148,7 @@ namespace MobaDemoMod.Systems
             // Entity collection providers
             _inputOrderMapping.SetActorProvider((out Entity entity) =>
             {
-                entity = TryGetLocalPlayerId(out int playerId)
+                entity = TryGetSolePossessedPlayerId(out int playerId)
                     ? GetControlledActor(playerId)
                     : default;
                 return _world.IsAlive(entity);
@@ -174,7 +176,7 @@ namespace MobaDemoMod.Systems
             });
             
             // Order submit handler
-            // Visual feedback (markers, cooldown text) is handled by Core PerformerRuleSystem
+            // Visual feedback (markers, cooldown text) is handled by Core PresenterRuleSystem
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
@@ -197,12 +199,12 @@ namespace MobaDemoMod.Systems
                 return _orders.Submit(in order);
             });
 
-            // Aiming state -> Performer direct API (for AimCast mode)
-            // Uses PerformerCommandBuffer to create/destroy a performer scope.
-            if (_globals.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer commands)
+            // Aiming state -> Presenter direct API (for AimCast mode)
+            // Uses PresenterCommandBuffer to create/destroy a presenter scope.
+            if (_globals.TryGetValue(CoreServiceKeys.PresenterCommandBuffer.Name, out var cmdObj) && cmdObj is PresenterCommandBuffer commands)
             {
                 var mc = (MobaConfig)_globals[InstallMobaDemoOnGameStartTrigger.MobaConfigKey];
-                var perfReg = _globals.TryGetValue(CoreServiceKeys.PerformerDefinitionRegistry.Name, out var prObj) && prObj is PerformerDefinitionRegistry pr ? pr : null;
+                var perfReg = _globals.TryGetValue(CoreServiceKeys.PresenterDefinitionRegistry.Name, out var prObj) && prObj is PresenterDefinitionRegistry pr ? pr : null;
                 int rangeCircleDefId = perfReg?.GetId(mc.Presentation.RangeCircleIndicatorDefKey) ?? 0;
 
                 _inputOrderMapping.SetAimingStateChangedHandler((isAiming, mapping) =>
@@ -210,12 +212,12 @@ namespace MobaDemoMod.Systems
                     int scopeId = mapping.ActionId.GetHashCode();
                     if (isAiming)
                     {
-                        commands.TryAdd(new PerformerCommand
+                        commands.TryAdd(new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = rangeCircleDefId,
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = rangeCircleDefId,
                             ScopeTag = scopeId,
-                            Source = TryGetLocalPlayerId(out int playerId)
+                            Source = TryGetSolePossessedPlayerId(out int playerId)
                                 ? GetControlledActor(playerId)
                                 : default
                         });
@@ -223,15 +225,15 @@ namespace MobaDemoMod.Systems
                     else
                     {
                         // Destroy the entire aiming scope
-                        commands.TryAdd(new PerformerCommand
+                        commands.TryAdd(new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                            CommandKind = PresenterCommandKind.DestroyPresenterScope,
                             ScopeTag = scopeId
                         });
                     }
                 });
 
-                // No update handler needed; performer position resolves from Owner entity each frame.
+                // No update handler needed; presenter position resolves from Owner entity each frame.
             }
         }
 
@@ -245,11 +247,10 @@ namespace MobaDemoMod.Systems
             {
                 CheckModeSwitchKeys(input, _inputOrderMapping);
 
-                if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) &&
-                    actorObj is Entity localPlayer &&
+                if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localPlayer) &&
                     _world.IsAlive(localPlayer))
                 {
-                    if (!TryGetLocalPlayerId(out int playerId))
+                    if (!TryGetSolePossessedPlayerId(out int playerId))
                     {
                         return;
                     }
@@ -260,7 +261,7 @@ namespace MobaDemoMod.Systems
                         return;
                     }
 
-                    _inputOrderMapping.SetLocalPlayer(actor, playerId);
+                    _inputOrderMapping.SetSolePossessedActor(actor, playerId);
                     _inputOrderMapping.Update(dt);
                 }
             }
@@ -268,17 +269,16 @@ namespace MobaDemoMod.Systems
             RenderModeHud();
         }
 
-        private bool TryGetLocalPlayerId(out int playerId)
+        private bool TryGetSolePossessedPlayerId(out int playerId)
         {
             playerId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
-                value is not int candidate ||
-                candidate <= 0)
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out ClientLocalSeat seat) || !seat.HasPossession)
             {
                 return false;
             }
 
-            playerId = candidate;
+            playerId = seat.PossessedPlayerId;
             return true;
         }
 
@@ -293,16 +293,12 @@ namespace MobaDemoMod.Systems
                 return default;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) || actorObj is not Entity localPlayer)
-                return default;
-            if (!_world.IsAlive(localPlayer)) return default;
-
             if (TryGetCollectionPrimary(EntityCollectionKeys.CommandSource, out var commandSourcePrimary))
             {
                 if (_world.TryGet(commandSourcePrimary, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == playerId)
                     return commandSourcePrimary;
             }
-            return localPlayer;
+            return default;
         }
 
         private bool TryGetCollectionPrimary(string collectionKey, out Entity target)
@@ -391,8 +387,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetLocalCollectionOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
         }

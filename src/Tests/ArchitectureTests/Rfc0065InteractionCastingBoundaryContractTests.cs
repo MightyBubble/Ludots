@@ -74,7 +74,7 @@ namespace Ludots.Tests.Architecture
         public void CoreDefaultConfigAssets_CarryNoScenarioVocabulary()
         {
             string repoRoot = FindRepoRoot();
-            string configsRoot = Path.Combine(repoRoot, "assets", "Configs");
+            string configsRoot = Path.Combine(repoRoot, "assets");
             string[] roots =
             {
                 Path.Combine(configsRoot, "Relationships"),
@@ -94,7 +94,7 @@ namespace Ludots.Tests.Architecture
                     if (node is JsonObject rootObject &&
                         string.Equals(
                             ToRepoRelativePath(repoRoot, file),
-                            "assets/Configs/Relationships/catalog.json",
+                            "assets/Relationships/catalog.json",
                             StringComparison.Ordinal))
                     {
                         // Explicit exemption: the catalog stance section (Hostile/Friendly/Neutral)
@@ -400,7 +400,11 @@ namespace Ludots.Tests.Architecture
                 "out Team ",
                 "new Team {",
                 "PlayerOwner",
-                "TeamManager"
+                "TeamManager",
+                "OrderBuffer",
+                "OrderTypeId",
+                "OrderId",
+                "NotifyOrderComplete"
             };
 
             var violations = new List<string>();
@@ -412,8 +416,9 @@ namespace Ludots.Tests.Architecture
             Assert.That(
                 violations,
                 Is.Empty,
-                "RFC-0065: MassNavigation is an execution domain. It must ingest explicit OrderBuffer move orders " +
-                "and must not resolve command actors or affiliation from input, command-source collections, embodied Team/PlayerOwner, or interaction context APIs:\n" +
+                "RFC-0065: MassNavigation is an execution domain. It must consume only the typed MovePlan " +
+                "execution contract (MovePlanExecutionIntent/Result) and must not touch OrderBuffer/OrderTypeId/OrderId " +
+                "or resolve command actors or affiliation from input, command-source collections, embodied Team/PlayerOwner, or interaction context APIs:\n" +
                 string.Join(Environment.NewLine, violations));
         }
 

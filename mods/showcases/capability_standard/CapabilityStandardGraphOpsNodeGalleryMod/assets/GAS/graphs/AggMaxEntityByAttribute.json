@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.AggMaxEntityByAttribute",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "maxEnt",
+        "op": "AggMaxEntityByAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "maxEnt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "maxEnt",
+        "toPort": "list"
+      }
+    ]
+  }
+]

@@ -1,0 +1,4 @@
+﻿{"Step":"idle","Producer":"Barracks","Resource":{"Name":"Minerals","Value":700},"Orders":{"HasActive":false,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"queued","Producer":"Barracks","Resource":{"Name":"Minerals","Value":565},"Orders":{"HasActive":true,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"mid_progress","Producer":"Barracks","Resource":{"Name":"Minerals","Value":565},"Orders":{"HasActive":true,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"complete","Producer":"Barracks","Resource":{"Name":"Minerals","Value":565},"Orders":{"HasActive":false,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":1}

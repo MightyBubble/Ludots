@@ -74,7 +74,7 @@ namespace RtsDemoMod.Triggers
             if (hasLocalPresentation)
             {
                 engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));
-                engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
+                engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
                 ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
                 _ctx.Log("[RtsDemoMod] RTS relation runtime and command-source panel systems registered");
             }

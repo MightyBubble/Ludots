@@ -5,6 +5,14 @@
     "orderAdmissionRejectionCapacity": 4096
   },
   "commandSource": {
-    "targetFilter": { "relationFilter": "Friendly" }
-  }
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

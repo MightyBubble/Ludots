@@ -28,14 +28,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ExCSS\ExCSS.csproj" />
+    <ProjectReference Include="..\externals\SVG\Generators\Svg.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
-
-  <Target Name="BuildSvgGenerators" BeforeTargets="CoreCompile">
-    <MSBuild Projects="..\externals\SVG\Generators\Svg.Generators.csproj"
-             Targets="Restore;Build"
-             Properties="Configuration=$(Configuration)" />
-    <ItemGroup>
-      <Analyzer Include="..\externals\SVG\Generators\bin\$(Configuration)\net9.0\Svg.Generators.dll" />
-    </ItemGroup>
-  </Target>
 </Project>

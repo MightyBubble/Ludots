@@ -19,6 +19,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
@@ -69,7 +70,7 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null), "interaction showcase must publish the local player command owner.");
             Entity arcweaver = FindEntityByName(engine.World, InteractionShowcaseIds.ArcweaverName);
             Entity vanguard = FindEntityByName(engine.World, InteractionShowcaseIds.VanguardName);
@@ -209,7 +210,7 @@ namespace Ludots.Tests.GAS.Production
                 engine.LoadMap(InteractionShowcaseIds.HubMapId);
                 Tick(engine, 8);
 
-                Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+                Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
                 Entity arcweaver = FindEntityByName(engine.World, InteractionShowcaseIds.ArcweaverName);
                 Entity vanguard = FindEntityByName(engine.World, InteractionShowcaseIds.VanguardName);
                 Entity commander = FindEntityByName(engine.World, InteractionShowcaseIds.CommanderName);
@@ -247,7 +248,7 @@ namespace Ludots.Tests.GAS.Production
                     expectedProfileId: NearestTopNDispatchId);
                 Assert.That(nearestRows.All(row => actors.Contains(row)), Is.True);
 
-                AssertInteractionBlinkPerformerRules(repoRoot);
+                AssertInteractionBlinkPresenterRules(repoRoot);
             }
             finally
             {
@@ -268,7 +269,7 @@ namespace Ludots.Tests.GAS.Production
             engine.LoadMap(InteractionShowcaseIds.HubMapId);
             Tick(engine, 8);
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null));
             Assert.That(engine.World.Has<WorldPositionCm>(localPlayer), Is.True);
 
@@ -573,24 +574,24 @@ namespace Ludots.Tests.GAS.Production
             collections.Replace(owner, descriptor, rows);
         }
 
-        private static void AssertInteractionBlinkPerformerRules(string repoRoot)
+        private static void AssertInteractionBlinkPresenterRules(string repoRoot)
         {
-            string performerPath = Path.Combine(repoRoot, LauncherTargetPath, "assets", "Presentation", "performers.json");
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(performerPath, Encoding.UTF8));
+            string presenterPath = Path.Combine(repoRoot, LauncherTargetPath, "assets", "Presentation", "presenters.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(presenterPath, Encoding.UTF8));
             JsonElement root = document.RootElement;
 
             AssertGroundOverlayRingDefinition(root, InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
-            AssertPerformerCollectionRule(
+            AssertPresenterCollectionRule(
                 root,
                 "EntityCollectionMemberAdded",
                 InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey,
-                "CreatePerformer",
+                "CreatePresenter",
                 InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
-            AssertPerformerCollectionRule(
+            AssertPresenterCollectionRule(
                 root,
                 "EntityCollectionMemberRemoved",
                 InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey,
-                "DestroyScopedPerformer",
+                "DestroyScopedPresenter",
                 InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
         }
 
@@ -621,13 +622,13 @@ namespace Ludots.Tests.GAS.Production
                     }
                 }
 
-                Assert.Fail($"Performer '{definitionId}' must bind a GroundOverlay Ring.");
+                Assert.Fail($"Presenter '{definitionId}' must bind a GroundOverlay Ring.");
             }
 
-            Assert.Fail($"Performer '{definitionId}' is missing.");
+            Assert.Fail($"Presenter '{definitionId}' is missing.");
         }
 
-        private static void AssertPerformerCollectionRule(
+        private static void AssertPresenterCollectionRule(
             JsonElement root,
             string eventKind,
             string collectionKey,
@@ -664,7 +665,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             Assert.Fail(
-                $"Performer rule missing: {eventKind} {collectionKey} -> {commandKind} {definitionId}.");
+                $"Presenter rule missing: {eventKind} {collectionKey} -> {commandKind} {definitionId}.");
         }
 
         private static Entity FindEntityByName(World world, string name)
@@ -795,7 +796,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 owner = frame.ContextEntity;
             }
-            else if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer))
+            else if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer))
             {
                 owner = localPlayer;
             }

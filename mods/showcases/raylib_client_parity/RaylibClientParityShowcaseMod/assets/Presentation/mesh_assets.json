@@ -1,0 +1,14 @@
+[
+  {
+    "id": "raylib_client_parity.mannequin",
+    "type": "Model"
+  },
+  {
+    "id": "raylib_client_parity.vfx_marker",
+    "type": "Billboard"
+  },
+  {
+    "id": "raylib_client_parity.albedo_building",
+    "type": "Model"
+  }
+]

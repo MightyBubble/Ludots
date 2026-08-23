@@ -9,8 +9,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -307,7 +307,7 @@ internal sealed class ItemSystemShowcaseRuntime
             return;
         }
 
-        bool activated = Ability(engine).TryActivateAbility(_hero, 0, _dummy);
+        bool activated = SubmitAbilityOrder(engine, 0, _dummy);
         if (!activated)
         {
             Log("Slot 0 rifle fire failed to activate.");
@@ -323,7 +323,7 @@ internal sealed class ItemSystemShowcaseRuntime
     public void CastMythicPulse(GameEngine engine)
     {
         EnsureScenario(engine);
-        Log(Ability(engine).TryActivateAbility(_hero, 1, _hero)
+        Log(SubmitAbilityOrder(engine, 1, _hero)
             ? "Mythic Pulse cast through slot 1."
             : "Mythic Pulse failed.");
     }
@@ -331,7 +331,7 @@ internal sealed class ItemSystemShowcaseRuntime
     public void CastSecondWind(GameEngine engine)
     {
         EnsureScenario(engine);
-        Log(Ability(engine).TryActivateAbility(_hero, 4, _hero)
+        Log(SubmitAbilityOrder(engine, 4, _hero)
             ? "Second Wind cast through slot 4."
             : "Second Wind failed.");
     }
@@ -625,7 +625,9 @@ internal sealed class ItemSystemShowcaseRuntime
         world.Add(_hero, new ActiveEffectContainer());
         TagStateInstaller.EnsureInstalled(world, _hero);
         world.Add(_hero, new AbilityStateBuffer());
-        InitAttributes(ref world.Get<AttributeBuffer>(_hero), true);
+        world.Add(_hero, OrderBuffer.CreateEmpty());
+        OrderBlackboardStateInstaller.EnsureInstalled(world, _hero);
+        InitAttributes(engine, _hero, true);
 
         _dummy = world.Create(new Name { Value = "Target Dummy" });
         TrackMapEntity(engine, _dummy);
@@ -633,7 +635,7 @@ internal sealed class ItemSystemShowcaseRuntime
         world.Add(_dummy, new AttributeBuffer());
         world.Add(_dummy, new ActiveEffectContainer());
         TagStateInstaller.EnsureInstalled(world, _dummy);
-        InitAttributes(ref world.Get<AttributeBuffer>(_dummy), false);
+        InitAttributes(engine, _dummy, false);
 
         _vendor = world.Create(new Name { Value = "Quartermaster" });
         TrackMapEntity(engine, _vendor);
@@ -688,13 +690,16 @@ internal sealed class ItemSystemShowcaseRuntime
         Log("Coverage live: MOBA boots/mythic, ARPG rings/charm, extraction stash/secure, rifle sockets, ammo stacks, vendor trade, and forge sockets.");
     }
 
-    private void InitAttributes(ref AttributeBuffer attrs, bool hero)
+    private void InitAttributes(GameEngine engine, Entity entity, bool hero)
     {
-        attrs.SetBase(_healthAttrId, hero ? 100f : 140f);
-        attrs.SetBase(_shieldAttrId, hero ? 20f : 0f);
-        attrs.SetBase(_moveSpeedAttrId, hero ? 100f : 0f);
-        attrs.SetBase(_attackAttrId, hero ? 12f : 0f);
-        attrs.SetBase(_armorAttrId, hero ? 5f : 1f);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("ItemSystemShowcase requires TagOps.");
+        World world = engine.World;
+        AttributeMutationOps.SetBase(world, entity, _healthAttrId, hero ? 100f : 140f, tagOps);
+        AttributeMutationOps.SetBase(world, entity, _shieldAttrId, hero ? 20f : 0f, tagOps);
+        AttributeMutationOps.SetBase(world, entity, _moveSpeedAttrId, hero ? 100f : 0f, tagOps);
+        AttributeMutationOps.SetBase(world, entity, _attackAttrId, hero ? 12f : 0f, tagOps);
+        AttributeMutationOps.SetBase(world, entity, _armorAttrId, hero ? 5f : 1f, tagOps);
     }
 
     private void EquipNamed(GameEngine engine, Entity item, string slotId)
@@ -744,13 +749,20 @@ internal sealed class ItemSystemShowcaseRuntime
         _selectedItem = Entity.Null;
     }
 
-    private AbilitySystem Ability(GameEngine engine)
+    private bool SubmitAbilityOrder(GameEngine engine, int slotIndex, Entity target)
     {
-        return new AbilitySystem(
-            engine.World,
-            engine.GetService(CoreServiceKeys.EffectRequestQueue),
-            engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry),
-            engine.GetService(CoreServiceKeys.TagOps));
+        OrderQueue queue = engine.GetService(CoreServiceKeys.OrderQueue)
+            ?? throw new InvalidOperationException("Item showcase requires the Core OrderQueue.");
+        OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            ?? throw new InvalidOperationException("Item showcase requires the Core OrderTypeRegistry.");
+        var order = new Order
+        {
+            Actor = _hero,
+            Target = target,
+            OrderTypeId = orderTypes.GetId("castAbility"),
+            Args = new OrderArgs { I0 = slotIndex }
+        };
+        return queue.TryEnqueue(in order);
     }
 
     private InventoryRuntimeService Inventory(GameEngine engine)

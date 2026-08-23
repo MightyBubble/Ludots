@@ -9,11 +9,11 @@ using Ludots.Core.Modding;
 using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Physics2D;
-using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Physics2DPlaygroundMod.Input;
 using Physics2DPlaygroundMod.Systems;
+using Ludots.Platform.Abstractions;
 
 namespace Physics2DPlaygroundMod.Triggers
 {

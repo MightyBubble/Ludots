@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipAggSumMetric",
+  "driver": "rel",
+  "title": "把好感加总",
+  "beat": "四份好感在算式台上连加。",
+  "detailTemplate": "好感总和 {sum}。",
+  "assertDetailContains": [
+    "总和"
+  ],
+  "featuredNodeId": "sum",
+  "graphKind": "Query",
+  "field": "rel"
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "capability_static_presenter.building.north.intact",
+    "type": "Model"
+  },
+  {
+    "id": "capability_static_presenter.building.south.intact",
+    "type": "Model"
+  },
+  {
+    "id": "capability_static_presenter.building.damaged",
+    "type": "Model"
+  },
+  {
+    "id": "capability_static_presenter.building.ruined",
+    "type": "Model"
+  },
+  {
+    "id": "capability_static_presenter.furnace",
+    "type": "Model"
+  },
+  {
+    "id": "capability_static_presenter.worker.knight",
+    "type": "Model"
+  },
+  {
+    "id": "capability_static_presenter.smoke.billboard",
+    "type": "Billboard",
+    "vfx": {
+      "particleVfxId": "capability_static_performer.smoke"
+    }
+  },
+  {
+    "id": "capability_static_presenter.worker.patrol",
+    "type": "Model"
+  },
+  {
+    "id": "capability_static_presenter.sound.anvil_hammering",
+    "type": "Model"
+  }
+]

@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Platform.Abstractions;
 
 namespace EntityInfoPanelsMod.Insight;
 

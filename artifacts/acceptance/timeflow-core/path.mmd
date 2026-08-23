@@ -1,0 +1,6 @@
+flowchart TD
+    A[simulation 1000, gas 1000] --> B[simulation 500, gas token 2000, gas effective 1000]
+    B --> C[Release simulation scale token]
+    C --> D[simulation 1000, gas effective 2000]
+    D --> E[Pause simulation parent domain]
+    E --> F[All child domains report paused]

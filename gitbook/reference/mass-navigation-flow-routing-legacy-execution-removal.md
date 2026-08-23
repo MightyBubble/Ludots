@@ -49,7 +49,7 @@ NAV-8 is regression-oriented and reuses the existing production tests and showca
 | Command / operation | Feedback |
 |---|---|
 | `dotnet test src/Tests/GasTests/GasTests.csproj --filter "RuntimeManifestationBridgeTests|Physics2DIntegrationTests|DisplacementPresetTests|StaticObstaclePhysicsShowcaseAcceptanceTests|CapabilityStandardPhysics2DShowcaseAcceptanceTests|RoadNetworkShowcaseTests|ChampionSkillSandbox" /m:1 /nr:false --no-restore` | Gameplay and showcase regressions stay green |
-| `dotnet test src/Tests/PresentationTests/PresentationTests.csproj --filter "MassNavigationExecutionAvoidanceContractTests|MassNavigationPerformerContractTests" /m:1 /nr:false --no-restore` | MassNavigationFlow execution and performer contracts stay green |
+| `dotnet test src/Tests/PresentationTests/PresentationTests.csproj --filter "MassNavigationExecutionAvoidanceContractTests|MassNavigationPresenterContractTests" /m:1 /nr:false --no-restore` | MassNavigationFlow execution and presenter contracts stay green |
 | `dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj /m:1 /nr:false --no-restore` | Repository scan reports no removed-domain or banned bake/editor policy hits |
 | Reintroduce one removed-domain token in any tracked file and rerun architecture tests | The scan fails with file and line |
 

@@ -53,7 +53,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private readonly EffectPhaseSideEffectTransaction _phaseTransaction;
-        private int _fanOutDropped;
 
 
         /// <summary>
@@ -149,7 +148,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 effectRequests,
                 spawnRequests,
                 presentationEvents,
-                snapshotCapacity);
+                snapshotCapacity,
+                _fanOutBudget);
         }
 
         private void RefreshBuiltinOrderContext()
@@ -170,6 +170,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            _templates?.RequireFinalized();
             try
             {
                 return UpdateSliceCore(dt, timeBudgetMs);
@@ -351,7 +352,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _fanOutBudget.NextFrame();
             }
-            _fanOutDropped = 0;
             ClearPendingWork();
             ClearRollbackState();
 
@@ -479,11 +479,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void CompleteSlice()
         {
-            if (_fanOutDropped > 0 && _budget != null)
-            {
-                _budget.EffectLifetimeFanOutDropped += _fanOutDropped;
-            }
-
             _sliceActive = false;
             _stage = LifetimeStage.Scan;
             _snapshotCount = 0;
@@ -701,18 +696,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 default,
                 phase,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetType,
+                tpl.EffectivePresetTypeId,
                 tpl.TagId,
                 entry.TemplateId,
                 in mergedConfig,
                 builtinRuntime,
                 BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context),
                 entry.Context.RootId);
-
-            if (builtinRuntime != null)
-            {
-                _fanOutDropped += builtinRuntime.DroppedCount;
-            }
 
             if (phase == EffectPhaseId.OnExpire || phase == EffectPhaseId.OnRemove)
             {

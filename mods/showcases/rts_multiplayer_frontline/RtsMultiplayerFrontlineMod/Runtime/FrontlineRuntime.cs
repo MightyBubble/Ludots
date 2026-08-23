@@ -551,8 +551,8 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
         orderRules.RegisterAdmissionValidator(
             orderTypes.GetId(Config.CastAbilityOrderTypeKey),
             trainGuard);
-        engine.InsertSystemBeforeRequired<AbilitySystem>(trainGuard, SystemGroup.AbilityActivation);
-        engine.InsertSystemBeforeRequired<AbilitySystem>(
+        engine.InsertSystemBeforeRequired<OrderBufferSystem>(trainGuard, SystemGroup.AbilityActivation);
+        engine.InsertSystemBeforeRequired<OrderBufferSystem>(
             new FrontlinePreMatchOrderGateSystem(engine.World, this, orderBufferSystem),
             SystemGroup.AbilityActivation);
         _tagBinder = new FrontlineTagBinder(Config, tagOps);

@@ -95,7 +95,10 @@ public sealed record LauncherLaunchPlan(
     int SchemaVersion,
     string GeneratedAtUtc,
     string PlanFingerprint,
-    string GraphArtifactPath);
+    string GraphArtifactPath,
+    bool IsExecutableTarget = false,
+    string ExecutableProjectPath = "",
+    IReadOnlyList<string>? ExecutableArgs = null);
 
 public sealed record LauncherResolveResult(
     LauncherLaunchPlan Plan,
@@ -118,3 +121,8 @@ public sealed record LauncherStartedProcess(
     int Pid,
     string AppAssemblyPath,
     string BootstrapPath);
+
+public sealed record LauncherExecutableTargetRun(
+    string CommandLine,
+    int ExitCode,
+    string Output);

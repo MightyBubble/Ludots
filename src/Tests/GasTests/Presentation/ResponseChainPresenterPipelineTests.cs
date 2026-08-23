@@ -9,18 +9,20 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Primitives;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
  
 namespace Ludots.Tests.GAS
 {
@@ -48,6 +50,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
+                FinalizeEffectTemplates(templates);
  
                 var clock = new DiscreteClock();
                 var conditions = new GasConditionRegistry();
@@ -78,7 +81,7 @@ namespace Ludots.Tests.GAS
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
  
-                var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new PlayerOwner { PlayerId = 1 });
+                var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags(), new PlayerOwner { PlayerId = 1 });
                 var listener = default(ResponseChainListener);
                 listener.Add(tag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot);
                 world.Add(target, listener);
@@ -154,6 +157,7 @@ namespace Ludots.Tests.GAS
                 ParticipatesInResponse = true,
                 Modifiers = default
             });
+            FinalizeEffectTemplates(templates);
 
             var requests = new EffectRequestQueue();
             var admissionResults = new OrderAdmissionResultBuffer(8, 8);
@@ -179,7 +183,7 @@ namespace Ludots.Tests.GAS
                 MaxWorkUnitsPerSlice = int.MaxValue
             };
 
-            var actor = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new PlayerOwner { PlayerId = 1 });
+            var actor = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags(), new PlayerOwner { PlayerId = 1 });
             var listener = default(ResponseChainListener);
             listener.Add(tag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot);
             world.Add(actor, listener);
@@ -233,8 +237,8 @@ namespace Ludots.Tests.GAS
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
             var markers = new TransientMarkerBuffer();
-            var prefabs = new PrefabRegistry();
-            prefabs.Register(WellKnownPrefabKeys.CueMarker, default);
+            var meshes = new MeshAssetRegistry();
+            var presenters = new PresenterDefinitionRegistry();
 
             var actor = world.Create();
             var request = default(OrderRequest);
@@ -246,7 +250,7 @@ namespace Ludots.Tests.GAS
 
             That(orderRequests.TryEnqueue(request), Is.True);
 
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, prefabs);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
             system.Update(0f);
 
             That(ui.Visible, Is.True);
@@ -278,11 +282,11 @@ namespace Ludots.Tests.GAS
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
             var markers = new TransientMarkerBuffer();
-            var prefabs = new PrefabRegistry();
-            prefabs.Register(WellKnownPrefabKeys.CueMarker, default);
+            var meshes = new MeshAssetRegistry();
+            var presenters = new PresenterDefinitionRegistry();
 
             var actor = world.Create();
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, prefabs);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
 
             var first = default(OrderRequest);
             first.PlayerId = 1;
@@ -313,8 +317,9 @@ namespace Ludots.Tests.GAS
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
             var markers = new TransientMarkerBuffer();
-            var prefabs = new PrefabRegistry();
-            prefabs.Register(WellKnownPrefabKeys.CueMarker, default);
+            var meshes = new MeshAssetRegistry();
+            var presenters = new PresenterDefinitionRegistry();
+            RegisterAuthoredCueMarker(meshes, presenters);
 
             var actor = world.Create(new VisualTransform { Position = new Vector3(2f, 0f, 3f), Scale = Vector3.One });
             That(telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -333,7 +338,7 @@ namespace Ludots.Tests.GAS
                 Outcome = ResponseChainResolveOutcome.AppliedInstant
             }), Is.True);
 
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, prefabs);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
             system.Update(0f);
 
             That(markers.Count, Is.EqualTo(1), "Only resolved response-chain telemetry should emit cue markers.");
@@ -352,6 +357,7 @@ namespace Ludots.Tests.GAS
             request.PromptTagId = 9001;
             request.Actor = actor;
             request.Target = actor;
+            request.TargetContext = Entity.Null;
             ui.ApplyRequest(request);
 
             var globals = new Dictionary<string, object>
@@ -413,6 +419,7 @@ namespace Ludots.Tests.GAS
             request.PromptTagId = 9001;
             request.Actor = actor;
             request.Target = actor;
+            request.TargetContext = Entity.Null;
             ui.ApplyRequest(request);
             var globals = new Dictionary<string, object>
             {
@@ -438,7 +445,7 @@ namespace Ludots.Tests.GAS
             };
             var admissionResults = new OrderAdmissionResultBuffer(4, 4);
             var chainOrders = new OrderQueue(capacity: 1, admissionResults);
-            var seed = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
+            var seed = new Order { Actor = actor, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
             That(chainOrders.TryEnqueue(in seed), Is.True);
             var system = new ResponseChainHumanOrderSourceSystem(globals, ui, chainOrders);
 
@@ -463,10 +470,11 @@ namespace Ludots.Tests.GAS
             request.PlayerId = 2;
             request.Actor = actor;
             request.Target = actor;
+            request.TargetContext = Entity.Null;
             ui.ApplyRequest(request);
             var admissionResults = new OrderAdmissionResultBuffer(4, 4);
             var chainOrders = new OrderQueue(capacity: 1, admissionResults);
-            var seed = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
+            var seed = new Order { Actor = actor, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
             That(chainOrders.TryEnqueue(in seed), Is.True);
             var system = new ResponseChainAiOrderSourceSystem(
                 ui,
@@ -568,6 +576,18 @@ namespace Ludots.Tests.GAS
             return lines.ToArray();
         }
 
+        private static void FinalizeEffectTemplates(EffectTemplateRegistry templates)
+        {
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                new PresetTypeRegistry(),
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/ResponseChainPresenterPipelineTests.json");
+        }
+
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildResponseChainHandler()
         {
             var backend = new TestInputBackend();
@@ -599,6 +619,35 @@ namespace Ludots.Tests.GAS
             handler.PushContext("Gameplay");
             handler.Update();
             return (backend, handler);
+        }
+
+        private static void RegisterAuthoredCueMarker(MeshAssetRegistry meshes, PresenterDefinitionRegistry presenters)
+        {
+            int meshId = meshes.Register(
+                WellKnownMeshKeys.CueMarker,
+                MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Cube));
+            presenters.Register(WellKnownMeshKeys.CueMarker, new PresenterDefinition
+            {
+                DefaultLifetime = 0.35f,
+                PositionOffset = new Vector3(0f, 0.2f, 0f),
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = meshId,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = new Vector3(0.2f, 0.2f, 0.2f),
+                        },
+                    },
+                ],
+            });
         }
 
         private static void PressButton(PlayerInputHandler handler, TestInputBackend backend, string path)

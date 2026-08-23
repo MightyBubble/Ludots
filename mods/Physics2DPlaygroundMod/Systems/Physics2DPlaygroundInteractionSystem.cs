@@ -22,9 +22,10 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -43,7 +44,7 @@ namespace Physics2DPlaygroundMod.Systems
                 new PresentationLodEntry(maxDistanceCm: 24000f, minScreenCoverage01: 0.008f),
                 new PresentationLodEntry(maxDistanceCm: 50000f, minScreenCoverage01: 0.002f));
 
-        private const string SpawnedBoxPerformerId = "physics2d_playground.spawned_box";
+        private const string SpawnedBoxPresenterId = "physics2d_playground.spawned_box";
         private const int InitialSelectedScratchCapacity = 64;
 
         private readonly GameEngine _engine;
@@ -52,8 +53,8 @@ namespace Physics2DPlaygroundMod.Systems
         private readonly List<Entity> _selectedEntities = new(1024);
         private Entity[] _selectedScratch = new Entity[InitialSelectedScratchCapacity];
         private readonly PresentationStableIdAllocator _stableIds;
-        private readonly PerformerCommandBuffer _performerCommands;
-        private readonly PerformerDefinitionRegistry _performerDefinitions;
+        private readonly PresenterCommandBuffer _presenterCommands;
+        private readonly PresenterDefinitionRegistry _presenterDefinitions;
         private readonly ShapeDataStorage2D _shapeStorage;
         private readonly Physics2DSolverConfig _solverConfig;
         private readonly EffectRequestQueue _effectRequests;
@@ -64,7 +65,7 @@ namespace Physics2DPlaygroundMod.Systems
         private int _boxShapeIndex = -1;
         private int _spawnCount = 10;
         private float _impulseMagnitude = 10f;
-        private int _cueMarkerPrefabId;
+        private int _cueMarkerMeshId;
 
         private bool _prevK1;
         private bool _prevK2;
@@ -90,10 +91,10 @@ namespace Physics2DPlaygroundMod.Systems
             _solverConfig = solverConfig ?? throw new ArgumentNullException(nameof(solverConfig));
             _stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
                 ?? throw new InvalidOperationException("Physics2DPlayground requires PresentationStableIdAllocator.");
-            _performerCommands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
-                ?? throw new InvalidOperationException("Physics2DPlayground requires PerformerCommandBuffer.");
-            _performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                ?? throw new InvalidOperationException("Physics2DPlayground requires PerformerDefinitionRegistry.");
+            _presenterCommands = engine.GetService(CoreServiceKeys.PresenterCommandBuffer)
+                ?? throw new InvalidOperationException("Physics2DPlayground requires PresenterCommandBuffer.");
+            _presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("Physics2DPlayground requires PresenterDefinitionRegistry.");
             _effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue)
                 ?? throw new InvalidOperationException(ResponseChainListenerOps.MissingQueueError);
         }
@@ -229,33 +230,31 @@ namespace Physics2DPlaygroundMod.Systems
                 throw new InvalidOperationException("Physics2DPlayground requires TransientMarkerBuffer for interaction cues.");
             }
 
-            markers.TryAddPrefab(
-                ResolveCueMarkerPrefabId(),
+            if (!markers.TryAddMesh(
+                ResolveCueMarkerMeshId(),
                 WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
                 new Vector3(0.3f),
                 new Vector4(0.2f, 0.9f, 1f, 1f),
-                0.3f);
+                0.3f))
+            {
+                throw new InvalidOperationException("TransientMarkerBuffer is full while emitting Physics2DPlayground cue marker.");
+            }
         }
 
-        private int ResolveCueMarkerPrefabId()
+        private int ResolveCueMarkerMeshId()
         {
-            if (_cueMarkerPrefabId > 0)
+            if (_cueMarkerMeshId > 0)
             {
-                return _cueMarkerPrefabId;
+                return _cueMarkerMeshId;
             }
 
-            if (_engine.GetService(CoreServiceKeys.PresentationPrefabRegistry) is not PrefabRegistry prefabs)
+            if (_engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) is not MeshAssetRegistry meshes)
             {
-                throw new InvalidOperationException("Physics2DPlayground requires PresentationPrefabRegistry.");
+                throw new InvalidOperationException("Physics2DPlayground requires PresentationMeshAssetRegistry.");
             }
 
-            _cueMarkerPrefabId = prefabs.GetId("cue_marker");
-            if (_cueMarkerPrefabId <= 0)
-            {
-                throw new InvalidOperationException("Physics2DPlayground requires prefab 'cue_marker'.");
-            }
-
-            return _cueMarkerPrefabId;
+            _cueMarkerMeshId = WellKnownMeshKeys.RequireCueMarkerId(meshes);
+            return _cueMarkerMeshId;
         }
 
         private bool TryGetGroundPointer(IInputActionReader input, out WorldCmInt2 worldCm)
@@ -328,7 +327,7 @@ namespace Physics2DPlaygroundMod.Systems
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
             if (local == Entity.Null || !_world.IsAlive(local))
             {
                 return false;
@@ -446,16 +445,16 @@ namespace Physics2DPlaygroundMod.Systems
                 default(CommandSourceSelectableTag),
                 CommandSourceSelectableState.EnabledByDefault);
 
-            if (!_performerCommands.TryAdd(new PerformerCommand
+            if (!_presenterCommands.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.CreatePerformer,
-                    PerformerDefinitionId = ResolveSpawnedBoxDefinitionId(),
+                    CommandKind = PresenterCommandKind.CreatePresenter,
+                    PresenterDefinitionId = ResolveSpawnedBoxDefinitionId(),
                     ScopeTag = ResolveSpawnedBoxScopeId(entity),
                     Source = entity,
                     AnchorKind = PresentationAnchorKind.Entity,
                 }))
             {
-                throw new InvalidOperationException("Physics2DPlayground failed to queue performer creation for spawned box.");
+                throw new InvalidOperationException("Physics2DPlayground failed to queue presenter creation for spawned box.");
             }
         }
 
@@ -478,11 +477,11 @@ namespace Physics2DPlaygroundMod.Systems
                 return _spawnedBoxDefinitionId;
             }
 
-            _spawnedBoxDefinitionId = _performerDefinitions.GetId(SpawnedBoxPerformerId);
+            _spawnedBoxDefinitionId = _presenterDefinitions.GetId(SpawnedBoxPresenterId);
             if (_spawnedBoxDefinitionId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Performer '{SpawnedBoxPerformerId}' is required by Physics2DPlaygroundMod.");
+                    $"Presenter '{SpawnedBoxPresenterId}' is required by Physics2DPlaygroundMod.");
             }
 
             return _spawnedBoxDefinitionId;
@@ -490,7 +489,7 @@ namespace Physics2DPlaygroundMod.Systems
 
         private static int ResolveSpawnedBoxScopeId(Entity entity)
         {
-            int scopeId = HashCode.Combine(SpawnedBoxPerformerId, entity.Id, entity.WorldId, entity.Version) & int.MaxValue;
+            int scopeId = HashCode.Combine(SpawnedBoxPresenterId, entity.Id, entity.WorldId, entity.Version) & int.MaxValue;
             return scopeId == 0 ? 1 : scopeId;
         }
     }

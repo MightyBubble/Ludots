@@ -1,0 +1,8 @@
+{
+  "scene": "material_binding",
+  "frames": 30,
+  "avgFrameMs": 0.418,
+  "p95FrameMs": 1.928,
+  "maxFrameMs": 4.078,
+  "wallMs": 597.2
+}

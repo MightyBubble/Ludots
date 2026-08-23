@@ -1,3 +1,4 @@
+using Ludots.Core.Client;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Ludots.Core.Engine;
@@ -217,7 +218,9 @@ public static class LiteNetLibNetworkRuntimeInstaller
                     appliers,
                     Require(engine, CoreServiceKeys.SpatialPartitionMembership),
                     knowledge,
-                    () => engine.GetService(CoreServiceKeys.LocalPlayerEntity)),
+                    () => ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Arch.Core.Entity rep)
+                        ? rep
+                        : Arch.Core.Entity.Null),
                 new ClientIdentityBindingNetworkRuntimeObserver(engine, observer));
             var commandPort = new ReplicatedClientCommandPort(
                 engine.World,

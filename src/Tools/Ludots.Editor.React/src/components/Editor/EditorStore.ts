@@ -17,7 +17,7 @@ import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
 export type JsonRecord = Record<string, unknown>;
 export type EntityTemplatePayload = JsonRecord;
-export type PerformerPayload = JsonRecord;
+export type PresenterPayload = JsonRecord;
 
 export type ToolCategory = 'Height' | 'Water' | 'Area' | 'Blocked' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities' | 'Obstacle';
 export type ToolMode = 'Set' | 'Raise' | 'Lower' | 'Smooth' | 'Bucket'; // Added Bucket
@@ -121,7 +121,7 @@ export interface EditorState {
     canvasSessionLabel: string | null;
     mapConfig: JsonRecord | null;
     templates: EntityTemplatePayload[];
-    performers: PerformerPayload[];
+    presenters: PresenterPayload[];
     navigationConfig: JsonRecord | null;
     navigationConfigVersion: number;
     selectedTemplateId: string | null;
@@ -249,7 +249,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     canvasSessionLabel: null,
     mapConfig: null,
     templates: [],
-    performers: [],
+    presenters: [],
     navigationConfig: null,
     navigationConfigVersion: 0,
     selectedTemplateId: null,
@@ -465,7 +465,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             canvasSessionLabel: null,
             mapConfig: null,
             templates: [],
-            performers: [],
+            presenters: [],
             navigationConfig: null,
             navigationConfigVersion: Date.now(),
             selectedTemplateId: null,
@@ -490,10 +490,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const tJson = await tRes.json() as JsonRecord;
         const templates = arrayOfRecords(tJson.templates);
 
-        const pRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/performers`);
+        const pRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/presenters`);
         if (!pRes.ok) throw new Error(`Bridge error ${pRes.status}`);
         const pJson = await pRes.json() as JsonRecord;
-        const performers = arrayOfRecords(pJson.performers);
+        const presenters = arrayOfRecords(pJson.presenters);
 
         const defaultTemplateId = templates.length > 0 ? String(templates[0]?.Id ?? templates[0]?.id ?? '') : null;
         const obstacleTemplate = templates.find((t) => {
@@ -530,7 +530,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             selectedBoardName: defaultBoardInfo?.name ?? null,
             selectedBoardInfo: defaultBoardInfo,
             templates,
-            performers,
+            presenters,
             navigationConfig,
             navigationConfigVersion: Date.now(),
             selectedTemplateId: defaultTemplateId && defaultTemplateId.length > 0 ? defaultTemplateId : null,

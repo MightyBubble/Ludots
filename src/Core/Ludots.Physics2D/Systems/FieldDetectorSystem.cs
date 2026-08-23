@@ -89,7 +89,8 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(ref Position2D position, ref Mass2D mass, ref AppliedDamping damping)
             {
-                if (mass.IsStatic)
+                // Only dynamic bodies experience field damping; kinematic velocity is pose-derived.
+                if (!mass.IsDynamic)
                 {
                     damping.TotalFieldDamping = Fix64.OneValue;
                     return;
@@ -116,7 +117,7 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(Entity entity, ref Position2D position, ref Mass2D mass)
             {
-                if (mass.IsStatic) return;
+                if (!mass.IsDynamic) return;
 
                 Fix64 totalFieldDamping = Fix64.OneValue;
                 bool inAnyField = false;

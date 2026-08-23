@@ -1,0 +1,92 @@
+[
+  {
+    "id": "Ability.Rts.TrainMarine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Marine",
+      "iconGlyph": "MN",
+      "accentColor": "#8FC4FF",
+      "hintText": "Show train intent on the barracks card."
+    }
+  },
+  {
+    "id": "Ability.Rts.ResearchStim",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Research Stim",
+      "iconGlyph": "ST",
+      "accentColor": "#D66F4D",
+      "hintText": "Show upgrade intent on the barracks card."
+    }
+  },
+  {
+    "id": "Ability.Rts.StimPack",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Stim Pack",
+      "iconGlyph": "ST",
+      "accentColor": "#F97316",
+      "hintText": "Show infantry burst intent on the marine card."
+    }
+  },
+  {
+    "id": "Ability.Rts.SiegeModeAoe",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Siege Arc",
+      "iconGlyph": "AO",
+      "accentColor": "#D7A95C",
+      "hintText": "Show area control intent on the tank card."
+    }
+  },
+  {
+    "id": "Ability.Rts.ShieldAura",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Shield Aura",
+      "iconGlyph": "AU",
+      "accentColor": "#7CE2C8",
+      "hintText": "Show support aura intent on the vessel card."
+    }
+  },
+  {
+    "id": "Ability.Rts.Irradiate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Irradiate",
+      "iconGlyph": "IR",
+      "accentColor": "#9EF0D9",
+      "hintText": "Show targeted support intent on the vessel card."
+    }
+  }
+]

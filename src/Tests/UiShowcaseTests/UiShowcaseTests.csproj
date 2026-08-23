@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\fixtures\ui-web-parity\**\*.*" Link="fixtures\ui-web-parity\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(SkiaNativeRid)' != ''">

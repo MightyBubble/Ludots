@@ -1,3 +1,4 @@
+using Ludots.Core.Client;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -22,8 +23,7 @@ using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Diagnostics;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -83,7 +83,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private EntityCollectionStore? _collections;
     private IScreenProjector? _projector;
     private PresentationFrameReceiptBuffer? _presentationReceipts;
-    private PerformerEntityRuntime? _performerRuntime;
+    private PresenterEntityRuntime? _performerRuntime;
     private InputOrderMappingSystem? _inputOrderMapping;
     private int _infantryBodyTemplateId;
     private GestureState _gesture;
@@ -256,12 +256,12 @@ internal sealed class AcceptanceDriver : ISystem<float>
             _engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer)
             ?? throw new InvalidOperationException(
                 "Acceptance client requires presentation frame receipts for framebuffer readiness.");
-        PerformerDefinitionRegistry performerDefinitions =
-            _engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+        PresenterDefinitionRegistry performerDefinitions =
+            _engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
             ?? throw new InvalidOperationException(
                 "Acceptance client requires performer definitions for framebuffer readiness.");
-        PerformerEntityRuntime performerRuntime =
-            _engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+        PresenterEntityRuntime performerRuntime =
+            _engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
             ?? throw new InvalidOperationException(
                 "Acceptance client requires the performer entity runtime for framebuffer readiness.");
         int infantryBodyTemplateId = performerDefinitions.GetId("rts.frontline.infantry.body");
@@ -345,9 +345,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException("Client handshake content fingerprint differs from locally canonicalized content.");
         }
 
-        int localPlayerId = _engine.GetService(CoreServiceKeys.LocalPlayerId);
+        int localPlayerId = RequireLocalPlayerId();
         if (localPlayerId <= 0 ||
-            !_engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+            !ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity localPlayer) ||
             !_world.IsAlive(localPlayer))
         {
             return;
@@ -395,7 +395,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         CameraCullingDebugState culling = _engine.GetService(CoreServiceKeys.CameraCullingDebugState)
             ?? throw new InvalidOperationException(
                 "Acceptance client requires camera-culling diagnostics for opening-view readiness.");
-        if (!CameraTargetMatches(_engine.GameSession.Camera.State.TargetCm, openingView.FocusTargetCm) ||
+        if (!CameraTargetMatches(ClientLocalSeatAccess.RequireSolePresentCamera(_engine).State.TargetCm, openingView.FocusTargetCm) ||
             !CameraTargetMatches(culling.CameraTargetCm, openingView.FocusTargetCm) ||
             culling.VisibilityRevision < openingView.ReadyVisibilityRevision ||
             culling.VisibleEntityCount <= 0)
@@ -740,7 +740,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         if (!HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm) ||
             !AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm) ||
-            !AreSelectedActorsVisibleWithPerformerPayload() ||
+            !AreSelectedActorsVisibleWithPresenterPayload() ||
             !AreMovedActorsOnscreenInPresentationReceipts())
         {
             return;
@@ -1013,7 +1013,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         if (_substep == 1)
         {
-            Vector2 cameraTarget = _engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = ClientLocalSeatAccess.RequireSolePresentCamera(_engine).State.TargetCm;
             var roundedCameraTarget = new WorldCmInt2(
                 checked((int)MathF.Round(cameraTarget.X)),
                 checked((int)MathF.Round(cameraTarget.Y)));
@@ -1055,7 +1055,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return;
         }
 
-        Vector2 finalCameraTarget = _engine.GameSession.Camera.State.TargetCm;
+        Vector2 finalCameraTarget = ClientLocalSeatAccess.RequireSolePresentCamera(_engine).State.TargetCm;
         var roundedFinalCameraTarget = new WorldCmInt2(
             checked((int)MathF.Round(finalCameraTarget.X)),
             checked((int)MathF.Round(finalCameraTarget.Y)));
@@ -2148,12 +2148,18 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private Entity RequireLocalPlayerEntity()
     {
-        if (!_engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity owner) ||
-            !_world.IsAlive(owner))
+        Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
+        if (!_world.IsAlive(owner))
         {
             throw new InvalidOperationException("Acceptance client lost its local player entity binding.");
         }
         return owner;
+    }
+
+    private int RequireLocalPlayerId()
+    {
+        ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_engine);
+        return seats.TryGetSoleSeat(out ClientLocalSeat seat) ? seat.PossessedPlayerId : 0;
     }
 
     private void DeriveBattlePoints()
@@ -2280,7 +2286,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         return liveCount > 0;
     }
 
-    private bool AreSelectedActorsVisibleWithPerformerPayload()
+    private bool AreSelectedActorsVisibleWithPresenterPayload()
     {
         Entity owner = RequireLocalPlayerEntity();
         int count = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
@@ -2290,7 +2296,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         for (int i = 0; i < count; i++)
         {
-            if (!HasVisiblePerformerPayload(_entityScratch[i]))
+            if (!HasVisiblePresenterPayload(_entityScratch[i]))
             {
                 return false;
             }
@@ -2508,7 +2514,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private bool AreOpeningEntitiesVisible(int playerId, Entity core, Entity openingCrystal)
     {
-        if (!HasVisiblePerformerPayload(core) || !HasVisiblePerformerPayload(openingCrystal))
+        if (!HasVisiblePresenterPayload(core) || !HasVisiblePresenterPayload(openingCrystal))
         {
             return false;
         }
@@ -2521,7 +2527,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             foreach (int index in chunk)
             {
                 if (owners[index].PlayerId == playerId &&
-                    HasVisiblePerformerPayload(Unsafe.Add(ref first, index)))
+                    HasVisiblePresenterPayload(Unsafe.Add(ref first, index)))
                 {
                     visibleHarvesterCount++;
                 }
@@ -2540,7 +2546,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             foreach (int index in chunk)
             {
                 if (owners[index].PlayerId == playerId &&
-                    HasVisiblePerformerPayload(Unsafe.Add(ref first, index)))
+                    HasVisiblePresenterPayload(Unsafe.Add(ref first, index)))
                 {
                     visibleInfantryCount++;
                 }
@@ -2549,12 +2555,12 @@ internal sealed class AcceptanceDriver : ISystem<float>
         return visibleInfantryCount == _plan.Expected.InitialInfantryCount;
     }
 
-    private bool HasVisiblePerformerPayload(Entity entity)
+    private bool HasVisiblePresenterPayload(Entity entity)
     {
         return _world.IsAlive(entity) &&
             _world.TryGet(entity, out CullState cull) &&
             cull.IsVisible &&
-            _world.TryGet(entity, out PresentationOwnerHasPerformerPayload payload) &&
+            _world.TryGet(entity, out PresentationOwnerHasPresenterPayload payload) &&
             payload.Count > 0;
     }
 
@@ -3111,7 +3117,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return Array.Empty<AcceptanceSelectedActorCheckpoint>();
         }
 
-        if (!_engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity owner) ||
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity owner) ||
             !_world.IsAlive(owner))
         {
             return Array.Empty<AcceptanceSelectedActorCheckpoint>();
@@ -3150,7 +3156,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         PresentationFrameReceiptBuffer receipts = _presentationReceipts
             ?? throw new InvalidOperationException(
                 "Advancing presentation evidence requires presentation frame receipts.");
-        PerformerEntityRuntime performers = _performerRuntime
+        PresenterEntityRuntime performers = _performerRuntime
             ?? throw new InvalidOperationException(
                 "Advancing presentation evidence requires the performer entity runtime.");
         CameraCullingDebugState culling = _engine.GetService(CoreServiceKeys.CameraCullingDebugState)
@@ -3203,33 +3209,33 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 actor.HasOwnerCullState = true;
                 actor.OwnerCullVisible = ownerCull.IsVisible;
             }
-            if (_world.TryGet(entity, out PresentationOwnerHasPerformerPayload payload))
+            if (_world.TryGet(entity, out PresentationOwnerHasPresenterPayload payload))
             {
-                actor.HasPerformerPayload = true;
-                actor.PerformerPayloadCount = payload.Count;
-                actor.PerformerRootCount = payload.RootCount;
-                if (payload.SingleRootPerformer != Entity.Null)
+                actor.HasPresenterPayload = true;
+                actor.PresenterPayloadCount = payload.Count;
+                actor.PresenterRootCount = payload.RootCount;
+                if (payload.SingleRootPresenter != Entity.Null)
                 {
-                    actor.RootPerformer = CapturePerformer(payload.SingleRootPerformer);
+                    actor.RootPresenter = CapturePresenter(payload.SingleRootPresenter);
                 }
             }
-            actor.HasVisiblePerformerPayload =
-                actor.OwnerCullVisible && actor.HasPerformerPayload && actor.PerformerPayloadCount > 0;
+            actor.HasVisiblePresenterPayload =
+                actor.OwnerCullVisible && actor.HasPresenterPayload && actor.PresenterPayloadCount > 0;
 
-            IReadOnlyList<Entity> bodyPerformers =
+            IReadOnlyList<Entity> bodyPresenters =
                 performers.GetActiveByOwnerDefinition(_infantryBodyTemplateId, entity);
-            var bodyEvidence = new AcceptancePerformerCheckpoint[bodyPerformers.Count];
-            for (int bodyIndex = 0; bodyIndex < bodyPerformers.Count; bodyIndex++)
+            var bodyEvidence = new AcceptancePresenterCheckpoint[bodyPresenters.Count];
+            for (int bodyIndex = 0; bodyIndex < bodyPresenters.Count; bodyIndex++)
             {
-                bodyEvidence[bodyIndex] = CapturePerformer(bodyPerformers[bodyIndex]);
+                bodyEvidence[bodyIndex] = CapturePresenter(bodyPresenters[bodyIndex]);
             }
-            actor.BodyPerformers = bodyEvidence;
+            actor.BodyPresenters = bodyEvidence;
             actor.MatchingBodyReceipts = CaptureInfantryBodyReceipts(start.PresentationStableId);
             actor.HasOnscreenPresentationReceipt = start.PresentationStableId > 0 &&
                 receipts.HasOnscreenInstance(start.PresentationStableId, _infantryBodyTemplateId);
         }
 
-        Vector2 cameraTarget = _engine.GameSession.Camera.State.TargetCm;
+        Vector2 cameraTarget = ClientLocalSeatAccess.RequireSolePresentCamera(_engine).State.TargetCm;
         Vector2 cullingCameraTarget = culling.CameraTargetCm;
         return new AcceptanceAdvancingPresentationCheckpoint
         {
@@ -3237,7 +3243,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             AreSelectedActorsNear = AreSelectedActorsNear(
                 _meetingPoint,
                 _plan.Battle.ArrivalToleranceCm),
-            AreSelectedActorsVisibleWithPerformerPayload = AreSelectedActorsVisibleWithPerformerPayload(),
+            AreSelectedActorsVisibleWithPresenterPayload = AreSelectedActorsVisibleWithPresenterPayload(),
             AreMovedActorsOnscreenInPresentationReceipts = AreMovedActorsOnscreenInPresentationReceipts(),
             PresentationFrameId = GetPresentationFrameId(),
             ReceiptFrameRevision = receipts.FrameRevision,
@@ -3254,9 +3260,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
         };
     }
 
-    private AcceptancePerformerCheckpoint CapturePerformer(Entity performer)
+    private AcceptancePresenterCheckpoint CapturePresenter(Entity performer)
     {
-        var checkpoint = new AcceptancePerformerCheckpoint
+        var checkpoint = new AcceptancePresenterCheckpoint
         {
             EntityId = performer.Id,
             IsAlive = _world.IsAlive(performer),
@@ -3265,18 +3271,18 @@ internal sealed class AcceptanceDriver : ISystem<float>
         {
             return checkpoint;
         }
-        if (_world.TryGet(performer, out PerformerState state))
+        if (_world.TryGet(performer, out PresenterState state))
         {
             checkpoint.DefinitionId = state.DefId;
             checkpoint.StableId = state.StableId;
             checkpoint.OwnerStableId = state.OwnerStableId;
         }
-        if (_world.TryGet(performer, out PerformerWorldPosition position))
+        if (_world.TryGet(performer, out PresenterWorldPosition position))
         {
             checkpoint.HasPosition = true;
             checkpoint.Position = CaptureVector3(position.Value);
         }
-        if (_world.TryGet(performer, out PerformerCullState cull))
+        if (_world.TryGet(performer, out PresenterCullState cull))
         {
             checkpoint.HasCullState = true;
             checkpoint.OwnerCullVisible = cull.OwnerCullVisible;

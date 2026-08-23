@@ -82,7 +82,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 for (int i = 0; i < selectedRoute.SlotOverrides.Count; i++)
                 {
                     var slotOverride = selectedRoute.SlotOverrides[i];
-                    if ((uint)slotOverride.SlotIndex >= (uint)abilities.Count)
+                    if ((uint)slotOverride.SlotIndex >= AbilityStateBuffer.CAPACITY)
                     {
                         continue;
                     }

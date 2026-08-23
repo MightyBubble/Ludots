@@ -14,6 +14,7 @@ namespace Ludots.Core.Modding
         FunctionRegistry FunctionRegistry { get; }
         SystemFactoryRegistry SystemFactoryRegistry { get; }
         TriggerDecoratorRegistry TriggerDecorators { get; }
+        IModExtensionRegistration Extensions { get; }
         LogChannel LogChannel { get; }
 
         /// <summary>
@@ -24,5 +25,8 @@ namespace Ludots.Core.Modding
         void Log(string message);
         void Log(LogLevel level, string message);
         Stream GetResource(string uri);
+
+        ISystemRegistrar Systems => UnavailableSystemRegistrar.Instance;
+        IRegistrySetView Registries => UnavailableRegistrySetView.Instance;
     }
 }

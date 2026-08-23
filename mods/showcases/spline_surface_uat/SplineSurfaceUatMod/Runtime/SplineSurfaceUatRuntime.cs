@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using SplineSurfaceUatMod.UI;
+using Ludots.Core.Client;
 
 namespace SplineSurfaceUatMod.Runtime
 {
@@ -110,13 +111,13 @@ namespace SplineSurfaceUatMod.Runtime
 
         public SplineSurfaceUatPanelState BuildPanelState(GameEngine engine)
         {
-            Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             return new SplineSurfaceUatPanelState(
                 Title: "Spline Surface UAT",
                 Status: LastStatus,
                 Camera: $"Camera ({cameraTarget.X:0},{cameraTarget.Y:0})",
                 Surfaces: "Road | River | Lake | Raw Mesh",
-                Hint: "Reset Camera returns to the shared overview. Focus buttons jump to each performer-authored chunk-baked procedural surface.");
+                Hint: "Reset Camera returns to the shared overview. Focus buttons jump to each presenter-authored chunk-baked procedural surface.");
         }
 
         public void SyncPanel(GameEngine engine)
@@ -132,7 +133,7 @@ namespace SplineSurfaceUatMod.Runtime
         private void ApplyCameraPose(GameEngine engine, Vector2 targetCm)
         {
             ActivateTacticalCamera(engine);
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = TacticalCameraId,
                 TargetCm = targetCm,
@@ -148,8 +149,8 @@ namespace SplineSurfaceUatMod.Runtime
                 return;
             }
 
-            engine.GameSession.Camera.ResetVirtualCameras();
-            engine.GameSession.Camera.ActivateVirtualCamera(
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ResetVirtualCameras();
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ActivateVirtualCamera(
                 TacticalCameraId,
                 blendDurationSeconds: 0f,
                 followTarget: CameraFollowTargetFactory.Build(

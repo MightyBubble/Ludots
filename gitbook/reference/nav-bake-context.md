@@ -65,7 +65,7 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 
 ## Configuration
 
-`assets/Configs/Navigation/navmesh.json`:
+`assets/Navigation/navmesh.json`:
 
 | Field | Value | Owner | Constraint |
 |---|---|---|---|

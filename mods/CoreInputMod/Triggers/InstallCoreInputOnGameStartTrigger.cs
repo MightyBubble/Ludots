@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
@@ -13,7 +13,9 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Triggers
 {
@@ -79,7 +81,7 @@ namespace CoreInputMod.Triggers
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner),
                 commandSourceAcquisitionConfig));
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new CommandActorMovePathPresentationSystem(
+            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new CommandActorMovePathPresentationSystem(
                 engine.World,
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
@@ -97,8 +99,9 @@ namespace CoreInputMod.Triggers
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (local == Entity.Null || !engine.World.IsAlive(local))
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity local) ||
+                local == Entity.Null ||
+                !engine.World.IsAlive(local))
             {
                 return false;
             }

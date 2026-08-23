@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterAttributeRange",
+  "driver": "query",
+  "title": "只圈残血的",
+  "beat": "全场先亮一圈，再只剩短血条的留着。",
+  "detailTemplate": "血量不超过{threshold}的{count}个短血条留圈，长血条退成灰影。",
+  "assertDetailContains": [
+    "短血条"
+  ],
+  "featuredNodeId": "hpRange",
+  "graphKind": "Query",
+  "field": "query"
+}

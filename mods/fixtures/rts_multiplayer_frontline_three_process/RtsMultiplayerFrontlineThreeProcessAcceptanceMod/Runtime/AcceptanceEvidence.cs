@@ -238,7 +238,7 @@ internal sealed class AcceptanceAdvancingPresentationCheckpoint
 {
     public bool HaveAllSelectedActorsMoved { get; set; }
     public bool AreSelectedActorsNear { get; set; }
-    public bool AreSelectedActorsVisibleWithPerformerPayload { get; set; }
+    public bool AreSelectedActorsVisibleWithPresenterPayload { get; set; }
     public bool AreMovedActorsOnscreenInPresentationReceipts { get; set; }
     public int PresentationFrameId { get; set; } = -1;
     public int ReceiptFrameRevision { get; set; } = -1;
@@ -263,23 +263,23 @@ internal sealed class AcceptanceAdvancingActorCheckpoint
     public bool IsAlive { get; set; }
     public bool HasMoved { get; set; }
     public bool IsNearMeetingPoint { get; set; }
-    public bool HasVisiblePerformerPayload { get; set; }
+    public bool HasVisiblePresenterPayload { get; set; }
     public bool HasOnscreenPresentationReceipt { get; set; }
     public int? WorldXCm { get; set; }
     public int? WorldYCm { get; set; }
     public AcceptanceVector3Checkpoint? VisualPosition { get; set; }
     public bool HasOwnerCullState { get; set; }
     public bool OwnerCullVisible { get; set; }
-    public bool HasPerformerPayload { get; set; }
-    public int PerformerPayloadCount { get; set; }
-    public int PerformerRootCount { get; set; }
-    public AcceptancePerformerCheckpoint? RootPerformer { get; set; }
-    public AcceptancePerformerCheckpoint[] BodyPerformers { get; set; } = Array.Empty<AcceptancePerformerCheckpoint>();
+    public bool HasPresenterPayload { get; set; }
+    public int PresenterPayloadCount { get; set; }
+    public int PresenterRootCount { get; set; }
+    public AcceptancePresenterCheckpoint? RootPresenter { get; set; }
+    public AcceptancePresenterCheckpoint[] BodyPresenters { get; set; } = Array.Empty<AcceptancePresenterCheckpoint>();
     public AcceptancePresentationReceiptCheckpoint[] MatchingBodyReceipts { get; set; } =
         Array.Empty<AcceptancePresentationReceiptCheckpoint>();
 }
 
-internal sealed class AcceptancePerformerCheckpoint
+internal sealed class AcceptancePresenterCheckpoint
 {
     public int EntityId { get; set; }
     public int DefinitionId { get; set; }

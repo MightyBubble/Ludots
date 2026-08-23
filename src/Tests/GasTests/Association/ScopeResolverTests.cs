@@ -80,15 +80,35 @@ namespace Ludots.Tests.GAS
                 resolver.ResolveMembers(ScopeKey.Named(squadScopeId), in roles, buffer);
             }
 
+            long allocated = MeasureResolveMembersAllocations(
+                resolver,
+                squadScopeId,
+                in roles,
+                buffer,
+                out int resolvedMemberCount);
+            Assert.That(resolvedMemberCount, Is.EqualTo(30_000));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureResolveMembersAllocations(
+            ScopeResolver resolver,
+            int scopeId,
+            in RoleResolverContext roles,
+            Span<Entity> destination,
+            out int resolvedMemberCount)
+        {
             GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
+            int total = 0;
             for (int i = 0; i < 10_000; i++)
             {
-                resolver.ResolveMembers(ScopeKey.Named(squadScopeId), in roles, buffer);
+                total += resolver.ResolveMembers(ScopeKey.Named(scopeId), in roles, destination);
             }
 
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(allocated, Is.EqualTo(0));
+            resolvedMemberCount = total;
+            return allocated;
         }
 
         private static void AddScopeRef(World world, Entity entity, int scopeKeyId, Entity host)

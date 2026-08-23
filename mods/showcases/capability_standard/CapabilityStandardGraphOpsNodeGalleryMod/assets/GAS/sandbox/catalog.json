@@ -1,0 +1,9 @@
+{
+  "markedTag": "State.Sandbox.Marked",
+  "markEffect": "Effect.GraphOpsSandbox.Mark",
+  "buffEffect": "Effect.GraphOps.Strike",
+  "buffBlackboardKey": "graphops.sandbox.buffTemplate",
+  "relationshipType": "SocialBond",
+  "loyaltyMetric": "Loyalty",
+  "trustedFlag": "Trusted"
+}

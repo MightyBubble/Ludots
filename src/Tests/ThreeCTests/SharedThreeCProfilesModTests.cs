@@ -32,7 +32,7 @@ namespace Ludots.Tests.ThreeC
             Assert.That(definition.TargetSource, Is.EqualTo(VirtualCameraTargetSource.FollowTarget));
             Assert.That(definition.PanMode, Is.EqualTo(CameraPanMode.None));
             Assert.That(definition.FollowMode, Is.EqualTo(CameraFollowMode.AlwaysFollow));
-            Assert.That(definition.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(definition.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(definition.EnableZoom, Is.False);
             Assert.That(definition.ConfineTargetToWorldBounds, Is.True);
             Assert.That(definition.AllowUserInput, Is.False);

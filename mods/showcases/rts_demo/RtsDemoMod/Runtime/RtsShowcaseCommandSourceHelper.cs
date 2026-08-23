@@ -6,7 +6,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace RtsDemoMod.Runtime
@@ -15,11 +15,7 @@ namespace RtsDemoMod.Runtime
     {
         public static void EnsureCommandSourceBinding(GameEngine engine)
         {
-            Entity owner = ResolveCommandSourceOwner(engine);
-            if (!engine.World.IsAlive(owner))
-            {
-                return;
-            }
+            _ = RequireLocalCommandSourceOwner(engine);
         }
 
         public static bool TrySetCommandSourceAndFocus(GameEngine engine, Entity target, bool snapCamera)
@@ -30,11 +26,7 @@ namespace RtsDemoMod.Runtime
                 return false;
             }
 
-            Entity owner = ResolveCommandSourceOwner(engine);
-            if (!engine.World.IsAlive(owner))
-            {
-                return false;
-            }
+            Entity owner = RequireLocalCommandSourceOwner(engine);
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
@@ -54,24 +46,22 @@ namespace RtsDemoMod.Runtime
 
         public static bool TryGetCommandSourcePrimary(GameEngine engine, out Entity primary)
         {
-            primary = Entity.Null;
-            return TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
-                   Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.TryGetPrimary(
-                       engine.World,
-                       engine.GlobalContext,
-                       owner,
-                       EntityCollectionKeys.CommandSource,
-                       out primary);
+            Entity owner = RequireLocalCommandSourceOwner(engine);
+            return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.TryGetPrimary(
+                engine.World,
+                engine.GlobalContext,
+                owner,
+                EntityCollectionKeys.CommandSource,
+                out primary);
         }
 
         public static int GetCommandSourceCount(GameEngine engine)
         {
-            return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
-                ? Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCount(
-                    engine.GlobalContext,
-                    owner,
-                    EntityCollectionKeys.CommandSource)
-                : 0;
+            Entity owner = RequireLocalCommandSourceOwner(engine);
+            return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCount(
+                engine.GlobalContext,
+                owner,
+                EntityCollectionKeys.CommandSource);
         }
 
         public static void WriteCameraFocusRequests(GameEngine engine, Entity target, bool snapCamera)
@@ -147,25 +137,16 @@ namespace RtsDemoMod.Runtime
             return MathF.Max(7000f, distanceCm.Value * 0.72f);
         }
 
-        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+        private static Entity RequireLocalCommandSourceOwner(GameEngine engine)
         {
-            owner = Entity.Null;
-            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity local) ||
-                !engine.World.IsAlive(local))
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
             {
-                return false;
+                throw new InvalidOperationException(
+                    "RTS showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            owner = local;
-            return true;
-        }
-
-        private static Entity ResolveCommandSourceOwner(GameEngine engine)
-        {
-            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity owner) &&
-                   engine.World.IsAlive(owner)
-                ? owner
-                : Entity.Null;
+            return owner;
         }
     }
 }

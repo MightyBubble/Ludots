@@ -9,9 +9,10 @@ using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
@@ -516,7 +517,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
             throw new InvalidOperationException($"Formation Capability formation outline sample index {sampleIndex} is outside configured curve samples {sampleCount}.");
         }
 
-        return PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+        return PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
             ownerStableId,
             ((int)segment * sampleCount) + sampleIndex,
             AssetKind.Spline,

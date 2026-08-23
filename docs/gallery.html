@@ -20,7 +20,8 @@
   .sc-card.retired { opacity: 0.62; }
   .sc-shot { position: relative; height: 168px; background: var(--bg-soft);
     border-bottom: 1px solid var(--bg-hairline); overflow: hidden; }
-  .sc-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .sc-shot img,
+  .sc-shot video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
   .sc-shot .placeholder {
     position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 6px;
@@ -122,7 +123,12 @@
     var catLabel = CATEGORY_LABEL[sc.category] || sc.category || "未分类";
 
     var shot = '<div class="placeholder"><span class="glyph">🖼️</span><span>暂无截图证据</span></div>';
-    if (sc.screenshot) {
+    if (sc.video) {
+      shot = '<video controls playsinline preload="metadata" ' +
+        (sc.screenshot ? 'poster="' + esc(sc.screenshot) + '" ' : '') +
+        'src="' + esc(sc.video) + '" ' +
+        'aria-label="' + esc(sc.title) + ' 录像"></video>';
+    } else if (sc.screenshot) {
       shot = '<img loading="lazy" src="' + esc(sc.screenshot) + '" alt="' + esc(sc.title) + ' 截图" ' +
         'onerror="this.parentNode.innerHTML=\'<div class=&quot;placeholder&quot;><span class=&quot;glyph&quot;>🖼️</span><span>截图不可用</span></div>\'">';
     }

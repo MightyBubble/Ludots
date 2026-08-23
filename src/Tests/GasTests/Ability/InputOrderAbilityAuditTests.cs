@@ -259,9 +259,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_InvalidOrderTypeId_PublishesTypedRejection()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(4, 4);
             var queue = new OrderQueue(64, results);
-            var order = new Order { OrderTypeId = 0 };
+            var order = new Order { Actor = actor, OrderTypeId = 0 };
 
             bool accepted = queue.TryEnqueue(in order);
 
@@ -291,10 +293,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_WhenAdmissionCapacityIsExhausted_DoesNotEnqueueAnUnobservableOrder()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(1, 1);
             var queue = new OrderQueue(64, results);
-            var first = new Order { OrderTypeId = 2 };
-            var second = new Order { OrderTypeId = 2 };
+            var first = new Order { Actor = actor, OrderTypeId = 2 };
+            var second = new Order { Actor = actor, OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
             That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -317,11 +321,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_WhenMultipleOrdersExceedAdmissionCapacity_PublishesEveryRejectedOrderId()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(1, 2);
             var queue = new OrderQueue(64, results);
-            var first = new Order { OrderTypeId = 2 };
-            var second = new Order { OrderTypeId = 2 };
-            var third = new Order { OrderTypeId = 2 };
+            var first = new Order { Actor = actor, OrderTypeId = 2 };
+            var second = new Order { Actor = actor, OrderTypeId = 2 };
+            var third = new Order { Actor = actor, OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
             That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -348,12 +354,14 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_WhenRejectionCapacityIsExhausted_TerminatesAdmissionBeforeAssigningFurtherIds()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(1, 1);
             var queue = new OrderQueue(64, results);
-            var first = new Order { OrderTypeId = 2 };
-            var second = new Order { OrderTypeId = 2 };
-            var terminalTrigger = new Order { OrderTypeId = 2 };
-            var afterFault = new Order { OrderTypeId = 2 };
+            var first = new Order { Actor = actor, OrderTypeId = 2 };
+            var second = new Order { Actor = actor, OrderTypeId = 2 };
+            var terminalTrigger = new Order { Actor = actor, OrderTypeId = 2 };
+            var afterFault = new Order { Actor = actor, OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
             That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -371,7 +379,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(results.TryGet(second.OrderId, OrderAdmissionStage.GlobalIntake, out var rejection), Is.True);
             That(rejection.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
 
-            var explicitOrder = new Order { OrderId = 99, OrderTypeId = 2 };
+            var explicitOrder = new Order { OrderId = 99, Actor = actor, OrderTypeId = 2 };
             InvalidOperationException explicitError = Throws<InvalidOperationException>(() =>
                 queue.SubmitAssigned(ref explicitOrder))!;
             That(explicitError.Message, Is.EqualTo(terminalError.Message));
@@ -380,7 +388,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             results.BeginLogicStep();
             results.EndEntityIntake();
             results.EndLogicStep();
-            var nextGenerationOrder = new Order { OrderTypeId = 2 };
+            var nextGenerationOrder = new Order { Actor = actor, OrderTypeId = 2 };
             InvalidOperationException nextGenerationError = Throws<InvalidOperationException>(() =>
                 queue.SubmitAssigned(ref nextGenerationOrder))!;
             That(nextGenerationError.Message, Is.EqualTo(terminalError.Message));
@@ -473,11 +481,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueues_SharingAdmissionResults_AssignGloballyUniqueOrderIds()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(4, 4);
             var gameplayOrders = new OrderQueue(64, results);
             var responseOrders = new OrderQueue(64, results);
-            var gameplayOrder = new Order { OrderTypeId = 2 };
-            var responseOrder = new Order { OrderTypeId = 3 };
+            var gameplayOrder = new Order { Actor = actor, OrderTypeId = 2 };
+            var responseOrder = new Order { Actor = actor, OrderTypeId = 3 };
 
             That(gameplayOrders.SubmitAssigned(ref gameplayOrder), Is.EqualTo(OrderSubmitResult.Queued));
             That(responseOrders.SubmitAssigned(ref responseOrder), Is.EqualTo(OrderSubmitResult.Queued));
@@ -1322,9 +1332,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_BatchAdmission_IsAtomicWhenCapacityIsInsufficient()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(16, 16);
             var queue = new OrderQueue(capacity: 4, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = actor, OrderTypeId = 1 };
             for (int i = 0; i < 3; i++)
             {
                 Assert.That(queue.TryEnqueue(in seed), Is.True);
@@ -1332,8 +1344,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var batch = new[]
             {
-                new Order { OrderTypeId = 1 },
-                new Order { OrderTypeId = 1 },
+                new Order { Actor = actor, OrderTypeId = 1 },
+                new Order { Actor = actor, OrderTypeId = 1 },
             };
 
             Assert.That(queue.TryEnqueueBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
@@ -1349,14 +1361,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_BatchAdmission_PublishesEveryAssignedIdWhenAdmissionCapacityIsInsufficient()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(2, 2);
             var queue = new OrderQueue(capacity: 1, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = actor, OrderTypeId = 1 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var batch = new[]
             {
-                new Order { OrderTypeId = 1 },
-                new Order { OrderTypeId = 1 },
+                new Order { Actor = actor, OrderTypeId = 1 },
+                new Order { Actor = actor, OrderTypeId = 1 },
             };
 
             Assert.That(queue.TryEnqueueBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -1398,7 +1412,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondActor = world.Create();
             var results = new OrderAdmissionResultBuffer(8, 8);
             var queue = new OrderQueue(capacity: 1, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = firstActor, OrderTypeId = 1 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var batch = new[]
             {
@@ -1423,7 +1437,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondActor = world.Create();
             var results = new OrderAdmissionResultBuffer(2, 2);
             var queue = new OrderQueue(capacity: 1, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = firstActor, OrderTypeId = 1 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var batch = new[]
             {
@@ -1451,7 +1465,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondSource = world.Create();
             var results = new OrderAdmissionResultBuffer(2, 2);
             var queue = new OrderQueue(capacity: 1, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = firstActor, OrderTypeId = 1 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var batch = new[]
             {
@@ -1476,7 +1490,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         {
             var queue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
+            var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate, playerId: 1);
             var ints = new BlackboardIntBuffer();
             var entities = new BlackboardEntityBuffer();
 
@@ -1573,6 +1587,29 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var resolved = AbilitySlotResolver.Resolve(in baseSlots, in form, hasForm: false, in itemGranted, hasItemGranted: false, in granted, hasGranted: false, slotIndex: 0);
             That(resolved.AbilityId, Is.EqualTo(100), "hasGranted=false should skip granted buffer");
+        }
+
+        [Test]
+        public void AbilitySlotResolver_EmptySlotFailsWithoutThrowing()
+        {
+            var baseSlots = new AbilityStateBuffer();
+            var form = default(AbilityFormSlotBuffer);
+            var itemGranted = default(ItemGrantedSlotBuffer);
+            var granted = default(GrantedSlotBuffer);
+
+            bool resolved = AbilitySlotResolver.TryResolve(
+                in baseSlots,
+                in form,
+                hasForm: false,
+                in itemGranted,
+                hasItemGranted: false,
+                in granted,
+                hasGranted: false,
+                slotIndex: 4,
+                out AbilitySlotState slot);
+
+            That(resolved, Is.False);
+            That(slot.IsConfigured, Is.False);
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -1695,7 +1732,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     "castRangeCm": 620,
                     "impactEffect": "Effect.Guard.Impact",
                     "aimVisual": {
-                      "areaPerformerId": "performer.aim.area"
+                      "areaPresenterId": "presenter.aim.area"
                     }
                   }
                 }
@@ -1708,14 +1745,14 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void AbilityExecLoader_CompileAbility_RejectsRemovedTopLevelPreviewPerformerField()
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedTopLevelPreviewPresenterField()
         {
             EffectTemplateIdRegistry.Clear();
             EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
             var obj = JsonNode.Parse(
                 """
                 {
-                  "previewPerformerId": "performer.aim.preview",
+                  "previewPresenterId": "presenter.aim.preview",
                   "targeting": {
                     "castRangeCm": 620,
                     "impactEffect": "Effect.Guard.Impact"
@@ -1724,9 +1761,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 """)!.AsObject();
 
             var ex = Throws<InvalidOperationException>(() =>
-                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPerformer", "GAS/abilities.json"));
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPresenter", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'previewPerformerId' is removed"));
+            That(ex!.Message, Does.Contain("field 'previewPresenterId' is removed"));
         }
 
         [Test]
@@ -2791,8 +2828,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Op = (ushort)GraphNodeOp.ConstBool,
                     Dst = 0,
                     Imm = 0
-                }
-            });
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+            }, GraphKind.Validation);
 
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
@@ -2870,8 +2908,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Op = (ushort)GraphNodeOp.ConstBool,
                     Dst = 0,
                     Imm = 0
-                }
-            });
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+            }, GraphKind.Validation);
 
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
@@ -2915,8 +2954,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Op = (ushort)GraphNodeOp.ConstBool,
                     Dst = 0,
                     Imm = 0
-                }
-            });
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+            }, GraphKind.Validation);
 
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
@@ -2937,16 +2977,21 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void ExecuteValidation_EmptyProgram_ReturnsTrue()
+        public void ExecuteValidation_EmptyProgram_Throws()
         {
             using var world = World.Create();
             var caster = world.Create();
             var target = world.Create();
 
-            // Empty program: B[0] starts at 1 (pass), no instructions change it.
-            ReadOnlySpan<GraphInstruction> program = ReadOnlySpan<GraphInstruction>.Empty;
-            bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
-            That(result, Is.True, "Empty validation program should pass by default (B[0]=1)");
+            // Empty program is invalid under the explicit-halt graph contract.
+            Assert.Throws<InvalidOperationException>(() =>
+                GasGraphExecutor.ExecuteValidation(
+                    world,
+                    caster,
+                    target,
+                    default,
+                    ReadOnlySpan<GraphInstruction>.Empty,
+                    null!));
         }
 
         [Test]
@@ -2963,7 +3008,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Dst = 0,  // register index B[0]
                 Imm = 0   // value = false
             };
-            ReadOnlySpan<GraphInstruction> program = new[] { instruction };
+            ReadOnlySpan<GraphInstruction> program = new[]
+            {
+                instruction,
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
             bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
             That(result, Is.False, "ConstBool B[0]=0 should cause validation to fail");
         }
@@ -3428,7 +3477,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Op = (ushort)GraphNodeOp.ConstBool,
                     Dst = 0,
                     Imm = 0
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
             };
         }
 

@@ -26,6 +26,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         .WithNone<MassNavigationAgentIndex, PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
+    private readonly Ludots.Core.Movement.PoseAuthorityArbiter _poseAuthorityArbiter;
     private readonly List<Entity> _entities;
     private readonly List<MassNavigationAgentSeed> _seeds;
     private readonly List<bool> _controllableFlags;
@@ -50,6 +51,8 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         }
 
         _agentCapacity = config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        _poseAuthorityArbiter = engine.GetService(CoreServiceKeys.PoseAuthorityArbiter)
+            ?? throw new InvalidOperationException("MassNavigation authored binding requires the PoseAuthorityArbiter service.");
         _controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
             ?? throw new InvalidOperationException("MassNavigation authored binding requires ControlDomainQuery.");
         _stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
@@ -89,6 +92,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         {
             if (simulation.AgentState.TotalAgents > 0)
             {
+                CancelPoseWindowsBeforeStructuralReset();
                 simulation.ClearAuthoredRuntimeBindings(_engine.World);
                 simulation.MarkStructuralChange();
                 _lastAuthoringSignature = 0L;
@@ -334,8 +338,22 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         }
     }
 
+    /// <summary>
+    /// 结构重建/清空会重排 agent 索引并清空求解器的 displaced 标记，
+    /// 活跃的位姿写权窗口必须同步作废，否则仲裁器与求解器状态错位。
+    /// 取消经桥做幂等清理；对应的位移效果会在下一 tick 识别窗口消失并合法终止。
+    /// </summary>
+    private void CancelPoseWindowsBeforeStructuralReset()
+    {
+        if (_poseAuthorityArbiter.ActiveWindowCount > 0 || _poseAuthorityArbiter.PendingTransitionCount > 0)
+        {
+            _poseAuthorityArbiter.CancelAllWindows(_engine.World);
+        }
+    }
+
     private void RebuildAuthoredAgents(MassNavigationSimulationRuntime simulation)
     {
+        CancelPoseWindowsBeforeStructuralReset();
         _entities.Clear();
         _seeds.Clear();
         _controllableFlags.Clear();

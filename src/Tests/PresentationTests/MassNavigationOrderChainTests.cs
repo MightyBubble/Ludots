@@ -10,6 +10,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 
@@ -114,6 +115,51 @@ public sealed class MassNavigationOrderChainTests
         Assert.That(loadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray(), Is.EqualTo(expected));
     }
 
+    /// <summary>
+    /// Production-equivalent move-command entry: Prepare + capacity gate + Commit.
+    /// </summary>
+    internal static int CommitPreparedOrderMove(
+        MassNavigationSimulationRuntime simulation,
+        int orderToken,
+        ReadOnlySpan<int> memberIndices,
+        int teamId,
+        Vector2 destinationWorldCm)
+    {
+        Span<Vector2> preparedTargets = memberIndices.Length <= 32
+            ? stackalloc Vector2[memberIndices.Length]
+            : new Vector2[memberIndices.Length];
+
+        bool commandChanged = simulation.NavGroupRuntime.PrepareOrderMoveCommand(
+            simulation.MassNavigationFlow,
+            simulation.AgentState,
+            orderToken,
+            memberIndices,
+            teamId,
+            destinationWorldCm,
+            preparedTargets,
+            out Vector2 resolvedDestinationWorldCm);
+
+        if (simulation.NavGroupRuntime.RequiresNewOrderGroup(orderToken))
+        {
+            simulation.NavGroupRuntime.EnsureCanAllocateNewOrderGroups(1);
+        }
+
+        if (!commandChanged)
+        {
+            return memberIndices.Length;
+        }
+
+        return simulation.NavGroupRuntime.CommitPreparedOrderMoveCommand(
+            simulation.MassNavigationFlow,
+            simulation.AgentState,
+            orderToken,
+            memberIndices,
+            teamId,
+            destinationWorldCm,
+            resolvedDestinationWorldCm,
+            preparedTargets);
+    }
+
     internal static MassNavigationConfig CreateConfigForTests()
     {
         MassNavigationConfig baseConfig = LoadBaseMassNavigationConfig();
@@ -175,6 +221,7 @@ public sealed class MassNavigationOrderChainTests
                     RouteWaypointCapacityPerAgent = 64,
                     LoadedChunkCapacity = 32,
                     RelationshipDomainCapacity = 2,
+                    DisplacedAgentCapacity = 4,
                 },
             },
             AgentProfiles = new MassNavigationAgentProfileSetConfig

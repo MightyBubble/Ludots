@@ -27,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly PresetTypeRegistry? _presetTypes;
         private readonly Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? _relationshipTypes;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
@@ -52,12 +53,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? relationshipTypes = null,
             FogLayerRegistry? fogLayers = null,
-            OrderTypeRegistry? orderTypes = null)
+            OrderTypeRegistry? orderTypes = null,
+            PresetTypeRegistry? presetTypes = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
+            _presetTypes = presetTypes;
             _exchangeOperations = exchangeOperations;
             _progressionScopeKeys = progressionScopeKeys;
             _entityTemplateKeys = entityTemplateKeys;
@@ -212,9 +215,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 ? TagRegistry.Register(RequireString(cfg.Tags[0], cfg.Id, relativePath, "tags[0]"))
                 : 0;
 
-            EffectPresetType presetType = ParsePresetType(cfg.PresetType, cfg.Id, relativePath);
-            int presetAttr0 = 0;
-            int presetAttr1 = 0;
+            int presetTypeId = ParsePresetTypeId(cfg.PresetType, cfg.Id, relativePath);
+            if (_presetTypes != null && _presetTypes.IsRegistered(presetTypeId))
+            {
+                ref readonly PresetTypeDefinition presetDefinition = ref _presetTypes.Get(presetTypeId);
+                if (!presetDefinition.AllowsLifetime(lifetimeKind))
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType '{presetDefinition.TypeKey}' does not allow lifetime '{lifetimeKind}'.");
+                }
+            }
+
+            EffectPresetType presetType = ResolveBuiltinPresetType(presetTypeId);
+            int presetAttr0 = AttributeRegistry.InvalidId;
+            int presetAttr1 = AttributeRegistry.InvalidId;
             int reserved = 0;
             if (presetType == EffectPresetType.ApplyForce2D)
             {
@@ -369,27 +383,17 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            if (cfg.RevealArea != null && presetType != EffectPresetType.RevealArea)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{cfg.Id}' in {relativePath}: 'revealArea' block is only valid when presetType=RevealArea.");
-            }
-            if (presetType == EffectPresetType.RevealArea)
+            if (cfg.RevealArea != null)
             {
                 if (lifetimeKind != EffectLifetimeKind.Instant && lifetimeKind != EffectLifetimeKind.After)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea requires lifetime=Instant or lifetime=After.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: revealArea requires lifetime=Instant or lifetime=After.");
                 }
                 if (lifetimeKind == EffectLifetimeKind.After && periodTicks <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea with lifetime=After requires duration.periodTicks > 0 for refresh.");
-                }
-                if (cfg.RevealArea == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea requires a 'revealArea' block.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: revealArea with lifetime=After requires duration.periodTicks > 0 for refresh.");
                 }
 
                 revealArea = CompileRevealArea(cfg.RevealArea, cfg.Id, relativePath);
@@ -518,6 +522,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 TagId = tagId,
                 PresetType = presetType,
+                PresetTypeId = presetTypeId,
                 PresetAttribute0 = presetAttr0,
                 PresetAttribute1 = presetAttr1,
                 LifetimeKind = lifetimeKind,
@@ -1145,9 +1150,38 @@ namespace Ludots.Core.Gameplay.GAS.Config
             throw new InvalidOperationException(
                 $"Effect template '{ownerId}' in {relativePath}: {fieldPath} uses unsupported entity slot '{slot}'. Supported: None, Source, Target, TargetContext.");
         }
-        private static EffectPresetType ParsePresetType(string? presetType, string ownerId, string relativePath)
+        private int ParsePresetTypeId(string? presetType, string ownerId, string relativePath)
         {
-            return GasEnumParser.ParsePresetTypeStrict(presetType, $"Effect template '{ownerId}' in {relativePath}");
+            string context = $"Effect template '{ownerId}' in {relativePath}";
+            if (string.IsNullOrWhiteSpace(presetType))
+            {
+                throw new InvalidOperationException($"{context}: presetType must be explicitly defined.");
+            }
+
+            if (_presetTypes != null && _presetTypes.TryGetId(presetType, out int typeId) && _presetTypes.IsRegistered(typeId))
+            {
+                return typeId;
+            }
+
+            if (Enum.TryParse<EffectPresetType>(presetType, out EffectPresetType builtin) &&
+                Enum.IsDefined(typeof(EffectPresetType), builtin))
+            {
+                return (int)builtin;
+            }
+
+            throw new InvalidOperationException(
+                $"{context}: presetType '{presetType}' is not registered in preset_types.json, a Core EffectPresetType, or a loaded mod extension.");
+        }
+
+        private static EffectPresetType ResolveBuiltinPresetType(int presetTypeId)
+        {
+            if ((uint)presetTypeId <= byte.MaxValue &&
+                Enum.IsDefined(typeof(EffectPresetType), (byte)presetTypeId))
+            {
+                return (EffectPresetType)(byte)presetTypeId;
+            }
+
+            return EffectPresetType.None;
         }
 
         // ── Phase Graph compilation ──
@@ -1182,6 +1216,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         {
                             throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: exceeded max phase steps ({EffectPhaseGraphBindings.MAX_STEPS}).");
                         }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(phaseCfg.Main))
+                {
+                    if (phaseCfg.SkipMain)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: phaseGraphs.{kvp.Key} cannot declare both main and skipMain=true.");
+                    }
+
+                    int graphId = ResolveGraphProgram(phaseCfg.Main, ownerId, $"phaseGraphs.{kvp.Key}.main", relativePath);
+                    if (!behavior.TryAddStep(phaseId, PhaseSlot.Main, graphId))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: exceeded max phase steps ({EffectPhaseGraphBindings.MAX_STEPS}).");
                     }
                 }
 
@@ -1471,6 +1520,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     eventTagId = TagRegistry.Register(lc.EventTag);
 
                 int priority = lc.Priority ?? 0;
+                if (!EffectPhaseListenerContract.TryValidateRegistration(
+                        listenTagId,
+                        listenEffectId,
+                        phaseId,
+                        scope,
+                        flags,
+                        graphProgramId,
+                        eventTagId,
+                        out string listenerError))
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] is invalid. {listenerError}");
+                }
                 if (!result.TryAddTemplate(listenTagId, listenEffectId, phaseId, scope, flags, graphProgramId, eventTagId, priority))
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners exceeded capacity ({EffectPhaseListenerBuffer.CAPACITY}).");
@@ -1691,7 +1753,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "targetFilter.relationFilter",
                 path);
             if (cfg.LayerMask != null)
-                desc.LayerMask = ParseLayerMask(cfg.LayerMask);
+                desc.LayerMask = ParseLayerMask(cfg.LayerMask, effectId, path);
             return desc;
         }
 
@@ -1796,7 +1858,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var desc = default(TargetDispatchDescriptor);
             bool hasPreset = !string.IsNullOrWhiteSpace(cfg.Preset);
-            bool hasContextMapping = cfg.ContextMapping != null;
+            ContextMappingConfig? contextMapping = cfg.ContextMapping;
 
             if (!string.IsNullOrWhiteSpace(cfg.PayloadEffect))
             {
@@ -1805,7 +1867,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException($"Effect template '{effectId}' in {path}: targetDispatch.payloadEffect '{cfg.PayloadEffect}' not found.");
             }
 
-            if (hasPreset && hasContextMapping)
+            if (hasPreset && contextMapping != null)
             {
                 throw new InvalidOperationException(
                     $"Effect template '{effectId}' in {path}: targetDispatch must define either preset or contextMapping, not both.");
@@ -1824,22 +1886,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 return desc;
             }
 
-            if (hasContextMapping)
+            if (contextMapping != null)
             {
                 desc.ContextMapping = new TargetResolverContextMapping
                 {
                     PayloadSource = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadSource, effectId, path, "targetDispatch.contextMapping.payloadSource"),
+                        RequireString(contextMapping.PayloadSource, effectId, path, "targetDispatch.contextMapping.payloadSource"),
                         effectId,
                         "targetDispatch.contextMapping.payloadSource",
                         path),
                     PayloadTarget = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadTarget, effectId, path, "targetDispatch.contextMapping.payloadTarget"),
+                        RequireString(contextMapping.PayloadTarget, effectId, path, "targetDispatch.contextMapping.payloadTarget"),
                         effectId,
                         "targetDispatch.contextMapping.payloadTarget",
                         path),
                     PayloadTargetContext = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadTargetContext, effectId, path, "targetDispatch.contextMapping.payloadTargetContext"),
+                        RequireString(contextMapping.PayloadTargetContext, effectId, path, "targetDispatch.contextMapping.payloadTargetContext"),
                         effectId,
                         "targetDispatch.contextMapping.payloadTargetContext",
                         path),
@@ -1852,9 +1914,17 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return desc;
         }
 
-        private static uint ParseLayerMask(List<string> layers)
+        private static uint ParseLayerMask(List<string> layers, string effectId, string path)
         {
-            throw new NotImplementedException("LayerMask parsing not yet implemented. Layer name to bit mapping requires a layer registry.");
+            try
+            {
+                return LayerRegistry.GetCombinedMask(layers);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: targetFilter.layerMask — {ex.Message}", ex);
+            }
         }
 
         private GasConditionHandle CompileExpireCondition(ExpireConditionConfig cfg, string effectId, string path)

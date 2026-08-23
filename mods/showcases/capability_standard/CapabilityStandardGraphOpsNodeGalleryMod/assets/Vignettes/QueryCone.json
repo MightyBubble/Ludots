@@ -1,0 +1,14 @@
+{
+  "op": "QueryCone",
+  "driver": "spatial",
+  "title": "朝这个方向的扇形里有谁",
+  "beat": "描边扇形罩住的人亮，贴着边站歪一点的不亮。",
+  "detailTemplate": "扇形扫过，弧内{count}人。",
+  "assertDetailContains": [
+    "扇形",
+    "弧内"
+  ],
+  "featuredNodeId": "cone",
+  "graphKind": "Query",
+  "field": "spatial"
+}

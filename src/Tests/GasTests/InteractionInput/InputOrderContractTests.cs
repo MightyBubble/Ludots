@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arch.Core;
 using CoreInputMod.Systems;
+using Ludots.Tests.TestCommon;
 using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Components;
@@ -26,6 +27,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using MobaDemoMod.Systems;
 using NUnit.Framework;
 
@@ -62,7 +64,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             using var world = World.Create();
-            system.SetLocalPlayer(world.Create(), 1);
+            system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
             handler.Update();
@@ -106,7 +108,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity actor = world.Create();
             var submitted = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key switch
             {
                 "beam" => 100,
@@ -153,7 +155,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             using var world = World.Create();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(world.Create(), 1);
+            system.SetSolePossessedActor(world.Create(), 1);
             system.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order _) => OrderSubmitResult.Queued);
 
             var ex = Assert.Throws<InvalidOperationException>(() => system.SetOrderTypeKeyResolver(_ => 0));
@@ -188,7 +190,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var submitted = new List<Order>();
             bool shiftHeld = false;
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -236,7 +238,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var submitted = new List<Order>();
             bool shiftHeld = false;
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
             system.SetQueueModifierProvider(() => shiftHeld);
             system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
@@ -277,7 +279,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity actor = world.Create();
             var submitted = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "stop" ? 103 : 0);
             system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
 
@@ -312,7 +314,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             using var world = World.Create();
             Entity actor = world.Create();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
             system.SetOrderSubmitHandler((in Order _) => OrderSubmitResult.Queued);
 
@@ -458,7 +460,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         public void DefaultCommandIntentProfile_RoutesGroundAndInspectableEntityHitsToMove()
         {
             string repoRoot = FindRepoRoot();
-            string profilePath = Path.Combine(repoRoot, "assets", "Configs", "Input", "command_intent_profiles.json");
+            string profilePath = Path.Combine(repoRoot, "assets", "Input", "command_intent_profiles.json");
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             options.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
             CommandIntentProfilesConfig config = JsonSerializer.Deserialize<CommandIntentProfilesConfig>(
@@ -553,14 +555,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 var globals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.AuthoritativeInput.Name] = input,
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
-                    [CoreServiceKeys.LocalPlayerId.Name] = 1,
                     [CoreServiceKeys.EntityCollectionStore.Name] = collections,
                     [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                     [CoreServiceKeys.PlayerEntityLookup.Name] = players,
                     [CoreServiceKeys.ControlDomainQuery.Name] = controlHarness.Domains,
                     [CoreServiceKeys.GameConfig.Name] = new GameConfig
                     {
+                        GasRuntimeCapacity = new GasRuntimeCapacityConfig
+                        {
+                            CommandIntentScratchCapacity = 64,
+                        },
                         Constants = new GameConstants
                         {
                             OrderTypeIds = new Dictionary<string, int>
@@ -573,6 +577,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     },
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1, "seat.0");
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("TestMobaMappingMod", root);
@@ -582,7 +587,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     new FunctionRegistry(),
                     new TriggerManager(),
                     new Ludots.Core.Engine.SystemFactoryRegistry(),
-                    new TriggerDecoratorRegistry());
+                    new TriggerDecoratorRegistry(),
+                    new ModExtensionHub());
                 var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
                 var system = new MobaLocalOrderSourceSystem(world, globals, orders, ctx);
 
@@ -812,7 +818,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             using var world = World.Create();
-            system.SetLocalPlayer(world.Create(), 1);
+            system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
             handler.Update();
@@ -863,7 +869,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new InputOrderMappingSystem(input, config);
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
 
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 203 : 0);
             system.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -927,7 +933,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity hovered = world.Create();
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
             system.SetHoveredEntityProvider((out Entity entity) =>
             {
@@ -978,7 +984,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             using var world = World.Create();
             Entity actor = world.Create();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
             system.SetAutoTargetProvider((Entity _, AutoTargetPolicy _, int _, out Entity target) =>
             {
@@ -1020,7 +1026,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             using var world = World.Create();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(world.Create(), 1);
+            system.SetSolePossessedActor(world.Create(), 1);
             system.SetOrderTypeKeyResolver(key => key == "stop" ? 102 : 0);
             system.SetActorProvider((out Entity actor) =>
             {
@@ -1066,7 +1072,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity actor = world.Create();
             var submitted = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetActorProvider((out Entity resolved) =>
             {
                 resolved = actor;
@@ -1132,7 +1138,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 CancelActionId = "Cancel",
                 CommandActionId = "Command",
             };
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 104 : 0);
             system.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -1199,7 +1205,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var resolver = new LocalOrderSourceHelper.SkillMappingOverrideResolver(world, definitions);
             var submitted = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, playerId: 1);
+            system.SetSolePossessedActor(actor, playerId: 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
             system.SetQueueModifierProvider(() => true);
             system.SetSkillMappingOverrideProvider(resolver.TryResolve);
@@ -1284,7 +1290,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
             system.CommandActionId = "PointerCommand";
-            system.SetLocalPlayer(producer, 1);
+            system.SetSolePossessedActor(producer, 1);
             system.SetOrderTypeKeyResolver(key => key == "setSpawnTarget" ? 106 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()), actor, routing.Candidates, out matchedCandidate));
@@ -1378,7 +1384,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
             system.CommandActionId = "PointerCommand";
-            system.SetLocalPlayer(producer, 1);
+            system.SetSolePossessedActor(producer, 1);
             system.SetOrderTypeKeyResolver(key =>
                 key switch
                 {
@@ -1465,7 +1471,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 CommandActionId = "PointerCommand",
             };
-            system.SetLocalPlayer(authorizedActor, 1);
+            system.SetSolePossessedActor(authorizedActor, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetActorOrderRoutingResolver((Entity _, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matched) =>
             {
@@ -1556,7 +1562,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
             system.CommandActionId = "PointerCommand";
-            system.SetLocalPlayer(unitA, 1);
+            system.SetSolePossessedActor(unitA, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()), actor, routing.Candidates, out matchedCandidate));
@@ -1633,7 +1639,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int batchSubmissions = 0;
             int singleSubmissions = 0;
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(first, 1);
+            system.SetSolePossessedActor(first, 1);
             system.SetActorProvider((out Entity actor) => { actor = first; return true; });
             system.SetCollectionEntityListProvider((string _, List<Entity> actors, int _, out OrderSubmitResult rejection) =>
             {
@@ -1764,7 +1770,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
             system.CommandActionId = "PointerCommand";
-            system.SetLocalPlayer(unitA, 1);
+            system.SetSolePossessedActor(unitA, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -2015,7 +2021,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             bool collectionProviderCalled = false;
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -2061,7 +2067,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var orders = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
             {
@@ -2182,7 +2188,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int nextOrderId = 100;
             var system = new InputOrderMappingSystem(input, config, commandIntentScratchCapacity: scratchCapacity);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
@@ -2355,7 +2361,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int nextOrderId = 100;
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
@@ -2530,7 +2536,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var submitted = new List<Order>(capacity: 3);
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key switch
             {
                 "castAbility" => 1,
@@ -2704,7 +2710,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             bool collectionProviderCalled = false;
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
             {
@@ -2843,7 +2849,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 CommandActionId = "Command",
             };
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
             {
@@ -2994,7 +3000,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
             {
@@ -3178,7 +3184,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var orders = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
             {
@@ -3314,7 +3320,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 CommandActionId = "Command",
             };
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
             system.SetGroundPositionProvider((out Vector3 position) =>
             {
@@ -3453,7 +3459,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var orders = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
-            system.SetLocalPlayer(localPlayer, 1);
+            system.SetSolePossessedActor(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key switch
             {
                 "castAbility" => 1,
@@ -3705,7 +3711,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             using var world = World.Create();
             Entity actor = world.Create();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(_ => 7);
             system.SetActivationActorValidator((candidate, playerId) =>
                 candidate == actor && playerId == 1 && world.IsAlive(candidate));
@@ -3746,7 +3752,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity firstActor = world.Create();
             Entity secondActor = world.Create();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(firstActor, 1);
+            system.SetSolePossessedActor(firstActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
             system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -3810,10 +3816,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondActor = world.Create();
             var admissionResults = new OrderAdmissionResultBuffer(8, 8);
             var queue = new OrderQueue(capacity: 1, admissionResults);
-            var seed = new Order { OrderTypeId = 8 };
+            var seed = new Order { Actor = firstActor, OrderTypeId = 8 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(firstActor, 1);
+            system.SetSolePossessedActor(firstActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
             system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -3873,7 +3879,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity firstActor = world.Create();
             Entity secondActor = world.Create();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(firstActor, 1);
+            system.SetSolePossessedActor(firstActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
             system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -3943,7 +3949,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 CancelActionId = "Cancel",
                 CommandActionId = "Command",
             };
-            system.SetLocalPlayer(actorA, 1);
+            system.SetSolePossessedActor(actorA, 1);
             system.SetActorProvider((out Entity actor) => { actor = providerActor; return true; });
             system.SetActivationActorValidator((candidate, _) => world.IsAlive(candidate));
             system.SetOrderTypeKeyResolver(_ => 7);
@@ -3996,7 +4002,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 CancelActionId = "Cancel",
                 CommandActionId = "Command",
             };
-            system.SetLocalPlayer(actorA, 1);
+            system.SetSolePossessedActor(actorA, 1);
             system.SetActorProvider((out Entity actor) => { actor = actorA; return true; });
             system.SetActivationActorValidator((candidate, _) => world.IsAlive(candidate));
             system.SetOrderTypeKeyResolver(_ => 7);
@@ -4080,7 +4086,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity foreignActor = world.Create();
             int submitted = 0;
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(controlledActor, 1);
+            system.SetSolePossessedActor(controlledActor, 1);
             system.SetOrderTypeKeyResolver(_ => 7);
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 91);
             system.SetOrderSubmitHandler((in Order _) => { submitted++; return OrderSubmitResult.Queued; });
@@ -4137,7 +4143,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var submitted = new List<Order>();
             int identityAssignments = 0;
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(controlledActor, 1);
+            system.SetSolePossessedActor(controlledActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = controlledActor; return true; });
             system.SetCollectionEntityListProvider((string collectionKey, List<Entity> actors, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -4208,7 +4214,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int identityAssignments = 0;
             bool authorizationOpen = true;
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(firstActor, 1);
+            system.SetSolePossessedActor(firstActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
             system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -4332,7 +4338,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void ActivateMappedAction_ExplicitContext_DoesNotRequireSetLocalPlayer()
+        public void ActivateMappedAction_ExplicitContext_DoesNotRequireSetSolePossessedActor()
         {
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
@@ -4354,7 +4360,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity actor = world.Create();
             var submitted = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
-            // Intentionally no SetLocalPlayer: explicit context alone must authorize the activation.
+            // Intentionally no SetSolePossessedActor: explicit context alone must authorize the activation.
             system.SetOrderTypeKeyResolver(_ => 7);
             system.SetActivationActorValidator((candidate, playerId) =>
                 candidate == actor && playerId == 1 && world.IsAlive(candidate));
@@ -4409,7 +4415,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity autoTargetActor = default;
             var orders = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actorA, 1);
+            system.SetSolePossessedActor(actorA, 1);
             system.SetActorProvider((out Entity actor) =>
             {
                 // First resolve should pin the activation; a second resolve must not be used.
@@ -4477,7 +4483,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity actor = world.Create();
             var orders = new List<Order>();
             var system = new InputOrderMappingSystem(input, config);
-            system.SetLocalPlayer(actor, 1);
+            system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(_ => 101);
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 55);
             system.SetAutoTargetProvider((Entity _, AutoTargetPolicy __, int ___, out Entity target) =>

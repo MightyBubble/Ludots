@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
 

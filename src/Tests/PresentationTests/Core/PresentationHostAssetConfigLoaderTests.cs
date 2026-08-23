@@ -5,6 +5,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {
@@ -15,9 +16,9 @@ namespace Ludots.Tests.Presentation
         public void MeshAssetConfigLoader_WhenModelDeclaresSourceUris_ThrowsExplicitHostAssetError()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Presentation", "mesh_assets.json"),
                 """
                 [
                   {
@@ -41,9 +42,9 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenBackendMatches_InjectsHostUrisIntoExistingMeshDescriptor()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Presentation", "mesh_assets.json"),
                 """
                 [
                   { "id": "test.model", "type": "Model" },
@@ -51,7 +52,7 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                Path.Combine(root, "Presentation", "host_assets.json"),
                 """
                 [
                   {
@@ -99,16 +100,16 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenHostAssetTargetsUnknownMesh_ThrowsExplicitly()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Presentation", "mesh_assets.json"),
                 """
                 [
                   { "id": "test.model", "type": "Model" }
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                Path.Combine(root, "Presentation", "host_assets.json"),
                 """
                 [
                   {
@@ -147,16 +148,16 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenHostAssetSchemaIsNotCanonical_Throws(string hostAssetRowJson, string expectedMessage)
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Presentation", "mesh_assets.json"),
                 """
                 [
                   { "id": "test.model", "type": "Model" }
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                Path.Combine(root, "Presentation", "host_assets.json"),
                 $"[ {hostAssetRowJson} ]");
 
             var pipeline = BuildCorePipeline(root);
@@ -174,16 +175,16 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenRequestedBackendHasBoundaryWhitespace_Throws()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Presentation", "mesh_assets.json"),
                 """
                 [
                   { "id": "test.model", "type": "Model" }
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                Path.Combine(root, "Presentation", "host_assets.json"),
                 """
                 [
                   {
@@ -211,9 +212,9 @@ namespace Ludots.Tests.Presentation
         public void MaterialAssetConfigLoader_WhenMaterialDeclaresSourceUris_ThrowsExplicitHostAssetError()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "material_assets.json"),
+                Path.Combine(root, "Presentation", "material_assets.json"),
                 """
                 [
                   {
@@ -237,12 +238,12 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenMaterialBackendMatches_InjectsHostUrisIntoExistingMaterialDescriptor()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Presentation", "mesh_assets.json"),
                 "[]");
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "material_assets.json"),
+                Path.Combine(root, "Presentation", "material_assets.json"),
                 """
                 [
                   {
@@ -253,7 +254,7 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                Path.Combine(root, "Presentation", "host_assets.json"),
                 """
                 [
                   {
@@ -261,14 +262,14 @@ namespace Ludots.Tests.Presentation
                     "assetKind": "Material",
                     "assetId": "surface.grid",
                     "backendId": "raylib",
-                    "sourceUris": [ "TestMod:assets/Materials/surface.mat" ]
+                    "textures": { "albedo": "TestMod:assets/Materials/surface.mat" }
                   },
                   {
                     "id": "surface.grid.ue5",
                     "assetKind": "Material",
                     "assetId": "surface.grid",
                     "backendId": "ue5",
-                    "sourceUris": [ "ue5.material:/Game/Test/Surface.Surface" ]
+                    "textures": { "material": "ue5.material:/Game/Test/Surface.Surface" }
                   }
                 ]
                 """);
@@ -281,14 +282,252 @@ namespace Ludots.Tests.Presentation
             new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog);
 
             int materialId = materials.GetId("surface.grid");
-            Assert.That(materials.TryGet(materialId, out var semanticDescriptor), Is.True);
-            Assert.That(semanticDescriptor.SourceUris, Is.Empty);
+            Assert.That(materials.TryResolve(materialId, out var semanticOnly), Is.True);
+            Assert.That(semanticOnly.TextureUris, Is.Empty);
 
             new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog);
 
-            Assert.That(materials.TryGet(materialId, out var boundDescriptor), Is.True);
-            Assert.That(boundDescriptor.SourceUris, Is.EqualTo(new[] { "TestMod:assets/Materials/surface.mat" }));
-            Assert.That(boundDescriptor.Flags, Is.EqualTo(MaterialAssetFlags.Transparent | MaterialAssetFlags.DoubleSided));
+            Assert.That(materials.TryResolve(materialId, out var bound), Is.True);
+            Assert.That(bound.TextureUris["albedo"], Is.EqualTo("TestMod:assets/Materials/surface.mat"));
+            Assert.That(bound.TextureUris.ContainsKey("material"), Is.False);
+            Assert.That(bound.Flags, Is.EqualTo(MaterialAssetFlags.Transparent | MaterialAssetFlags.DoubleSided));
+        }
+
+        [Test]
+        public void Apply_WhenMaterialRowDeclaresSourceUris_ThrowsNamedTexturesError()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  { "id": "surface.grid", "domain": "Surface" }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "host_assets.json"),
+                """
+                [
+                  {
+                    "id": "surface.grid.raylib",
+                    "assetKind": "Material",
+                    "assetId": "surface.grid",
+                    "backendId": "raylib",
+                    "sourceUris": [ "TestMod:assets/Materials/surface.mat" ]
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
+            new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog));
+            Assert.That(ex!.Message, Does.Contain("textures"));
+        }
+
+        [Test]
+        public void Resolve_WhenInstanceChainMerges_ChildOverridesParentSparsely()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "demo.metal",
+                    "domain": "Surface",
+                    "shaderKey": "lit",
+                    "params": {
+                      "floats": { "roughness": 0.2, "metallic": 1.0 },
+                      "colors": { "tint": [ 1.0, 0.8, 0.6, 1.0 ] }
+                    }
+                  },
+                  {
+                    "id": "demo.metal.rusty",
+                    "domain": "Surface",
+                    "parent": "demo.metal",
+                    "params": { "floats": { "roughness": 0.9 } }
+                  }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "host_assets.json"),
+                """
+                [
+                  {
+                    "id": "demo.metal.raylib",
+                    "assetKind": "Material",
+                    "assetId": "demo.metal",
+                    "backendId": "raylib",
+                    "textures": {
+                      "albedo": "TestMod:assets/Textures/metal.png",
+                      "normal": "TestMod:assets/Textures/metal_n.png"
+                    }
+                  },
+                  {
+                    "id": "demo.metal.rusty.raylib",
+                    "assetKind": "Material",
+                    "assetId": "demo.metal.rusty",
+                    "backendId": "raylib",
+                    "textures": { "albedo": "TestMod:assets/Textures/rusty.png" }
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
+            new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog);
+            new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog);
+
+            int instanceId = materials.GetId("demo.metal.rusty");
+            Assert.That(materials.TryResolve(instanceId, out var resolved), Is.True);
+            Assert.That(resolved.ShaderKey, Is.EqualTo("lit"));
+            Assert.That(resolved.Roughness, Is.EqualTo(0.9f));
+            Assert.That(resolved.Metallic, Is.EqualTo(1.0f));
+            Assert.That(resolved.Colors["tint"].Y, Is.EqualTo(0.8f));
+            Assert.That(resolved.TextureUris["albedo"], Is.EqualTo("TestMod:assets/Textures/rusty.png"));
+            Assert.That(resolved.TextureUris["normal"], Is.EqualTo("TestMod:assets/Textures/metal_n.png"));
+        }
+
+        [Test]
+        public void Load_WhenInstanceDeclaresShaderKeyOrFlags_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  { "id": "demo.base", "domain": "Surface" },
+                  { "id": "demo.bad", "domain": "Surface", "parent": "demo.base", "flags": [ "Cutout" ] }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var materials = new PresentationMaterialRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("instances cannot declare shaderKey/flags"));
+        }
+
+        [Test]
+        public void Resolve_WhenParentChainHasCycle_Throws()
+        {
+            var materials = new PresentationMaterialRegistry();
+            materials.Register("cycle.a", MaterialAssetDomain.Surface, MaterialAssetFlags.None, parentKey: "cycle.b");
+            materials.Register("cycle.b", MaterialAssetDomain.Surface, MaterialAssetFlags.None, parentKey: "cycle.a");
+
+            int id = materials.GetId("cycle.a");
+            var ex = Assert.Throws<InvalidOperationException>(() => materials.TryResolve(id, out _));
+            Assert.That(ex!.Message, Does.Contain("cycle"));
+        }
+
+        [Test]
+        public void Resolve_WhenParentIsMissing_Throws()
+        {
+            var materials = new PresentationMaterialRegistry();
+            materials.Register("orphan.instance", MaterialAssetDomain.Surface, MaterialAssetFlags.None, parentKey: "ghost.parent");
+
+            int id = materials.GetId("orphan.instance");
+            var ex = Assert.Throws<InvalidOperationException>(() => materials.TryResolve(id, out _));
+            Assert.That(ex!.Message, Does.Contain("ghost.parent"));
+        }
+
+        [Test]
+        public void Load_ParsesShaderKeyAndNamedParams()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "demo.emissive",
+                    "domain": "Surface",
+                    "shaderKey": "emissive",
+                    "params": {
+                      "floats": { "roughness": 0.6, "uEmissiveStrength": 3.0 },
+                      "colors": { "uEmissiveColor": [ 1.0, 0.35, 0.15, 1.0 ] }
+                    }
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var materials = new PresentationMaterialRegistry();
+            new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog);
+
+            int id = materials.GetId("demo.emissive");
+            Assert.That(materials.TryGet(id, out var descriptor), Is.True);
+            Assert.That(descriptor.ShaderKey, Is.EqualTo("emissive"));
+            Assert.That(descriptor.Roughness, Is.EqualTo(0.6f));
+            Assert.That(descriptor.FloatParams["uEmissiveStrength"], Is.EqualTo(3.0f));
+            Assert.That(descriptor.ColorParams["uEmissiveColor"].Y, Is.EqualTo(0.35f));
+        }
+
+        [Test]
+        public void Load_WhenTopLevelAndParamsDeclareSameWellKnownScalar_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "demo.conflict",
+                    "domain": "Surface",
+                    "roughness": 0.4,
+                    "params": { "floats": { "roughness": 0.8 } }
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var materials = new PresentationMaterialRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("both at top level and in params.floats"));
+        }
+
+        [Test]
+        public void Load_WhenWellKnownFloatParamOutOfUnitRange_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "demo.bad_range",
+                    "domain": "Surface",
+                    "params": { "floats": { "metallic": 1.5 } }
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var materials = new PresentationMaterialRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("within [0, 1]"));
         }
 
         private static string CreateTempCoreRoot()

@@ -5,6 +5,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Vision;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -228,10 +229,25 @@ namespace Ludots.Tests.GAS
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            GC.GetAllocatedBytesForCurrentThread();
+            long allocated = MeasureFogProjectionAllocations(
+                projector,
+                store,
+                buffer,
+                out int observed);
+            Assert.That(observed, Is.EqualTo(256_000));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureFogProjectionAllocations(
+            FogGlobalFieldVisualProjector projector,
+            FogFieldStore store,
+            GlobalFieldVisualBuffer buffer,
+            out int observed)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
-            int observed = 0;
+            observed = 0;
             for (int i = 0; i < 1_000; i++)
             {
                 buffer.BeginFrame();
@@ -239,9 +255,7 @@ namespace Ludots.Tests.GAS
                 observed += buffer.CellCount;
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(observed, Is.EqualTo(256_000));
-            Assert.That(allocated, Is.EqualTo(0));
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private static GlobalFieldVisualDescriptor CreateDescriptor(int scopeKeyId, int layerKeyId, IntRect bounds)

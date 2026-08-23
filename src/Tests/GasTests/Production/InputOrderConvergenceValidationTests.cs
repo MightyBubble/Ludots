@@ -51,7 +51,7 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(localInputNames, Does.Contain("AuthoritativeInputSnapshotSystem"));
             Assert.That(localInputNames, Does.Contain("AuthoritativePointerButtonSnapshotSystem"));
-            Assert.That(localInputNames, Does.Contain("LocalPlayerEntityResolverSystem"));
+            Assert.That(inputNames, Does.Contain("SeatPossessionSyncSystem"));
             Assert.That(localInputNames, Does.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(localInputNames, Does.Contain("AxisMoveOrderSystem"));
             Assert.That(localInputNames, Does.Contain("TabTargetCycleSystem"));
@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(localInputNames, Does.Not.Contain("UtilityAiThinkScheduleSystem"));
             Assert.That(localInputNames, Does.Not.Contain("Physics2DSimulationSystem"));
 
-            Assert.That(presentationNames, Does.Not.Contain("LocalPlayerEntityResolverSystem"));
+            Assert.That(presentationNames, Does.Not.Contain("SeatPossessionSyncSystem"));
             Assert.That(presentationNames, Does.Not.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(presentationNames, Does.Not.Contain("GasInputResponseSystem"));
             Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));
@@ -250,7 +250,7 @@ namespace Ludots.Tests.GAS.Production
             foreach (string file in aiConfigFiles)
             {
                 string normalized = file.Replace('\\', '/');
-                if (!normalized.Contains("/assets/Configs/AI/", StringComparison.Ordinal))
+                if (!normalized.Contains("/assets/AI/", StringComparison.Ordinal))
                 {
                     continue;
                 }

@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
@@ -22,6 +23,7 @@ using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.GraphQuery;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -44,7 +46,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntitySetQueryRuntime entityQueries,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
-            IClock clock)
+            IClock clock,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
@@ -63,6 +66,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            LookupTables = lookupTables;
         }
 
         public World World { get; }
@@ -78,6 +82,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public RelationshipReasonRegistry ReasonRegistry { get; }
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
+        public GraphLookupTableRegistry? LookupTables { get; }
         public EntitySetQueryRuntime EntityQueries { get; }
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
@@ -98,7 +103,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
+        private readonly GraphLookupTableRegistry? _lookupTables;
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
+        private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private LoadedGraphRuntime? _loadedGraphRuntime;
+        private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -177,7 +186,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
-                services.EntityQueries);
+                services.EntityQueries,
+                lookupTables: services.LookupTables);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
@@ -195,6 +205,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return typed;
         }
 
+        public Ludots.Core.UI.PanelActivation.PanelActivationApi? PanelActivationApi => _panelActivationApi;
+
+        public void BindPanelActivation(Ludots.Core.UI.PanelActivation.PanelActivationApi api)
+        {
+            _panelActivationApi = api ?? throw new ArgumentNullException(nameof(api));
+        }
+
+        public Ludots.Core.UI.PanelHosting.PanelHost? PanelHost => _panelHost;
+
+        public void BindPanelHost(Ludots.Core.UI.PanelHosting.PanelHost host)
+        {
+            _panelHost = host ?? throw new ArgumentNullException(nameof(host));
+        }
+
+        /// <summary>
+        /// Resolves a map id to its live <see cref="Gameplay.MapTriggers.MapVariableStore"/>.
+        /// The engine binds this lazily because map sessions are created after the graph API.
+        /// </summary>
+        public void BindMapVariableStoreResolver(Func<MapId, Gameplay.MapTriggers.MapVariableStore?> resolver)
+        {
+            _mapVariableStoreResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -209,7 +242,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipReasonRegistry? reasonRegistry = null,
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
-            EntitySetQueryRuntime? entityQueries = null)
+            EntitySetQueryRuntime? entityQueries = null,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
@@ -221,6 +255,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _relationshipRuntime = relationshipRuntime;
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
+            _lookupTables = lookupTables;
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
@@ -230,6 +265,102 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private TagOps RequireTagOps()
         {
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
+        }
+
+        public int ResolveTableRow(int tableId, int key)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ResolveRow(tableId, key);
+        }
+
+        public int TableReadInt(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadInt(rowHandle, fieldId);
+        }
+
+        public float TableReadFloat(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadFloat(rowHandle, fieldId);
+        }
+
+        public void ShowPanel(int panelTypeId)
+        {
+            RequirePanelActivationApi().ShowPanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void HidePanel(int panelTypeId)
+        {
+            RequirePanelActivationApi().HidePanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
+        {
+            CreatePanel(templateKeyId, anchorKeyId, scope, UI.PanelHosting.PanelSkinIds.Unspecified, 100f);
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            RequirePanelHost().Instantiate(
+                ResolvePanelTypeName(templateKeyId),
+                ResolvePanelTypeName(anchorKeyId),
+                scope,
+                UI.PanelHosting.PanelSkinIds.ToName(skinId),
+                (int)zOrder);
+        }
+
+        public void DestroyPanel(int templateKeyId, Entity scope)
+        {
+            RequirePanelHost().DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
+        }
+
+        private string ResolvePanelTypeName(int panelTypeId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(panelTypeId);
+            return name ?? throw new InvalidOperationException(
+                $"Panel op references unregistered config key id {panelTypeId}.");
+        }
+
+        public int ReadMapVarInt(int varKeyId, MapId mapId)
+            => ResolveMapVariableStore(mapId).ReadInt(ResolveMapVariableName(varKeyId));
+
+        public float ReadMapVarFloat(int varKeyId, MapId mapId)
+            => ResolveMapVariableStore(mapId).ReadFloat(ResolveMapVariableName(varKeyId));
+
+        public void WriteMapVarInt(int varKeyId, MapId mapId, int value)
+            => ResolveMapVariableStore(mapId).WriteInt(ResolveMapVariableName(varKeyId), value);
+
+        public void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
+            => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
+
+        private Gameplay.MapTriggers.MapVariableStore ResolveMapVariableStore(MapId mapId)
+        {
+            var resolver = _mapVariableStoreResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+            return resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.MapVariableStoreUnavailable: map '{mapId.Value}' has no live variable store.");
+        }
+
+        private string ResolveMapVariableName(int varKeyId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(varKeyId);
+            return name ?? throw new InvalidOperationException(
+                $"GAS.GRAPH.ERR.MapVariableNameUnknown: map variable op references unregistered config key id {varKeyId}.");
+        }
+
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi RequirePanelActivationApi()
+        {
+            return _panelActivationApi ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        private Ludots.Core.UI.PanelHosting.PanelHost RequirePanelHost()
+        {
+            return _panelHost ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)
@@ -350,10 +481,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         internal bool HasActiveEffectSideEffectTransaction => _effectSideEffects?.IsActive == true;
+        internal bool HasGameplayEventBus => _eventBus != null;
 
         public void BindLoadedGraphRuntime(LoadedGraphRuntime? runtime)
         {
             _loadedGraphRuntime = runtime;
+            PreflightGraphProjectionCandidateScratch(runtime);
+        }
+
+        private void PreflightGraphProjectionCandidateScratch(LoadedGraphRuntime? runtime)
+        {
+            if (runtime == null || !runtime.HasLoadedGraph)
+            {
+                _graphProjectionCandidateScratch = Array.Empty<int>();
+                return;
+            }
+
+            int nodeCount = runtime.CurrentGraph.NodeCount;
+            if (nodeCount <= 0)
+            {
+                _graphProjectionCandidateScratch = Array.Empty<int>();
+                return;
+            }
+
+            if (_graphProjectionCandidateScratch.Length == nodeCount)
+            {
+                return;
+            }
+
+            // Allocate once when the loaded graph is bound — never grow on the snap hot path.
+            _graphProjectionCandidateScratch = new int[nodeCount];
         }
 
         /// <summary>
@@ -498,7 +655,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             try
             {
                 registry.Invoke(
-                    (BuiltinHandlerId)builtinHandlerId,
+                    builtinHandlerId,
                     _world,
                     _currentEffectEntity,
                     ref context,
@@ -815,14 +972,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
             RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
         }
-        public int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer);
-        public int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer);
-        public int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer);
-        public int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer);
+        public RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
         public int FilterRelationshipMetricRange(Span<Entity> entities, int count, Entity source, int typeId, int metricId, short minInclusive, short maxInclusive)
             => RequireEntityQueries().FilterRelationshipMetricRange(entities, count, source, typeId, metricId, minInclusive, maxInclusive);
         public int FilterRelationshipFlag(Span<Entity> entities, int count, Entity source, int typeId, int flagId, bool expected)
@@ -1232,7 +1401,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 return false;
             }
 
-            EnsureGraphProjectionCandidateCapacity(runtime.CurrentGraph.NodeCount);
+            int nodeCount = runtime.CurrentGraph.NodeCount;
+            if (_graphProjectionCandidateScratch.Length < nodeCount)
+            {
+                throw new InvalidOperationException(
+                    $"Graph edge snap candidate scratch capacity {_graphProjectionCandidateScratch.Length} is below loaded graph node count {nodeCount}. BindLoadedGraphRuntime must preflight capacity before execution.");
+            }
+
             Fix64Vec2 pointCm = Fix64Vec2.FromInt(targetPosCm.X, targetPosCm.Y);
             bool found = PlacementValidation.TrySnapToNearestGraphEdge(
                 runtime.CurrentGraph,
@@ -1248,22 +1423,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return found;
-        }
-
-        private void EnsureGraphProjectionCandidateCapacity(int required)
-        {
-            if (_graphProjectionCandidateScratch.Length >= required)
-            {
-                return;
-            }
-
-            int next = _graphProjectionCandidateScratch.Length == 0 ? 64 : _graphProjectionCandidateScratch.Length * 2;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _graphProjectionCandidateScratch, next);
         }
     }
 }

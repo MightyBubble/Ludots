@@ -145,6 +145,7 @@ public sealed class LauncherService
         }
 
         var config = LoadRepoConfig();
+        var existing = config.Bindings.Find(binding => string.Equals(binding.Name, name, StringComparison.OrdinalIgnoreCase));
         config.Bindings.RemoveAll(binding => string.Equals(binding.Name, name, StringComparison.OrdinalIgnoreCase));
         config.Bindings.Add(new LauncherBinding
         {
@@ -153,7 +154,8 @@ public sealed class LauncherService
             {
                 Type = targetType.Trim(),
                 Value = targetValue.Trim(),
-                ProjectPath = string.IsNullOrWhiteSpace(projectPath) ? null : projectPath.Trim()
+                ProjectPath = string.IsNullOrWhiteSpace(projectPath) ? null : projectPath.Trim(),
+                Args = existing?.Target.Args
             }
         });
         SaveRepoConfig(config);
@@ -392,6 +394,11 @@ public sealed class LauncherService
             throw new ArgumentNullException(nameof(plan));
         }
 
+        if (plan.IsExecutableTarget)
+        {
+            throw new InvalidOperationException("Executable target plans do not write a runtime bootstrap.");
+        }
+
         return WriteRuntimeBootstrap(plan);
     }
 
@@ -447,6 +454,11 @@ public sealed class LauncherService
             config,
             BuildCatalog(config),
             presets);
+        if (resolveResult.Plan.IsExecutableTarget)
+        {
+            return await LaunchExecutableTargetAsync(resolveResult.Plan, config);
+        }
+
         var buildResults = await BuildPlanRuntimeAsync(resolveResult.Plan, config, CancellationToken.None);
         var failedModBuild = buildResults.FirstOrDefault(result => !result.Ok);
         if (failedModBuild != null)
@@ -541,6 +553,87 @@ public sealed class LauncherService
         {
             process.Dispose();
         }
+    }
+
+    private async Task<LauncherLaunchResult> LaunchExecutableTargetAsync(LauncherLaunchPlan plan, LauncherConfig config)
+    {
+        var buildResults = await BuildPlanRuntimeAsync(plan, config, CancellationToken.None);
+        var failedBuild = buildResults.FirstOrDefault(result => !result.Ok);
+        if (failedBuild != null)
+        {
+            return new LauncherLaunchResult(false, failedBuild.Output, -1, string.Empty, string.Empty, plan);
+        }
+
+        ReplacePreviousActiveLaunch(plan.AdapterId);
+        var startInfo = new ProcessStartInfo(ResolveDotnetCommand(), BuildExecutableTargetArguments(plan))
+        {
+            WorkingDirectory = plan.AppOutputDirectory,
+            UseShellExecute = false
+        };
+
+        var process = Process.Start(startInfo);
+        if (process == null)
+        {
+            return new LauncherLaunchResult(false, "Failed to start executable target process.", -1, string.Empty, string.Empty, plan);
+        }
+
+        var started = new LauncherStartedProcess(
+            "primary",
+            string.Empty,
+            process.Id,
+            plan.AppAssemblyPath,
+            string.Empty);
+        PersistActiveLaunch(
+            plan.AdapterId,
+            plan.PlanFingerprint,
+            new[] { CreateActiveProcessRecord(started, process) });
+        return new LauncherLaunchResult(true, string.Empty, process.Id, string.Empty, string.Empty, plan)
+        {
+            Processes = new[] { started }
+        };
+    }
+
+    public async Task<LauncherExecutableTargetRun> ExecuteExecutableTargetAsync(LauncherLaunchPlan plan, CancellationToken ct = default)
+    {
+        if (plan == null)
+        {
+            throw new ArgumentNullException(nameof(plan));
+        }
+
+        if (!plan.IsExecutableTarget)
+        {
+            throw new InvalidOperationException("Plan is not an executable target plan.");
+        }
+
+        ct.ThrowIfCancellationRequested();
+        var arguments = BuildExecutableTargetArguments(plan);
+        var run = await RunProcessAsync(
+            ResolveDotnetCommand(),
+            arguments,
+            plan.AppOutputDirectory,
+            timeoutMs: 300_000);
+        return new LauncherExecutableTargetRun($"{ResolveDotnetCommand()} {arguments}", run.ExitCode, run.Output);
+    }
+
+    private static string BuildExecutableTargetArguments(LauncherLaunchPlan plan)
+    {
+        var arguments = new StringBuilder($"exec --roll-forward Major \"{plan.AppAssemblyPath}\"");
+        foreach (var argument in plan.ExecutableArgs ?? Array.Empty<string>())
+        {
+            arguments.Append(' ').Append(QuoteProcessArgument(argument));
+        }
+
+        return arguments.ToString();
+    }
+
+    private static string QuoteProcessArgument(string argument)
+    {
+        if (!argument.Contains(' ') && !argument.Contains('"'))
+        {
+            return argument;
+        }
+
+        return $"\"{argument.Replace("\"", "\\\"")}\"";
     }
 
     public LauncherResolveResult Resolve(IEnumerable<string> selectors, string? adapterId = null, LauncherBuildMode buildMode = LauncherBuildMode.Auto)
@@ -739,11 +832,24 @@ public sealed class LauncherService
             pair => pair.Value.ToList(),
             StringComparer.OrdinalIgnoreCase);
         var presetStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resolutionState = new PlanResolutionState();
         var roots = new List<CatalogEntry>();
 
         foreach (var selector in selectors)
         {
-            roots.AddRange(ResolveSelector(selector, config, presetDocument, catalog, localByRootPath, localById, presetStack));
+            roots.AddRange(ResolveSelector(selector, config, presetDocument, catalog, localByRootPath, localById, presetStack, resolutionState));
+        }
+
+        if (resolutionState.ExecutableTargets.Count > 0)
+        {
+            if (roots.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "Executable project bindings cannot be combined with mod selectors in one launch plan.");
+            }
+
+            var executablePlan = BuildExecutableLaunchPlan(selectors, adapterId, buildMode, config, resolutionState);
+            return new LauncherResolveResult(executablePlan, catalog.Entries.Select(entry => entry.Info).ToList());
         }
 
         var ordered = ResolveDependencyClosure(roots, localById);
@@ -821,7 +927,8 @@ public sealed class LauncherService
         CatalogIndex catalog,
         Dictionary<string, CatalogEntry> localByRootPath,
         Dictionary<string, List<CatalogEntry>> localById,
-        HashSet<string> presetStack)
+        HashSet<string> presetStack,
+        PlanResolutionState resolutionState)
     {
         if (string.IsNullOrWhiteSpace(selector))
         {
@@ -836,7 +943,7 @@ public sealed class LauncherService
                 throw new InvalidOperationException($"Binding not found: {selector}");
             }
 
-            return ResolveBinding(binding, config, catalog, localByRootPath, localById, presetDocument, presetStack);
+            return ResolveBinding(binding, config, catalog, localByRootPath, localById, presetDocument, presetStack, resolutionState);
         }
 
         if (selector.StartsWith("preset:", StringComparison.OrdinalIgnoreCase))
@@ -855,10 +962,11 @@ public sealed class LauncherService
                     throw new InvalidOperationException($"Preset not found: {presetId}");
                 }
 
+                ApplyPresetArgs(preset, resolutionState);
                 var resolved = new List<CatalogEntry>();
                 foreach (var nestedSelector in preset.Selectors)
                 {
-                    resolved.AddRange(ResolveSelector(nestedSelector, config, presetDocument, catalog, localByRootPath, localById, presetStack));
+                    resolved.AddRange(ResolveSelector(nestedSelector, config, presetDocument, catalog, localByRootPath, localById, presetStack, resolutionState));
                 }
 
                 return resolved;
@@ -911,14 +1019,149 @@ public sealed class LauncherService
         Dictionary<string, CatalogEntry> localByRootPath,
         Dictionary<string, List<CatalogEntry>> localById,
         LauncherPresetDocument presetDocument,
-        HashSet<string> presetStack)
+        HashSet<string> presetStack,
+        PlanResolutionState resolutionState)
     {
         return binding.Target.Type.Trim().ToLowerInvariant() switch
         {
-            "path" => ResolveSelector($"path:{binding.Target.Value}", config, presetDocument, catalog, localByRootPath, localById, presetStack),
-            "modid" => ResolveSelector($"mod:{binding.Target.Value}", config, presetDocument, catalog, localByRootPath, localById, presetStack),
+            "path" => ResolveSelector($"path:{binding.Target.Value}", config, presetDocument, catalog, localByRootPath, localById, presetStack, resolutionState),
+            "modid" => ResolveSelector($"mod:{binding.Target.Value}", config, presetDocument, catalog, localByRootPath, localById, presetStack, resolutionState),
+            "project" => ResolveProjectBinding(binding, resolutionState),
             _ => throw new InvalidOperationException($"Unsupported binding target type: {binding.Target.Type}")
         };
+    }
+
+    private IReadOnlyList<CatalogEntry> ResolveProjectBinding(LauncherBinding binding, PlanResolutionState resolutionState)
+    {
+        var projectPath = ResolveRepoRelativePath(binding.Target.Value);
+        if (!File.Exists(projectPath))
+        {
+            throw new InvalidOperationException($"Executable project target not found: {projectPath}");
+        }
+
+        resolutionState.ExecutableTargets.Add(new ExecutableTargetCandidate(projectPath, binding.Target.Args));
+        return Array.Empty<CatalogEntry>();
+    }
+
+    private static void ApplyPresetArgs(LauncherPresetDefinition preset, PlanResolutionState resolutionState)
+    {
+        if (preset.Args == null)
+        {
+            return;
+        }
+
+        if (resolutionState.PresetArgs != null &&
+            !resolutionState.PresetArgs.SequenceEqual(preset.Args, StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Conflicting preset args: [{string.Join(" ", resolutionState.PresetArgs)}] vs [{string.Join(" ", preset.Args)}].");
+        }
+
+        resolutionState.PresetArgs = preset.Args.ToList();
+    }
+
+    private LauncherLaunchPlan BuildExecutableLaunchPlan(
+        IReadOnlyList<string> selectors,
+        string? adapterId,
+        LauncherBuildMode buildMode,
+        LauncherConfig config,
+        PlanResolutionState resolutionState)
+    {
+        var distinctTargets = resolutionState.ExecutableTargets
+            .GroupBy(target => target.ProjectPath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (distinctTargets.Count > 1)
+        {
+            throw new InvalidOperationException(
+                $"Multiple executable project targets selected: {string.Join(", ", distinctTargets.Select(group => group.Key))}.");
+        }
+
+        var target = distinctTargets[0].First();
+        var resolvedAdapterId = string.IsNullOrWhiteSpace(adapterId)
+            ? ResolveSelectedAdapterId(config, LoadPreferences())
+            : adapterId!.Trim().ToLowerInvariant();
+        var profile = GetPlatformProfile(resolvedAdapterId);
+        var buildModeText = buildMode.ToString().ToLowerInvariant();
+        var executableArgs = NormalizeExecutableArgs(resolutionState.PresetArgs ?? target.BindingArgs);
+        var outputDirectory = ResolveExecutableOutputDirectory(target.ProjectPath);
+        var appAssemblyPath = ResolveExecutableAssemblyPath(target.ProjectPath, outputDirectory);
+        var adapterDescriptor = new LauncherAdapterDescriptor(
+            profile.Id,
+            profile.Name,
+            string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase) ? "web" : "desktop",
+            "dotnet",
+            "none",
+            target.ProjectPath,
+            outputDirectory,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty);
+        var graphArtifactPath = ResolveGraphArtifactPath(profile);
+        var generatedAtUtc = DateTimeOffset.UtcNow.ToString("O");
+        var planFingerprint = ComputePlanFingerprint(
+            adapterDescriptor,
+            buildModeText,
+            selectors,
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<LauncherPlannedMod>(),
+            "none",
+            string.Empty,
+            graphArtifactPath,
+            outputDirectory,
+            appAssemblyPath,
+            string.Empty,
+            browserRuntime: null,
+            isExecutableTarget: true,
+            executableProjectPath: target.ProjectPath,
+            executableArgs: executableArgs);
+
+        return new LauncherLaunchPlan(
+            profile.Id,
+            buildModeText,
+            selectors,
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<LauncherPlannedMod>(),
+            "none",
+            string.Empty,
+            outputDirectory,
+            appAssemblyPath,
+            string.Empty,
+            null,
+            new LauncherPlanDiagnostics(Array.Empty<LauncherResolvedSetting>(), Array.Empty<string>()),
+            adapterDescriptor,
+            LaunchGraphSchemaVersion,
+            generatedAtUtc,
+            planFingerprint,
+            graphArtifactPath,
+            IsExecutableTarget: true,
+            ExecutableProjectPath: target.ProjectPath,
+            ExecutableArgs: executableArgs);
+    }
+
+    private static IReadOnlyList<string> NormalizeExecutableArgs(List<string>? args)
+    {
+        return args == null
+            ? Array.Empty<string>()
+            : args.Where(arg => !string.IsNullOrWhiteSpace(arg)).Select(arg => arg.Trim()).ToList();
+    }
+
+    private static string ResolveExecutableOutputDirectory(string projectPath)
+    {
+        var projectDirectory = Path.GetDirectoryName(projectPath);
+        if (string.IsNullOrWhiteSpace(projectDirectory))
+        {
+            throw new InvalidOperationException($"Executable project path has no directory: {projectPath}");
+        }
+
+        return Path.Combine(projectDirectory, "bin", "Release", "net8.0");
+    }
+
+    private static string ResolveExecutableAssemblyPath(string projectPath, string outputDirectory)
+    {
+        return Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(projectPath) + ".dll");
     }
 
     private static CatalogEntry ResolveUniqueModEntry(string modId, IReadOnlyDictionary<string, List<CatalogEntry>> byId)
@@ -1452,7 +1695,10 @@ public sealed class LauncherService
         string appOutputDirectory,
         string appAssemblyPath,
         string launchUrl,
-        BrowserRuntimeConfig? browserRuntime)
+        BrowserRuntimeConfig? browserRuntime,
+        bool isExecutableTarget = false,
+        string executableProjectPath = "",
+        IReadOnlyList<string>? executableArgs = null)
     {
         var payload = new PlanFingerprintPayload(
             LaunchGraphSchemaVersion,
@@ -1476,7 +1722,10 @@ public sealed class LauncherService
             appOutputDirectory,
             appAssemblyPath,
             launchUrl,
-            browserRuntime);
+            browserRuntime,
+            isExecutableTarget,
+            executableProjectPath,
+            executableArgs?.ToList());
         var json = JsonSerializer.Serialize(payload);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
         return Convert.ToHexString(hash).ToLowerInvariant();
@@ -1630,6 +1879,10 @@ public sealed class LauncherService
                     names.Add(binding.Name);
                     break;
                 }
+                case "project":
+                {
+                    break;
+                }
             }
         }
 
@@ -1689,6 +1942,12 @@ public sealed class LauncherService
         CancellationToken ct)
     {
         var results = new List<LauncherBuildResult>();
+        if (plan.IsExecutableTarget)
+        {
+            results.Add(await BuildExecutableTargetAsync(plan, ct));
+            return results;
+        }
+
         results.AddRange(await BuildPlannedModsAsync(plan, config, ct));
         results.AddRange(await BuildHostBrowserRuntimeAsync(plan, ct));
         return results;
@@ -1721,6 +1980,37 @@ public sealed class LauncherService
         }
 
         return results;
+    }
+
+    private async Task<LauncherBuildResult> BuildExecutableTargetAsync(LauncherLaunchPlan plan, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var resultId = $"project:{plan.ExecutableProjectPath}";
+        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() && File.Exists(plan.AppAssemblyPath))
+        {
+            return new LauncherBuildResult(resultId, true, 0, "Executable target build skipped by request.");
+        }
+
+        var projectDirectory = Path.GetDirectoryName(plan.ExecutableProjectPath) ?? _repoRoot;
+        var build = await RunDotnetAsync(
+            $"build \"{plan.ExecutableProjectPath}\" -c Release",
+            projectDirectory,
+            timeoutMs: 300_000);
+        if (build.ExitCode != 0)
+        {
+            return new LauncherBuildResult(resultId, false, build.ExitCode, build.Output);
+        }
+
+        if (!File.Exists(plan.AppAssemblyPath))
+        {
+            return new LauncherBuildResult(
+                resultId,
+                false,
+                1,
+                $"{build.Output}{Environment.NewLine}Executable assembly missing after build: {plan.AppAssemblyPath}");
+        }
+
+        return new LauncherBuildResult(resultId, true, 0, build.Output);
     }
 
     private async Task<IReadOnlyList<LauncherBuildResult>> BuildHostBrowserRuntimeAsync(
@@ -3016,7 +3306,18 @@ public sealed class LauncherService
         string AppOutputDirectory,
         string AppAssemblyPath,
         string LaunchUrl,
-        BrowserRuntimeConfig? BrowserRuntime);
+        BrowserRuntimeConfig? BrowserRuntime,
+        bool IsExecutableTarget,
+        string ExecutableProjectPath,
+        IReadOnlyList<string>? ExecutableArgs);
+
+    private sealed class PlanResolutionState
+    {
+        public List<ExecutableTargetCandidate> ExecutableTargets { get; } = new();
+        public List<string>? PresetArgs { get; set; }
+    }
+
+    private sealed record ExecutableTargetCandidate(string ProjectPath, List<string>? BindingArgs);
 
     private sealed record CatalogEntry(LauncherModInfo Info, ModManifest Manifest);
     private sealed record GameConfigFragment(string Source, string? OwnerModId, bool IsRootSelection, JsonObject Content);

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
@@ -11,6 +13,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.StructureCollision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Map
 {
@@ -32,10 +35,15 @@ namespace Ludots.Core.Map
         public TeamEntityLookup TeamEntityLookup { get; set; } = new TeamEntityLookup();
         public PlayerEntityLookup PlayerEntityLookup { get; set; } = new PlayerEntityLookup();
         public MapLoadEntityIndex EntityIndex { get; set; } = new MapLoadEntityIndex();
-        public int LocalPlayerId { get; set; }
-        public Entity LocalPlayerEntity { get; set; }
+        public IReadOnlyList<ResolvedLocalSeatPossession> LocalSeats { get; set; } = Array.Empty<ResolvedLocalSeatPossession>();
         public TeamRelationshipSnapshot? TeamRelationships { get; set; }
         public MapLaunchContext? LaunchContext { get; set; }
+
+        /// <summary>
+        /// Map-scoped variable table created from <see cref="MapConfig.Variables"/> when the
+        /// session is constructed; null after Cleanup/Dispose (map unload).
+        /// </summary>
+        public MapVariableStore? Variables { get; private set; }
 
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();
@@ -49,6 +57,7 @@ namespace Ludots.Core.Map
             MapConfig = mapConfig;
             State = MapSessionState.Active;
             Context = new MapContext(parentContext);
+            Variables = MapVariableStore.Create(mapId, mapConfig?.Variables);
         }
 
         public void AddBoard(IBoard board)
@@ -154,6 +163,7 @@ namespace Ludots.Core.Map
                 }
             }
             _boards.Clear();
+            Variables = null;
 
             State = MapSessionState.Disposed;
         }
@@ -167,6 +177,7 @@ namespace Ludots.Core.Map
                     try { kvp.Value.Dispose(); } catch { }
                 }
                 _boards.Clear();
+                Variables = null;
                 State = MapSessionState.Disposed;
             }
         }

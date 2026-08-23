@@ -242,7 +242,7 @@ public sealed class NetworkReadinessArtifactRuntimeTests
 
     private static void AttachPerformerPayload(World world, Entity mirror)
     {
-        world.Add(mirror, new PresentationOwnerHasPerformerPayload
+        world.Add(mirror, new PresentationOwnerHasPresenterPayload
         {
             Count = 4,
             RootCount = 1,

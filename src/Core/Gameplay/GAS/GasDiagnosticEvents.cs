@@ -21,7 +21,6 @@ namespace Ludots.Core.Gameplay.GAS
         ResponseDepthDropped = 2,
         ResponseStepBudgetFused = 3,
         ResponseQueueOverflow = 4,
-        FanOutCreatesDropped = 5,
         TagCountOverflowDropped = 7,
         ActiveEffectContainerAttachDropped = 8,
         PhaseListenerRegistrationDropped = 9,

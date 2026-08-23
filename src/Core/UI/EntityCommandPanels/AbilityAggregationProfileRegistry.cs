@@ -151,7 +151,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
 
                 for (int slotIndex = 0; slotIndex < AbilityStateBuffer.CAPACITY; slotIndex++)
                 {
-                    AbilitySlotState slot = AbilitySlotResolver.Resolve(
+                    if (!AbilitySlotResolver.TryResolve(
                         in baseSlots,
                         in formSlots,
                         hasForm,
@@ -159,8 +159,8 @@ namespace Ludots.Core.UI.EntityCommandPanels
                         hasItemGranted,
                         in grantedSlots,
                         hasGranted,
-                        slotIndex);
-                    if (slot.AbilityId <= 0 && slot.TemplateEntityId == 0)
+                        slotIndex,
+                        out AbilitySlotState slot))
                     {
                         continue;
                     }

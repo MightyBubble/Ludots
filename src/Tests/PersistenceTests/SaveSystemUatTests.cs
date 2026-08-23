@@ -134,7 +134,7 @@ public sealed class SaveSystemUatTests
             Assert.That(TryFindByName(target.World, "Saved Contract Pilot"), Is.EqualTo(Entity.Null));
             Entity preserved = FindSingleByName(target.World, "Current Mission Survives");
             ref readonly WorldPositionCm preservedPosition = ref target.World.Get<WorldPositionCm>(preserved);
-            Assert.That(preservedPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Core.Mathematics.WorldCmInt2(33, 44)));
+            Assert.That(preservedPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Platform.Abstractions.WorldCmInt2(33, 44)));
         });
     }
 
@@ -455,7 +455,7 @@ public sealed class SaveSystemUatTests
 4. Change the world state visibly: advance simulation, move the camera, or create/modify units through the existing RTS controls.
 5. Trigger load for the saved slot.
 6. Confirm the map returns to the saved state: entity count, positions, current tick, and visible presentation all match the save point.
-7. Continue simulation for several ticks and confirm no invalid entity references, missing performers, or stale UI rows appear.
+7. Continue simulation for several ticks and confirm no invalid entity references, missing presenters, or stale UI rows appear.
 
 ## Pass Criteria
 

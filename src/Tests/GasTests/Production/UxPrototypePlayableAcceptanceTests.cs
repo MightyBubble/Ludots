@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -24,6 +24,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -32,6 +33,7 @@ using Ludots.UI;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -145,7 +147,7 @@ namespace Ludots.Tests.GAS.Production
             LoadMap(engine, "ux_prototype_battle", frameTimesMs);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             var backend = GetInputBackend(engine);
-            Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = engine.AuthorityCamera().State.TargetCm;
             Assert.That(cameraTarget.X, Is.InRange(3200f, 4000f), "UX prototype battle camera should frame the battlefield instead of drifting back toward the world origin.");
             Assert.That(cameraTarget.Y, Is.InRange(2200f, 2900f), "UX prototype battle camera should frame the battlefield instead of drifting back toward the world origin.");
 
@@ -446,7 +448,7 @@ namespace Ludots.Tests.GAS.Production
             Entity entity = FindEntityByName(engine.World, entityName);
             Vector3 expectedPosition = engine.World.TryGet(entity, out VisualTransform transform)
                 ? transform.Position
-                : WorldUnits.WorldCmToVisualMeters(engine.World.Get<WorldPositionCm>(entity).Value, yMeters: 0f);
+                : WorldUnitsFix64.WorldCmToVisualMeters(engine.World.Get<WorldPositionCm>(entity).Value, yMeters: 0f);
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
                 ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
@@ -479,7 +481,7 @@ namespace Ludots.Tests.GAS.Production
                 }
             }
 
-            Assert.That(matched.HasValue, Is.True, $"{entityName} should emit a visible primitive through the performer mainline.");
+            Assert.That(matched.HasValue, Is.True, $"{entityName} should emit a visible primitive through the presenter mainline.");
             PrimitiveDrawItem primitive = matched!.Value;
             Assert.That(bestDistanceSq, Is.LessThanOrEqualTo(0.25f), $"{entityName} should match the nearest visible primitive for {expectedMeshAssetKey}.");
             Assert.That(primitive.MeshAssetId, Is.GreaterThan(0), $"{entityName} should resolve a mesh asset.");
@@ -669,7 +671,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             ref var position = ref engine.World.Get<WorldPositionCm>(entity);
-            Vector2 fallback = projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+            Vector2 fallback = projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(position.Value, yMeters: 0f));
             Assert.That(float.IsFinite(fallback.X) && float.IsFinite(fallback.Y), Is.True,
                 $"Fallback projected screen position for entity #{entity.Id} must stay finite.");
             return fallback;
@@ -722,8 +724,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static Entity GetLocalPlayer(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                   localObj is Entity entity &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity entity) &&
                    engine.World.IsAlive(entity)
                 ? entity
                 : throw new InvalidOperationException("LocalPlayerEntity missing.");
@@ -786,8 +787,8 @@ namespace Ludots.Tests.GAS.Production
             var cameraAdapter = new StubCameraAdapter();
             var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            var screenProjector = new CoreScreenProjector(engine.AuthorityCamera(), view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.AuthorityCamera(), view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
@@ -795,12 +796,12 @@ namespace Ludots.Tests.GAS.Production
 
             var culling = new CameraCullingSystem(
                 engine.World,
-                engine.GameSession.Camera,
+                engine.AuthorityCamera(),
                 engine.SpatialQueries,
                 view,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling,
                 loadedChunks: null,
-                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+                presenters: engine.GetService(CoreServiceKeys.PresenterEntityRuntime),
                 timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
@@ -866,7 +867,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+            runtime.CameraPresenter.Update(engine.AuthorityCamera(), alpha);
         }
 
         private static List<string> ExtractUiText(UIRoot root)

@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Association;
-using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Vision;
@@ -36,8 +36,6 @@ namespace Ludots.Core.Gameplay.GAS
         SubmitOrderFromBlackboard = 15,
         /// <summary>Atomic entity template replacement with inheritance profile.</summary>
         DeployConsumeSource = 16,
-        /// <summary>Timed area reveal through Vision/Fog/Knowledge projection.</summary>
-        RevealArea = 17,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -328,8 +326,21 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public int TagId;
         public EffectPresetType PresetType;
+        public int PresetTypeId;
+
+        /// <summary>
+        /// Loader-compiled templates carry the registry id; programmatically built templates
+        /// may only set the builtin enum. Execution paths must use this, not the raw fields.
+        /// </summary>
+        public int EffectivePresetTypeId => PresetTypeId != 0 ? PresetTypeId : (int)PresetType;
         public int PresetAttribute0;
         public int PresetAttribute1;
+
+        public EffectTemplateData()
+        {
+            PresetAttribute0 = AttributeRegistry.InvalidId;
+            PresetAttribute1 = AttributeRegistry.InvalidId;
+        }
         public EffectLifetimeKind LifetimeKind;
         public GasClockId ClockId;
         public int DurationTicks;
@@ -383,11 +394,19 @@ namespace Ludots.Core.Gameplay.GAS
     public sealed class EffectTemplateRegistry
     {
         public const int MaxTemplates = 4096;
+        public const string DuplicateRegistrationError = "GAS.EFFECT_TEMPLATE.ERR.DuplicateRegistration";
+        public const string RegistrationAfterFinalizationError = "GAS.EFFECT_TEMPLATE.ERR.RegistrationAfterFinalization";
+        public const string UnfinalizedRegistryError = "GAS.EFFECT_PLAN.ERR.UnfinalizedRegistry";
 
         private readonly EffectTemplateData[] _templates = new EffectTemplateData[MaxTemplates];
         private readonly ulong[] _hasBits = new ulong[MaxTemplates >> 6];
+        private readonly EffectExecutionPlanSet[] _executionPlans = new EffectExecutionPlanSet[MaxTemplates];
+        private readonly ulong[] _finalizedPlanBits = new ulong[MaxTemplates >> 6];
         private readonly System.Collections.Generic.Dictionary<int, string> _registrationSource = new();
         private Ludots.Core.Modding.RegistrationConflictReport _conflictReport;
+        private bool _executionPlansFinalized;
+
+        public bool AreExecutionPlansFinalized => _executionPlansFinalized;
 
         public void SetConflictReport(Ludots.Core.Modding.RegistrationConflictReport report)
         {
@@ -398,28 +417,36 @@ namespace Ludots.Core.Gameplay.GAS
         {
             Array.Clear(_templates, 0, _templates.Length);
             Array.Clear(_hasBits, 0, _hasBits.Length);
+            Array.Clear(_executionPlans, 0, _executionPlans.Length);
+            Array.Clear(_finalizedPlanBits, 0, _finalizedPlanBits.Length);
+            _registrationSource.Clear();
+            _executionPlansFinalized = false;
         }
 
         public void Register(int templateId, in EffectTemplateData data, string modId = null)
         {
-            if ((uint)templateId >= MaxTemplates) throw new ArgumentOutOfRangeException(nameof(templateId));
-#if DEBUG
+            if (templateId <= 0 || templateId >= MaxTemplates) throw new ArgumentOutOfRangeException(nameof(templateId));
+            if (_executionPlansFinalized)
             {
-                int w = templateId >> 6;
-                int b = templateId & 63;
-                if ((_hasBits[w] & (1UL << b)) != 0)
-                {
-                    string existingMod = _registrationSource.TryGetValue(templateId, out var em) ? em : "(core)";
-                    string newMod = modId ?? "(core)";
-                    Log.Warn(in LogChannels.GAS, $"TemplateId {templateId} registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
-                    _conflictReport?.Add("EffectTemplateRegistry", templateId.ToString(), existingMod, newMod);
-                }
+                throw new InvalidOperationException(
+                    $"{RegistrationAfterFinalizationError}: templateId={templateId}. Clear and rebuild the registry before registering more templates.");
             }
-#endif
-            _templates[templateId] = data;
+
             int word = templateId >> 6;
             int bit = templateId & 63;
+            if ((_hasBits[word] & (1UL << bit)) != 0)
+            {
+                string existingMod = _registrationSource.TryGetValue(templateId, out var em) ? em : "(core)";
+                string newMod = modId ?? "(core)";
+                _conflictReport?.Add("EffectTemplateRegistry", templateId.ToString(), existingMod, newMod);
+                throw new InvalidOperationException(
+                    $"{DuplicateRegistrationError}: templateId={templateId}, existingSource='{existingMod}', newSource='{newMod}'.");
+            }
+
+            _templates[templateId] = data;
             _hasBits[word] |= 1UL << bit;
+            _executionPlans[templateId] = default;
+            _finalizedPlanBits[word] &= ~(1UL << bit);
             _registrationSource[templateId] = modId ?? "(core)";
         }
 
@@ -440,6 +467,207 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             data = _templates[templateId];
+            return true;
+        }
+
+        /// <summary>
+        /// NextCast-safe numeric field replace for already-registered templates.
+        /// Does not Clear/re-Register; identity (templateId) stays fixed.
+        /// Supported paths: duration.durationTicks, duration.periodTicks.
+        /// </summary>
+        public bool TryReplaceHotNumericField(int templateId, string fieldPath, double numericValue, out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(fieldPath))
+            {
+                failureReason = "fieldPath is required.";
+                return false;
+            }
+
+            string path = fieldPath.Trim();
+            if (path.Equals("duration.durationTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("DurationTicks", StringComparison.OrdinalIgnoreCase))
+            {
+                int ticks = checked((int)Math.Round(numericValue));
+                if (ticks < 0)
+                {
+                    failureReason = "duration.durationTicks must be >= 0.";
+                    return false;
+                }
+
+                data.DurationTicks = ticks;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("duration.periodTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("PeriodTicks", StringComparison.OrdinalIgnoreCase))
+            {
+                int ticks = checked((int)Math.Round(numericValue));
+                if (ticks < 0)
+                {
+                    failureReason = "duration.periodTicks must be >= 0.";
+                    return false;
+                }
+
+                data.PeriodTicks = ticks;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("modifiers.0.value", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("modifiers[0].value", StringComparison.OrdinalIgnoreCase))
+            {
+                if (data.Modifiers.Count <= 0)
+                {
+                    failureReason = "modifiers.0.value requires at least one authored modifier.";
+                    return false;
+                }
+
+                unsafe
+                {
+                    data.Modifiers.Values[0] = (float)numericValue;
+                }
+
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            failureReason =
+                $"Field path '{fieldPath}' is not NextCast-hot-editable; MapReload or EngineRestart is required.";
+            return false;
+        }
+
+        /// <summary>
+        /// NextCast-safe replace of projectile impact/presentation effect refs (stable template id).
+        /// </summary>
+        public bool TryReplaceHotProjectileEffectRef(
+            int templateId,
+            string fieldPath,
+            int targetEffectTemplateId,
+            out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (targetEffectTemplateId <= 0 || !TryGet(targetEffectTemplateId, out _))
+            {
+                failureReason = $"Target effect template id {targetEffectTemplateId} is not registered.";
+                return false;
+            }
+
+            if (data.PresetType != EffectPresetType.LaunchProjectile)
+            {
+                failureReason = "Projectile effect refs require LaunchProjectile preset.";
+                return false;
+            }
+
+            string path = (fieldPath ?? string.Empty).Trim();
+            if (path.Equals("projectile.impactEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                data.Projectile.ImpactEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("projectile.hitEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                data.Projectile.HitEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("projectile.presentationEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                data.Projectile.PresentationEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            failureReason = $"Field path '{fieldPath}' is not a hot-editable projectile effect ref.";
+            return false;
+        }
+
+        /// <summary>
+        /// Restores a previously snapshotted template body for atomic NextCast commit rollback.
+        /// Identity must already be registered; does not Clear/re-Register.
+        /// </summary>
+        public void RestoreHotTemplate(int templateId, in EffectTemplateData snapshot)
+        {
+            if (!TryGetRef(templateId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template id {templateId} is not registered; cannot restore hot snapshot.");
+            }
+
+            _templates[templateId] = snapshot;
+        }
+
+        /// <summary>
+        /// NextCast-safe grant of one Fixed tag contribution on an existing template (debuff).
+        /// </summary>
+        public bool TryReplaceHotGrantedTagFixed(
+            int templateId,
+            int tagId,
+            ushort amount,
+            out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (tagId <= 0)
+            {
+                failureReason = "tagId must be > 0.";
+                return false;
+            }
+
+            // Replace slot 0 if present; otherwise append.
+            unsafe
+            {
+                if (data.GrantedTags.Count <= 0)
+                {
+                    if (!data.GrantedTags.Add(new TagContribution
+                    {
+                        TagId = tagId,
+                        Formula = TagContributionFormula.Fixed,
+                        Amount = amount,
+                        Base = 0,
+                        GraphProgramId = 0
+                    }))
+                    {
+                        failureReason = "GrantedTags capacity exceeded.";
+                        return false;
+                    }
+                }
+                else
+                {
+                    data.GrantedTags.TagIds[0] = tagId;
+                    data.GrantedTags.Formulas[0] = (byte)TagContributionFormula.Fixed;
+                    data.GrantedTags.Amounts[0] = amount;
+                    data.GrantedTags.Bases[0] = 0;
+                    data.GrantedTags.GraphProgramIds[0] = 0;
+                }
+            }
+
+            _templates[templateId] = data;
+            failureReason = null;
             return true;
         }
 
@@ -474,6 +702,78 @@ namespace Ludots.Core.Gameplay.GAS
         public ref readonly EffectTemplateData GetRef(int templateId)
         {
             return ref _templates[templateId];
+        }
+
+        internal void FinalizeExecutionPlans(EffectExecutionPlanSet[] executionPlans)
+        {
+            ArgumentNullException.ThrowIfNull(executionPlans);
+            if (executionPlans.Length != MaxTemplates)
+            {
+                throw new ArgumentException(
+                    $"Effect execution plan array must contain exactly {MaxTemplates} entries.",
+                    nameof(executionPlans));
+            }
+            if (_executionPlansFinalized)
+            {
+                throw new InvalidOperationException("Effect execution plans are already finalized.");
+            }
+
+            for (int templateId = 1; templateId < MaxTemplates; templateId++)
+            {
+                if (!TryGetRef(templateId, out _))
+                {
+                    continue;
+                }
+                if (!executionPlans[templateId].IsFinalized)
+                {
+                    throw new InvalidOperationException(
+                        $"{UnfinalizedRegistryError}: templateId={templateId} does not have all four execution windows finalized.");
+                }
+            }
+
+            Array.Copy(executionPlans, _executionPlans, MaxTemplates);
+            Array.Copy(_hasBits, _finalizedPlanBits, _hasBits.Length);
+            _executionPlansFinalized = true;
+        }
+
+        public void RequireFinalized()
+        {
+            if (!_executionPlansFinalized)
+            {
+                throw new InvalidOperationException(
+                    $"{UnfinalizedRegistryError}: runtime requires a fully finalized effect template registry.");
+            }
+        }
+
+        public bool TryGetExecutionPlans(int templateId, out EffectExecutionPlanSet executionPlans)
+        {
+            if (!_executionPlansFinalized || (uint)templateId >= MaxTemplates)
+            {
+                executionPlans = default;
+                return false;
+            }
+
+            int word = templateId >> 6;
+            int bit = templateId & 63;
+            if ((_finalizedPlanBits[word] & (1UL << bit)) == 0)
+            {
+                executionPlans = default;
+                return false;
+            }
+
+            executionPlans = _executionPlans[templateId];
+            return true;
+        }
+
+        public ref readonly EffectExecutionPlanSet RequireExecutionPlans(int templateId)
+        {
+            if (!TryGetExecutionPlans(templateId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_PLAN.ERR.UnfinalizedTemplate: templateId={templateId}.");
+            }
+
+            return ref _executionPlans[templateId];
         }
     }
 }

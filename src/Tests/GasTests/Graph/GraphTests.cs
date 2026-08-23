@@ -6,6 +6,7 @@ using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
@@ -14,29 +15,40 @@ using Ludots.Core.Physics;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
-    public class GraphCompilerTests
+    public class GraphControlFlowCompilerTests
     {
         [Test]
         public void Compile_BuildsSymbolTable_AndInstructions()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Test.Graph",
                 Kind = "Effect",
                 Entry = "t1",
-                Nodes = new List<GraphNodeConfig>
+                Nodes = new List<GraphControlFlowNode>
                 {
-                    new GraphNodeConfig { Id = "t1", Op = "LoadExplicitTarget", Next = "c1" },
-                    new GraphNodeConfig { Id = "c1", Op = "ConstFloat", FloatValue = 5.0f, Next = "m1" },
-                    new GraphNodeConfig { Id = "m1", Op = "ModifyAttributeAdd", Attribute = "Health", Inputs = new List<string> { "t1", "c1" } }
-                }
+                    new GraphControlFlowNode { Id = "t1", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode { Id = "c1", Op = "ConstFloat", FloatValue = 5.0f },
+                    new GraphControlFlowNode { Id = "m1", Op = "ModifyAttributeAdd", Attribute = "Health" }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("t1", GraphControlFlowPorts.Next, "c1"),
+                    new("c1", GraphControlFlowPorts.Next, "m1")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("t1", GraphControlFlowPorts.Value, "m1", GraphControlFlowPorts.Target),
+                    new("c1", GraphControlFlowPorts.Value, "m1", GraphControlFlowPorts.Value)
+                },
             };
 
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
             That(pkg.HasValue, Is.True);
             for (int i = 0; i < diags.Count; i++)
             {
@@ -47,6 +59,92 @@ namespace Ludots.Tests.GAS
             That(p.GraphName, Is.EqualTo("Test.Graph"));
             That(p.Symbols, Does.Contain("Health"));
             That(p.Program.Length, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void Compile_CreatePanel_WithExplicitSource_EncodesScopeRegister()
+        {
+            var cfg = new GraphControlFlowDocument
+            {
+                Id = "Test.CreatePanel.Scope",
+                Kind = "Script",
+                Entry = "scope",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new GraphControlFlowNode { Id = "scope", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode
+                    {
+                        Id = "panel",
+                        Op = "CreatePanel",
+                        PanelType = "tests.panel.host",
+                        PanelAnchor = "screen.topRight",
+                    },
+                    new GraphControlFlowNode { Id = "ok", Op = "ConstInt", IntValue = 1 },
+                    new GraphControlFlowNode { Id = "halt", Op = "HaltReturnInt" },
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("scope", GraphControlFlowPorts.Next, "panel"),
+                    new("panel", GraphControlFlowPorts.Next, "ok"),
+                    new("ok", GraphControlFlowPorts.Next, "halt"),
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("scope", GraphControlFlowPorts.Value, "panel", GraphControlFlowPorts.Source),
+                    new("ok", GraphControlFlowPorts.Value, "halt", GraphControlFlowPorts.Value),
+                },
+            };
+
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+
+            That(pkg.HasValue, Is.True);
+            for (int i = 0; i < diags.Count; i++)
+            {
+                That(diags[i].Severity, Is.Not.EqualTo(GraphDiagnosticSeverity.Error), diags[i].Message);
+            }
+
+            GraphInstruction createPanel = default;
+            bool found = false;
+            GraphInstruction[] program = pkg!.Value.Program;
+            for (int i = 0; i < program.Length; i++)
+            {
+                if ((GraphNodeOp)program[i].Op == GraphNodeOp.CreatePanel)
+                {
+                    createPanel = program[i];
+                    found = true;
+                    break;
+                }
+            }
+
+            That(found, Is.True);
+            That(createPanel.A, Is.Not.EqualTo(byte.MaxValue));
+            That(pkg.Value.Symbols, Does.Contain("tests.panel.host"));
+            That(pkg.Value.Symbols, Does.Contain("screen.topRight"));
+        }
+
+        [Test]
+        public void Execute_NullHandlerTable_ThrowsArgumentNullException()
+        {
+            Throws<System.ArgumentNullException>(ExecuteWithNullHandlerTable);
+        }
+
+        private static void ExecuteWithNullHandlerTable()
+        {
+            using var world = World.Create();
+            Entity[] targets = new Entity[GraphVmLimits.MaxTargets];
+            var state = new GraphExecutionState
+            {
+                World = world,
+                F = new float[GraphVmLimits.MaxFloatRegisters],
+                I = new int[GraphVmLimits.MaxIntRegisters],
+                B = new byte[GraphVmLimits.MaxBoolRegisters],
+                E = new Entity[GraphVmLimits.MaxEntityRegisters],
+                Targets = targets,
+                TargetList = new GraphTargetList(targets),
+                CallStack = new int[GraphVmLimits.MaxCallStackDepth],
+            };
+
+            GasGraphOpHandlerTable.Execute(ref state, System.ReadOnlySpan<GraphInstruction>.Empty, null!);
         }
 
     }
@@ -122,10 +220,11 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryLimit, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.AggMinByDistance, Dst = 2 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 10.0f },
-                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 0, Imm = 0 }
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 0, Imm = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
             };
 
-            GraphExecutor.Execute(world, caster, default, new IntVector2(0, 0), program, api);
+            GraphExecutor.Execute(world, caster, default, new IntVector2(0, 0), program, api, GraphKind.Effect, new GasGraphOpHandlerTable());
 
             ref var a1 = ref world.Get<AttributeBuffer>(e1);
             ref var a2 = ref world.Get<AttributeBuffer>(e2);

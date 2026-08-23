@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using Ludots.Core.Association;
+using Ludots.Core.Client;
 using Ludots.Core.Config;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -12,6 +16,7 @@ using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using NUnit.Framework;
@@ -38,13 +43,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_MapOwnedLogicalEntities_WritesIdentityLookupsRelationshipsAndLocalPlayer()
+        public void ParticipantBindingResolver_MapOwnedLogicalEntities_WritesIdentityLookupsRelationshipsAndLocalSeat()
         {
             using var world = World.Create();
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -59,9 +64,12 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
                 [CoreServiceKeys.PlayerEntityLookup.Name] = new PlayerEntityLookup(),
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
             };
             TeamEntityLookup focusedTeamLookup = (TeamEntityLookup)globals[CoreServiceKeys.TeamEntityLookup.Name];
             PlayerEntityLookup focusedPlayerLookup = (PlayerEntityLookup)globals[CoreServiceKeys.PlayerEntityLookup.Name];
+            ClientLocalSeatRegistry focusedSeats = (ClientLocalSeatRegistry)globals[CoreServiceKeys.ClientLocalSeatRegistry.Name];
 
             ParticipantBindingResolver.PublishFocused(globals, result);
 
@@ -76,10 +84,17 @@ namespace Ludots.Tests.GAS
 
             Assert.That(result.Teams.Get(10), Is.EqualTo(teamOne));
             Assert.That(result.Players.Get(7), Is.EqualTo(playerOne));
-            Assert.That(result.LocalPlayerId, Is.EqualTo(7));
-            Assert.That(result.LocalPlayerEntity, Is.EqualTo(playerOne));
-            Assert.That(globals[CoreServiceKeys.LocalPlayerId.Name], Is.EqualTo(7));
-            Assert.That(globals[CoreServiceKeys.LocalPlayerEntity.Name], Is.EqualTo(playerOne));
+            Assert.That(result.LocalSeats.Count, Is.EqualTo(1));
+            Assert.That(result.LocalSeats[0].PlayerId, Is.EqualTo(7));
+            Assert.That(result.LocalSeats[0].RepEntity, Is.EqualTo(playerOne));
+            Assert.That(focusedSeats.TryGetSoleSeat(out ClientLocalSeat soleSeat), Is.True);
+            Assert.That(soleSeat.PossessedPlayerId, Is.EqualTo(7));
+            Assert.That(soleSeat.PossessedRep, Is.EqualTo(playerOne));
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out Entity publishedRep), Is.True);
+            Assert.That(publishedRep, Is.EqualTo(playerOne));
+            Assert.That(ClientLocalSeatAccess.RequireLogicViews(globals).Count, Is.EqualTo(1));
+            // ViewController absent in this harness → PresentBinding deferred until present surface is known.
+            Assert.That(soleSeat.PresentBinding, Is.Null);
             Assert.That(globals[CoreServiceKeys.TeamEntityLookup.Name], Is.SameAs(focusedTeamLookup));
             Assert.That(globals[CoreServiceKeys.PlayerEntityLookup.Name], Is.SameAs(focusedPlayerLookup));
             Assert.That(focusedTeamLookup.Get(10), Is.EqualTo(teamOne));
@@ -111,7 +126,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
@@ -129,7 +144,81 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void LocalPlayerEntityResolverSystem_UsesLookupAndDoesNotScanPlayerOwner()
+        public void GameConfig_CreateStartupLaunchContext_MapsStartupLocalSeats()
+        {
+            var config = new GameConfig
+            {
+                StartupLocalSeats =
+                {
+                    new StartupLocalSeatConfig { SeatId = "seat.0", PlayerId = 7 },
+                    new StartupLocalSeatConfig { SeatId = "seat.1", PlayerId = 8, ControlSchemeId = "pad" },
+                },
+            };
+
+            MapLaunchContext? launch = config.CreateStartupLaunchContext();
+            Assert.That(launch, Is.Not.Null);
+            Assert.That(launch!.LocalSeats.Count, Is.EqualTo(2));
+            Assert.That(launch.LocalSeats[0].SeatId, Is.EqualTo("seat.0"));
+            Assert.That(launch.LocalSeats[0].PlayerId, Is.EqualTo(7));
+            Assert.That(launch.LocalSeats[1].SeatId, Is.EqualTo("seat.1"));
+            Assert.That(launch.LocalSeats[1].PlayerId, Is.EqualTo(8));
+            Assert.That(launch.LocalSeats[1].ControlSchemeId, Is.EqualTo("pad"));
+        }
+
+        [Test]
+        public void GameConfig_CreateStartupLaunchContext_RejectsImplicitDefaultSeat()
+        {
+            var config = new GameConfig
+            {
+                StartupLocalSeats =
+                {
+                    new StartupLocalSeatConfig { PlayerId = 7 },
+                },
+            };
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                config.CreateStartupLaunchContext())!;
+
+            Assert.That(ex.Message, Does.Contain("seatId"));
+            Assert.That(ex.Message, Does.Contain("non-empty"));
+        }
+
+        [TestCase("")]
+        [TestCase(" ")]
+        public void MapLaunchContext_Create_RejectsBlankSeatId(string seatId)
+        {
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding(seatId, 7) }))!;
+
+            Assert.That(ex.Message, Does.Contain("SeatId"));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void MapLaunchContext_Create_RejectsNonPositivePlayerId(int playerId)
+        {
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", playerId) }))!;
+
+            Assert.That(ex.Message, Does.Contain("PlayerId"));
+            Assert.That(ex.Message, Does.Contain("positive"));
+        }
+
+        [Test]
+        public void ClientLocalSeatBindings_BindSoleSeat_RequiresExplicitPositivePlayerAndSeat()
+        {
+            using var world = World.Create();
+            Entity possessed = world.Create();
+            var globals = new Dictionary<string, object>();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, possessed, 0, "seat.0"));
+            Assert.Throws<ArgumentException>(() =>
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, possessed, 7, string.Empty));
+        }
+
+        [Test]
+        public void SeatPossessionSyncSystem_UsesLookupAndDoesNotScanPlayerOwner()
         {
             using var world = World.Create();
             Entity strayOwner = world.Create(new PlayerOwner { PlayerId = 7 });
@@ -138,35 +227,37 @@ namespace Ludots.Tests.GAS
             lookup.Register(7, representative);
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerId.Name] = 7,
                 [CoreServiceKeys.PlayerEntityLookup.Name] = lookup,
             };
-            var system = new LocalPlayerEntityResolverSystem(world, globals);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, strayOwner, 7, "seat.0");
+            var system = new SeatPossessionSyncSystem(world, globals);
 
             system.Update(0f);
 
-            Assert.That(globals[CoreServiceKeys.LocalPlayerEntity.Name], Is.EqualTo(representative));
-            Assert.That(globals[CoreServiceKeys.LocalPlayerEntity.Name], Is.Not.EqualTo(strayOwner));
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out Entity synced), Is.True);
+            Assert.That(synced, Is.EqualTo(representative));
+            Assert.That(synced, Is.Not.EqualTo(strayOwner));
         }
 
         [Test]
-        public void LocalPlayerEntityResolverSystem_MissingLookupLeavesManualExplicitBindingUntouched()
+        public void SeatPossessionSyncSystem_MissingLookupLeavesManualExplicitBindingUntouched()
         {
             using var world = World.Create();
             Entity manual = world.Create(new PlayerOwner { PlayerId = 7 });
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = manual,
             };
-            var system = new LocalPlayerEntityResolverSystem(world, globals);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, manual, 7, "seat.0");
+            var system = new SeatPossessionSyncSystem(world, globals);
 
             system.Update(0f);
 
-            Assert.That(globals[CoreServiceKeys.LocalPlayerEntity.Name], Is.EqualTo(manual));
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out Entity synced), Is.True);
+            Assert.That(synced, Is.EqualTo(manual));
         }
 
         [Test]
-        public void ParticipantBindingResolver_PublishFocused_RestoresManualLocalPlayerEntityWithoutLocalPlayerId()
+        public void ParticipantBindingResolver_PublishFocused_ClearsManualSeatWhenResultHasNoLocalSeats()
         {
             using var world = World.Create();
             Entity manual = world.Create(new PlayerOwner { PlayerId = 7 });
@@ -174,24 +265,24 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
                 [CoreServiceKeys.PlayerEntityLookup.Name] = new PlayerEntityLookup(),
-                [CoreServiceKeys.LocalPlayerId.Name] = 9,
-                [CoreServiceKeys.LocalPlayerEntity.Name] = world.Create(new PlayerOwner { PlayerId = 9 }),
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, world.Create(new PlayerOwner { PlayerId = 9 }), 9, "seat.0");
 
             var result = new ParticipantBindingResult(
                 new TeamEntityLookup(),
                 new PlayerEntityLookup(),
-                localPlayerId: 0,
-                localPlayerEntity: manual);
+                localSeats: Array.Empty<ResolvedLocalSeatPossession>());
 
             ParticipantBindingResolver.PublishFocused(globals, result);
 
-            Assert.That(globals.ContainsKey(CoreServiceKeys.LocalPlayerId.Name), Is.False);
-            Assert.That(globals[CoreServiceKeys.LocalPlayerEntity.Name], Is.EqualTo(manual));
+            Assert.That(ClientLocalSeatAccess.RequireRegistry(globals).Count, Is.EqualTo(0));
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out _), Is.False);
         }
 
         [Test]
-        public void LocalPlayerEntityResolverSystem_LocalPlayerIdChangeReplacesExistingLocalPlayerEntity()
+        public void SeatPossessionSyncSystem_PlayerIdChangeRebindsPossessedRep()
         {
             using var world = World.Create();
             Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 });
@@ -201,15 +292,124 @@ namespace Ludots.Tests.GAS
             lookup.Register(8, playerEight);
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerId.Name] = 7,
                 [CoreServiceKeys.PlayerEntityLookup.Name] = lookup,
-                [CoreServiceKeys.LocalPlayerEntity.Name] = playerEight,
             };
-            var system = new LocalPlayerEntityResolverSystem(world, globals);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, playerEight, 7, "seat.0");
+            var system = new SeatPossessionSyncSystem(world, globals);
 
             system.Update(0f);
 
-            Assert.That(globals[CoreServiceKeys.LocalPlayerEntity.Name], Is.EqualTo(playerSeven));
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out Entity synced), Is.True);
+            Assert.That(synced, Is.EqualTo(playerSeven));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeats_PublishesBothAndRejectsSoleAssert()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
+                [CoreServiceKeys.PlayerEntityLookup.Name] = players,
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+            };
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(globals);
+            Assert.That(seats.Count, Is.EqualTo(2));
+            Assert.That(seats.Require("seat.0").PossessedRep, Is.EqualTo(playerSeven));
+            Assert.That(seats.Require("seat.1").PossessedRep, Is.EqualTo(playerEight));
+            Assert.That(ClientLocalSeatAccess.RequireLogicViews(globals).Count, Is.EqualTo(2));
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out _), Is.False);
+            Assert.Throws<InvalidOperationException>(() => seats.RequireSolePossessedRep());
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_CreatesIndependentLogicViewCameraAndPresentBindingFromHostSurface()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            var orphanCamera = new CameraManager();
+            orphanCamera.State.Yaw = 12f;
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
+                [CoreServiceKeys.PlayerEntityLookup.Name] = players,
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+                [CoreServiceKeys.ViewController.Name] = new StubHostViewController(new Vector2(1600f, 900f)),
+                [CoreServiceKeys.CameraBehaviorInputState.Name] = new CameraBehaviorInputState(),
+            };
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, player, ControlSchemeId: null),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(globals);
+            Assert.That(seats.TryGetSoleSeat(out ClientLocalSeat seat), Is.True);
+            Assert.That(seat.PresentBinding, Is.Not.Null);
+            PresentBinding binding = seat.PresentBinding!.Value;
+            Assert.That(binding.PresentResolutionPx, Is.EqualTo(new Vector2(1600f, 900f)));
+            Assert.That(binding.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 1f)));
+
+            CameraManager logicCamera = ClientLocalSeatAccess.RequireSolePresentCamera(globals);
+            Assert.That(logicCamera, Is.Not.SameAs(orphanCamera));
+            Assert.That(logicCamera.State.Yaw, Is.Not.EqualTo(12f));
+        }
+
+        [Test]
+        public void PresentBinding_HorizontalEqualSplit_AndCopyPresentBindings_SupportMultiSplitFoundation()
+        {
+            using var world = World.Create();
+            Entity playerA = world.Create(new PlayerIdentity { PlayerId = 1 }, new PlayerOwner { PlayerId = 1 });
+            Entity playerB = world.Create(new PlayerIdentity { PlayerId = 2 }, new PlayerOwner { PlayerId = 2 });
+            var views = new LogicViewRegistry();
+            string viewA = views.EnsureDefaultView(playerA);
+            string viewB = views.EnsureDefaultView(playerB);
+            Vector2 resolution = new(1920f, 1080f);
+            var seats = new ClientLocalSeatRegistry();
+            seats.Add(new ClientLocalSeat("seat.0")
+            {
+                PossessedPlayerId = 1,
+                PossessedRep = playerA,
+                PresentBinding = PresentBinding.HorizontalEqualSplit(viewA, index: 0, count: 2, resolution),
+            });
+            seats.Add(new ClientLocalSeat("seat.1")
+            {
+                PossessedPlayerId = 2,
+                PossessedRep = playerB,
+                PresentBinding = PresentBinding.HorizontalEqualSplit(viewB, index: 1, count: 2, resolution),
+            });
+
+            Assert.That(seats.PresentBindingCount, Is.EqualTo(2));
+            var copied = new List<(string SeatId, PresentBinding Binding)>();
+            seats.CopyPresentBindings(copied);
+            Assert.That(copied.Count, Is.EqualTo(2));
+            Assert.That(copied[0].Binding.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 0.5f, 1f)));
+            Assert.That(copied[1].Binding.NormalizedScreenRect, Is.EqualTo(new Vector4(0.5f, 0f, 0.5f, 1f)));
+            Assert.That(views.RequireCamera(copied[0].Binding.LogicViewId), Is.Not.SameAs(views.RequireCamera(copied[1].Binding.LogicViewId)));
         }
 
         [Test]
@@ -219,7 +419,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -396,13 +596,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_LaunchContextLocalPlayerId_SelectsLocalPlayer()
+        public void ParticipantBindingResolver_LaunchContextLocalSeats_SelectsLocalPlayer()
         {
             using var world = World.Create();
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 8),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 8) }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -414,12 +614,13 @@ namespace Ludots.Tests.GAS
 
             ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
 
-            Assert.That(result.LocalPlayerId, Is.EqualTo(8));
-            Assert.That(result.LocalPlayerEntity, Is.EqualTo(playerTwo));
+            Assert.That(result.LocalSeats.Count, Is.EqualTo(1));
+            Assert.That(result.LocalSeats[0].PlayerId, Is.EqualTo(8));
+            Assert.That(result.LocalSeats[0].RepEntity, Is.EqualTo(playerTwo));
         }
 
         [Test]
-        public void ParticipantBindingResolver_WithoutLaunchContext_HasNoLocalPlayer()
+        public void ParticipantBindingResolver_WithoutLaunchContext_HasNoLocalSeat()
         {
             using var world = World.Create();
             var map = CreateMap();
@@ -434,18 +635,17 @@ namespace Ludots.Tests.GAS
 
             ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
 
-            Assert.That(result.LocalPlayerId, Is.EqualTo(0));
-            Assert.That(result.LocalPlayerEntity, Is.EqualTo(Entity.Null));
+            Assert.That(result.LocalSeats, Is.Empty);
         }
 
         [Test]
-        public void ParticipantBindingResolver_LaunchContextUnknownLocalPlayerId_FailsExplicitly()
+        public void ParticipantBindingResolver_LaunchContextUnknownLocalSeatPlayerId_FailsExplicitly()
         {
             using var world = World.Create();
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 99),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 99) }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
@@ -458,7 +658,7 @@ namespace Ludots.Tests.GAS
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership))!;
 
-            Assert.That(ex.Message, Does.Contain("LocalPlayerId 99"));
+            Assert.That(ex.Message, Does.Contain("playerId 99"));
         }
 
         private static MapConfig CreateMap()
@@ -597,6 +797,18 @@ namespace Ludots.Tests.GAS
                 default:
                     throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
             }
+        }
+
+        private sealed class StubHostViewController : IViewController
+        {
+            public StubHostViewController(Vector2 resolution)
+            {
+                Resolution = resolution;
+            }
+
+            public Vector2 Resolution { get; }
+            public float Fov => 60f;
+            public float AspectRatio => Resolution.X / Resolution.Y;
         }
     }
 }

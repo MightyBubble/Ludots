@@ -55,7 +55,7 @@ public partial class World
     /// <param name="handler">The delegate to call.</param>
     public void SubscribeEntityDestroyed(EntityDestroyedHandler handler)
     {
-        if (handler is null)
+        if (handler == null)
         {
             throw new ArgumentNullException(nameof(handler));
         }

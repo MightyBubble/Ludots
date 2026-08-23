@@ -1,3 +1,4 @@
+using Ludots.Core.Client;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.Buffer;
@@ -278,7 +279,12 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
         _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
         _castAbilityOrderTypeId = orderTypes.GetId(runtime.Config.CastAbilityOrderTypeKey);
         _trainAbilityId = AbilityIdRegistry.GetId(runtime.Config.TrainAbilityId);
-        _crystalAttributeId = AttributeRegistry.Register(runtime.Config.CrystalAttribute);
+        _crystalAttributeId = AttributeRegistry.GetId(runtime.Config.CrystalAttribute);
+        if (_crystalAttributeId == AttributeRegistry.InvalidId)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline crystal attribute '{runtime.Config.CrystalAttribute}' is not registered at mod load.");
+        }
         if (_trainAbilityId <= 0)
         {
             throw new InvalidOperationException($"RTS Frontline train ability '{runtime.Config.TrainAbilityId}' is not registered.");
@@ -560,6 +566,12 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 
     private readonly FrontlineRuntime _runtime;
     private readonly GameEngine _engine;
+
+    private int RequireLocalPlayerId()
+    {
+        ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_engine);
+        return seats.TryGetSoleSeat(out ClientLocalSeat seat) ? seat.PossessedPlayerId : 0;
+    }
     private readonly World _world;
     private readonly bool _isReplicatedClient;
     private readonly int _matchStateSchemaId;
@@ -748,7 +760,7 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
             return;
         }
 
-        int localPlayerId = _engine.GetService(CoreServiceKeys.LocalPlayerId);
+        int localPlayerId = RequireLocalPlayerId();
         if (localPlayerId <= 0)
         {
             return;
@@ -822,13 +834,13 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         }
 
         Vector2 focusTargetCm = openingView.FocusTargetCm;
-        if (!TargetsMatch(_engine.GameSession.Camera.State.TargetCm, focusTargetCm) ||
+        if (!TargetsMatch(ClientLocalSeatAccess.RequireSolePresentCamera(_engine).State.TargetCm, focusTargetCm) ||
             !TargetsMatch(culling.CameraTargetCm, focusTargetCm) ||
             culling.VisibilityRevision <= openingView.CapturedVisibilityRevision ||
             culling.VisibleEntityCount <= 0 ||
             !_world.TryGet(ownedCore, out CullState coreCull) ||
             !coreCull.IsVisible ||
-            !_world.TryGet(ownedCore, out PresentationOwnerHasPerformerPayload payload) ||
+            !_world.TryGet(ownedCore, out PresentationOwnerHasPresenterPayload payload) ||
             payload.Count <= 0)
         {
             return;
@@ -957,7 +969,7 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 
         NetworkRuntimeStateObserver observer = _engine.GetService(CoreServiceKeys.NetworkRuntimeStateObserver)
             ?? throw new InvalidOperationException("RTS Frontline Ready control requires the Core network room observer.");
-        int localPlayerId = _engine.GetService(CoreServiceKeys.LocalPlayerId);
+        int localPlayerId = RequireLocalPlayerId();
         if (!observer.HasRoomSnapshot || localPlayerId <= 0 || observer.LastRoomSnapshot.Phase == NetworkRoomPhase.Started)
         {
             return;
@@ -1087,7 +1099,7 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                 : hud.SmoothConnectionText;
         }
 
-        int localPlayerId = _engine.GetService(CoreServiceKeys.LocalPlayerId);
+        int localPlayerId = RequireLocalPlayerId();
         int localSide = localPlayerId == _runtime.Config.Sides[0].PlayerId
             ? 0
             : localPlayerId == _runtime.Config.Sides[1].PlayerId

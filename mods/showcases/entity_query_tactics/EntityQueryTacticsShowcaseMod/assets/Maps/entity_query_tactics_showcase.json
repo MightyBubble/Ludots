@@ -153,6 +153,9 @@
     { "TeamId": 1, "RepresentativeInstanceId": "entityquery-tactics-player-commander" },
     { "TeamId": 2, "RepresentativeInstanceId": "entityquery-tactics-enemy-commander" }
   ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "entityquery-tactics-player-commander" }
+  ],
   "ParticipantRelationships": {
     "Teams": [
       { "TeamA": 1, "TeamB": 1, "TypeId": "EntityQueryTactics.Participant", "Attitude": "Friendly", "Symmetric": true },

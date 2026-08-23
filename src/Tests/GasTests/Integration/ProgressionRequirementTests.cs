@@ -284,14 +284,7 @@ namespace Ludots.Tests.GAS
                 evaluator.Evaluate(reqId, in context);
             }
 
-            GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 10_000; i++)
-            {
-                evaluator.Evaluate(reqId, in context);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureRequirementEvaluationAllocations(evaluator, reqId, in context);
             Assert.That(allocated, Is.EqualTo(0));
         }
 
@@ -519,7 +512,7 @@ namespace Ludots.Tests.GAS
             {
                 Type = EffectPresetType.CompleteProgression,
                 Components = ComponentFlags.None,
-                ActivePhases = PhaseFlags.InstantCore,
+                ActivePhases = PhaseFlags.OnApply,
                 AllowedLifetimes = LifetimeFlags.InstantOnly
             };
             preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.CompleteProgression);
@@ -540,12 +533,19 @@ namespace Ludots.Tests.GAS
 
             var queue = new EffectRequestQueue();
             var graphPrograms = new GraphProgramRegistry();
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                graphPrograms,
+                GasGraphOpHandlerTable.Instance,
+                "Test/ProgressionRequirementTests.cs");
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: queue);
             var phaseExecutor = new EffectPhaseExecutor(
                 graphPrograms,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var loop = new EffectProcessingLoopSystem(
                 world,
@@ -1160,22 +1160,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" },
                       { "id": "province" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" },
                       { "id": "Progression.ProvinceTrade", "scope": "province" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1226,20 +1226,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "team", "memberSource": "EntityCollection", "collection": "team.members" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.TeamLogistics", "scope": "team" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
 
                 using var world = World.Create();
                 var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1268,20 +1268,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
 
                 var loader = CreateProgressionLoader(root, out _, out _);
                 var ex = Assert.Throws<AggregateException>(() => loader.Load(CreateProgressionCatalog()));
@@ -1299,20 +1299,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1343,20 +1343,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1387,22 +1387,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArmor", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1445,22 +1445,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArmor", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1600,6 +1600,22 @@ namespace Ludots.Tests.GAS
                     in requiredTags)
             };
             return new ProgressionRequirementDefinition(requirementId, nodes, Array.Empty<int>());
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureRequirementEvaluationAllocations(
+            ProgressionRequirementEvaluator evaluator,
+            int requirementId,
+            in RoleResolverContext context)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                evaluator.Evaluate(requirementId, in context);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private static int RegisterCityScope(ScopeKeyRegistry scopeKeys)

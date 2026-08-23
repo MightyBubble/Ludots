@@ -174,12 +174,13 @@ namespace Ludots.Tests.GAS
             var programs = new GraphProgramRegistry();
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             var executor = new EffectPhaseExecutor(
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var lifetime = new EffectLifetimeSystem(
                 world,
@@ -200,7 +201,8 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadContextTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -7f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 1, Imm = durabilityId },
-            });
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            }, GraphKind.Effect);
 
             var bindings = new EffectPhaseGraphBindings();
             That(bindings.TryAddStep(EffectPhaseId.OnPeriod, PhaseSlot.Post, graphId), Is.True);
@@ -214,6 +216,12 @@ namespace Ludots.Tests.GAS
                 PeriodTicks = 2,
                 PhaseGraphBindings = bindings,
             });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/LifetimeConditionTests.OnPeriodPostGraph.json");
 
             var effect = GameplayEffectFactory.CreateEffect(
                 world,
@@ -306,6 +314,16 @@ namespace Ludots.Tests.GAS
                 DurationTicks = 120,
                 PeriodTicks = 30,
             });
+
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/LifetimeConditionTests.InitialPeriodOffset.json");
 
             var lifetime = new EffectLifetimeSystem(
                 world,

@@ -7,10 +7,8 @@ namespace Ludots.Core.Gameplay
 {
     public sealed record GameSessionSnapshot(
         int CurrentTick,
-        int LocalPlayerId,
         IReadOnlyList<PlayerSnapshot> Players,
-        IReadOnlyDictionary<string, object> Globals,
-        CameraStateSnapshot Camera);
+        IReadOnlyDictionary<string, object> Globals);
 
     public sealed record PlayerSnapshot(int Id, int TeamId, CameraStateSnapshot Camera);
 
@@ -38,16 +36,9 @@ namespace Ludots.Core.Gameplay
 
         public AuthoritativeSimulationTickState SimulationTicks => _simulationTicks;
 
-        public CameraManager Camera { get; } = new CameraManager();
-        public int LocalPlayerId { get; private set; }
-
         public void AddPlayer(Player player)
         {
             _players.Add(player);
-            if (LocalPlayerId <= 0)
-            {
-                LocalPlayerId = player.Id;
-            }
         }
 
         public void RemovePlayer(Player player)
@@ -122,10 +113,8 @@ namespace Ludots.Core.Gameplay
 
             return new GameSessionSnapshot(
                 _simulationTicks.CommittedTick,
-                LocalPlayerId,
                 players,
-                globals,
-                CameraStateSnapshot.FromState(Camera.State));
+                globals);
         }
 
         public void RestoreSnapshot(GameSessionSnapshot snapshot)
@@ -161,10 +150,7 @@ namespace Ludots.Core.Gameplay
             }
 
             _simulationTicks.RestoreCommittedTick(snapshot.CurrentTick);
-            LocalPlayerId = snapshot.LocalPlayerId;
-            snapshot.Camera.ApplyTo(Camera.State);
-            snapshot.Camera.ApplyTo(Camera.PreviousState);
-        }
+    }
 
         public void Update(float dt)
         {
@@ -182,16 +168,6 @@ namespace Ludots.Core.Gameplay
         }
 
         public IReadOnlyList<Player> Players => _players;
-
-        public void SelectLocalPlayer(int playerId)
-        {
-            if (playerId <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(playerId), "Local player id must be positive.");
-            }
-
-            LocalPlayerId = playerId;
-        }
 
         private static object CopySerializableGlobal(string key, object value)
         {

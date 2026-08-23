@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using Ludots.Core.Association;
 using CoreInputMod.Systems;
 using Ludots.Core.Components;
@@ -53,9 +54,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, ambientTarget);
 
@@ -264,7 +265,7 @@ namespace Ludots.Tests.GAS
             var first = world.Create();
             var second = world.Create();
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetLocalPlayer(local, 1);
+            mapping.SetSolePossessedActor(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "moveTo" ? 1002 : 0);
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -342,7 +343,7 @@ namespace Ludots.Tests.GAS
             var first = world.Create();
             var second = world.Create();
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetLocalPlayer(local, 1);
+            mapping.SetSolePossessedActor(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "moveTo" ? 1002 : 0);
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -413,7 +414,7 @@ namespace Ludots.Tests.GAS
             var first = world.Create();
             var second = world.Create();
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetLocalPlayer(local, 1);
+            mapping.SetSolePossessedActor(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
             mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -479,7 +480,7 @@ namespace Ludots.Tests.GAS
             var first = world.Create();
             var second = world.Create();
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetLocalPlayer(local, 1);
+            mapping.SetSolePossessedActor(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
             mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -523,9 +524,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
 
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
@@ -541,6 +542,130 @@ namespace Ludots.Tests.GAS
             AssertCommandSource(globals, local, first, second, third);
             That(EntityCollectionContextRuntime.TryGetPrimary(world, globals, local, EntityCollectionKeys.CommandSource, out currentPrimary), Is.True);
             That(currentPrimary, Is.EqualTo(first), "Primary selected entity should stay deterministic after box select.");
+        }
+
+        [Test]
+        public void CommandSourceAcquisitionSystem_CameraCulledEntity_RemainsSelectableAndReceivesOrders()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var culled = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CommandSourceSelectableTag());
+            var offCamera = world.Create(
+                WorldPositionCm.FromCm(2600, 1600),
+                new CommandSourceSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            Ludots.Tests.TestCommon.ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
+            CreateCommandSourceRuntime(world, globals);
+
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
+
+            Click(system, globals, input, new Vector2(1600f, 1200f));
+            AssertCommandSource(globals, local, culled);
+
+            DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(2700f, 1700f));
+            AssertCommandSource(globals, local, culled, offCamera);
+
+            var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.TargetFirst,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Stop",
+                        ActorCollectionKey = EntityCollectionKeys.CommandSource,
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "stop",
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = false,
+                    },
+                },
+            });
+            mapping.SetSolePossessedActor(local, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
+            {
+                That(collectionKey, Is.EqualTo(EntityCollectionKeys.CommandSource));
+                var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+                That(collections.TryGet(local, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle), Is.True);
+                entities.Clear();
+                Entity[] members = new Entity[2];
+                int written = collections.CopyEntities(handle, 0, members);
+                for (int i = 0; i < written; i++)
+                {
+                    entities.Add(members[i]);
+                }
+
+                rejection = OrderSubmitResult.Activated;
+                return written > 0;
+            });
+
+            var orders = new List<Order>();
+            mapping.SetOrderSubmitHandler((in Order _) =>
+            {
+                Fail("Multi-actor command-source fan-out must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            mapping.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return OrderSubmitResult.Queued;
+            });
+
+            input.InjectButtonPress("Stop");
+            input.Update();
+            mapping.Update(0f);
+
+            That(orders.Count, Is.EqualTo(2));
+            That(orders[0].Actor, Is.EqualTo(culled));
+            That(orders[1].Actor, Is.EqualTo(offCamera));
+            That(orders[0].OrderTypeId, Is.EqualTo(1003));
+            That(orders[1].OrderTypeId, Is.EqualTo(1003));
+        }
+
+        [Test]
+        public void CommandSourcePointerHitResolver_UsesWorldPositionCm_NotVisualTransformOrCull()
+        {
+            using var world = World.Create();
+            var local = world.Create();
+            var actor = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(80f, 0f, 80f) },
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CommandSourceSelectableTag());
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+            };
+
+            Entity hit = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+                world,
+                globals,
+                local,
+                new Vector2(1600f, 1200f),
+                radiusPixels: 16f);
+
+            That(hit, Is.EqualTo(actor));
         }
 
         [Test]
@@ -561,9 +686,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -596,9 +721,9 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, destroyed, survivor);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
@@ -635,9 +760,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, first);
 
@@ -665,9 +790,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, selected);
             var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
@@ -703,9 +828,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -739,9 +864,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -775,9 +900,9 @@ namespace Ludots.Tests.GAS
                     [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                     [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                     [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
                 CreateCommandSourceRuntime(world, globals, "Friendly");
                 CommandSourceDomainHarness domains = InstallCommandSourceDomainServices(world, globals);
                 Entity teamOne = world.Create(new TeamIdentity { TeamId = 1 });
@@ -847,9 +972,9 @@ namespace Ludots.Tests.GAS
                     [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                     [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                     [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
                 CreateCommandSourceRuntime(world, globals, "Friendly");
                 CommandSourceDomainHarness domains = InstallCommandSourceDomainServices(world, globals);
                 Entity teamOne = world.Create(new TeamIdentity { TeamId = 1 });
@@ -893,9 +1018,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -927,9 +1052,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -961,9 +1086,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -992,9 +1117,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -1034,9 +1159,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -1080,9 +1205,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var inputRuntime = new InputRuntimeSystem(globals, authoritativeInputAccumulator, pointerButtonAccumulator);
             var selectionSystem = CreateCommandSourceAcquisitionSystem(world, globals, local);
@@ -1140,9 +1265,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
@@ -1171,9 +1296,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, first, second);
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
@@ -1203,9 +1328,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = bindings,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, actor);
 
@@ -1229,7 +1354,7 @@ namespace Ludots.Tests.GAS
             });
             mapping.SetInteractionActionBindings(bindings);
 
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetCollectionPrimaryEntityProvider((string _, out Entity entity) =>
             {
@@ -1285,22 +1410,22 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var local = world.Create(
                 new Team { Id = 1 },
-                new VisualTransform { Position = Vector3.Zero });
+                WorldPositionCm.FromCm(0, 0));
             _ = world.Create(
                 new Team { Id = 2 },
-                new VisualTransform { Position = new Vector3(5f, 0f, 0f) },
+                WorldPositionCm.FromCm(500, 0),
                 new CommandSourceSelectableTag(),
                 CommandSourceSelectableState.Disabled);
             var enabledEnemy = world.Create(
                 new Team { Id = 2 },
-                new VisualTransform { Position = new Vector3(10f, 0f, 0f) },
+                WorldPositionCm.FromCm(1000, 0),
                 new CommandSourceSelectableTag());
 
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
 
             var system = new TabTargetCycleSystem(world, globals, searchRadiusCm: 3000);
 

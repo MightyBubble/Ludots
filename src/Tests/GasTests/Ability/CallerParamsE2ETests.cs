@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -16,6 +17,7 @@ using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -58,6 +60,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, templates);
                 loader.Load(catalog, relativePath: "GAS/effects.json");
+                FinalizeEffectTemplates(pipeline, catalog, templates);
 
                 using var world = World.Create();
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
@@ -84,8 +87,9 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: null, templates: templates,
@@ -125,6 +129,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, templates);
                 loader.Load(catalog, relativePath: "GAS/effects.json");
+                FinalizeEffectTemplates(pipeline, catalog, templates);
 
                 using var world = World.Create();
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
@@ -144,8 +149,9 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: null, templates: templates,
@@ -184,6 +190,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5.5f },
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -3.3f },
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, B = 0, C = 1, Flags = 2, Imm = 777 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
@@ -228,14 +235,15 @@ namespace Ludots.Tests.GAS
 
         private static void SetupEffectsJson(string root)
         {
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-            File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+            Directory.CreateDirectory(Path.Combine(root, "GAS"));
+            File.WriteAllText(Path.Combine(root, "config_catalog.json"),
                 """
                 [
-                  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" }
+                  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
+                  { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" }
                 ]
                 """);
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+            File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                 """
                 [
                   {
@@ -251,6 +259,38 @@ namespace Ludots.Tests.GAS
                   }
                 ]
                 """);
+            File.WriteAllText(Path.Combine(root, "GAS", "preset_types.json"),
+                """
+                [
+                  {
+                    "id": "ApplyForce2D",
+                    "components": ["ForceParams"],
+                    "activePhases": ["OnApply"],
+                    "allowedLifetimes": ["Instant"],
+                    "defaultPhaseHandlers": {
+                      "OnApply": { "type": "builtin", "id": "ApplyForce" }
+                    }
+                  }
+                ]
+                """);
+        }
+
+        private static void FinalizeEffectTemplates(
+            ConfigPipeline pipeline,
+            ConfigCatalog catalog,
+            EffectTemplateRegistry templates)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            new PresetTypeLoader(pipeline, presetTypes, builtinHandlers).Load(catalog);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                "GAS/effects.json");
         }
 
         private static string CreateTempRoot()

@@ -1,0 +1,62 @@
+{
+  "mapId": "crowd_physics_arena",
+  "world": {
+    "hotZones": [
+      {
+        "id": "central",
+        "label": "Arena",
+        "centerXCm": 5000,
+        "centerYCm": 5000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      }
+    ]
+  },
+  "scenario": {
+    "agentsPerTeam": 48,
+    "teams": [
+      {
+        "id": 1,
+        "name": "Azure Vanguard"
+      },
+      {
+        "id": 2,
+        "name": "Crimson Column"
+      }
+    ],
+    "spawnLayout": {
+      "kind": "OrbitOpposedTargets",
+      "orbitRadiusCm": 2600,
+      "randomSeed": 12648430
+    }
+  },
+  "presentation": {
+    "teams": [
+      {
+        "teamId": 1,
+        "styleId": "blue",
+        "lightTemplateId": "crowd_arena_agent_azure_light",
+        "heavyTemplateId": "crowd_arena_agent_azure_heavy",
+        "lightPresenterId": "mass_navigation_agent_azure_light",
+        "heavyPresenterId": "mass_navigation_agent_azure_heavy"
+      },
+      {
+        "teamId": 2,
+        "styleId": "red",
+        "lightTemplateId": "crowd_arena_agent_crimson_light",
+        "heavyTemplateId": "crowd_arena_agent_crimson_heavy",
+        "lightPresenterId": "mass_navigation_agent_crimson_light",
+        "heavyPresenterId": "mass_navigation_agent_crimson_heavy"
+      }
+    ]
+  },
+  "teamRelationships": {
+    "defaultRelationship": "Hostile",
+    "relationships": []
+  },
+  "scenarioRuntime": {
+    "runtimeCapacity": {
+      "displacedAgentCapacity": 128
+    }
+  }
+}

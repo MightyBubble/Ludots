@@ -15,6 +15,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -30,7 +31,7 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             var templates = new EffectTemplateRegistry();
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var source = world.Create(WorldPositionCm.FromCm(0, 0));
@@ -68,6 +69,12 @@ namespace Ludots.Tests.GAS
                     ContextMapping = TargetResolverContextMapping.Default,
                 },
             });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/SearchPhaseConvergenceTests.SearchHandlers.json");
 
             var runtime = new BuiltinHandlerExecutionContext
             {
@@ -108,7 +115,7 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             var templates = new EffectTemplateRegistry();
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var source = world.Create(WorldPositionCm.FromCm(0, 0));
@@ -145,6 +152,12 @@ namespace Ludots.Tests.GAS
                     ContextMapping = TargetResolverContextMapping.Default,
                 },
             });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/SearchPhaseConvergenceTests.PeriodicSearchHandler.json");
 
             var runtime = new BuiltinHandlerExecutionContext
             {
@@ -212,6 +225,12 @@ namespace Ludots.Tests.GAS
                     ContextMapping = TargetResolverContextMapping.Default,
                 },
             });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/SearchPhaseConvergenceTests.PeriodicSearchLifetime.json");
 
             Entity effect = GameplayEffectFactory.CreateEffect(
                 world,
@@ -260,7 +279,7 @@ namespace Ludots.Tests.GAS
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 BuiltinHandlers.RegisterAll(builtinHandlers);
                 var templates = new EffectTemplateRegistry();
-                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
                 var source = world.Create(WorldPositionCm.FromCm(0, 0), new Team { Id = 1 });
@@ -298,6 +317,12 @@ namespace Ludots.Tests.GAS
                         ContextMapping = TargetResolverContextMapping.Default,
                     },
                 });
+                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                    templates,
+                    presetTypes,
+                    builtinHandlers,
+                    programs,
+                    "Test/SearchPhaseConvergenceTests.HostileFilterSkips.json");
 
                 var runtime = new BuiltinHandlerExecutionContext
                 {
@@ -344,7 +369,7 @@ namespace Ludots.Tests.GAS
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 BuiltinHandlers.RegisterAll(builtinHandlers);
                 var templates = new EffectTemplateRegistry();
-                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
                 var sourceWithoutTeam = world.Create(WorldPositionCm.FromCm(0, 0));
@@ -381,6 +406,12 @@ namespace Ludots.Tests.GAS
                         ContextMapping = TargetResolverContextMapping.Default,
                     },
                 });
+                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                    templates,
+                    presetTypes,
+                    builtinHandlers,
+                    programs,
+                    "Test/SearchPhaseConvergenceTests.HostileFilterNoTeam.json");
 
                 var runtime = new BuiltinHandlerExecutionContext
                 {

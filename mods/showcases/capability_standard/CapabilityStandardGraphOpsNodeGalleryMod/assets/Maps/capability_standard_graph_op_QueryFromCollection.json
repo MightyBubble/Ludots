@@ -1,0 +1,330 @@
+{
+  "Id": "capability_standard_graph_op_QueryFromCollection",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "指挥"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": -220
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "unit0",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军1"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -550,
+            "Y": 120
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 90
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit1",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军2"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -330,
+            "Y": 120
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 70
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit2",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军3"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -110,
+            "Y": 120
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 50
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit3",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军4"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 110,
+            "Y": 120
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 30
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit4",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军5"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 330,
+            "Y": 120
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 10
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit5",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军6"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 550,
+            "Y": 120
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit6",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军7"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -550,
+            "Y": 400
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 0
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit7",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军8"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -330,
+            "Y": 400
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 150
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit8",
+      "Template": "Unit.Soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军9"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -110,
+            "Y": 400
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 40
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit9",
+      "Template": "Unit.Scout",
+      "Overrides": {
+        "Name": {
+          "Value": "敌军10"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 110,
+            "Y": 400
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 80
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "unit10",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "友军11"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 330,
+            "Y": 400
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 60
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "unit11",
+      "Template": "Unit.Scout",
+      "Overrides": {
+        "Name": {
+          "Value": "友军12"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 550,
+            "Y": 400
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 20
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "caster"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "unit0"
+    }
+  ]
+}

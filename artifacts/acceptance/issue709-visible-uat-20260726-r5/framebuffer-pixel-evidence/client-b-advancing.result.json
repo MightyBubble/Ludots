@@ -1,0 +1,76 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\issue709-visible-uat-20260726-r5\\screens\\client-b\\frontline_002_advancing.png",
+    "width":  1280,
+    "height":  720,
+    "passed":  true,
+    "requirements":  [
+                         {
+                             "role":  "infantryBody",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "passingRegions":  4,
+                             "matchingPixels":  1953,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "50:28356308",
+                                                 "x":  427,
+                                                 "y":  325,
+                                                 "width":  34,
+                                                 "height":  33,
+                                                 "matchingPixels":  315,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "50:29882376",
+                                                 "x":  423,
+                                                 "y":  349,
+                                                 "width":  35,
+                                                 "height":  33,
+                                                 "matchingPixels":  504,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "50:31791883",
+                                                 "x":  221,
+                                                 "y":  341,
+                                                 "width":  41,
+                                                 "height":  33,
+                                                 "matchingPixels":  630,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "50:33697546",
+                                                 "x":  212,
+                                                 "y":  333,
+                                                 "width":  41,
+                                                 "height":  33,
+                                                 "matchingPixels":  504,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "crystalField",
+                             "presentationTemplate":  "rts.frontline.crystal.center",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "passingRegions":  1,
+                             "matchingPixels":  1149,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "54:11953003",
+                                                 "x":  28,
+                                                 "y":  322,
+                                                 "width":  56,
+                                                 "height":  48,
+                                                 "matchingPixels":  1149,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         }
+                     ]
+}

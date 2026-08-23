@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 
@@ -5,23 +6,46 @@ namespace Ludots.Core.Gameplay.GAS
 {
     public static class RelationOps
     {
+        public const string ChildrenCapacityExceededError = "GAS.RELATION.ERR.ChildrenCapacityExceeded";
+
         public static void SetParent(World world, Entity child, Entity parent)
         {
             if (!world.IsAlive(child) || !world.IsAlive(parent)) return;
+            if (child == parent)
+            {
+                throw new InvalidOperationException("GAS.RELATION.ERR.SelfParent");
+            }
 
             if (world.Has<ChildOf>(child))
             {
                 ref var old = ref world.Get<ChildOf>(child);
                 if (old.Parent.Equals(parent)) return;
+            }
+
+            if (world.Has<ChildrenBuffer>(parent))
+            {
+                ref ChildrenBuffer destination = ref world.Get<ChildrenBuffer>(parent);
+                if (!destination.Contains(in child) &&
+                    destination.Count >= GasConstants.MAX_CHILDREN_BUFFER_CAPACITY)
+                {
+                    throw new InvalidOperationException(
+                        $"{ChildrenCapacityExceededError}: parent={parent.Id}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
+                }
+            }
+
+            if (world.Has<ChildOf>(child))
+            {
                 RemoveParent(world, child);
             }
 
             if (!world.Has<ChildrenBuffer>(parent)) world.Add(parent, new ChildrenBuffer());
             ref var children = ref world.Get<ChildrenBuffer>(parent);
-            if (children.Add(in child))
+            if (!children.Add(in child))
             {
-                world.Add(child, new ChildOf { Parent = parent });
+                throw new InvalidOperationException(
+                    $"{ChildrenCapacityExceededError}: parent={parent.Id}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
             }
+            world.Add(child, new ChildOf { Parent = parent });
         }
 
         public static void RemoveParent(World world, Entity child)

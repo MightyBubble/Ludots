@@ -5,6 +5,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -37,13 +38,16 @@ namespace Ludots.Core.Gameplay.GAS
                     $"Ability {abilityId} references missing activation validation graphId={precondition.ValidationGraphId}.");
             }
 
+            GraphKind kind = graphPrograms.RequireKind(precondition.ValidationGraphId, GraphKind.Validation);
             return GasGraphExecutor.ExecuteValidation(
                 world,
                 caster,
                 explicitTarget,
                 targetPosCm,
                 validationProgram,
-                graphApi);
+                graphApi,
+                kind,
+                programs: graphPrograms);
         }
     }
 }

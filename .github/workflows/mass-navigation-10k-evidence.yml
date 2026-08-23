@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - '.github/workflows/mass-navigation-10k-evidence.yml'
+      - 'global.json'
       - 'mods/capabilities/navigation/**'
       - 'mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/**'
       - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
@@ -50,16 +51,6 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
-
-      - name: Pin evidence SDK outside the worktree
-        shell: pwsh
-        run: |
-          $sdkSelectionRoot = Split-Path $env:GITHUB_WORKSPACE -Parent
-          dotnet new globaljson `
-            --sdk-version 9.0.100 `
-            --roll-forward latestFeature `
-            --force `
-            --output $sdkSelectionRoot
 
       - name: Configure evidence root
         shell: pwsh

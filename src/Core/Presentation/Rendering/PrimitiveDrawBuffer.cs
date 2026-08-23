@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Presentation.Components;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Rendering
 {
-    public sealed class PrimitiveDrawBuffer
+    public sealed class PrimitiveDrawBuffer : IPrimitiveDrawSnapshot
     {
+        public const string OverflowErrorCode = "PRIMITIVE_DRAW_BUFFER_OVERFLOW";
+
         private readonly PrimitiveDrawItem[] _buffer;
         private readonly Dictionary<int, int> _staticSlotByStableId = new();
         private PrimitiveDrawItem[] _staticMeshDeltaItems = Array.Empty<PrimitiveDrawItem>();
@@ -48,6 +52,28 @@ namespace Ludots.Core.Presentation.Rendering
                 return false;
             }
 
+            Insert(in item);
+            return true;
+        }
+
+        public void Add(in PrimitiveDrawItem item)
+        {
+            if (_count >= _buffer.Length)
+            {
+                throw CreateOverflowException(item.StableId, item.RenderPath);
+            }
+
+            Insert(in item);
+        }
+
+        public InvalidOperationException CreateOverflowException(int stableId, VisualRenderPath renderPath)
+        {
+            return new InvalidOperationException(
+                $"PrimitiveDrawBuffer overflowed ({OverflowErrorCode}) while adding stableId={stableId}, renderPath={renderPath}; capacity={Capacity}, count={_count}.");
+        }
+
+        private void Insert(in PrimitiveDrawItem item)
+        {
             int slot = _count++;
             _buffer[slot] = item;
             if (item.RenderPath.IsStaticInstanceLane())
@@ -59,8 +85,6 @@ namespace Ludots.Core.Presentation.Rendering
             {
                 _skinnedLaneItemCount++;
             }
-
-            return true;
         }
 
         public void ApplyStaticMeshDelta(
@@ -96,7 +120,7 @@ namespace Ludots.Core.Presentation.Rendering
                 }
                 else if (keep)
                 {
-                    TryAdd(item);
+                    Add(in item);
                 }
             }
         }

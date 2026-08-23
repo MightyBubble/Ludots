@@ -1,6 +1,10 @@
+using Ludots.Core.Config;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
@@ -430,14 +434,14 @@ app.MapGet("/api/mods/{modId}/entity-templates", (string modId) =>
     }
 });
 
-app.MapGet("/api/mods/{modId}/performers", (string modId) =>
+app.MapGet("/api/mods/{modId}/presenters", (string modId) =>
 {
     string repoRoot = FindAssetsRoot();
     try
     {
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
-        var performers = EditorRepo.LoadMergedPerformers(ctx, includeSources: false, out _);
-        return Results.Ok(new { ok = true, performers });
+        var presenters = EditorRepo.LoadMergedPresenters(ctx, includeSources: false, out _);
+        return Results.Ok(new { ok = true, presenters });
     }
     catch (Exception ex)
     {
@@ -1529,7 +1533,334 @@ app.MapDelete("/api/bindings/{name}", (string name) =>
     }
 });
 
+app.MapGet("/api/mods/{modId}/gas/graphs", (string modId) =>
+{
+    if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
+        return error!;
+
+    if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
+        return readError!;
+
+    var graphs = new List<object>(arr.Count);
+    for (int i = 0; i < arr.Count; i++)
+    {
+        if (arr[i] is not JsonObject obj)
+            continue;
+        var id = obj["id"]?.GetValue<string>();
+        var kind = obj["kind"]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(id))
+            continue;
+        graphs.Add(new { id, kind = kind ?? string.Empty });
+    }
+
+    return Results.Ok(new { ok = true, graphs, path = graphsPath });
+});
+
+app.MapGet("/api/mods/{modId}/gas/graphs/{graphId}", (string modId, string graphId) =>
+{
+    if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
+        return error!;
+
+    if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
+        return readError!;
+
+    if (!TryFindGraphObject(arr, graphId, out var graphObj, out _))
+        return Results.NotFound(new { ok = false, error = $"Graph not found: {graphId}", path = graphsPath });
+
+    return Results.Json(new { ok = true, graph = graphObj, path = graphsPath });
+});
+
+app.MapPut("/api/mods/{modId}/gas/graphs/{graphId}", async (string modId, string graphId, HttpRequest req) =>
+{
+    if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
+        return error!;
+
+    using var sr = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await sr.ReadToEndAsync();
+    if (string.IsNullOrWhiteSpace(body))
+        return Results.BadRequest(new { ok = false, error = "Empty body." });
+
+    JsonNode? bodyNode;
+    try
+    {
+        bodyNode = JsonNode.Parse(body);
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Malformed JSON body: {ex.Message}" });
+    }
+
+    if (bodyNode is not JsonObject bodyObj)
+        return Results.BadRequest(new { ok = false, error = "Body must be a graph JSON object." });
+
+    if (!TryNormalizeGasGraphBody(bodyObj, graphId, out var normalizedId, out var normalizeError))
+        return Results.BadRequest(new { ok = false, error = normalizeError });
+
+    bodyObj["id"] = normalizedId;
+
+    if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
+        return readError!;
+
+    if (!TryFindGraphObject(arr, graphId, out _, out var index))
+        return Results.NotFound(new { ok = false, error = $"Graph not found: {graphId}", path = graphsPath });
+
+    arr[index] = bodyObj.DeepClone();
+
+    try
+    {
+        var written = arr.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        if (!written.EndsWith('\n'))
+            written += "\n";
+        WriteTextAtomically(graphsPath, written);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Failed to write graphs.json: {ex.Message}", path = graphsPath });
+    }
+
+    return Results.Ok(new { ok = true, path = graphsPath, graphId = normalizedId });
+});
+
+app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string modId, string graphId, HttpRequest req) =>
+{
+    if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
+        return error!;
+
+    using var sr = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await sr.ReadToEndAsync();
+
+    string source;
+    JsonObject graphObj;
+    try
+    {
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            source = "body";
+            JsonNode? bodyNode;
+            try
+            {
+                bodyNode = JsonNode.Parse(body);
+            }
+            catch (JsonException ex)
+            {
+                return Results.BadRequest(new { ok = false, error = $"Malformed JSON body: {ex.Message}" });
+            }
+
+            if (bodyNode is not JsonObject bodyObj)
+                return Results.BadRequest(new { ok = false, error = "Body must be a graph JSON object." });
+
+            graphObj = bodyObj;
+        }
+        else
+        {
+            source = "file";
+            if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
+                return readError!;
+            if (!TryFindGraphObject(arr, graphId, out var fileGraphObj, out _))
+                return Results.NotFound(new { ok = false, error = $"Graph not found: {graphId}", path = graphsPath });
+
+            graphObj = fileGraphObj;
+        }
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Failed to read graph JSON: {ex.Message}" });
+    }
+
+    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+        return Results.BadRequest(new { ok = false, error = compileError });
+    bool hasErrors = false;
+    for (int i = 0; i < diagnostics.Count; i++)
+    {
+        if (diagnostics[i].Severity == GraphDiagnosticSeverity.Error)
+        {
+            hasErrors = true;
+            break;
+        }
+    }
+
+    bool ok = package.HasValue && !hasErrors;
+    int instructionCount = package.HasValue ? package.Value.Program.Length : 0;
+
+    var diagnosticPayload = new List<object>(diagnostics.Count);
+    for (int i = 0; i < diagnostics.Count; i++)
+    {
+        var d = diagnostics[i];
+        diagnosticPayload.Add(new
+        {
+            severity = d.Severity.ToString(),
+            code = d.Code,
+            message = d.Message,
+            graphId = d.GraphId,
+            nodeId = d.NodeId
+        });
+    }
+
+    return Results.Ok(new
+    {
+        ok,
+        source,
+        path = graphsPath,
+        diagnostics = diagnosticPayload,
+        instructionCount
+    });
+});
+
+static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out string normalizedId, out string error)
+{
+    normalizedId = string.Empty;
+    error = string.Empty;
+    try
+    {
+        GraphKind kind = GraphProgramAuthoringFrontDoor.RequireKind(bodyObj, graphId);
+        GraphProgramAuthoringFrontDoor.RequireControlFlowAuthoringShape(bodyObj, graphId, kind);
+
+        GraphControlFlowDocument? doc = bodyObj.Deserialize<GraphControlFlowDocument>(StrictJsonOptions.CreateCamelCase(includeFields: true));
+        if (doc == null)
+        {
+            error = "Failed to deserialize GraphControlFlowDocument.";
+            return false;
+        }
+
+        normalizedId = string.IsNullOrWhiteSpace(doc.Id) ? graphId : doc.Id;
+    }
+    catch (InvalidOperationException ex)
+    {
+        error = ex.Message;
+        return false;
+    }
+    catch (JsonException ex)
+    {
+        error = $"Failed to deserialize gas graph: {ex.Message}";
+        return false;
+    }
+
+    if (!string.Equals(normalizedId, graphId, StringComparison.OrdinalIgnoreCase))
+    {
+        error = $"Body id '{normalizedId}' does not match route graphId '{graphId}'.";
+        return false;
+    }
+
+    return true;
+}
+
+static bool TryCompileGasGraph(
+    JsonObject graphObj,
+    string graphId,
+    out GraphProgramPackage? package,
+    out List<GraphDiagnostic> diagnostics,
+    out string error)
+{
+    package = null;
+    diagnostics = new List<GraphDiagnostic>();
+    error = string.Empty;
+    try
+    {
+        var result = GraphProgramAuthoringFrontDoor.CompileJsonObject(
+            graphObj,
+            graphId,
+            StrictJsonOptions.CreateCamelCase(includeFields: true));
+        package = result.Package;
+        diagnostics = result.Diagnostics;
+        return true;
+    }
+    catch (InvalidOperationException ex)
+    {
+        error = ex.Message;
+        return false;
+    }
+    catch (JsonException ex)
+    {
+        error = $"Failed to deserialize gas graph: {ex.Message}";
+        return false;
+    }
+}
+
 app.Run("http://localhost:5299");
+
+static bool TryResolveModGraphsPath(LauncherService launcher, string modId, out string graphsPath, out IResult? error)
+{
+    graphsPath = string.Empty;
+    error = null;
+
+    if (string.IsNullOrWhiteSpace(modId))
+    {
+        error = Results.BadRequest(new { ok = false, error = "Missing modId." });
+        return false;
+    }
+
+    var mods = launcher.DiscoverMods();
+    var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
+    if (mod == null)
+    {
+        error = Results.NotFound(new { ok = false, error = $"Mod not found: {modId}" });
+        return false;
+    }
+
+    graphsPath = Path.Combine(mod.RootPath, "assets", "GAS", "graphs.json");
+    if (!File.Exists(graphsPath))
+    {
+        error = Results.NotFound(new { ok = false, error = $"graphs.json not found at '{graphsPath}'." });
+        return false;
+    }
+
+    return true;
+}
+
+static bool TryReadGraphsArray(string graphsPath, out JsonArray arr, out IResult? error)
+{
+    arr = null!;
+    error = null;
+    try
+    {
+        var text = File.ReadAllText(graphsPath);
+        var node = JsonNode.Parse(text);
+        if (node is not JsonArray parsed)
+        {
+            error = Results.BadRequest(new { ok = false, error = $"graphs.json must be a JSON array: {graphsPath}" });
+            return false;
+        }
+
+        arr = parsed;
+        return true;
+    }
+    catch (Exception ex)
+    {
+        error = Results.BadRequest(new { ok = false, error = $"Failed to read graphs.json: {ex.Message}", path = graphsPath });
+        return false;
+    }
+}
+
+static bool TryFindGraphObject(JsonArray arr, string graphId, out JsonObject graphObj, out int index)
+{
+    graphObj = null!;
+    index = -1;
+    for (int i = 0; i < arr.Count; i++)
+    {
+        if (arr[i] is not JsonObject obj)
+            continue;
+        var id = obj["id"]?.GetValue<string>();
+        if (string.Equals(id, graphId, StringComparison.OrdinalIgnoreCase))
+        {
+            graphObj = obj;
+            index = i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void WriteTextAtomically(string path, string content)
+{
+    var directory = Path.GetDirectoryName(path);
+    if (!string.IsNullOrWhiteSpace(directory))
+        Directory.CreateDirectory(directory);
+
+    var tempPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+    File.WriteAllText(tempPath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    File.Move(tempPath, path, overwrite: true);
+}
 
 static IResult? TryReadRecastReactCommonOptions(
     IFormCollection form,
@@ -2949,10 +3280,10 @@ static class EditorRepo
         return mergedNodes.Values.OrderBy(n => n?["id"]?.ToString() ?? string.Empty, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    public static JsonNode[] LoadMergedPerformers(ModContext ctx, bool includeSources, out List<string> sources)
+    public static JsonNode[] LoadMergedPresenters(ModContext ctx, bool includeSources, out List<string> sources)
     {
         var sourcesLocal = new List<string>();
-        var defs = new Dictionary<int, JsonNode>();
+        var defs = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
 
         void Load(string path)
         {
@@ -2963,23 +3294,22 @@ static class EditorRepo
             foreach (var item in arr)
             {
                 if (item is not JsonObject obj) continue;
-                int id = int.TryParse(obj["id"]?.GetValue<string>(), out int parsedId) ? parsedId : 0;
-                if (id <= 0) continue;
+                if (!TryReadId(obj, out string id)) continue;
                 defs[id] = obj.DeepClone();
             }
         }
 
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Presentation", "performers.json"));
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Presentation", "performers.json"));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Presentation", "presenters.json"));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Presentation", "presenters.json"));
         for (int i = 0; i < ctx.LoadOrder.Count; i++)
         {
             var mod = ctx.ModsById[ctx.LoadOrder[i]];
-            Load(Path.Combine(mod.RootPath, "assets", "Presentation", "performers.json"));
-            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Presentation", "performers.json"));
+            Load(Path.Combine(mod.RootPath, "assets", "Presentation", "presenters.json"));
+            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Presentation", "presenters.json"));
         }
 
         sources = sourcesLocal;
-        return defs.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToArray();
+        return defs.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase).Select(kvp => kvp.Value).ToArray();
     }
 
     public static JsonNode LoadMergedNavigationJson(

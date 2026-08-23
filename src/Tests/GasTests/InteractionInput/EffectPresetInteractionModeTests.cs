@@ -82,7 +82,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var actor = world.Create();
             var target = world.Create();
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetCollectionPrimaryEntityProvider((string _, out Entity e) => { e = target; return true; });
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
@@ -182,7 +182,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var actor = world.Create();
             var target = world.Create();
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
             mapping.SetSkillMappingOverrideProvider((Entity _, InputOrderMapping source, out InputOrderMapping overrideMapping) =>
