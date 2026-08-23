@@ -20,7 +20,10 @@ using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -1070,6 +1073,7 @@ namespace Ludots.Core.Engine
                 presentationOwnerChanges);
             var globalPresentationEventProjectionSystem = new GlobalPresentationEventProjectionSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
             var presenterCommandBuffer = new PresenterCommandBuffer(presentationConfig.PresenterCommandCapacity);
+            var presenterTimerTable = new PresenterTimerTable(presentationConfig.PresenterTimerCapacity);
             var meshAssets = new MeshAssetRegistry();
             var particleVfx = new ParticleVfxRegistry();
             var materialAssets = new PresentationMaterialRegistry();
@@ -1166,6 +1170,7 @@ namespace Ludots.Core.Engine
                 AbilityPresentationTextValidator.RejectTokenizedPresentationWithoutLocaleCatalog(abilityDefinitions);
             }
             var presenterRuleSystem = new PresenterRuleSystem(World, presentationEventStream, presenterCommandBuffer, presenterDefinitions, presenterRuntime, graphProgramRegistry, gasGraphApi, GlobalContext, graphHandlers);
+            var presenterTimerSystem = new PresenterTimerSystem(World, presenterTimerTable, presentationEventStream);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
                 World,
                 presentationEventStream,
@@ -1186,7 +1191,8 @@ namespace Ludots.Core.Engine
                 presenterAnimatorStates,
                 stableDrawCache,
                 presenterVisualStableIds,
-                performerCommandKinds);
+                performerCommandKinds,
+                presenterTimerTable);
             var presenterBehaviorSystem = new PresenterBehaviorSystem(
                 World,
                 presenterRuntime,
@@ -1705,6 +1711,39 @@ namespace Ludots.Core.Engine
             var questRuntime = new QuestRuntimeService(World, questDefinitions);
             SetService(CoreServiceKeys.QuestDefinitionRegistry, questDefinitions);
             SetService(CoreServiceKeys.QuestRuntimeService, questRuntime);
+            var providerServices = new ProviderServices();
+            SetService(CoreServiceKeys.ProviderServices, providerServices);
+            SetService(CoreServiceKeys.ProviderGapCatalog, providerServices.Gaps);
+            SetService(CoreServiceKeys.SourceProviderRegistry, providerServices.Sources);
+            SetService(CoreServiceKeys.SelectorProviderRegistry, providerServices.Selectors);
+            SetService(CoreServiceKeys.ConditionProviderRegistry, providerServices.Conditions);
+            SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
+            SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
+            var activityDefinitions = new ActivityDefinitionRegistry();
+            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var activityPresentation = new ActivityPresentationBuffer();
+            var activityRuntime = new ActivityRuntimeService(
+                World,
+                activityDefinitions,
+                providerServices,
+                activityPresentation);
+            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
+            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
+            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
+            var taskDefinitions = new TaskDefinitionRegistry();
+            new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var taskPresentation = new TaskPresentationBuffer();
+            var taskRuntime = new TaskRuntimeService(
+                World,
+                taskDefinitions,
+                providerServices,
+                taskPresentation);
+            TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
+            SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
+            SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
+            SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
@@ -1943,6 +1982,9 @@ namespace Ludots.Core.Engine
                 instancedBatchOperations,
                 presentationEventStream,
                 presentationOwnerChanges));
+            // PresenterTimerSystem advances named timers and publishes TimerExpired before rules run,
+            // so an expiry is consumable by PresenterRuleSystem in the same frame.
+            RegisterPresentationSystem(presenterTimerSystem);
             // PresenterRuleSystem reads events and produces commands.
             RegisterPresentationSystem(presenterRuleSystem);
             // PresenterRuntimeSystem consumes commands, manages instance lifecycle.

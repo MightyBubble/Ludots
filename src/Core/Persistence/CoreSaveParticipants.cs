@@ -9,8 +9,10 @@ using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
@@ -29,6 +31,8 @@ namespace Ludots.Core.Persistence
             registry.Register(new EmptySaveParticipant("inventory"));
             registry.Register(CreateMapSessionsParticipant(engine.MapSessions));
             registry.Register(CreateQuestParticipant(engine.GetService(CoreServiceKeys.QuestRuntimeService)));
+            registry.Register(CreateActivityParticipant(engine.GetService(CoreServiceKeys.ActivityRuntimeService)));
+            registry.Register(CreateTaskParticipant(engine.GetService(CoreServiceKeys.TaskRuntimeService)));
             registry.Register(CreateNarrativeParticipant(engine.GetService(CoreServiceKeys.NarrativeDirector)));
             registry.Register(CreateRelationshipParticipant(engine.GetService(CoreServiceKeys.RelationshipRuntime)));
             registry.Register(CreateTeamParticipant());
@@ -68,6 +72,16 @@ namespace Ludots.Core.Persistence
         public static ISaveParticipant CreateQuestParticipant(QuestRuntimeService runtime)
         {
             return new QuestSaveParticipant(runtime);
+        }
+
+        public static ISaveParticipant CreateActivityParticipant(ActivityRuntimeService runtime)
+        {
+            return new ActivitySaveParticipant(runtime);
+        }
+
+        public static ISaveParticipant CreateTaskParticipant(TaskRuntimeService runtime)
+        {
+            return new TaskSaveParticipant(runtime);
         }
 
         public static ISaveParticipant CreateRelationshipParticipant(RelationshipRuntime runtime)
@@ -563,6 +577,108 @@ namespace Ludots.Core.Persistence
                 catch (InvalidOperationException ex)
                 {
                     throw new SaveContextException($"Quest save state is invalid: {ex.Message}");
+                }
+            }
+        }
+
+        private sealed class ActivitySaveParticipant : ISaveParticipant
+        {
+            private readonly ActivityRuntimeService _runtime;
+
+            public ActivitySaveParticipant(ActivityRuntimeService runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public string DomainKey => "activities";
+
+            public JsonNode CaptureState()
+            {
+                ActivityRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
+                return new JsonObject
+                {
+                    ["nextInstanceId"] = snapshot.NextInstanceId
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+
+                JsonObject root = state.AsObject();
+                int nextInstanceId = RequireInt(root, "nextInstanceId");
+                try
+                {
+                    _runtime.RestoreSnapshot(new ActivityRuntimeSnapshot(nextInstanceId));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new SaveContextException($"Activity save state is invalid: {ex.Message}");
+                }
+            }
+        }
+
+        private sealed class TaskSaveParticipant : ISaveParticipant
+        {
+            private readonly TaskRuntimeService _runtime;
+
+            public TaskSaveParticipant(TaskRuntimeService runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public string DomainKey => "tasks";
+
+            public JsonNode CaptureState()
+            {
+                TaskRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
+                var signals = new JsonObject();
+                foreach (KeyValuePair<string, int> pair in snapshot.Signals)
+                {
+                    signals[pair.Key] = pair.Value;
+                }
+
+                var accumulators = new JsonObject();
+                foreach (KeyValuePair<string, int> pair in snapshot.Accumulators)
+                {
+                    accumulators[pair.Key] = pair.Value;
+                }
+
+                return new JsonObject
+                {
+                    ["signals"] = signals,
+                    ["accumulators"] = accumulators,
+                    ["nextInstanceId"] = snapshot.NextInstanceId
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+
+                JsonObject root = state.AsObject();
+                var signals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                JsonObject signalObject = RequireObject(root["signals"], "signals");
+                foreach (KeyValuePair<string, JsonNode?> pair in signalObject)
+                {
+                    signals[pair.Key] = RequireIntValue(pair.Value, $"signals.{pair.Key}");
+                }
+
+                var accumulators = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                JsonObject accumulatorObject = RequireObject(root["accumulators"], "accumulators");
+                foreach (KeyValuePair<string, JsonNode?> pair in accumulatorObject)
+                {
+                    accumulators[pair.Key] = RequireIntValue(pair.Value, $"accumulators.{pair.Key}");
+                }
+
+                int nextInstanceId = RequireInt(root, "nextInstanceId");
+                try
+                {
+                    _runtime.RestoreSnapshot(new TaskRuntimeSnapshot(signals, accumulators, nextInstanceId));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new SaveContextException($"Task save state is invalid: {ex.Message}");
                 }
             }
         }
