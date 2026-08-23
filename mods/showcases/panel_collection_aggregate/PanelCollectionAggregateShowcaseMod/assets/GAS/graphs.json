@@ -1,0 +1,53 @@
+[
+  {
+    "id": "Graph.Panel.CollectionAggregate.Values",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster" },
+      { "id": "allMap", "op": "QueryAllMapEntities" },
+      { "id": "team", "op": "QueryFilterTeam", "teamId": 2147483646 },
+      { "id": "oreSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Ore" },
+      { "id": "crystalSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Crystal" }
+    ],
+    "controlEdges": [
+      { "from": "owner", "fromPort": "next", "to": "allMap" },
+      { "from": "allMap", "fromPort": "next", "to": "team" },
+      { "from": "team", "fromPort": "next", "to": "oreSum" },
+      { "from": "oreSum", "fromPort": "next", "to": "crystalSum" }
+    ],
+    "valueEdges": [
+      { "from": "allMap", "fromPort": "list", "to": "team", "toPort": "list" },
+      { "from": "team", "fromPort": "list", "to": "oreSum", "toPort": "list" },
+      { "from": "team", "fromPort": "list", "to": "crystalSum", "toPort": "list" }
+    ],
+    "outputs": [
+      { "id": "oreTotal", "destination": "Summary", "type": "Float", "source": "oreSum", "key": "collection.aggregate.ore.total" },
+      { "id": "crystalTotal", "destination": "Summary", "type": "Float", "source": "crystalSum", "key": "collection.aggregate.crystal.total" }
+    ]
+  },
+  {
+    "id": "Graph.Collection.Aggregate.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.collection.aggregate", "panelAnchor": "screen.bottomRight" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.collection.aggregate" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

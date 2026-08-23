@@ -1,0 +1,9 @@
+{
+  "name": "PanelCollectionAggregateShowcaseMod",
+  "version": "1.0.0",
+  "description": "Schema v2 collection aggregate panel backed by a real collection Query",
+  "priority": 0,
+  "dependencies": {
+    "UiPlayerAggregateGraphMvpShowcaseMod": "^1.0.0"
+  }
+}

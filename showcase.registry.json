@@ -7547,6 +7547,30 @@
       ]
     },
     {
+      "id": "panel_collection_aggregate",
+      "path": "mods/showcases/panel_collection_aggregate/PanelCollectionAggregateShowcaseMod",
+      "projectPath": null,
+      "title": "Collection Aggregate Panel",
+      "summary": "Schema v2 collection totals from a real QueryAllMapEntities and aggregation graph",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_collection_aggregate",
+      "preset": "panel_collection_aggregate_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-collection-aggregate.md",
+      "readmePath": null,
+      "acceptanceTest": "PanelCollectionAggregateShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_collection_aggregate",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "schema-v2",
+        "collection-aggregate",
+        "showcase"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_SpawnTemplate",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
       "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj",

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "panel.collection.aggregate",
+    "graph": "Graph.Panel.CollectionAggregate.Values",
+    "pins": [
+      { "name": "oreTotal", "key": "collection.aggregate.ore.total", "mode": "realtime", "default": 0 },
+      { "name": "crystalTotal", "key": "collection.aggregate.crystal.total", "mode": "realtime", "default": 0 }
+    ]
+  }
+]
