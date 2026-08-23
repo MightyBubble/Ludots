@@ -424,9 +424,11 @@ namespace Ludots.Core.Gameplay.Spawning
         private static bool IsTemplateBatchMember(string templateId, in RuntimeEntitySpawnRequest request)
         {
             // 带父链接/attachment 局部姿的请求只能走单实体 lane（batch lane 不处理父子链接）。
+            // 未设置 Parent 的请求字段是 default(Entity)（0,0,0），不等于 Entity.Null——
+            // 两种"无父"都要放行 batch lane（先例：EntityTriggerGraphMounts）。
             return request.Kind == RuntimeEntitySpawnKind.Template &&
                    !HasComponentPatches(in request) &&
-                   request.Parent == Entity.Null &&
+                   (request.Parent == Entity.Null || request.Parent == default) &&
                    request.LinkSourceAsParent == 0 &&
                    request.HasAttachedLocalPose == 0 &&
                    !string.IsNullOrWhiteSpace(request.TemplateId) &&
