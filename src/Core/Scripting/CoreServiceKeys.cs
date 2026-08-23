@@ -17,7 +17,6 @@ using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
-using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -171,8 +170,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CameraImpulseRuntime> CameraImpulseRuntime = new("CameraImpulseRuntime");
         public static readonly ServiceKey<PlatformManagedCameraDriverRegistry> PlatformManagedCameraDriverRegistry = new("PlatformManagedCameraDriverRegistry");
         public static readonly ServiceKey<IPlatformManagedCameraHostService> PlatformManagedCameraHostService = new("PlatformManagedCameraHostService");
-        public static readonly ServiceKey<QuestDefinitionRegistry> QuestDefinitionRegistry = new("QuestDefinitionRegistry");
-        public static readonly ServiceKey<QuestRuntimeService> QuestRuntimeService = new("QuestRuntimeService");
         public static readonly ServiceKey<ProviderServices> ProviderServices = new("ProviderServices");
         public static readonly ServiceKey<ProviderGapCatalog> ProviderGapCatalog = new("ProviderGapCatalog");
         public static readonly ServiceKey<SourceProviderRegistry> SourceProviderRegistry = new("SourceProviderRegistry");

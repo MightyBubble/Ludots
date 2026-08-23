@@ -22,7 +22,6 @@ using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
-using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Tasks;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
@@ -617,16 +616,17 @@ namespace Ludots.Core.Engine
             bool reloadNarrative = string.IsNullOrWhiteSpace(group)
                                  || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
                                  || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
-            bool reloadQuests = string.IsNullOrWhiteSpace(group)
-                             || string.Equals(group, "Quests", StringComparison.OrdinalIgnoreCase)
-                             || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Quests/", StringComparison.OrdinalIgnoreCase));
+            bool reloadTasks = string.IsNullOrWhiteSpace(group)
+                            || string.Equals(group, "Tasks", StringComparison.OrdinalIgnoreCase)
+                            || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Tasks/", StringComparison.OrdinalIgnoreCase));
 
-            if (reloadQuests &&
-                GetService(CoreServiceKeys.QuestDefinitionRegistry) is QuestDefinitionRegistry questDefinitions &&
-                GetService(CoreServiceKeys.QuestRuntimeService) is QuestRuntimeService questRuntime)
+            if (reloadTasks &&
+                GetService(CoreServiceKeys.TaskDefinitionRegistry) is TaskDefinitionRegistry taskDefinitions &&
+                GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService taskRuntime &&
+                GetService(CoreServiceKeys.ProviderServices) is ProviderServices taskProviders)
             {
-                new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-                questRuntime.ResetState();
+                new TaskConfigLoader(ConfigPipeline, taskDefinitions, taskProviders.Validator).Load(ConfigCatalog, ConfigConflictReport);
+                taskRuntime.ResetState();
             }
 
             if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
@@ -1706,11 +1706,6 @@ namespace Ludots.Core.Engine
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
-            var questDefinitions = new QuestDefinitionRegistry();
-            new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            var questRuntime = new QuestRuntimeService(World, questDefinitions);
-            SetService(CoreServiceKeys.QuestDefinitionRegistry, questDefinitions);
-            SetService(CoreServiceKeys.QuestRuntimeService, questRuntime);
             var providerServices = new ProviderServices();
             SetService(CoreServiceKeys.ProviderServices, providerServices);
             SetService(CoreServiceKeys.ProviderGapCatalog, providerServices.Gaps);
@@ -1746,7 +1741,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
+            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, taskRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             AttributeRegistry.Freeze();

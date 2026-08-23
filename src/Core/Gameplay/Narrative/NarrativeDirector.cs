@@ -7,7 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 
@@ -48,19 +48,19 @@ namespace Ludots.Core.Gameplay.Narrative
     {
         private readonly GameEngine _engine;
         private readonly NarrativeDefinitionRegistry _definitions;
-        private readonly QuestRuntimeService _questRuntime;
+        private readonly TaskRuntimeService _taskRuntime;
         private readonly NarrativeValueStore _variables;
         private readonly Dictionary<string, Entity> _bindings = new(StringComparer.OrdinalIgnoreCase);
         private NarrativeDialogueSession _activeDialogue;
         private NarrativeCinematicSession _activeCinematic;
 
-        public NarrativeDirector(GameEngine engine, NarrativeDefinitionRegistry definitions, QuestRuntimeService questRuntime)
+        public NarrativeDirector(GameEngine engine, NarrativeDefinitionRegistry definitions, TaskRuntimeService taskRuntime)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
-            _questRuntime = questRuntime ?? throw new ArgumentNullException(nameof(questRuntime));
+            _taskRuntime = taskRuntime ?? throw new ArgumentNullException(nameof(taskRuntime));
             _variables = new NarrativeValueStore(definitions);
-            _questRuntime.QuestEventPublished += HandleQuestEventPublished;
+            _taskRuntime.TaskStateChanged += HandleTaskStateChanged;
         }
 
         public bool HasActiveDialogue => _activeDialogue != null;
@@ -69,7 +69,7 @@ namespace Ludots.Core.Gameplay.Narrative
         public void ResetState()
         {
             ResetNarrativeState();
-            _questRuntime.ResetState();
+            _taskRuntime.ResetState();
         }
 
         public void ResetNarrativeState()
@@ -115,11 +115,11 @@ namespace Ludots.Core.Gameplay.Narrative
             };
         }
 
-        public bool TryGetQuestState(string questId, out QuestState state, out string stageId)
-            => _questRuntime.TryGetQuestState(questId, out state, out stageId);
+        public bool TryGetTaskState(string taskId, out TaskInstanceState state)
+            => _taskRuntime.TryGetState(taskId, out state);
 
-        public IReadOnlyList<QuestView> GetQuestViews()
-            => _questRuntime.GetQuestViews();
+        public IReadOnlyList<TaskView> GetTaskViews()
+            => _taskRuntime.CaptureViews();
 
         public NarrativeDirectorSnapshot CaptureSnapshot()
         {
@@ -218,24 +218,23 @@ namespace Ludots.Core.Gameplay.Narrative
             }
         }
 
-        public void StartQuest(string questId)
+        public void StartTask(string taskId)
         {
-            _questRuntime.StartQuest(questId);
+            Entity entity = _taskRuntime.OfferOrStart(taskId);
+            if (_taskRuntime.TryGetView(entity, out TaskView view) && view.State == TaskInstanceState.Offered)
+            {
+                _taskRuntime.Accept(entity);
+            }
         }
 
-        public void AdvanceQuestStage(string questId, string targetStageId = "")
+        public void CompleteTask(string taskId)
         {
-            _questRuntime.AdvanceQuestStage(questId, targetStageId);
+            _taskRuntime.Complete(taskId);
         }
 
-        public void CompleteQuest(string questId)
+        public void FailTask(string taskId)
         {
-            _questRuntime.CompleteQuest(questId);
-        }
-
-        public void FailQuest(string questId)
-        {
-            _questRuntime.FailQuest(questId);
+            _taskRuntime.Fail(taskId, Entity.Null, string.Empty);
         }
 
         public void StartDialogue(string dialogueId)
@@ -337,17 +336,17 @@ namespace Ludots.Core.Gameplay.Narrative
         {
             if (string.IsNullOrWhiteSpace(signalId))
             {
-                throw new ArgumentException("Quest signal id is required.", nameof(signalId));
+                throw new ArgumentException("Task signal id is required.", nameof(signalId));
             }
 
-            FireTriggerEvent(QuestEventKeys.Signal, ctx =>
+            FireTriggerEvent(TaskEventKeys.Signal, ctx =>
             {
-                ctx.Set(QuestServiceKeys.SignalId, signalId);
-                ctx.Set(QuestServiceKeys.SignalIntValue, intValue);
-                ctx.Set(QuestServiceKeys.SignalStringValue, stringValue ?? string.Empty);
+                ctx.Set(TaskServiceKeys.SignalId, signalId);
+                ctx.Set(TaskServiceKeys.SignalIntValue, intValue);
+                ctx.Set(TaskServiceKeys.SignalStringValue, stringValue ?? string.Empty);
             });
 
-            _questRuntime.EmitSignal(signalId);
+            _taskRuntime.EmitSignal(signalId);
         }
 
         public void Update(float dt)
@@ -357,49 +356,59 @@ namespace Ludots.Core.Gameplay.Narrative
             TickCinematic(dt);
         }
 
-        public string BuildQuestSummary()
+        public string BuildTaskSummary()
         {
             var sb = new StringBuilder();
-            IReadOnlyList<QuestView> quests = _questRuntime.GetQuestViews();
-            for (int i = 0; i < quests.Count; i++)
+            IReadOnlyList<TaskView> tasks = _taskRuntime.CaptureViews();
+            for (int i = 0; i < tasks.Count; i++)
             {
-                QuestView quest = quests[i];
-                if (quest.State == QuestState.Inactive)
-                {
-                    continue;
-                }
+                TaskView task = tasks[i];
 
                 if (sb.Length > 0)
                 {
                     sb.Append(" | ");
                 }
 
-                sb.Append(quest.DisplayName);
+                sb.Append(task.DisplayName);
                 sb.Append(": ");
-                sb.Append(quest.State);
-                if (!string.IsNullOrWhiteSpace(quest.StageTitle))
+                sb.Append(task.State);
+                string objectiveTitle = ResolveCurrentObjectiveTitle(task);
+                if (!string.IsNullOrWhiteSpace(objectiveTitle))
                 {
                     sb.Append(" - ");
-                    sb.Append(quest.StageTitle);
+                    sb.Append(objectiveTitle);
                 }
             }
 
-            return sb.Length == 0 ? "No active quests" : sb.ToString();
+            return sb.Length == 0 ? "No active tasks" : sb.ToString();
         }
 
         public string BuildObjectiveSummary()
         {
-            IReadOnlyList<QuestView> quests = _questRuntime.GetQuestViews();
-            for (int i = 0; i < quests.Count; i++)
+            IReadOnlyList<TaskView> tasks = _taskRuntime.CaptureViews();
+            for (int i = 0; i < tasks.Count; i++)
             {
-                QuestView quest = quests[i];
-                if (quest.State == QuestState.Active)
+                TaskView task = tasks[i];
+                if (task.State == TaskInstanceState.Active)
                 {
-                    return $"{quest.DisplayName}: {quest.ObjectiveText}";
+                    return $"{task.DisplayName}: {ResolveCurrentObjectiveTitle(task)}";
                 }
             }
 
-            return "Awaiting quest";
+            return "Awaiting task";
+        }
+
+        private static string ResolveCurrentObjectiveTitle(TaskView task)
+        {
+            for (int i = 0; i < task.Objectives.Count; i++)
+            {
+                if (!task.Objectives[i].Completed)
+                {
+                    return task.Objectives[i].Title;
+                }
+            }
+
+            return task.Objectives.Count > 0 ? task.Objectives[0].Title : string.Empty;
         }
 
         public string BuildDialogueSummary()
@@ -587,59 +596,61 @@ namespace Ludots.Core.Gameplay.Narrative
             EnterCinematicStep(nextIndex);
         }
 
-        private void HandleQuestEventPublished(QuestEvent questEvent)
+        private void HandleTaskStateChanged(TaskStateChangedInfo change)
         {
-            switch (questEvent.Kind)
+            switch (change.State)
             {
-                case QuestEventKind.Started:
-                    FireQuestLifecycleEvent(QuestEventKeys.Started, questEvent);
+                case TaskInstanceState.Offered:
+                    FireTaskLifecycleEvent(TaskEventKeys.Offered, change);
                     break;
-                case QuestEventKind.StageChanged:
-                    HandleQuestStageChanged(questEvent);
+                case TaskInstanceState.Active:
+                    HandleTaskActivated(change);
                     break;
-                case QuestEventKind.Completed:
-                    FireQuestLifecycleEvent(QuestEventKeys.Completed, questEvent);
+                case TaskInstanceState.Completed:
+                    FireTaskLifecycleEvent(TaskEventKeys.Completed, change);
                     break;
-                case QuestEventKind.Failed:
-                    FireQuestLifecycleEvent(QuestEventKeys.Failed, questEvent);
+                case TaskInstanceState.Failed:
+                    FireTaskLifecycleEvent(TaskEventKeys.Failed, change);
+                    break;
+                case TaskInstanceState.Abandoned:
+                    FireTaskLifecycleEvent(TaskEventKeys.Abandoned, change);
                     break;
             }
         }
 
-        private void FireQuestLifecycleEvent(EventKey eventKey, QuestEvent questEvent)
+        private void FireTaskLifecycleEvent(EventKey eventKey, TaskStateChangedInfo change)
         {
             FireTriggerEvent(eventKey, ctx =>
             {
-                ctx.Set(QuestServiceKeys.QuestId, questEvent.QuestId);
-                ctx.Set(QuestServiceKeys.StageId, questEvent.StageId);
-                ctx.Set(QuestServiceKeys.QuestEntity, questEvent.QuestEntity);
+                ctx.Set(TaskServiceKeys.TaskId, change.TaskId);
+                ctx.Set(TaskServiceKeys.TaskEntity, change.TaskEntity);
             });
         }
 
-        private void HandleQuestStageChanged(QuestEvent questEvent)
+        private void HandleTaskActivated(TaskStateChangedInfo change)
         {
-            if (!_questRuntime.TryGetStage(questEvent.QuestId, questEvent.StageId, out QuestStageDefinition stage))
+            if (!_taskRuntime.TryGetDefinition(change.TaskId, out TaskDefinition definition))
             {
                 throw new InvalidOperationException(
-                    $"Quest event references missing stage '{questEvent.StageId}' on quest '{questEvent.QuestId}'.");
+                    $"Task state change references missing task '{change.TaskId}'.");
             }
 
-            if (!string.IsNullOrWhiteSpace(stage.CinematicOnEnterId))
+            if (!string.IsNullOrWhiteSpace(definition.OnEnterCinematicId))
             {
-                StartCinematic(stage.CinematicOnEnterId);
+                StartCinematic(definition.OnEnterCinematicId);
             }
 
-            if (!string.IsNullOrWhiteSpace(stage.DialogueOnEnterId))
+            if (!string.IsNullOrWhiteSpace(definition.OnEnterDialogueId))
             {
-                StartDialogue(stage.DialogueOnEnterId);
+                StartDialogue(definition.OnEnterDialogueId);
             }
 
-            FireTriggerEvent(QuestEventKeys.StageChanged, ctx =>
+            string objectiveText = definition.Objectives.Count > 0 ? definition.Objectives[0].Title : string.Empty;
+            FireTriggerEvent(TaskEventKeys.Activated, ctx =>
             {
-                ctx.Set(QuestServiceKeys.QuestId, questEvent.QuestId);
-                ctx.Set(QuestServiceKeys.StageId, stage.Id);
-                ctx.Set(QuestServiceKeys.ObjectiveText, stage.ObjectiveText);
-                ctx.Set(QuestServiceKeys.QuestEntity, questEvent.QuestEntity);
+                ctx.Set(TaskServiceKeys.TaskId, change.TaskId);
+                ctx.Set(TaskServiceKeys.ObjectiveText, objectiveText);
+                ctx.Set(TaskServiceKeys.TaskEntity, change.TaskEntity);
             });
         }
 
@@ -742,11 +753,8 @@ namespace Ludots.Core.Gameplay.Narrative
                 case NarrativeActionKind.AddVariable:
                     _variables.Add(action.VariableId, CreateValue(action));
                     break;
-                case NarrativeActionKind.StartQuest:
-                    StartQuest(action.QuestId);
-                    break;
-                case NarrativeActionKind.AdvanceQuestStage:
-                    AdvanceQuestStage(action.QuestId, action.StageId);
+                case NarrativeActionKind.StartTask:
+                    StartTask(action.TaskId);
                     break;
                 case NarrativeActionKind.StartDialogue:
                     StartDialogue(action.DialogueId);
@@ -757,11 +765,11 @@ namespace Ludots.Core.Gameplay.Narrative
                 case NarrativeActionKind.EmitSignal:
                     EmitSignal(action.SignalId, action.IntValue, action.StringValue);
                     break;
-                case NarrativeActionKind.CompleteQuest:
-                    CompleteQuest(action.QuestId);
+                case NarrativeActionKind.CompleteTask:
+                    CompleteTask(action.TaskId);
                     break;
-                case NarrativeActionKind.FailQuest:
-                    FailQuest(action.QuestId);
+                case NarrativeActionKind.FailTask:
+                    FailTask(action.TaskId);
                     break;
                 case NarrativeActionKind.ActivateCamera:
                     ActivateCamera(action.CameraId);
@@ -800,10 +808,10 @@ namespace Ludots.Core.Gameplay.Narrative
         {
             switch (condition.Kind)
             {
-                case NarrativeConditionKind.QuestState:
-                    return TryGetQuestState(condition.QuestId, out var questState, out _) && questState == condition.QuestState;
+                case NarrativeConditionKind.TaskState:
+                    return TryGetTaskState(condition.TaskId, out var taskState) && taskState == condition.TaskState;
                 case NarrativeConditionKind.SignalCount:
-                    _questRuntime.Signals.TryGetValue(condition.SignalId, out int count);
+                    _taskRuntime.Signals.TryGetValue(condition.SignalId, out int count);
                     return CompareInt(count, condition.IntValue, condition.Operator);
                 case NarrativeConditionKind.EntityTag:
                     return EvaluateEntityTag(condition);

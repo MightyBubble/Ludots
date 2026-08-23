@@ -10,7 +10,6 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Activities;
-using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Teams;
@@ -30,7 +29,6 @@ namespace Ludots.Core.Persistence
             registry.Register(CreateGameSessionParticipant(engine.GameSession));
             registry.Register(new EmptySaveParticipant("inventory"));
             registry.Register(CreateMapSessionsParticipant(engine.MapSessions));
-            registry.Register(CreateQuestParticipant(engine.GetService(CoreServiceKeys.QuestRuntimeService)));
             registry.Register(CreateActivityParticipant(engine.GetService(CoreServiceKeys.ActivityRuntimeService)));
             registry.Register(CreateTaskParticipant(engine.GetService(CoreServiceKeys.TaskRuntimeService)));
             registry.Register(CreateNarrativeParticipant(engine.GetService(CoreServiceKeys.NarrativeDirector)));
@@ -67,11 +65,6 @@ namespace Ludots.Core.Persistence
         public static ISaveParticipant CreateNarrativeParticipant(NarrativeDirector director)
         {
             return new NarrativeSaveParticipant(director);
-        }
-
-        public static ISaveParticipant CreateQuestParticipant(QuestRuntimeService runtime)
-        {
-            return new QuestSaveParticipant(runtime);
         }
 
         public static ISaveParticipant CreateActivityParticipant(ActivityRuntimeService runtime)
@@ -529,55 +522,6 @@ namespace Ludots.Core.Persistence
                     bindings,
                     ReadNarrativeDialogue(root["activeDialogue"]),
                     ReadNarrativeCinematic(root["activeCinematic"])));
-            }
-        }
-
-        private sealed class QuestSaveParticipant : ISaveParticipant
-        {
-            private readonly QuestRuntimeService _runtime;
-
-            public QuestSaveParticipant(QuestRuntimeService runtime)
-            {
-                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            }
-
-            public string DomainKey => "quests";
-
-            public JsonNode CaptureState()
-            {
-                QuestRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
-                var signals = new JsonObject();
-                foreach (KeyValuePair<string, int> pair in snapshot.Signals)
-                {
-                    signals[pair.Key] = pair.Value;
-                }
-
-                return new JsonObject
-                {
-                    ["signals"] = signals
-                };
-            }
-
-            public void RestoreState(JsonNode state)
-            {
-                if (state == null) throw new ArgumentNullException(nameof(state));
-
-                JsonObject root = state.AsObject();
-                var signals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                JsonObject signalObject = RequireObject(root["signals"], "signals");
-                foreach (KeyValuePair<string, JsonNode?> pair in signalObject)
-                {
-                    signals[pair.Key] = RequireIntValue(pair.Value, $"signals.{pair.Key}");
-                }
-
-                try
-                {
-                    _runtime.RestoreSnapshot(new QuestRuntimeSnapshot(signals));
-                }
-                catch (InvalidOperationException ex)
-                {
-                    throw new SaveContextException($"Quest save state is invalid: {ex.Message}");
-                }
             }
         }
 
