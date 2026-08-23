@@ -110,6 +110,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly FacingDirection[] _relationFacingOriginalValues;
     private readonly bool[] _relationAuthorityPendingAttached;
     private readonly bool[] _relationAuthorityPendingHandback;
+    private readonly byte[] _relationNavMembershipOps;
+    private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[] _relationNavAgentValues;
     private readonly int[] _relationParentRingTotal;
     private readonly ushort[] _relationParentRingSlotsTaken;
     private readonly Ludots.Core.Movement.PoseAuthorityArbiter? _poseAuthorityArbiter;
@@ -249,6 +251,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationFacingOriginalValues = new FacingDirection[attributeEntityCapacity];
         _relationAuthorityPendingAttached = new bool[attributeEntityCapacity];
         _relationAuthorityPendingHandback = new bool[attributeEntityCapacity];
+        _relationNavMembershipOps = new byte[attributeEntityCapacity];
+        _relationNavAgentValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[attributeEntityCapacity];
         _relationParentRingTotal = new int[relationParentCapacity];
         _relationParentRingSlotsTaken = new ushort[relationParentCapacity];
         _poseAuthorityArbiter = poseAuthorityArbiter;
@@ -376,6 +380,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.ParentPositionMissingError}: parent={parent.Id}.");
         }
 
+        StageNavMembershipSuspend(childIndex, subject);
         StageAttachedAuthorityGrant(childIndex, subject);
 
         Entity currentParent = _relationChildValues[childIndex].Parent;
@@ -404,8 +409,12 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationAttachedStaged[childIndex] = true;
         _relationAttachedValues[childIndex] = localPose;
 
-        float parentFacing = _world.Has<FacingDirection>(parent) ? _world.Get<FacingDirection>(parent).AngleRad : 0f;
-        float ownFacing = _world.Has<FacingDirection>(subject) ? _world.Get<FacingDirection>(subject).AngleRad : 0f;
+        TryReadRelationFacing(parent, out float parentFacing);
+        bool subjectHasFacing = TryReadRelationFacing(subject, out float subjectFacing);
+        float ownFacing = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.ResolveOwnFacingRad(
+            subjectHasFacing,
+            subjectFacing,
+            parentFacing);
         Fix64Vec2 worldPosition = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.ComposeWorldPosition(
             in parentPosition.Value,
             parentFacing,
@@ -504,6 +513,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.TargetInvalidError}: subject={subject.Id}, parent={parent.Id}, reason=perimeter-requires-live-parent.");
         }
 
+        StageNavMembershipRestore(childIndex, subject);
         StageDetachedAuthorityHandback(childIndex, subject);
 
         // 同事务 attach→detach：attach 阶段 stage 过的初始位姿写不再落地
@@ -568,12 +578,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         if (!_world.Has<PoseAuthority>(subject))
         {
-            if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject))
-            {
-                throw new InvalidOperationException(
-                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.AuthorityConflictError}: subject={subject.Id}, reason=nav-agent-without-movement-participation.");
-            }
-
             return;
         }
 
@@ -2036,6 +2040,48 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _structuralCommands.Add(subject, _relationPreviousPositionValues[i]);
             }
         }
+
+        ApplyStagedNavMembership();
+    }
+
+    /// <summary>挂接链唯一 mass nav 约定的提交落地：挂起摘三组件存快照，恢复回放 Agent 标记（旧 Index 不复用，绑定系统按已提交位姿重播种）。</summary>
+    private void ApplyStagedNavMembership()
+    {
+        for (int i = 0; i < _relationChildCount; i++)
+        {
+            byte navOp = _relationNavMembershipOps[i];
+            if (navOp == NavMembershipNone)
+            {
+                continue;
+            }
+
+            Entity subject = _relationChildEntities[i];
+            if (navOp == NavMembershipSuspend)
+            {
+                _structuralCommands.Add(subject, new Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership
+                {
+                    Agent = _relationNavAgentValues[i],
+                });
+                if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject))
+                {
+                    _structuralCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject);
+                }
+
+                if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject))
+                {
+                    _structuralCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject);
+                }
+
+                _structuralCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject);
+            }
+            else
+            {
+                _structuralCommands.Add(
+                    subject,
+                    _world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject).Agent);
+                _structuralCommands.Remove<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject);
+            }
+        }
     }
 
     private unsafe void PrepareListenerValues()
@@ -2523,7 +2569,51 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationFacingWrite[index] = false;
         _relationAuthorityPendingAttached[index] = false;
         _relationAuthorityPendingHandback[index] = false;
+        _relationNavMembershipOps[index] = NavMembershipNone;
         return index;
+    }
+
+    private const byte NavMembershipNone = 0;
+    private const byte NavMembershipSuspend = 1;
+    private const byte NavMembershipRestore = 2;
+
+    /// <summary>
+    /// 挂接链唯一 mass nav 约定的事务 staged 形态：attach stage 挂起成员身份、detach stage 恢复，
+    /// 同事务正反抵消回 None（净效果无成员变化）。提交期经 _structuralCommands 落地。
+    /// </summary>
+    private void StageNavMembershipSuspend(int childIndex, Entity subject)
+    {
+        if (_relationNavMembershipOps[childIndex] == NavMembershipRestore)
+        {
+            _relationNavMembershipOps[childIndex] = NavMembershipNone;
+            return;
+        }
+
+        if (_relationNavMembershipOps[childIndex] != NavMembershipNone ||
+            !_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject))
+        {
+            return;
+        }
+
+        _relationNavAgentValues[childIndex] = _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject);
+        _relationNavMembershipOps[childIndex] = NavMembershipSuspend;
+    }
+
+    private void StageNavMembershipRestore(int childIndex, Entity subject)
+    {
+        if (_relationNavMembershipOps[childIndex] == NavMembershipSuspend)
+        {
+            _relationNavMembershipOps[childIndex] = NavMembershipNone;
+            return;
+        }
+
+        if (_relationNavMembershipOps[childIndex] != NavMembershipNone ||
+            !_world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject))
+        {
+            return;
+        }
+
+        _relationNavMembershipOps[childIndex] = NavMembershipRestore;
     }
 
     private void CaptureRelationSnapSource(int index, Entity source)
@@ -2556,6 +2646,29 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
 
         position = default;
+        return false;
+    }
+
+    /// <summary>
+    /// 关系 staged 视图的朝向读取：同事务内 relation op 已 stage 的 FacingDirection 写优先，
+    /// 否则回退世界态。与 <see cref="TryReadRelationWorldPosition"/> 同一纪律——
+    /// 同事务"先改朝向再挂接"的组合必须读到 staged 朝向，不得读陈旧世界态。
+    /// </summary>
+    private bool TryReadRelationFacing(Entity entity, out float facingRad)
+    {
+        int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
+        if (index >= 0 && _relationFacingWrite[index])
+        {
+            facingRad = _relationFacingValues[index].AngleRad;
+            return true;
+        }
+        if (_world.Has<FacingDirection>(entity))
+        {
+            facingRad = _world.Get<FacingDirection>(entity).AngleRad;
+            return true;
+        }
+
+        facingRad = 0f;
         return false;
     }
 

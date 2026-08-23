@@ -18,7 +18,7 @@ namespace Ludots.Tests.GAS.Production
     /// <summary>
     /// Entity attachment capability 端到端验收（headless 全引擎 + AttachmentCapabilityMod）：
     /// 多层炮塔坦克（底盘 Nav 写权独立移动、炮塔独立朝向、炮管孙层深度序）、
-    /// 静态聚落（parent-moved 门）、GAS Attach/Detach 效果驱动骑乘与周界散布、写权授予/归还。
+    /// 静态聚落（恒重算幂等）、GAS Attach/Detach 效果驱动骑乘与周界散布、写权授予/归还。
     /// 产出 MUD 风格战报 + trace + path 工件到 artifacts/acceptance/entity-attachment/。
     /// </summary>
     [NonParallelizable]
@@ -89,17 +89,18 @@ namespace Ludots.Tests.GAS.Production
                     "底盘持有 Nav 写权独立移动");
             });
 
-            // ── 静态父样例：parent-moved 门 ──
+            // ── 静态父样例：恒重算幂等（无 parent-moved 门）──
             for (int i = 0; i < 3; i++)
             {
                 engine.Tick(DeltaTime);
             }
-            Log($"[静态父门] 全场 3 tick 无移动：跳过={sink.LastGateSkippedCount}（附楼+塔楼 + 未移动底盘上的炮塔）, 应用={sink.LastAppliedCount}");
-            Assert.That(sink.LastGateSkippedCount, Is.EqualTo(3), "静态父位置依赖子树整树跳过（炮管朝向依赖不进门）");
+            Log($"[静态父幂等] 全场 3 tick 无移动：末 tick 重派生={sink.LastAppliedCount}（附楼+塔楼+炮塔+炮管），位置不变");
+            Assert.That(sink.LastAppliedCount, Is.EqualTo(4), "恒重算：静态父子树每步重派生且幂等");
 
             // ── 底盘移动（Nav 写权持有者的位姿写），炮塔跟随 + 独立瞄准 ──
             // 底盘朝向 +X 移动 2000cm；炮塔保持独立朝向（瞄准 -Y）。
-            // 位姿写在 InputCollection 组（步内、PostMovement 之前），与真实 nav 写者同位次。
+            // 位姿写在 InputCollection 组（步内、sink 之前）；sink 后置写者（nav 求解器/订单/位移）
+            // 的时序由 AttachmentPositionSyncSystemTests.PostSinkWriterTiming 用例覆盖。
             var chassisPoseScript = new ScriptedChassisPoseSystem(engine.World, chassis);
             engine.RegisterSystem(chassisPoseScript, SystemGroup.InputCollection);
             engine.World.Get<FacingDirection>(turret).AngleRad = (float)(-Math.PI / 2);
@@ -210,8 +211,9 @@ namespace Ludots.Tests.GAS.Production
         }
 
         /// <summary>
-        /// 测试扮演底盘的 Nav 写者：在 InputCollection（PostMovement 之前）按脚本写 Current 位姿，
-        /// 与真实 nav 写者同位次——SavePrevious 在步首已留旧值，parent-moved 门据此识别"父移动了"。
+        /// 测试扮演底盘的 Nav 写者：在 InputCollection（sink 之前）按脚本写 Current 位姿。
+        /// 真实引擎的 nav 写者在 sink 之后（PostMovement 后段求解器）——该时序由
+        /// AttachmentPositionSyncSystemTests.PostSinkWriterTiming 用例覆盖。
         /// </summary>
         private sealed class ScriptedChassisPoseSystem : Arch.System.BaseSystem<World, float>
         {
@@ -282,9 +284,8 @@ namespace Ludots.Tests.GAS.Production
         }
 
         private const string MermaidPath = @"flowchart TD
-    A[地图装载: 模板 children 预置组合] --> B{静态父?}
-    B -- 是 --> C[parent-moved 门: 整树跳过]
-    B -- 否 --> D[sink: 父∘局部 深度序派生]
+    A[地图装载: 模板 children 预置组合] --> D[sink: 父∘局部 深度序恒重算]
+    D --> D2[静态父: 重派生幂等 位置不变]
     D --> E[底盘 Nav 写权独立移动]
     E --> F[炮塔零偏移锚定 + 独立朝向]
     F --> G[炮管随炮塔朝向前伸 孙层]

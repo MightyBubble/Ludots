@@ -311,18 +311,43 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Attach_NavAgentWithoutParticipation_FailsFastInsteadOfDoubleWriting()
+        public void Attach_NavMember_SuspendsMembership_DetachRestores()
         {
+            // 挂接链唯一 mass nav 约定：子实体是 nav 成员时，attach 挂起成员身份
+            // （求解器槽位由绑定系统回收），detach 回放 Agent 标记由绑定系统重播种。
             using World world = World.Create();
             Entity parent = world.Create(WorldPositionCm.FromCm(0, 0));
             Entity child = world.Create(
                 WorldPositionCm.FromCm(0, 0),
-                new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex { Value = 0 });
+                new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent { ProfileId = 3 },
+                new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex { Value = 7 },
+                new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile { ProfileId = 3 });
 
-            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-                AttachmentOps.Attach(world, new PoseAuthorityArbiter(), child, parent, OffsetPose(0, 0)))!;
+            AttachmentOps.Attach(world, new PoseAuthorityArbiter(), child, parent, OffsetPose(0, 0));
 
-            Assert.That(error.Message, Does.Contain("nav-agent-without-movement-participation"));
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child), Is.False,
+                    "挂接链唯一 mass nav：子实体成员身份摘除");
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child), Is.False);
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(child), Is.False);
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child), Is.True);
+                Assert.That(world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child).Agent.ProfileId,
+                    Is.EqualTo(3));
+            });
+
+            AttachmentOps.Detach(world, new PoseAuthorityArbiter(), child, DetachPlacement.KeepWorldPose, 0);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child), Is.True,
+                    "解除恢复成员身份");
+                Assert.That(world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child).ProfileId,
+                    Is.EqualTo(3));
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child), Is.False);
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child), Is.False,
+                    "旧 Index 不复用，由绑定系统按已提交位姿重播种");
+            });
         }
 
         [Test]

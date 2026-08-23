@@ -14,9 +14,11 @@ namespace Ludots.Core.Gameplay.Attachment
     /// <summary>
     /// attachment 位置同步 sink：父位姿 ∘ 局部位姿 → 子实体 WorldPositionCm + Previous（刚性零插值）。
     /// 运行在 PostMovement 组、WorldToGridSyncSystem 之前——父实体位姿已落定、网格派生链在其后。
-    /// 深度序（父先子后）保证多层结构（底盘→炮塔→炮管）一步内一致；parent-moved 门跳过
-    /// 未移动父的整棵位置依赖子树（静态父样例零重算）；0 alloc（全部缓冲预分配复用）。
+    /// 深度序（父先子后）保证多层结构（底盘→炮塔→炮管）一步内一致；0 alloc（全部缓冲预分配复用）。
     /// 写权合同：sink 只写 PoseAuthority==Attached 或无 PoseAuthority 的子实体。
+    /// 恒重算（无 parent-moved 门）：位姿写者大量存在于本系统之后（PostMovement 后段的 nav 求解器、
+    /// AbilityActivation 的订单移动、EffectProcessing 的位移/投射物），Previous 比对在 sink 时点
+    /// 恒为"未移动"，门会让位置依赖子冻结；compose 只是几次 Fix64 运算，恒重算不构成热点。
     /// </summary>
     public sealed class AttachmentPositionSyncSystem : BaseSystem<World, float>
     {
@@ -42,9 +44,6 @@ namespace Ludots.Core.Gameplay.Attachment
         /// <summary>上一 Update 处理的子实体数（headless 验收日志用）。</summary>
         public int LastAppliedCount { get; private set; }
 
-        /// <summary>上一 Update 被 parent-moved 门跳过的子实体数。</summary>
-        public int LastGateSkippedCount { get; private set; }
-
         /// <summary>上一 Update 因父死亡被清理的子实体数。</summary>
         public int LastOrphanCleanupCount { get; private set; }
 
@@ -54,7 +53,6 @@ namespace Ludots.Core.Gameplay.Attachment
         public override void Update(in float dt)
         {
             LastAppliedCount = 0;
-            LastGateSkippedCount = 0;
             LastOrphanCleanupCount = 0;
             LastMaxDepth = 0;
 
@@ -137,17 +135,11 @@ namespace Ludots.Core.Gameplay.Attachment
             }
 
             ref readonly WorldPositionCm parentPosition = ref World.Get<WorldPositionCm>(parent);
-            bool parentMoved = World.Has<PreviousWorldPositionCm>(parent)
-                ? parentPosition.Value != World.Get<PreviousWorldPositionCm>(parent).Value
-                : true;
-            if (!parentMoved && !AttachedPoseMath.DependsOnFacing(in localPose))
-            {
-                LastGateSkippedCount++;
-                return;
-            }
-
             float parentFacing = World.Has<FacingDirection>(parent) ? World.Get<FacingDirection>(parent).AngleRad : 0f;
-            float ownFacing = World.Has<FacingDirection>(child) ? World.Get<FacingDirection>(child).AngleRad : 0f;
+            float ownFacing = AttachedPoseMath.ResolveOwnFacingRad(
+                World.Has<FacingDirection>(child),
+                World.Has<FacingDirection>(child) ? World.Get<FacingDirection>(child).AngleRad : 0f,
+                parentFacing);
             Fix64Vec2 worldPosition = AttachedPoseMath.ComposeWorldPosition(
                 in parentPosition.Value,
                 parentFacing,
@@ -206,6 +198,10 @@ namespace Ludots.Core.Gameplay.Attachment
 
                 _poseAuthorityArbiter.RequestAttachedHandback(World, child);
             }
+
+            // 挂接期间挂起的 nav 成员身份随自愈恢复——父死亡是常规玩法事件，
+            // 子实体以独立 nav 成员身份重新出现（绑定系统按已提交位姿重新播种）。
+            Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(World, child);
 
             if (World.Has<AttachedLocalPose>(child))
             {

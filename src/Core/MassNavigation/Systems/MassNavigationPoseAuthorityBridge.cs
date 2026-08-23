@@ -34,6 +34,14 @@ internal sealed class MassNavigationPoseAuthorityBridge : IPoseAuthorityTransiti
                 $"MassNavigation pose-authority bridge received a {from}->{to} transition for agent entity {entity.Id} without an active navigation runtime.");
 
         int agentIndex = world.Get<MassNavigationAgentIndex>(entity).Value;
+        if (from == PoseAuthorityKind.Attached || to == PoseAuthorityKind.Attached)
+        {
+            // 挂接链唯一 mass nav 约定：attach 时成员身份已挂起（无 AgentIndex，上方守卫直接返回）；
+            // 走到这里的 Attached 转移只可能是 detach 归还时成员已先按已提交位姿重播种——
+            // 求解器状态由成员身份 rebuild 维护（挂起回收槽位、恢复重播种），桥接无事可做。
+            return;
+        }
+
         if (from == PoseAuthorityKind.Nav && to == PoseAuthorityKind.Displacement)
         {
             simulation.MassNavigationFlow.MarkAgentDisplaced(agentIndex);
@@ -50,26 +58,6 @@ internal sealed class MassNavigationPoseAuthorityBridge : IPoseAuthorityTransiti
                 agentIndex,
                 worldPosition.Value.X.ToFloat(),
                 worldPosition.Value.Y.ToFloat());
-            simulation.MassNavigationFlow.ClearAgentDisplaced(agentIndex);
-            return;
-        }
-
-        // Attached 与 Displacement 共用 displaced 求解器状态：外部写权持有者驱动
-        // WorldPositionCm（位移窗口每步直写；attachment 由 AttachmentPositionSyncSystem
-        // 从父位姿派生），求解器跳过积分、邻居持续避让、每 entity-sync 节拍回灌。
-        if (from == PoseAuthorityKind.Nav && to == PoseAuthorityKind.Attached)
-        {
-            simulation.MassNavigationFlow.MarkAgentDisplaced(agentIndex);
-            return;
-        }
-
-        if (from == PoseAuthorityKind.Attached && to == PoseAuthorityKind.Nav)
-        {
-            ref WorldPositionCm attachedPosition = ref world.Get<WorldPositionCm>(entity);
-            simulation.MassNavigationFlow.ApplyCommittedWorldPose(
-                agentIndex,
-                attachedPosition.Value.X.ToFloat(),
-                attachedPosition.Value.Y.ToFloat());
             simulation.MassNavigationFlow.ClearAgentDisplaced(agentIndex);
             return;
         }

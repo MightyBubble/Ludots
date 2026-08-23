@@ -325,10 +325,11 @@ namespace Ludots.Core.Gameplay.Spawning
                     .AttachedLocalPoseAuthoring.Parse(
                         child.LocalPose,
                         $"Entity template '{request.TemplateId}' children[{i}] '{child.Template}'");
+                // 新生子实体尚无 FacingDirection，OwnFacing 偏移走回退链（子→父→0）。
                 Fix64Vec2 childPosition = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.ComposeWorldPosition(
                     in parentPosition,
                     parentFacing,
-                    ownFacingRad: 0f,
+                    ownFacingRad: parentFacing,
                     in localPose);
                 float childFacing;
                 byte hasFacing;

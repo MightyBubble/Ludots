@@ -86,3 +86,32 @@
 ### 9.5 map 装载与 runtime spawn 的双路径说明
 
 runtime 模板 spawn：children 经 `RuntimeEntitySpawnQueue` enqueue（票面指定路径）；map 装载：`MapLoader` 非 batch 路径同步递归物化 children（同一 `EntityBuilder` 物化 + 同一位姿组合数学，仅时序不同——map 装载本就是同步 lane）。两路径共享 `AttachedPoseMath` 组合函数，无平行物化管线。
+
+## 10. 审计后修正（对抗性审计 + 约定修正，2026-08-23）
+
+### 10.1 HIGH-1：parent-moved 门删除，sink 恒重算
+
+审计发现（已逐环核实）：`SavePreviousWorldPositionSystem`（SchemaUpdate 步首）先把 Previous=Current 抹平，而真实位姿写者大量存在于 sink 之后（PostMovement 后段的 `MassNavigationSimulationStepSystem`、AbilityActivation 的 `MoveToWorldCmOrderSystem`、EffectProcessing 的位移/投射物）——sink 运行时父的 `Current==Previous` 是常态，Previous 比对门会让位置依赖子（炮塔/骑乘/驻防形态）在真实 nav 驱动父下**永久冻结**，且被两层测试时序差异掩护（harness 把求解器排在 sink 前 + 不跑 SavePrevious；验收用 InputCollection 脚本写者并注释"与真实 nav 写者同位次"——不实）。
+
+修正：门整体删除（`LastGateSkippedCount`/`DependsOnFacing` 一并移除），sink 恒重算——compose 只是几次 Fix64 运算，恒重算不构成热点；静态父重派生幂等。**这是对票面"parent-moved 门（静态父整树跳过）"的显式偏离**，理由：门的推断前提（Previous 比对可识别"未移动"）在引擎真实时序下不成立。回归测试 `PostSinkWriterTiming_PositionDependentChild_StillFollows` 钉住该时序。两个 harness 同步改为引擎真实时序（sink 先于求解器；验收测试注释如实标注 pre-sink 写者与 post-sink 用例的覆盖分工）。
+
+### 10.2 约定修正：挂接链唯一 mass nav——成员身份挂起/恢复取代 displaced 复用
+
+按引擎约定修正（此前实现违反）：**attachment 挂接链上只允许一个 mass nav 成员**（独立移动的根）。原实现保留子实体 nav agent 身份、复用位移窗口的 displaced 求解器状态（跳积分/避让/回灌）——删除：
+
+- `MassNavigationPoseAuthorityBridge` 的 Nav↔Attached 两条转移回退为 main 形态；对 Attached 转移显式 no-op（成员身份 rebuild 已维护求解器状态：挂起回收槽位、恢复按已提交位姿重播种）。
+- nav 域新增 `SuspendedNavMembership` 快照组件与 `MassNavigationMembership.Suspend/Restore` 单点：attach 摘除 `MassNavigationAgent/AgentIndex/AgentProfile` 三组件并存快照；detach / 孤儿自愈回放 Agent 标记（旧 Index 不复用，绑定系统按已提交位姿重播种）。成员数变化由既有 `MassNavigationAuthoredAgentBindingSystem` 感知（rebuild/append）。
+- 事务路径同构：`StageAttach/StageDetach` stage 成员身份挂起/恢复（同事务正反抵消），提交期经 `_structuralCommands` 落地；"nav agent 无 MovementParticipation attach fail-fast"旧合同删除（成员身份挂起后求解器不再是竞争写者，双写前提消失）。
+- `EntityAttachmentTests` 旧钉子测试（fail-fast 合同）改写为新约定合同；`MassNavigationAttachedAuthorityTests` 重写为成员身份合同（attach 后 TotalAgents==1、sink 镜像载具已提交位姿、detach 重播种恢复行军）。
+
+### 10.3 MEDIUM 修复
+
+- M1：`StageAttach` 组合初始位姿的 facing 改走 staged 视图（新增 `TryReadRelationFacing`，与位置同一纪律）——同事务"先改父朝向再挂子"不再用陈旧世界态。
+- M2：OwnFacing 偏移的朝向回退链恢复为迁移前 manifestation 语义（子 facing → 父 facing → 0，单点 `AttachedPoseMath.ResolveOwnFacingRad`，sink/直接路径/事务/spawn children 四处统一）。
+
+### 10.4 验证（修正后）
+
+- `Ludots.Core` 构建 0 错误。
+- GasTests attachment 全集 23/23 通过（含 HIGH-1 回归、成员身份合同、事务回滚）。
+- `MassNavigationAttachedAuthorityTests` 1/1 通过（引擎时序 + 成员身份 + 重播种行军）。
+- ArchitectureTests 见票面评论（基线 4 失败与本票无关）。

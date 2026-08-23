@@ -45,11 +45,13 @@ namespace Ludots.Core.Gameplay.Attachment
             }
         }
 
-        /// <summary>子实体朝向是否随父（决定 sink 是否写 FacingDirection 与 parent-moved 门的适用性）。</summary>
-        public static bool DependsOnFacing(in AttachedLocalPose localPose)
+        /// <summary>
+        /// OwnFacing 偏移的朝向回退链：子实体无 FacingDirection 时回退父朝向（再无则 0），
+        /// 与迁移前 manifestation 的 ResolveOffsetFacing 语义一致。
+        /// </summary>
+        public static float ResolveOwnFacingRad(bool childHasFacing, float childFacingRad, float parentFacingRad)
         {
-            return localPose.OffsetRotation != AttachedOffsetRotation.None ||
-                   localPose.InheritParentFacing != 0;
+            return childHasFacing ? childFacingRad : parentFacingRad;
         }
 
         public static Fix64Vec2 Rotate(in Fix64Vec2 offsetCm, float facingRad)
@@ -117,6 +119,10 @@ namespace Ludots.Core.Gameplay.Attachment
                     $"{ParentPositionMissingError}: parent={parent.Id}.");
             }
 
+            // 挂接链唯一 mass nav 约定：子实体是 nav 成员时挂起成员身份（求解器槽位由绑定系统
+            // 在下一 RuntimeEntityBinding pass 回收），detach / 孤儿自愈时恢复。
+            Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Suspend(world, child);
+
             // 写权授予：持有 PoseAuthority 的子实体必须切到 Attached（无竞争写者化）；
             // 无 PoseAuthority 的子实体（未声明 MovementParticipation）没有其他写者，
             // attachment sink 即其唯一位姿写者，无需授予。
@@ -153,6 +159,7 @@ namespace Ludots.Core.Gameplay.Attachment
             }
 
             HandbackAttachedAuthority(world, arbiter, child);
+            Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
 
             Fix64Vec2 ringOffset = AttachedPoseMath.PerimeterRingOffsetCm(ringSlot, ringSlotCount, perimeterRadiusCm);
             Fix64Vec2 ringPosition = world.Get<WorldPositionCm>(parent).Value + ringOffset;
@@ -217,6 +224,8 @@ namespace Ludots.Core.Gameplay.Attachment
                 arbiter.RequestAttachedHandback(world, child);
             }
 
+            Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
+
             if (placement == DetachPlacement.ParentPerimeterRing)
             {
                 if (!world.Has<WorldPositionCm>(parent))
@@ -267,7 +276,10 @@ namespace Ludots.Core.Gameplay.Attachment
         {
             Fix64Vec2 parentPosition = world.Get<WorldPositionCm>(parent).Value;
             float parentFacing = world.Has<FacingDirection>(parent) ? world.Get<FacingDirection>(parent).AngleRad : 0f;
-            float ownFacing = world.Has<FacingDirection>(child) ? world.Get<FacingDirection>(child).AngleRad : 0f;
+            float ownFacing = AttachedPoseMath.ResolveOwnFacingRad(
+                world.Has<FacingDirection>(child),
+                world.Has<FacingDirection>(child) ? world.Get<FacingDirection>(child).AngleRad : 0f,
+                parentFacing);
             Fix64Vec2 worldPosition = AttachedPoseMath.ComposeWorldPosition(
                 in parentPosition,
                 parentFacing,
@@ -299,20 +311,13 @@ namespace Ludots.Core.Gameplay.Attachment
 
         /// <summary>
         /// 授予 Attached 写权。返回 true 表示实体持有 PoseAuthority 且已处理（授予或本就 Attached）；
-        /// 返回 false 表示实体无 PoseAuthority（无竞争写者）。持有 Displacement/Physics 写权、
-        /// 或是 nav agent 却未声明 MovementParticipation（求解器写它但无写权可仲裁——attach 会双写）时
-        /// fail-fast。
+        /// 返回 false 表示实体无 PoseAuthority（无竞争写者）。持有 Displacement/Physics 写权时
+        /// fail-fast；nav 成员身份已在 attach 前挂起，求解器不再是竞争写者。
         /// </summary>
         private static bool TryGrantAttachedAuthority(World world, PoseAuthorityArbiter? arbiter, Entity child)
         {
             if (!world.Has<PoseAuthority>(child))
             {
-                if (world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child))
-                {
-                    throw new InvalidOperationException(
-                        $"{AuthorityConflictError}: child={child.Id}, reason=nav-agent-without-movement-participation.");
-                }
-
                 return false;
             }
 

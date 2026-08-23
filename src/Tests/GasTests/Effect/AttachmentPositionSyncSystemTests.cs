@@ -12,8 +12,8 @@ namespace Ludots.Tests.GAS
 {
     /// <summary>
     /// AttachmentPositionSyncSystem 合同：父∘局部位姿派生（刚性零插值）、深度序
-    /// （父先子后一步一致）、parent-moved 门（静态父位置依赖子树跳过、朝向依赖子除外）、
-    /// 独立朝向保持、孤儿自愈。
+    /// （父先子后一步一致）、恒重算（无 parent-moved 门——位姿写者大量存在于 sink 之后，
+    /// Previous 比对会冻结位置依赖子）、独立朝向保持、孤儿自愈。
     /// </summary>
     [TestFixture]
     public sealed class AttachmentPositionSyncSystemTests
@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParentMovedGate_StaticPositionDependentChildren_SkipWholeSubtree()
+        public void StaticParent_PositionDependentChildren_RecomputeIdempotently()
         {
             using World world = World.Create();
             Entity hall = world.Create(
@@ -78,22 +78,57 @@ namespace Ludots.Tests.GAS
             AttachmentOps.Attach(world, null, annex, hall, Pose(700, 0));
             AttachmentOps.Attach(world, null, tower, hall, Pose(-350, 600));
             using var sink = new AttachmentPositionSyncSystem(world);
-            WorldPositionCm annexBefore = world.Get<WorldPositionCm>(annex);
-            WorldPositionCm towerBefore = world.Get<WorldPositionCm>(tower);
 
             sink.Update(1f / 60f);
 
             Assert.Multiple(() =>
             {
-                Assert.That(sink.LastGateSkippedCount, Is.EqualTo(2), "静态父 + 无朝向依赖 → 整树跳过");
-                Assert.That(sink.LastAppliedCount, Is.Zero);
-                Assert.That(world.Get<WorldPositionCm>(annex).Value, Is.EqualTo(annexBefore.Value));
-                Assert.That(world.Get<WorldPositionCm>(tower).Value, Is.EqualTo(towerBefore.Value));
+                Assert.That(sink.LastAppliedCount, Is.EqualTo(2), "恒重算：静态父的位置依赖子每步都重派生");
+                Assert.That(world.Get<WorldPositionCm>(annex).Value, Is.EqualTo(Fix64Vec2.FromInt(5700, 5000)),
+                    "静态父重派生幂等：位置不变");
+                Assert.That(world.Get<WorldPositionCm>(tower).Value, Is.EqualTo(Fix64Vec2.FromInt(4650, 5600)));
             });
         }
 
         [Test]
-        public void ParentMovedGate_FacingDependentChild_RecomputesOnRotationInPlace()
+        public void PostSinkWriterTiming_PositionDependentChild_StillFollows()
+        {
+            // HIGH-1 回归：位姿写者在 sink 之后运行（PostMovement 后段 nav 求解器、
+            // AbilityActivation 订单、EffectProcessing 位移）。引擎每步首 SavePrevious 把
+            // Previous=Current 抹平后 sink 运行，父的 Current==Previous 是常态而非"未移动"。
+            // 旧 Previous 比对门在该时序下会让位置依赖子永久冻结在挂接位姿。
+            using World world = World.Create();
+            Entity parent = world.Create(
+                WorldPositionCm.FromCm(1000, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(1000, 0) });
+            Entity child = world.Create(
+                WorldPositionCm.FromCm(1200, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(1200, 0) });
+            AttachmentOps.Attach(world, null, child, parent, Pose(200, 0));
+            using var sink = new AttachmentPositionSyncSystem(world);
+
+            // 步 1：sink 派生（父 1000,0 → 子 1200,0）。
+            sink.Update(1f / 60f);
+            Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(1200, 0)));
+
+            // 步 2 模拟引擎时序：后置写者把父推到 1800，下一 步首 SavePrevious 抹平 Previous=1800，
+            // sink 运行时 Current==Previous——子必须仍跟随到 2000（旧门在此冻结）。
+            world.Get<WorldPositionCm>(parent) = WorldPositionCm.FromCm(1800, 0);
+            world.Get<PreviousWorldPositionCm>(parent) = new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(1800, 0) };
+            sink.Update(1f / 60f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(sink.LastAppliedCount, Is.EqualTo(1), "Current==Previous 不得跳过（后置写者时序）");
+                Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(2000, 0)),
+                    "子跟随父的已提交位姿");
+                Assert.That(world.Get<PreviousWorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(2000, 0)),
+                    "刚性零插值");
+            });
+        }
+
+        [Test]
+        public void RotationInPlace_FacingDependentChild_Recomputed()
         {
             using World world = World.Create();
             Entity parent = world.Create(
@@ -104,13 +139,13 @@ namespace Ludots.Tests.GAS
             AttachmentOps.Attach(world, null, child, parent, Pose(220, 0, rotation: AttachedOffsetRotation.ParentFacing));
             using var sink = new AttachmentPositionSyncSystem(world);
 
-            // 原地旋转：位置未动（Current==Previous），但朝向依赖子树必须重算。
+            // 原地旋转：位置未动（Current==Previous），朝向依赖偏移仍重算。
             world.Get<FacingDirection>(parent).AngleRad = (float)(Math.PI / 2);
             sink.Update(1f / 60f);
 
             Assert.Multiple(() =>
             {
-                Assert.That(sink.LastGateSkippedCount, Is.Zero, "朝向依赖子不进 parent-moved 门");
+                Assert.That(sink.LastAppliedCount, Is.EqualTo(1));
                 Assert.That(world.Get<WorldPositionCm>(child).Value.X.ToFloat(), Is.EqualTo(1000f).Within(2f));
                 Assert.That(world.Get<WorldPositionCm>(child).Value.Y.ToFloat(), Is.EqualTo(1220f).Within(2f));
             });
