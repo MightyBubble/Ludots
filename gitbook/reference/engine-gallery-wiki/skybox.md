@@ -2,7 +2,9 @@
 
 `RaylibSkyboxRenderer` 用天顶/地平线/地面雾三色渐变加太阳圆盘画出整个天空，七根柱子绕成一圈，太阳方位随时间慢慢绕行。
 
-<img src="artifacts/acceptance/engine_gallery_all/skybox.png" alt="skybox 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_skybox/poster.png" src="artifacts/evidence/engine_raylib_skybox/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_skybox/play.mp4`。
+</video>
 
 ## 作者写法
 

@@ -12,6 +12,7 @@
 4. **注册表**：`showcase.registry.json` 加条目：`category: "engine"`、`binding: "engine_gallery"`、`preset`、`acceptanceTest: "RaylibEngineGalleryTests"`、`artifactDir`、`screenshot`、`docsPath` 指回本文档族；随后跑 `python scripts/build-acceptance-index.py` 同步 `scripts/acceptance/acceptance.index.json`（CI 用 `--check` 校验同步，忘跑即红）。
 5. **验收证据**：本地跑一次 preset 落截图 + stats（命令见下）；CI 的 `ci-acceptance.yml` 会按索引逐条 `--record` 重跑并门禁。
 6. **Wiki 页**：`gitbook/reference/engine-gallery-wiki/` 下新增与场景 id 同名的 md 页，README 总目录照既有行格式加一行（人话标题 — 场景页链接 — 一句话简介，参考 vegetation_cutout 条目）；`scripts/build-site.py` 解析 README 生成侧栏导航，条目缺页**硬失败**、孤儿页告警。
+7. **录像**：`python scripts/record-engine-galleries.py`（或 `--scene <id>` 单场景）重录页内播放的 `play.mp4` + `poster.png` 到 `artifacts/evidence/engine_raylib_<id>/`——真实运行采样拼制，录像不是可选项，Wiki 页正文嵌的就是它。
 
 本地验收命令（产物即证据，preset 名替换为新场景）：
 

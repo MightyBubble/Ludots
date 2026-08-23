@@ -2,7 +2,9 @@
 
 `RaylibSkyEnvironment` 把六停靠点的渐变烘焙成天空纹理，相位转一整圈：夜→晨光→白昼→黄昏→夜。日光、环境光、阴影跟着相位一起走。
 
-<img src="artifacts/acceptance/engine_gallery_all/sky_daynight.png" alt="sky_daynight 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_sky_daynight/poster.png" src="artifacts/evidence/engine_raylib_sky_daynight/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_sky_daynight/play.mp4`。
+</video>
 
 ## 作者写法
 

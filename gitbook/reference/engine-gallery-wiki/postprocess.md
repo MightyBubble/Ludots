@@ -2,7 +2,9 @@
 
 世界先画进 RenderTexture，再由 `RaylibPostProcessRenderer` 调色出场：曝光、对比、饱和、暗角四根推子以不同频率正弦摆动，HUD 实时报数。
 
-<img src="artifacts/acceptance/engine_gallery_all/postprocess.png" alt="postprocess 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_postprocess/poster.png" src="artifacts/evidence/engine_raylib_postprocess/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_postprocess/play.mp4`。
+</video>
 
 ## 作者写法
 

@@ -2,7 +2,9 @@
 
 十二具 mannequin 围成一圈，每具的行走相位各不相同——`RaylibSkinnedPlayback` 逐实例解算 clip 帧相位并上传骨骼姿态，是非合批 GPU 蒙皮路径的最小完整演示。
 
-<img src="artifacts/acceptance/engine_gallery_all/gpu_skinning.png" alt="gpu_skinning 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_gpu_skinning/poster.png" src="artifacts/evidence/engine_raylib_gpu_skinning/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_gpu_skinning/play.mp4`。
+</video>
 
 ## 作者写法
 

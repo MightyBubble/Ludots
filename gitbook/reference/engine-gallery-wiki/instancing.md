@@ -2,7 +2,9 @@
 
 300×100 的棋盘格立方/球阵共 30,000 个实例，正弦波浪起伏——`RaylibBenchmarkRenderer` 用纯数据驱动 ISM 合批，HUD 实时报可见数、分桶数与 CPU 绘制耗时。
 
-<img src="artifacts/acceptance/engine_gallery_all/instancing.png" alt="instancing 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_instancing/poster.png" src="artifacts/evidence/engine_raylib_instancing/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_instancing/play.mp4`。
+</video>
 
 ## 作者写法
 

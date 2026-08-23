@@ -2,7 +2,9 @@
 
 4,096 具 mannequin 排成 14 环行军——CPU 每帧只重算环位/朝向并打包动画相位，骨骼蒙皮全部走 `skinning_instanced` 合批车道，不存在 CPU 变换假蒙皮回退。
 
-<img src="artifacts/acceptance/engine_raylib_crowd_anim/screen.png" alt="crowd_anim 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_crowd_anim/poster.png" src="artifacts/evidence/engine_raylib_crowd_anim/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_crowd_anim/play.mp4`。
+</video>
 
 ## 作者写法
 

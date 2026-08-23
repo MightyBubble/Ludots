@@ -2,7 +2,9 @@
 
 二十一颗球按「粗糙度 × 金属度」排成梯度阵，太阳绕着走，金属带映出天空——GGX 直射光、split-sum 天空 IBL、深度阴影一次看全。
 
-<img src="artifacts/acceptance/engine_raylib_lighting/screen.png" alt="lighting 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_lighting/poster.png" src="artifacts/evidence/engine_raylib_lighting/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_lighting/play.mp4`。
+</video>
 
 ## 作者写法
 

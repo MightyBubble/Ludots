@@ -2,7 +2,9 @@
 
 环形覆盖直接画在地面上，样条带沿路径铺开——`GroundOverlayBuffer` 与 `SplineRibbonBuffer` 手工填充，绘制统一走 `RaylibWorldOverlayRenderer`，宿主与画廊共用同一实现。
 
-<img src="artifacts/acceptance/engine_gallery_all/ribbon_overlay.png" alt="ribbon_overlay 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_ribbon_overlay/poster.png" src="artifacts/evidence/engine_raylib_ribbon_overlay/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_ribbon_overlay/play.mp4`。
+</video>
 
 ## 作者写法
 

@@ -55,6 +55,7 @@ PRD_README = GITBOOK_DIR / "reference" / "mod-editor-prd" / "README.md"
 PRD_TODO_DIR = GITBOOK_DIR / "reference" / "mod-editor-prd" / "todo"
 ACCEPTANCE_DIR = REPO_ROOT / "artifacts" / "acceptance"
 GRAPH_OP_EVIDENCE_GLOB = "capability_standard_graph_op_*"
+ENGINE_EVIDENCE_GLOB = "engine_raylib_*"
 EVIDENCE_DIR = REPO_ROOT / "artifacts" / "evidence"
 REGISTRY_JSON = REPO_ROOT / "showcase.registry.json"
 
@@ -399,19 +400,19 @@ def copy_tree(src: Path, dst: Path, label: str) -> int:
 
 
 def copy_graph_op_media(src: Path, dst: Path) -> int:
-    """只拷贝 GraphNodeOp 画廊的 play.mp4 / poster.png，供 Pages 与 wiki 嵌入。"""
+    """只拷贝画廊录像的 play.mp4 / poster.png，供 Pages 与 wiki 嵌入。"""
     if not src.is_dir():
-        warn("artifacts/evidence/ 不存在 → GraphNodeOp 画廊媒体为空")
+        warn("artifacts/evidence/ 不存在 → 画廊录像媒体为空")
         return 0
 
     count = 0
-    for child in sorted(src.glob(GRAPH_OP_EVIDENCE_GLOB)):
-        if not child.is_dir():
-            continue
+    globs = (GRAPH_OP_EVIDENCE_GLOB, ENGINE_EVIDENCE_GLOB)
+    children = sorted(p for g in globs for p in src.glob(g) if p.is_dir())
+    for child in children:
         for name in GRAPH_OP_MEDIA_NAMES:
             file = child / name
             if not file.is_file():
-                warn(f"GraphNodeOp 媒体缺失：{file.relative_to(REPO_ROOT)}")
+                warn(f"画廊录像媒体缺失：{file.relative_to(REPO_ROOT)}")
                 continue
             target = dst / child.name / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -517,7 +518,7 @@ def build(out_dir: Path) -> int:
     print("-- 拷贝 artifacts/acceptance/ → _site/artifacts/acceptance/")
     n_acc = copy_tree(ACCEPTANCE_DIR, out_dir / "artifacts" / "acceptance", "artifacts/acceptance/")
 
-    print("-- 拷贝 GraphNodeOp 画廊 play.mp4/poster.png → _site/artifacts/evidence/")
+    print("-- 拷贝画廊录像 play.mp4/poster.png（graph 节点 + 引擎场景）→ _site/artifacts/evidence/")
     n_graph_media = copy_graph_op_media(EVIDENCE_DIR, out_dir / "artifacts" / "evidence")
 
     if REGISTRY_JSON.exists():
@@ -569,7 +570,7 @@ def build(out_dir: Path) -> int:
     print(f"  docs/ 文件          : {n_docs}")
     print(f"  gitbook/ 文件       : {n_gitbook}")
     print(f"  acceptance/ 文件    : {n_acc}")
-    print(f"  GraphOp 媒体文件    : {n_graph_media}")
+    print(f"  画廊录像媒体文件    : {n_graph_media}")
     print(f"  文档目录树 md 条目  : {md_count}")
     print('  PRD 手册篇目        : {}/{} 已写（{} 卷）'.format(prd_nav['written'], prd_nav['total'], len(prd_nav['volumes'])))
     print('  Graph 节点 Wiki op  : {}（{} 家族）'.format(graph_op_nav['total'], len(graph_op_nav['families'])))

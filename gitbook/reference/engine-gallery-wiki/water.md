@@ -2,7 +2,9 @@
 
 海床在反射、折射两个 RenderTexture 里各渲染一次，主画面 `water.fs` 采样两张 RT 加 DUDV 扭曲——近处水纹晃动，远处反射天空。
 
-<img src="artifacts/acceptance/engine_gallery_all/water.png" alt="water 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_water/poster.png" src="artifacts/evidence/engine_raylib_water/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_water/play.mp4`。
+</video>
 
 ## 作者写法
 

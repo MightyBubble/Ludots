@@ -2,7 +2,9 @@
 
 整片草丛和树都是镂空公告板（billboard），alpha-cutout 材质把贴图透明处打穿；阴影深度 pass 同样按 alpha 打孔——树冠的影子是斑驳的，不是一整块实心矩形。
 
-<img src="artifacts/acceptance/engine_gallery_all/vegetation_cutout.png" alt="vegetation_cutout 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_vegetation_cutout/poster.png" src="artifacts/evidence/engine_raylib_vegetation_cutout/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_vegetation_cutout/play.mp4`。
+</video>
 
 ## 作者写法
 

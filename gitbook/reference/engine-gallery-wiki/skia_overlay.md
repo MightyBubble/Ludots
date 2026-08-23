@@ -2,7 +2,9 @@
 
 3D 场景照常渲染，`RaylibSkiaRenderer` 在上面合成 Skia 画出来的 HUD：标题面板、96 帧帧时柱状图、脉动罗盘——GPU 2D 矢量绘制，不是贴图 UI。
 
-<img src="artifacts/acceptance/engine_gallery_all/skia_overlay.png" alt="skia_overlay 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_skia_overlay/poster.png" src="artifacts/evidence/engine_raylib_skia_overlay/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_skia_overlay/play.mp4`。
+</video>
 
 ## 作者写法
 

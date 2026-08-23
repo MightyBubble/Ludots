@@ -2,7 +2,9 @@
 
 两排立方把材质系统的三个正交轴全部摆上台面：同一网格换贴图/改参数（实例链）、改着色行为（shaderKey 自定义车道）、混合模式差异（不透明/裁切/半透明）。
 
-<img src="artifacts/acceptance/engine_gallery_all/material_binding.png" alt="material_binding 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_material_binding/poster.png" src="artifacts/evidence/engine_raylib_material_binding/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_material_binding/play.mp4`。
+</video>
 
 ## 作者写法
 

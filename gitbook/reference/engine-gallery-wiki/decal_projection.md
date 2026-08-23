@@ -2,7 +2,9 @@
 
 圆环、箭头、靶标三枚贴花贴着起伏的地表移动——不是画在贴图上，而是 `decal_project` 着色器沿世界 Y 把贴花投影到接收面网格上，地形起伏处贴花跟着「垂下来」。
 
-<img src="artifacts/acceptance/engine_gallery_all/decal_projection.png" alt="decal_projection 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_decal_projection/poster.png" src="artifacts/evidence/engine_raylib_decal_projection/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_decal_projection/play.mp4`。
+</video>
 
 ## 作者写法
 

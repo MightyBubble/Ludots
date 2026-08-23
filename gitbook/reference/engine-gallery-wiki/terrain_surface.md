@@ -2,7 +2,9 @@
 
 程序化 chunk 地形按海拔分带着色：沙滩、草地、岩石分层出现，低洼处蓄出湖面。这是 Ludots 地表着色车道的最小完整演示。
 
-<img src="artifacts/acceptance/engine_gallery_all/terrain_surface.png" alt="terrain_surface 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_terrain_surface/poster.png" src="artifacts/evidence/engine_raylib_terrain_surface/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_terrain_surface/play.mp4`。
+</video>
 
 ## 作者写法
 

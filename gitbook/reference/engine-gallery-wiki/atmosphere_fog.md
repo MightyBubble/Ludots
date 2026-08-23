@@ -2,7 +2,9 @@
 
 方碑、圆球、矮台沿视线一排排远去，越远越融进雾色——距离雾的衰减曲线和环境色调对天空的接管一目了然。
 
-<img src="artifacts/acceptance/engine_gallery_all/atmosphere_fog.png" alt="atmosphere_fog 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_atmosphere_fog/poster.png" src="artifacts/evidence/engine_raylib_atmosphere_fog/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_atmosphere_fog/play.mp4`。
+</video>
 
 ## 作者写法
 

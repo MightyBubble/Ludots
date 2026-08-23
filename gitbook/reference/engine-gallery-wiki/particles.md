@@ -2,7 +2,9 @@
 
 三组粒子同时在场：加色火花、逐帧贴图烟雾、拉伸火星拖尾——`ParticleVfxAssetData` 手工构造，走图元渲染器的 VFX 通道驱动 `ParticleSystemRuntime`。
 
-<img src="artifacts/acceptance/engine_gallery_all/particles.png" alt="particles 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_particles/poster.png" src="artifacts/evidence/engine_raylib_particles/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_particles/play.mp4`。
+</video>
 
 ## 作者写法
 

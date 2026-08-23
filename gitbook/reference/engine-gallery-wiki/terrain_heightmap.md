@@ -2,7 +2,9 @@
 
 一整幅 480m 的程序化岛屿高度场按「绝对海拔」上色：水下陆架、海平面、雪线各占一条色带，相机拉到 620m 高俯瞰全岛。
 
-<img src="artifacts/acceptance/engine_gallery_all/terrain_heightmap.png" alt="terrain_heightmap 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_terrain_heightmap/poster.png" src="artifacts/evidence/engine_raylib_terrain_heightmap/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_terrain_heightmap/play.mp4`。
+</video>
 
 ## 作者写法
 

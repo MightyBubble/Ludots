@@ -2,7 +2,9 @@
 
 `RaylibPrimitiveRenderer` 直接模式的最小完整演示：48 个彩色图元随时间波动，坦克/人形原型走 `AnimatorPackedState` 驱动的 locomotion/aim 通道动效——所有「纯数据画东西」的车道都从这条基线出发。
 
-<img src="artifacts/acceptance/engine_gallery_all/primitives.png" alt="primitives 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_primitives/poster.png" src="artifacts/evidence/engine_raylib_primitives/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_primitives/play.mp4`。
+</video>
 
 ## 作者写法
 

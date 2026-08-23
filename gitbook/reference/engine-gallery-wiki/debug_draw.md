@@ -2,7 +2,9 @@
 
 网格线、脉动单位圈、选中盒、由相机推得的视锥线——`DebugDrawCommandBuffer` 手工填充命令，`RaylibDebugDrawRenderer` 一次消费，HUD 报告当帧线/圆/盒数量。
 
-<img src="artifacts/acceptance/engine_gallery_all/debug_draw.png" alt="debug_draw 验收截图" width="880">
+<video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_debug_draw/poster.png" src="artifacts/evidence/engine_raylib_debug_draw/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_debug_draw/play.mp4`。
+</video>
 
 ## 作者写法
 
