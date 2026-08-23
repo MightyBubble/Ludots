@@ -9,7 +9,7 @@ namespace Ludots.Core.Navigation.GraphWorld
     /// Map-scoped loaded chunk set for world-space grid chunks keyed by <see cref="GraphChunkKey"/>.
     /// Supports explicit chunk toggles, contributor-owned chunks, and AOI-style square updates.
     /// </summary>
-    public sealed class WorldGridLoadedChunks : ILoadedChunks, IWorldChunkKeyResolver
+    public sealed class WorldGridLoadedChunks : ILoadedChunkWindowSource, IWorldChunkKeyResolver
     {
         private readonly HashSet<long> _activeChunks;
         private readonly HashSet<long> _directChunks;
@@ -146,6 +146,36 @@ namespace Ludots.Core.Navigation.GraphWorld
             return new WorldGridLoadedChunkContributor(this, key, capacity);
         }
 
+        ILoadedChunkContributor ILoadedChunkWindowSource.AcquireContributor(string key, int capacity)
+        {
+            return AcquireContributor(key, capacity);
+        }
+
+        public void CollectWindowChunkKeys(int centerXcm, int centerYcm, int radiusCm, ICollection<long> destination)
+        {
+            if (destination == null)
+            {
+                throw new ArgumentNullException(nameof(destination));
+            }
+
+            if (radiusCm < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(radiusCm));
+            }
+
+            int minChunkX = ResolveChunkCoordinate((long)centerXcm - radiusCm);
+            int maxChunkX = ResolveChunkCoordinate((long)centerXcm + radiusCm);
+            int minChunkY = ResolveChunkCoordinate((long)centerYcm - radiusCm);
+            int maxChunkY = ResolveChunkCoordinate((long)centerYcm + radiusCm);
+            for (long chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
+            {
+                for (long chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+                {
+                    destination.Add(GraphChunkKey.Pack((int)chunkX, (int)chunkY));
+                }
+            }
+        }
+
         internal void SetContributionLoaded(long chunkKey, bool loaded)
         {
             if (loaded)
@@ -248,7 +278,7 @@ namespace Ludots.Core.Navigation.GraphWorld
         internal int Generation => _generation;
     }
 
-    public sealed class WorldGridLoadedChunkContributor : IDisposable
+    public sealed class WorldGridLoadedChunkContributor : ILoadedChunkContributor
     {
         private readonly WorldGridLoadedChunks _owner;
         private readonly HashSet<long> _activeChunks;

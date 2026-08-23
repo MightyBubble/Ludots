@@ -22,11 +22,19 @@ namespace Ludots.Core.Physics2D.Systems
         private const byte IndexOccupied = 1;
         private const byte IndexTombstone = 2;
 
-        private static readonly QueryDescription SingleQuery = new QueryDescription()
+        private static readonly QueryDescription StructuralSingleQuery = new QueryDescription()
             .WithAll<WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState, RuntimeNavMeshStructuralObstacle>();
 
-        private static readonly QueryDescription CompoundQuery = new QueryDescription()
+        private static readonly QueryDescription AuthoredSingleQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState>()
+            .WithNone<RuntimeNavMeshStructuralObstacle>();
+
+        private static readonly QueryDescription StructuralCompoundQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CompoundObstacle2DState, RuntimeNavMeshStructuralObstacle>();
+
+        private static readonly QueryDescription AuthoredCompoundQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CompoundObstacle2DState>()
+            .WithNone<RuntimeNavMeshStructuralObstacle>();
 
         private readonly GameEngine _engine;
         private readonly ShapeDataStorage2D _shapeStorage;
@@ -96,27 +104,53 @@ namespace Ludots.Core.Physics2D.Systems
             long collectTimeBefore = Stopwatch.GetTimestamp();
             obstacleSnapshot.BeginCapture();
 
-            var singleJob = new CaptureSingleJob
+            var authoredSingleJob = new CaptureSingleJob
             {
                 System = this,
                 Snapshot = obstacleSnapshot,
                 Queue = queue,
-                IncludeNeighbors = bakeConfig.RuntimeIncremental.IncludeNeighborTiles
+                IncludeNeighbors = bakeConfig.RuntimeIncremental.IncludeNeighborTiles,
+                TrackStructuralDirty = false
             };
             World.InlineEntityQuery<CaptureSingleJob, WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState>(
-                in SingleQuery,
-                ref singleJob);
+                in AuthoredSingleQuery,
+                ref authoredSingleJob);
 
-            var compoundJob = new CaptureCompoundJob
+            var structuralSingleJob = new CaptureSingleJob
             {
                 System = this,
                 Snapshot = obstacleSnapshot,
                 Queue = queue,
-                IncludeNeighbors = bakeConfig.RuntimeIncremental.IncludeNeighborTiles
+                IncludeNeighbors = bakeConfig.RuntimeIncremental.IncludeNeighborTiles,
+                TrackStructuralDirty = true
+            };
+            World.InlineEntityQuery<CaptureSingleJob, WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState>(
+                in StructuralSingleQuery,
+                ref structuralSingleJob);
+
+            var authoredCompoundJob = new CaptureCompoundJob
+            {
+                System = this,
+                Snapshot = obstacleSnapshot,
+                Queue = queue,
+                IncludeNeighbors = bakeConfig.RuntimeIncremental.IncludeNeighborTiles,
+                TrackStructuralDirty = false
             };
             World.InlineEntityQuery<CaptureCompoundJob, WorldPositionCm, CompoundObstacle2DState>(
-                in CompoundQuery,
-                ref compoundJob);
+                in AuthoredCompoundQuery,
+                ref authoredCompoundJob);
+
+            var structuralCompoundJob = new CaptureCompoundJob
+            {
+                System = this,
+                Snapshot = obstacleSnapshot,
+                Queue = queue,
+                IncludeNeighbors = bakeConfig.RuntimeIncremental.IncludeNeighborTiles,
+                TrackStructuralDirty = true
+            };
+            World.InlineEntityQuery<CaptureCompoundJob, WorldPositionCm, CompoundObstacle2DState>(
+                in StructuralCompoundQuery,
+                ref structuralCompoundJob);
 
             RemoveMissingTracked(queue, bakeConfig.RuntimeIncremental.IncludeNeighborTiles);
             obstacleSnapshot.EndCaptureAndSort();
@@ -288,11 +322,16 @@ namespace Ludots.Core.Physics2D.Systems
             ref ManifestationObstacleBridge2DState state,
             RuntimeNavObstacleSnapshot snapshot,
             RuntimeIncrementalNavMeshRebuildQueue queue,
-            bool includeNeighbors)
+            bool includeNeighbors,
+            bool trackStructuralDirty)
         {
             if (intent.SinkNavigationObstacle == 0)
             {
-                TrackOrRemove(entity, queue, includeNeighbors);
+                if (trackStructuralDirty)
+                {
+                    TrackOrRemove(entity, queue, includeNeighbors);
+                }
+
                 return;
             }
 
@@ -306,7 +345,10 @@ namespace Ludots.Core.Physics2D.Systems
                 ResolveRotation(entity),
                 intent.NavMinYcm,
                 intent.NavMaxYcm);
-            TrackCurrent(entity, bounds, state.ShapeSignature, state.PoseSignature, queue, includeNeighbors);
+            if (trackStructuralDirty)
+            {
+                TrackCurrent(entity, bounds, state.ShapeSignature, state.PoseSignature, queue, includeNeighbors);
+            }
         }
 
         private void CaptureCompound(
@@ -315,11 +357,16 @@ namespace Ludots.Core.Physics2D.Systems
             ref CompoundObstacle2DState state,
             RuntimeNavObstacleSnapshot snapshot,
             RuntimeIncrementalNavMeshRebuildQueue queue,
-            bool includeNeighbors)
+            bool includeNeighbors,
+            bool trackStructuralDirty)
         {
             if (state.SinkNavigationObstacle == 0)
             {
-                TrackOrRemove(entity, queue, includeNeighbors);
+                if (trackStructuralDirty)
+                {
+                    TrackOrRemove(entity, queue, includeNeighbors);
+                }
+
                 return;
             }
 
@@ -344,11 +391,18 @@ namespace Ludots.Core.Physics2D.Systems
 
             if (!hasBounds)
             {
-                TrackOrRemove(entity, queue, includeNeighbors);
+                if (trackStructuralDirty)
+                {
+                    TrackOrRemove(entity, queue, includeNeighbors);
+                }
+
                 return;
             }
 
-            TrackCurrent(entity, combined, state.ShapeSignature, state.PoseSignature, queue, includeNeighbors);
+            if (trackStructuralDirty)
+            {
+                TrackCurrent(entity, combined, state.ShapeSignature, state.PoseSignature, queue, includeNeighbors);
+            }
         }
 
         private WorldAabbCm WriteShapePrimitive(
@@ -752,6 +806,7 @@ namespace Ludots.Core.Physics2D.Systems
             public RuntimeNavObstacleSnapshot Snapshot;
             public RuntimeIncrementalNavMeshRebuildQueue Queue;
             public bool IncludeNeighbors;
+            public bool TrackStructuralDirty;
 
             public void Update(
                 Entity entity,
@@ -759,7 +814,15 @@ namespace Ludots.Core.Physics2D.Systems
                 ref ManifestationObstacleIntent2D intent,
                 ref ManifestationObstacleBridge2DState state)
             {
-                System.CaptureSingle(entity, ref position, ref intent, ref state, Snapshot, Queue, IncludeNeighbors);
+                System.CaptureSingle(
+                    entity,
+                    ref position,
+                    ref intent,
+                    ref state,
+                    Snapshot,
+                    Queue,
+                    IncludeNeighbors,
+                    TrackStructuralDirty);
             }
         }
 
@@ -769,10 +832,18 @@ namespace Ludots.Core.Physics2D.Systems
             public RuntimeNavObstacleSnapshot Snapshot;
             public RuntimeIncrementalNavMeshRebuildQueue Queue;
             public bool IncludeNeighbors;
+            public bool TrackStructuralDirty;
 
             public void Update(Entity entity, ref WorldPositionCm position, ref CompoundObstacle2DState state)
             {
-                System.CaptureCompound(entity, ref position, ref state, Snapshot, Queue, IncludeNeighbors);
+                System.CaptureCompound(
+                    entity,
+                    ref position,
+                    ref state,
+                    Snapshot,
+                    Queue,
+                    IncludeNeighbors,
+                    TrackStructuralDirty);
             }
         }
     }

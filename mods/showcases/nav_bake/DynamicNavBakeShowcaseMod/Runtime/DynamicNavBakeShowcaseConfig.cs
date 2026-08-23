@@ -21,6 +21,8 @@ public sealed class DynamicNavBakeShowcaseConfig
     public int HeightInMacroTiles { get; set; }
     public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
     public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.TerrainChunkCells;
+    public int TerrainEditCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
+    public DynamicNavBakeShowcaseSurfaceGridConfig SurfaceGrid { get; set; } = null!;
     public int ResidentWidthChunks { get; set; }
     public int ResidentHeightChunks { get; set; }
     public int CameraTargetXCm { get; set; }
@@ -53,13 +55,24 @@ public sealed class DynamicNavBakeShowcaseConfig
     public int WidthChunks => checked(WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells / ChunkSizeCells);
     public int HeightChunks => checked(HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells / ChunkSizeCells);
     public int ChunkSizeCm => checked(ChunkSizeCells * GridCellSizeCm);
-    public int WorldWidthCm => checked(WidthChunks * ChunkSizeCm);
-    public int WorldHeightCm => checked(HeightChunks * ChunkSizeCm);
+    public int SurfaceTileWidthCm => SurfaceGrid?.TileWidthCm
+        ?? throw new InvalidOperationException("DynamicNavBakeShowcaseConfig.surfaceGrid is required.");
+    public int SurfaceTileHeightCm => SurfaceGrid?.TileHeightCm
+        ?? throw new InvalidOperationException("DynamicNavBakeShowcaseConfig.surfaceGrid is required.");
+    public int WorldOriginXCm => SurfaceGrid?.OriginXCm
+        ?? throw new InvalidOperationException("DynamicNavBakeShowcaseConfig.surfaceGrid is required.");
+    public int WorldOriginZCm => SurfaceGrid?.OriginZCm
+        ?? throw new InvalidOperationException("DynamicNavBakeShowcaseConfig.surfaceGrid is required.");
+    public int WorldWidthCm => checked(WidthChunks * SurfaceTileWidthCm);
+    public int WorldHeightCm => checked(HeightChunks * SurfaceTileHeightCm);
+    public int WorldMaxXCm => checked(WorldOriginXCm + WorldWidthCm);
+    public int WorldMaxZCm => checked(WorldOriginZCm + WorldHeightCm);
 
     public static DynamicNavBakeShowcaseConfig Load(JsonObject configObject)
     {
         using JsonDocument document = JsonDocument.Parse(configObject.ToJsonString());
         ValidateRequiredProperties(document.RootElement);
+        ValidateSurfaceGridRequiredProperties(document.RootElement);
         ValidateOpenWorldHotspotRequiredProperties(document.RootElement);
         ValidateBenchmarkRequiredProperties(document.RootElement);
         ValidatePresentationRequiredProperties(document.RootElement);
@@ -87,6 +100,25 @@ public sealed class DynamicNavBakeShowcaseConfig
         if (GridCellSizeCm <= 0 || ChunkSizeCells <= 0)
         {
             throw new InvalidOperationException("DynamicNavBakeShowcaseConfig requires positive gridCellSizeCm and chunkSizeCells.");
+        }
+
+        if (TerrainEditCellSizeCm <= 0)
+        {
+            throw new InvalidOperationException("DynamicNavBakeShowcaseConfig requires terrainEditCellSizeCm > 0.");
+        }
+
+        if (SurfaceGrid == null)
+        {
+            throw new InvalidOperationException("DynamicNavBakeShowcaseConfig requires explicit 'surfaceGrid' section.");
+        }
+
+        SurfaceGrid.Validate(WidthChunks, HeightChunks);
+        if (SurfaceGrid.TileWidthCm % TerrainEditCellSizeCm != 0 ||
+            SurfaceGrid.TileHeightCm % TerrainEditCellSizeCm != 0)
+        {
+            throw new InvalidOperationException(
+                "DynamicNavBakeShowcaseConfig.terrainEditCellSizeCm must divide surfaceGrid tileWidthCm and tileHeightCm " +
+                $"(terrainEditCellSizeCm={TerrainEditCellSizeCm}, surfaceGrid={SurfaceGrid.TileWidthCm}x{SurfaceGrid.TileHeightCm}).");
         }
 
         if (ResidentWidthChunks <= 0 || ResidentHeightChunks <= 0)
@@ -200,14 +232,10 @@ public sealed class DynamicNavBakeShowcaseConfig
 
     private void ValidateWorldPlacement()
     {
-        // World dimensions use checked arithmetic in WidthChunks/WorldWidthCm — truncation is already a hard fail.
-        int worldWidth = WorldWidthCm;
-        int worldHeight = WorldHeightCm;
-        // Grid boards are authored as centered extents: [-half, +half).
-        int minX = -worldWidth / 2;
-        int minY = -worldHeight / 2;
-        int maxX = minX + worldWidth;
-        int maxY = minY + worldHeight;
+        int minX = WorldOriginXCm;
+        int minY = WorldOriginZCm;
+        int maxX = WorldMaxXCm;
+        int maxY = WorldMaxZCm;
 
         RequireInsideWorld(Squad.CenterXCm, Squad.CenterYCm, "squad.center", minX, minY, maxX, maxY);
         RequireInsideWorld(Goal.XCm, Goal.YCm, "goal", minX, minY, maxX, maxY);
@@ -251,11 +279,12 @@ public sealed class DynamicNavBakeShowcaseConfig
             out int residentMinY,
             out int residentMaxX,
             out int residentMaxY);
-        int insetCm = checked(marginChunks * ChunkSizeCm);
-        int insetMinX = checked(residentMinX + insetCm);
-        int insetMinY = checked(residentMinY + insetCm);
-        int insetMaxX = checked(residentMaxX - insetCm);
-        int insetMaxY = checked(residentMaxY - insetCm);
+        int insetXcm = checked(marginChunks * SurfaceTileWidthCm);
+        int insetYcm = checked(marginChunks * SurfaceTileHeightCm);
+        int insetMinX = checked(residentMinX + insetXcm);
+        int insetMinY = checked(residentMinY + insetYcm);
+        int insetMaxX = checked(residentMaxX - insetXcm);
+        int insetMaxY = checked(residentMaxY - insetYcm);
         int parkingX = Parking.XCm;
         int parkingY = Parking.YCm;
         if (parkingX < insetMinX || parkingY < insetMinY ||
@@ -302,7 +331,7 @@ public sealed class DynamicNavBakeShowcaseConfig
     {
         RequireProperty(root, "mapId");
         RequireProperty(root, "sceneKind");
-        RequireProperties(root, "widthInMacroTiles", "heightInMacroTiles", "gridCellSizeCm", "chunkSizeCells");
+        RequireProperties(root, "widthInMacroTiles", "heightInMacroTiles", "gridCellSizeCm", "chunkSizeCells", "terrainEditCellSizeCm", "surfaceGrid");
         RequireProperties(root, "residentWidthChunks", "residentHeightChunks", "cameraTargetXCm", "cameraTargetYCm");
         RequireProperty(root, "squad");
         RequireProperty(root, "goal");
@@ -311,6 +340,12 @@ public sealed class DynamicNavBakeShowcaseConfig
         RequireProperty(root, "sideRouteEast");
         RequireProperty(root, "parking");
         RequireProperties(root, "movementSpeedCmPerSec", "wallPoolCapacity", "terrainBrushHalfExtentCm", "terrainRaiseHeightLevel", "evidenceSampleCount", "benchmark", "ui", "presentation", "raylibAutoTimeline");
+    }
+
+    private static void ValidateSurfaceGridRequiredProperties(JsonElement root)
+    {
+        JsonElement surfaceGrid = RequireProperty(root, "surfaceGrid");
+        RequireProperties(surfaceGrid, "originXCm", "originZCm", "tileWidthCm", "tileHeightCm");
     }
 
     private static void ValidatePresentationRequiredProperties(JsonElement root)
@@ -511,12 +546,10 @@ public sealed class DynamicNavBakeShowcaseConfig
             throw new ArgumentNullException(nameof(hotspot));
         }
 
-        int originX = checked(-config.WorldWidthCm / 2);
-        int originY = checked(-config.WorldHeightCm / 2);
-        minXCm = checked(originX + hotspot.ResidentOriginChunkX * config.ChunkSizeCm);
-        minYCm = checked(originY + hotspot.ResidentOriginChunkZ * config.ChunkSizeCm);
-        maxXCm = checked(minXCm + config.ResidentWidthChunks * config.ChunkSizeCm);
-        maxYCm = checked(minYCm + config.ResidentHeightChunks * config.ChunkSizeCm);
+        minXCm = checked(config.WorldOriginXCm + hotspot.ResidentOriginChunkX * config.SurfaceTileWidthCm);
+        minYCm = checked(config.WorldOriginZCm + hotspot.ResidentOriginChunkZ * config.SurfaceTileHeightCm);
+        maxXCm = checked(minXCm + config.ResidentWidthChunks * config.SurfaceTileWidthCm);
+        maxYCm = checked(minYCm + config.ResidentHeightChunks * config.SurfaceTileHeightCm);
     }
 
     /// <summary>
@@ -550,12 +583,34 @@ public sealed class DynamicNavBakeShowcaseConfig
             return;
         }
 
-        int originX = checked(-config.WorldWidthCm / 2);
-        int originY = checked(-config.WorldHeightCm / 2);
-        minXCm = originX;
-        minYCm = originY;
-        maxXCm = checked(originX + config.ResidentWidthChunks * config.ChunkSizeCm);
-        maxYCm = checked(originY + config.ResidentHeightChunks * config.ChunkSizeCm);
+        minXCm = config.WorldOriginXCm;
+        minYCm = config.WorldOriginZCm;
+        maxXCm = checked(config.WorldOriginXCm + config.ResidentWidthChunks * config.SurfaceTileWidthCm);
+        maxYCm = checked(config.WorldOriginZCm + config.ResidentHeightChunks * config.SurfaceTileHeightCm);
+    }
+}
+
+public sealed class DynamicNavBakeShowcaseSurfaceGridConfig
+{
+    public int OriginXCm { get; set; }
+    public int OriginZCm { get; set; }
+    public int TileWidthCm { get; set; }
+    public int TileHeightCm { get; set; }
+
+    public void Validate(int widthChunks, int heightChunks)
+    {
+        if (widthChunks <= 0 || heightChunks <= 0)
+        {
+            throw new InvalidOperationException("DynamicNavBakeShowcaseConfig surfaceGrid validation requires positive world chunk counts.");
+        }
+
+        if (TileWidthCm <= 0 || TileHeightCm <= 0)
+        {
+            throw new InvalidOperationException("DynamicNavBakeShowcaseConfig.surfaceGrid requires positive tileWidthCm and tileHeightCm.");
+        }
+
+        _ = checked(OriginXCm + checked(widthChunks * TileWidthCm));
+        _ = checked(OriginZCm + checked(heightChunks * TileHeightCm));
     }
 }
 
@@ -1325,10 +1380,10 @@ public sealed class DynamicNavBakeShowcaseHotspotConfig
             out int spanMaxX,
             out int spanMaxY);
 
-        int worldMinX = checked(-config.WorldWidthCm / 2);
-        int worldMinY = checked(-config.WorldHeightCm / 2);
-        int worldMaxX = checked(worldMinX + config.WorldWidthCm);
-        int worldMaxY = checked(worldMinY + config.WorldHeightCm);
+        int worldMinX = config.WorldOriginXCm;
+        int worldMinY = config.WorldOriginZCm;
+        int worldMaxX = config.WorldMaxXCm;
+        int worldMaxY = config.WorldMaxZCm;
 
         if (WallCenterXCm < worldMinX || WallCenterYCm < worldMinY ||
             WallCenterXCm >= worldMaxX || WallCenterYCm >= worldMaxY)

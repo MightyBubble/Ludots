@@ -2974,7 +2974,6 @@ namespace Ludots.Core.Engine
             NavBuildConfig? runtimeBuildConfig = null;
             if (runtimeIncremental)
             {
-                ValidateInitialResidentWindow(bakeConfig.RuntimeIncremental, widthChunks, heightChunks);
                 runtimeBuildConfig = new NavBuildConfig(
                     bakeConfig.RuntimeIncremental.HeightScaleMeters,
                     bakeConfig.RuntimeIncremental.MinWalkableUpDot,
@@ -2985,13 +2984,17 @@ namespace Ludots.Core.Engine
                 runtimeTriangleSurfaceService = new RuntimeNavTriangleSurfaceService(runtimeTriangleSurface);
                 SetService(CoreServiceKeys.NavTriangleSurface, runtimeTriangleSurface);
                 SetService(CoreServiceKeys.RuntimeNavTriangleSurface, runtimeTriangleSurfaceService);
+                ValidateInitialResidentWindow(
+                    bakeConfig.RuntimeIncremental,
+                    runtimeTriangleSurface.Grid.TileCountX,
+                    runtimeTriangleSurface.Grid.TileCountZ);
                 queryTileSpace = NavQueryTileSpace.FromGrid(runtimeTriangleSurface.Grid);
             }
             else
             {
                 NavTriangleSurfaceTileGrid offlineGrid = LogicTerrainTriangleSurfaceCompiler.DeriveTileGrid(
                     LogicTerrain,
-                    bakeConfig.TriangleSurface.HaloPaddingCm);
+                    bakeConfig.TriangleSurface);
                 queryTileSpace = NavQueryTileSpace.FromGrid(offlineGrid);
             }
 

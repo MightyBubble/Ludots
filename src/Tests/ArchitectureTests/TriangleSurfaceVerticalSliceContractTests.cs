@@ -222,19 +222,48 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(terrain.Topology, Is.EqualTo(LogicTerrainTopology.Hex));
             Assert.That(a.Surface.TriangleCount, Is.GreaterThan(0));
+            var metrics = new HexMetrics(terrain.HorizontalStepCm);
             Assert.That(
                 a.Grid.TileWidthCm,
-                Is.EqualTo((int)MathF.Round(HexCoordinates.HexWidth * terrain.ChunkSizeCells * SpatialScaleDefaults.CellCm)));
+                Is.EqualTo(metrics.HexWidthCm * terrain.ChunkSizeCells));
             Assert.That(
                 a.Grid.TileHeightCm,
-                Is.EqualTo((int)MathF.Round(HexCoordinates.RowSpacing * terrain.ChunkSizeCells * SpatialScaleDefaults.CellCm)));
+                Is.EqualTo(metrics.RowSpacingCm * terrain.ChunkSizeCells));
             Assert.That(a.Surface.TriStableIds.ToArray(), Is.EqualTo(b.Surface.TriStableIds.ToArray()));
             for (int i = 0; i < a.Surface.TriangleCount; i++)
             {
                 Assert.That(
                     a.Surface.TriFlags[i],
                     Is.EqualTo(NavTriangleSurfaceFlags.Solid | NavTriangleSurfaceFlags.WalkCandidate));
-            }
+                }
+        }
+
+        [Test]
+        public void LogicTerrainCompiler_Hex_ExplicitTileSubdivisionsProducePortalSizedTiles()
+        {
+            const int chunkSizeCells = 64;
+            var terrain = new HexLikeFlatLogicTerrainField(
+                widthCells: chunkSizeCells * 2,
+                heightCells: chunkSizeCells * 2,
+                chunkSizeCells: chunkSizeCells);
+            var config = new NavTriangleSurfaceConfig
+            {
+                HaloPaddingCm = 384,
+                TileSubdivisionsX = 2,
+                TileSubdivisionsZ = 2
+            };
+
+            NavTriangleSurfaceTileGrid grid = LogicTerrainTriangleSurfaceCompiler.DeriveTileGrid(
+                terrain,
+                config);
+            var metrics = new HexMetrics(terrain.HorizontalStepCm);
+
+            Assert.That(grid.TileWidthCm, Is.EqualTo(metrics.HexWidthCm * chunkSizeCells / 2));
+            Assert.That(grid.TileHeightCm, Is.EqualTo(metrics.RowSpacingCm * chunkSizeCells / 2));
+            Assert.That(grid.TileWidthCm, Is.LessThanOrEqualTo(short.MaxValue));
+            Assert.That(grid.TileHeightCm, Is.LessThanOrEqualTo(short.MaxValue));
+            Assert.That(grid.TileCountX, Is.EqualTo(4));
+            Assert.That(grid.TileCountZ, Is.EqualTo(4));
         }
 
         [Test]
@@ -637,6 +666,61 @@ namespace Ludots.Tests.Architecture
                 $"CDT cross-tile path must be reachable across negative-origin tiles; status={path.Status} " +
                 $"start=({startXcm},{pathZcm}) goal=({goalXcm},{pathZcm}) westPortals={west.PortalCount} eastPortals={east.PortalCount}");
             Assert.That(path.PathXcm.Length, Is.GreaterThanOrEqualTo(2));
+        }
+
+        [Test]
+        public void Cdt_HexSurface_CrossTilePathIsReachable()
+        {
+            const int chunkSizeCells = 8;
+            var terrain = new HexLikeFlatLogicTerrainField(
+                widthCells: chunkSizeCells * 2,
+                heightCells: chunkSizeCells,
+                chunkSizeCells: chunkSizeCells);
+            NavMeshBakeConfig config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmCdt);
+            config.TriangleSurface = new NavTriangleSurfaceConfig
+            {
+                HaloPaddingCm = 384,
+                TileSubdivisionsX = 2,
+                TileSubdivisionsZ = 2
+            };
+            var build = new NavBuildConfig(1f, 0.6f, 1);
+            NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(terrain, config, build);
+            var targets = new[]
+            {
+                new NavBakeTileCoord(1, 0),
+                new NavBakeTileCoord(2, 0)
+            };
+            NavBakeResult bake = BakeAll(surface, config, build, targets, NavBakeAlgorithmKind.Cdt);
+            NavTile west = bake.Entries[0].Tile;
+            NavTile east = bake.Entries[1].Tile;
+            Assert.That(west.PortalCount, Is.GreaterThan(0));
+            Assert.That(east.PortalCount, Is.GreaterThan(0));
+            Assert.That(TryFirstEastPortalY(west, out int eastY), Is.True);
+            Assert.That(HasWestPortalAtY(east, eastY), Is.True);
+            Assert.That(CountTriangleConnectedComponents(west), Is.EqualTo(1));
+            Assert.That(CountTriangleConnectedComponents(east), Is.EqualTo(1));
+
+            int startXcm = west.OriginXcm + (surface.Grid.TileWidthCm / 4);
+            int goalXcm = east.OriginXcm + (surface.Grid.TileWidthCm / 4);
+            int pathZcm = west.OriginZcm + (surface.Grid.TileHeightCm / 3);
+            NavPathResult path = DetourNavQueryEngine.FindPath(
+                new[] { west, east },
+                layer: 0,
+                areaCosts: NavAreaCostTable.CreateDefault(),
+                tileWidthCm: surface.Grid.TileWidthCm,
+                tileHeightCm: surface.Grid.TileHeightCm,
+                startXcm,
+                pathZcm,
+                goalXcm,
+                pathZcm,
+                maxPortals: 64);
+            Assert.That(
+                path.Status,
+                Is.EqualTo(NavPathStatus.Ok),
+                $"start=({startXcm},{pathZcm}) goal=({goalXcm},{pathZcm}); " +
+                $"west={DescribeTilePortals(west)}; east={DescribeTilePortals(east)}; " +
+                $"startCovered={PointInTileTriangles(west, startXcm - west.OriginXcm, pathZcm - west.OriginZcm)}; " +
+                $"goalCovered={PointInTileTriangles(east, goalXcm - east.OriginXcm, pathZcm - east.OriginZcm)}.");
         }
 
         [Test]
@@ -1445,6 +1529,20 @@ namespace Ludots.Tests.Architecture
             }
 
             return false;
+        }
+
+        private static string DescribeTilePortals(NavTile tile)
+        {
+            var values = new List<string>(tile.PortalCount);
+            ReadOnlySpan<NavBorderPortal> portals = tile.ActivePortals;
+            for (int i = 0; i < portals.Length; i++)
+            {
+                NavBorderPortal portal = portals[i];
+                values.Add(
+                    $"{portal.Side}({portal.LeftXcm},{portal.LeftZcm})-({portal.RightXcm},{portal.RightZcm})@{portal.LeftYcm}/{portal.RightYcm}");
+            }
+
+            return $"id=({tile.TileId.ChunkX},{tile.TileId.ChunkY}) tris={tile.TriangleCount} portals=[{string.Join(',', values)}]";
         }
 
         private static NavTile StripPortals(NavTile tile)

@@ -5,13 +5,26 @@ using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.AOI
 {
-    public class HexGridAOI : ILoadedChunks, IWorldChunkKeyResolver
+    public class HexGridAOI : ILoadedChunkWindowSource, IWorldChunkKeyResolver
     {
         private readonly HashSet<long> _activeChunks = new HashSet<long>();
+        private readonly HashSet<long> _directChunks = new HashSet<long>();
+        private readonly HashSet<long> _nextDirectChunks = new HashSet<long>();
+        private readonly Dictionary<long, int> _contributionCounts = new Dictionary<long, int>();
+        private readonly List<long> _eventScratch = new List<long>();
         private readonly List<IAOIListener> _listeners = new List<IAOIListener>();
-        
-        // Temporary set for update logic to avoid allocs
-        private readonly HashSet<long> _newActiveChunks = new HashSet<long>();
+        private readonly HexMetrics _hexMetrics;
+        private int _generation;
+
+        public HexGridAOI()
+            : this(HexMetrics.Default)
+        {
+        }
+
+        public HexGridAOI(HexMetrics hexMetrics)
+        {
+            _hexMetrics = hexMetrics ?? throw new ArgumentNullException(nameof(hexMetrics));
+        }
 
         // ILoadedChunks implementation
         public IReadOnlyCollection<long> ActiveChunkKeys => _activeChunks;
@@ -20,8 +33,7 @@ namespace Ludots.Core.Navigation.AOI
 
         public long GetChunkKeyForWorldCm(float worldXCm, float worldYCm)
         {
-            HexCoordinates hex = HexCoordinates.FromWorldPositionCm(
-                new System.Numerics.Vector3(worldXCm, 0f, worldYCm));
+            HexCoordinates hex = _hexMetrics.WorldCmToHex(worldXCm, worldYCm);
             (int col, int row) = hex.ToOffsetCoordinates();
             return HexCoordinates.GetChunkKey(col >> 6, row >> 6);
         }
@@ -53,6 +65,10 @@ namespace Ludots.Core.Navigation.AOI
             var snapshot = new long[_activeChunks.Count];
             _activeChunks.CopyTo(snapshot);
             _activeChunks.Clear();
+            _directChunks.Clear();
+            _nextDirectChunks.Clear();
+            _contributionCounts.Clear();
+            _generation = checked(_generation + 1);
 
             foreach (long key in snapshot)
             {
@@ -62,54 +78,131 @@ namespace Ludots.Core.Navigation.AOI
 
         public void Update(IAOISource source)
         {
-            _newActiveChunks.Clear();
+            _nextDirectChunks.Clear();
+            CollectWindowChunkKeys(source.CenterXcm, source.CenterZcm, source.RadiusCm, _nextDirectChunks);
 
-            // Convert world position (cm) to Hex
-            var centerHex = HexCoordinates.FromWorldPositionCm(
-                new System.Numerics.Vector3(source.CenterXcm, 0f, source.CenterZcm));
-            
-            // Calculate chunk range based on radius (all in centimeters)
-            int chunkWorldSizeCm = SpatialScaleDefaults.TerrainChunkCells * HexCoordinates.EdgeLengthCm;
-            int radiusInChunks = (int)Math.Ceiling((float)source.RadiusCm / chunkWorldSizeCm) + 1;
+            _eventScratch.Clear();
+            foreach (long key in _directChunks)
+            {
+                if (!_nextDirectChunks.Contains(key))
+                {
+                    _eventScratch.Add(key);
+                }
+            }
 
-            (int cx, int cy) = centerHex.ToOffsetCoordinates(); // Approx center chunk
+            _eventScratch.Sort();
+            for (int i = 0; i < _eventScratch.Count; i++)
+            {
+                long key = _eventScratch[i];
+                _directChunks.Remove(key);
+                DeactivateIfUnreferenced(key);
+            }
+
+            _eventScratch.Clear();
+            foreach (long key in _nextDirectChunks)
+            {
+                if (!_directChunks.Contains(key))
+                {
+                    _eventScratch.Add(key);
+                }
+            }
+
+            _eventScratch.Sort();
+            for (int i = 0; i < _eventScratch.Count; i++)
+            {
+                long key = _eventScratch[i];
+                _directChunks.Add(key);
+                Activate(key);
+            }
+        }
+
+        public void CollectWindowChunkKeys(int centerXcm, int centerYcm, int radiusCm, ICollection<long> destination)
+        {
+            if (destination == null)
+            {
+                throw new ArgumentNullException(nameof(destination));
+            }
+
+            if (radiusCm < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(radiusCm));
+            }
+
+            HexCoordinates centerHex = _hexMetrics.WorldCmToHex(centerXcm, centerYcm);
+            int chunkWorldSizeCm = SpatialScaleDefaults.TerrainChunkCells * _hexMetrics.EdgeLengthCm;
+            int radiusInChunks = (int)Math.Ceiling((float)radiusCm / chunkWorldSizeCm) + 1;
+
+            (int cx, int cy) = centerHex.ToOffsetCoordinates();
             int centerChunkX = cx >> VertexChunk.ChunkSizeShift;
             int centerChunkY = cy >> VertexChunk.ChunkSizeShift;
 
-            // Simple square loop around center chunk
             for (int x = centerChunkX - radiusInChunks; x <= centerChunkX + radiusInChunks; x++)
             {
                 for (int y = centerChunkY - radiusInChunks; y <= centerChunkY + radiusInChunks; y++)
                 {
-                    // Precise distance check could be added here if needed
-                    long key = HexCoordinates.GetChunkKey(x, y);
-                    _newActiveChunks.Add(key);
+                    destination.Add(HexCoordinates.GetChunkKey(x, y));
                 }
             }
+        }
 
-            // Detect Exits
-            foreach (long key in _activeChunks)
+        public HexGridLoadedChunkContributor AcquireContributor(string key, int capacity)
+        {
+            if (string.IsNullOrWhiteSpace(key))
             {
-                if (!_newActiveChunks.Contains(key))
+                throw new ArgumentException("Loaded-chunk contributor key is required.", nameof(key));
+            }
+
+            return new HexGridLoadedChunkContributor(this, key, capacity);
+        }
+
+        ILoadedChunkContributor ILoadedChunkWindowSource.AcquireContributor(string key, int capacity)
+        {
+            return AcquireContributor(key, capacity);
+        }
+
+        internal void SetContributionLoaded(long chunkKey, bool loaded)
+        {
+            if (loaded)
+            {
+                _contributionCounts.TryGetValue(chunkKey, out int count);
+                _contributionCounts[chunkKey] = checked(count + 1);
+                if (count == 0)
                 {
-                    NotifyExit(key);
+                    Activate(chunkKey);
                 }
+
+                return;
             }
 
-            // Detect Enters
-            foreach (long key in _newActiveChunks)
+            if (!_contributionCounts.TryGetValue(chunkKey, out int current) || current <= 0)
             {
-                if (!_activeChunks.Contains(key))
-                {
-                    NotifyEnter(key);
-                }
+                throw new InvalidOperationException($"Loaded-chunk contribution underflow for key {chunkKey}.");
             }
 
-            // Swap sets
-            _activeChunks.Clear();
-            foreach (var key in _newActiveChunks)
+            if (current == 1)
             {
-                _activeChunks.Add(key);
+                _contributionCounts.Remove(chunkKey);
+                DeactivateIfUnreferenced(chunkKey);
+            }
+            else
+            {
+                _contributionCounts[chunkKey] = current - 1;
+            }
+        }
+
+        private void Activate(long key)
+        {
+            if (_activeChunks.Add(key))
+            {
+                NotifyEnter(key);
+            }
+        }
+
+        private void DeactivateIfUnreferenced(long key)
+        {
+            if (!_directChunks.Contains(key) && !_contributionCounts.ContainsKey(key) && _activeChunks.Remove(key))
+            {
+                NotifyExit(key);
             }
         }
 
@@ -123,6 +216,98 @@ namespace Ludots.Core.Navigation.AOI
         {
             foreach (var listener in _listeners) listener.OnChunkExit(key);
             ChunkUnloaded?.Invoke(key);
+        }
+
+        internal int Generation => _generation;
+    }
+
+    public sealed class HexGridLoadedChunkContributor : ILoadedChunkContributor
+    {
+        private readonly HexGridAOI _owner;
+        private readonly HashSet<long> _activeChunks;
+        private int _generation;
+        private bool _disposed;
+
+        internal HexGridLoadedChunkContributor(HexGridAOI owner, string key, int capacity)
+        {
+            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            if (capacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            }
+
+            Key = key;
+            Capacity = capacity;
+            _activeChunks = new HashSet<long>(capacity);
+            _generation = owner.Generation;
+        }
+
+        public string Key { get; }
+        public int Capacity { get; }
+
+        public IReadOnlyCollection<long> ActiveChunkKeys
+        {
+            get
+            {
+                SynchronizeGeneration();
+                return _activeChunks;
+            }
+        }
+
+        public void SetLoaded(long chunkKey, bool loaded)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            SynchronizeGeneration();
+            if (loaded)
+            {
+                if (_activeChunks.Contains(chunkKey))
+                {
+                    return;
+                }
+
+                if (_activeChunks.Count >= Capacity)
+                {
+                    throw new InvalidOperationException(
+                        $"Loaded-chunk contributor '{Key}' exceeded capacity {Capacity}.");
+                }
+
+                _activeChunks.Add(chunkKey);
+                _owner.SetContributionLoaded(chunkKey, true);
+                return;
+            }
+
+            if (_activeChunks.Remove(chunkKey))
+            {
+                _owner.SetContributionLoaded(chunkKey, false);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            SynchronizeGeneration();
+            foreach (long chunkKey in _activeChunks)
+            {
+                _owner.SetContributionLoaded(chunkKey, false);
+            }
+
+            _activeChunks.Clear();
+            _disposed = true;
+        }
+
+        private void SynchronizeGeneration()
+        {
+            if (_generation == _owner.Generation)
+            {
+                return;
+            }
+
+            _activeChunks.Clear();
+            _generation = _owner.Generation;
         }
     }
 }

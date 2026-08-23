@@ -1,0 +1,88 @@
+{
+  "mode": "runtime-incremental",
+  "algorithm": "layered-span",
+  "profiles": [
+    {
+      "id": "light",
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45
+    }
+  ],
+  "layers": [
+    {
+      "id": "Ground",
+      "layer": 0
+    }
+  ],
+  "areas": [
+    {
+      "id": "Default",
+      "areaId": 0,
+      "cost": 1.0
+    }
+  ],
+  "runtimeIncremental": {
+    "tileBudgetPerFixedTick": 4,
+    "includeNeighborTiles": true,
+    "heightScaleMeters": 1.0,
+    "minWalkableUpDot": 0.6,
+    "cliffHeightThreshold": 1,
+    "trackedStructuralEntityCapacity": 32,
+    "obstaclePrimitiveCapacity": 128,
+    "polygonVertexCapacity": 4096,
+    "dirtyTileCapacity": 64,
+    "stagedEntryCapacity": 64,
+    "publishedTileCapacity": 64,
+    "storeGroupCapacity": 4,
+    "residentTileCapacity": 36,
+    "outputVertexCapacity": 65536,
+    "outputTriangleCapacity": 131072,
+    "outputPortalCapacity": 16384,
+    "initialResidentChunkX": 1,
+    "initialResidentChunkZ": 1,
+    "initialResidentWidthChunks": 6,
+    "initialResidentHeightChunks": 6
+  },
+  "layeredSpan": {
+    "scratchSlotCount": 4,
+    "rasterCellSizeCm": 96,
+    "rasterHaloCells": 2,
+    "sameSurfaceToleranceCm": 5,
+    "maxSimplificationErrorCm": 0,
+    "heightRounding": "roundHalfAwayFromZero",
+    "maxLawsonFlipCount": 100000,
+    "columnCapacity": 65536,
+    "spanCapacity": 131072,
+    "classifiedSpanCapacity": 131072,
+    "walkableSpanCapacity": 131072,
+    "linkCapacity": 524288,
+    "sheetCapacity": 131072,
+    "portalIntervalCapacity": 524288,
+    "regionCapacity": 65536,
+    "chartCapacity": 8192,
+    "ringCapacity": 8192,
+    "contourVertexCapacity": 131072,
+    "contourEdgeCapacity": 131072,
+    "seamCapacity": 32768,
+    "canonicalLinkCapacity": 524288,
+    "splitPointCapacity": 32768,
+    "triangulationVertexCapacity": 131072,
+    "triangulationTriangleCapacity": 262144,
+    "constrainedEdgeCapacity": 262144,
+    "borderPortalCapacity": 32768,
+    "polygonVertexCapacity": 131072,
+    "adjacencyEdgeCapacity": 786432,
+    "bridgeCandidateCapacity": 131072,
+    "ringWorkCapacity": 8192,
+    "temporaryConstraintFlagCapacity": 262144
+  },
+  "triangleSurface": {
+    "haloPaddingCm": 384,
+    "tileSubdivisionsX": 2,
+    "tileSubdivisionsZ": 2
+  },
+  "recast": {
+    "rasterCellSizeCm": 20,
+    "rasterCellHeightCm": 10
+  }
+}

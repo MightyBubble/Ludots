@@ -1,0 +1,142 @@
+{
+  "mapId": "nav_bake_dynamic_rts_hex",
+  "sceneKind": "rts",
+  "widthInMacroTiles": 2,
+  "heightInMacroTiles": 2,
+  "gridCellSizeCm": 1400,
+  "chunkSizeCells": 32,
+  "terrainEditCellSizeCm": 96,
+  "surfaceGrid": {
+    "originXCm": 0,
+    "originZCm": 0,
+    "tileWidthCm": 22176,
+    "tileHeightCm": 19200
+  },
+  "residentWidthChunks": 6,
+  "residentHeightChunks": 6,
+  "cameraTargetXCm": 90000,
+  "cameraTargetYCm": 80000,
+  "squad": {
+    "templateId": "mass_navigation_agent_azure_light",
+    "profileId": "light",
+    "count": 8,
+    "centerXCm": 90000,
+    "centerYCm": 60000,
+    "columns": 4,
+    "rows": 2,
+    "spacingXCm": 600,
+    "spacingYCm": 400
+  },
+  "goal": {
+    "templateId": "mass_navigation_hotspot_marker",
+    "xCm": 90000,
+    "yCm": 105000
+  },
+  "gate": {
+    "wallTemplateId": "dynamic_nav_bake_wall_segment",
+    "centerXCm": 90000,
+    "centerYCm": 80000,
+    "segmentCount": 1,
+    "segmentSpacingCm": 500,
+    "navRadiusCm": 150,
+    "navMinYcm": 500,
+    "navMaxYcm": 1300
+  },
+  "sideRouteWest": {
+    "markerTemplateId": "mass_navigation_hotspot_marker",
+    "xCm": 50000,
+    "yCm": 80000
+  },
+  "sideRouteEast": {
+    "markerTemplateId": "mass_navigation_hotspot_marker",
+    "xCm": 130000,
+    "yCm": 80000
+  },
+  "parking": {
+    "xCm": 50000,
+    "yCm": 50000
+  },
+  "movementSpeedCmPerSec": 300,
+  "wallPoolCapacity": 1,
+  "terrainBrushHalfExtentCm": 384,
+  "terrainRaiseHeightLevel": 10,
+  "evidenceSampleCount": 64,
+  "benchmark": {
+    "sampleWindowCount": 20,
+    "warmupSampleCount": 4,
+    "determinismWorkerCounts": [1, 4],
+    "dirtyPublishP95RatioMax": 1.15,
+    "dirtyPublishP95FixedNoiseMs": 0.5,
+    "steadyStateThroughputRatioMin": 0.85,
+    "collectP95BudgetMs": 4.0,
+    "commitP95BudgetMs": 4.0,
+    "fixedStepBudgetMs": 8.0,
+    "layeredSpanSteadyStateAllocBytesMax": 0,
+    "peakResidentTileCountMax": 36,
+    "peakWorkerScratchBytesMax": 536870912,
+    "peakResidentBytesMax": 536870912,
+    "maxDirtyVisitedCandidateCount": 16,
+    "steadyStateTileBudgetPerSample": 4,
+    "dirtyComparisonBoundaryMarginChunks": 1
+  },
+  "ui": {
+    "absoluteLeft": 16,
+    "absoluteTop": 208,
+    "width": 392
+  },
+  "presentation": {
+    "pathOverlayY": 0.06,
+    "localPathWidthMeters": 0.55,
+    "localPathBorderWidthMeters": 0.08,
+    "corridorPathWidthMeters": 0.35,
+    "corridorPathBorderWidthMeters": 0.08,
+    "fillColor": [0.18, 0.72, 0.55, 0.28],
+    "edgeColor": [0.12, 0.92, 0.68, 0.85],
+    "tileBoundsColor": [0.95, 0.85, 0.25, 0.55],
+    "pendingColor": [0.96, 0.78, 0.20, 0.80],
+    "rebuildingColor": [0.98, 0.42, 0.18, 0.85],
+    "committedColor": [0.20, 0.90, 0.48, 0.78],
+    "heightOffsetMeters": 0.04,
+    "navMeshEnabled": true,
+    "navMeshLayer": 0,
+    "navMeshProfile": 0,
+    "drawFill": true,
+    "drawEdges": true,
+    "drawTileBounds": true,
+    "drawTileStateIndication": true
+  },
+  "raylibAutoTimeline": {
+    "algorithmRequestEarliestFrame": 30,
+    "algorithmCommitDeadlineFrame": 180,
+    "initialScreenshotFrame": 240,
+    "dynamicActionFrame": 300,
+    "dynamicCommitDeadlineFrame": 450,
+    "dynamicScreenshotFrame": 480,
+    "finalActionFrame": 540,
+    "finalCommitDeadlineFrame": 690,
+    "finalScreenshotFrame": 3000,
+    "autoExitFrame": 3030,
+    "cameraTargetToleranceCm": 500,
+    "requiredQuiescentFixedTicks": 2,
+    "finalCaptureCompletionMode": "arrival",
+    "finalArrivalMemberToleranceCm": 500,
+    "finalArrivalRequiredStableFixedTicks": 2,
+    "playerFraming": {
+      "captureWidthPx": 1280,
+      "captureHeightPx": 720,
+      "safeInsetLeftPx": 432,
+      "safeInsetTopPx": 32,
+      "safeInsetRightPx": 32,
+      "safeInsetBottomPx": 32,
+      "marginCm": 800,
+      "minDistanceCm": 9000,
+      "maxDistanceCm": 26000,
+      "baseDistanceCm": 13000,
+      "minSquadMembersOnScreen": 8,
+      "minProjectedSquadSpanPx": 15,
+      "pathLookaheadCm": 2200,
+      "coverageBuffer": 1.1,
+      "distanceToleranceCm": 150
+    }
+  }
+}

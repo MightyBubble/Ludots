@@ -111,7 +111,9 @@
     <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\nav_bake\DynamicNavBakeShowcaseMod\DynamicNavBakeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\nav_bake\NavBakeDynamicRtsShowcaseMod\NavBakeDynamicRtsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\nav_bake\NavBakeDynamicRtsHexShowcaseMod\NavBakeDynamicRtsHexShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\nav_bake\NavBakeOpenWorld64x64ShowcaseMod\NavBakeOpenWorld64x64ShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\nav_bake\NavBakeOpenWorld64x64HexShowcaseMod\NavBakeOpenWorld64x64HexShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.NavBake.Recast\Ludots.NavBake.Recast.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>

@@ -849,6 +849,29 @@
       "status": "active"
     },
     {
+      "id": "nav_bake_dynamic_rts_hex",
+      "path": "mods/showcases/nav_bake/NavBakeDynamicRtsHexShowcaseMod",
+      "projectPath": "NavBakeDynamicRtsHexShowcaseMod.csproj",
+      "title": "动态 NavMesh Hex RTS 堡垒",
+      "summary": "HexGrid RTS 场景：切换 recast/cdt/layered-span、建墙/拆墙、抬升地形，并观察 runtime-incremental 局部脏更新。",
+      "tier": "T1",
+      "category": "showcase",
+      "tags": [
+        "navmesh",
+        "nav-bake",
+        "rts",
+        "hex-grid"
+      ],
+      "binding": "nav_bake_dynamic_rts_hex",
+      "preset": "nav_bake_dynamic_rts_hex_raylib",
+      "docsPath": "gitbook/architecture/dynamic-3d-navmesh-bake.md",
+      "readmePath": "mods/showcases/nav_bake/NavBakeDynamicRtsHexShowcaseMod/README.md",
+      "acceptanceTest": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-dynamic-rts-hex",
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "nav_bake_open_world_64x64",
       "path": "mods/showcases/nav_bake/NavBakeOpenWorld64x64ShowcaseMod",
       "projectPath": "NavBakeOpenWorld64x64ShowcaseMod.csproj",
@@ -869,6 +892,30 @@
       "acceptanceTest": "DynamicNavBakeShowcaseAcceptanceTests",
       "artifactDir": "artifacts/acceptance/nav-bake-open-world-64x64",
       "screenshot": "artifacts/acceptance/nav-bake-open-world-64x64/screens/layered-span_003_f0720.png",
+      "status": "active"
+    },
+    {
+      "id": "nav_bake_open_world_64x64_hex",
+      "path": "mods/showcases/nav_bake/NavBakeOpenWorld64x64HexShowcaseMod",
+      "projectPath": "NavBakeOpenWorld64x64HexShowcaseMod.csproj",
+      "title": "动态 NavMesh Hex 64×64 开放世界",
+      "summary": "HexGrid 4096 数据 chunk 开放世界：16384 节点粗图 corridor、4×4 滑动 resident nav 窗口、热点建墙与三算法对比。",
+      "tier": "T1",
+      "category": "showcase",
+      "tags": [
+        "navmesh",
+        "nav-bake",
+        "open-world",
+        "streaming",
+        "hex-grid"
+      ],
+      "binding": "nav_bake_open_world_64x64_hex",
+      "preset": "nav_bake_open_world_64x64_hex_raylib",
+      "docsPath": "gitbook/architecture/dynamic-3d-navmesh-bake.md",
+      "readmePath": "mods/showcases/nav_bake/NavBakeOpenWorld64x64HexShowcaseMod/README.md",
+      "acceptanceTest": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-open-world-64x64-hex",
+      "screenshot": null,
       "status": "active"
     },
     {

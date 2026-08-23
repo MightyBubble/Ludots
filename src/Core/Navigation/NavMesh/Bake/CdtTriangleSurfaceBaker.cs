@@ -1020,7 +1020,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     continue;
                 }
 
-                InterpolateClipVertex(xi, yi, zi, xj, yj, zj, plane, clipX, isMin, out int cx, out int cy, out int cz);
+                InterpolateClipVertex(xi, yi, zi, xj, yj, zj, plane, clipX, out int cx, out int cy, out int cz);
                 nx.Add(cx);
                 ny.Add(cy);
                 nz.Add(cz);
@@ -1043,13 +1043,20 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int zj,
             int plane,
             bool clipX,
-            bool isMin,
             out int cx,
             out int cy,
             out int cz)
         {
             int vi = clipX ? xi : zi;
             int vj = clipX ? xj : zj;
+            if (vi > vj)
+            {
+                (xi, xj) = (xj, xi);
+                (yi, yj) = (yj, yi);
+                (zi, zj) = (zj, zi);
+                (vi, vj) = (vj, vi);
+            }
+
             int denom = vj - vi;
             if (denom == 0)
             {
@@ -1069,14 +1076,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             long tNum = (long)plane - vi;
-            if (isMin && vi < plane)
-            {
-                tNum = (long)plane - vi;
-            }
-            else if (!isMin && vi > plane)
-            {
-                tNum = (long)plane - vi;
-            }
 
             cx = xi + (int)((tNum * (xj - xi)) / denom);
             cy = yi + (int)((tNum * (yj - yi)) / denom);
@@ -1619,6 +1618,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             var neighborSegments = CollectNeighborBoundarySegments(
                 request,
+                grid,
                 new NavBakeTileCoord(nx, nz),
                 boundaryCoord,
                 side);
@@ -1644,11 +1644,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         private static List<BoundarySegment> CollectNeighborBoundarySegments(
             in CdtTriangleSurfaceBakeRequest request,
+            NavTriangleSurfaceTileGrid grid,
             NavBakeTileCoord neighbor,
             int boundaryCoord,
             NavPortalSide side)
         {
             var segments = new List<BoundarySegment>();
+            int neighborMinX = checked(grid.OriginXcm + checked(neighbor.ChunkX * grid.TileWidthCm));
+            int neighborMinZ = checked(grid.OriginZcm + checked(neighbor.ChunkY * grid.TileHeightCm));
+            int neighborMaxX = checked(neighborMinX + grid.TileWidthCm);
+            int neighborMaxZ = checked(neighborMinZ + grid.TileHeightCm);
             NavTriangleSurfaceSnapshot surface = request.SurfaceIndex.Surface;
             ReadOnlySpan<int> selection = request.SurfaceIndex.GetTriangleIndices(neighbor);
             ReadOnlySpan<int> vx = surface.VertexXcm;
@@ -1684,9 +1689,69 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 int ia = triA[tri];
                 int ib = triB[tri];
                 int ic = triC[tri];
-                AddSurfaceBoundaryEdge(vx, vy, vz, ia, ib, ic, side, boundaryCoord, sheet, segments);
-                AddSurfaceBoundaryEdge(vx, vy, vz, ib, ic, ia, side, boundaryCoord, sheet, segments);
-                AddSurfaceBoundaryEdge(vx, vy, vz, ic, ia, ib, side, boundaryCoord, sheet, segments);
+                int ax = vx[ia];
+                int ay = vy[ia];
+                int az = vz[ia];
+                int bx = vx[ib];
+                int by = vy[ib];
+                int bz = vz[ib];
+                int cx = vx[ic];
+                int cy = vy[ic];
+                int cz = vz[ic];
+                if (TriangleFullyInsideTarget(
+                        ax, az, bx, bz, cx, cz,
+                        neighborMinX,
+                        neighborMinZ,
+                        neighborMaxX,
+                        neighborMaxZ))
+                {
+                    AddSurfaceBoundaryEdge(vx, vy, vz, ia, ib, ic, side, boundaryCoord, sheet, segments);
+                    AddSurfaceBoundaryEdge(vx, vy, vz, ib, ic, ia, side, boundaryCoord, sheet, segments);
+                    AddSurfaceBoundaryEdge(vx, vy, vz, ic, ia, ib, side, boundaryCoord, sheet, segments);
+                    continue;
+                }
+
+                var clippedX = new List<int>(6);
+                var clippedY = new List<int>(6);
+                var clippedZ = new List<int>(6);
+                var clippedIndex = new Dictionary<VertexKey, int>();
+                var clippedA = new List<int>(4);
+                var clippedB = new List<int>(4);
+                var clippedC = new List<int>(4);
+                ClipTriangleToTarget(
+                    ax, ay, az,
+                    bx, by, bz,
+                    cx, cy, cz,
+                    neighborMinX,
+                    neighborMinZ,
+                    neighborMaxX,
+                    neighborMaxZ,
+                    clippedIndex,
+                    clippedX,
+                    clippedY,
+                    clippedZ,
+                    clippedA,
+                    clippedB,
+                    clippedC,
+                    maxLawsonFlipCount: 0);
+                int[] clippedXArray = clippedX.ToArray();
+                int[] clippedYArray = clippedY.ToArray();
+                int[] clippedZArray = clippedZ.ToArray();
+                for (int clipped = 0; clipped < clippedA.Count; clipped++)
+                {
+                    AddSurfaceBoundaryEdge(
+                        clippedXArray, clippedYArray, clippedZArray,
+                        clippedA[clipped], clippedB[clipped], clippedC[clipped],
+                        side, boundaryCoord, sheet, segments);
+                    AddSurfaceBoundaryEdge(
+                        clippedXArray, clippedYArray, clippedZArray,
+                        clippedB[clipped], clippedC[clipped], clippedA[clipped],
+                        side, boundaryCoord, sheet, segments);
+                    AddSurfaceBoundaryEdge(
+                        clippedXArray, clippedYArray, clippedZArray,
+                        clippedC[clipped], clippedA[clipped], clippedB[clipped],
+                        side, boundaryCoord, sheet, segments);
+                }
             }
 
             return segments;

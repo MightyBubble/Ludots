@@ -107,14 +107,36 @@ namespace Ludots.Core.Navigation.NavMesh.Surface
             }
 
             bakeConfig.TriangleSurface.Validate(layeredSpan: bakeConfig.LayeredSpan);
-            return Compile(terrain, buildConfig, bakeConfig.TriangleSurface.HaloPaddingCm);
+            return Compile(terrain, buildConfig, bakeConfig.TriangleSurface);
         }
 
         /// <summary>
         /// Authoritative tile grid for a LogicTerrain field (origin + tile size + counts + halo).
         /// Shared by cold compile and offline query tile-space composition — no Hex query defaults.
         /// </summary>
+        public static NavTriangleSurfaceTileGrid DeriveTileGrid(
+            LogicTerrainField terrain,
+            NavTriangleSurfaceConfig triangleSurface)
+        {
+            if (triangleSurface == null) throw new ArgumentNullException(nameof(triangleSurface));
+            triangleSurface.Validate();
+            return DeriveTileGrid(
+                terrain,
+                triangleSurface.HaloPaddingCm,
+                triangleSurface.TileSubdivisionsX,
+                triangleSurface.TileSubdivisionsZ,
+                "NavMeshBakeConfig.triangleSurface");
+        }
+
         public static NavTriangleSurfaceTileGrid DeriveTileGrid(LogicTerrainField terrain, int haloPaddingCm)
+            => DeriveTileGrid(terrain, haloPaddingCm, tileSubdivisionsX: 1, tileSubdivisionsZ: 1, "NavTriangleSurfaceConfig");
+
+        private static NavTriangleSurfaceTileGrid DeriveTileGrid(
+            LogicTerrainField terrain,
+            int haloPaddingCm,
+            int tileSubdivisionsX,
+            int tileSubdivisionsZ,
+            string path)
         {
             if (terrain == null) throw new ArgumentNullException(nameof(terrain));
             if (haloPaddingCm < 0)
@@ -122,25 +144,52 @@ namespace Ludots.Core.Navigation.NavMesh.Surface
                 throw new ArgumentOutOfRangeException(nameof(haloPaddingCm), haloPaddingCm, "Halo/padding must be nonnegative.");
             }
 
+            if (tileSubdivisionsX <= 0)
+            {
+                throw new InvalidOperationException($"{path}.tileSubdivisionsX must be > 0.");
+            }
+
+            if (tileSubdivisionsZ <= 0)
+            {
+                throw new InvalidOperationException($"{path}.tileSubdivisionsZ must be > 0.");
+            }
+
             terrain.GetWorldPositionMeters(0, 0, out float originXm, out float originZm);
             int originXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originXm));
             int originZcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originZm));
             // Hex world XZ spacing is HexWidth/RowSpacing (meters), not EdgeLengthCm.
-            int tileWidthCm;
-            int tileHeightCm;
+            int terrainChunkWidthCm;
+            int terrainChunkHeightCm;
             if (terrain.Topology == LogicTerrainTopology.Hex)
             {
-                tileWidthCm = checked((int)MathF.Round(
-                    HexCoordinates.HexWidth * terrain.ChunkSizeCells * SpatialScaleDefaults.CellCm));
-                tileHeightCm = checked((int)MathF.Round(
-                    HexCoordinates.RowSpacing * terrain.ChunkSizeCells * SpatialScaleDefaults.CellCm));
+                var metrics = new HexMetrics(terrain.HorizontalStepCm);
+                terrainChunkWidthCm = checked((int)MathF.Round(
+                    metrics.HexWidthCm * terrain.ChunkSizeCells));
+                terrainChunkHeightCm = checked((int)MathF.Round(
+                    metrics.RowSpacingCm * terrain.ChunkSizeCells));
             }
             else
             {
-                tileWidthCm = checked(terrain.ChunkSizeCells * terrain.HorizontalStepCm);
-                tileHeightCm = checked(terrain.ChunkSizeCells * terrain.VerticalStepCm);
+                terrainChunkWidthCm = checked(terrain.ChunkSizeCells * terrain.HorizontalStepCm);
+                terrainChunkHeightCm = checked(terrain.ChunkSizeCells * terrain.VerticalStepCm);
             }
 
+            if (terrainChunkWidthCm % tileSubdivisionsX != 0)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.tileSubdivisionsX ({tileSubdivisionsX}) must divide the derived " +
+                    $"terrain chunk width {terrainChunkWidthCm}cm for topology {terrain.Topology}.");
+            }
+
+            if (terrainChunkHeightCm % tileSubdivisionsZ != 0)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.tileSubdivisionsZ ({tileSubdivisionsZ}) must divide the derived " +
+                    $"terrain chunk height {terrainChunkHeightCm}cm for topology {terrain.Topology}.");
+            }
+
+            int tileWidthCm = terrainChunkWidthCm / tileSubdivisionsX;
+            int tileHeightCm = terrainChunkHeightCm / tileSubdivisionsZ;
             if (tileWidthCm <= 0 || tileHeightCm <= 0)
             {
                 throw new InvalidOperationException(
@@ -152,15 +201,38 @@ namespace Ludots.Core.Navigation.NavMesh.Surface
                 originZcm,
                 tileWidthCm,
                 tileHeightCm,
-                terrain.WidthChunks,
-                terrain.HeightChunks,
+                checked(terrain.WidthChunks * tileSubdivisionsX),
+                checked(terrain.HeightChunks * tileSubdivisionsZ),
                 haloPaddingCm);
         }
 
         public static NavTriangleSurfaceTileIndex Compile(
             LogicTerrainField terrain,
             in NavBuildConfig buildConfig,
+            NavTriangleSurfaceConfig triangleSurface)
+        {
+            if (triangleSurface == null) throw new ArgumentNullException(nameof(triangleSurface));
+            triangleSurface.Validate();
+            return Compile(
+                terrain,
+                buildConfig,
+                triangleSurface.HaloPaddingCm,
+                triangleSurface.TileSubdivisionsX,
+                triangleSurface.TileSubdivisionsZ);
+        }
+
+        public static NavTriangleSurfaceTileIndex Compile(
+            LogicTerrainField terrain,
+            in NavBuildConfig buildConfig,
             int haloPaddingCm)
+            => Compile(terrain, buildConfig, haloPaddingCm, tileSubdivisionsX: 1, tileSubdivisionsZ: 1);
+
+        private static NavTriangleSurfaceTileIndex Compile(
+            LogicTerrainField terrain,
+            in NavBuildConfig buildConfig,
+            int haloPaddingCm,
+            int tileSubdivisionsX,
+            int tileSubdivisionsZ)
         {
             if (terrain == null) throw new ArgumentNullException(nameof(terrain));
             if (haloPaddingCm < 0)
@@ -171,7 +243,7 @@ namespace Ludots.Core.Navigation.NavMesh.Surface
             // Uniform FlatGrid is O(chunks): two triangles per terrain chunk, never per-cell enumeration.
             if (terrain.IsUniformFlatGridSurface && terrain.Topology == LogicTerrainTopology.Grid)
             {
-                return CompileUniformFlatGrid(terrain, buildConfig, haloPaddingCm);
+                return CompileUniformFlatGrid(terrain, buildConfig, haloPaddingCm, tileSubdivisionsX, tileSubdivisionsZ);
             }
 
             int mapWidth = terrain.WidthCells;
@@ -254,7 +326,7 @@ namespace Ludots.Core.Navigation.NavMesh.Surface
                 }
             }
 
-            return FinishCompile(terrain, haloPaddingCm, vertexIndex, vx, vy, vz, pending);
+            return FinishCompile(terrain, haloPaddingCm, tileSubdivisionsX, tileSubdivisionsZ, vertexIndex, vx, vy, vz, pending);
         }
 
         /// <summary>
@@ -265,7 +337,9 @@ namespace Ludots.Core.Navigation.NavMesh.Surface
         private static NavTriangleSurfaceTileIndex CompileUniformFlatGrid(
             LogicTerrainField terrain,
             in NavBuildConfig buildConfig,
-            int haloPaddingCm)
+            int haloPaddingCm,
+            int tileSubdivisionsX,
+            int tileSubdivisionsZ)
         {
             int mapWidth = terrain.WidthCells;
             int mapHeight = terrain.HeightCells;
@@ -341,12 +415,14 @@ namespace Ludots.Core.Navigation.NavMesh.Surface
                 }
             }
 
-            return FinishCompile(terrain, haloPaddingCm, vertexIndex, vx, vy, vz, pending);
+            return FinishCompile(terrain, haloPaddingCm, tileSubdivisionsX, tileSubdivisionsZ, vertexIndex, vx, vy, vz, pending);
         }
 
         private static NavTriangleSurfaceTileIndex FinishCompile(
             LogicTerrainField terrain,
             int haloPaddingCm,
+            int tileSubdivisionsX,
+            int tileSubdivisionsZ,
             Dictionary<VertexKey, int> vertexIndex,
             List<int> vx,
             List<int> vy,
@@ -387,7 +463,12 @@ namespace Ludots.Core.Navigation.NavMesh.Surface
                 triStableIds,
                 triFlags);
 
-            NavTriangleSurfaceTileGrid grid = DeriveTileGrid(terrain, haloPaddingCm);
+            NavTriangleSurfaceTileGrid grid = DeriveTileGrid(
+                terrain,
+                haloPaddingCm,
+                tileSubdivisionsX,
+                tileSubdivisionsZ,
+                "NavMeshBakeConfig.triangleSurface");
             return NavTriangleSurfaceTileIndex.Build(snapshot, grid);
         }
 

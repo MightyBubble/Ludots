@@ -4,7 +4,9 @@ public static class DynamicNavBakeShowcaseIds
 {
     public const string RuntimeServiceKey = "DynamicNavBakeShowcase.Runtime";
     public const string RtsMapId = "nav_bake_dynamic_rts";
+    public const string RtsHexMapId = "nav_bake_dynamic_rts_hex";
     public const string OpenWorldMapId = "nav_bake_open_world_64x64";
+    public const string OpenWorldHexMapId = "nav_bake_open_world_64x64_hex";
 
     public const string PanelElementId = "dynamic-nav-bake-panel";
     public const string StatusTextElementId = "dynamic-nav-bake-status";
@@ -54,6 +56,8 @@ public static class DynamicNavBakeShowcaseIds
         }
 
         return string.Equals(mapId, RtsMapId, StringComparison.Ordinal)
-            || string.Equals(mapId, OpenWorldMapId, StringComparison.Ordinal);
+            || string.Equals(mapId, RtsHexMapId, StringComparison.Ordinal)
+            || string.Equals(mapId, OpenWorldMapId, StringComparison.Ordinal)
+            || string.Equals(mapId, OpenWorldHexMapId, StringComparison.Ordinal);
     }
 }

@@ -7,6 +7,8 @@ using Ludots.Core.Layers;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Map.Hex;
+using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
@@ -42,6 +44,22 @@ public sealed class MassNavigationOrderChainTests
         Assert.That(ex.Message, Does.Contain("active hot zone"));
         Assert.That(ex.Message, Does.Contain("center x"));
         Assert.That(ex.Message, Does.Contain("center range"));
+    }
+
+    [Test]
+    public void BindBoardWorld_AcceptsHexGridLoadedChunkWindowSource()
+    {
+        MassNavigationConfig config = CreateConfigForTests();
+        var simulation = new MassNavigationSimulationRuntime(config);
+        var loadedChunks = new HexGridAOI(HexMetrics.Default);
+
+        simulation.BindBoardWorld(
+            new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+            loadedChunks);
+
+        Assert.That(simulation.LoadedChunks, Is.SameAs(loadedChunks));
+        Assert.That(simulation.LoadedChunkCount, Is.GreaterThan(0));
+        Assert.That(loadedChunks.ActiveChunkKeys, Is.Not.Empty);
     }
 
     [Test]

@@ -146,10 +146,28 @@
       "buildMode": "auto"
     },
     {
+      "id": "nav_bake_dynamic_rts_hex_raylib",
+      "name": "Dynamic NavMesh Hex RTS Raylib",
+      "selectors": [
+        "$nav_bake_dynamic_rts_hex"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "nav_bake_open_world_64x64_raylib",
       "name": "Dynamic NavMesh Open World 64x64 Raylib",
       "selectors": [
         "$nav_bake_open_world_64x64"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "nav_bake_open_world_64x64_hex_raylib",
+      "name": "Dynamic NavMesh Hex Open World 64x64 Raylib",
+      "selectors": [
+        "$nav_bake_open_world_64x64_hex"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

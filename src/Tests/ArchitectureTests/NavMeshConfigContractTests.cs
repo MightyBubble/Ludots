@@ -326,6 +326,102 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        [Test]
+        public void NavMeshBakeConfigLoader_TriangleSurfaceDefaultsToSingleTileSubdivision()
+        {
+            AgentProfileRegistry agentProfiles = CreateSmallAgentProfileRegistry();
+            string navRoot = CreateTempNavigationConfig(
+                CreateMinimalNavmeshJson(
+                    """
+                    {
+                      "haloPaddingCm": 100
+                    }
+                    """),
+                MinimalPathingJson);
+
+            try
+            {
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", navRoot);
+                var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+
+                NavMeshBakeConfig config = new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog);
+
+                Assert.That(config.TriangleSurface.TileSubdivisionsX, Is.EqualTo(1));
+                Assert.That(config.TriangleSurface.TileSubdivisionsZ, Is.EqualTo(1));
+            }
+            finally
+            {
+                Directory.Delete(navRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_AcceptsTriangleSurfaceTileSubdivisions()
+        {
+            AgentProfileRegistry agentProfiles = CreateSmallAgentProfileRegistry();
+            string navRoot = CreateTempNavigationConfig(
+                CreateMinimalNavmeshJson(
+                    """
+                    {
+                      "haloPaddingCm": 100,
+                      "tileSubdivisionsX": 2,
+                      "tileSubdivisionsZ": 2
+                    }
+                    """),
+                MinimalPathingJson);
+
+            try
+            {
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", navRoot);
+                var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+
+                NavMeshBakeConfig config = new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog);
+
+                Assert.That(config.TriangleSurface.TileSubdivisionsX, Is.EqualTo(2));
+                Assert.That(config.TriangleSurface.TileSubdivisionsZ, Is.EqualTo(2));
+            }
+            finally
+            {
+                Directory.Delete(navRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_RejectsNonPositiveTriangleSurfaceTileSubdivisions()
+        {
+            AgentProfileRegistry agentProfiles = CreateSmallAgentProfileRegistry();
+            string navRoot = CreateTempNavigationConfig(
+                CreateMinimalNavmeshJson(
+                    """
+                    {
+                      "haloPaddingCm": 100,
+                      "tileSubdivisionsX": 0,
+                      "tileSubdivisionsZ": 2
+                    }
+                    """),
+                MinimalPathingJson);
+
+            try
+            {
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", navRoot);
+                var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                    () => new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog))!;
+                Assert.That(ex.Message, Does.Contain("triangleSurface.tileSubdivisionsX"));
+            }
+            finally
+            {
+                Directory.Delete(navRoot, recursive: true);
+            }
+        }
+
         private static string CreateTempNavigationConfig(string navmeshJson, string pathingJson)
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-contract-" + Guid.NewGuid().ToString("N"));
@@ -342,6 +438,110 @@ namespace Ludots.Tests.Architecture
             File.WriteAllText(Path.Combine(coreConfigs, "Navigation", "pathing.json"), pathingJson);
             return tempRoot;
         }
+
+        private const string MinimalPathingJson =
+            """
+            {
+              "agentTypes": [
+                {
+                  "id": "Humanoid",
+                  "profileId": "Small",
+                  "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
+                  "navMesh": { "areaCosts": [] },
+                  "nodeGraph": { "projectionMaxRadiusCm": 1, "useDynamicOverlay": false, "forbiddenTagsAny": [], "requiredTagsAll": [], "tagCostRules": [] }
+                }
+              ]
+            }
+            """;
+
+        private static AgentProfileRegistry CreateSmallAgentProfileRegistry()
+            => new(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "Small",
+                    RadiusCm = 30,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
+
+        private static string CreateMinimalNavmeshJson(string triangleSurfaceJson)
+            => $$"""
+               {
+                 "mode": "offline",
+                 "algorithm": "recast",
+                 "profiles": [
+                   { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
+                 ],
+                 "layers": [
+                   { "id": "Ground", "layer": 0 }
+                 ],
+                 "areas": [],
+                 "runtimeIncremental": {
+                   "tileBudgetPerFixedTick": 1,
+                   "includeNeighborTiles": true,
+                   "heightScaleMeters": 1,
+                   "minWalkableUpDot": 0.6,
+                   "cliffHeightThreshold": 1,
+                   "trackedStructuralEntityCapacity": 256,
+                   "obstaclePrimitiveCapacity": 512,
+                   "polygonVertexCapacity": 4096,
+                   "dirtyTileCapacity": 64,
+                   "stagedEntryCapacity": 64,
+                   "publishedTileCapacity": 64,
+                   "storeGroupCapacity": 8,
+                   "residentTileCapacity": 128,
+                   "outputVertexCapacity": 256,
+                   "outputTriangleCapacity": 512,
+                   "outputPortalCapacity": 64,
+                   "initialResidentChunkX": 0,
+                   "initialResidentChunkZ": 0,
+                   "initialResidentWidthChunks": 1,
+                   "initialResidentHeightChunks": 1
+                 },
+                 "layeredSpan": {
+                   "scratchSlotCount": 2,
+                   "rasterCellSizeCm": 100,
+                   "rasterHaloCells": 1,
+                   "sameSurfaceToleranceCm": 5,
+                   "maxSimplificationErrorCm": 0,
+                   "heightRounding": "roundHalfAwayFromZero",
+                   "maxLawsonFlipCount": 100000,
+                   "columnCapacity": 64,
+                   "spanCapacity": 128,
+                   "classifiedSpanCapacity": 128,
+                   "walkableSpanCapacity": 128,
+                   "linkCapacity": 256,
+                   "sheetCapacity": 128,
+                   "portalIntervalCapacity": 256,
+                   "regionCapacity": 64,
+                   "chartCapacity": 32,
+                   "ringCapacity": 32,
+                   "contourVertexCapacity": 256,
+                   "contourEdgeCapacity": 256,
+                   "seamCapacity": 64,
+                   "canonicalLinkCapacity": 256,
+                   "splitPointCapacity": 64,
+                   "triangulationVertexCapacity": 256,
+                   "triangulationTriangleCapacity": 512,
+                   "constrainedEdgeCapacity": 512,
+                   "borderPortalCapacity": 64,
+                   "polygonVertexCapacity": 256,
+                   "adjacencyEdgeCapacity": 1536,
+                   "bridgeCandidateCapacity": 256,
+                   "ringWorkCapacity": 64,
+                   "temporaryConstraintFlagCapacity": 512
+                 },
+                 "triangleSurface": {{triangleSurfaceJson}},
+                 "recast": {
+                   "rasterCellSizeCm": 10,
+                   "rasterCellHeightCm": 5
+                 }
+               }
+               """;
 
         private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId)
         {

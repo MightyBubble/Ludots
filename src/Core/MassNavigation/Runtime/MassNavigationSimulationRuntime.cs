@@ -7,7 +7,6 @@ using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.MovePlanning;
-using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
 
@@ -98,18 +97,15 @@ public sealed class MassNavigationSimulationRuntime
     private MassNavigationDomainStanceProjection? _domainStanceProjection;
     private int[] _teamIds = Array.Empty<int>();
     private int _frameIndex;
-    private WorldGridLoadedChunks? _loadedChunks;
-    private WorldGridLoadedChunkContributor? _loadedChunkContributor;
+    private ILoadedChunkWindowSource? _loadedChunks;
+    private ILoadedChunkContributor? _loadedChunkContributor;
     private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds;
     private readonly List<long> _loadedChunksToEvict;
     private readonly List<long> _loadedChunksAddedDuringUpdate;
+    private readonly List<long> _streamingWindowChunkKeys;
     private readonly HashSet<Entity> _authoredBindingSeenEntities;
     private readonly int _loadedChunkCapacity;
     private float _streamingClockSeconds;
-    private int _streamingMinChunkX = int.MinValue;
-    private int _streamingMaxChunkX = int.MinValue;
-    private int _streamingMinChunkY = int.MinValue;
-    private int _streamingMaxChunkY = int.MinValue;
     private int _streamingRadiusCm = int.MinValue;
     private WorldSizeSpec _boardWorldSize;
     private bool _boardWorldBound;
@@ -196,7 +192,7 @@ public sealed class MassNavigationSimulationRuntime
     internal MassNavigationGroupRuntime NavGroupRuntime { get; }
     internal MassNavigationFlowSolverState MassNavigationFlow { get; }
     public MassNavigationWorldConfig WorldConfig { get; }
-    public WorldGridLoadedChunks LoadedChunks => RequireLoadedChunks();
+    public ILoadedChunks LoadedChunks => RequireLoadedChunks();
     public MassNavigationStreamingConfig Streaming => Config.Streaming;
 
     public int NavigationAgentCount => MassNavigationFlow.UnitCount;
@@ -212,7 +208,7 @@ public sealed class MassNavigationSimulationRuntime
     public int FrameIndex => _frameIndex;
     public int AgentsPerTeam => Config.Scenario.AgentsPerTeam;
     public int LoadedChunkCount => _loadedChunkContributor?.ActiveChunkKeys.Count ?? 0;
-    public int StreamingChunkSizeCm => RequireLoadedChunks().ChunkSizeCm;
+    public int StreamingChunkSizeCm => WorldConfig.StreamingChunkSizeCm;
     public float SolverWindowCenterXCm => _simWindowCenterXCm;
     public float SolverWindowCenterYCm => _simWindowCenterYCm;
     public float SolverWindowWidthCm => _simWindowWidthCm;
@@ -282,6 +278,7 @@ public sealed class MassNavigationSimulationRuntime
         _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);
         _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);
         _loadedChunksAddedDuringUpdate = new List<long>(_loadedChunkCapacity);
+        _streamingWindowChunkKeys = new List<long>(_loadedChunkCapacity);
         _simWindowWidthCm = WorldConfig.SolverWindowWidthCm;
         _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;
         _simWindowCenterXCm = _activeHotZoneCenterXCm;
@@ -298,14 +295,9 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow.Semantics.CopyFrom(config.Semantics);
     }
 
-    public void BindBoardWorld(WorldSizeSpec boardWorldSize, WorldGridLoadedChunks loadedChunks)
+    public void BindBoardWorld(WorldSizeSpec boardWorldSize, ILoadedChunkWindowSource loadedChunks)
     {
         ArgumentNullException.ThrowIfNull(loadedChunks);
-        if (loadedChunks.ChunkSizeCm != WorldConfig.StreamingChunkSizeCm)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation streaming chunk size {WorldConfig.StreamingChunkSizeCm} does not match board-owned loaded chunks {loadedChunks.ChunkSizeCm}.");
-        }
 
         if (!ReferenceEquals(_loadedChunks, loadedChunks))
         {
@@ -1195,39 +1187,31 @@ public sealed class MassNavigationSimulationRuntime
         int centerX = (int)MathF.Round(worldCenterCm.X);
         int centerY = (int)MathF.Round(worldCenterCm.Y);
         int radius = Streaming.RadiusCm;
-        int chunkSize = RequireLoadedChunks().ChunkSizeCm;
-        int minChunkX = MathUtil.FloorDiv(centerX - radius, chunkSize);
-        int maxChunkX = MathUtil.FloorDiv(centerX + radius, chunkSize);
-        int minChunkY = MathUtil.FloorDiv(centerY - radius, chunkSize);
-        int maxChunkY = MathUtil.FloorDiv(centerY + radius, chunkSize);
-        bool changed = minChunkX != _streamingMinChunkX ||
-            maxChunkX != _streamingMaxChunkX ||
-            minChunkY != _streamingMinChunkY ||
-            maxChunkY != _streamingMaxChunkY ||
-            radius != _streamingRadiusCm;
-        ValidateStreamingWindowCapacity(worldCenterCm);
+        ILoadedChunkWindowSource loadedChunks = RequireLoadedChunks();
+        _streamingWindowChunkKeys.Clear();
+        loadedChunks.CollectWindowChunkKeys(centerX, centerY, radius, _streamingWindowChunkKeys);
+        bool changed = radius != _streamingRadiusCm;
+        ValidateStreamingWindowCapacity(_streamingWindowChunkKeys);
         _loadedChunksAddedDuringUpdate.Clear();
         try
         {
-            for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
+            for (int i = 0; i < _streamingWindowChunkKeys.Count; i++)
             {
-                for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+                long chunkKey = _streamingWindowChunkKeys[i];
+                bool wasTracked = _loadedChunkLastTouchedSeconds.ContainsKey(chunkKey);
+                TouchStreamingChunk(chunkKey);
+                if (!wasTracked)
                 {
-                    long chunkKey = GraphChunkKey.Pack(chunkX, chunkY);
-                    bool wasTracked = _loadedChunkLastTouchedSeconds.ContainsKey(chunkKey);
-                    TouchStreamingChunk(chunkKey);
-                    if (!wasTracked)
-                    {
-                        _loadedChunksAddedDuringUpdate.Add(chunkKey);
-                    }
+                    changed = true;
+                    _loadedChunksAddedDuringUpdate.Add(chunkKey);
                 }
             }
 
-            EvictExpiredStreamingChunks(minChunkX, maxChunkX, minChunkY, maxChunkY);
-            _streamingMinChunkX = minChunkX;
-            _streamingMaxChunkX = maxChunkX;
-            _streamingMinChunkY = minChunkY;
-            _streamingMaxChunkY = maxChunkY;
+            if (EvictExpiredStreamingChunks(_streamingWindowChunkKeys))
+            {
+                changed = true;
+            }
+
             _streamingRadiusCm = radius;
         }
         catch
@@ -1255,17 +1239,17 @@ public sealed class MassNavigationSimulationRuntime
     {
         int centerX = (int)MathF.Round(worldCenterCm.X);
         int centerY = (int)MathF.Round(worldCenterCm.Y);
-        int radius = Streaming.RadiusCm;
-        int chunkSize = RequireLoadedChunks().ChunkSizeCm;
-        int minChunkX = MathUtil.FloorDiv(centerX - radius, chunkSize);
-        int maxChunkX = MathUtil.FloorDiv(centerX + radius, chunkSize);
-        int minChunkY = MathUtil.FloorDiv(centerY - radius, chunkSize);
-        int maxChunkY = MathUtil.FloorDiv(centerY + radius, chunkSize);
+        _streamingWindowChunkKeys.Clear();
+        RequireLoadedChunks().CollectWindowChunkKeys(centerX, centerY, Streaming.RadiusCm, _streamingWindowChunkKeys);
+        ValidateStreamingWindowCapacity(_streamingWindowChunkKeys);
+    }
+
+    private void ValidateStreamingWindowCapacity(List<long> currentWindowKeys)
+    {
         int requiredCount = 0;
         foreach (KeyValuePair<long, float> pair in _loadedChunkLastTouchedSeconds)
         {
-            (int chunkX, int chunkY) = GraphChunkKey.Unpack(pair.Key);
-            bool inNextWindow = chunkX >= minChunkX && chunkX <= maxChunkX && chunkY >= minChunkY && chunkY <= maxChunkY;
+            bool inNextWindow = currentWindowKeys.Contains(pair.Key);
             float elapsedSeconds = _streamingClockSeconds - pair.Value;
             bool expired = !inNextWindow &&
                 ((Streaming.RetainSeconds == 0f && elapsedSeconds >= 0f) || elapsedSeconds > Streaming.RetainSeconds);
@@ -1275,14 +1259,11 @@ public sealed class MassNavigationSimulationRuntime
             }
         }
 
-        for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
+        for (int i = 0; i < currentWindowKeys.Count; i++)
         {
-            for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+            if (!_loadedChunkLastTouchedSeconds.ContainsKey(currentWindowKeys[i]))
             {
-                if (!_loadedChunkLastTouchedSeconds.ContainsKey(GraphChunkKey.Pack(chunkX, chunkY)))
-                {
-                    requiredCount++;
-                }
+                requiredCount++;
             }
         }
 
@@ -1293,24 +1274,18 @@ public sealed class MassNavigationSimulationRuntime
         }
     }
 
-    private void EvictExpiredStreamingChunks(
-        int currentMinChunkX,
-        int currentMaxChunkX,
-        int currentMinChunkY,
-        int currentMaxChunkY)
+    private bool EvictExpiredStreamingChunks(List<long> currentWindowKeys)
     {
         float retainSeconds = Streaming.RetainSeconds;
         if (retainSeconds < 0f)
         {
-            return;
+            return false;
         }
 
         _loadedChunksToEvict.Clear();
         foreach (KeyValuePair<long, float> pair in _loadedChunkLastTouchedSeconds)
         {
-            (int chunkX, int chunkY) = GraphChunkKey.Unpack(pair.Key);
-            bool inCurrentWindow = chunkX >= currentMinChunkX && chunkX <= currentMaxChunkX &&
-                chunkY >= currentMinChunkY && chunkY <= currentMaxChunkY;
+            bool inCurrentWindow = currentWindowKeys.Contains(pair.Key);
             if (!inCurrentWindow && _streamingClockSeconds - pair.Value > retainSeconds)
             {
                 _loadedChunksToEvict.Add(pair.Key);
@@ -1323,6 +1298,8 @@ public sealed class MassNavigationSimulationRuntime
             _loadedChunkLastTouchedSeconds.Remove(chunkKey);
             RequireLoadedChunkContributor().SetLoaded(chunkKey, false);
         }
+
+        return _loadedChunksToEvict.Count > 0;
     }
 
     private void TouchStreamingChunk(long chunkKey)
@@ -1560,13 +1537,13 @@ public sealed class MassNavigationSimulationRuntime
         return _boardWorldSize;
     }
 
-    private WorldGridLoadedChunks RequireLoadedChunks()
+    private ILoadedChunkWindowSource RequireLoadedChunks()
     {
         return _loadedChunks
-            ?? throw new InvalidOperationException("MassNavigation requires board-owned WorldGridLoadedChunks before streaming operations.");
+            ?? throw new InvalidOperationException("MassNavigation requires board-owned loaded chunk window source before streaming operations.");
     }
 
-    private WorldGridLoadedChunkContributor RequireLoadedChunkContributor()
+    private ILoadedChunkContributor RequireLoadedChunkContributor()
     {
         return _loadedChunkContributor
             ?? throw new InvalidOperationException("MassNavigation requires an active board loaded-chunk contribution before streaming operations.");
@@ -1649,10 +1626,7 @@ public sealed class MassNavigationSimulationRuntime
 
     private void InvalidateStreamingWindowCache()
     {
-        _streamingMinChunkX = int.MinValue;
-        _streamingMaxChunkX = int.MinValue;
-        _streamingMinChunkY = int.MinValue;
-        _streamingMaxChunkY = int.MinValue;
         _streamingRadiusCm = int.MinValue;
+        _streamingWindowChunkKeys.Clear();
     }
 }

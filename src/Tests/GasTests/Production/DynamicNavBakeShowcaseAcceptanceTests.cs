@@ -35,6 +35,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Navigation;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Scripting;
 using Ludots.NavBake.Recast;
@@ -82,7 +83,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         Assert.That(triangleSurface?.Surface.TriangleCount, Is.EqualTo(128));
 
         AssertAlgorithmSwitch(engine, actions, algorithm);
-        Assert.That(actions.TryDeploySquad(engine, out _), Is.True);
+        Assert.That(actions.SquadDeployed, Is.True);
         AssertPathingHumanoidMapsToLight(engine);
         Assert.That(actions.TryCommandMoveToGoal(engine, out _), Is.True, "Initial RTS route should be ready before the gate seals.");
         AssertFormalNavMeshRouteEventually(engine, actions, expectedSquadCount: actions.ActiveConfig.Squad.Count);
@@ -146,7 +147,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         DrainSpawnAndNavBootstrap(engine, actions);
         AssertAlgorithmSwitch(engine, actions, NavBakeAlgorithmKind.Recast);
 
-        Assert.That(actions.TryDeploySquad(engine, out _), Is.True);
+        Assert.That(actions.SquadDeployed, Is.True);
         Assert.That(actions.TryCommandMoveToGoal(engine, out string moveError), Is.True, moveError);
         AssertFormalNavMeshRouteEventually(engine, actions);
         Assert.That(CountActiveSquadMoveOrders(engine), Is.GreaterThan(0));
@@ -212,7 +213,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         DrainSpawnAndNavBootstrap(engine, actions);
         AssertAlgorithmSwitch(engine, actions, NavBakeAlgorithmKind.Recast);
 
-        Assert.That(actions.TryDeploySquad(engine, out _), Is.True);
+        Assert.That(actions.SquadDeployed, Is.True);
         Assert.That(actions.TryCommandMoveToGoal(engine, out string moveError), Is.True, moveError);
         AssertFormalNavMeshRouteEventually(engine, actions);
         Assert.That(
@@ -276,7 +277,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         DynamicNavBakeShowcaseActions actions = WaitForActions(engine, DynamicNavBakeShowcaseIds.RtsMapId);
         DrainSpawnAndNavBootstrap(engine, actions);
         AssertAlgorithmSwitch(engine, actions, algorithm);
-        Assert.That(actions.TryDeploySquad(engine, out _), Is.True);
+        Assert.That(actions.SquadDeployed, Is.True);
         Assert.That(actions.TryCommandMoveToGoal(engine, out _), Is.True);
         int openPathPoints = actions.LastPathPointCount;
         Assert.That(openPathPoints, Is.GreaterThan(1));
@@ -296,6 +297,128 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
             "Sealed gate must change the deterministic player-route geometry signature (Recast may keep the same waypoint count).");
 
         TestContext.WriteLine($"RTS-stale/{algorithm} elapsed={wall.Elapsed}");
+    }
+
+    // Feature: HexGrid runtime dirty update shows the same player loop under every bake algorithm
+    // Given a player enters the HexGrid fortress with visible relief terrain and a selected squad
+    // When they switch to Recast, CDT, or LayeredSpan, build a wall, demolish it, then raise terrain
+    // Then every edit publishes a local runtime generation, the resident window stays bounded, and the squad can still route
+    [TestCase(NavBakeAlgorithmKind.Recast)]
+    [TestCase(NavBakeAlgorithmKind.Cdt)]
+    [TestCase(NavBakeAlgorithmKind.LayeredSpan)]
+    public void Feature_HexRtsRuntimeDirtyUpdate_BuildRestoreAndTerrainRaise(NavBakeAlgorithmKind algorithm)
+    {
+        Stopwatch wall = Stopwatch.StartNew();
+        using GameEngine engine = CreateEngine("NavBakeDynamicRtsHexShowcaseMod", registerRecast: algorithm == NavBakeAlgorithmKind.Recast);
+        engine.LoadMap(DynamicNavBakeShowcaseIds.RtsHexMapId);
+        DynamicNavBakeShowcaseActions actions = WaitForActions(engine, DynamicNavBakeShowcaseIds.RtsHexMapId);
+        DrainSpawnAndNavBootstrap(engine, actions);
+        AssertAlgorithmSwitch(engine, actions, algorithm);
+
+        DynamicNavBakeShowcaseConfig config = actions.ActiveConfig;
+        Assert.That(config.MapId, Is.EqualTo(DynamicNavBakeShowcaseIds.RtsHexMapId));
+        Assert.That(config.ResidentWidthChunks * config.ResidentHeightChunks, Is.EqualTo(36));
+        Assert.That(config.SurfaceTileWidthCm, Is.EqualTo(22176));
+        Assert.That(config.SurfaceTileHeightCm, Is.EqualTo(19200));
+
+        var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
+            ?? throw new InvalidOperationException("Hex Dynamic NavBake showcase must bind VisualHeightmap.");
+        if (visualHeightmap is not IVisualHeightmapRenderSource visualHeightmapSource)
+        {
+            throw new InvalidOperationException("Hex Dynamic NavBake VisualHeightmap must be renderable so the relief is visible.");
+        }
+
+        Assert.That(visualHeightmapSource.Bounds.Left, Is.LessThanOrEqualTo(config.WorldOriginXCm));
+        Assert.That(visualHeightmapSource.Bounds.Right, Is.GreaterThanOrEqualTo(config.WorldMaxXCm));
+        Assert.That(visualHeightmapSource.Bounds.Top, Is.LessThanOrEqualTo(config.WorldOriginZCm));
+        Assert.That(visualHeightmapSource.Bounds.Bottom, Is.GreaterThanOrEqualTo(config.WorldMaxZCm));
+
+        NavTriangleSurfaceTileIndex triangleSurface = engine.GetService(CoreServiceKeys.NavTriangleSurface)
+            ?? throw new InvalidOperationException("Hex Dynamic NavBake requires NavTriangleSurface.");
+        Assert.That(triangleSurface.Grid.TileWidthCm, Is.EqualTo(config.SurfaceTileWidthCm));
+        Assert.That(triangleSurface.Grid.TileHeightCm, Is.EqualTo(config.SurfaceTileHeightCm));
+        Assert.That(triangleSurface.Grid.OriginXcm, Is.EqualTo(config.WorldOriginXCm));
+        Assert.That(triangleSurface.Grid.OriginZcm, Is.EqualTo(config.WorldOriginZCm));
+        Assert.That(triangleSurface.Surface.TriangleCount, Is.GreaterThan(0));
+
+        RuntimeIncrementalNavMeshRebuildQueue queue = engine.GetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue)!;
+        int expectedResidentTileCount = checked(config.ResidentWidthChunks * config.ResidentHeightChunks);
+        Assert.That(queue.CommittedResidentWindowCount, Is.EqualTo(expectedResidentTileCount));
+
+        Assert.That(actions.SquadDeployed, Is.True);
+        Assert.That(
+            actions.TryCommandMoveToGoal(engine, out string moveError),
+            Is.True,
+            BuildHexRtsMoveDiagnostic(engine, actions, queue, moveError));
+        Assert.That(actions.LastPathStatus, Is.EqualTo(NavPathStatus.Ok));
+        AssertFormalNavMeshRouteEventually(engine, actions, expectedSquadCount: config.Squad.Count);
+        ulong initialRouteSignature = actions.CaptureEvidence(engine).PlayerRouteSignature;
+        Assert.That(initialRouteSignature, Is.Not.EqualTo(0UL));
+
+        ulong generationBeforeBuild = actions.CaptureEvidence(engine).LastGeneration;
+        Assert.That(actions.TryBuildWall(engine, out string buildError), Is.True, buildError);
+        actions.DrainUntilIdle(engine, maxTicks: 8192);
+        DynamicNavBakeShowcaseEvidence builtEvidence = actions.CaptureEvidence(engine);
+        Assert.That(builtEvidence.LastGeneration, Is.GreaterThan(generationBeforeBuild));
+        Assert.That(queue.LastDirtyVisitedCandidateCount, Is.GreaterThan(0));
+        Assert.That(queue.LastDirtyVisitedCandidateCount, Is.LessThanOrEqualTo(config.Benchmark.MaxDirtyVisitedCandidateCount));
+        Assert.That(queue.CommittedResidentWindowCount, Is.EqualTo(expectedResidentTileCount));
+        Assert.That(actions.WallDeployedCount, Is.EqualTo(1));
+        AssertDeployedWallNavigationFootprints(engine, config);
+        Assert.That(
+            actions.TryCommandMoveToGoal(engine, out string walledMoveError),
+            Is.True,
+            BuildHexRtsBakeDiagnostic(engine, queue, walledMoveError));
+        Assert.That(actions.LastPathStatus, Is.EqualTo(NavPathStatus.Ok));
+        AssertFormalNavMeshRouteEventually(engine, actions, expectedSquadCount: config.Squad.Count);
+
+        ulong generationBeforeDemolish = actions.CaptureEvidence(engine).LastGeneration;
+        Assert.That(actions.TryDemolishWall(engine, out string demolishError), Is.True, demolishError);
+        actions.DrainUntilIdle(engine, maxTicks: 8192);
+        DynamicNavBakeShowcaseEvidence demolishedEvidence = actions.CaptureEvidence(engine);
+        Assert.That(demolishedEvidence.LastGeneration, Is.GreaterThan(generationBeforeDemolish));
+        Assert.That(queue.LastDirtyVisitedCandidateCount, Is.GreaterThan(0));
+        Assert.That(queue.LastDirtyVisitedCandidateCount, Is.LessThanOrEqualTo(config.Benchmark.MaxDirtyVisitedCandidateCount));
+        Assert.That(actions.WallDeployedCount, Is.EqualTo(0));
+        Assert.That(actions.TryCommandMoveToGoal(engine, out string restoredMoveError), Is.True, restoredMoveError);
+        Assert.That(actions.LastPathStatus, Is.EqualTo(NavPathStatus.Ok));
+        AssertFormalNavMeshRouteEventually(engine, actions, expectedSquadCount: config.Squad.Count);
+
+        RuntimeNavTriangleSurfaceService runtimeSurface = engine.GetService(CoreServiceKeys.RuntimeNavTriangleSurface)
+            ?? throw new InvalidOperationException("Hex terrain raise requires RuntimeNavTriangleSurface.");
+        NavTriangleSurfaceTileIndex beforeTerrain = runtimeSurface.Published;
+        string beforeTerrainHash = DynamicNavBakeShowcaseEvidenceCapture.ComputeInputHash(beforeTerrain);
+        ulong surfaceGenerationBeforeRaise = runtimeSurface.ContentGeneration;
+        ulong navGenerationBeforeRaise = actions.CaptureEvidence(engine).LastGeneration;
+        Assert.That(actions.TryStageTerrainRaise(engine, out string stageTerrainError), Is.True, stageTerrainError);
+        Assert.That(actions.TryBake(engine, out string terrainBakeError), Is.True, terrainBakeError);
+        actions.DrainUntilIdle(engine, maxTicks: 8192);
+        Assert.That(runtimeSurface.ContentGeneration, Is.GreaterThan(surfaceGenerationBeforeRaise));
+        Assert.That(runtimeSurface.Published, Is.Not.SameAs(beforeTerrain));
+        Assert.That(
+            DynamicNavBakeShowcaseEvidenceCapture.ComputeInputHash(runtimeSurface.Published),
+            Is.Not.EqualTo(beforeTerrainHash),
+            "Hex terrain raise must change authoritative triangle geometry, not only generation state.");
+        DynamicNavBakeShowcaseEvidence raisedEvidence = actions.CaptureEvidence(engine);
+        Assert.That(raisedEvidence.LastGeneration, Is.GreaterThan(navGenerationBeforeRaise));
+        Assert.That(queue.LastDirtyVisitedCandidateCount, Is.GreaterThan(0));
+        Assert.That(queue.LastDirtyVisitedCandidateCount, Is.LessThanOrEqualTo(config.Benchmark.MaxDirtyVisitedCandidateCount));
+        Assert.That(queue.CommittedResidentWindowCount, Is.EqualTo(expectedResidentTileCount));
+
+        ulong surfaceGenerationBeforeRestore = runtimeSurface.ContentGeneration;
+        Assert.That(actions.TryRestore(engine, out string stageRestoreError), Is.True, stageRestoreError);
+        Assert.That(actions.TryBake(engine, out string restoreBakeError), Is.True, restoreBakeError);
+        actions.DrainUntilIdle(engine, maxTicks: 8192);
+        Assert.That(runtimeSurface.ContentGeneration, Is.GreaterThan(surfaceGenerationBeforeRestore));
+        Assert.That(runtimeSurface.Published, Is.SameAs(beforeTerrain));
+        Assert.That(DynamicNavBakeShowcaseEvidenceCapture.ComputeInputHash(runtimeSurface.Published), Is.EqualTo(beforeTerrainHash));
+        Assert.That(actions.TryCommandMoveToGoal(engine, out string finalMoveError), Is.True, finalMoveError);
+        Assert.That(actions.LastPathStatus, Is.EqualTo(NavPathStatus.Ok));
+        AssertFormalNavMeshRouteEventually(engine, actions, expectedSquadCount: config.Squad.Count);
+
+        TestContext.WriteLine(
+            $"HexRTS-dirty/{algorithm} elapsed={wall.Elapsed} dirtyCandidates={queue.LastDirtyVisitedCandidateCount}");
+        Assert.That(wall.Elapsed, Is.LessThan(TimeSpan.FromMinutes(4)));
     }
 
     // Feature: Open-world hotspot wall follows the focused hotspot
@@ -328,6 +451,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         Assert.That(actions.TryBuildWall(engine, out string buildError), Is.True, buildError);
         Assert.That(actions.LastStatus, Does.Contain(nextHotspot.Label));
         Assert.That(actions.WallDeployedCount, Is.EqualTo(config.Gate.SegmentCount));
+        AssertDeployedWallNavigationFootprints(engine, config);
 
         ResolveAuthoredResidentWindowBounds(config, nextHotspot, out int winMinX, out int winMinY, out int winMaxX, out int winMaxY);
         var deployed = CaptureDeployedWallPositions(engine, config);
@@ -373,7 +497,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         DynamicNavBakeShowcaseActions actions = WaitForActions(engine, DynamicNavBakeShowcaseIds.OpenWorldMapId);
         DrainSpawnAndNavBootstrap(engine, actions);
         AssertAlgorithmSwitch(engine, actions, algorithm);
-        Assert.That(actions.TryDeploySquad(engine, out _), Is.True);
+        Assert.That(actions.SquadDeployed, Is.True);
 
         RuntimeIncrementalNavMeshRebuildQueue queue = engine.GetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue)!;
         Assert.That(queue.CommittedResidentWindowCount, Is.EqualTo(64), "Open world resident nav window must remain 8x8.");
@@ -443,7 +567,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         DrainSpawnAndNavBootstrap(engine, actions);
         AssertAlgorithmSwitch(engine, actions, algorithm);
 
-        Assert.That(actions.TryDeploySquad(engine, out _), Is.True);
+        Assert.That(actions.SquadDeployed, Is.True);
         AssertPathingHumanoidMapsToLight(engine);
         var positionsBefore = CaptureSquadPositions(engine, actions);
         bool moveOk = actions.TryCommandMoveToGoal(engine, out string moveError);
@@ -483,7 +607,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         DrainSpawnAndNavBootstrap(engine, actions);
         AssertAlgorithmSwitch(engine, actions, NavBakeAlgorithmKind.LayeredSpan);
 
-        Assert.That(actions.TryDeploySquad(engine, out string deployError), Is.True, deployError);
+        Assert.That(actions.SquadDeployed, Is.True);
         Assert.That(actions.TryCommandMoveToGoal(engine, out string moveError), Is.True, moveError);
         Assert.That(actions.MoveCommandActive, Is.True);
         Assert.That(actions.LastCoarseCorridorNodeCount, Is.GreaterThan(2));
@@ -1360,6 +1484,244 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         maxZ = checked(grid.OriginZcm + checked((maxChunkZ + 1) * grid.TileHeightCm));
     }
 
+    private static string BuildHexRtsMoveDiagnostic(
+        GameEngine engine,
+        DynamicNavBakeShowcaseActions actions,
+        RuntimeIncrementalNavMeshRebuildQueue queue,
+        string moveError)
+    {
+        DynamicNavBakeShowcaseConfig config = actions.ActiveConfig;
+        ResolveCommittedResidentWorldBounds(engine, queue, out int minX, out int minZ, out int maxX, out int maxZ);
+        NavQueryServiceRegistry registry = engine.GetService(CoreServiceKeys.NavQueryServices)
+            ?? throw new InvalidOperationException("Hex RTS move diagnostic requires NavQueryServices.");
+        if (!registry.TryGetStore(0, 0, out NavTileStore store))
+        {
+            throw new InvalidOperationException("Hex RTS move diagnostic requires layer 0 profile 0 NavTileStore.");
+        }
+
+        NavTile[] tiles = store.SnapshotLoadedTiles();
+        int nonEmptyTiles = 0;
+        int totalTriangles = 0;
+        int minTileX = int.MaxValue;
+        int minTileZ = int.MaxValue;
+        int maxTileX = int.MinValue;
+        int maxTileZ = int.MinValue;
+        for (int i = 0; i < tiles.Length; i++)
+        {
+            NavTile tile = tiles[i];
+            if (tile.TriangleCount <= 0 || tile.VertexCount <= 0)
+            {
+                continue;
+            }
+
+            nonEmptyTiles++;
+            totalTriangles = checked(totalTriangles + tile.TriangleCount);
+            minTileX = Math.Min(minTileX, tile.TileId.ChunkX);
+            minTileZ = Math.Min(minTileZ, tile.TileId.ChunkY);
+            maxTileX = Math.Max(maxTileX, tile.TileId.ChunkX);
+            maxTileZ = Math.Max(maxTileZ, tile.TileId.ChunkY);
+        }
+
+        bool queryCreated = registry.TryCreateQuery(0, 0, NavAreaCostTable.CreateDefault(), out NavQueryService query);
+        ResolveSquadCentroid(engine, actions, out int liveStartX, out int liveStartZ);
+        bool authoredStartProjected = queryCreated && query.TryProject(config.Squad.CenterXCm, config.Squad.CenterYCm, out _);
+        bool liveStartProjected = queryCreated && query.TryProject(liveStartX, liveStartZ, out _);
+        bool goalProjected = queryCreated && query.TryProject(config.Goal.XCm, config.Goal.YCm, out _);
+        NavPathStatus authoredDirectStatus = queryCreated
+            ? query.TryFindPath(config.Squad.CenterXCm, config.Squad.CenterYCm, config.Goal.XCm, config.Goal.YCm).Status
+            : NavPathStatus.NotReady;
+        NavPathStatus liveDirectStatus = queryCreated
+            ? query.TryFindPath(liveStartX, liveStartZ, config.Goal.XCm, config.Goal.YCm).Status
+            : NavPathStatus.NotReady;
+        string rawDetour = "<not-created>";
+        if (queryCreated)
+        {
+            try
+            {
+                NavPathResult rawPath = DetourNavQueryEngine.FindPath(
+                    tiles,
+                    layer: 0,
+                    areaCosts: NavAreaCostTable.CreateDefault(),
+                    tileWidthCm: registry.TileSpace.TileWidthCm,
+                    tileHeightCm: registry.TileSpace.TileHeightCm,
+                    startXcm: liveStartX,
+                    startZcm: liveStartZ,
+                    goalXcm: config.Goal.XCm,
+                    goalZcm: config.Goal.YCm,
+                    maxPortals: 256);
+                rawDetour = rawPath.Status.ToString();
+            }
+            catch (Exception ex)
+            {
+                rawDetour = ex.Message;
+            }
+        }
+
+        string tileRange = nonEmptyTiles > 0
+            ? $"[{minTileX},{minTileZ}]-[{maxTileX},{maxTileZ}]"
+            : "<empty>";
+        string routeTileSummary = BuildHexRouteTileSummary(
+            tiles,
+            registry.TileSpace,
+            config.Squad.CenterXCm,
+            config.Squad.CenterYCm,
+            config.Gate.CenterXCm,
+            config.Gate.CenterYCm,
+            config.Goal.XCm,
+            config.Goal.YCm);
+        return
+            $"Hex RTS move failed: {moveError}; " +
+            $"status={actions.LastStatus}; path={actions.LastPathStatus}; orch={actions.PathOrchestrationState}; " +
+            $"queue={queue.Status}; pending={queue.PendingTileCount}; transition={queue.HasResidentWindowTransition}; " +
+            $"committed={queue.CommittedResidentWindowCount}; resident={queue.ResidentWindowCount}; " +
+            $"window=[{minX},{minZ}]-[{maxX},{maxZ}]; " +
+            $"authoredStart=({config.Squad.CenterXCm},{config.Squad.CenterYCm}) projected={authoredStartProjected}; " +
+            $"liveStart=({liveStartX},{liveStartZ}) projected={liveStartProjected}; " +
+            $"goal=({config.Goal.XCm},{config.Goal.YCm}) projected={goalProjected}; " +
+            $"authoredDirect={authoredDirectStatus}; liveDirect={liveDirectStatus}; rawDetour={rawDetour}; " +
+            $"storeResident={store.ResidentCount}; snapshot={tiles.Length}; nonEmpty={nonEmptyTiles}; tris={totalTriangles}; tiles={tileRange}; " +
+            $"routeTiles={routeTileSummary}.";
+    }
+
+    private static string BuildHexRouteTileSummary(
+        IReadOnlyList<NavTile> tiles,
+        NavQueryTileSpace tileSpace,
+        int startXcm,
+        int startZcm,
+        int wallXcm,
+        int wallZcm,
+        int goalXcm,
+        int goalZcm)
+    {
+        var requested = new HashSet<NavTileId>
+        {
+            LocateTile(tileSpace, startXcm, startZcm),
+            LocateTile(tileSpace, wallXcm, wallZcm),
+            LocateTile(tileSpace, goalXcm, goalZcm)
+        };
+        var summary = new List<string>(requested.Count);
+        for (int i = 0; i < tiles.Count; i++)
+        {
+            NavTile tile = tiles[i];
+            if (!requested.Contains(tile.TileId))
+            {
+                continue;
+            }
+
+            int west = 0;
+            int south = 0;
+            int east = 0;
+            int north = 0;
+            ReadOnlySpan<NavBorderPortal> portals = tile.ActivePortals;
+            for (int p = 0; p < portals.Length; p++)
+            {
+                switch (portals[p].Side)
+                {
+                    case NavPortalSide.West: west++; break;
+                    case NavPortalSide.South: south++; break;
+                    case NavPortalSide.East: east++; break;
+                    case NavPortalSide.North: north++; break;
+                }
+            }
+
+            summary.Add($"({tile.TileId.ChunkX},{tile.TileId.ChunkY}):tri={tile.TriangleCount},portals=W{west}/S{south}/E{east}/N{north}");
+        }
+
+        return summary.Count == 0 ? "<missing>" : string.Join(",", summary);
+    }
+
+    private static NavTileId LocateTile(in NavQueryTileSpace tileSpace, int worldXcm, int worldZcm)
+    {
+        int chunkX = MathUtil.FloorDiv(checked(worldXcm - tileSpace.OriginXcm), tileSpace.TileWidthCm);
+        int chunkZ = MathUtil.FloorDiv(checked(worldZcm - tileSpace.OriginZcm), tileSpace.TileHeightCm);
+        return new NavTileId(chunkX, chunkZ, layer: 0);
+    }
+
+    private static string BuildHexRtsBakeDiagnostic(
+        GameEngine engine,
+        RuntimeIncrementalNavMeshRebuildQueue queue,
+        string moveError)
+    {
+        RuntimeNavTriangleSurfaceService surfaceService = engine.GetService(CoreServiceKeys.RuntimeNavTriangleSurface)
+            ?? throw new InvalidOperationException("Hex RTS bake diagnostic requires RuntimeNavTriangleSurface.");
+        NavTriangleSurfaceTileIndex surface = surfaceService.Published;
+        RuntimeNavObstacleSnapshot obstacles = engine.GetService(CoreServiceKeys.RuntimeNavMeshObstacles)
+            ?? throw new InvalidOperationException("Hex RTS bake diagnostic requires RuntimeNavMeshObstacles.");
+        NavQueryServiceRegistry registry = engine.GetService(CoreServiceKeys.NavQueryServices)
+            ?? throw new InvalidOperationException("Hex RTS bake diagnostic requires NavQueryServices.");
+        if (!registry.TryGetStore(0, 0, out NavTileStore store))
+        {
+            throw new InvalidOperationException("Hex RTS bake diagnostic requires layer 0 profile 0 NavTileStore.");
+        }
+
+        NavTile[] tiles = store.SnapshotLoadedTiles();
+        int nonEmptyTiles = 0;
+        int totalTriangles = 0;
+        int surfaceTrianglesInResident = 0;
+        for (int i = 0; i < tiles.Length; i++)
+        {
+            NavTile tile = tiles[i];
+            if (tile.TriangleCount > 0 && tile.VertexCount > 0)
+            {
+                nonEmptyTiles++;
+                totalTriangles = checked(totalTriangles + tile.TriangleCount);
+            }
+
+            surfaceTrianglesInResident = checked(
+                surfaceTrianglesInResident + surface.GetTriangleIndices(tile.TileId.ChunkX, tile.TileId.ChunkY).Length);
+        }
+
+        return
+            $"Hex RTS walled move failed: {moveError}; queue={queue.Status}; pending={queue.PendingTileCount}; " +
+            $"committed={queue.CommittedResidentWindowCount}; storeResident={store.ResidentCount}; " +
+            $"storeNonEmpty={nonEmptyTiles}; storeTriangles={totalTriangles}; " +
+            $"surfaceTriangles={surface.Surface.TriangleCount}; surfaceTrianglesInResident={surfaceTrianglesInResident}; " +
+            $"obstacles={obstacles.ObstacleCount}; surfaceGeneration={surfaceService.ContentGeneration}.";
+    }
+
+    private static void ResolveSquadCentroid(
+        GameEngine engine,
+        DynamicNavBakeShowcaseActions actions,
+        out int xCm,
+        out int zCm)
+    {
+        ReadOnlySpan<Entity> squad = actions.SquadEntities;
+        if (squad.Length <= 0)
+        {
+            xCm = actions.ActiveConfig.Squad.CenterXCm;
+            zCm = actions.ActiveConfig.Squad.CenterYCm;
+            return;
+        }
+
+        long sumX = 0;
+        long sumZ = 0;
+        int count = 0;
+        for (int i = 0; i < squad.Length; i++)
+        {
+            Entity entity = squad[i];
+            if (entity == Entity.Null || !engine.World.IsAlive(entity) ||
+                !engine.World.TryGet(entity, out WorldPositionCm position))
+            {
+                continue;
+            }
+
+            WorldCmInt2 world = position.ToWorldCmInt2();
+            sumX += world.X;
+            sumZ += world.Y;
+            count++;
+        }
+
+        if (count <= 0)
+        {
+            xCm = actions.ActiveConfig.Squad.CenterXCm;
+            zCm = actions.ActiveConfig.Squad.CenterYCm;
+            return;
+        }
+
+        xCm = checked((int)(sumX / count));
+        zCm = checked((int)(sumZ / count));
+    }
+
     private static void AssertAlgorithmSwitch(GameEngine engine, DynamicNavBakeShowcaseActions actions, NavBakeAlgorithmKind algorithm)
     {
         RuntimeIncrementalNavMeshRebuildQueue queue = engine.GetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue)!;
@@ -1393,7 +1755,7 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
         DynamicNavBakeShowcaseActions actions = WaitForActions(engine, mapId);
         DrainSpawnAndNavBootstrap(engine, actions);
         AssertAlgorithmSwitch(engine, actions, NavBakeAlgorithmKind.Cdt);
-        Assert.That(actions.TryDeploySquad(engine, out _), Is.True);
+        Assert.That(actions.SquadDeployed, Is.True);
         AssertPathingHumanoidMapsToLight(engine);
         Assert.That(actions.TryCommandMoveToGoal(engine, out string moveError), Is.True, moveError);
         AssertFormalNavMeshRouteEventually(engine, actions);
@@ -1620,6 +1982,29 @@ public sealed class DynamicNavBakeShowcaseAcceptanceTests
             result.Add((world.X, world.Y));
         });
         return result;
+    }
+
+    private static void AssertDeployedWallNavigationFootprints(GameEngine engine, DynamicNavBakeShowcaseConfig config)
+    {
+        int deployedCount = 0;
+        var query = new QueryDescription().WithAll<RuntimeNavMeshStructuralObstacle, ManifestationObstacleIntent2D, WorldPositionCm>();
+        engine.World.Query(in query, (Entity entity, ref ManifestationObstacleIntent2D intent, ref WorldPositionCm position) =>
+        {
+            _ = entity;
+            WorldCmInt2 world = position.ToWorldCmInt2();
+            if (world.X == config.Parking.XCm && world.Y == config.Parking.YCm)
+            {
+                return;
+            }
+
+            deployedCount++;
+            Assert.That(intent.NavRadiusCm, Is.EqualTo(config.Gate.NavRadiusCm));
+            Assert.That(intent.RadiusCm, Is.EqualTo(config.Gate.NavRadiusCm));
+            Assert.That(intent.NavMinYcm, Is.EqualTo(config.Gate.NavMinYcm));
+            Assert.That(intent.NavMaxYcm, Is.EqualTo(config.Gate.NavMaxYcm));
+        });
+
+        Assert.That(deployedCount, Is.EqualTo(config.Gate.SegmentCount));
     }
 
     private static Dictionary<Entity, (int X, int Y)> CaptureSquadPositions(GameEngine engine, DynamicNavBakeShowcaseActions actions)

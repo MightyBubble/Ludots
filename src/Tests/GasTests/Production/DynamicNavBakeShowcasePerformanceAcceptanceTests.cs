@@ -212,8 +212,8 @@ public sealed class DynamicNavBakeShowcasePerformanceAcceptanceTests
         }
 
         Assert.That(surface.Grid.TileCount, Is.EqualTo(checked(showcase.WidthChunks * showcase.HeightChunks)));
-        Assert.That(surface.Grid.TileWidthCm, Is.EqualTo(showcase.ChunkSizeCm));
-        Assert.That(surface.Grid.TileHeightCm, Is.EqualTo(showcase.ChunkSizeCm));
+        Assert.That(surface.Grid.TileWidthCm, Is.EqualTo(showcase.SurfaceTileWidthCm));
+        Assert.That(surface.Grid.TileHeightCm, Is.EqualTo(showcase.SurfaceTileHeightCm));
 
         ResolveCommittedResidentTileTargets(showcase, queue, surface.Grid, out NavBakeTileCoord[] residentTargets);
         long bootstrapTriangleRefs = CountTriangleReferences(surface, residentTargets);

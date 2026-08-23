@@ -10,6 +10,10 @@ namespace Ludots.Core.Navigation.NavMesh.Config
     {
         public int HaloPaddingCm { get; set; }
 
+        public int TileSubdivisionsX { get; set; } = 1;
+
+        public int TileSubdivisionsZ { get; set; } = 1;
+
         public void Validate(
             string path = "NavMeshBakeConfig.triangleSurface",
             NavLayeredSpanConfig? layeredSpan = null)
@@ -27,7 +31,17 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                     throw new InvalidOperationException(
                         $"{path}.haloPaddingCm ({HaloPaddingCm}) must be >= " +
                         $"layeredSpan.rasterHaloCells * rasterCellSizeCm ({layeredHaloPaddingCm}).");
-                }
+                    }
+            }
+
+            if (TileSubdivisionsX <= 0)
+            {
+                throw new InvalidOperationException($"{path}.tileSubdivisionsX must be > 0.");
+            }
+
+            if (TileSubdivisionsZ <= 0)
+            {
+                throw new InvalidOperationException($"{path}.tileSubdivisionsZ must be > 0.");
             }
         }
     }

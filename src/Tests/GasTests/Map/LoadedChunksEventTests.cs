@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Navigation.GraphCore;
@@ -193,6 +194,29 @@ namespace Ludots.Tests.GAS
             That(loadedChunks.IsLoaded(key), Is.True);
             Assert.DoesNotThrow(contributor.Dispose);
             That(loadedChunks.IsLoaded(key), Is.False);
+        }
+
+        [Test]
+        public void HexGridAOI_ContributorsComposeWithDirectAoiUpdates()
+        {
+            var aoi = new HexGridAOI(new HexMetrics(400));
+            aoi.Update(new SimpleAOISource { CenterXcm = 0, CenterZcm = 0, RadiusCm = 0 });
+            long shared = aoi.ActiveChunkKeys.OrderBy(static key => key).First();
+            using HexGridLoadedChunkContributor navigation = aoi.AcquireContributor("navigation", capacity: 4);
+            var unloaded = new List<long>();
+            aoi.ChunkUnloaded += unloaded.Add;
+
+            navigation.SetLoaded(shared, true);
+            int farDistance = HexCoordinates.EdgeLengthCm * 64 * 20;
+            aoi.Update(new SimpleAOISource { CenterXcm = farDistance, CenterZcm = farDistance, RadiusCm = 0 });
+
+            That(aoi.IsLoaded(shared), Is.True, "The navigation contribution must keep the shared hex chunk loaded.");
+            That(unloaded, Does.Not.Contain(shared));
+
+            navigation.Dispose();
+
+            That(aoi.IsLoaded(shared), Is.False);
+            That(unloaded, Does.Contain(shared));
         }
 
         // =====================================================================

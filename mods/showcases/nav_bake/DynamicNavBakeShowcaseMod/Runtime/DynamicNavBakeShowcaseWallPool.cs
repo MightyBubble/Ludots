@@ -151,6 +151,11 @@ internal sealed class DynamicNavBakeShowcaseWallPool
         }
 
         ComputeGateSlotWorldCm(config, slotIndex, centerXCm, centerYCm, out int xCm, out int yCm);
+        if (!TryApplySceneNavigationFootprint(world, entity, config, out error))
+        {
+            return false;
+        }
+
         MoveEntityWorldPosition(engine, entity, xCm, yCm);
         _deployed[poolIndex] = true;
         _slotIndices[poolIndex] = slotIndex;
@@ -218,6 +223,11 @@ internal sealed class DynamicNavBakeShowcaseWallPool
                 return false;
             }
 
+            if (!TryValidateSceneNavigationFootprint(world, entity, config, out error))
+            {
+                return false;
+            }
+
             if (_deployed[poolIndex])
             {
                 error = $"Wall pool index {poolIndex} is already deployed; BuildAll requires a free prefix pool.";
@@ -245,6 +255,19 @@ internal sealed class DynamicNavBakeShowcaseWallPool
             }
 
             ComputeGateSlotWorldCm(config, slot, centerXCm, centerYCm, out int xCm, out int yCm);
+            if (!TryApplySceneNavigationFootprint(world, entity, config, out error))
+            {
+                for (int rollback = 0; rollback < slot; rollback++)
+                {
+                    MoveEntityWorldPosition(engine, _entities[rollback], config.Parking.XCm, config.Parking.YCm);
+                    _deployed[rollback] = false;
+                    _slotIndices[rollback] = -1;
+                    _deployedCount--;
+                }
+
+                return false;
+            }
+
             MoveEntityWorldPosition(engine, entity, xCm, yCm);
             _deployed[slot] = true;
             _slotIndices[slot] = slot;
@@ -347,6 +370,71 @@ internal sealed class DynamicNavBakeShowcaseWallPool
         yCm = centerYCm;
     }
 
+    private static bool TryValidateSceneNavigationFootprint(
+        World world,
+        Entity entity,
+        DynamicNavBakeShowcaseConfig config,
+        out string error)
+    {
+        error = string.Empty;
+        if (!world.TryGet(entity, out ManifestationObstacleIntent2D intent))
+        {
+            error = $"Wall entity {entity.Id} is missing ManifestationObstacleIntent2D.";
+            return false;
+        }
+
+        if (intent.Shape != ManifestationObstacleShape2D.Circle)
+        {
+            error = $"Wall entity {entity.Id} must use a circle ManifestationObstacleIntent2D.";
+            return false;
+        }
+
+        if (intent.SinkNavigationObstacle == 0)
+        {
+            error = $"Wall entity {entity.Id} must sink a runtime navigation obstacle.";
+            return false;
+        }
+
+        if (config.Gate.NavRadiusCm <= 0 || config.Gate.NavMaxYcm <= config.Gate.NavMinYcm)
+        {
+            error = "Dynamic NavBake gate navigation footprint is invalid.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryApplySceneNavigationFootprint(
+        World world,
+        Entity entity,
+        DynamicNavBakeShowcaseConfig config,
+        out string error)
+    {
+        if (!TryValidateSceneNavigationFootprint(world, entity, config, out error))
+        {
+            return false;
+        }
+
+        ManifestationObstacleIntent2D intent = world.Get<ManifestationObstacleIntent2D>(entity);
+        intent.RadiusCm = config.Gate.NavRadiusCm;
+        intent.NavRadiusCm = config.Gate.NavRadiusCm;
+        intent.NavMinYcm = config.Gate.NavMinYcm;
+        intent.NavMaxYcm = config.Gate.NavMaxYcm;
+        world.Set(entity, intent);
+        MarkBridgeDirty(world, entity);
+        return true;
+    }
+
+    private static void MarkBridgeDirty(World world, Entity entity)
+    {
+        if (world.Has<ManifestationObstacleBridge2DDirty>(entity))
+        {
+            return;
+        }
+
+        world.Add(entity, new ManifestationObstacleBridge2DDirty());
+    }
+
     private static void MoveEntityWorldPosition(GameEngine engine, Entity entity, int xCm, int yCm)
     {
         World world = engine.World;
@@ -354,11 +442,7 @@ internal sealed class DynamicNavBakeShowcaseWallPool
 
         // Mark bridge dirty before pose writes. Arch archetype moves on Add must not
         // invalidate the teleport writes below.
-        if (world.Has<ManifestationObstacleBridge2DState>(entity) &&
-            !world.Has<ManifestationObstacleBridge2DDirty>(entity))
-        {
-            world.Add(entity, new ManifestationObstacleBridge2DDirty());
-        }
+        MarkBridgeDirty(world, entity);
 
         // WorldPositionCm is logical pose; Position2D is physics/sync pose.
         // Physics2DToWorldPositionSyncSystem copies Position2D to WorldPositionCm each

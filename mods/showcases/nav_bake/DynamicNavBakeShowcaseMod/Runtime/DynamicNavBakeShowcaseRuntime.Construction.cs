@@ -521,7 +521,7 @@ internal sealed partial class DynamicNavBakeShowcaseRuntime
             _editTransaction.PreviewZCm,
             ActiveConfig.TerrainBrushHalfExtentCm,
             kind,
-            ActiveConfig.GridCellSizeCm,
+            ActiveConfig.TerrainEditCellSizeCm,
             bakeConfig.RuntimeIncremental?.HeightScaleMeters
                 ?? throw new InvalidOperationException("Terrain bake requires runtimeIncremental.heightScaleMeters."),
             baseHeightLevel: 0,
@@ -620,10 +620,10 @@ internal sealed partial class DynamicNavBakeShowcaseRuntime
         }
         else
         {
-            int minX = checked(-ActiveConfig.WorldWidthCm / 2);
-            int minY = checked(-ActiveConfig.WorldHeightCm / 2);
-            int maxX = checked(minX + ActiveConfig.WorldWidthCm);
-            int maxY = checked(minY + ActiveConfig.WorldHeightCm);
+            int minX = ActiveConfig.WorldOriginXCm;
+            int minY = ActiveConfig.WorldOriginZCm;
+            int maxX = ActiveConfig.WorldMaxXCm;
+            int maxY = ActiveConfig.WorldMaxZCm;
             if (xCm < minX || zCm < minY || xCm >= maxX || zCm >= maxY)
             {
                 return DynamicNavBakePlacementLegality.IllegalOutsideResident;

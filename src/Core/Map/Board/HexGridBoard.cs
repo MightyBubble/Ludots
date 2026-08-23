@@ -50,7 +50,7 @@ namespace Ludots.Core.Map.Board
             queryService.SetCoordinateConverter(CoordinateConverter);
             QueryService = queryService;
 
-            HexGridAOI = new HexGridAOI();
+            HexGridAOI = new HexGridAOI(hexMetrics);
         }
 
         public void Dispose()

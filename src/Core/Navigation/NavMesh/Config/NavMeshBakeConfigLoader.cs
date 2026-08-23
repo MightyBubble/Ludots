@@ -405,8 +405,17 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
 
             const string path = "NavMeshBakeConfig.triangleSurface";
-            RequireOnlyProperties(triangleSurface, path, "haloPaddingCm");
+            RequireOnlyTriangleSurfaceProperties(triangleSurface, path);
             RequireNonNegativeInt(triangleSurface, "haloPaddingCm", path);
+            if (triangleSurface.ContainsKey("tileSubdivisionsX"))
+            {
+                RequirePositiveInt(triangleSurface, "tileSubdivisionsX", path);
+            }
+
+            if (triangleSurface.ContainsKey("tileSubdivisionsZ"))
+            {
+                RequirePositiveInt(triangleSurface, "tileSubdivisionsZ", path);
+            }
 
             if (root["layeredSpan"] is JsonObject layeredSpan)
             {
@@ -499,6 +508,26 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             RequirePositiveInt(layeredSpan, "bridgeCandidateCapacity", path);
             RequirePositiveInt(layeredSpan, "ringWorkCapacity", path);
             RequirePositiveInt(layeredSpan, "temporaryConstraintFlagCapacity", path);
+        }
+
+        private static void RequireOnlyTriangleSurfaceProperties(JsonObject obj, string path)
+        {
+            foreach (var property in obj)
+            {
+                if (string.Equals(property.Key, "haloPaddingCm", StringComparison.Ordinal) ||
+                    string.Equals(property.Key, "tileSubdivisionsX", StringComparison.Ordinal) ||
+                    string.Equals(property.Key, "tileSubdivisionsZ", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                throw new InvalidOperationException($"{path} contains unknown property '{property.Key}'.");
+            }
+
+            if (!obj.ContainsKey("haloPaddingCm"))
+            {
+                throw new InvalidOperationException($"{path} must explicitly define 'haloPaddingCm'.");
+            }
         }
 
         private static int RequirePositiveInt(JsonObject obj, string key, string path)

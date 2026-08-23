@@ -7,7 +7,6 @@ using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Movement;
 using Ludots.Core.Navigation.AgentProfiles;
-using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -227,10 +226,10 @@ public sealed class MassNavigationRuntime
         var board = session.PrimaryBoard
             ?? throw new InvalidOperationException("MassNavigation runtime requires a primary board.");
         MassNavigationSimulationRuntime simulation = RequireSimulationRuntime("binding the board world");
-        if (board.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
+        if (board.LoadedChunks is not ILoadedChunkWindowSource loadedChunks)
         {
             throw new InvalidOperationException(
-                $"MassNavigation requires board-owned {nameof(WorldGridLoadedChunks)}, got {board.LoadedChunks?.GetType().FullName ?? "null"}.");
+                $"MassNavigation requires board-owned {nameof(ILoadedChunkWindowSource)}, got {board.LoadedChunks?.GetType().FullName ?? "null"}.");
         }
 
         simulation.BindBoardWorld(board.WorldSize, loadedChunks);

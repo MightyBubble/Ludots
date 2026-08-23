@@ -5,6 +5,13 @@
   "heightInMacroTiles": 16,
   "gridCellSizeCm": 100,
   "chunkSizeCells": 64,
+  "terrainEditCellSizeCm": 100,
+  "surfaceGrid": {
+    "originXCm": -204800,
+    "originZCm": -204800,
+    "tileWidthCm": 6400,
+    "tileHeightCm": 6400
+  },
   "residentWidthChunks": 8,
   "residentHeightChunks": 8,
   "cameraTargetXCm": 0,

@@ -2,6 +2,58 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - Dynamic NavBake Hex Runtime Dirty Update Showcase - 2026-08-19
+
+- **Task / Issue**: Continue the Dynamic NavBake runtime dirty-update showcase work for HexGrid RTS / open-world coverage and visual heightmap, fixing the Hex RTS squad being synced back near the origin before the first NavMesh route.
+- **Date**: 2026-08-19
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary delivery (A/B/C/D): A
+
+Result: PASS
+
+Reason: The fix reuses the existing MassNavigation runtime binding and `FocusSimulationWindow` before the existing runtime spawn queue authors the squad. It adds no runtime spawn DSL, profile enum, graph op, preset switch, component schema, fallback, or parallel materialization path.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|-----------|-----------------|----------|
+| Focus MassNavigation solver window at the authored squad spawn center | N/A | Existing `MassNavigationRuntimeBinding.Current.FocusSimulationWindow` |
+| Spawn walls, markers, and squad | N/A | Existing `RuntimeEntitySpawnQueue` requests written by `DynamicNavBakeShowcaseWallPool` |
+| Bind authored agents | N/A | Existing `MassNavigationAuthoredAgentBindingSystem` |
+
+### 3. Reuse list
+
+- Handlers: N/A.
+- Queues / Systems: existing `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `MassNavigationAuthoredAgentBindingSystem`, `MassNavigationSimulationStepSystem`.
+- Resolvers / Registries: existing `MassNavigationRuntimeBinding`, `MassNavigationKeys.RuntimeBinding`, `EntityTemplateKeyRegistry`, player/team relationship lookups.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops (if any)
+
+N/A.
+
+### 5. Transaction boundary
+
+No new mutation transaction is introduced. The focus update runs before scenario spawn requests are enqueued; spawn preflight, relationship linking, agent binding, and entity sync remain owned by their existing systems.
+
+### 6. Config SSOT
+
+Behavior configuration remains in the DynamicNavBake showcase JSON and existing MassNavigation config. New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel spawn or MassNavigation materialization pipeline added
+- [x] No placement validation moved into a lifecycle op
+- [x] No fallback, compatibility bypass, or silent acceptance added
+
+### 8. Next variant test
+
+A future showcase variant should change authored showcase coordinates, map data, visual heightmap assets, or existing MassNavigation/NavMesh config, not Core enums or a second spawn/binding path.
+
 ## GAS Composition Gate - Issue #734 Crowd Physics Arena (massnav→kinematic bridge + showcase) - 2026-08-06
 
 - **Task / Issue**: Issue #734 — deliver the #643 increment-2 massnav→kinematic bridge, then the `CapabilityStandardCrowdPhysicsArenaMod` showcase (Q shockwave knockback via GAS displacement, E boulder spawn with initial velocity, pressure plate → door via contact events, HUD counters).

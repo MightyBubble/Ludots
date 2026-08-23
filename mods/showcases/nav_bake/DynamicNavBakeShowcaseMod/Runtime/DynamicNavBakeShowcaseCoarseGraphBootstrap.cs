@@ -78,30 +78,31 @@ internal static class DynamicNavBakeShowcaseCoarseGraphBootstrap
                 $"got {grid.TileCountX}x{grid.TileCountZ}.");
         }
 
-        if (grid.TileWidthCm != config.ChunkSizeCm || grid.TileHeightCm != config.ChunkSizeCm)
+        if (grid.TileWidthCm != config.SurfaceTileWidthCm || grid.TileHeightCm != config.SurfaceTileHeightCm)
         {
             throw new InvalidOperationException(
-                $"Open-world coarse graph requires NavTriangleSurfaceTileGrid tile size {config.ChunkSizeCm}x{config.ChunkSizeCm}cm, " +
+                "Open-world coarse graph requires NavTriangleSurfaceTileGrid tile size " +
+                $"{config.SurfaceTileWidthCm}x{config.SurfaceTileHeightCm}cm, " +
                 $"got {grid.TileWidthCm}x{grid.TileHeightCm}cm.");
         }
 
-        int expectedOriginXcm = checked(-config.WorldWidthCm / 2);
-        int expectedOriginZcm = checked(-config.WorldHeightCm / 2);
+        int expectedOriginXcm = config.WorldOriginXCm;
+        int expectedOriginZcm = config.WorldOriginZCm;
         if (grid.OriginXcm != expectedOriginXcm || grid.OriginZcm != expectedOriginZcm)
         {
             throw new InvalidOperationException(
-                $"Open-world coarse graph requires centered NavTriangleSurfaceTileGrid origin ({expectedOriginXcm},{expectedOriginZcm})cm, " +
+                $"Open-world coarse graph requires NavTriangleSurfaceTileGrid origin ({expectedOriginXcm},{expectedOriginZcm})cm, " +
                 $"got ({grid.OriginXcm},{grid.OriginZcm})cm.");
         }
 
-        int expectedMaxXcm = checked(expectedOriginXcm + config.WorldWidthCm);
-        int expectedMaxZcm = checked(expectedOriginZcm + config.WorldHeightCm);
+        int expectedMaxXcm = config.WorldMaxXCm;
+        int expectedMaxZcm = config.WorldMaxZCm;
         int gridMaxXcm = checked(grid.OriginXcm + checked(grid.TileCountX * grid.TileWidthCm));
         int gridMaxZcm = checked(grid.OriginZcm + checked(grid.TileCountZ * grid.TileHeightCm));
         if (gridMaxXcm != expectedMaxXcm || gridMaxZcm != expectedMaxZcm)
         {
             throw new InvalidOperationException(
-                $"Open-world coarse graph requires centered extents " +
+                $"Open-world coarse graph requires surfaceGrid extents " +
                 $"[{expectedOriginXcm},{expectedMaxXcm}) x [{expectedOriginZcm},{expectedMaxZcm}), " +
                 $"got [{grid.OriginXcm},{gridMaxXcm}) x [{grid.OriginZcm},{gridMaxZcm}).");
         }

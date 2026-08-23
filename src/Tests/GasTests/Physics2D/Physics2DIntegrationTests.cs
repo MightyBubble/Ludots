@@ -673,7 +673,9 @@ namespace GasTests
             bridge.Update(0f);
             dirtySystem.Update(0f);
 
-            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(2));
+            Assert.That(obstacles.EntityIds.ToArray(), Does.Contain(nonStructuralEntity.Id));
+            Assert.That(obstacles.EntityIds.ToArray(), Does.Contain(obstacleEntity.Id));
             Assert.That(queue.PendingTileCount, Is.EqualTo(0));
             Assert.That(store.Revision, Is.EqualTo(1u));
             Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile firstTile), Is.True);
@@ -685,7 +687,8 @@ namespace GasTests
             bridge.Update(0f);
             dirtySystem.Update(0f);
 
-            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(2));
+            Assert.That(obstacles.EntityIds.ToArray(), Does.Contain(nonStructuralEntity.Id));
             Assert.That(store.Revision, Is.EqualTo(1u));
 
             world.Set(obstacleEntity, WorldPositionCm.FromCm(250, 150));
@@ -693,7 +696,9 @@ namespace GasTests
             bridge.Update(0f);
             dirtySystem.Update(0f);
 
-            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(2));
+            Assert.That(obstacles.EntityIds.ToArray(), Does.Contain(nonStructuralEntity.Id));
+            Assert.That(obstacles.EntityIds.ToArray(), Does.Contain(obstacleEntity.Id));
             Assert.That(store.Revision, Is.EqualTo(2u));
             Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile secondTile), Is.True);
             Assert.That(secondTile.TileVersion, Is.Not.EqualTo(firstVersion));

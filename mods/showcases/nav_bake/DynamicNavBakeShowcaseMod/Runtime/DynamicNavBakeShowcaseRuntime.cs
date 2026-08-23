@@ -1339,6 +1339,8 @@ internal sealed partial class DynamicNavBakeShowcaseRuntime
             DynamicNavBakeShowcaseCoarseGraphBootstrap.ValidateConfigMatchesGrid(config, surfaceGrid);
         }
 
+        FocusMassNavigationRuntimeForInitialSquad(engine, config);
+
         _wallPool = new DynamicNavBakeShowcaseWallPool(config.WallPoolCapacity);
         int spawnCount = DynamicNavBakeShowcaseWallPool.BuildSpawnRequestCount(config);
         EnsureSpawnScratch(spawnCount);
@@ -1367,6 +1369,28 @@ internal sealed partial class DynamicNavBakeShowcaseRuntime
         _scenarioSpawned = true;
         _entitiesBound = false;
         _lastStatus = "Scenario authored. Deploy the squad to begin.";
+    }
+
+    private static void FocusMassNavigationRuntimeForInitialSquad(
+        GameEngine engine,
+        DynamicNavBakeShowcaseConfig config)
+    {
+        MassNavigationRuntimeBinding binding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+            ?? throw new InvalidOperationException(
+                "DynamicNavBake showcase requires MassNavigationRuntimeBinding before squad spawn.");
+        if (binding.Current == null)
+        {
+            throw new InvalidOperationException(
+                "DynamicNavBake showcase requires an active MassNavigation runtime before squad spawn.");
+        }
+
+        if (!string.Equals(binding.CurrentMapId.Value, config.MapId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"DynamicNavBake showcase requires MassNavigation runtime for map '{config.MapId}', got '{binding.CurrentMapId.Value}'.");
+        }
+
+        binding.Current.FocusSimulationWindow(new Vector2(config.Squad.CenterXCm, config.Squad.CenterYCm));
     }
 
     private void EnsureEntitiesBound(GameEngine engine)

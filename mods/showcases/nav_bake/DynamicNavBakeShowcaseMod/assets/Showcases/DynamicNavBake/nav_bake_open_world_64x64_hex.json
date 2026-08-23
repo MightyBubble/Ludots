@@ -1,0 +1,183 @@
+{
+  "mapId": "nav_bake_open_world_64x64_hex",
+  "sceneKind": "open_world",
+  "widthInMacroTiles": 16,
+  "heightInMacroTiles": 16,
+  "gridCellSizeCm": 1400,
+  "chunkSizeCells": 32,
+  "terrainEditCellSizeCm": 96,
+  "surfaceGrid": {
+    "originXCm": 0,
+    "originZCm": 0,
+    "tileWidthCm": 22176,
+    "tileHeightCm": 19200
+  },
+  "residentWidthChunks": 4,
+  "residentHeightChunks": 4,
+  "cameraTargetXCm": 1419264,
+  "cameraTargetYCm": 1228800,
+  "squad": {
+    "templateId": "mass_navigation_agent_azure_light",
+    "profileId": "light",
+    "count": 10,
+    "centerXCm": 1386000,
+    "centerYCm": 1228800,
+    "columns": 5,
+    "rows": 2,
+    "spacingXCm": 500,
+    "spacingYCm": 400
+  },
+  "goal": {
+    "templateId": "mass_navigation_hotspot_marker",
+    "xCm": 2572416,
+    "yCm": 1228800
+  },
+  "gate": {
+    "wallTemplateId": "dynamic_nav_bake_wall_segment",
+    "centerXCm": 1419264,
+    "centerYCm": 1228800,
+    "segmentCount": 1,
+    "segmentSpacingCm": 500,
+    "navRadiusCm": 150,
+    "navMinYcm": 500,
+    "navMaxYcm": 1300
+  },
+  "sideRouteWest": {
+    "markerTemplateId": "mass_navigation_hotspot_marker",
+    "xCm": 1374000,
+    "yCm": 1228800
+  },
+  "sideRouteEast": {
+    "markerTemplateId": "mass_navigation_hotspot_marker",
+    "xCm": 1464000,
+    "yCm": 1228800
+  },
+  "parking": {
+    "xCm": 1400000,
+    "yCm": 1210000
+  },
+  "movementSpeedCmPerSec": 500,
+  "wallPoolCapacity": 1,
+  "terrainBrushHalfExtentCm": 384,
+  "terrainRaiseHeightLevel": 10,
+  "evidenceSampleCount": 64,
+  "benchmark": {
+    "sampleWindowCount": 20,
+    "warmupSampleCount": 4,
+    "determinismWorkerCounts": [1, 4],
+    "dirtyPublishP95RatioMax": 1.15,
+    "dirtyPublishP95FixedNoiseMs": 0.5,
+    "steadyStateThroughputRatioMin": 0.85,
+    "collectP95BudgetMs": 4.0,
+    "commitP95BudgetMs": 4.0,
+    "fixedStepBudgetMs": 8.0,
+    "layeredSpanSteadyStateAllocBytesMax": 0,
+    "peakResidentTileCountMax": 16,
+    "peakWorkerScratchBytesMax": 536870912,
+    "peakResidentBytesMax": 536870912,
+    "maxDirtyVisitedCandidateCount": 16,
+    "steadyStateTileBudgetPerSample": 4,
+    "dirtyComparisonBoundaryMarginChunks": 1
+  },
+  "ui": {
+    "absoluteLeft": 16,
+    "absoluteTop": 208,
+    "width": 392
+  },
+  "presentation": {
+    "pathOverlayY": 0.06,
+    "localPathWidthMeters": 0.75,
+    "localPathBorderWidthMeters": 0.12,
+    "corridorPathWidthMeters": 0.45,
+    "corridorPathBorderWidthMeters": 0.10,
+    "fillColor": [0.18, 0.72, 0.55, 0.28],
+    "edgeColor": [0.12, 0.92, 0.68, 0.85],
+    "tileBoundsColor": [0.95, 0.85, 0.25, 0.55],
+    "pendingColor": [0.96, 0.78, 0.20, 0.80],
+    "rebuildingColor": [0.98, 0.42, 0.18, 0.85],
+    "committedColor": [0.20, 0.90, 0.48, 0.78],
+    "heightOffsetMeters": 0.04,
+    "navMeshEnabled": true,
+    "navMeshLayer": 0,
+    "navMeshProfile": 0,
+    "drawFill": true,
+    "drawEdges": true,
+    "drawTileBounds": true,
+    "drawTileStateIndication": true
+  },
+  "raylibAutoTimeline": {
+    "algorithmRequestEarliestFrame": 30,
+    "algorithmCommitDeadlineFrame": 180,
+    "initialScreenshotFrame": 240,
+    "dynamicActionFrame": 300,
+    "dynamicCommitDeadlineFrame": 450,
+    "dynamicScreenshotFrame": 480,
+    "finalActionFrame": 540,
+    "finalCommitDeadlineFrame": 690,
+    "finalScreenshotFrame": 720,
+    "autoExitFrame": 750,
+    "cameraTargetToleranceCm": 500,
+    "requiredQuiescentFixedTicks": 2,
+    "finalCaptureCompletionMode": "route_ready",
+    "finalArrivalMemberToleranceCm": 500,
+    "finalArrivalRequiredStableFixedTicks": 2,
+    "playerFraming": {
+      "captureWidthPx": 1280,
+      "captureHeightPx": 720,
+      "safeInsetLeftPx": 420,
+      "safeInsetTopPx": 32,
+      "safeInsetRightPx": 340,
+      "safeInsetBottomPx": 32,
+      "marginCm": 1200,
+      "minDistanceCm": 12000,
+      "maxDistanceCm": 34000,
+      "baseDistanceCm": 18000,
+      "minSquadMembersOnScreen": 10,
+      "minProjectedSquadSpanPx": 15,
+      "pathLookaheadCm": 1200,
+      "coverageBuffer": 1.2,
+      "distanceToleranceCm": 250
+    }
+  },
+  "openWorld": {
+    "initialHotspotIndex": 1,
+    "autoCaptureMinimapRect": {
+      "x": 956,
+      "y": 24,
+      "width": 300,
+      "height": 420
+    },
+    "hotspots": [
+      {
+        "id": "west_pass",
+        "label": "West Pass",
+        "cameraTargetXCm": 177408,
+        "cameraTargetYCm": 1228800,
+        "wallCenterXCm": 177408,
+        "wallCenterYCm": 1228800,
+        "residentOriginChunkX": 6,
+        "residentOriginChunkZ": 62
+      },
+      {
+        "id": "central_gate",
+        "label": "Central Gate",
+        "cameraTargetXCm": 1419264,
+        "cameraTargetYCm": 1228800,
+        "wallCenterXCm": 1419264,
+        "wallCenterYCm": 1228800,
+        "residentOriginChunkX": 62,
+        "residentOriginChunkZ": 62
+      },
+      {
+        "id": "east_reach",
+        "label": "East Reach",
+        "cameraTargetXCm": 2572416,
+        "cameraTargetYCm": 1228800,
+        "wallCenterXCm": 2572416,
+        "wallCenterYCm": 1228800,
+        "residentOriginChunkX": 114,
+        "residentOriginChunkZ": 62
+      }
+    ]
+  }
+}

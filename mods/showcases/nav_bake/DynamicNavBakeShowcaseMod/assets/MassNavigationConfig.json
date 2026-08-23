@@ -1,6 +1,6 @@
 {
   "mapId": "nav_bake_dynamic_rts",
-  "compatibleMapIds": ["nav_bake_open_world_64x64"],
+  "compatibleMapIds": ["nav_bake_open_world_64x64", "nav_bake_dynamic_rts_hex", "nav_bake_open_world_64x64_hex"],
   "presentation": {
     "requiredMeshAssetIds": [
       "mass_navigation.agent.soldier",

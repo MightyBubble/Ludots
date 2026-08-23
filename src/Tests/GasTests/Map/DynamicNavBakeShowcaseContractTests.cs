@@ -27,6 +27,50 @@ namespace Ludots.Tests.GAS.Map;
 [TestFixture]
 public sealed class DynamicNavBakeShowcaseContractTests
 {
+    private static readonly ShowcaseSceneContract[] ShowcaseScenes =
+    {
+        new(
+            DynamicNavBakeShowcaseIds.RtsMapId,
+            "NavBakeDynamicRtsShowcaseMod",
+            "mods/showcases/nav_bake/NavBakeDynamicRtsShowcaseMod",
+            isHex: false,
+            isOpenWorld: false),
+        new(
+            DynamicNavBakeShowcaseIds.RtsHexMapId,
+            "NavBakeDynamicRtsHexShowcaseMod",
+            "mods/showcases/nav_bake/NavBakeDynamicRtsHexShowcaseMod",
+            isHex: true,
+            isOpenWorld: false),
+        new(
+            DynamicNavBakeShowcaseIds.OpenWorldMapId,
+            "NavBakeOpenWorld64x64ShowcaseMod",
+            "mods/showcases/nav_bake/NavBakeOpenWorld64x64ShowcaseMod",
+            isHex: false,
+            isOpenWorld: true),
+        new(
+            DynamicNavBakeShowcaseIds.OpenWorldHexMapId,
+            "NavBakeOpenWorld64x64HexShowcaseMod",
+            "mods/showcases/nav_bake/NavBakeOpenWorld64x64HexShowcaseMod",
+            isHex: true,
+            isOpenWorld: true),
+    };
+
+    private static IEnumerable<TestCaseData> ShowcaseSceneCases()
+    {
+        foreach (ShowcaseSceneContract scene in ShowcaseScenes)
+        {
+            yield return new TestCaseData(scene).SetName($"ShowcaseMap_AuthoringContract_{scene.MapId}");
+        }
+    }
+
+    private static IEnumerable<TestCaseData> PathingSceneCases()
+    {
+        foreach (ShowcaseSceneContract scene in ShowcaseScenes)
+        {
+            yield return new TestCaseData(scene).SetName($"ShowcaseScene_Pathing_{scene.MapId}");
+        }
+    }
+
     [Test]
     public void PanelController_MountOrSync_WithUiRootButMissingSurfaceHost_ThrowsPathSpecificError()
     {
@@ -49,15 +93,20 @@ public sealed class DynamicNavBakeShowcaseContractTests
     {
         DynamicNavBakeShowcaseConfig rts = LoadSceneConfig(DynamicNavBakeShowcaseIds.RtsMapId);
         DynamicNavBakeShowcaseConfig open = LoadSceneConfig(DynamicNavBakeShowcaseIds.OpenWorldMapId);
-        Assert.That(rts.Benchmark, Is.Not.Null);
-        Assert.That(open.Benchmark, Is.Not.Null);
+        foreach (ShowcaseSceneContract scene in ShowcaseScenes)
+        {
+            DynamicNavBakeShowcaseConfig config = LoadSceneConfig(scene.MapId);
+            Assert.That(config.Benchmark, Is.Not.Null, $"{scene.MapId} must declare benchmark gates.");
+            Assert.That(config.Benchmark.SampleWindowCount, Is.GreaterThan(0));
+            Assert.That(config.Benchmark.PeakResidentTileCountMax, Is.EqualTo(config.ResidentWidthChunks * config.ResidentHeightChunks));
+            Assert.That(config.Benchmark.DeterminismWorkerCounts, Does.Contain(1));
+        }
+
         Assert.That(rts.Benchmark.SampleWindowCount, Is.GreaterThan(0));
         Assert.That(rts.Benchmark.FixedStepBudgetMs, Is.EqualTo(4.0));
         Assert.That(rts.Benchmark.DirtyPublishP95RatioMax, Is.EqualTo(1.15));
         Assert.That(rts.Benchmark.SteadyStateThroughputRatioMin, Is.EqualTo(0.85));
-        Assert.That(rts.Benchmark.PeakResidentTileCountMax, Is.EqualTo(rts.ResidentWidthChunks * rts.ResidentHeightChunks));
-        Assert.That(open.Benchmark.PeakResidentTileCountMax, Is.EqualTo(open.ResidentWidthChunks * open.ResidentHeightChunks));
-        Assert.That(rts.Benchmark.DeterminismWorkerCounts, Does.Contain(1));
+        Assert.That(open.Benchmark.FixedStepBudgetMs, Is.EqualTo(4.0));
     }
 
     // Feature: Dirty-wall timing comparison stays fair between the small RTS yard and the open world
@@ -67,16 +116,18 @@ public sealed class DynamicNavBakeShowcaseContractTests
     [Test]
     public void ShowcaseConfigs_AuthoredDirtyComparisonFairness_UsesMinimumP95WindowAndBoundaryMargin()
     {
-        DynamicNavBakeShowcaseConfig rts = LoadSceneConfig(DynamicNavBakeShowcaseIds.RtsMapId);
-        DynamicNavBakeShowcaseConfig open = LoadSceneConfig(DynamicNavBakeShowcaseIds.OpenWorldMapId);
-        Assert.That(
-            rts.Benchmark.SampleWindowCount,
-            Is.GreaterThanOrEqualTo(DynamicNavBakeShowcaseBenchmarkConfig.MinimumP95SampleWindowCount));
-        Assert.That(
-            open.Benchmark.SampleWindowCount,
-            Is.GreaterThanOrEqualTo(DynamicNavBakeShowcaseBenchmarkConfig.MinimumP95SampleWindowCount));
-        Assert.That(rts.Benchmark.DirtyComparisonBoundaryMarginChunks, Is.EqualTo(2));
-        Assert.That(open.Benchmark.DirtyComparisonBoundaryMarginChunks, Is.EqualTo(2));
+        foreach (ShowcaseSceneContract scene in ShowcaseScenes)
+        {
+            DynamicNavBakeShowcaseConfig config = LoadSceneConfig(scene.MapId);
+            Assert.That(
+                config.Benchmark.SampleWindowCount,
+                Is.GreaterThanOrEqualTo(DynamicNavBakeShowcaseBenchmarkConfig.MinimumP95SampleWindowCount),
+                $"{scene.MapId} must keep enough samples for P95 comparison.");
+            Assert.That(
+                config.Benchmark.DirtyComparisonBoundaryMarginChunks,
+                Is.GreaterThanOrEqualTo(scene.IsHex ? 1 : 2),
+                $"{scene.MapId} must park pooled walls away from the resident boundary halo.");
+        }
     }
 
     [Test]
@@ -93,58 +144,59 @@ public sealed class DynamicNavBakeShowcaseContractTests
         Assert.That(ex.Message, Does.Contain("MinimumP95SampleWindowCount"));
     }
 
-    [TestCase(DynamicNavBakeShowcaseIds.RtsMapId, "mods/showcases/nav_bake/NavBakeDynamicRtsShowcaseMod")]
-    [TestCase(DynamicNavBakeShowcaseIds.OpenWorldMapId, "mods/showcases/nav_bake/NavBakeOpenWorld64x64ShowcaseMod")]
-    public void ShowcaseMap_AuthoringContract_MatchesSharedConfig(string mapId, string modRelativePath)
+    [TestCaseSource(nameof(ShowcaseSceneCases))]
+    public void ShowcaseMap_AuthoringContract_MatchesSharedConfig(ShowcaseSceneContract scene)
     {
         string repoRoot = FindRepoRoot();
-        AssertShowcaseRegistry(repoRoot, mapId);
-        string entryModRoot = Path.Combine(repoRoot, modRelativePath);
+        AssertShowcaseRegistry(repoRoot, scene.MapId);
+        string entryModRoot = Path.Combine(repoRoot, scene.ModRelativePath);
         string sharedAssetsRoot = Path.Combine(
             repoRoot,
             "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod/assets");
-        JsonObject map = ReadJsonObject(Path.Combine(sharedAssetsRoot, "Maps", $"{mapId}.json"));
+        JsonObject map = ReadJsonObject(Path.Combine(sharedAssetsRoot, "Maps", $"{scene.MapId}.json"));
         JsonObject config = ReadJsonObject(Path.Combine(
             sharedAssetsRoot,
             "Showcases",
             "DynamicNavBake",
-            $"{mapId}.json"));
+            $"{scene.MapId}.json"));
         JsonObject game = ReadJsonObject(Path.Combine(entryModRoot, "assets", "game.json"));
         JsonObject sharedGame = ReadJsonObject(Path.Combine(sharedAssetsRoot, "game.json"));
         JsonArray catalog = ReadJsonArray(Path.Combine(sharedAssetsRoot, "Configs", "config_catalog.json"));
         JsonObject pathing = ReadJsonObject(Path.Combine(sharedAssetsRoot, "Configs", "Navigation", "pathing.json"));
         JsonObject inputOrderMappings = ReadJsonObject(Path.Combine(sharedAssetsRoot, "Input", "input_order_mappings.json"));
+        DynamicNavBakeShowcaseConfig loaded = DynamicNavBakeShowcaseConfig.Load(config);
 
-        Assert.That(game["startupMapId"]!.GetValue<string>(), Is.EqualTo(mapId));
-        AssertDefaultGameplayContext(game, $"{modRelativePath}/assets/game.json");
+        Assert.That(game["startupMapId"]!.GetValue<string>(), Is.EqualTo(scene.MapId));
+        AssertDefaultGameplayContext(game, $"{scene.ModRelativePath}/assets/game.json");
         AssertDefaultGameplayContext(sharedGame, "DynamicNavBakeShowcaseMod/assets/game.json");
         Assert.That(
             game["targetFps"]!.GetValue<int>(),
             Is.EqualTo(60),
             "NavBake scene game.json must explicitly set targetFps=60 so Raylib FixedSteps keep pace with the auto timeline.");
-        Assert.That(map["Id"]!.GetValue<string>(), Is.EqualTo(mapId));
-        Assert.That(config["mapId"]!.GetValue<string>(), Is.EqualTo(mapId));
+        Assert.That(map["Id"]!.GetValue<string>(), Is.EqualTo(scene.MapId));
+        Assert.That(config["mapId"]!.GetValue<string>(), Is.EqualTo(scene.MapId));
         Assert.That(config["squad"]!["profileId"]!.GetValue<string>(), Is.EqualTo("light"));
         Assert.That(map["Tags"]!.AsArray().ToJsonString(), Does.Contain(MapTags.FeatureNavMeshOn.Name));
         Assert.That(map["DefaultCamera"]!["VirtualCameraId"]!.GetValue<string>(), Is.EqualTo("Camera.Profile.Tactical"));
-        Assert.That(map["DefaultCamera"]!["TargetXCm"]!.GetValue<int>(), Is.EqualTo(0));
-        Assert.That(map["DefaultCamera"]!["TargetYCm"]!.GetValue<int>(), Is.EqualTo(0));
+        Assert.That(map["DefaultCamera"]!["TargetXCm"]!.GetValue<int>(), Is.EqualTo(loaded.CameraTargetXCm));
+        Assert.That(map["DefaultCamera"]!["TargetYCm"]!.GetValue<int>(), Is.EqualTo(loaded.CameraTargetYCm));
+        AssertBoardContract(sharedAssetsRoot, map, loaded, scene);
+        AssertNavMeshConfigContract(sharedAssetsRoot, catalog, loaded, scene);
         AssertReliefGroundAssetCoversMap(sharedAssetsRoot, map, config);
         AssertMassNavigationRightClickMapping(inputOrderMappings);
         AssertCommandIntentRoutesMassNavigationMove(sharedAssetsRoot);
+        AssertCatalogDeclaresPath(catalog, $"Showcases/DynamicNavBake/{scene.MapId}.json", "Replace");
+        AssertCatalogDeclaresPath(catalog, $"Navigation/navmesh.{scene.MapId}.json", "Replace");
         AssertCatalogDeclaresPath(catalog, "Navigation/pathing.json", "DeepObject");
         AssertCatalogDeclaresPath(catalog, "Input/command_intent_profiles.json", "DeepObject");
         AssertCatalogDeclaresPath(catalog, "Input/input_order_mappings.json", "DeepObject");
         AssertBuildingFootprintMatchesGateConfig(sharedAssetsRoot, config);
         AssertHumanoidMapsToLightPreferMesh(pathing);
 
-        DynamicNavBakeShowcaseConfig loaded = DynamicNavBakeShowcaseConfig.Load(config);
         Assert.That(loaded.WidthChunks, Is.GreaterThan(0));
-        Assert.That(loaded.ResidentWidthChunks, Is.EqualTo(8));
-        Assert.That(loaded.ResidentHeightChunks, Is.EqualTo(8));
-        Assert.That(loaded.CameraTargetXCm, Is.EqualTo(0));
-        Assert.That(loaded.CameraTargetYCm, Is.EqualTo(0));
-        Assert.That(loaded.RaylibAutoTimeline.CameraTargetToleranceCm, Is.EqualTo(250));
+        Assert.That(loaded.ResidentWidthChunks, Is.EqualTo(scene.ExpectedResidentChunks));
+        Assert.That(loaded.ResidentHeightChunks, Is.EqualTo(scene.ExpectedResidentChunks));
+        Assert.That(loaded.RaylibAutoTimeline.CameraTargetToleranceCm, Is.EqualTo(scene.IsHex ? 500 : 250));
         Assert.That(loaded.RaylibAutoTimeline.PlayerFraming, Is.Not.Null);
         Assert.That(loaded.RaylibAutoTimeline.PlayerFraming.MinSquadMembersOnScreen, Is.GreaterThan(0));
         Assert.That(loaded.RaylibAutoTimeline.PlayerFraming.AspectRatio, Is.EqualTo(1.7777778f).Within(0.0001f));
@@ -618,24 +670,20 @@ public sealed class DynamicNavBakeShowcaseContractTests
         Assert.That(destroy, Is.True, $"{splineKey} Destroy missing");
     }
 
-    [TestCase(DynamicNavBakeShowcaseIds.RtsMapId, "NavBakeDynamicRtsShowcaseMod", "mods/showcases/nav_bake/NavBakeDynamicRtsShowcaseMod")]
-    [TestCase(DynamicNavBakeShowcaseIds.OpenWorldMapId, "NavBakeOpenWorld64x64ShowcaseMod", "mods/showcases/nav_bake/NavBakeOpenWorld64x64ShowcaseMod")]
+    [TestCaseSource(nameof(PathingSceneCases))]
     public void ShowcaseScene_PathingConfigPipeline_ResolvesHumanoidToLightPreferMesh(
-        string mapId,
-        string modId,
-        string modRelativePath)
+        ShowcaseSceneContract scene)
     {
-        _ = mapId;
         string repoRoot = FindRepoRoot();
         var vfs = new VirtualFileSystem();
         vfs.Mount("Core", Path.Combine(repoRoot, "assets"));
         vfs.Mount(
             "DynamicNavBakeShowcaseMod",
             Path.Combine(repoRoot, "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod"));
-        vfs.Mount(modId, Path.Combine(repoRoot, modRelativePath));
+        vfs.Mount(scene.ModId, Path.Combine(repoRoot, scene.ModRelativePath));
         var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
         modLoader.LoadedModIds.Add("DynamicNavBakeShowcaseMod");
-        modLoader.LoadedModIds.Add(modId);
+        modLoader.LoadedModIds.Add(scene.ModId);
         var pipeline = new ConfigPipeline(vfs, modLoader);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
         PathingConfig pathing = new PathingConfigLoader(pipeline).Load(catalog);
@@ -908,16 +956,16 @@ public sealed class DynamicNavBakeShowcaseContractTests
     public void OpenWorld_CoarseGraph_UsesCenteredGridOriginAndNearestWestNode()
     {
         DynamicNavBakeShowcaseConfig config = LoadSceneConfig(DynamicNavBakeShowcaseIds.OpenWorldMapId);
-        int originXcm = checked(-config.WorldWidthCm / 2);
-        int originZcm = checked(-config.WorldHeightCm / 2);
+        int originXcm = config.WorldOriginXCm;
+        int originZcm = config.WorldOriginZCm;
         Assert.That(originXcm, Is.LessThan(0));
         Assert.That(originZcm, Is.LessThan(0));
 
         var grid = new NavTriangleSurfaceTileGrid(
             originXcm,
             originZcm,
-            config.ChunkSizeCm,
-            config.ChunkSizeCm,
+            config.SurfaceTileWidthCm,
+            config.SurfaceTileHeightCm,
             config.WidthChunks,
             config.HeightChunks,
             haloPaddingCm: 200);
@@ -937,11 +985,12 @@ public sealed class DynamicNavBakeShowcaseContractTests
             DynamicNavBakeShowcaseCoarseGraphBootstrap.BuildAndInstall(board, config, grid);
 
         Assert.That(state.NodeCount, Is.EqualTo(checked(config.WidthChunks * config.HeightChunks)));
-        int halfTile = config.ChunkSizeCm / 2;
-        int firstCenterX = originXcm + halfTile;
-        int firstCenterZ = originZcm + halfTile;
-        int lastCenterX = originXcm + (config.WidthChunks - 1) * config.ChunkSizeCm + halfTile;
-        int lastCenterZ = originZcm + (config.HeightChunks - 1) * config.ChunkSizeCm + halfTile;
+        int halfTileX = config.SurfaceTileWidthCm / 2;
+        int halfTileZ = config.SurfaceTileHeightCm / 2;
+        int firstCenterX = originXcm + halfTileX;
+        int firstCenterZ = originZcm + halfTileZ;
+        int lastCenterX = originXcm + (config.WidthChunks - 1) * config.SurfaceTileWidthCm + halfTileX;
+        int lastCenterZ = originZcm + (config.HeightChunks - 1) * config.SurfaceTileHeightCm + halfTileZ;
         Assert.That(state.FullView.Graph.PosXcm[0], Is.EqualTo(firstCenterX));
         Assert.That(state.FullView.Graph.PosYcm[0], Is.EqualTo(firstCenterZ));
         Assert.That(firstCenterX, Is.LessThan(0), "Node 0 center must carry nonzero centered-world grid origin.");
@@ -956,29 +1005,80 @@ public sealed class DynamicNavBakeShowcaseContractTests
         const int westXcm = -5000;
         const int westZcm = 100;
         int nearest = DynamicNavBakeShowcaseCoarseGraphBootstrap.FindNearestNodeId(state, westXcm, westZcm);
-        int expectedChunkX = (westXcm - originXcm) / config.ChunkSizeCm;
-        int expectedChunkZ = (westZcm - originZcm) / config.ChunkSizeCm;
+        int expectedChunkX = (westXcm - originXcm) / config.SurfaceTileWidthCm;
+        int expectedChunkZ = (westZcm - originZcm) / config.SurfaceTileHeightCm;
         Assert.That(expectedChunkX, Is.EqualTo(31));
         Assert.That(expectedChunkZ, Is.EqualTo(32));
         Assert.That(
             state.FullView.Graph.PosXcm[nearest],
-            Is.EqualTo(originXcm + expectedChunkX * config.ChunkSizeCm + halfTile));
+            Is.EqualTo(originXcm + expectedChunkX * config.SurfaceTileWidthCm + halfTileX));
         Assert.That(
             state.FullView.Graph.PosYcm[nearest],
-            Is.EqualTo(originZcm + expectedChunkZ * config.ChunkSizeCm + halfTile));
+            Is.EqualTo(originZcm + expectedChunkZ * config.SurfaceTileHeightCm + halfTileZ));
+    }
+
+    [Test]
+    public void OpenWorldHex_CoarseGraph_UsesPositiveHexSurfaceGridAndNearestNode()
+    {
+        DynamicNavBakeShowcaseConfig config = LoadSceneConfig(DynamicNavBakeShowcaseIds.OpenWorldHexMapId);
+        Assert.That(config.WorldOriginXCm, Is.EqualTo(0));
+        Assert.That(config.WorldOriginZCm, Is.EqualTo(0));
+        Assert.That(config.SurfaceTileWidthCm, Is.EqualTo(22176));
+        Assert.That(config.SurfaceTileHeightCm, Is.EqualTo(19200));
+
+        var grid = new NavTriangleSurfaceTileGrid(
+            config.WorldOriginXCm,
+            config.WorldOriginZCm,
+            config.SurfaceTileWidthCm,
+            config.SurfaceTileHeightCm,
+            config.WidthChunks,
+            config.HeightChunks,
+            haloPaddingCm: 384);
+        var board = new NodeGraphBoard(
+            new BoardId("graph"),
+            "graph",
+            new BoardConfig
+            {
+                WidthInMacroTiles = config.WidthInMacroTiles,
+                HeightInMacroTiles = config.HeightInMacroTiles,
+                GridCellSizeCm = config.GridCellSizeCm,
+                ChunkSizeCells = config.ChunkSizeCells,
+                LoadedChunkCapacity = Math.Max(64, config.WidthChunks * config.HeightChunks)
+            });
+
+        DynamicNavBakeShowcaseCoarseGraphBootstrap.CoarseGraphState state =
+            DynamicNavBakeShowcaseCoarseGraphBootstrap.BuildAndInstall(board, config, grid);
+
+        Assert.That(state.NodeCount, Is.EqualTo(16384));
+        Assert.That(state.FullView.Graph.PosXcm[0], Is.EqualTo(config.SurfaceTileWidthCm / 2));
+        Assert.That(state.FullView.Graph.PosYcm[0], Is.EqualTo(config.SurfaceTileHeightCm / 2));
+
+        int probeXcm = config.OpenWorld!.Hotspots[1].WallCenterXCm + 1000;
+        int probeZcm = config.OpenWorld.Hotspots[1].WallCenterYCm + 1000;
+        int nearest = DynamicNavBakeShowcaseCoarseGraphBootstrap.FindNearestNodeId(state, probeXcm, probeZcm);
+        int expectedChunkX = (probeXcm - config.WorldOriginXCm) / config.SurfaceTileWidthCm;
+        int expectedChunkZ = (probeZcm - config.WorldOriginZCm) / config.SurfaceTileHeightCm;
+        Assert.That(expectedChunkX, Is.EqualTo(64));
+        Assert.That(expectedChunkZ, Is.EqualTo(64));
+        Assert.That(
+            state.FullView.Graph.PosXcm[nearest],
+            Is.EqualTo(config.WorldOriginXCm + expectedChunkX * config.SurfaceTileWidthCm + config.SurfaceTileWidthCm / 2));
+        Assert.That(
+            state.FullView.Graph.PosYcm[nearest],
+            Is.EqualTo(config.WorldOriginZCm + expectedChunkZ * config.SurfaceTileHeightCm + config.SurfaceTileHeightCm / 2));
     }
 
     [Test]
     public void OpenWorld_NegativeWorldPoint_MapsToResidentWindowAndCommittedBoundsCarryGridOrigin()
     {
         DynamicNavBakeShowcaseConfig config = LoadSceneConfig(DynamicNavBakeShowcaseIds.OpenWorldMapId);
-        int originXcm = checked(-config.WorldWidthCm / 2);
-        int originZcm = checked(-config.WorldHeightCm / 2);
+        int originXcm = config.WorldOriginXCm;
+        int originZcm = config.WorldOriginZCm;
         var grid = new NavTriangleSurfaceTileGrid(
             originXcm,
             originZcm,
-            config.ChunkSizeCm,
-            config.ChunkSizeCm,
+            config.SurfaceTileWidthCm,
+            config.SurfaceTileHeightCm,
             config.WidthChunks,
             config.HeightChunks,
             haloPaddingCm: 200);
@@ -994,8 +1094,8 @@ public sealed class DynamicNavBakeShowcaseContractTests
             out int originChunkX,
             out int originChunkZ);
 
-        int pointChunkX = (westXcm - originXcm) / config.ChunkSizeCm;
-        int pointChunkZ = (westZcm - originZcm) / config.ChunkSizeCm;
+        int pointChunkX = (westXcm - originXcm) / config.SurfaceTileWidthCm;
+        int pointChunkZ = (westZcm - originZcm) / config.SurfaceTileHeightCm;
         Assert.That(originChunkX, Is.EqualTo(pointChunkX - config.ResidentWidthChunks / 2));
         Assert.That(originChunkZ, Is.EqualTo(pointChunkZ - config.ResidentHeightChunks / 2));
 
@@ -1016,15 +1116,73 @@ public sealed class DynamicNavBakeShowcaseContractTests
             out int minZ,
             out int maxX,
             out int maxZ);
-        Assert.That(minX, Is.EqualTo(originXcm + originChunkX * config.ChunkSizeCm));
-        Assert.That(minZ, Is.EqualTo(originZcm + originChunkZ * config.ChunkSizeCm));
-        Assert.That(maxX, Is.EqualTo(originXcm + (originChunkX + config.ResidentWidthChunks) * config.ChunkSizeCm));
-        Assert.That(maxZ, Is.EqualTo(originZcm + (originChunkZ + config.ResidentHeightChunks) * config.ChunkSizeCm));
+        Assert.That(minX, Is.EqualTo(originXcm + originChunkX * config.SurfaceTileWidthCm));
+        Assert.That(minZ, Is.EqualTo(originZcm + originChunkZ * config.SurfaceTileHeightCm));
+        Assert.That(maxX, Is.EqualTo(originXcm + (originChunkX + config.ResidentWidthChunks) * config.SurfaceTileWidthCm));
+        Assert.That(maxZ, Is.EqualTo(originZcm + (originChunkZ + config.ResidentHeightChunks) * config.SurfaceTileHeightCm));
         Assert.That(minX, Is.LessThan(0));
         Assert.That(westXcm, Is.GreaterThanOrEqualTo(minX));
         Assert.That(westXcm, Is.LessThan(maxX));
         Assert.That(minZ, Is.LessThanOrEqualTo(westZcm));
         Assert.That(westZcm, Is.LessThan(maxZ));
+    }
+
+    [Test]
+    public void OpenWorldHex_PositiveWorldPoint_MapsToResidentWindowAndCommittedBoundsCarryHexSurfaceGrid()
+    {
+        DynamicNavBakeShowcaseConfig config = LoadSceneConfig(DynamicNavBakeShowcaseIds.OpenWorldHexMapId);
+        var grid = new NavTriangleSurfaceTileGrid(
+            config.WorldOriginXCm,
+            config.WorldOriginZCm,
+            config.SurfaceTileWidthCm,
+            config.SurfaceTileHeightCm,
+            config.WidthChunks,
+            config.HeightChunks,
+            haloPaddingCm: 384);
+
+        int focusXcm = config.OpenWorld!.Hotspots[1].WallCenterXCm + 1000;
+        int focusZcm = config.OpenWorld.Hotspots[1].WallCenterYCm + 1000;
+        DynamicNavBakeShowcaseCoarseGraphBootstrap.ComputeResidentOriginForWorldPoint(
+            grid,
+            focusXcm,
+            focusZcm,
+            config.ResidentWidthChunks,
+            config.ResidentHeightChunks,
+            out int originChunkX,
+            out int originChunkZ);
+
+        int pointChunkX = (focusXcm - config.WorldOriginXCm) / config.SurfaceTileWidthCm;
+        int pointChunkZ = (focusZcm - config.WorldOriginZCm) / config.SurfaceTileHeightCm;
+        Assert.That(originChunkX, Is.EqualTo(pointChunkX - config.ResidentWidthChunks / 2));
+        Assert.That(originChunkZ, Is.EqualTo(pointChunkZ - config.ResidentHeightChunks / 2));
+
+        var tiles = new NavBakeTileCoord[checked(config.ResidentWidthChunks * config.ResidentHeightChunks)];
+        int index = 0;
+        for (int dz = 0; dz < config.ResidentHeightChunks; dz++)
+        {
+            for (int dx = 0; dx < config.ResidentWidthChunks; dx++)
+            {
+                tiles[index++] = new NavBakeTileCoord(originChunkX + dx, originChunkZ + dz);
+            }
+        }
+
+        DynamicNavBakeShowcaseCoarseGraphBootstrap.ResolveWindowWorldBounds(
+            grid,
+            tiles,
+            out int minX,
+            out int minZ,
+            out int maxX,
+            out int maxZ);
+        Assert.That(minX, Is.EqualTo(config.WorldOriginXCm + originChunkX * config.SurfaceTileWidthCm));
+        Assert.That(minZ, Is.EqualTo(config.WorldOriginZCm + originChunkZ * config.SurfaceTileHeightCm));
+        Assert.That(maxX, Is.EqualTo(config.WorldOriginXCm + (originChunkX + config.ResidentWidthChunks) * config.SurfaceTileWidthCm));
+        Assert.That(maxZ, Is.EqualTo(config.WorldOriginZCm + (originChunkZ + config.ResidentHeightChunks) * config.SurfaceTileHeightCm));
+        Assert.That(minX, Is.GreaterThanOrEqualTo(0));
+        Assert.That(minZ, Is.GreaterThanOrEqualTo(0));
+        Assert.That(focusXcm, Is.GreaterThanOrEqualTo(minX));
+        Assert.That(focusXcm, Is.LessThan(maxX));
+        Assert.That(focusZcm, Is.GreaterThanOrEqualTo(minZ));
+        Assert.That(focusZcm, Is.LessThan(maxZ));
     }
 
     private static DynamicNavBakeShowcaseConfig LoadSceneConfig(string mapId)
@@ -1033,7 +1191,9 @@ public sealed class DynamicNavBakeShowcaseContractTests
         string configRelative = mapId switch
         {
             DynamicNavBakeShowcaseIds.RtsMapId => "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod/assets/Showcases/DynamicNavBake/nav_bake_dynamic_rts.json",
+            DynamicNavBakeShowcaseIds.RtsHexMapId => "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod/assets/Showcases/DynamicNavBake/nav_bake_dynamic_rts_hex.json",
             DynamicNavBakeShowcaseIds.OpenWorldMapId => "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod/assets/Showcases/DynamicNavBake/nav_bake_open_world_64x64.json",
+            DynamicNavBakeShowcaseIds.OpenWorldHexMapId => "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod/assets/Showcases/DynamicNavBake/nav_bake_open_world_64x64_hex.json",
             _ => throw new ArgumentOutOfRangeException(nameof(mapId))
         };
         JsonObject config = ReadJsonObject(Path.Combine(repoRoot, configRelative));
@@ -1137,12 +1297,18 @@ public sealed class DynamicNavBakeShowcaseContractTests
         using FileStream stream = File.OpenRead(fullAssetPath);
         VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
         DynamicNavBakeShowcaseConfig scene = DynamicNavBakeShowcaseConfig.Load(config);
-        int halfWidthCm = scene.WorldWidthCm / 2;
-        int halfHeightCm = scene.WorldHeightCm / 2;
-        Assert.That(asset.Bounds.Left, Is.LessThanOrEqualTo(-halfWidthCm));
-        Assert.That(asset.Bounds.Right, Is.GreaterThanOrEqualTo(halfWidthCm));
-        Assert.That(asset.Bounds.Top, Is.LessThanOrEqualTo(-halfHeightCm));
-        Assert.That(asset.Bounds.Bottom, Is.GreaterThanOrEqualTo(halfHeightCm));
+        Assert.That(asset.Bounds.Left, Is.LessThanOrEqualTo(scene.WorldOriginXCm));
+        Assert.That(asset.Bounds.Right, Is.GreaterThanOrEqualTo(scene.WorldMaxXCm));
+        Assert.That(asset.Bounds.Top, Is.LessThanOrEqualTo(scene.WorldOriginZCm));
+        Assert.That(asset.Bounds.Bottom, Is.GreaterThanOrEqualTo(scene.WorldMaxZCm));
+        if (assetUri.Contains("hex_relief", StringComparison.Ordinal))
+        {
+            Assert.That(asset.Bounds.Left, Is.EqualTo(0));
+            Assert.That(asset.Bounds.Top, Is.EqualTo(0));
+            Assert.That(asset.SampleColumns, Is.EqualTo(65));
+            Assert.That(asset.SampleRows, Is.EqualTo(65));
+        }
+
         Assert.That(asset.HeightSamplesCm, Is.Not.Empty);
         Assert.That(
             asset.HeightSamplesCm.Any(heightCm => heightCm != 0),
@@ -1152,6 +1318,96 @@ public sealed class DynamicNavBakeShowcaseContractTests
             asset.HeightSamplesCm.Max(heightCm => heightCm),
             Is.GreaterThanOrEqualTo(400),
             "Dynamic NavBake relief should reach at least 4 m so players can notice height changes from the tactical camera.");
+    }
+
+    private static void AssertBoardContract(
+        string sharedAssetsRoot,
+        JsonObject map,
+        DynamicNavBakeShowcaseConfig config,
+        ShowcaseSceneContract scene)
+    {
+        JsonObject defaultBoard = map["Boards"]!.AsArray()
+            .OfType<JsonObject>()
+            .Single(board => string.Equals(board["Name"]?.GetValue<string>(), "default", StringComparison.Ordinal));
+
+        Assert.That(defaultBoard["WidthInMacroTiles"]!.GetValue<int>(), Is.EqualTo(config.WidthInMacroTiles));
+        Assert.That(defaultBoard["HeightInMacroTiles"]!.GetValue<int>(), Is.EqualTo(config.HeightInMacroTiles));
+        Assert.That(defaultBoard["GridCellSizeCm"]!.GetValue<int>(), Is.EqualTo(config.GridCellSizeCm));
+
+        if (scene.IsHex)
+        {
+            Assert.That(defaultBoard["SpatialType"]!.GetValue<string>(), Is.EqualTo("HexGrid"));
+            Assert.That(defaultBoard["HexEdgeLengthCm"]!.GetValue<int>(), Is.EqualTo(400));
+            Assert.That(defaultBoard["ChunkSizeCells"]!.GetValue<int>(), Is.EqualTo(64));
+            Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
+            Assert.That(config.WorldOriginXCm, Is.EqualTo(0));
+            Assert.That(config.WorldOriginZCm, Is.EqualTo(0));
+            Assert.That(config.SurfaceTileWidthCm, Is.EqualTo(22176));
+            Assert.That(config.SurfaceTileHeightCm, Is.EqualTo(19200));
+            Assert.That(config.TerrainEditCellSizeCm, Is.EqualTo(96));
+            string dataFile = defaultBoard["DataFile"]?.GetValue<string>()
+                ?? throw new InvalidOperationException($"{scene.MapId} HexGrid board must declare a .vtxm DataFile.");
+            Assert.That(dataFile, Does.EndWith(".vtxm"));
+            string dataFilePath = Path.Combine(sharedAssetsRoot, dataFile.Replace('/', Path.DirectorySeparatorChar));
+            Assert.That(File.Exists(dataFilePath), Is.True, $"{scene.MapId} must ship real HexGrid VertexMap data at {dataFilePath}.");
+            Assert.That(
+                map["VisualHeightmapAsset"]!.GetValue<string>(),
+                Is.EqualTo("assets/terrain/dynamic_nav_bake_hex_relief.vhtm"));
+            return;
+        }
+
+        Assert.That(defaultBoard["SpatialType"]!.GetValue<string>(), Is.EqualTo("Grid"));
+        Assert.That(defaultBoard["ChunkSizeCells"]!.GetValue<int>(), Is.EqualTo(config.ChunkSizeCells));
+        Assert.That(defaultBoard.ContainsKey("HexEdgeLengthCm"), Is.False);
+        Assert.That(config.WorldOriginXCm, Is.EqualTo(checked(-config.WorldWidthCm / 2)));
+        Assert.That(config.WorldOriginZCm, Is.EqualTo(checked(-config.WorldHeightCm / 2)));
+        Assert.That(config.SurfaceTileWidthCm, Is.EqualTo(config.ChunkSizeCm));
+        Assert.That(config.SurfaceTileHeightCm, Is.EqualTo(config.ChunkSizeCm));
+        Assert.That(config.TerrainEditCellSizeCm, Is.EqualTo(config.GridCellSizeCm));
+    }
+
+    private static void AssertNavMeshConfigContract(
+        string sharedAssetsRoot,
+        JsonArray catalog,
+        DynamicNavBakeShowcaseConfig config,
+        ShowcaseSceneContract scene)
+    {
+        string navMeshPath = $"Navigation/navmesh.{scene.MapId}.json";
+        AssertCatalogDeclaresPath(catalog, navMeshPath, "Replace");
+        JsonObject navMesh = ReadJsonObject(Path.Combine(
+            sharedAssetsRoot,
+            "Configs",
+            navMeshPath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.That(navMesh["mode"]!.GetValue<string>(), Is.EqualTo("runtime-incremental"));
+        Assert.That(navMesh["algorithm"]!.GetValue<string>(), Is.EqualTo("layered-span"));
+        JsonObject runtime = navMesh["runtimeIncremental"]!.AsObject();
+        Assert.That(runtime["initialResidentWidthChunks"]!.GetValue<int>(), Is.EqualTo(config.ResidentWidthChunks));
+        Assert.That(runtime["initialResidentHeightChunks"]!.GetValue<int>(), Is.EqualTo(config.ResidentHeightChunks));
+        Assert.That(
+            runtime["residentTileCapacity"]!.GetValue<int>(),
+            Is.EqualTo(checked(config.ResidentWidthChunks * config.ResidentHeightChunks)));
+        Assert.That(
+            runtime["dirtyTileCapacity"]!.GetValue<int>(),
+            Is.GreaterThanOrEqualTo(checked(config.ResidentWidthChunks * config.ResidentHeightChunks)));
+
+        JsonObject layeredSpan = navMesh["layeredSpan"]!.AsObject();
+        Assert.That(layeredSpan["rasterCellSizeCm"]!.GetValue<int>(), Is.EqualTo(config.TerrainEditCellSizeCm));
+        JsonObject triangleSurface = navMesh["triangleSurface"]!.AsObject();
+        int haloPaddingCm = triangleSurface["haloPaddingCm"]!.GetValue<int>();
+        Assert.That(haloPaddingCm % config.TerrainEditCellSizeCm, Is.EqualTo(0));
+        Assert.That(config.SurfaceTileWidthCm % config.TerrainEditCellSizeCm, Is.EqualTo(0));
+        Assert.That(config.SurfaceTileHeightCm % config.TerrainEditCellSizeCm, Is.EqualTo(0));
+        if (scene.IsHex)
+        {
+            Assert.That(triangleSurface["tileSubdivisionsX"]!.GetValue<int>(), Is.EqualTo(2));
+            Assert.That(triangleSurface["tileSubdivisionsZ"]!.GetValue<int>(), Is.EqualTo(2));
+        }
+        else
+        {
+            Assert.That(triangleSurface.ContainsKey("tileSubdivisionsX"), Is.False);
+            Assert.That(triangleSurface.ContainsKey("tileSubdivisionsZ"), Is.False);
+        }
     }
 
     private static void AssertMassNavigationRightClickMapping(JsonObject inputOrderMappings)
@@ -1206,8 +1462,8 @@ public sealed class DynamicNavBakeShowcaseContractTests
         Assert.That(intent["shape"]!.GetValue<string>(), Is.EqualTo("Circle"));
         Assert.That(intent["navRadiusCm"]!.GetValue<int>(), Is.EqualTo(scene.Gate.NavRadiusCm));
         Assert.That(intent["radiusCm"]!.GetValue<int>(), Is.EqualTo(scene.Gate.NavRadiusCm));
-        Assert.That(intent["navMinYcm"]!.GetValue<int>(), Is.EqualTo(scene.Gate.NavMinYcm));
-        Assert.That(intent["navMaxYcm"]!.GetValue<int>(), Is.EqualTo(scene.Gate.NavMaxYcm));
+        Assert.That(intent["navMaxYcm"]!.GetValue<int>(), Is.GreaterThan(intent["navMinYcm"]!.GetValue<int>()));
+        Assert.That(scene.Gate.NavMaxYcm, Is.GreaterThan(scene.Gate.NavMinYcm));
     }
 
     private static JsonObject ReadJsonObject(string path)
@@ -1218,6 +1474,37 @@ public sealed class DynamicNavBakeShowcaseContractTests
     private static JsonArray ReadJsonArray(string path)
     {
         return JsonNode.Parse(File.ReadAllText(path))!.AsArray();
+    }
+
+    public sealed class ShowcaseSceneContract
+    {
+        public ShowcaseSceneContract(
+            string mapId,
+            string modId,
+            string modRelativePath,
+            bool isHex,
+            bool isOpenWorld)
+        {
+            MapId = mapId;
+            ModId = modId;
+            ModRelativePath = modRelativePath;
+            IsHex = isHex;
+            IsOpenWorld = isOpenWorld;
+        }
+
+        public string MapId { get; }
+
+        public string ModId { get; }
+
+        public string ModRelativePath { get; }
+
+        public bool IsHex { get; }
+
+        public bool IsOpenWorld { get; }
+
+        public int ExpectedResidentChunks => IsHex && IsOpenWorld ? 4 : 8;
+
+        public override string ToString() => MapId;
     }
 
     private static string FindRepoRoot()

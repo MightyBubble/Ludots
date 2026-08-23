@@ -188,11 +188,27 @@
       "hasScreenshotEvidence": true
     },
     {
+      "id": "nav_bake_dynamic_rts_hex",
+      "preset": "nav_bake_dynamic_rts_hex_raylib",
+      "binding": "nav_bake_dynamic_rts_hex",
+      "testFilter": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-dynamic-rts-hex",
+      "hasScreenshotEvidence": true
+    },
+    {
       "id": "nav_bake_open_world_64x64",
       "preset": "nav_bake_open_world_64x64_raylib",
       "binding": "nav_bake_open_world_64x64",
       "testFilter": "DynamicNavBakeShowcaseAcceptanceTests",
       "artifactDir": "artifacts/acceptance/nav-bake-open-world-64x64",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "nav_bake_open_world_64x64_hex",
+      "preset": "nav_bake_open_world_64x64_hex_raylib",
+      "binding": "nav_bake_open_world_64x64_hex",
+      "testFilter": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-open-world-64x64-hex",
       "hasScreenshotEvidence": true
     },
     {

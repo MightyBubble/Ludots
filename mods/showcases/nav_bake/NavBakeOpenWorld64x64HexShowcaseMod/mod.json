@@ -1,0 +1,16 @@
+{
+  "name": "NavBakeOpenWorld64x64HexShowcaseMod",
+  "version": "1.0.0",
+  "description": "HexGrid 64x64 Dynamic 3D NavMesh bake showcase entry (nav_bake_open_world_64x64_hex).",
+  "main": "bin/net8.0/NavBakeOpenWorld64x64HexShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "DynamicNavBakeShowcaseMod": "^1.0.0",
+    "LudotsCoreMod": "^1.0.0",
+    "MassNavigationMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "navmesh", "nav-bake", "open-world", "streaming", "hex-grid"]
+}

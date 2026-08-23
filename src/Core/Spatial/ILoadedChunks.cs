@@ -39,4 +39,16 @@ namespace Ludots.Core.Spatial
     {
         long GetChunkKeyForWorldCm(float worldXCm, float worldYCm);
     }
+
+    public interface ILoadedChunkContributor : IDisposable
+    {
+        IReadOnlyCollection<long> ActiveChunkKeys { get; }
+        void SetLoaded(long chunkKey, bool loaded);
+    }
+
+    public interface ILoadedChunkWindowSource : ILoadedChunks
+    {
+        ILoadedChunkContributor AcquireContributor(string key, int capacity);
+        void CollectWindowChunkKeys(int centerXcm, int centerYcm, int radiusCm, ICollection<long> destination);
+    }
 }

@@ -146,11 +146,27 @@
       }
     },
     {
+      "name": "nav_bake_dynamic_rts_hex",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/nav_bake/NavBakeDynamicRtsHexShowcaseMod",
+        "projectPath": "NavBakeDynamicRtsHexShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "nav_bake_open_world_64x64",
       "target": {
         "type": "path",
         "value": "mods/showcases/nav_bake/NavBakeOpenWorld64x64ShowcaseMod",
         "projectPath": "NavBakeOpenWorld64x64ShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "nav_bake_open_world_64x64_hex",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/nav_bake/NavBakeOpenWorld64x64HexShowcaseMod",
+        "projectPath": "NavBakeOpenWorld64x64HexShowcaseMod.csproj"
       }
     },
     {
