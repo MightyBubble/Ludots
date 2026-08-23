@@ -17,10 +17,13 @@ namespace Ludots.Core.Engine.Randomization
         internal RngStream(string streamId, uint seed)
         {
             StreamId = streamId;
+            DeclaredSeed = seed;
             _state = seed == 0u ? ZeroStateEscape : seed;
         }
 
         public string StreamId { get; }
+
+        public uint DeclaredSeed { get; }
 
         public long Position { get; private set; }
 

@@ -88,6 +88,7 @@ public sealed class SaveParticipantRegistryTests
             "narrative",
             "quests",
             "relationships",
+            "rng",
             "teams",
             "timeFlow"
         }));
