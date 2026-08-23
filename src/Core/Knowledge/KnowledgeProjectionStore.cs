@@ -32,6 +32,20 @@ namespace Ludots.Core.Knowledge
         public uint Upsert(Entity viewer, Entity target, in KnowledgeDisclosureRecord record)
         {
             ValidateViewerAndTarget(viewer, target);
+            if (record.Presence == KnowledgePresence.LiveVisible && viewer != target)
+            {
+                try
+                {
+                    System.IO.File.AppendAllText(
+                        System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ludots-knowledge-writers.txt"),
+                        "v=" + viewer.Id + ":" + viewer.Version + " t=" + target.Id + ":" + target.Version
+                        + " src=" + record.Source.Id + " mask=" + (record.AttributeMask.IsEmpty ? 0 : 1)
+                        + " stack=" + System.Environment.StackTrace + System.Environment.NewLine);
+                }
+                catch (System.IO.IOException)
+                {
+                }
+            }
 
             EntityKeyedSoaKey key = EntityKeyedSoaKey.ForPair(viewer, target);
             var next = KnowledgeProjectionPayload.FromRecord(in record);
