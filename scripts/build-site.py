@@ -537,11 +537,11 @@ def build(out_dir: Path) -> int:
         **parse_wiki_catalog(ENGINE_GALLERY_WIKI_DIR / "README.md", "engine-gallery-wiki"),
     }
 
-    print("-- 解析 panel-case-designs.md 案目录 -> panels-nav.js")
+    print("-- 解析 panel-cases/README.md 家族目录 -> panels-nav.js")
     panels_nav = {
         "generatedAt": now,
-        "source": "gitbook/architecture/panel-case-designs.md",
-        **parse_panel_cases(GITBOOK_DIR / "architecture" / "panel-case-designs.md", "panel-case-designs"),
+        "source": "gitbook/architecture/panel-cases/README.md",
+        **parse_wiki_catalog(GITBOOK_DIR / "architecture" / "panel-cases" / "README.md", "panel-cases"),
     }
     write_js(out_dir / "site-assets" / "panels-nav.js", "PANELS_NAV", panels_nav)
 
