@@ -742,6 +742,13 @@ namespace {modId}
                 throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
             }
 
+            NavBakePolicy policy = NavBakePolicyValidator.Require(boardConfig);
+            if (string.Equals(policy.HeightSource, NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Board '{boardConfig.Name}' selects direct continuous-heightmap baking, but the CLI backend is not connected yet. No projection was performed.");
+            }
+
             NavMeshBakeConfigContext bakeConfigContext;
             try
             {
