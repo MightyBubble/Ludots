@@ -688,6 +688,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (string.Equals(node.Op, GraphAuthoringSugar.Break, StringComparison.Ordinal))
+                {
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"{GraphAuthoringSugar.Break} is Script/TriggerGraph compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    // Break is an author-facing name for an unconditional jump to an
+                    // explicitly authored exit. There is no implicit loop-scope lookup;
+                    // the target edge keeps control flow visible and rejects dangling breaks.
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.Jump);
+                    continue;
+                }
+
                 // Wait is author alias for Yield — Script/TriggerGraph CF only; never a second waiter opcode.
                 if (string.Equals(node.Op, WaitOp, StringComparison.Ordinal))
                 {

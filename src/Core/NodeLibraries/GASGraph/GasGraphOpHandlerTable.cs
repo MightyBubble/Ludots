@@ -457,6 +457,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 pc++;
                 treeSteps++;
                 stepsThisSlice++;
+                state.CurrentInstructionPc = instructionIndex;
 
                 ushort op = ins.Op;
                 if (op == moveIntOp)
@@ -596,7 +597,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 state.TreeSteps = treeSteps;
-                state.CurrentInstructionPc = instructionIndex;
                 handler(ref state, in ins, ref pc);
                 callStackCount = state.CallStackCount;
                 returnInt = state.ReturnInt;
@@ -669,6 +669,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             state.TreeSteps = treeSteps;
             state.Status = status;
             cursor.Pc = pc;
+            cursor.LastInstructionPc = state.CurrentInstructionPc;
             cursor.CallStackCount = callStackCount;
             cursor.ReturnInt = returnInt;
             cursor.Steps = treeSteps;

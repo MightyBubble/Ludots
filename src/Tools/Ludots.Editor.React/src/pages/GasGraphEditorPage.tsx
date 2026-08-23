@@ -8,12 +8,15 @@ import {
   Handle,
   Position,
   applyNodeChanges,
+  addEdge,
   type Node,
   type Edge,
+  type Connection,
   type NodeProps,
   type NodeChange,
   MarkerType,
 } from '@xyflow/react';
+import { Search, Plus } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
 type GraphNodeConfig = {
@@ -58,7 +61,7 @@ type GraphNodeConfig = {
   queryCapacityPolicy?: string | null;
 };
 
-type GasNodeData = GraphNodeConfig & { label: string; descriptor?: GraphDescriptor };
+type GasNodeData = GraphNodeConfig & { label: string; descriptor?: GraphDescriptor; sugar?: GraphSugarDescriptor };
 
 type GraphDescriptor = {
   op: string;
@@ -72,6 +75,14 @@ type GraphDescriptor = {
   flagsRole: string;
   immRole: string;
   scriptSliceOnly: boolean;
+};
+
+type GraphSugarDescriptor = {
+  op: string;
+  controlOutputPorts: string[];
+  valueInputPorts: string[];
+  outputType: string;
+  lowersTo: string;
 };
 
 type EditorLayout = {
@@ -155,10 +166,12 @@ const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
 
 function GasNode({ data, selected }: NodeProps<Node<GasNodeData>>) {
   const descriptor = data.descriptor;
+  const sugar = data.sugar;
   const inputPorts = Array.from(new Set([
     ...(descriptor?.linearInputPorts ?? []),
     ...(descriptor?.queryInputPorts ?? []),
     ...(descriptor?.scriptInputPorts ?? []),
+    ...(sugar?.valueInputPorts ?? []),
   ]));
   const outputType = descriptor?.queryOutputType !== 'Void'
     ? descriptor?.queryOutputType
@@ -190,7 +203,7 @@ function GasNode({ data, selected }: NodeProps<Node<GasNodeData>>) {
         {valueOutput ? <span className="rounded bg-violet-950 px-1 text-violet-300">{valueOutput}</span> : null}
         {inputPorts.map((port) => <span key={port} className="rounded bg-emerald-950 px-1 text-emerald-300">{port}</span>)}
       </div>
-      <Handle id="next" type="source" position={Position.Right} className="!top-4 !bg-sky-400" />
+      <Handle id={sugar?.controlOutputPorts[0] ?? 'next'} type="source" position={Position.Right} className="!top-4 !bg-sky-400" />
       {valueOutput ? (
         <Handle id={valueOutput} type="source" position={Position.Right} className="!top-12 !bg-violet-400" />
       ) : null}
@@ -267,13 +280,14 @@ function edgeLabel(edge: Edge<GasEdgeData>): string {
 function graphToFlow(
   graph: GraphConfig,
   descriptors: Record<string, GraphDescriptor> = {},
+  sugars: Record<string, GraphSugarDescriptor> = {},
   layout: EditorLayout = {},
 ): { nodes: Node<GasNodeData>[]; edges: Edge<GasEdgeData>[] } {
   const nodes: Node<GasNodeData>[] = graph.nodes.map((n, index) => ({
     id: n.id,
     type: 'gas',
     position: layout.nodes?.[n.id] ?? { x: 40 + index * 220, y: 80 + (index % 2) * 40 },
-    data: { ...n, label: n.id, descriptor: descriptors[n.op] },
+    data: { ...n, label: n.id, descriptor: descriptors[n.op], sugar: sugars[n.op] },
   }));
 
   const edges: Edge<GasEdgeData>[] = [];
@@ -328,12 +342,17 @@ function graphToFlow(
 }
 
 function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge<GasEdgeData>[]): GraphConfig {
-  const byId = new Map(nodes.map((n) => [n.id, n.data]));
-  const wireNodes = graph.nodes.map((n) => {
-    const edited = byId.get(n.id);
-    if (!edited) return toWireNode(n);
+  const sourceById = new Map(graph.nodes.map((n) => [n.id, n]));
+  const wireNodes = nodes.map((flowNode) => {
+    const n = sourceById.get(flowNode.id);
+    const edited = flowNode.data;
+    if (!n) {
+      return toWireNode({ ...edited, id: flowNode.id, op: edited.op });
+    }
     const rest = { ...edited };
     delete rest.label;
+    delete rest.descriptor;
+    delete rest.sugar;
     return toWireNode({
       ...n,
       ...rest,
@@ -387,6 +406,8 @@ export const GasGraphEditorPage: React.FC = () => {
   const [graphId, setGraphId] = React.useState(DEFAULT_GRAPH_ID);
   const [graph, setGraph] = React.useState<GraphConfig | null>(null);
   const [descriptors, setDescriptors] = React.useState<Record<string, GraphDescriptor>>({});
+  const [sugars, setSugars] = React.useState<Record<string, GraphSugarDescriptor>>({});
+  const [nodeSearch, setNodeSearch] = React.useState('');
   const [layout, setLayout] = React.useState<EditorLayout>({});
   const [nodes, setNodes] = React.useState<Node<GasNodeData>[]>([]);
   const [edges, setEdges] = React.useState<Edge<GasEdgeData>[]>([]);
@@ -441,13 +462,18 @@ export const GasGraphEditorPage: React.FC = () => {
       for (const descriptor of (descriptorPayload.descriptors ?? []) as GraphDescriptor[]) {
         nextDescriptors[descriptor.op] = descriptor;
       }
-      const missingDescriptor = loaded.nodes.find((node) => !nextDescriptors[node.op]);
+      const nextSugars: Record<string, GraphSugarDescriptor> = {};
+      for (const sugar of (descriptorPayload.authoringSugars ?? []) as GraphSugarDescriptor[]) {
+        nextSugars[sugar.op] = sugar;
+      }
+      const missingDescriptor = loaded.nodes.find((node) => !nextDescriptors[node.op] && !nextSugars[node.op]);
       if (missingDescriptor) throw new Error(`Descriptor missing for graph op '${missingDescriptor.op}'.`);
       const nextLayout = (layoutPayload.layout ?? {}) as EditorLayout;
       setDescriptors(nextDescriptors);
+      setSugars(nextSugars);
       setLayout(nextLayout);
       setGraph(loaded);
-      const flow = graphToFlow(loaded, nextDescriptors, nextLayout);
+      const flow = graphToFlow(loaded, nextDescriptors, nextSugars, nextLayout);
       setNodes(flow.nodes);
       setEdges(flow.edges);
       setSelectedNodeId(null);
@@ -489,7 +515,7 @@ export const GasGraphEditorPage: React.FC = () => {
     });
     setNodes(nextNodes);
     if (field === 'next') {
-      setEdges(graphToFlow(flowToGraph(graph, nextNodes, edges), descriptors, layout).edges);
+      setEdges(graphToFlow(flowToGraph(graph, nextNodes, edges), descriptors, sugars, layout).edges);
     }
   };
 
@@ -516,7 +542,55 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const onNodesChange = React.useCallback((changes: NodeChange<Node<GasNodeData>>[]) => {
     setNodes((prev) => applyNodeChanges(changes, prev));
+    const removed = new Set(changes.filter((change) => change.type === 'remove').map((change) => change.id));
+    if (removed.size > 0) {
+      setEdges((prev) => prev.filter((edge) => !removed.has(edge.source) && !removed.has(edge.target)));
+    }
   }, []);
+
+  const onConnect = React.useCallback((connection: Connection) => {
+    if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) return;
+    const kind: GasEdgeData['kind'] = connection.targetHandle === 'control-in' ? 'control' : 'value';
+    setEdges((prev) => addEdge({
+      ...connection,
+      id: `${kind}:${connection.source}:${connection.sourceHandle}:${connection.target}:${connection.targetHandle}`,
+      markerEnd: { type: MarkerType.ArrowClosed },
+      label: kind === 'control'
+        ? connection.sourceHandle
+        : `${connection.sourceHandle} -> ${connection.targetHandle}`,
+      data: { kind },
+    }, prev));
+  }, []);
+
+  const availableNodes = React.useMemo(() => {
+    const entries = [
+      ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined })),
+      ...Object.values(sugars).map((sugar) => ({ op: sugar.op, descriptor: undefined, sugar })),
+    ];
+    const query = nodeSearch.trim().toLocaleLowerCase();
+    return entries
+      .filter((entry) => !query || entry.op.toLocaleLowerCase().includes(query))
+      .sort((a, b) => a.op.localeCompare(b.op));
+  }, [descriptors, nodeSearch, sugars]);
+
+  const addAuthoringNode = React.useCallback((op: string) => {
+    if (!graph) return;
+    const idBase = op.replace(/[^A-Za-z0-9_]/g, '_').toLocaleLowerCase();
+    const used = new Set(nodes.map((node) => node.id));
+    let suffix = 1;
+    let id = idBase;
+    while (used.has(id)) id = `${idBase}_${suffix++}`;
+    const next: Node<GasNodeData> = {
+      id,
+      type: 'gas',
+      position: { x: 80 + (nodes.length % 3) * 240, y: 120 + Math.floor(nodes.length / 3) * 150 },
+      data: { id, op, label: id, descriptor: descriptors[op], sugar: sugars[op] },
+    };
+    setNodes((previous) => [...previous, next]);
+    setSelectedNodeId(id);
+    setSelectedEdgeId(null);
+    setStatus(`Added ${op}; wire its pins before validation.`);
+  }, [descriptors, graph, nodes, sugars]);
 
   const saveLayout = React.useCallback(async () => {
     const nextLayout: EditorLayout = {
@@ -768,22 +842,56 @@ export const GasGraphEditorPage: React.FC = () => {
       <div className="grid min-h-0 flex-1 grid-cols-[1fr_320px]">
         <div className="min-h-0">
           {graph ? (
-            <ReactFlow
-              nodes={displayNodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onSelectionChange={({ nodes: selected, edges: selectedEdges }) => {
-                setSelectedNodeId(selected[0]?.id ?? null);
-                setSelectedEdgeId(selectedEdges[0]?.id ?? null);
-              }}
-              fitView
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background gap={16} color="#334155" />
-              <Controls />
-              <MiniMap pannable zoomable />
-            </ReactFlow>
+            <div className="relative h-full">
+              <ReactFlow
+                nodes={displayNodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={onNodesChange}
+                onConnect={onConnect}
+                onSelectionChange={({ nodes: selected, edges: selectedEdges }) => {
+                  setSelectedNodeId(selected[0]?.id ?? null);
+                  setSelectedEdgeId(selectedEdges[0]?.id ?? null);
+                }}
+                fitView
+                proOptions={{ hideAttribution: true }}
+              >
+                <Background gap={16} color="#334155" />
+                <Controls />
+                <MiniMap pannable zoomable />
+              </ReactFlow>
+              <div className="absolute left-3 top-3 z-10 w-72 rounded border border-slate-700 bg-slate-950/95 p-2 shadow-xl">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                  <Search size={14} className="text-slate-500" aria-hidden="true" />
+                  <input
+                    value={nodeSearch}
+                    onChange={(event) => setNodeSearch(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && availableNodes[0]) addAuthoringNode(availableNodes[0].op);
+                    }}
+                    placeholder="Find node"
+                    aria-label="Find graph node"
+                    className="min-w-0 flex-1 bg-transparent text-xs text-slate-100 outline-none placeholder:text-slate-600"
+                  />
+                  <span className="text-[10px] text-slate-600">Enter</span>
+                </div>
+                <div className="mt-2 max-h-64 overflow-auto">
+                  {availableNodes.slice(0, 24).map((entry) => (
+                    <button
+                      key={entry.op}
+                      type="button"
+                      onClick={() => addAuthoringNode(entry.op)}
+                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-800"
+                    >
+                      <Plus size={12} className="text-emerald-400" aria-hidden="true" />
+                      <span className="font-mono">{entry.op}</span>
+                      {entry.sugar ? <span className="ml-auto text-[10px] text-amber-300">sugar</span> : null}
+                    </button>
+                  ))}
+                  {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-slate-600">No runtime node matches.</div> : null}
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-slate-500">
               No graph loaded. Check Bridge is running on :5299.
