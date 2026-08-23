@@ -26,7 +26,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     // flat sheet. A large default plus a wide clamp lets authors dial in visible 3D relief.
     private const float MinDisplayHeightScale = 0.25f;
     private const float MaxDisplayHeightScale = 5000f;
-    private const float ImportedDefaultDisplayHeightScale = 500f;
+    internal const float ImportedDefaultDisplayHeightScale = 500f;
     private readonly VisualTerrainAssetDescriptor _asset;
     private readonly int _defaultMaterialAssetId;
     private readonly VisualTerrainErosionParameters _parameters = new();
