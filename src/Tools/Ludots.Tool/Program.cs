@@ -195,6 +195,55 @@ namespace Ludots.Tool
                 ctx.ExitCode = 0;
             });
             mapCommand.AddCommand(genEastAsiaPlayableCommand);
+
+            var bakeEastAsiaWeightsCommand = new Command("bake-east-asia-weights", "Bake the East Asia terrain control weight map (RGBA8 PNG) from authored weight rules");
+            var bakeWeightsModRootOption = new Option<string>(
+                "--modRoot",
+                () => "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod",
+                "Mod root containing assets/terrain and receiving the baked PNG");
+            var bakeWeightsRulesOption = new Option<string?>("--rules", () => null, "Weight rules JSON path (default: assets/terrain/east_asia_weight_rules.json under modRoot)");
+            var bakeWeightsHeightmapOption = new Option<string?>("--heightmap", () => null, "Visual heightmap .vhtm path (default: assets/terrain/east_asia_continuous.vhtm under modRoot)");
+            var bakeWeightsOutOption = new Option<string?>("--out", () => null, "Output PNG path (default: output.file from the rules, resolved under modRoot)");
+            var bakeWeightsManifestOption = new Option<string?>("--manifest", () => null, "Terrain profile manifest path (default: assets/terrain/east_asia_terrain_profile.json under modRoot)");
+            var bakeWeightsSkipManifestOption = new Option<bool>("--skipManifest", () => false, "Do not register the output SHA256 in the terrain profile manifest");
+            var bakeWeightsOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite the baked PNG if it exists");
+            bakeEastAsiaWeightsCommand.AddOption(bakeWeightsModRootOption);
+            bakeEastAsiaWeightsCommand.AddOption(bakeWeightsRulesOption);
+            bakeEastAsiaWeightsCommand.AddOption(bakeWeightsHeightmapOption);
+            bakeEastAsiaWeightsCommand.AddOption(bakeWeightsOutOption);
+            bakeEastAsiaWeightsCommand.AddOption(bakeWeightsManifestOption);
+            bakeEastAsiaWeightsCommand.AddOption(bakeWeightsSkipManifestOption);
+            bakeEastAsiaWeightsCommand.AddOption(bakeWeightsOverwriteOption);
+            bakeEastAsiaWeightsCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var modRoot = ctx.ParseResult.GetValueForOption(bakeWeightsModRootOption);
+                var rules = ctx.ParseResult.GetValueForOption(bakeWeightsRulesOption);
+                var heightmap = ctx.ParseResult.GetValueForOption(bakeWeightsHeightmapOption);
+                var output = ctx.ParseResult.GetValueForOption(bakeWeightsOutOption);
+                var manifest = ctx.ParseResult.GetValueForOption(bakeWeightsManifestOption);
+                var skipManifest = ctx.ParseResult.GetValueForOption(bakeWeightsSkipManifestOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(bakeWeightsOverwriteOption);
+
+                TerrainControlMapBakeSummary summary = TerrainControlMapBaker.Bake(
+                    modRoot,
+                    overwrite,
+                    rules,
+                    heightmap,
+                    output,
+                    manifest,
+                    registerInManifest: !skipManifest);
+
+                Console.WriteLine($"Read weight rules: {summary.RulesPath}");
+                Console.WriteLine($"Read VisualHeightmap terrain: {summary.VisualHeightmapPath}");
+                Console.WriteLine($"Wrote terrain control weights: {summary.OutputPath} ({summary.OutputColumns}x{summary.OutputRows})");
+                Console.WriteLine($"Output SHA256: {summary.OutputSha256}");
+                if (summary.ManifestPath != null)
+                {
+                    Console.WriteLine($"Registered output in terrain profile: {summary.ManifestPath}");
+                }
+                ctx.ExitCode = 0;
+            });
+            mapCommand.AddCommand(bakeEastAsiaWeightsCommand);
             rootCommand.AddCommand(mapCommand);
 
             var navCommand = new Command("nav", "Navigation utilities");

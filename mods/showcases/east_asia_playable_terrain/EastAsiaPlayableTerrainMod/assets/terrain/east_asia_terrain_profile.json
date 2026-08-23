@@ -123,6 +123,10 @@
     "visualHeightmap": {
       "file": "assets/terrain/east_asia_continuous.vhtm",
       "sha256": "537704C2832D5B25C4EBEB4B9F781959E56BADD0D2D5ECD68FF0922D28E94487"
+    },
+    "terrainControlWeights": {
+      "file": "assets/Textures/terrain_control_weights.png",
+      "sha256": "A592FA425BB60221F4A8D666AE6EE51F0EB8F6C8C361969BB99BBF6136030CC0"
     }
   }
 }
