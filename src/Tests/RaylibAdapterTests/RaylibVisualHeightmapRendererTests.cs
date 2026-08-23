@@ -116,9 +116,14 @@ public sealed class RaylibVisualHeightmapRendererTests
         RaylibVisualHeightmapRenderer.ResolveChunkRenderSampling(
             sampleColumns: 257,
             sampleRows: 257,
+            strideScale: 1,
             out int renderColumns,
             out int renderRows,
             out int sampleStride);
+
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveChunkSampleAxisPointCount(257, sampleStride * 2),
+            Is.EqualTo(65));
 
         Assert.That(sampleStride, Is.EqualTo(2));
         Assert.That(renderColumns, Is.EqualTo(129));

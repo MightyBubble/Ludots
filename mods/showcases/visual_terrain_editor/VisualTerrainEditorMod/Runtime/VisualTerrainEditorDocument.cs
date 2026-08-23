@@ -35,7 +35,10 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private readonly Dictionary<long, ChunkState> _chunks = new();
     private readonly List<ChunkState> _dirtyChunksScratch = new();
 
-    public VisualTerrainEditorDocument(VisualTerrainAssetDescriptor asset, int defaultMaterialAssetId)
+    public VisualTerrainEditorDocument(
+        VisualTerrainAssetDescriptor asset,
+        int defaultMaterialAssetId,
+        VisualHeightmapRenderProfile? renderProfile = null)
     {
         _asset = asset ?? throw new ArgumentNullException(nameof(asset));
         if (defaultMaterialAssetId <= 0)
@@ -45,7 +48,10 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
         _defaultMaterialAssetId = defaultMaterialAssetId;
         _heightmapStore = new ChunkedVisualHeightmapStore(_asset.CreateHeightmapDescriptor());
-        _heightmapRuntime = new ChunkedVisualHeightmapRuntime(_heightmapStore.Descriptor, _heightmapStore);
+        _heightmapRuntime = new ChunkedVisualHeightmapRuntime(
+            _heightmapStore.Descriptor,
+            _heightmapStore,
+            renderProfile ?? VisualHeightmapRenderProfile.CreateDefault());
         Reset();
     }
 
@@ -350,7 +356,8 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         string displayName,
         VisualHeightmapAsset source,
         int defaultMaterialAssetId,
-        float defaultHeight01)
+        float defaultHeight01,
+        VisualHeightmapRenderProfile? renderProfile = null)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(id));
         if (string.IsNullOrWhiteSpace(displayName)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(displayName));
@@ -378,7 +385,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             source.InterpolationMode,
             useAbsoluteHeightColorRamp: true);
 
-        var document = new VisualTerrainEditorDocument(asset, defaultMaterialAssetId);
+        var document = new VisualTerrainEditorDocument(asset, defaultMaterialAssetId, renderProfile);
         document.ApplyErosion = false;
         document.ViewMode = TerrainViewMode.Base;
         // Imported real-world heightmaps span continental distances with small absolute

@@ -1,6 +1,14 @@
 {
   "Id": "east_asia_visual_heightmap",
-  "VisualHeightmapAsset": "assets/terrain/east_asia_continuous.vhtm",
+  "VisualHeightmap": {
+    "Asset": "assets/terrain/east_asia_continuous.vhtm",
+    "RenderProfile": {
+      "OverviewSwitchChunkSpans": 2.5,
+      "OverviewVertexLimit": 65536,
+      "ChunkLodErrorPx": 240,
+      "DisableDistanceFog": true
+    }
+  },
   "Tags": [
     "east_asia",
     "terrain",

@@ -450,12 +450,16 @@ internal sealed class VisualTerrainEditorRuntime
             nextSavePath = ResolveSingleMountedAssetPath(engine, declaredVisualHeightmap, "visual heightmap");
             using FileStream stream = File.OpenRead(nextSavePath);
             VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
+            Ludots.Platform.Abstractions.VisualHeightmapRenderProfile mapRenderProfile =
+                (mapConfig.VisualHeightmap?.RenderProfile ?? Ludots.Platform.Abstractions.VisualHeightmapRenderProfile.CreateDefault())
+                .NormalizeAndValidate();
             nextDocument = VisualTerrainEditorDocument.CreateFromVisualHeightmapAsset(
                 id: mapId,
                 displayName: $"Visual Heightmap: {mapId}",
                 source: asset,
                 defaultMaterialAssetId: DefaultChunkMaterialAssetId,
-                defaultHeight01: ImportedVisualHeightmapDefaultHeight01);
+                defaultHeight01: ImportedVisualHeightmapDefaultHeight01,
+                renderProfile: mapRenderProfile);
             statusText = $"Loaded visual heightmap from {nextSavePath}";
         }
 

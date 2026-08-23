@@ -54,8 +54,13 @@ namespace Ludots.Raylib.Render
         private bool _controlMapEnabled;
         private float _terrainTileScale = 0.25f;
         private Vector4 _controlBoundsMeters;
+        private Mesh _overviewMesh;
+        private int _overviewMeshRevision = -1;
+        private bool _disableDistanceFog;
 
         public int DrawnChunkCountLastFrame { get; private set; }
+
+        public bool OverviewActiveLastFrame { get; private set; }
 
         public int BuiltChunkCountLastFrame { get; private set; }
 
@@ -254,6 +259,12 @@ namespace Ludots.Raylib.Render
             if (_initialized)
             {
                 lighting.Apply(_terrainShader, in _terrainLightingLocs);
+                if (_disableDistanceFog)
+                {
+                    Vector4 fogOff = new(lighting.FogParams.X, lighting.FogParams.Y, lighting.FogParams.Z, 0f);
+                    Rl.SetShaderValue(_terrainShader, _terrainLightingLocs.FogParams, &fogOff, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                }
+
                 ApplyTerrainShadow();
             }
         }
@@ -284,32 +295,68 @@ namespace Ludots.Raylib.Render
             MissingChunkCountLastFrame = 0;
             TerrainVertexCountLastFrame = 0;
             ChunkBuildMsLastFrame = 0d;
+            OverviewActiveLastFrame = false;
 
-            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
-            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            VisualHeightmapRenderProfile profile = source.RenderProfile;
+            _disableDistanceFog = profile.DisableDistanceFog;
+            float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
+            float effectiveVisibleRadiusCm = ResolveEffectiveVisibleRadiusCm(source, in camera, aspect);
 
-            for (int y = minChunkY; y <= maxChunkY; y++)
+            if (ShouldUseOverviewMesh(source, in camera, aspect, VisibleRadiusCm, profile.OverviewSwitchChunkSpans))
             {
-                for (int x = minChunkX; x <= maxChunkX; x++)
+                EnsureOverviewMesh(source, profile.OverviewVertexLimit);
+                RaylibMatrix overviewIdentity = RaylibMatrix.Identity;
+                Rl.rlDisableBackfaceCulling();
+                Rl.DrawMesh(_overviewMesh, _terrainMaterial, overviewIdentity);
+                Rl.rlEnableBackfaceCulling();
+                OverviewActiveLastFrame = true;
+                TerrainVertexCountLastFrame = _overviewMesh.vertexCount;
+            }
+            else
+            {
+                int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - effectiveVisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+                int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + effectiveVisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+                int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - effectiveVisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+                int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + effectiveVisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+
+                float chunkSpanCm = MathF.Max(
+                    source.Bounds.Width / (float)Math.Max(1, source.ChunkColumns),
+                    source.Bounds.Height / (float)Math.Max(1, source.ChunkRows));
+                for (int y = minChunkY; y <= maxChunkY; y++)
                 {
-                    if (!source.TryGetChunk(x, y, out VisualHeightmapRenderChunk chunk))
+                    for (int x = minChunkX; x <= maxChunkX; x++)
                     {
-                        MissingChunkCountLastFrame++;
-                        continue;
+                        if (!source.TryGetChunk(x, y, out VisualHeightmapRenderChunk chunk))
+                        {
+                            MissingChunkCountLastFrame++;
+                            continue;
+                        }
+
+                        Vector3 chunkCenterMeters = new(
+                            (chunk.Bounds.Left + chunk.Bounds.Right) * 0.005f,
+                            0f,
+                            (chunk.Bounds.Top + chunk.Bounds.Bottom) * 0.005f);
+                        float chunkDistanceMeters = MathF.Max(1f, Vector3.Distance(camera.position, chunkCenterMeters));
+                        float projectedChunkPx = chunkSpanCm * 0.01f * ResolvePixelsPerMeter(in camera, chunkDistanceMeters);
+                        int strideScale = ResolveChunkLodStrideScale(projectedChunkPx, profile.ChunkLodErrorPx);
+
+                        ref ChunkGpu gpu = ref GetOrCreateChunk(in chunk, strideScale);
+                        gpu.LastUsedFrame = _frameIndex;
+                        RaylibMatrix identity = RaylibMatrix.Identity;
+                        Rl.rlDisableBackfaceCulling();
+                        Rl.DrawMesh(gpu.Mesh, _terrainMaterial, identity);
+                        Rl.rlEnableBackfaceCulling();
+
+                        DrawnChunkCountLastFrame++;
+                        TerrainVertexCountLastFrame += gpu.Mesh.vertexCount;
                     }
-
-                    ref ChunkGpu gpu = ref GetOrCreateChunk(in chunk);
-                    gpu.LastUsedFrame = _frameIndex;
-                    RaylibMatrix identity = RaylibMatrix.Identity;
-                    Rl.rlDisableBackfaceCulling();
-                    Rl.DrawMesh(gpu.Mesh, _terrainMaterial, identity);
-                    Rl.rlEnableBackfaceCulling();
-
-                    DrawnChunkCountLastFrame++;
-                    TerrainVertexCountLastFrame += gpu.Mesh.vertexCount;
                 }
+            }
+
+            if ((_frameIndex % 300) == 0)
+            {
+                RenderDiagnostics.Info(
+                    "[visual-heightmap] f" + _frameIndex + " overview=" + OverviewActiveLastFrame + " drawn=" + DrawnChunkCountLastFrame + " verts=" + TerrainVertexCountLastFrame + " radiusCm=" + effectiveVisibleRadiusCm.ToString("F0") + " fogOff=" + _disableDistanceFog);
             }
 
             EvictUnusedChunks(240);
@@ -325,10 +372,22 @@ namespace Ludots.Raylib.Render
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
 
             EnsureInitialized();
-            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
-            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            VisualHeightmapRenderProfile profile = source.RenderProfile;
+            float shadowAspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
+            float effectiveVisibleRadiusCm = ResolveEffectiveVisibleRadiusCm(source, in camera, shadowAspect);
+
+            if (ShouldUseOverviewMesh(source, in camera, shadowAspect, VisibleRadiusCm, profile.OverviewSwitchChunkSpans))
+            {
+                EnsureOverviewMesh(source, profile.OverviewVertexLimit);
+                RaylibMatrix overviewIdentity = RaylibMatrix.Identity;
+                shadow.DrawMeshShadow(_overviewMesh, overviewIdentity);
+                return;
+            }
+
+            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - effectiveVisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + effectiveVisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - effectiveVisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + effectiveVisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
             RaylibMatrix identity = RaylibMatrix.Identity;
             for (int y = minChunkY; y <= maxChunkY; y++)
             {
@@ -339,7 +398,8 @@ namespace Ludots.Raylib.Render
                         continue;
                     }
 
-                    ref ChunkGpu gpu = ref GetOrCreateChunk(in chunk);
+                    // 影子 pass 恒用最低密度：深度图不需要高细节。
+                    ref ChunkGpu gpu = ref GetOrCreateChunk(in chunk, strideScale: 4);
                     shadow.DrawMeshShadow(gpu.Mesh, identity);
                 }
             }
@@ -850,14 +910,15 @@ namespace Ludots.Raylib.Render
             return node.GetValue<float>();
         }
 
-        private static long PackChunkKey(int x, int y)
+        private static long PackChunkKey(int x, int y, int strideScale)
         {
-            return (long)(uint)x << 32 | (uint)y;
+            return ((long)(uint)x << 40) | ((long)(uint)strideScale << 32) | (uint)y;
         }
 
-        private ref ChunkGpu GetOrCreateChunk(in VisualHeightmapRenderChunk chunk)
+        private ref ChunkGpu GetOrCreateChunk(in VisualHeightmapRenderChunk chunk, int strideScale)
         {
-            long key = PackChunkKey(chunk.ChunkX, chunk.ChunkY);
+            if (strideScale < 1) throw new ArgumentOutOfRangeException(nameof(strideScale));
+            long key = PackChunkKey(chunk.ChunkX, chunk.ChunkY, strideScale);
             if (_chunks.TryGetValue(key, out ChunkGpu existing))
             {
                 if (existing.Revision == chunk.Revision)
@@ -874,7 +935,7 @@ namespace Ludots.Raylib.Render
             ResolveChunkHeightRange(in chunk, out float minHeightCm, out float maxHeightCm);
             ChunkGpu gpu = new()
             {
-                Mesh = CreateChunkMesh(in chunk),
+                Mesh = CreateChunkMesh(in chunk, strideScale),
                 Revision = chunk.Revision,
                 LastUsedFrame = _frameIndex,
                 MinX = chunk.Bounds.Left * 0.01f,
@@ -890,16 +951,19 @@ namespace Ludots.Raylib.Render
             return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
         }
 
-        private Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
+        private Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk, int strideScale)
         {
             ResolveChunkRenderSampling(
                 chunk.SampleColumns,
                 chunk.SampleRows,
+                strideScale,
                 out int columns,
                 out int rows,
                 out int sampleStride);
-            int vertexCount = checked(columns * rows);
-            int indexCount = checked((columns - 1) * (rows - 1) * 6);
+            int skirtEdgeSegments = (2 * (columns - 1)) + (2 * (rows - 1));
+            int skirtVertexCount = (2 * columns) + Math.Max(0, 2 * (rows - 2));
+            int vertexCount = checked((columns * rows) + skirtVertexCount);
+            int indexCount = checked(((columns - 1) * (rows - 1) * 6) + (skirtEdgeSegments * 6));
 
             Mesh mesh = new()
             {
@@ -983,8 +1047,99 @@ namespace Ludots.Raylib.Render
                 }
             }
 
+            // 裙边：LOD 相邻块密度不同会在共享边裂开，边缘顶点复制下探一段把缝挡住。
+            float skirtDepthMeters = MathF.Max(1f, heightRangeCm * 0.2f) * 0.01f;
+            int skirtCursor = columns * rows;
+            for (int x = 0; x < columns; x++)
+            {
+                CopySkirtVertex(mesh, x, skirtCursor++, skirtDepthMeters);
+            }
+
+            for (int x = 0; x < columns; x++)
+            {
+                CopySkirtVertex(mesh, ((rows - 1) * columns) + x, skirtCursor++, skirtDepthMeters);
+            }
+
+            for (int y = 1; y < rows - 1; y++)
+            {
+                CopySkirtVertex(mesh, (y * columns) + 0, skirtCursor++, skirtDepthMeters);
+            }
+
+            for (int y = 1; y < rows - 1; y++)
+            {
+                CopySkirtVertex(mesh, (y * columns) + (columns - 1), skirtCursor++, skirtDepthMeters);
+            }
+
+            int topSkirt = columns * rows;
+            int bottomSkirt = topSkirt + columns;
+            int leftSkirt = bottomSkirt + columns;
+            int rightSkirt = leftSkirt + Math.Max(0, rows - 2);
+            for (int x = 0; x < columns - 1; x++)
+            {
+                int g0 = x;
+                int g1 = x + 1;
+                int s0 = topSkirt + x;
+                int s1 = topSkirt + x + 1;
+                mesh.indices[cursor++] = checked((ushort)g0);
+                mesh.indices[cursor++] = checked((ushort)g1);
+                mesh.indices[cursor++] = checked((ushort)s1);
+                mesh.indices[cursor++] = checked((ushort)g0);
+                mesh.indices[cursor++] = checked((ushort)s1);
+                mesh.indices[cursor++] = checked((ushort)s0);
+
+                int b0 = ((rows - 1) * columns) + x;
+                int b1 = b0 + 1;
+                int bs0 = bottomSkirt + x;
+                int bs1 = bottomSkirt + x + 1;
+                mesh.indices[cursor++] = checked((ushort)b0);
+                mesh.indices[cursor++] = checked((ushort)b1);
+                mesh.indices[cursor++] = checked((ushort)bs1);
+                mesh.indices[cursor++] = checked((ushort)b0);
+                mesh.indices[cursor++] = checked((ushort)bs1);
+                mesh.indices[cursor++] = checked((ushort)bs0);
+            }
+
+            for (int y = 1; y < rows - 2; y++)
+            {
+                int lg0 = (y * columns) + 0;
+                int lg1 = ((y + 1) * columns) + 0;
+                int ls0 = leftSkirt + (y - 1);
+                int ls1 = leftSkirt + y;
+                mesh.indices[cursor++] = checked((ushort)lg0);
+                mesh.indices[cursor++] = checked((ushort)lg1);
+                mesh.indices[cursor++] = checked((ushort)ls1);
+                mesh.indices[cursor++] = checked((ushort)lg0);
+                mesh.indices[cursor++] = checked((ushort)ls1);
+                mesh.indices[cursor++] = checked((ushort)ls0);
+
+                int rg0 = (y * columns) + (columns - 1);
+                int rg1 = ((y + 1) * columns) + (columns - 1);
+                int rs0 = rightSkirt + (y - 1);
+                int rs1 = rightSkirt + y;
+                mesh.indices[cursor++] = checked((ushort)rg0);
+                mesh.indices[cursor++] = checked((ushort)rg1);
+                mesh.indices[cursor++] = checked((ushort)rs1);
+                mesh.indices[cursor++] = checked((ushort)rg0);
+                mesh.indices[cursor++] = checked((ushort)rs1);
+                mesh.indices[cursor++] = checked((ushort)rs0);
+            }
+
             Rl.UploadMesh(ref mesh, false);
             return mesh;
+        }
+
+        private static void CopySkirtVertex(Mesh mesh, int sourceVertex, int targetVertex, float depthMeters)
+        {
+            mesh.vertices[(targetVertex * 3) + 0] = mesh.vertices[(sourceVertex * 3) + 0];
+            mesh.vertices[(targetVertex * 3) + 1] = mesh.vertices[(sourceVertex * 3) + 1] - depthMeters;
+            mesh.vertices[(targetVertex * 3) + 2] = mesh.vertices[(sourceVertex * 3) + 2];
+            mesh.normals[(targetVertex * 3) + 0] = mesh.normals[(sourceVertex * 3) + 0];
+            mesh.normals[(targetVertex * 3) + 1] = mesh.normals[(sourceVertex * 3) + 1];
+            mesh.normals[(targetVertex * 3) + 2] = mesh.normals[(sourceVertex * 3) + 2];
+            mesh.colors[(targetVertex * 4) + 0] = mesh.colors[(sourceVertex * 4) + 0];
+            mesh.colors[(targetVertex * 4) + 1] = mesh.colors[(sourceVertex * 4) + 1];
+            mesh.colors[(targetVertex * 4) + 2] = mesh.colors[(sourceVertex * 4) + 2];
+            mesh.colors[(targetVertex * 4) + 3] = mesh.colors[(sourceVertex * 4) + 3];
         }
 
         private static void ResolveChunkHeightRange(in VisualHeightmapRenderChunk chunk, out float minHeightCm, out float maxHeightCm)
@@ -1103,6 +1258,160 @@ namespace Ludots.Raylib.Render
             _chunks.Clear();
         }
 
+        private float ResolveEffectiveVisibleRadiusCm(IVisualHeightmapRenderSource source, in Camera3D camera, float aspect)
+        {
+            float halfDiagonalCm = MathF.Sqrt(
+                ((float)source.Bounds.Width * source.Bounds.Width) +
+                ((float)source.Bounds.Height * source.Bounds.Height)) * 0.5f;
+            float footprintCm = ComputeCameraFootprintRadiusCm(camera, aspect);
+            float desired = MathF.Max(VisibleRadiusCm, footprintCm * 1.2f);
+            return MathF.Min(desired, halfDiagonalCm);
+        }
+
+        internal static float ResolvePixelsPerMeter(in Camera3D camera, float distanceMeters)
+        {
+            float fovyRad = Math.Clamp(camera.fovy * (MathF.PI / 180f), 0.001f, MathF.PI - 0.001f);
+            float screenPx = MathF.Max(1f, Rl.GetScreenHeight());
+            return screenPx / (2f * MathF.Tan(fovyRad * 0.5f) * MathF.Max(1f, distanceMeters));
+        }
+
+        internal static int ResolveChunkLodStrideScale(float projectedChunkPx, float lodErrorPx)
+        {
+            if (!float.IsFinite(projectedChunkPx)) throw new ArgumentOutOfRangeException(nameof(projectedChunkPx));
+            if (!float.IsFinite(lodErrorPx) || lodErrorPx <= 0f) throw new ArgumentOutOfRangeException(nameof(lodErrorPx));
+
+            if (projectedChunkPx >= lodErrorPx)
+            {
+                return 1;
+            }
+
+            return projectedChunkPx >= lodErrorPx * 0.25f ? 2 : 4;
+        }
+
+        private void EnsureOverviewMesh(IVisualHeightmapRenderSource source, int vertexLimit)
+        {
+            if (_overviewMeshRevision == source.Revision)
+            {
+                return;
+            }
+
+            if (_overviewMesh.vertexCount > 0)
+            {
+                Rl.UnloadMesh(_overviewMesh);
+                _overviewMesh = default;
+            }
+
+            _overviewMesh = BuildOverviewMesh(source, vertexLimit);
+            _overviewMeshRevision = source.Revision;
+        }
+
+        private Mesh BuildOverviewMesh(IVisualHeightmapRenderSource source, int vertexLimit)
+        {
+            int step = ResolveOverviewStepChunks(source.ChunkColumns, source.ChunkRows, vertexLimit);
+            int columns = ResolveOverviewAxisPointCount(source.ChunkColumns, step);
+            int rows = ResolveOverviewAxisPointCount(source.ChunkRows, step);
+            int vertexCount = checked(columns * rows);
+            int indexCount = checked((columns - 1) * (rows - 1) * 6);
+
+            VisualHeightmapRenderProfile profile = source.RenderProfile;
+            float seaLevelCm = ResolveEffectiveSeaLevelCm(profile, 0f);
+            float peakSpanCm = MathF.Max(1f, profile.AbsoluteColorPeakSpanCm);
+            float stepXCm = source.Bounds.Width / (float)(columns - 1);
+            float stepYCm = source.Bounds.Height / (float)(rows - 1);
+
+            float[] heights = new float[vertexCount];
+            for (int y = 0; y < rows; y++)
+            {
+                int chunkY = Math.Min(y * step, source.ChunkRows - 1);
+                bool farY = (y * step) >= source.ChunkRows;
+                for (int x = 0; x < columns; x++)
+                {
+                    int chunkX = Math.Min(x * step, source.ChunkColumns - 1);
+                    bool farX = (x * step) >= source.ChunkColumns;
+                    float heightCm = seaLevelCm;
+                    if (source.TryGetChunk(chunkX, chunkY, out VisualHeightmapRenderChunk chunk))
+                    {
+                        int sampleX = farX ? chunk.SampleColumns - 1 : 0;
+                        int sampleY = farY ? chunk.SampleRows - 1 : 0;
+                        if (chunk.TryReadHeightCm(sampleX, sampleY, out float sampledCm))
+                        {
+                            heightCm = sampledCm;
+                        }
+                    }
+
+                    heights[(y * columns) + x] = heightCm;
+                }
+            }
+
+            Mesh mesh = new()
+            {
+                vertexCount = vertexCount,
+                triangleCount = indexCount / 3,
+            };
+            int vertexFloatCount = vertexCount * 3;
+            int colorByteCount = vertexCount * 4;
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.colors = (byte*)Rl.MemAlloc(sizeof(byte) * colorByteCount);
+            mesh.indices = (ushort*)Rl.MemAlloc(sizeof(ushort) * indexCount);
+
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    int vertex = (y * columns) + x;
+                    float heightCm = heights[vertex];
+                    float heightL = heights[(y * columns) + Math.Max(0, x - 1)];
+                    float heightR = heights[(y * columns) + Math.Min(columns - 1, x + 1)];
+                    float heightU = heights[(Math.Max(0, y - 1) * columns) + x];
+                    float heightD = heights[(Math.Min(rows - 1, y + 1) * columns) + x];
+                    Vector3 normal = Vector3.Normalize(new Vector3(
+                        (heightL - heightR) / MathF.Max(1f, stepXCm * 2f),
+                        1f,
+                        (heightU - heightD) / MathF.Max(1f, stepYCm * 2f)));
+                    float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
+                    float heightBand = Math.Clamp((heightCm - seaLevelCm) / peakSpanCm, -1f, 1f);
+                    ResolveAbsoluteIslandTerrainColor(heightBand, slope, out byte red, out byte green, out byte blue);
+
+                    int f = vertex * 3;
+                    mesh.vertices[f + 0] = (source.Bounds.Left + (x * stepXCm)) * 0.01f;
+                    mesh.vertices[f + 1] = heightCm * 0.01f;
+                    mesh.vertices[f + 2] = (source.Bounds.Top + (y * stepYCm)) * 0.01f;
+                    mesh.normals[f + 0] = normal.X;
+                    mesh.normals[f + 1] = normal.Y;
+                    mesh.normals[f + 2] = normal.Z;
+
+                    int c = vertex * 4;
+                    mesh.colors[c + 0] = red;
+                    mesh.colors[c + 1] = green;
+                    mesh.colors[c + 2] = blue;
+                    mesh.colors[c + 3] = ClampToByte(Math.Clamp(heightBand, 0f, 1f) * 255f);
+                }
+            }
+
+            int cursor = 0;
+            for (int y = 0; y < rows - 1; y++)
+            {
+                for (int x = 0; x < columns - 1; x++)
+                {
+                    int p00 = (y * columns) + x;
+                    int p10 = p00 + 1;
+                    int p01 = p00 + columns;
+                    int p11 = p01 + 1;
+
+                    mesh.indices[cursor++] = checked((ushort)p00);
+                    mesh.indices[cursor++] = checked((ushort)p01);
+                    mesh.indices[cursor++] = checked((ushort)p10);
+                    mesh.indices[cursor++] = checked((ushort)p11);
+                    mesh.indices[cursor++] = checked((ushort)p10);
+                    mesh.indices[cursor++] = checked((ushort)p01);
+                }
+            }
+
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
+        }
+
         private void EvictUnusedChunks(int maxAgeFrames)
         {
             if (_chunks.Count == 0)
@@ -1159,11 +1468,13 @@ namespace Ludots.Raylib.Render
         internal static void ResolveChunkRenderSampling(
             int sampleColumns,
             int sampleRows,
+            int strideScale,
             out int renderColumns,
             out int renderRows,
             out int sampleStride)
         {
-            sampleStride = ResolveChunkSampleStride(sampleColumns, sampleRows);
+            if (strideScale < 1) throw new ArgumentOutOfRangeException(nameof(strideScale));
+            sampleStride = ResolveChunkSampleStride(sampleColumns, sampleRows) * strideScale;
             renderColumns = ResolveChunkSampleAxisPointCount(sampleColumns, sampleStride);
             renderRows = ResolveChunkSampleAxisPointCount(sampleRows, sampleStride);
             int renderVertexCount = checked(renderColumns * renderRows);
@@ -1307,6 +1618,13 @@ namespace Ludots.Raylib.Render
             }
 
             _chunks.Clear();
+            if (_overviewMesh.vertexCount > 0)
+            {
+                Rl.UnloadMesh(_overviewMesh);
+                _overviewMesh = default;
+                _overviewMeshRevision = -1;
+            }
+
             ClearTerrainAlbedo();
             _albedoDescriptors.Clear();
             if (!_initialized)
