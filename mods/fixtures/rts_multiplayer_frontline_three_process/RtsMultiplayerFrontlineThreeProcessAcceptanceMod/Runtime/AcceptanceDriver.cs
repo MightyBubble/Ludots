@@ -329,9 +329,36 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     }
 
+    private long _probeNextTimestamp;
+
+    private void ProbeConnectingGates(SessionHandshakeResponse handshake)
+    {
+        long now = Stopwatch.GetTimestamp();
+        if (now < _probeNextTimestamp)
+        {
+            return;
+        }
+        _probeNextTimestamp = now + (Stopwatch.Frequency * 2);
+        int seatCount = -1;
+        int possessed = -1;
+        try
+        {
+            ClientLocalSeatRegistry reg = ClientLocalSeatAccess.RequireRegistry(_engine);
+            seatCount = reg.Count;
+            possessed = reg.TryGetSoleSeat(out ClientLocalSeat s) ? s.PossessedPlayerId : -2;
+        }
+        catch (Exception ex)
+        {
+            possessed = -3;
+            Console.WriteLine("[PROBE] seat registry error: " + ex.Message);
+        }
+        Console.WriteLine($"[PROBE] connecting gates: hsAccepted={handshake.Accepted} hsPlayer={(handshake.PlayerId.HasValue ? handshake.PlayerId.Value : -1)} epochEmpty={handshake.SessionEpoch.IsEmpty} established={_clientStatus?.HasEstablishedSession} connState={_clientStatus?.ConnectionState} awaitingSnap={_clientStatus?.IsAwaitingFullSnapshot} roomSnap={_observer.HasRoomSnapshot} faults={_observer.FaultCount} seats={seatCount} possessedPlayer={possessed}");
+    }
+
     private void UpdateConnecting()
     {
         SessionHandshakeResponse handshake = _observer.LastClientHandshake;
+        ProbeConnectingGates(handshake);
         if (!handshake.Accepted || handshake.SessionEpoch.IsEmpty ||
             !_clientStatus!.HasEstablishedSession ||
             _clientStatus.ConnectionState != ReplicatedClientConnectionState.Connected ||
