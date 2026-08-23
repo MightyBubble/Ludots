@@ -99,13 +99,6 @@ namespace Ludots.Core.Map.Board
                     $"Board '{board.Name}' selects continuous-heightmap but VisualHeightmapAsset is empty.");
             }
 
-            if (string.Equals(policy.HeightSource, NavBakeSourceKinds.BoardLogicTerrain, StringComparison.Ordinal) &&
-                string.IsNullOrWhiteSpace(board.DataFile) &&
-                !IsGrid(spatialType))
-            {
-                throw new InvalidOperationException(
-                    $"Board '{board.Name}' selects board-logic-terrain height without a DataFile on non-Grid board '{spatialType}'.");
-            }
         }
 
         public static NavBakePolicy Require(BoardConfig board)
@@ -153,7 +146,5 @@ namespace Ludots.Core.Map.Board
         private static bool IsNodeGraph(string spatialType)
             => string.Equals(spatialType, "NodeGraph", StringComparison.OrdinalIgnoreCase);
 
-        private static bool IsGrid(string spatialType)
-            => string.Equals(spatialType, "Grid", StringComparison.OrdinalIgnoreCase);
     }
 }
