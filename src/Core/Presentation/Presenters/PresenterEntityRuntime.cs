@@ -3872,12 +3872,13 @@ namespace Ludots.Core.Presentation.Presenters
                 return;
             }
 
+            bool singleRoot = TryGetSingleRoot(in bucket, out Entity singleRootPresenter);
             var next = new PresentationOwnerHasPresenterPayload
             {
                 Count = bucket.Count,
-                RootCount = TryGetSingleRoot(in bucket, out Entity singleRoot) ? 1 : CountRoots(in bucket),
-                SingleRootPresenter = singleRoot,
-                SingleRootTransformSync = CanUseOwnerPayloadTransformSync(singleRoot) ? (byte)1 : (byte)0,
+                RootCount = singleRoot ? 1 : CountRoots(in bucket),
+                SingleRootPresenter = singleRootPresenter,
+                SingleRootTransformSync = singleRoot && OwnerPayloadTransformEligible(singleRootPresenter) ? (byte)1 : (byte)0,
             };
 
             if (_world.Has<PresentationOwnerHasPresenterPayload>(owner))
@@ -3901,6 +3902,25 @@ namespace Ludots.Core.Presentation.Presenters
         }
 
         private bool CanUseOwnerPayloadTransformSync(Entity presenter)
+        {
+            if (!OwnerPayloadTransformEligible(presenter))
+            {
+                return false;
+            }
+
+            // The single-root fast path only covers owners whose payload names this
+            // presenter as the one root; multi-root owners must keep the per-presenter
+            // anchored sync (the anchored query excludes this marker), otherwise every
+            // root presenter freezes at its bootstrap transform.
+            ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
+            Entity owner = state.OwnerEntity;
+            return _world.TryGet(owner, out PresentationOwnerHasPresenterPayload payload) &&
+                payload.RootCount == 1 &&
+                payload.SingleRootPresenter == presenter &&
+                payload.SingleRootTransformSync != 0;
+        }
+
+        private bool OwnerPayloadTransformEligible(Entity presenter)
         {
             if (presenter == Entity.Null ||
                 !_world.IsAlive(presenter) ||
