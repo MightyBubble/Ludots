@@ -2,6 +2,12 @@
 
 > 状态：🔴 目标态——拒因：G8（$payload 引用语义）+ G9（actorSource none）+ #1015（意图链路本体）。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "chips", "chips": ["信息", "科技", "外交", "生产"], "on": 0}
+```
+
 ```jsonc
 {
   "id": "panel.tabs.global",

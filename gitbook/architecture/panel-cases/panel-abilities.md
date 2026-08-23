@@ -2,6 +2,12 @@
 
 > 状态：🔴 目标态——#1015 主战场；拒因：G8（$payload）+ #1015（admission 拒绝回执→按钮态）。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "chips", "chips": ["Q 火球", "W 治疗", "E 冲锋"], "on": 0}
+```
+
 ```jsonc
 {
   "id": "panel.abilities",

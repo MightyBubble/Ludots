@@ -2,6 +2,12 @@
 
 > 状态：🟢 今日可装载——纯展示；显隐由 TriggerGraph 听游戏事件驱动（现有 op，非 UI 事件不涉 G10）。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "text", "text": "⚠ 敌军逼近北门"}
+```
+
 ```jsonc
 {
   "id": "panel.info.banner",

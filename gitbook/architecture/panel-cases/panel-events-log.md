@@ -2,6 +2,12 @@
 
 > 状态：🔴 目标态——拒因：G5（modal.center）+ G8（$payload）+ G9 + G10（close 编排）+ #1015。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "list", "rows": [["春 7", "丰收 +200"], ["春 6", "暴风 −50"]]}
+```
+
 ```jsonc
 {
   "id": "panel.events.log",

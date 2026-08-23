@@ -2,6 +2,12 @@
 
 > 状态：🟢 今日可装载——纯展示；snapshot 手动刷新（教程阶段切换时作者主动 Refresh）。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "text", "text": "“北风呼啸……”"}
+```
+
 ```jsonc
 {
   "id": "panel.extra.text",

@@ -2,6 +2,12 @@
 
 > 状态：🟢 今日可装载——纯展示，图内 LoadSelfAttribute 聚合（总合同实体链路）。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "bars", "bars": [["HP", 82], ["MP", 40]]}
+```
+
 ```jsonc
 {
   "id": "panel.entity.aggregate",

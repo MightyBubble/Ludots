@@ -2,6 +2,12 @@
 
 > 状态：🔴 目标态——拒因：G8（$payload）+ G9（actorSource none）+ #1015。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "list", "rows": [["🔬 科技", "3 未读"], ["🛠 建设", ""], ["📜 外交", ""]]}
+```
+
 ```jsonc
 {
   "id": "panel.subsystem.entries",

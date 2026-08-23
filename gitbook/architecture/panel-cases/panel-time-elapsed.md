@@ -2,6 +2,12 @@
 
 > 状态：🟢 今日可装载——纯展示，图输出 realtime 回读，字段全过白名单（新形状不写 scope）。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "text", "text": "☀ 12:34"}
+```
+
 ```jsonc
 {
   "id": "panel.time.elapsed",

@@ -2,6 +2,12 @@
 
 > 状态：🟢 今日可装载——纯展示；图内 LoadSelfAttribute 聚合。
 
+> **高保真预期**（门户面板矩阵页可交互预览）：
+
+```mock
+{"type": "bars", "bars": [["HP", 72], ["MP", 55]]}
+```
+
 ```jsonc
 {
   "id": "panel.unit.status",
