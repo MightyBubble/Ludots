@@ -213,8 +213,10 @@ namespace Ludots.Tool
             var bakeRecastReactNavCommand = new Command("bake-recast-react", "Bake NavTiles from React editor map_data.bin using Recast");
             var mapIdOption = new Option<string>("--mapId", "Target mapId (used for output paths)") { IsRequired = true };
             var navModIdOption = new Option<string?>("--modId", () => null, "Optional mod id when mapId is authored by a mod");
+            var navBoardNameOption = new Option<string>("--boardName", "Exact navigation board name") { IsRequired = true };
             bakeRecastReactNavCommand.AddOption(mapIdOption);
             bakeRecastReactNavCommand.AddOption(navModIdOption);
+            bakeRecastReactNavCommand.AddOption(navBoardNameOption);
             bakeRecastReactNavCommand.AddOption(reactInOption);
             bakeRecastReactNavCommand.AddOption(reactDirtyOption);
             bakeRecastReactNavCommand.AddOption(reactIncludeNeighborsOption);
@@ -232,6 +234,7 @@ namespace Ludots.Tool
             {
                 var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
                 var modId = ctx.ParseResult.GetValueForOption(navModIdOption);
+                var boardName = ctx.ParseResult.GetValueForOption(navBoardNameOption);
                 var inputPath = ctx.ParseResult.GetValueForOption(reactInOption);
                 var dirtyPath = ctx.ParseResult.GetValueForOption(reactDirtyOption);
                 var includeNeighbors = ctx.ParseResult.GetValueForOption(reactIncludeNeighborsOption);
@@ -245,13 +248,14 @@ namespace Ludots.Tool
                 var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
                 var largeBake = ctx.ParseResult.GetValueForOption(navLargeBakeOption);
                 var estimateHash = ctx.ParseResult.GetValueForOption(navEstimateHashOption);
-                ctx.ExitCode = BakeNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
+                ctx.ExitCode = BakeNavFromReactRecast(mapId, modId, boardName, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
             });
             navCommand.AddCommand(bakeRecastReactNavCommand);
 
             var estimateRecastReactNavCommand = new Command("estimate-recast-react", "Estimate Recast NavTile bake cost from React editor map_data.bin");
             estimateRecastReactNavCommand.AddOption(mapIdOption);
             estimateRecastReactNavCommand.AddOption(navModIdOption);
+            estimateRecastReactNavCommand.AddOption(navBoardNameOption);
             estimateRecastReactNavCommand.AddOption(reactInOption);
             estimateRecastReactNavCommand.AddOption(reactDirtyOption);
             estimateRecastReactNavCommand.AddOption(reactIncludeNeighborsOption);
@@ -266,6 +270,7 @@ namespace Ludots.Tool
             {
                 var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
                 var modId = ctx.ParseResult.GetValueForOption(navModIdOption);
+                var boardName = ctx.ParseResult.GetValueForOption(navBoardNameOption);
                 var inputPath = ctx.ParseResult.GetValueForOption(reactInOption);
                 var dirtyPath = ctx.ParseResult.GetValueForOption(reactDirtyOption);
                 var includeNeighbors = ctx.ParseResult.GetValueForOption(reactIncludeNeighborsOption);
@@ -276,7 +281,7 @@ namespace Ludots.Tool
                 var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
                 var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
                 var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
-                ctx.ExitCode = EstimateNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, parallel, maxDegree, tileVersion);
+                ctx.ExitCode = EstimateNavFromReactRecast(mapId, modId, boardName, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, parallel, maxDegree, tileVersion);
             });
             navCommand.AddCommand(estimateRecastReactNavCommand);
             rootCommand.AddCommand(navCommand);
@@ -616,6 +621,7 @@ namespace {modId}
         static int BakeNavFromReactRecast(
             string mapId,
             string? modId,
+            string boardName,
             string inputReactBinPath,
             string? dirtyChunksPath,
             bool includeNeighbors,
@@ -635,6 +641,7 @@ namespace {modId}
                 NavBakeContext context = BuildReactRecastNavBakeContext(
                     mapId,
                     modId,
+                    boardName,
                     inputReactBinPath,
                     dirtyChunksPath,
                     includeNeighbors,
@@ -672,13 +679,14 @@ namespace {modId}
             }
         }
 
-        static int EstimateNavFromReactRecast(string mapId, string? modId, string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool parallel, int maxDegree, int tileVersion)
+        static int EstimateNavFromReactRecast(string mapId, string? modId, string boardName, string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool parallel, int maxDegree, int tileVersion)
         {
             try
             {
                 NavBakeContext context = BuildReactRecastNavBakeContext(
                     mapId,
                     modId,
+                    boardName,
                     inputReactBinPath,
                     dirtyChunksPath,
                     includeNeighbors,
@@ -706,6 +714,7 @@ namespace {modId}
         static NavBakeContext BuildReactRecastNavBakeContext(
             string mapId,
             string? modId,
+            string boardName,
             string inputReactBinPath,
             string? dirtyChunksPath,
             bool includeNeighbors,
@@ -737,18 +746,11 @@ namespace {modId}
             }
 
             MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
-            BoardConfig boardConfig = ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig);
-            if (boardConfig == null)
-            {
-                throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
-            }
+            BoardConfig boardConfig = ToolMapConfigResolver.ResolveBoardByName(mapConfig, boardName);
 
             NavBakePolicy policy = NavBakePolicyValidator.Require(boardConfig);
-            IVisualHeightmap? continuousHeightmap = string.Equals(
-                policy.HeightSource,
-                NavBakeSourceKinds.ContinuousHeightmap,
-                StringComparison.Ordinal)
-                ? NavBakeHeightmapLoader.LoadFromRepoRoot(repoRoot, mapConfig, modId)
+            IVisualHeightmap? continuousHeightmap = policy.UsesContinuousHeightmap
+                ? NavBakeHeightmapLoader.LoadFromRepoRoot(repoRoot, mapConfig, boardConfig, ToolMapConfigResolver.ResolveAssetRoots(repoRoot, mapId, modId))
                 : null;
 
             NavMeshBakeConfigContext bakeConfigContext;
@@ -764,7 +766,7 @@ namespace {modId}
             NavObstacleSet obstacles;
             try
             {
-                obstacles = string.Equals(policy.StaticObstacleSource, NavBakeSourceKinds.MapEntities, StringComparison.Ordinal)
+                obstacles = policy.UsesMapEntityObstacles
                     ? NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId)
                     : new NavObstacleSet();
             }
@@ -791,7 +793,7 @@ namespace {modId}
                 targets = NavBakeTileSelection.AllTiles(terrain);
             }
 
-            _ = new NavBakeInput(
+            var bakeInput = new NavBakeInput(
                 boardConfig,
                 terrain,
                 continuousHeightmap,
@@ -804,6 +806,8 @@ namespace {modId}
                 MapId = mapId,
                 ModId = modId ?? string.Empty,
                 SourceUri = ToCoreSourceUri(repoRoot, inputReactBinPath),
+                Input = bakeInput,
+                Policy = bakeInput.Policy,
                 Terrain = terrain,
                 ContinuousHeightmap = continuousHeightmap,
                 Obstacles = obstacles,

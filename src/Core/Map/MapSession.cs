@@ -37,6 +37,7 @@ namespace Ludots.Core.Map
         public IReadOnlyList<ResolvedLocalSeatPossession> LocalSeats { get; set; } = Array.Empty<ResolvedLocalSeatPossession>();
         public TeamRelationshipSnapshot? TeamRelationships { get; set; }
         public MapLaunchContext? LaunchContext { get; set; }
+        public string? NavigationBoardName { get; set; }
 
         /// <summary>
         /// Map-scoped variable table created from <see cref="MapConfig.Variables"/> when the

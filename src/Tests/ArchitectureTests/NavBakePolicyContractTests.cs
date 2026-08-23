@@ -125,5 +125,48 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(error.Message, Does.Contain("GridCellSizeCm"));
         }
+
+        [Test]
+        public void BoardResolver_RequiresAnExactNavigationBoard()
+        {
+            var map = new Ludots.Core.Config.MapConfig
+            {
+                Id = "multi-board",
+                Boards =
+                {
+                    new BoardConfig { Name = "logic", SpatialType = "Grid", NavigationEnabled = true },
+                    new BoardConfig { Name = "routes", SpatialType = "NodeGraph", NavigationEnabled = false }
+                }
+            };
+
+            Assert.Throws<InvalidOperationException>(() => ToolMapConfigResolver.ResolveBoardByName(map, "missing"));
+            Assert.Throws<InvalidOperationException>(() => ToolMapConfigResolver.ResolveBoardByName(map, "routes"));
+            Assert.That(ToolMapConfigResolver.ResolveBoardByName(map, "logic").Name, Is.EqualTo("logic"));
+        }
+
+        [Test]
+        public void BakeContext_RejectsPolicyInstanceThatWasNotValidatedByInput()
+        {
+            var board = new BoardConfig
+            {
+                Name = "logic",
+                SpatialType = "Grid",
+                NavBakePolicy = NavBakePolicy.ForBoardLogicTerrain()
+            };
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            var input = new NavBakeInput(board, terrain, null, new NavObstacleSet(), null);
+            var context = new NavBakeContext
+            {
+                SourceUri = "Core:test",
+                Input = input,
+                Policy = input.Policy.Clone(),
+                Terrain = terrain,
+                Obstacles = new NavObstacleSet()
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => context.Validate())!;
+
+            Assert.That(error.Message, Does.Contain("validated by").IgnoreCase);
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Platform.Abstractions;
@@ -55,6 +56,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         public string SourceUri { get; init; } = string.Empty;
 
+        public NavBakeInput? Input { get; init; }
+
+        public NavBakePolicy? Policy { get; init; }
+
         public LogicTerrainField Terrain { get; init; } = null!;
 
         public IVisualHeightmap? ContinuousHeightmap { get; init; }
@@ -85,6 +90,26 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public void Validate()
         {
             ValidateSourceUri(SourceUri);
+
+            if (Input != null)
+            {
+                if (Policy == null)
+                {
+                    throw new InvalidOperationException("NavBakeContext.policy is required when NavBakeContext.input is supplied.");
+                }
+
+                if (!ReferenceEquals(Input.Policy, Policy))
+                {
+                    throw new InvalidOperationException("NavBakeContext.policy must be the policy validated by NavBakeContext.input.");
+                }
+
+                if (!ReferenceEquals(Input.LogicTerrain, Terrain) ||
+                    !ReferenceEquals(Input.ContinuousHeightmap, ContinuousHeightmap) ||
+                    !ReferenceEquals(Input.StaticObstacles, Obstacles))
+                {
+                    throw new InvalidOperationException("NavBakeContext input does not match terrain, heightmap, or obstacles.");
+                }
+            }
 
             if (Terrain == null)
             {

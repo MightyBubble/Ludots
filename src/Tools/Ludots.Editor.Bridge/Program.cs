@@ -324,6 +324,7 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}", async (string modId, string mapId, 
     string? previous = File.Exists(outFile) ? File.ReadAllText(outFile) : null;
     try
     {
+        EditorRepo.ValidateNavigationPolicies(map);
         File.WriteAllText(outFile, JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true }));
         var reloaded = EditorRepo.LoadMergedMapConfig(ctx, mapId);
         if (!reloaded.Found)
@@ -1043,22 +1044,11 @@ app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
 
         Ludots.Core.Map.Board.NavBakePolicyValidator.Require(boardConfig);
 
-        if (!string.Equals(
-                boardConfig.NavBakePolicy!.HeightSource,
-                Ludots.Core.Map.Board.NavBakeSourceKinds.BoardLogicTerrain,
-                StringComparison.Ordinal) ||
-            !string.Equals(
-                boardConfig.NavBakePolicy.ClassificationSource,
-                Ludots.Core.Map.Board.NavBakeSourceKinds.BoardLogicTerrain,
-                StringComparison.Ordinal) ||
-            !string.Equals(
-                boardConfig.NavBakePolicy.StaticObstacleSource,
-                Ludots.Core.Map.Board.NavBakeSourceKinds.None,
-                StringComparison.Ordinal) ||
-            !string.Equals(
-                boardConfig.NavBakePolicy.RuntimeObstacleSource,
-                Ludots.Core.Map.Board.NavBakeSourceKinds.None,
-                StringComparison.Ordinal))
+        NavBakePolicy flatPolicy = boardConfig.NavBakePolicy!;
+        if (!flatPolicy.UsesBoardLogicTerrainHeight ||
+            !string.Equals(flatPolicy.ClassificationSource, NavBakeSourceKinds.BoardLogicTerrain, StringComparison.Ordinal) ||
+            !string.Equals(flatPolicy.StaticObstacleSource, NavBakeSourceKinds.None, StringComparison.Ordinal) ||
+            flatPolicy.UsesRuntimeEntityObstacles)
         {
             return Results.BadRequest(new
             {
@@ -2039,12 +2029,19 @@ static bool TryBuildEditorUploadRecastContext(
 
     Ludots.Core.Config.MapConfig mapConfig;
     Ludots.Core.Map.Board.BoardConfig boardConfig;
+    EditorRepo.ModContext editorContext;
     try
     {
-        mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
-        boardConfig = !string.IsNullOrWhiteSpace(boardName)
-            ? EditorRepo.ResolveRequiredBoardByName(mapConfig, boardName)
-            : ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig);
+        if (string.IsNullOrWhiteSpace(modId))
+            throw new InvalidOperationException("Editor nav baking requires an explicit target modId.");
+
+        editorContext = EditorRepo.CreateContext(repoRoot, modId);
+        var mergedMap = EditorRepo.LoadMergedMapConfig(editorContext, mapId);
+        if (!mergedMap.Found)
+            throw new InvalidOperationException($"Map '{mapId}' was not found in the editor mod load order.");
+
+        mapConfig = mergedMap.Map;
+        boardConfig = ToolMapConfigResolver.ResolveBoardByName(mapConfig, boardName!);
     }
     catch (Exception ex)
     {
@@ -2082,7 +2079,7 @@ static bool TryBuildEditorUploadRecastContext(
 
     try
     {
-        obstacles = string.Equals(policy.StaticObstacleSource, Ludots.Core.Map.Board.NavBakeSourceKinds.MapEntities, StringComparison.Ordinal)
+        obstacles = policy.UsesMapEntityObstacles
             ? NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId)
             : new NavObstacleSet();
     }
@@ -2095,13 +2092,10 @@ static bool TryBuildEditorUploadRecastContext(
     try
     {
         var terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
-        IVisualHeightmap? continuousHeightmap = string.Equals(
-            policy.HeightSource,
-            Ludots.Core.Map.Board.NavBakeSourceKinds.ContinuousHeightmap,
-            StringComparison.Ordinal)
-            ? NavBakeHeightmapLoader.LoadFromRepoRoot(repoRoot, mapConfig, modId)
+        IVisualHeightmap? continuousHeightmap = policy.UsesContinuousHeightmap
+            ? NavBakeHeightmapLoader.LoadFromRepoRoot(repoRoot, mapConfig, boardConfig, EditorRepo.ResolveAssetRoots(editorContext))
             : null;
-        _ = new NavBakeInput(
+        var bakeInput = new NavBakeInput(
             boardConfig,
             terrain,
             continuousHeightmap,
@@ -2114,6 +2108,8 @@ static bool TryBuildEditorUploadRecastContext(
             MapId = mapId,
             ModId = modId ?? string.Empty,
             SourceUri = ToEditorUploadSourceUri(fileName),
+            Input = bakeInput,
+            Policy = bakeInput.Policy,
             Terrain = terrain,
             ContinuousHeightmap = continuousHeightmap,
             Obstacles = obstacles,
@@ -2463,6 +2459,22 @@ static class EditorRepo
         public required List<string> LoadOrder { get; init; }
     }
 
+    public static IReadOnlyList<string> ResolveAssetRoots(ModContext ctx)
+    {
+        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
+
+        var roots = new List<string>(1 + ctx.LoadOrder.Count) { ctx.RepoRoot };
+        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        {
+            string modId = ctx.LoadOrder[i];
+            if (!ctx.ModsById.TryGetValue(modId, out ModInfo? mod))
+                throw new InvalidOperationException($"Editor mod load order references unknown mod '{modId}'.");
+            roots.Add(mod.RootPath);
+        }
+
+        return roots;
+    }
+
     public sealed record MergedMapResult(bool Found, Ludots.Core.Config.MapConfig Map, List<string> Sources);
     public sealed record BoardMutationResult(
         Ludots.Core.Config.MapConfig Map,
@@ -2762,7 +2774,8 @@ static class EditorRepo
             if (!File.Exists(path)) return;
             foundAny = true;
             var cfg = JsonSerializer.Deserialize<Ludots.Core.Config.MapConfig>(File.ReadAllText(path), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (cfg == null) return;
+            if (cfg == null)
+                throw new InvalidOperationException($"Map config '{path}' deserialized to null.");
             MergeMapConfig(merged, cfg);
             sources.Add(path);
         }
@@ -2784,13 +2797,13 @@ static class EditorRepo
         if (!string.IsNullOrWhiteSpace(merged.ParentId))
         {
             var parent = LoadMergedMapConfig(ctx, merged.ParentId);
-            if (parent.Found)
-            {
-                var child = merged;
-                merged = parent.Map;
-                MergeMapConfig(merged, child);
-                sources.AddRange(parent.Sources);
-            }
+            if (!parent.Found)
+                throw new InvalidOperationException($"Map '{mapId}' declares missing parent map '{merged.ParentId}'.");
+
+            var child = merged;
+            merged = parent.Map;
+            MergeMapConfig(merged, child);
+            sources.AddRange(parent.Sources);
         }
 
         return new MergedMapResult(true, merged, sources);
@@ -2847,9 +2860,10 @@ static class EditorRepo
             HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
             ChunkSizeCells = chunkSizeCells,
             DataFile = dataFile,
+            VisualHeightmapAsset = request.VisualHeightmapAsset?.Trim() ?? string.Empty,
             NavigationEnabled = request.NavigationEnabled,
             NavBakePolicy = request.NavigationEnabled
-                ? Ludots.Core.Map.Board.NavBakePolicy.ForBoardLogicTerrain()
+                ? request.NavBakePolicy?.Clone() ?? Ludots.Core.Map.Board.NavBakePolicy.ForBoardLogicTerrain()
                 : null,
         };
 
@@ -2927,7 +2941,19 @@ static class EditorRepo
 
         if (request.NavigationEnabled.HasValue)
         {
+            if (request.NavigationEnabled.Value && board.NavBakePolicy == null && request.NavBakePolicy == null)
+                throw new InvalidOperationException($"Board '{board.Name}' requires NavBakePolicy when NavigationEnabled is enabled.");
             board.NavigationEnabled = request.NavigationEnabled.Value;
+        }
+
+        if (request.NavBakePolicy != null)
+        {
+            board.NavBakePolicy = request.NavBakePolicy.Clone();
+        }
+
+        if (request.VisualHeightmapAsset != null)
+        {
+            board.VisualHeightmapAsset = request.VisualHeightmapAsset.Trim();
         }
 
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
@@ -3166,10 +3192,24 @@ static class EditorRepo
     private static string WriteWritableMapConfig(ModContext ctx, string mapId, Ludots.Core.Config.MapConfig map)
     {
         map.Id = mapId;
+        ValidateNavigationPolicies(map);
         string outFile = ResolveWritableMapConfigPath(ctx, mapId);
         Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
         File.WriteAllText(outFile, JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true }));
         return outFile;
+    }
+
+    public static void ValidateNavigationPolicies(Ludots.Core.Config.MapConfig map)
+    {
+        if (map == null) throw new ArgumentNullException(nameof(map));
+        if (map.Boards == null || map.Boards.Count == 0)
+            throw new InvalidOperationException($"Map '{map.Id}' must declare at least one board.");
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            var board = map.Boards[i] ?? throw new InvalidOperationException($"Map '{map.Id}' contains a null board at index {i}.");
+            if (board.NavigationEnabled)
+                Ludots.Core.Map.Board.NavBakePolicyValidator.Require(board);
+        }
     }
 
     private static string RequireBoardName(string? raw)
@@ -3708,6 +3748,8 @@ sealed class BoardCreateRequest
     public int ChunkSizeCells { get; set; }
     public bool NavigationEnabled { get; set; } = true;
     public string? DataFile { get; set; }
+    public string? VisualHeightmapAsset { get; set; }
+    public Ludots.Core.Map.Board.NavBakePolicy? NavBakePolicy { get; set; }
 }
 
 sealed class BoardUpdateRequest
@@ -3715,6 +3757,8 @@ sealed class BoardUpdateRequest
     public int? CellSizeCm { get; set; }
     public int? HexEdgeLengthCm { get; set; }
     public bool? NavigationEnabled { get; set; }
+    public string? VisualHeightmapAsset { get; set; }
+    public Ludots.Core.Map.Board.NavBakePolicy? NavBakePolicy { get; set; }
 }
 
 sealed class FlatGridNavBootstrapRequest

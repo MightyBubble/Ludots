@@ -34,6 +34,25 @@ namespace Ludots.Core.Presentation.Terrain
             return new VisualHeightmapRuntime(asset, ResolveRenderProfile(mapConfig));
         }
 
+        public static IVisualHeightmap? Load(
+            IVirtualFileSystem vfs,
+            IEnumerable<string>? loadedModIds,
+            MapConfig mapConfig,
+            BoardConfig board)
+        {
+            if (vfs == null) throw new ArgumentNullException(nameof(vfs));
+            if (mapConfig == null) throw new ArgumentNullException(nameof(mapConfig));
+            if (board == null) throw new ArgumentNullException(nameof(board));
+
+            string? assetPath = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(board.VisualHeightmapAsset);
+            if (string.IsNullOrWhiteSpace(assetPath))
+                return Load(vfs, loadedModIds, mapConfig);
+
+            using Stream stream = OpenDeclaredAsset(vfs, loadedModIds, assetPath);
+            VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
+            return new VisualHeightmapRuntime(asset, ResolveRenderProfile(mapConfig));
+        }
+
         public static string? ResolveDeclaredAssetPath(MapConfig mapConfig)
         {
             string? resolved = ResolveMapLevelDeclaredAssetPath(mapConfig);
