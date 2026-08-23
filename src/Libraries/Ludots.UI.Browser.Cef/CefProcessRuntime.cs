@@ -303,6 +303,11 @@ internal static class CefProcessRuntime
 			LogFile = Path.Combine(cacheRoot, "cef.log")
 		};
 
+		// CEF 表面承载 UI 面板（启动器/面板/流程图）而非游戏视口：软件合成即可，
+		// 并规避离屏合成下 GPU 驱动栈不稳定连坐宿主进程（实测 LiveKernelEvent + gpu adapter 探测失败）。
+		settings.CefCommandLineArgs.Add("disable-gpu");
+		settings.CefCommandLineArgs.Add("disable-gpu-compositing");
+
 		settings.RegisterScheme(new CefCustomScheme
 		{
 			SchemeName = CefBrowserRuntime.LocalAppSchemeName,
