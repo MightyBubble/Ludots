@@ -1041,6 +1041,30 @@ app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
 
         Ludots.Core.Map.Board.NavBakePolicyValidator.Require(boardConfig);
 
+        if (!string.Equals(
+                boardConfig.NavBakePolicy!.HeightSource,
+                Ludots.Core.Map.Board.NavBakeSourceKinds.BoardLogicTerrain,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                boardConfig.NavBakePolicy.ClassificationSource,
+                Ludots.Core.Map.Board.NavBakeSourceKinds.BoardLogicTerrain,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                boardConfig.NavBakePolicy.StaticObstacleSource,
+                Ludots.Core.Map.Board.NavBakeSourceKinds.None,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                boardConfig.NavBakePolicy.RuntimeObstacleSource,
+                Ludots.Core.Map.Board.NavBakeSourceKinds.None,
+                StringComparison.Ordinal))
+        {
+            return Results.BadRequest(new
+            {
+                ok = false,
+                error = "Flat baseline bootstrap requires board-logic-terrain geometry/classification and no obstacle sources. Use Recast bake for the declared NavBakePolicy."
+            });
+        }
+
         if (!EditorRepo.IsGridBoard(boardConfig))
         {
             return Results.BadRequest(new { ok = false, error = $"Flat baseline NavTile bootstrap only supports Grid boards. Board '{boardConfig.Name}' is {EditorRepo.NormalizeSpatialType(boardConfig)}." });
@@ -2071,9 +2095,7 @@ static bool TryBuildEditorUploadRecastContext(
             terrain,
             continuousHeightmap,
             obstacles,
-            string.Equals(policy.RuntimeObstacleSource, Ludots.Core.Map.Board.NavBakeSourceKinds.RuntimeEntities, StringComparison.Ordinal)
-                ? null
-                : new NavObstacleSet());
+            new NavObstacleSet());
         targets = NavBakeTileSelection.Resolve(terrain, dirtyJson, includeNeighbors, dirtyOnly);
         NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
         navBakeContext = new NavBakeContext
@@ -2680,12 +2702,7 @@ static class EditorRepo
         {
             try
             {
-                Ludots.Core.Map.Board.NavBakePolicy policy = Ludots.Core.Map.Board.NavBakePolicyValidator.Require(board);
-                if (string.Equals(policy.HeightSource, Ludots.Core.Map.Board.NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal))
-                {
-                    policyValid = false;
-                    policyError = "Direct continuous-height bake backend is not connected yet; no projection fallback is allowed.";
-                }
+                _ = Ludots.Core.Map.Board.NavBakePolicyValidator.Require(board);
             }
             catch (Exception ex)
             {
