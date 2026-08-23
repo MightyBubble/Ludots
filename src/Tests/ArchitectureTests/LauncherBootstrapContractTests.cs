@@ -1644,6 +1644,58 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        [Test]
+        public void ShellPreset_ResolvesToLauncherShellUxModWithCefRuntime()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"shell-preset-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+            var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+            File.WriteAllText(preferencesPath, "{}");
+            File.WriteAllText(userConfigPath, "{}");
+
+            try
+            {
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var plan = launcher.Resolve(
+                    new[] { LauncherShellSelectors.RaylibShellPreset },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.OrderedModIds, Does.Contain("LudotsCoreMod"));
+                Assert.That(plan.OrderedModIds, Does.Contain("LauncherShellUxMod"));
+                Assert.That(plan.BrowserRuntime, Is.Not.Null);
+                Assert.That(plan.BrowserRuntime!.Enabled, Is.True);
+                Assert.That(plan.BrowserRuntime.Provider, Is.EqualTo("cef"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void LauncherShellLifecycle_SessionStartInfo_CarriesBootstrapPath()
+        {
+            const string bootstrapPath = @"C:\somewhere\launcher.runtime.json";
+            var startInfo = LauncherShellLifecycle.BuildSessionStartInfo(bootstrapPath);
+            Assert.That(startInfo.Arguments, Does.Contain($"\"{bootstrapPath}\""));
+            Assert.That(startInfo.UseShellExecute, Is.False);
+
+            var shellInfo = LauncherShellLifecycle.BuildSessionStartInfo(null);
+            Assert.That(shellInfo.Arguments, Does.Not.Contain("launcher.runtime.json"));
+        }
+
         private static string FindRepoRoot()
         {
             var current = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);

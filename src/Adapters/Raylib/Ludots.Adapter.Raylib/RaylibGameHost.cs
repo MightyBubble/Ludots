@@ -8,11 +8,13 @@ namespace Ludots.Adapter.Raylib
     {
         private readonly string _baseDir;
         private readonly string? _gameConfigFile;
+        private readonly Action<Ludots.Core.Engine.GameEngine>? _onComposed;
 
-        public RaylibGameHost(string baseDir, string? gameConfigFile = null)
+        public RaylibGameHost(string baseDir, string? gameConfigFile = null, Action<Ludots.Core.Engine.GameEngine>? onComposed = null)
         {
             _baseDir = baseDir;
             _gameConfigFile = gameConfigFile;
+            _onComposed = onComposed;
         }
 
         public void Run()
@@ -21,6 +23,10 @@ namespace Ludots.Adapter.Raylib
             try
             {
                 setup = RaylibHostComposer.Compose(_baseDir, _gameConfigFile);
+                if (setup is not null)
+                {
+                    _onComposed?.Invoke(setup.Engine);
+                }
                 RaylibHostLoop.Run(setup);
             }
             finally

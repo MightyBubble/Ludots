@@ -50,6 +50,11 @@
       "kind": "csproj",
       "value": "mods/showcases/panel_fireball_shared/FireballSharedMod",
       "reason": "shared fireball gameplay library consumed by all panel skin/theme showcase mods; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "launcher_shell",
+      "reason": "in-app shell 基础设施（LauncherShellUxMod，进程内启动器会话），非玩家 showcase 条目"
     }
   ],
   "showcases": [

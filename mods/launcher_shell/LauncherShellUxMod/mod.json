@@ -1,0 +1,12 @@
+{
+  "name": "LauncherShellUxMod",
+  "version": "1.0.0",
+  "description": "In-app launcher shell: hosts the React launcher on a full-screen browser surface and relays sessions.",
+  "main": "bin/net8.0/LauncherShellUxMod.dll",
+  "priority": 191,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["launcher", "shell", "browser-ui"]
+}

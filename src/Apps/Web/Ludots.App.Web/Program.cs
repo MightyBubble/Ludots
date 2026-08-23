@@ -1,5 +1,7 @@
 using Ludots.Adapter.Web;
 using Ludots.Adapter.Web.Streaming;
+using Ludots.Launcher.Backend;
+using Microsoft.AspNetCore.Builder;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://0.0.0.0:5200");
@@ -7,8 +9,14 @@ builder.WebHost.UseUrls("http://0.0.0.0:5200");
 var app = builder.Build();
 
 var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-var configFile = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) ? args[0] : "launcher.runtime.json";
-var gameHost = new WebGameHost(baseDir, configFile);
+var bootstrapConfigPath = LauncherShellLifecycle.ResolveBootstrapConfigPath(args);
+if (bootstrapConfigPath is null)
+{
+    await RunShellModeAsync(app);
+    return;
+}
+
+var gameHost = new WebGameHost(baseDir, bootstrapConfigPath);
 
 var cts = new CancellationTokenSource();
 var setupReady = new TaskCompletionSource<WebHostSetup>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -98,3 +106,21 @@ app.Lifetime.ApplicationStopping.Register(() =>
 });
 
 app.Run();
+return;
+
+static async Task RunShellModeAsync(WebApplication app)
+{
+    string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+    string repoRoot = LauncherService.FindRepoRoot(baseDirectory);
+    var launcher = new LauncherService(repoRoot);
+
+    app.MapLauncherShellApi(
+        launcher,
+        LauncherPlatformIds.Web,
+        resolveSessionUrl: _ => "/",
+        relayToSession: session => LauncherShellLifecycle.RelayTo(session.BootstrapPath));
+    app.MapGet("/", () => Results.Redirect("/launcher/index.html"));
+
+    Console.WriteLine("Web launcher shell starting on http://0.0.0.0:5200/launcher/index.html ...");
+    await app.RunAsync();
+}

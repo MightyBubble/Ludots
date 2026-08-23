@@ -30,6 +30,8 @@ public sealed class LauncherService
     private readonly string _repoRoot;
     private readonly LauncherConfigService _configService;
 
+    public string RepoRoot => _repoRoot;
+
     public LauncherService(
         string repoRoot,
         string? configPath = null,
@@ -412,12 +414,15 @@ public sealed class LauncherService
         return WriteRuntimeBootstrap(plan);
     }
 
+    /// <param name="buildApp">
+    /// false = 跳过平台 app 构建（进程内 shell 会话必须如此：运行中的进程锁着自己的 bin，
+    /// 自建必然 MSB3027 死锁，且新程序集也要经会话中继才生效）。
+    /// </param>
     public async Task<LauncherPrepareResult> PrepareLaunchAsync(
         IEnumerable<string> selectors,
         string? adapterId = null,
         LauncherBuildMode buildMode = LauncherBuildMode.Auto,
-        string? browserProviderOverride = null)
-    {
+        string? browserProviderOverride = null)    {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
@@ -449,9 +454,12 @@ public sealed class LauncherService
         var appBuild = ShouldSkipAppBuild(resolveResult.Plan)
             ? new LauncherBuildResult(resolveResult.Plan.AdapterId, true, 0, "App build skipped by request; using prebuilt assembly.")
             : await BuildAppAsync(resolveResult.Plan.AdapterId);
-        if (!appBuild.Ok)
-        {
-            return new LauncherPrepareResult(false, appBuild.Output, string.Empty, resolveResult.Plan);
+        if (!appBuild.Ok)        {
+            var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+            if (!appBuild.Ok)
+            {
+                return new LauncherPrepareResult(false, appBuild.Output, string.Empty, resolveResult.Plan);
+            }
         }
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);

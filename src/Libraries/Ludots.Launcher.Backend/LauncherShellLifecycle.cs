@@ -45,4 +45,29 @@ public static class LauncherShellLifecycle
             WorkingDirectory = AppContext.BaseDirectory
         };
     }
+
+    /// <summary>会话中继：spawn 自身进入指定会话（bootstrap 路径非空 = GameMode，空 = ShellMode）。</summary>
+    public static ProcessStartInfo BuildSessionStartInfo(string? bootstrapConfigPath)
+    {
+        var startInfo = BuildRelayRestartStartInfo();
+        if (!string.IsNullOrWhiteSpace(bootstrapConfigPath))
+        {
+            startInfo.Arguments = string.IsNullOrWhiteSpace(startInfo.Arguments)
+                ? $"\"{bootstrapConfigPath}\""
+                : $"{startInfo.Arguments} \"{bootstrapConfigPath}\"";
+        }
+
+        return startInfo;
+    }
+
+    public static void RelayTo(string? bootstrapConfigPath)
+    {
+        Process.Start(BuildSessionStartInfo(bootstrapConfigPath));
+        Environment.Exit(0);
+    }
+}
+
+public static class LauncherShellSelectors
+{
+    public const string RaylibShellPreset = "preset:launcher_shell_raylib";
 }
