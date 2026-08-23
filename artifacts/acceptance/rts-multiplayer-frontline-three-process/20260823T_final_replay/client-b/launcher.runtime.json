@@ -1,0 +1,35 @@
+{
+    "LaunchGraphPath":  "launcher.graph.json",
+    "LaunchGraphFullPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_final_replay\\client-b\\launcher.graph.json",
+    "PlanSelectors":  [
+                          "preset:rts_multiplayer_frontline_three_process_uat_raylib"
+                      ],
+    "PlanRootModIds":  [
+                           "RtsMultiplayerFrontlineNetworkedMod",
+                           "RtsMultiplayerFrontlineThreeProcessAcceptanceMod"
+                       ],
+    "PlanOrderedModIds":  [
+                              "LudotsCoreMod",
+                              "CoreInputMod",
+                              "EntityCommandPanelMod",
+                              "RtsDemoMod",
+                              "RtsShowcaseMod",
+                              "RtsMultiplayerFrontlineMod",
+                              "RtsMultiplayerFrontlineNetworkedMod",
+                              "RtsMultiplayerFrontlineThreeProcessAcceptanceMod"
+                          ],
+    "PlanFingerprint":  "a85c40b5f9368bb16069af6231e60161b987b89c77bee7e474f6a7659d064507",
+    "PlanSchemaVersion":  1,
+    "PlanGeneratedAtUtc":  "2026-08-23T09:08:49.8164303+00:00",
+    "BrowserRuntime":  null,
+    "NetworkHost":  {
+                        "ProcessRole":  "replicatedClient",
+                        "Host":  "127.0.0.1",
+                        "Port":  27777,
+                        "ConnectionKey":  "rts-frontline-local-uat",
+                        "ClientInstanceId":  2,
+                        "CredentialPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_final_replay\\client-b\\session.credential",
+                        "FaultProfile":  "normal",
+                        "FaultSeed":  70903
+                    }
+}

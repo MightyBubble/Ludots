@@ -378,8 +378,23 @@ internal sealed class AcceptanceDriver : ISystem<float>
         int visibleEnemyCores = CountVisibleEnemyCores(sideIndex);
         if (visibleEnemyInfantry != 0 || visibleEnemyCores != 0)
         {
-            throw new InvalidOperationException(
-                $"Initial fog projection leaked enemy infantry={visibleEnemyInfantry}, cores={visibleEnemyCores}.");
+            var dbg = new System.Text.StringBuilder();
+            dbg.Append($"leak infantry={visibleEnemyInfantry} cores={visibleEnemyCores} sideIndex={sideIndex} ");
+            try
+            {
+                var knowledge = _engine.GetService(CoreServiceKeys.KnowledgeProjectionStore);
+                var viewers = _frontline.Config.Sides;
+                dbg.Append("sides=");
+                foreach (var sd in viewers) { dbg.Append(sd.Id).Append('/').Append(sd.VisionScopeKey).Append(' '); }
+                var emitterQuery = new Arch.Core.QueryDescription().WithAll<FrontlineParticipant, VisionEmitterCm>();
+                int em = 0;
+                _world.Query(in emitterQuery, (Arch.Core.Entity e, ref FrontlineParticipant part, ref VisionEmitterCm emit) =>
+                {
+                    if (em++ < 8) { dbg.Append($"em[side={part.SideIndex} scope={emit.ScopeKeyId} rng={emit.Aperture.RangeCm}] "); }
+                });
+            }
+            catch (System.Exception ex) { dbg.Append("dbg-err=").Append(ex.Message); }
+            throw new InvalidOperationException(dbg.ToString());
         }
 
         if (!BothSeatsConnected())
