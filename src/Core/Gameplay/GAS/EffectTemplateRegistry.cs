@@ -287,6 +287,8 @@ namespace Ludots.Core.Gameplay.GAS
         SetParent = 1,
         RemoveParent = 2,
         EnsureLink = 3,
+        Attach = 4,
+        Detach = 5,
     }
 
     public enum RelationEntitySlot : byte
@@ -304,6 +306,17 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationEntitySlot Parent;
         public bool SnapSubjectToParentPosition;
         public int RelationshipTypeId;
+
+        // ── Attach 参数（局部姿 + 继承声明）──
+        public int AttachOffsetXCm;
+        public int AttachOffsetYCm;
+        public int AttachFacingDeg;
+        public bool AttachInheritParentFacing;
+        public Ludots.Core.Components.AttachedOffsetRotation AttachOffsetRotation;
+
+        // ── Detach 参数（落位策略）──
+        public Ludots.Core.Gameplay.Attachment.DetachPlacement DetachPlacementKind;
+        public int DetachPerimeterRadiusCm;
     }
 
     /// <summary>

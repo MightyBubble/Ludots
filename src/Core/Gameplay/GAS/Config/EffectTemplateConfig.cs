@@ -228,6 +228,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? Parent { get; set; }
         public bool? SnapSubjectToParentPosition { get; set; }
         public string? RelationshipType { get; set; }
+        public AttachedLocalPoseConfig? LocalPose { get; set; }
+        public string? DetachPlacement { get; set; }
+        public int? DetachPerimeterRadiusCm { get; set; }
+    }
+
+    /// <summary>Attach 局部位姿参数（offset 旋转源与朝向继承声明）。</summary>
+    public sealed class AttachedLocalPoseConfig
+    {
+        public int? OffsetXCm { get; set; }
+        public int? OffsetYCm { get; set; }
+        public int? FacingDeg { get; set; }
+        public bool? InheritParentFacing { get; set; }
+        public string? OffsetRotation { get; set; }
     }
 
     public sealed class RevealAreaConfig
