@@ -11,7 +11,7 @@
       {
         "event": { "kind": "EntitySpawned", "key": "rts_frontline_core" },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "scopeSource": "EventPayloadA",
           "definitionId": "rts.frontline.visual.core"
         },
@@ -19,7 +19,7 @@
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "rts_frontline_core" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -35,7 +35,7 @@
       {
         "event": { "kind": "EntitySpawned", "key": "rts_frontline_harvester" },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "scopeSource": "EventPayloadA",
           "definitionId": "rts.frontline.visual.harvester"
         },
@@ -43,7 +43,7 @@
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "rts_frontline_harvester" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -58,7 +58,7 @@
       {
         "event": { "kind": "EntitySpawned", "key": "rts_frontline_infantry" },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "scopeSource": "EventPayloadA",
           "definitionId": "rts.frontline.visual.infantry"
         },
@@ -66,7 +66,7 @@
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "rts_frontline_infantry" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -81,7 +81,7 @@
       {
         "event": { "kind": "EntitySpawned", "key": "rts_frontline_crystal_node" },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "scopeSource": "EventPayloadA",
           "definitionId": "rts.frontline.visual.crystal"
         },
@@ -89,7 +89,7 @@
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "rts_frontline_crystal_node" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },

@@ -1,0 +1,47 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  SkiaSharp -> C:\001_AI\LudotsProd_issue709\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  Ludots.Contracts -> C:\001_AI\LudotsProd_issue709\src\Contracts\bin\Release\net8.0\Ludots.Contracts.dll
+  Ludots.UI -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI\bin\Release\net8.0\Ludots.UI.dll
+  Raylib-cs -> C:\001_AI\LudotsProd_issue709\src\Libraries\Raylib-cs\bin\Release\net8.0\Raylib-cs.dll
+  ExCSS -> C:\001_AI\LudotsProd_issue709\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Graph\Ludots.Graph.Abstractions\bin\Release\net8.0\Ludots.Graph.Abstractions.dll
+  Ludots.UI.Browser -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.Browser\bin\Release\net8.0\Ludots.UI.Browser.dll
+  ShimSkiaSharp -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  Ludots.Raylib.Render -> C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Raylib.Render\bin\Release\net8.0\Ludots.Raylib.Render.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Svg.Generators -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Svg.Custom -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Svg.Model -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  Svg.Skia -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  LiteNetLib -> C:\001_AI\LudotsProd_issue709\src\Libraries\LiteNetLib\bin\Release\net8.0\LiteNetLib.dll
+  Ludots.UI.Skia -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.Skia\bin\Release\net8.0\Ludots.UI.Skia.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net8.0\Ludots.UI.HtmlEngine.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net8.0\Ludots.WebUI.DataPlane.dll
+  Ludots.Client.Raylib -> C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\bin\Release\net8.0\Ludots.Client.Raylib.dll
+  Ludots.UI.Panels -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.Panels\bin\Release\net8.0\Ludots.UI.Panels.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\LudotsProd_issue709\src\Core\Ludots.Physics.Broadphase\bin\Release\net8.0\Ludots.Physics.Broadphase.dll
+  Ludots.Presentation.Skia -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.Presentation.Skia\bin\Release\net8.0\Ludots.Presentation.Skia.dll
+  Ludots.WebUI.Browser -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.WebUI.Browser\bin\Release\net8.0\Ludots.WebUI.Browser.dll
+  Ludots.Adapter.LiteNetLib -> C:\001_AI\LudotsProd_issue709\src\Adapters\Networking\Ludots.Adapter.LiteNetLib\bin\Release\net8.0\Ludots.Adapter.LiteNetLib.dll
+  Ludots.Adapter.Raylib -> C:\001_AI\LudotsProd_issue709\src\Adapters\Raylib\Ludots.Adapter.Raylib\bin\Release\net8.0\Ludots.Adapter.Raylib.dll
+  Ludots.Physics2D -> C:\001_AI\LudotsProd_issue709\src\Core\Ludots.Physics2D\bin\Release\net8.0\Ludots.Physics2D.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\LudotsProd_issue709\src\Core\Ludots.Movement.Physics2DBridge\bin\Release\net8.0\Ludots.Movement.Physics2DBridge.dll
+  Ludots.App.Raylib -> C:\001_AI\LudotsProd_issue709\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\Ludots.App.Raylib.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:08.59
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+

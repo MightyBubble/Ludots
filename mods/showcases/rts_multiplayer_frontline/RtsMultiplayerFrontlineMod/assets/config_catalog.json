@@ -6,5 +6,5 @@
   { "Path": "GAS/order_types.json", "Policy": "DeepObject" },
   { "Path": "GAS/abilities.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" }
+  { "Path": "Presentation/presenters.json", "Policy": "ArrayById", "IdField": "id" }
 ]
