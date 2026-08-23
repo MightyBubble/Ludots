@@ -50,14 +50,19 @@ public sealed class NavGateTimelineSystem : ISystem<float>
 
     private void HandleInput()
     {
-        if (_input == null)
+        if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
+            inputObj is PlayerInputHandler handler)
         {
-            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
-                inputObj is PlayerInputHandler handler)
+            // 幂等重推：MapLoaded 时若 handler 尚未就绪或随后被重建，单次 push 会静默丢失。
+            if (!ReferenceEquals(_input, handler))
             {
+                handler.PushContext(NavGateInputContexts.Overlay);
                 _input = handler;
             }
+        }
 
+        if (_input == null)
+        {
             return;
         }
 

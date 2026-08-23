@@ -73,7 +73,14 @@ namespace NavGateShowcaseMod
                             $"Missing NavGate input actions; check assets/Input/default_input.json for '{NavGateInputActions.ToggleGate}'.");
                     }
 
+                    if (!input.HasContext(NavGateInputContexts.Overlay))
+                    {
+                        throw new InvalidOperationException(
+                            $"Missing NavGate input context '{NavGateInputContexts.Overlay}'; check assets/Input/default_input.json contexts.");
+                    }
+
                     input.PushContext(NavGateInputContexts.Overlay);
+                    Console.WriteLine($"[NavGate] input context '{NavGateInputContexts.Overlay}' pushed (map={engine.CurrentMapSession?.MapId.Value})");
                 }
 
                 WarmUpNavMeshOverlay(engine);
