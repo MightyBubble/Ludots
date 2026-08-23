@@ -6,8 +6,8 @@
 
 catalog `types` 条目支持 `template.components`（组件字典 authoring），在 catalog 安装期通过既有
 `ComponentRegistry.Apply` authoring 链烘焙成预编译补丁（装箱组件值 + 组件类型分类），物化点
-`RelationshipRuntime.MaterializeRelationshipEntity` 在关系实体首次创建时应用补丁（AddRange/Set，
-零 JSON 解析、零分配）；实体已存在则直接返回，不重放模板。
+`RelationshipRuntime.MaterializeRelationshipEntity` 在关系实体首次创建时逐组件应用（已建组件 Set 覆盖、
+新组件 Add，零 JSON 解析、稳态零分配）；实体已存在则直接返回，不重放模板。
 
 叙事关系（如 `Kinship.FatherSon`）自此可纯数据声明初始属性与出生标签，零代码。
 
