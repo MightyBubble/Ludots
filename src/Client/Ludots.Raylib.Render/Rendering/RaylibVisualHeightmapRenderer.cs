@@ -258,13 +258,7 @@ namespace Ludots.Raylib.Render
             _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
-                lighting.Apply(_terrainShader, in _terrainLightingLocs);
-                if (_disableDistanceFog)
-                {
-                    Vector4 fogOff = new(lighting.FogParams.X, lighting.FogParams.Y, lighting.FogParams.Z, 0f);
-                    Rl.SetShaderValue(_terrainShader, _terrainLightingLocs.FogParams, &fogOff, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-                }
-
+                ApplyLightingUniforms();
                 ApplyTerrainShadow();
             }
         }
@@ -287,6 +281,8 @@ namespace Ludots.Raylib.Render
                     MathF.Max(bounds.Height * 0.01f, 1e-5f));
             }
 
+            VisualHeightmapRenderProfile profile = source.RenderProfile;
+            _disableDistanceFog = profile.DisableDistanceFog;
             UpdateUniforms(camera);
 
             _frameIndex++;
@@ -297,8 +293,6 @@ namespace Ludots.Raylib.Render
             ChunkBuildMsLastFrame = 0d;
             OverviewActiveLastFrame = false;
 
-            VisualHeightmapRenderProfile profile = source.RenderProfile;
-            _disableDistanceFog = profile.DisableDistanceFog;
             float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
             float effectiveVisibleRadiusCm = ResolveEffectiveVisibleRadiusCm(source, in camera, aspect);
 
@@ -584,10 +578,22 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibVisualHeightmapRenderer)} requires {nameof(ApplyFrameLighting)} before Render.");
             }
 
-            _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+            ApplyLightingUniforms();
             _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, camera.position);
             ApplyTerrainShadow();
             ApplyAlbedoUniforms();
+        }
+
+        // lighting.Apply always re-uploads the enabled fog params; the profile fog-off must ride on top of every
+        // re-apply, otherwise the mega-meter map saturates to the fog color (start/end authored for meter-scale worlds).
+        private void ApplyLightingUniforms()
+        {
+            _frameLighting!.Apply(_terrainShader, in _terrainLightingLocs);
+            if (_disableDistanceFog)
+            {
+                Vector4 fogOff = new(_frameLighting.FogParams.X, _frameLighting.FogParams.Y, _frameLighting.FogParams.Z, 0f);
+                Rl.SetShaderValue(_terrainShader, _terrainLightingLocs.FogParams, &fogOff, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            }
         }
 
         private void ApplyTerrainShadow()
