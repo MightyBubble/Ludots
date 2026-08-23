@@ -4534,11 +4534,11 @@
       "preset": "effect_history_raylib",
       "docsPath": "gitbook/entity/effect-history-showcase-design.md",
       "readmePath": null,
-      "acceptanceTest": "EntityHistoryShowcaseAcceptanceTests",
+      "acceptanceTest": "EntityHistoryContractsTests",
       "artifactDir": "artifacts/acceptance/effect-history",
-      "screenshot": null,
+      "screenshot": "artifacts/acceptance/effect-history/screens/reuse.png",
       "status": "active",
-      "notes": "首轮自动循环验证通用身份、知识和效果记录；HUD 读取 GlobalContext 中的正式运行时状态。"
+      "notes": "Agent Bridge 实机证据覆盖首屏、TTL 过期、Point、身份复用和地图重载；HUD 读取 showcase 正式运行时状态。"
     },
     {
       "id": "forge_socket",

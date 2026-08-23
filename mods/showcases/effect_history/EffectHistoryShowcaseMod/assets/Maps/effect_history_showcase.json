@@ -2,7 +2,7 @@
   "Id": "effect_history_showcase",
   "Tags": ["showcase", "entity_history", "knowledge", "effect"],
   "DefaultCamera": {
-    "VirtualCameraId": "Tactical",
+    "VirtualCameraId": "EffectHistory.Camera.Showcase",
     "TargetXCm": 0,
     "TargetYCm": 0,
     "DistanceCm": 8000,

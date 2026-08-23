@@ -89,6 +89,49 @@ public sealed class EntityHistoryContractsTests
         Assert.That(snapshot.State, Is.EqualTo(EntitySnapshotState.Destroyed));
     }
 
+    [TestCase(EffectTargetResolutionMode.Point)]
+    [TestCase(EffectTargetResolutionMode.Cell)]
+    public void Spatial_target_modes_resolve_explicit_payload_without_entity_lookup(EffectTargetResolutionMode mode)
+    {
+        World world = World.Create();
+        EntityRef target = new(91, 3, 7);
+        EntityRef viewer = new(92, 3, 1);
+        Fix64Vec2 point = Fix64Vec2.FromInt(12, 15);
+        var targetRef = new EffectTargetRef(in target, in viewer, mode, 4, 0, 0, point, 44);
+
+        EffectTargetResolveOutput output = EffectTargetResolver.Resolve(
+            world,
+            in targetRef,
+            5,
+            new EntitySnapshotStore(2),
+            new KnowledgeSnapshotStore(2));
+
+        Assert.That(output.Result, Is.EqualTo(EffectTargetResolveResult.Resolved));
+        Assert.That(output.Identity, Is.EqualTo(target));
+        Assert.That(output.Point, Is.EqualTo(point));
+        Assert.That(output.Cell, Is.EqualTo(44));
+    }
+
+    [Test]
+    public void Live_resolution_rejects_reused_numeric_id_after_destroy_snapshot()
+    {
+        World world = World.Create();
+        Entity first = world.Create();
+        EntityRef oldRef = EntityRef.From(first);
+        var entityStore = new EntitySnapshotStore(2);
+        var knowledgeStore = new KnowledgeSnapshotStore(2);
+        using var capture = new EntitySnapshotCapture(world, entityStore, new TestSnapshotReader());
+        world.Destroy(first);
+        Entity replacement = world.Create();
+
+        var targetRef = new EffectTargetRef(in oldRef, in oldRef, EffectTargetResolutionMode.Live, 1, 0, 0, Fix64Vec2.Zero, 0);
+        EffectTargetResolveOutput output = EffectTargetResolver.Resolve(world, in targetRef, 2, entityStore, knowledgeStore);
+
+        Assert.That(EntityRef.From(replacement), Is.Not.EqualTo(oldRef));
+        Assert.That(output.Result, Is.EqualTo(EffectTargetResolveResult.Stale));
+        world.Destroy(replacement);
+    }
+
     private static EntitySnapshot CreateSnapshot(Entity entity, int tick)
         => new() { Identity = EntityRef.From(entity), CapturedTick = tick, State = EntitySnapshotState.Live };
 

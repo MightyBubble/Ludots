@@ -1,0 +1,37 @@
+{
+  "actions": [
+    { "id": "EffectHistory.ModeLive", "name": "EffectHistory_ModeLive", "type": "Button" },
+    { "id": "EffectHistory.ModeKnown", "name": "EffectHistory_ModeKnown", "type": "Button" },
+    { "id": "EffectHistory.ModePoint", "name": "EffectHistory_ModePoint", "type": "Button" },
+    { "id": "EffectHistory.ModeCell", "name": "EffectHistory_ModeCell", "type": "Button" },
+    { "id": "EffectHistory.DelayDown", "name": "EffectHistory_DelayDown", "type": "Button" },
+    { "id": "EffectHistory.DelayUp", "name": "EffectHistory_DelayUp", "type": "Button" },
+    { "id": "EffectHistory.TtlDown", "name": "EffectHistory_TtlDown", "type": "Button" },
+    { "id": "EffectHistory.TtlUp", "name": "EffectHistory_TtlUp", "type": "Button" },
+    { "id": "EffectHistory.Submit", "name": "EffectHistory_Submit", "type": "Button" },
+    { "id": "EffectHistory.Hide", "name": "EffectHistory_Hide", "type": "Button" },
+    { "id": "EffectHistory.Remove", "name": "EffectHistory_Remove", "type": "Button" },
+    { "id": "EffectHistory.Reuse", "name": "EffectHistory_Reuse", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "EffectHistoryShowcase.Controls",
+      "name": "Effect History Showcase Controls",
+      "priority": 90,
+      "bindings": [
+        { "actionId": "EffectHistory.ModeLive", "path": "<Keyboard>/1" },
+        { "actionId": "EffectHistory.ModeKnown", "path": "<Keyboard>/2" },
+        { "actionId": "EffectHistory.ModePoint", "path": "<Keyboard>/3" },
+        { "actionId": "EffectHistory.ModeCell", "path": "<Keyboard>/4" },
+        { "actionId": "EffectHistory.DelayDown", "path": "<Keyboard>/d" },
+        { "actionId": "EffectHistory.DelayUp", "path": "<Keyboard>/f" },
+        { "actionId": "EffectHistory.TtlDown", "path": "<Keyboard>/t" },
+        { "actionId": "EffectHistory.TtlUp", "path": "<Keyboard>/g" },
+        { "actionId": "EffectHistory.Submit", "path": "<Keyboard>/enter" },
+        { "actionId": "EffectHistory.Hide", "path": "<Keyboard>/h" },
+        { "actionId": "EffectHistory.Remove", "path": "<Keyboard>/r" },
+        { "actionId": "EffectHistory.Reuse", "path": "<Keyboard>/u" }
+      ]
+    }
+  ]
+}

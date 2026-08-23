@@ -21,6 +21,7 @@ public sealed class EffectHistoryShowcaseModEntry : IMod
             engine.GlobalContext[EffectHistoryShowcaseIds.InstalledKey] = true;
             engine.GlobalContext[EffectHistoryShowcaseIds.RuntimeKey] = runtime;
             engine.RegisterSystem(new EffectHistoryShowcaseSimulationSystem(engine, runtime), SystemGroup.InputCollection);
+            engine.RegisterPresentationSystem(new EffectHistoryShowcasePresentationSystem(engine, runtime));
             return Task.CompletedTask;
         });
 

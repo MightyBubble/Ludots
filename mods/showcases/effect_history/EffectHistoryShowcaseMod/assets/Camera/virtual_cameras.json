@@ -1,0 +1,22 @@
+[
+  {
+    "id": "EffectHistory.Camera.Showcase",
+    "displayName": "Effect History Showcase",
+    "priority": 120,
+    "rigKind": "Orbit",
+    "distanceCm": 3600,
+    "pitch": 62,
+    "fovYDeg": 48,
+    "yaw": 180,
+    "minDistanceCm": 2800,
+    "maxDistanceCm": 5000,
+    "minPitchDeg": 55,
+    "maxPitchDeg": 68,
+    "panMode": "None",
+    "enableGrabDrag": false,
+    "rotateMode": "None",
+    "enableZoom": false,
+    "followMode": "None",
+    "allowUserInput": false
+  }
+]

@@ -1,7 +1,7 @@
 {
   "startupMapId": "effect_history_showcase",
-  "worldWidthInMacroTiles": 120,
-  "worldHeightInMacroTiles": 80,
+  "worldWidthInMacroTiles": 8,
+  "worldHeightInMacroTiles": 8,
   "presentation": {
     "minimap": {
       "minZoomExtentMode": "ExplicitCm",
