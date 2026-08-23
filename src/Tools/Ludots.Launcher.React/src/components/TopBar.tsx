@@ -77,8 +77,8 @@ export function TopBar() {
   };
 
   return (
-    <header className="flex items-center gap-3 border-b border-bg-border bg-bg-panel px-4 py-3">
-      <div className="flex items-center gap-2">
+    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-bg-border bg-bg-panel px-4 py-3">
+      <div className="flex shrink-0 items-center gap-2">
         <Gamepad2 className="text-accent" size={22} />
         <div className="flex flex-col">
           <span className="text-sm font-bold tracking-[0.25em]">LUDOTS</span>
