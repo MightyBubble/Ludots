@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
@@ -33,15 +35,21 @@ internal sealed class VisualTerrainEditorRuntime
     private const string TerrainMeshAssetKeyPrefix = "visual_terrain_editor.runtime_terrain";
     private const string TerrainChunkPerformerKeyPrefix = "visual_terrain_editor.runtime_chunk";
     private static readonly int DefaultChunkMaterialAssetId = 1;
+    private const float ImportedVisualHeightmapDefaultHeight01 = 0.45f;
     private const int MinVisibleChunkRadius = 4;
-    private const int MaxVisibleChunkRadius = 8;
+    private const int MaxVisibleChunkRadius = 16;
+    private const int LargeMapChunkCountThreshold = 512;
+    private const float LargeMapWorldSpanThresholdCm = 100_000_000f;
+    private const int LargeMapVisibleChunkRadius = 1;
+    // Overview must engage before the camera pulls back past what the detail window
+    // (visibleRadius=1 => a 3-chunk-wide patch) can cover, otherwise there is a dead zone
+    // where only an isolated 3x3 detail patch floats in an empty continent-scale view.
+    private const float LargeMapOverviewDistanceInChunks = 2.5f;
+    private const float StandardMapPreferredCameraDistanceRatio = 0.65f;
+    private const float StandardMapMaxPreferredCameraDistanceRatio = 0.85f;
+    private const float LargeMapPreferredCameraDistanceRatio = 0.95f;
+    private const float LargeMapMaxPreferredCameraDistanceRatio = 1.05f;
     private const int RetainedChunkMargin = 1;
-
-    private static readonly PresentationLodProfile ChunkLodProfile =
-        new(
-            new PresentationLodEntry(maxDistanceCm: 30000f, minScreenCoverage01: 0.01f),
-            new PresentationLodEntry(maxDistanceCm: 90000f, minScreenCoverage01: 0.002f),
-            new PresentationLodEntry(maxDistanceCm: 180000f, minScreenCoverage01: 0.0005f));
 
     private readonly Dictionary<long, RenderedChunk> _renderedChunks = new();
 
@@ -57,10 +65,14 @@ internal sealed class VisualTerrainEditorRuntime
     private bool _previousDrawSkiaUi = true;
     private bool _forceChunkEntityRefresh = true;
     private IVisualHeightmap? _previousVisualHeightmap;
+    private string _previousVisualHeightmapMapId = string.Empty;
     private VisualTerrainAssetDescriptor? _pendingAssetReplacement;
     private bool _mapDirty = true;
     private string _statusText = "Unsaved map.";
     private string _lastSavedManifestPath = string.Empty;
+    private string _activeMapId = string.Empty;
+    private string _activeDocumentKey = string.Empty;
+    private string _activeVisualHeightmapFullPath = string.Empty;
     private bool _pointerWorldValid;
     private WorldCmInt2 _pointerWorldCm;
     private int _hoverChunkX = -1;
@@ -114,9 +126,10 @@ internal sealed class VisualTerrainEditorRuntime
             return Task.CompletedTask;
         }
 
-        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
-        if (VisualTerrainEditorIds.IsEditorMap(activeMapId))
+        MapConfig? mapConfig = engine.CurrentMapSession?.MapConfig;
+        if (VisualTerrainEditorIds.IsEditableMap(mapConfig))
         {
+            EnsureDocumentForFocusedMap(engine);
             Activate(engine);
         }
         else
@@ -135,7 +148,7 @@ internal sealed class VisualTerrainEditorRuntime
         }
 
         var mapId = context.Get(CoreServiceKeys.MapId);
-        if (VisualTerrainEditorIds.IsEditorMap(mapId.Value))
+        if (string.Equals(mapId.Value, _activeMapId, StringComparison.Ordinal))
         {
             Deactivate(engine);
         }
@@ -145,15 +158,17 @@ internal sealed class VisualTerrainEditorRuntime
 
     public void Update(GameEngine engine)
     {
-        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
-        if (!VisualTerrainEditorIds.IsEditorMap(activeMapId))
+        MapConfig? mapConfig = engine.CurrentMapSession?.MapConfig;
+        if (!VisualTerrainEditorIds.IsEditableMap(mapConfig))
         {
             Deactivate(engine);
             return;
         }
 
+        EnsureDocumentForFocusedMap(engine);
         Activate(engine);
         ApplyPendingAssetReplacement(engine);
+        UpdateSharedTerrainOverviewDebug(engine);
 
         bool viewportChanged = TrackViewport(engine);
 
@@ -200,6 +215,13 @@ internal sealed class VisualTerrainEditorRuntime
         _panelDirty = true;
     }
 
+    public void SetApplyErosion(bool applyErosion)
+    {
+        _document.SetApplyErosion(applyErosion);
+        MarkMapDirty(applyErosion ? "Erosion output enabled." : "Pure visual heightmap output enabled.");
+        _panelDirty = true;
+    }
+
     public void AdjustBrushRadius(float deltaMeters)
     {
         _document.AdjustBrushRadius(deltaMeters);
@@ -241,6 +263,43 @@ internal sealed class VisualTerrainEditorRuntime
         _panelDirty = true;
     }
 
+    public void AdjustDisplayHeightScale(float delta)
+    {
+        _document.AdjustDisplayHeightScale(delta);
+        _statusText = "Display height contrast changed.";
+        _panelDirty = true;
+    }
+
+    public void SetDisplayHeightScale(float value)
+    {
+        _document.SetDisplayHeightScale(value);
+        _statusText = $"Vertical exaggeration set to {value:0}x.";
+        _panelDirty = true;
+    }
+
+    public void AdjustDisplayColorContrast(float delta)
+    {
+        _document.AdjustDisplayColorContrast(delta);
+        _statusText = "Display color contrast changed.";
+        _panelDirty = true;
+    }
+
+    public void SetDisplayFlatOverview(bool flatOverview)
+    {
+        _document.SetDisplayFlatOverview(flatOverview);
+        _statusText = flatOverview ? "Overview renders as a flat visual heightmap." : "Overview renders with 3D relief.";
+        _panelDirty = true;
+    }
+
+    public void SetDisplayColorMode(VisualHeightmapRenderColorMode colorMode)
+    {
+        _document.SetDisplayColorMode(colorMode);
+        _statusText = colorMode == VisualHeightmapRenderColorMode.HeightmapGrayscale
+            ? "Showing source heightmap contrast for editing."
+            : "Showing terrain color ramp.";
+        _panelDirty = true;
+    }
+
     public void ResetDocument()
     {
         _document.Reset();
@@ -269,7 +328,18 @@ internal sealed class VisualTerrainEditorRuntime
         try
         {
             _document.Update();
-            _lastSavedManifestPath = VisualTerrainEditorPersistence.SaveMap(_document);
+            if (!string.IsNullOrWhiteSpace(_activeVisualHeightmapFullPath))
+            {
+                VisualHeightmapAsset asset = _document.CreateVisualHeightmapAsset("edited");
+                using FileStream stream = File.Create(_activeVisualHeightmapFullPath);
+                VisualHeightmapBinary.Write(stream, asset);
+                _lastSavedManifestPath = _activeVisualHeightmapFullPath;
+            }
+            else
+            {
+                _lastSavedManifestPath = VisualTerrainEditorPersistence.SaveMap(_document);
+            }
+
             _mapDirty = false;
             _statusText = $"Saved map to {_lastSavedManifestPath}";
         }
@@ -316,7 +386,12 @@ internal sealed class VisualTerrainEditorRuntime
             asset.Bounds.Height * 0.01f,
             _document.ViewMode,
             _document.LowerBrush,
+            _document.ApplyErosion,
             _document.BrushRadiusMeters,
+            _document.DisplayHeightScale,
+            _document.DisplayColorContrast,
+            _document.DisplayFlatOverview,
+            _document.DisplayColorMode,
             _document.Scale,
             _document.Strength,
             _document.GullyWeight,
@@ -330,7 +405,66 @@ internal sealed class VisualTerrainEditorRuntime
         ApplyEditorRenderDefaults(engine);
         InstallHeightmap(engine);
         PrimeCamera(engine);
+        ClampCameraTarget(engine);
         ClampCameraDistance(engine);
+    }
+
+    private void EnsureDocumentForFocusedMap(GameEngine engine)
+    {
+        MapConfig mapConfig = engine.CurrentMapSession?.MapConfig
+            ?? throw new InvalidOperationException("Visual terrain editor requires a focused map config.");
+        string mapId = engine.CurrentMapSession?.MapId.Value ?? mapConfig.Id;
+        string declaredVisualHeightmap = ResolveDeclaredVisualHeightmapAssetPath(mapConfig);
+        string documentKey = VisualTerrainEditorIds.IsEditorMap(mapId)
+            ? mapId
+            : $"{mapId}|{declaredVisualHeightmap}";
+
+        if (string.Equals(_activeDocumentKey, documentKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (_active)
+        {
+            Deactivate(engine);
+        }
+
+        VisualTerrainEditorDocument nextDocument;
+        string nextSavePath = string.Empty;
+        string statusText;
+        if (VisualTerrainEditorIds.IsEditorMap(mapId))
+        {
+            nextDocument = new VisualTerrainEditorDocument(CreatePresetAsset("8K", 32, 32, 50_000, 257, 33), DefaultChunkMaterialAssetId);
+            statusText = "Unsaved map.";
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(declaredVisualHeightmap))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' is tagged '{VisualTerrainEditorIds.EditableMapTag}' but does not declare VisualHeightmapAsset.");
+            }
+
+            nextSavePath = ResolveSingleMountedAssetPath(engine, declaredVisualHeightmap, "visual heightmap");
+            using FileStream stream = File.OpenRead(nextSavePath);
+            VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
+            nextDocument = VisualTerrainEditorDocument.CreateFromVisualHeightmapAsset(
+                id: mapId,
+                displayName: $"Visual Heightmap: {mapId}",
+                source: asset,
+                defaultMaterialAssetId: DefaultChunkMaterialAssetId,
+                defaultHeight01: ImportedVisualHeightmapDefaultHeight01);
+            statusText = $"Loaded visual heightmap from {nextSavePath}";
+        }
+
+        ReplaceDocument(engine, nextDocument);
+        _activeMapId = mapId;
+        _activeDocumentKey = documentKey;
+        _activeVisualHeightmapFullPath = nextSavePath;
+        _lastSavedManifestPath = nextSavePath;
+        _mapDirty = false;
+        _statusText = statusText;
+        _panelDirty = true;
     }
 
     private void RefreshPanel(GameEngine engine)
@@ -358,6 +492,9 @@ internal sealed class VisualTerrainEditorRuntime
         RestoreVisualHeightmap(engine);
         RestoreRenderDebug(engine);
         ClearPanelIfOwned(engine);
+        _activeMapId = string.Empty;
+        _activeDocumentKey = string.Empty;
+        _activeVisualHeightmapFullPath = string.Empty;
     }
 
     private void ClearPanelIfOwned(GameEngine engine)
@@ -375,10 +512,12 @@ internal sealed class VisualTerrainEditorRuntime
             !ReferenceEquals(existing, current))
         {
             _previousVisualHeightmap = existing;
+            _previousVisualHeightmapMapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
         }
         else
         {
             _previousVisualHeightmap = null;
+            _previousVisualHeightmapMapId = string.Empty;
         }
 
         engine.SetService(CoreServiceKeys.VisualHeightmap, current);
@@ -386,13 +525,19 @@ internal sealed class VisualTerrainEditorRuntime
 
     private void RestoreVisualHeightmap(GameEngine engine)
     {
-        if (_previousVisualHeightmap != null)
+        string currentMapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
+        if (_previousVisualHeightmap != null &&
+            string.Equals(currentMapId, _previousVisualHeightmapMapId, StringComparison.Ordinal) &&
+            string.Equals(currentMapId, _activeMapId, StringComparison.Ordinal))
         {
             engine.SetService(CoreServiceKeys.VisualHeightmap, _previousVisualHeightmap);
             _previousVisualHeightmap = null;
+            _previousVisualHeightmapMapId = string.Empty;
             return;
         }
 
+        _previousVisualHeightmap = null;
+        _previousVisualHeightmapMapId = string.Empty;
         if (engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap existing) &&
             ReferenceEquals(existing, _document.HeightmapRuntime))
         {
@@ -408,9 +553,10 @@ internal sealed class VisualTerrainEditorRuntime
         }
 
         float distanceCm = GetPreferredCameraDistanceCm();
+        Vector2 targetCm = GetWorldCenterCm(_document.Asset);
         engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
         {
-            TargetCm = Vector2.Zero,
+            TargetCm = targetCm,
             DistanceCm = distanceCm,
             Pitch = 42f,
             Yaw = 225f,
@@ -420,10 +566,29 @@ internal sealed class VisualTerrainEditorRuntime
         _cameraPrimed = true;
     }
 
+    private void ClampCameraTarget(GameEngine engine)
+    {
+        var state = engine.GameSession.Camera.State;
+        Vector2 clampedTargetCm = ResolveCameraTargetInsideBounds(_document.Asset, state.TargetCm);
+        if (Vector2.DistanceSquared(clampedTargetCm, state.TargetCm) <= 1f)
+        {
+            return;
+        }
+
+        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        {
+            TargetCm = clampedTargetCm,
+            DistanceCm = state.DistanceCm,
+            Pitch = state.Pitch,
+            Yaw = state.Yaw,
+            FovYDeg = state.FovYDeg,
+        });
+    }
+
     private void ClampCameraDistance(GameEngine engine)
     {
         float maxDistanceCm = GetMaxCameraDistanceCm();
-        float minDistanceCm = Math.Max(8_000f, maxDistanceCm * 0.2f);
+        float minDistanceCm = GetMinCameraDistanceCm();
         var state = engine.GameSession.Camera.State;
         float clampedDistanceCm = Math.Clamp(state.DistanceCm, minDistanceCm, maxDistanceCm);
         if (MathF.Abs(clampedDistanceCm - state.DistanceCm) <= 1f)
@@ -445,6 +610,7 @@ internal sealed class VisualTerrainEditorRuntime
     {
         _pendingAssetReplacement = asset;
         _lastSavedManifestPath = string.Empty;
+        _activeVisualHeightmapFullPath = string.Empty;
         _mapDirty = true;
         _statusText = statusText;
         _panelDirty = true;
@@ -462,17 +628,29 @@ internal sealed class VisualTerrainEditorRuntime
             _panelController.ClearIfOwned(root);
         }
 
-        ClearRenderedChunks(engine);
-        _document.Dispose();
-        _document = new VisualTerrainEditorDocument(_pendingAssetReplacement, DefaultChunkMaterialAssetId);
-        _panelController = new VisualTerrainEditorPanelController(this, _document);
+        ReplaceDocument(engine, new VisualTerrainEditorDocument(_pendingAssetReplacement, DefaultChunkMaterialAssetId));
         _pendingAssetReplacement = null;
-        _forceChunkEntityRefresh = true;
-        _cameraPrimed = false;
 
         InstallHeightmap(engine);
         PrimeCamera(engine);
         _panelDirty = true;
+    }
+
+    private void ReplaceDocument(GameEngine engine, VisualTerrainEditorDocument document)
+    {
+        if (document == null) throw new ArgumentNullException(nameof(document));
+
+        if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+        {
+            _panelController.ClearIfOwned(root);
+        }
+
+        ClearRenderedChunks(engine);
+        _document.Dispose();
+        _document = document;
+        _panelController = new VisualTerrainEditorPanelController(this, _document);
+        _forceChunkEntityRefresh = true;
+        _cameraPrimed = false;
     }
 
     private bool EnsureChunkWindowLoaded(GameEngine engine)
@@ -595,25 +773,31 @@ internal sealed class VisualTerrainEditorRuntime
                 int materialAssetId = ResolveChunkMaterialAssetId(materials);
                 int definitionId = RegisterChunkMeshDefinition(performerDefinitions, meshAssetId, materialAssetId, proceduralMesh.UsageHint, chunkX, chunkY);
                 int stableId = stableIds.Allocate();
-                Vector3 centerMeters = ResolveChunkCenterMeters(_document.Asset, chunkX, chunkY);
-                WorldPositionCm worldPosition = WorldPositionCm.FromCmFloat(centerMeters.X * 100f, centerMeters.Z * 100f);
+                Vector3 chunkCenterMeters = ComputeChunkCenterMeters(_document.Asset, chunkX, chunkY);
+                WorldPositionCm worldPosition = WorldPositionCm.FromCmFloat(
+                    chunkCenterMeters.X * 100f,
+                    chunkCenterMeters.Z * 100f);
                 Entity entity = engine.World.Create(
                     worldPosition,
                     new PreviousWorldPositionCm { Value = worldPosition.Value },
                     new PresentationStableId { Value = stableId },
                     new VisualTransform
                     {
-                        Position = Vector3.Zero,
+                        Position = chunkCenterMeters,
                         Rotation = Quaternion.Identity,
                         Scale = Vector3.One,
                     },
                     PresentationLocalBounds.Create(proceduralMesh.LocalBounds.Center, proceduralMesh.LocalBounds.Extents),
-                    ChunkLodProfile,
+                    CreateChunkLodProfile(_document.Asset),
+                    new SpatialPartitionExcluded(),
                     new CullState
                     {
                         IsVisible = true,
                         LOD = LODLevel.High,
-                    });
+                    },
+                    new PresentationStaticTransform(),
+                    new PresentationStaticVisualPending(),
+                    new PresentationStaticCullPending());
 
                 int scopeId = ComposeChunkScopeId(chunkX, chunkY);
                 if (!performerCommands.TryAdd(new PerformerCommand
@@ -673,6 +857,13 @@ internal sealed class VisualTerrainEditorRuntime
 
             _renderedChunks.Remove(key);
         }
+    }
+
+    private static Vector3 ComputeChunkCenterMeters(VisualTerrainAssetDescriptor asset, int chunkX, int chunkY)
+    {
+        float centerXCm = asset.Bounds.Left + ((chunkX + 0.5f) * asset.ChunkWorldWidthCm);
+        float centerYCm = asset.Bounds.Top + ((chunkY + 0.5f) * asset.ChunkWorldHeightCm);
+        return new Vector3(centerXCm * 0.01f, 0f, centerYCm * 0.01f);
     }
 
     private void ClearRenderedChunks(GameEngine engine)
@@ -804,6 +995,24 @@ internal sealed class VisualTerrainEditorRuntime
         renderDebug.DrawSkiaUi = true;
     }
 
+    private void UpdateSharedTerrainOverviewDebug(GameEngine engine)
+    {
+        if (engine.GetService(CoreServiceKeys.RenderDebugState) is not RenderDebugState renderDebug)
+        {
+            return;
+        }
+
+        renderDebug.DrawTerrain = ShouldUseSharedTerrainOverview(engine);
+        renderDebug.DrawPrimitives = true;
+        renderDebug.DrawDebugDraw = false;
+        renderDebug.DrawSkiaUi = true;
+    }
+
+    private bool ShouldUseSharedTerrainOverview(GameEngine engine)
+    {
+        return ShouldUseSharedTerrainOverview(_document.Asset, engine.GameSession.Camera.State.DistanceCm);
+    }
+
     private void RestoreRenderDebug(GameEngine engine)
     {
         if (!_renderDebugCaptured)
@@ -833,7 +1042,7 @@ internal sealed class VisualTerrainEditorRuntime
         out int maxChunkY)
     {
         VisualTerrainAssetDescriptor asset = _document.Asset;
-        Vector2 targetCm = engine.GameSession.Camera.State.TargetCm;
+        Vector2 targetCm = ResolveCameraTargetInsideBounds(asset, engine.GameSession.Camera.State.TargetCm);
         centerChunkX = WorldToChunkX(asset, (int)MathF.Round(targetCm.X));
         centerChunkY = WorldToChunkY(asset, (int)MathF.Round(targetCm.Y));
         minChunkX = Math.Max(0, centerChunkX - radius);
@@ -849,7 +1058,72 @@ internal sealed class VisualTerrainEditorRuntime
         float distanceCm = MathF.Max(engine.GameSession.Camera.State.DistanceCm, chunkSpanCm);
         int radiusFromDistance = (int)MathF.Ceiling(distanceCm / chunkSpanCm) + 1;
         int maxRadiusForMap = Math.Max(asset.ChunkColumns, asset.ChunkRows) - 1;
-        return Math.Clamp(radiusFromDistance, MinVisibleChunkRadius, Math.Min(MaxVisibleChunkRadius, maxRadiusForMap));
+        if (ShouldUseLargeMapMode(asset))
+        {
+            return Math.Clamp(LargeMapVisibleChunkRadius, 0, maxRadiusForMap);
+        }
+
+        int dynamicMaxRadius = asset.ChunkCount <= LargeMapChunkCountThreshold
+            ? maxRadiusForMap
+            : Math.Min(MaxVisibleChunkRadius, maxRadiusForMap);
+        return Math.Clamp(radiusFromDistance, MinVisibleChunkRadius, dynamicMaxRadius);
+    }
+
+    internal static bool ShouldUseLargeMapMode(VisualTerrainAssetDescriptor asset)
+    {
+        if (asset == null) throw new ArgumentNullException(nameof(asset));
+
+        float longestWorldSpanCm = MathF.Max(asset.Bounds.Width, asset.Bounds.Height);
+        return asset.ChunkCount > LargeMapChunkCountThreshold ||
+            longestWorldSpanCm >= LargeMapWorldSpanThresholdCm;
+    }
+
+    internal static bool ShouldUseSharedTerrainOverview(VisualTerrainAssetDescriptor asset, float cameraDistanceCm)
+    {
+        if (asset == null) throw new ArgumentNullException(nameof(asset));
+
+        if (!ShouldUseLargeMapMode(asset))
+        {
+            return false;
+        }
+
+        float chunkSpanCm = MathF.Max(asset.ChunkWorldWidthCm, asset.ChunkWorldHeightCm);
+        float overviewDistanceCm = chunkSpanCm * LargeMapOverviewDistanceInChunks;
+        return cameraDistanceCm >= overviewDistanceCm;
+    }
+
+    internal static float ResolvePreferredCameraDistanceCm(VisualTerrainAssetDescriptor asset)
+    {
+        if (asset == null) throw new ArgumentNullException(nameof(asset));
+
+        float diagonalCm = GetWorldDiagonalCm(asset);
+        float chunkSpanCm = GetChunkSpanCm(asset);
+        bool largeMap = ShouldUseLargeMapMode(asset);
+        float preferredRatio = largeMap
+            ? LargeMapPreferredCameraDistanceRatio
+            : StandardMapPreferredCameraDistanceRatio;
+        float maxRatio = largeMap
+            ? LargeMapMaxPreferredCameraDistanceRatio
+            : StandardMapMaxPreferredCameraDistanceRatio;
+        return Math.Clamp(diagonalCm * preferredRatio, chunkSpanCm * 1.2f, diagonalCm * maxRatio);
+    }
+
+    internal static Vector2 ResolveCameraTargetInsideBounds(VisualTerrainAssetDescriptor asset, Vector2 targetCm)
+    {
+        if (asset == null) throw new ArgumentNullException(nameof(asset));
+
+        return new Vector2(
+            Math.Clamp(targetCm.X, asset.Bounds.Left, asset.Bounds.Right - 1),
+            Math.Clamp(targetCm.Y, asset.Bounds.Top, asset.Bounds.Bottom - 1));
+    }
+
+    internal static Vector2 GetWorldCenterCm(VisualTerrainAssetDescriptor asset)
+    {
+        if (asset == null) throw new ArgumentNullException(nameof(asset));
+
+        return new Vector2(
+            asset.Bounds.Left + (asset.Bounds.Width * 0.5f),
+            asset.Bounds.Top + (asset.Bounds.Height * 0.5f));
     }
 
     private static int WorldToChunkX(VisualTerrainAssetDescriptor asset, int worldXCm)
@@ -868,6 +1142,95 @@ internal sealed class VisualTerrainEditorRuntime
     {
         _mapDirty = true;
         _statusText = statusText;
+    }
+
+    private static string ResolveDeclaredVisualHeightmapAssetPath(MapConfig mapConfig)
+    {
+        if (mapConfig == null) throw new ArgumentNullException(nameof(mapConfig));
+
+        string? resolved = NormalizeDeclaredAssetPath(mapConfig.VisualHeightmapAsset);
+        if (mapConfig.Boards == null)
+        {
+            return resolved ?? string.Empty;
+        }
+
+        for (int i = 0; i < mapConfig.Boards.Count; i++)
+        {
+            string? boardAsset = NormalizeDeclaredAssetPath(mapConfig.Boards[i]?.VisualHeightmapAsset);
+            if (string.IsNullOrWhiteSpace(boardAsset))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(resolved))
+            {
+                resolved = boardAsset;
+                continue;
+            }
+
+            if (!string.Equals(resolved, boardAsset, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig.Id}' declares conflicting visual heightmap assets. Editable visual terrain maps must resolve to one shared vhtm.");
+            }
+        }
+
+        return resolved ?? string.Empty;
+    }
+
+    private static string ResolveSingleMountedAssetPath(GameEngine engine, string assetPath, string assetKind)
+    {
+        if (engine == null) throw new ArgumentNullException(nameof(engine));
+        string normalized = NormalizeDeclaredAssetPath(assetPath)
+            ?? throw new InvalidOperationException($"{assetKind} asset path must not be empty.");
+        var matches = new List<string>();
+
+        void AddMatchIfExists(string uri)
+        {
+            if (engine.VFS.TryResolveFullPath(uri, out string fullPath) && File.Exists(fullPath))
+            {
+                matches.Add(fullPath);
+            }
+        }
+
+        AddMatchIfExists($"Core:{normalized}");
+        if (engine.ModLoader?.LoadedModIds != null)
+        {
+            foreach (string modId in engine.ModLoader.LoadedModIds)
+            {
+                AddMatchIfExists($"{modId}:{normalized}");
+            }
+        }
+
+        if (matches.Count == 0)
+        {
+            throw new FileNotFoundException(
+                $"Declared {assetKind} asset '{normalized}' could not be resolved from the mounted Core/mod assets.");
+        }
+
+        if (matches.Count > 1)
+        {
+            throw new InvalidOperationException(
+                $"Declared {assetKind} asset '{normalized}' resolves to multiple mounted files ({string.Join(", ", matches)}).");
+        }
+
+        return matches[0];
+    }
+
+    private static string? NormalizeDeclaredAssetPath(string? assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath))
+        {
+            return null;
+        }
+
+        string normalized = assetPath.Replace('\\', '/').Trim();
+        while (normalized.StartsWith("/", StringComparison.Ordinal))
+        {
+            normalized = normalized.Substring(1);
+        }
+
+        return normalized.Length == 0 ? null : normalized;
     }
 
     private static VisualTerrainAssetDescriptor CreatePresetAsset(
@@ -901,12 +1264,44 @@ internal sealed class VisualTerrainEditorRuntime
 
     private float GetPreferredCameraDistanceCm()
     {
-        return Math.Clamp(_document.Asset.ChunkWorldWidthCm * 1.2f, 16_000f, 60_000f);
+        return ResolvePreferredCameraDistanceCm(_document.Asset);
     }
 
     private float GetMaxCameraDistanceCm()
     {
-        return Math.Clamp(_document.Asset.ChunkWorldWidthCm * 1.45f, 22_000f, 72_000f);
+        float diagonalCm = GetWorldDiagonalCm(_document.Asset);
+        float chunkSpanCm = GetChunkSpanCm(_document.Asset);
+        return Math.Max(chunkSpanCm * 1.45f, diagonalCm * 1.2f);
+    }
+
+    private float GetMinCameraDistanceCm()
+    {
+        return Math.Max(8_000f, GetChunkSpanCm(_document.Asset) * 0.15f);
+    }
+
+    private static PresentationLodProfile CreateChunkLodProfile(VisualTerrainAssetDescriptor asset)
+    {
+        float diagonalCm = GetWorldDiagonalCm(asset);
+        float chunkSpanCm = GetChunkSpanCm(asset);
+        float lowDistanceCm = Math.Max(180_000f, diagonalCm * 1.5f);
+        float mediumDistanceCm = Math.Max(90_000f, lowDistanceCm * 0.66f);
+        float highDistanceCm = Math.Max(30_000f, Math.Min(mediumDistanceCm * 0.5f, chunkSpanCm * 2f));
+        return new PresentationLodProfile(
+            new PresentationLodEntry(highDistanceCm, minScreenCoverage01: 0.01f),
+            new PresentationLodEntry(mediumDistanceCm, minScreenCoverage01: 0.002f),
+            new PresentationLodEntry(lowDistanceCm, minScreenCoverage01: 0.0001f));
+    }
+
+    private static float GetWorldDiagonalCm(VisualTerrainAssetDescriptor asset)
+    {
+        float width = asset.Bounds.Width;
+        float height = asset.Bounds.Height;
+        return MathF.Sqrt((width * width) + (height * height));
+    }
+
+    private static float GetChunkSpanCm(VisualTerrainAssetDescriptor asset)
+    {
+        return MathF.Max(asset.ChunkWorldWidthCm, asset.ChunkWorldHeightCm);
     }
 
     private static int ResolveChunkMaterialAssetId(PresentationMaterialRegistry materials)
@@ -1038,13 +1433,6 @@ internal sealed class VisualTerrainEditorRuntime
     {
         int scopeId = HashCode.Combine(VisualTerrainEditorIds.ChunkMeshPerformerId, chunkX, chunkY) & int.MaxValue;
         return scopeId == 0 ? 1 : scopeId;
-    }
-
-    private static Vector3 ResolveChunkCenterMeters(VisualTerrainAssetDescriptor asset, int chunkX, int chunkY)
-    {
-        float centerXCm = asset.Bounds.Left + ((chunkX + 0.5f) * asset.ChunkWorldWidthCm);
-        float centerYCm = asset.Bounds.Top + ((chunkY + 0.5f) * asset.ChunkWorldHeightCm);
-        return new Vector3(centerXCm * 0.01f, 0f, centerYCm * 0.01f);
     }
 
     private readonly record struct RenderedChunk(int ChunkX, int ChunkY, Entity Entity, int ScopeId);

@@ -9,6 +9,8 @@ using Ludots.Tool;
 using NUnit.Framework;
 using System;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace Ludots.Tests.Architecture
 {
@@ -202,6 +204,109 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        [Test]
+        public void EastAsiaPlayableTerrainAssets_LoadGridHexAndVisualHeightmapWithExpectedLandSeaContract()
+        {
+            string repoRoot = FindRepoRoot();
+            string assetRoot = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "east_asia_playable_terrain",
+                "EastAsiaPlayableTerrainMod",
+                "assets");
+
+            string gridPath = Path.Combine(assetRoot, "Data", "Maps", "east_asia_grid_map_data.bin");
+            string hexReactSourcePath = Path.Combine(assetRoot, "Data", "Maps", "east_asia_hex_source_map_data.bin");
+            string hexPath = Path.Combine(assetRoot, "Data", "Maps", "east_asia_hex.vtxm");
+            string visualPath = Path.Combine(assetRoot, "terrain", "east_asia_continuous.vhtm");
+            string profilePath = Path.Combine(assetRoot, "terrain", "east_asia_terrain_profile.json");
+
+            LogicTerrainField gridTerrain = ReactLogicTerrainBinary.ReadGridLogicTerrainField(gridPath, cellSizeCm: 100);
+            using FileStream hexStream = File.OpenRead(hexPath);
+            VertexMap hexMap = VertexMapBinary.Read(hexStream);
+            LogicTerrainField hexTerrain = new VertexMapLogicTerrainField(hexMap);
+            using FileStream visualStream = File.OpenRead(visualPath);
+            VisualHeightmapAsset visualAsset = VisualHeightmapBinary.Read(visualStream);
+            EastAsiaProjectionContext projection = ReadProjectionContext(profilePath);
+            string exported112Hash = ReadEditorImportHash(profilePath, "east_asia_strategy_editor_112x64_chunks_map_data.bin");
+
+            Assert.That(gridTerrain.Topology, Is.EqualTo(LogicTerrainTopology.Grid));
+            Assert.That(gridTerrain.WidthChunks, Is.EqualTo(EastAsiaTerrainAssetGenerator.DefaultGridWidthChunks));
+            Assert.That(gridTerrain.HeightChunks, Is.EqualTo(EastAsiaTerrainAssetGenerator.DefaultGridHeightChunks));
+            Assert.That(ComputeSha256(gridPath), Is.EqualTo(exported112Hash));
+            Assert.That(ComputeSha256(hexReactSourcePath), Is.EqualTo(exported112Hash));
+            Assert.That(hexTerrain.Topology, Is.EqualTo(LogicTerrainTopology.Hex));
+            Assert.That(hexMap.WidthInChunks, Is.EqualTo(EastAsiaTerrainAssetGenerator.DefaultHexWidthChunks));
+            Assert.That(hexMap.HeightInChunks, Is.EqualTo(EastAsiaTerrainAssetGenerator.DefaultHexHeightChunks));
+            Assert.That(visualAsset.SampleColumns, Is.EqualTo(EastAsiaTerrainAssetGenerator.DefaultVisualSampleColumns));
+            Assert.That(visualAsset.SampleRows, Is.EqualTo(EastAsiaTerrainAssetGenerator.DefaultVisualSampleRows));
+            Assert.That(visualAsset.Bounds.Width, Is.EqualTo(EastAsiaTerrainAssetGenerator.DefaultWorldWidthCm));
+            Assert.That(visualAsset.Bounds.Height, Is.EqualTo(EastAsiaTerrainAssetGenerator.DefaultWorldHeightCm));
+
+            LogicTerrainCell northChina = SampleLogicAtLonLat(gridTerrain, projection, lon: 116.0, lat: 38.0);
+            LogicTerrainCell vietnamNorth = SampleLogicAtLonLat(gridTerrain, projection, lon: 106.0, lat: 21.0);
+            LogicTerrainCell vietnamSouth = SampleLogicAtLonLat(gridTerrain, projection, lon: 106.0, lat: 10.0);
+            LogicTerrainCell eastChinaSea = SampleLogicAtLonLat(gridTerrain, projection, lon: 125.0, lat: 30.0);
+            LogicTerrainCell tibet = SampleLogicAtLonLat(gridTerrain, projection, lon: 88.0, lat: 32.0);
+
+            Assert.That(northChina.HeightLevel, Is.GreaterThan(0), "North China must be authored as land, not sea level.");
+            Assert.That(northChina.HasWater, Is.False, "North China must not be under water.");
+            Assert.That(vietnamNorth.HeightLevel, Is.GreaterThan(0), "Northern Vietnam must be included as land.");
+            Assert.That(vietnamSouth.HeightLevel, Is.GreaterThan(0), "Southern Vietnam must be included as land.");
+            Assert.That(eastChinaSea.HasWater, Is.True, "Open sea must remain visibly below sea level.");
+            Assert.That(tibet.HeightLevel, Is.GreaterThan(northChina.HeightLevel), "The Tibetan plateau must read higher than the North China plain.");
+
+            LogicTerrainCell hexVietnamSouth = SampleLogicAtLonLat(hexTerrain, projection, lon: 106.0, lat: 10.0);
+            Assert.That(hexVietnamSouth.HeightLevel, Is.GreaterThan(0), "HexGrid East Asia must keep complete Vietnam coverage.");
+
+            short visualSea = SampleVisualAtLonLat(visualAsset, projection, lon: 125.0, lat: 30.0);
+            short visualNorthChina = SampleVisualAtLonLat(visualAsset, projection, lon: 116.0, lat: 38.0);
+            short visualVietnamSouth = SampleVisualAtLonLat(visualAsset, projection, lon: 106.0, lat: 10.0);
+            short visualTibet = SampleVisualAtLonLat(visualAsset, projection, lon: 88.0, lat: 32.0);
+
+            Assert.That(visualSea, Is.LessThan(0), "Visual sea must be below sea level.");
+            Assert.That(visualNorthChina, Is.GreaterThan(0), "Visual North China plain must remain above sea level.");
+            Assert.That(visualVietnamSouth, Is.GreaterThan(0), "Visual southern Vietnam must remain above sea level.");
+            Assert.That(visualTibet, Is.GreaterThan(visualNorthChina + 800), "Visual height contrast must make plateau relief readable.");
+        }
+
+        [Test]
+        public void EastAsiaPlayableTerrainMaps_StartInsideEditorTerrainVisibilityRange()
+        {
+            string repoRoot = FindRepoRoot();
+            string assetRoot = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "east_asia_playable_terrain",
+                "EastAsiaPlayableTerrainMod",
+                "assets");
+
+            string cameraPath = Path.Combine(assetRoot, "Configs", "Camera", "virtual_cameras.json");
+            using JsonDocument cameraDocument = JsonDocument.Parse(File.ReadAllText(cameraPath));
+            JsonElement camera = cameraDocument.RootElement[0];
+            string cameraId = camera.GetProperty("id").GetString()!;
+            float maxDistanceCm = camera.GetProperty("maxDistanceCm").GetSingle();
+
+            Assert.That(cameraId, Is.EqualTo("EastAsia.Camera.PlayableTerrain"));
+            float minDistanceCm = camera.GetProperty("minDistanceCm").GetSingle();
+            Assert.That(maxDistanceCm, Is.GreaterThan(600000000f), "East Asia camera must support the full imported terrain scale.");
+            Assert.That(camera.GetProperty("confineTargetToWorldBounds").GetBoolean(), Is.True, "East Asia camera must not edge-pan outside the imported terrain.");
+            Assert.That(camera.GetProperty("panMode").GetString(), Is.EqualTo("Keyboard"), "East Asia editor camera must not drift when the pointer rests on CEF panels.");
+            Assert.That(camera.TryGetProperty("targetHeightMode", out _), Is.False, "East Asia starts with flat camera target height so edge confinement cannot sample outside the imported heightmap.");
+
+            foreach (string mapName in new[] { "east_asia_grid.json", "east_asia_hex.json", "east_asia_visual_heightmap.json" })
+            {
+                string mapPath = Path.Combine(assetRoot, "Maps", mapName);
+                using JsonDocument mapDocument = JsonDocument.Parse(File.ReadAllText(mapPath));
+                JsonElement defaultCamera = mapDocument.RootElement.GetProperty("DefaultCamera");
+
+                Assert.That(defaultCamera.GetProperty("VirtualCameraId").GetString(), Is.EqualTo(cameraId), mapName);
+                Assert.That(defaultCamera.GetProperty("DistanceCm").GetSingle(), Is.InRange(minDistanceCm, maxDistanceCm), mapName);
+            }
+        }
+
         private static VertexMap CreateFlatVertexMap()
         {
             var map = new VertexMap();
@@ -290,6 +395,110 @@ namespace Ludots.Tests.Architecture
             chunk[2] = blocked ? (byte)0b0000_1000 : (byte)0;
             chunk[3] = areaId;
             writer.Write(chunk);
+        }
+
+        private static LogicTerrainCell SampleLogicAtLonLat(
+            LogicTerrainField terrain,
+            EastAsiaProjectionContext projection,
+            double lon,
+            double lat)
+        {
+            LonLatToSampleIndex(projection, lon, lat, terrain.WidthCells, terrain.HeightCells, out int column, out int row);
+            return terrain.GetCell(column, row);
+        }
+
+        private static short SampleVisualAtLonLat(
+            VisualHeightmapAsset asset,
+            EastAsiaProjectionContext projection,
+            double lon,
+            double lat)
+        {
+            LonLatToSampleIndex(projection, lon, lat, asset.SampleColumns, asset.SampleRows, out int column, out int row);
+            return asset.HeightSamplesCm[(row * asset.SampleColumns) + column];
+        }
+
+        private static void LonLatToSampleIndex(
+            EastAsiaProjectionContext projection,
+            double lon,
+            double lat,
+            int columns,
+            int rows,
+            out int column,
+            out int row)
+        {
+            bool projected = EastAsiaTerrainAssetGenerator.TryProjectLonLatToSourceUv(
+                projection.Projection,
+                projection.Extent,
+                lon,
+                lat,
+                out double u,
+                out double v);
+            Assert.That(projected, Is.True, $"Point {lon},{lat} must project into the East Asia Albers canvas.");
+            column = Math.Clamp((int)Math.Round(u * (columns - 1)), 0, columns - 1);
+            row = Math.Clamp((int)Math.Round(v * (rows - 1)), 0, rows - 1);
+        }
+
+        private static EastAsiaProjectionContext ReadProjectionContext(string profilePath)
+        {
+            using JsonDocument profile = JsonDocument.Parse(File.ReadAllText(profilePath));
+            JsonElement root = profile.RootElement;
+            JsonElement projection = root.GetProperty("projection");
+            JsonElement extent = root.GetProperty("sourceRaster").GetProperty("projectedExtentM");
+            return new EastAsiaProjectionContext(
+                new EastAsiaTerrainAssetGenerator.EastAsiaProjectionSpec(
+                    projection.GetProperty("kind").GetString() ?? string.Empty,
+                    projection.GetProperty("centralMeridianDeg").GetDouble(),
+                    projection.GetProperty("latitudeOfOriginDeg").GetDouble(),
+                    projection.GetProperty("standardParallel1Deg").GetDouble(),
+                    projection.GetProperty("standardParallel2Deg").GetDouble(),
+                    projection.GetProperty("earthRadiusM").GetDouble()),
+                new EastAsiaTerrainAssetGenerator.EastAsiaProjectedExtent(
+                    extent.GetProperty("minX").GetDouble(),
+                    extent.GetProperty("maxX").GetDouble(),
+                    extent.GetProperty("minY").GetDouble(),
+                    extent.GetProperty("maxY").GetDouble()));
+        }
+
+        private static string ReadEditorImportHash(string profilePath, string fileName)
+        {
+            using JsonDocument profile = JsonDocument.Parse(File.ReadAllText(profilePath));
+            foreach (JsonElement editorImport in profile.RootElement.GetProperty("source").GetProperty("editorImports").EnumerateArray())
+            {
+                if (string.Equals(editorImport.GetProperty("file").GetString(), fileName, StringComparison.Ordinal))
+                {
+                    return editorImport.GetProperty("sha256").GetString() ?? string.Empty;
+                }
+            }
+
+            throw new InvalidDataException($"Editor import '{fileName}' was not found in East Asia terrain profile.");
+        }
+
+        private static string ComputeSha256(string path)
+        {
+            using FileStream stream = File.OpenRead(path);
+            byte[] hash = SHA256.HashData(stream);
+            return Convert.ToHexString(hash);
+        }
+
+        private readonly record struct EastAsiaProjectionContext(
+            EastAsiaTerrainAssetGenerator.EastAsiaProjectionSpec Projection,
+            EastAsiaTerrainAssetGenerator.EastAsiaProjectedExtent Extent);
+
+        private static string FindRepoRoot()
+        {
+            var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+            while (directory != null)
+            {
+                if (Directory.Exists(Path.Combine(directory.FullName, "mods")) &&
+                    File.Exists(Path.Combine(directory.FullName, "launcher.config.json")))
+                {
+                    return directory.FullName;
+                }
+
+                directory = directory.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Could not locate Ludots repository root from the test directory.");
         }
     }
 }

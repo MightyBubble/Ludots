@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -128,6 +130,29 @@ namespace Ludots.Tests.Gas
             Assert.That(heightmap, Is.TypeOf<VisualHeightmapRuntime>());
             Assert.That(heightmap.TrySampleHeightCm(50f, 50f, out float heightCm), Is.True);
             Assert.That(heightCm, Is.EqualTo(50f).Within(0.001f));
+        }
+
+        [Test]
+        public void LoadMap_WhenVisualHeightmapHasNoBoard_UsesHeightmapBoundsForWorldSpatialRange()
+        {
+            var bounds = new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304);
+            WriteHeightmap("outer.vhtm", 50, bounds, sampleColumns: 65, sampleRows: 33);
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "visualHeightmapAsset": "assets/terrain/outer.vhtm"
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("outer_map");
+
+            Assert.That(engine.CurrentMapSession!.PrimaryBoard, Is.Null);
+            Assert.That(engine.WorldSizeSpec.Bounds, Is.EqualTo(bounds));
+            Assert.That(engine.WorldSizeSpec.GridCellSizeCm, Is.EqualTo(14072688));
+
+            engine.World.Create(WorldPositionCm.FromCm(434_242_944, 241_246_080));
+            Assert.DoesNotThrow(() => engine.Tick(1f / 60f));
         }
 
         [Test]
@@ -294,11 +319,27 @@ namespace Ludots.Tests.Gas
 
         private void WriteHeightmap(string fileName, short heightCm)
         {
-            var asset = VisualHeightmapAsset.CreateSingleLayer(
-                new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 100, 100),
+            WriteHeightmap(
+                fileName,
+                heightCm,
+                new WorldAabbCm(0, 0, 100, 100),
                 sampleColumns: 2,
-                sampleRows: 2,
-                new[] { heightCm, heightCm, heightCm, heightCm });
+                sampleRows: 2);
+        }
+
+        private void WriteHeightmap(
+            string fileName,
+            short heightCm,
+            WorldAabbCm bounds,
+            int sampleColumns,
+            int sampleRows)
+        {
+            var samples = Enumerable.Repeat(heightCm, checked(sampleColumns * sampleRows)).ToArray();
+            var asset = VisualHeightmapAsset.CreateSingleLayer(
+                bounds,
+                sampleColumns,
+                sampleRows,
+                samples);
 
             using var stream = File.Create(Path.Combine(_modRoot, "assets", "terrain", fileName));
             VisualHeightmapBinary.Write(stream, asset);

@@ -24,4 +24,23 @@ namespace Ludots.Core.Presentation.Terrain
 
         bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk);
     }
+
+    public interface IVisualHeightmapRenderPresentation
+    {
+        float RenderDisplayHeightScale { get; }
+
+        float RenderColorContrast { get; }
+
+        bool RenderFlatOverview { get; }
+
+        VisualHeightmapRenderColorMode RenderColorMode { get; }
+
+        bool RenderUseAbsoluteHeightColorRange { get; }
+
+        float RenderMinHeightCm { get; }
+
+        float RenderMaxHeightCm { get; }
+
+        int RenderPresentationRevision { get; }
+    }
 }

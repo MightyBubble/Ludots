@@ -34,7 +34,7 @@ namespace Ludots.Tool
         private const int ChunkSize = SpatialScaleDefaults.TerrainChunkCells;
         private const int CellsPerChunk = ChunkSize * ChunkSize;
         private const int ReactCellStride = 4;
-        public const byte ReactSparseFormatVersion = 0x84;
+        public const byte ReactSparseFormatVersion = ReactLogicTerrainBinary.SparseFormatVersion;
         private const int ReactChunkBytes = CellsPerChunk * ReactCellStride;
 
         private const int PackedBytesPerChunk = CellsPerChunk;
@@ -62,81 +62,13 @@ namespace Ludots.Tool
         public static LogicTerrainField ReadGridLogicTerrainField(
             string inputPath,
             int cellSizeCm = SpatialScaleDefaults.CellCm)
-        {
-            using var input = File.OpenRead(inputPath);
-            return ReadGridLogicTerrainField(inputPath, input, cellSizeCm);
-        }
+            => ReactLogicTerrainBinary.ReadGridLogicTerrainField(inputPath, cellSizeCm);
 
         public static LogicTerrainField ReadGridLogicTerrainField(
             string inputName,
             Stream input,
             int cellSizeCm = SpatialScaleDefaults.CellCm)
-        {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-            if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
-
-            using var br = new BinaryReader(input, Encoding.UTF8, leaveOpen: true);
-            int widthChunks = br.ReadInt32();
-            int heightChunks = br.ReadInt32();
-            byte strideOrVersion = br.ReadByte();
-
-            ValidateReactHeader(inputName, input, widthChunks, heightChunks, strideOrVersion);
-
-            int widthCells = checked(widthChunks * ChunkSize);
-            int heightCells = checked(heightChunks * ChunkSize);
-            var terrain = new SparseGridLogicTerrainField(widthCells, heightCells, cellSizeCm, ChunkSize);
-            byte[] reactChunk = new byte[ReactChunkBytes];
-
-            if (strideOrVersion == ReactSparseFormatVersion)
-            {
-                int chunkCount = br.ReadInt32();
-                if (chunkCount < 0)
-                {
-                    throw new InvalidDataException($"Sparse React terrain '{inputName}' has negative chunk count {chunkCount}.");
-                }
-
-                for (int i = 0; i < chunkCount; i++)
-                {
-                    int cx = br.ReadInt32();
-                    int cy = br.ReadInt32();
-                    if ((uint)cx >= (uint)widthChunks || (uint)cy >= (uint)heightChunks)
-                    {
-                        throw new InvalidDataException($"Sparse React terrain '{inputName}' has chunk ({cx},{cy}) outside {widthChunks}x{heightChunks}.");
-                    }
-
-                    int read = input.Read(reactChunk, 0, reactChunk.Length);
-                    if (read != reactChunk.Length)
-                    {
-                        throw new EndOfStreamException($"Unexpected EOF when reading sparse chunk ({cx},{cy}) from '{inputName}'.");
-                    }
-
-                    LoadReactChunkIntoSparseGrid(terrain, cx, cy, reactChunk);
-                }
-
-                return terrain;
-            }
-
-            if (input.Length - input.Position == 0)
-            {
-                return terrain;
-            }
-
-            for (int cy = 0; cy < heightChunks; cy++)
-            {
-                for (int cx = 0; cx < widthChunks; cx++)
-                {
-                    int read = input.Read(reactChunk, 0, reactChunk.Length);
-                    if (read != reactChunk.Length)
-                    {
-                        throw new EndOfStreamException($"Unexpected EOF when reading chunk ({cx},{cy}) from '{inputName}'.");
-                    }
-
-                    LoadReactChunkIntoSparseGrid(terrain, cx, cy, reactChunk);
-                }
-            }
-
-            return terrain;
-        }
+            => ReactLogicTerrainBinary.ReadGridLogicTerrainField(inputName, input, cellSizeCm);
 
         private static void LoadReactChunkIntoSparseGrid(
             SparseGridLogicTerrainField terrain,

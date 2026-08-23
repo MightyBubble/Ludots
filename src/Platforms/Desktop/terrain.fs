@@ -2,8 +2,11 @@
 
 in vec3 fragPos;
 in vec3 fragNormal;
+in vec2 fragTexCoord;
 in vec4 fragColor;
 
+uniform sampler2D texture0;
+uniform int uUseTexture;
 uniform vec3 uLightPos;
 uniform vec3 uViewPos;
 uniform float uAmbient;
@@ -16,7 +19,9 @@ void main()
     vec3 N = normalize(fragNormal);
     vec3 L = normalize(uLightPos - fragPos);
     float ndl = abs(dot(N, L));
-    vec3 lit = fragColor.rgb * (uAmbient + uLightIntensity * ndl);
-    finalColor = vec4(clamp(lit, 0.0, 1.0), fragColor.a);
+    vec4 albedo = uUseTexture != 0 ? texture(texture0, fragTexCoord) : fragColor;
+    float light = uUseTexture != 0 ? 1.0 : (uAmbient + uLightIntensity * ndl);
+    vec3 lit = albedo.rgb * light;
+    finalColor = vec4(clamp(lit, 0.0, 1.0), albedo.a);
 }
 

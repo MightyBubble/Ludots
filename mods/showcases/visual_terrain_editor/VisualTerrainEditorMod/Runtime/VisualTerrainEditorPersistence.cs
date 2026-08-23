@@ -17,7 +17,7 @@ internal static class VisualTerrainEditorPersistence
     private const string ChunkFileExtension = ".vtchunk";
     private const string ChunkMagic = "VTCK";
     private const int ChunkVersion = 1;
-    private const int ManifestVersion = 3;
+    private const int ManifestVersion = 4;
 
     public static string SaveMap(VisualTerrainEditorDocument document)
     {
@@ -80,6 +80,7 @@ internal static class VisualTerrainEditorPersistence
             SampleScaleUnitsPerSampleNumeratorCm = asset.SampleScale.UnitsPerSampleNumeratorCm,
             SampleScaleUnitsPerSampleDenominator = asset.SampleScale.UnitsPerSampleDenominator,
             BindingKind = asset.Binding.Kind.ToString(),
+            UseAbsoluteHeightColorRamp = asset.UseAbsoluteHeightColorRamp,
             LogicalColumns = asset.Binding.LogicalColumns,
             LogicalRows = asset.Binding.LogicalRows,
             EditedChunkCount = chunkEntries.Count,
@@ -217,7 +218,8 @@ internal static class VisualTerrainEditorPersistence
             new VisualHeightSampleScale(
                 manifest.SampleScaleOffsetCm,
                 manifest.SampleScaleUnitsPerSampleNumeratorCm,
-                manifest.SampleScaleUnitsPerSampleDenominator));
+                manifest.SampleScaleUnitsPerSampleDenominator),
+            manifest.UseAbsoluteHeightColorRamp);
     }
 
     private static VisualTerrainEditorDocument.VisualTerrainErosionSettingsSnapshot CreateErosionSnapshot(VisualTerrainEditorMapManifest manifest)

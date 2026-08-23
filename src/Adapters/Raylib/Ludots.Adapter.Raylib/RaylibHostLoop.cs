@@ -150,6 +150,8 @@ namespace Ludots.Adapter.Raylib
 
         public static void Run(RaylibHostSetup setup)
         {
+            string? startupDiagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
+            AppendRaylibDiagnostic(startupDiagnosticPath, "host-loop-start");
             var engine = setup.Engine;
             var config = setup.Config;
             var uiRoot = setup.UiRoot;
@@ -188,8 +190,10 @@ namespace Ludots.Adapter.Raylib
                     Rl.SetConfigFlags(FlagWindowResizable);
                 }
 
+                AppendRaylibDiagnostic(startupDiagnosticPath, $"init-window width={screenWidth} height={screenHeight} title={title}");
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
+                AppendRaylibDiagnostic(startupDiagnosticPath, "init-window-complete");
                 if (config.WindowStartMaximized)
                 {
                     Rl.MaximizeWindow();
@@ -209,6 +213,7 @@ namespace Ludots.Adapter.Raylib
                 var windowRepaintGuard = new RaylibWindowRepaintGuard();
                 uiRoot.Resize(screenWidth, screenHeight);
 
+                AppendRaylibDiagnostic(startupDiagnosticPath, "presentation-setup-start");
                 var initialCamera = new Camera3D
                 {
                     position = new Vector3(10.0f, 10.0f, 10.0f),
@@ -274,6 +279,7 @@ namespace Ludots.Adapter.Raylib
                 }
 
                 ValidateRequiredContextBeforeLoop(engine);
+                AppendRaylibDiagnostic(startupDiagnosticPath, "presentation-setup-complete");
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
@@ -292,12 +298,16 @@ namespace Ludots.Adapter.Raylib
                     engine.SetService(RaylibBenchmarkRendererKey, (IRaylibBenchmarkRenderer)benchmarkRenderer);
                 }
 
+                AppendRaylibDiagnostic(startupDiagnosticPath, "engine-start");
                 engine.Start();
+                AppendRaylibDiagnostic(startupDiagnosticPath, "engine-start-complete");
                 if (string.IsNullOrWhiteSpace(config.StartupMapId))
                 {
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
+                AppendRaylibDiagnostic(startupDiagnosticPath, $"load-startup-map map={config.StartupMapId}");
                 engine.LoadStartupMap();
+                AppendRaylibDiagnostic(startupDiagnosticPath, "load-startup-map-complete");
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;

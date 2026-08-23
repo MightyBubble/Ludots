@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -82,7 +83,11 @@ internal sealed class VisualTerrainEditorPanelController
         VisualTerrainEditorPanelState state = context.State;
         float minimapLeft = MathF.Max(16f, state.ViewportWidth - 16f - 288f);
         float brushLeft = MathF.Max(16f, state.ViewportWidth - 16f - 336f);
-        float brushTop = MathF.Max(16f, state.ViewportHeight - 16f - 486f);
+        // Anchor the brush/terrain controls to the top-right, just below the minimap,
+        // and bound their height with a scroll view so added rows never fall off screen.
+        float minimapBottom = 16f + 300f;
+        float brushTop = MathF.Max(16f, minimapBottom + 12f);
+        float brushMaxHeight = MathF.Max(240f, state.ViewportHeight - brushTop - 16f);
 
         return Ui.Column(
                 BuildInfoPanel(state)
@@ -93,6 +98,8 @@ internal sealed class VisualTerrainEditorPanelController
                     .Absolute(minimapLeft, 16f),
                 BuildBrushPanel(state)
                     .Width(336f)
+                    .Height(brushMaxHeight)
+                    .Overflow(UiOverflow.Scroll)
                     .Absolute(brushLeft, brushTop))
             .WidthPercent(100f)
             .HeightPercent(100f)
@@ -178,7 +185,29 @@ internal sealed class VisualTerrainEditorPanelController
                 BuildModeButton("Lower", state.LowerBrush, _ => _runtime.SetBrushMode(true)),
                 BuildActionButton("Radius -", _ => _runtime.AdjustBrushRadius(-5f)),
                 BuildActionButton("Radius +", _ => _runtime.AdjustBrushRadius(5f))),
+            BuildButtonGroup(
+                "Output",
+                BuildModeButton("Pure", !state.ApplyErosion, _ => _runtime.SetApplyErosion(false)),
+                BuildModeButton("Erode", state.ApplyErosion, _ => _runtime.SetApplyErosion(true)),
+                BuildModeButton("Terrain", state.DisplayColorMode == VisualHeightmapRenderColorMode.TerrainRamp, _ => _runtime.SetDisplayColorMode(VisualHeightmapRenderColorMode.TerrainRamp)),
+                BuildModeButton("Heightmap", state.DisplayColorMode == VisualHeightmapRenderColorMode.HeightmapGrayscale, _ => _runtime.SetDisplayColorMode(VisualHeightmapRenderColorMode.HeightmapGrayscale)),
+                BuildModeButton("Flat", state.DisplayFlatOverview, _ => _runtime.SetDisplayFlatOverview(true)),
+                BuildModeButton("3D", !state.DisplayFlatOverview, _ => _runtime.SetDisplayFlatOverview(false)),
+                BuildActionButton("Height -", _ => _runtime.AdjustDisplayHeightScale(-50f)),
+                BuildActionButton("Height +", _ => _runtime.AdjustDisplayHeightScale(50f)),
+                BuildActionButton("Contrast -", _ => _runtime.AdjustDisplayColorContrast(-0.20f)),
+                BuildActionButton("Contrast +", _ => _runtime.AdjustDisplayColorContrast(0.20f))),
+            BuildButtonGroup(
+                "Vertical Exaggeration",
+                BuildActionButton("1x", _ => _runtime.SetDisplayHeightScale(1f)),
+                BuildActionButton("100x", _ => _runtime.SetDisplayHeightScale(100f)),
+                BuildActionButton("500x", _ => _runtime.SetDisplayHeightScale(500f)),
+                BuildActionButton("1000x", _ => _runtime.SetDisplayHeightScale(1000f)),
+                BuildActionButton("2000x", _ => _runtime.SetDisplayHeightScale(2000f)),
+                BuildActionButton("5000x", _ => _runtime.SetDisplayHeightScale(5000f))),
             BuildMetricCard("Brush Radius", $"{state.BrushRadiusMeters:0.0} m"),
+            BuildMetricCard("Display Height", $"{state.DisplayHeightScale:0.00}x"),
+            BuildMetricCard("Color Contrast", $"{state.DisplayColorContrast:0.00}x"),
             BuildStepperCard("Scale", $"{state.Scale:0.00}", _ => _runtime.AdjustScale(-0.01f), _ => _runtime.AdjustScale(0.01f)),
             BuildStepperCard("Strength", $"{state.Strength:0.00}", _ => _runtime.AdjustStrength(-0.01f), _ => _runtime.AdjustStrength(0.01f)),
             BuildStepperCard("Gully Weight", $"{state.GullyWeight:0.00}", _ => _runtime.AdjustGullyWeight(-0.05f), _ => _runtime.AdjustGullyWeight(0.05f)),
@@ -217,9 +246,16 @@ internal sealed class VisualTerrainEditorPanelController
     private UiElementBuilder BuildChunkGrid(VisualTerrainEditorPanelState state)
     {
         VisualTerrainAssetDescriptor asset = _document.Asset;
-        float cellSize = MathF.Max(2f, MathF.Floor(224f / MathF.Max(asset.ChunkColumns, asset.ChunkRows)));
-        float gridWidth = asset.ChunkColumns * cellSize;
-        float gridHeight = asset.ChunkRows * cellSize;
+        const float maxGridWidth = 224f;
+        const float maxGridHeight = 224f;
+        float worldAspect = (asset.ChunkColumns * asset.ChunkWorldWidthCm) /
+                            (float)Math.Max(1, asset.ChunkRows * asset.ChunkWorldHeightCm);
+        float gridWidth = worldAspect >= 1f ? maxGridWidth : maxGridWidth * worldAspect;
+        float gridHeight = worldAspect >= 1f ? maxGridHeight / worldAspect : maxGridHeight;
+        float cellWidth = MathF.Max(2f, gridWidth / asset.ChunkColumns);
+        float cellHeight = MathF.Max(2f, gridHeight / asset.ChunkRows);
+        gridWidth = cellWidth * asset.ChunkColumns;
+        gridHeight = cellHeight * asset.ChunkRows;
 
         var rows = new UiElementBuilder[asset.ChunkRows];
         _runtime.GetVisibleChunkWindow(out int centerChunkX, out int centerChunkY, out int minChunkX, out int maxChunkX, out int minChunkY, out int maxChunkY);
@@ -254,8 +290,8 @@ internal sealed class VisualTerrainEditorPanelController
                 }
 
                 cells[chunkX] = Ui.Text(" ")
-                    .Width(cellSize)
-                    .Height(cellSize)
+                    .Width(cellWidth)
+                    .Height(cellHeight)
                     .Background(background)
                     .Border(borderWidth, borderColor);
             }

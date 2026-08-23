@@ -83,6 +83,19 @@ namespace Ludots.Core.Presentation.Terrain
             return removed;
         }
 
+        public void TouchChunk(int chunkX, int chunkY)
+        {
+            ValidateChunkCoordinates(chunkX, chunkY);
+            long key = GraphChunkKey.Pack(chunkX, chunkY);
+            if (!_chunks.ContainsKey(key))
+            {
+                throw new InvalidOperationException($"Cannot touch missing visual heightmap chunk ({chunkX}, {chunkY}).");
+            }
+
+            Revision++;
+            InvalidateThreadCache(key);
+        }
+
         public bool TryGetChunk(int chunkX, int chunkY, out ChunkedVisualHeightmapChunk chunk)
         {
             ValidateChunkCoordinates(chunkX, chunkY);

@@ -9,10 +9,18 @@ namespace Ludots.Core.Presentation.Terrain
     /// IVisualHeightmap runtime over a sparse loaded chunk store.
     /// Missing chunks return false instead of inventing implicit global terrain.
     /// </summary>
-    public sealed class ChunkedVisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapRenderSource, IVisualHeightmapSampleAccessor
+    public sealed class ChunkedVisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapRenderSource, IVisualHeightmapRenderPresentation, IVisualHeightmapSampleAccessor
     {
         private readonly ChunkedVisualHeightmapDescriptor _descriptor;
         private readonly ChunkedVisualHeightmapStore _store;
+        private float _renderDisplayHeightScale = 1f;
+        private float _renderColorContrast = 1f;
+        private bool _renderFlatOverview;
+        private VisualHeightmapRenderColorMode _renderColorMode = VisualHeightmapRenderColorMode.TerrainRamp;
+        private bool _renderUseAbsoluteHeightColorRange;
+        private float _renderMinHeightCm;
+        private float _renderMaxHeightCm = 1f;
+        private int _renderPresentationRevision;
 
         public ChunkedVisualHeightmapRuntime(ChunkedVisualHeightmapDescriptor descriptor, ChunkedVisualHeightmapStore store)
         {
@@ -37,6 +45,90 @@ namespace Ludots.Core.Presentation.Terrain
         public int DefaultLayerIndex => _descriptor.DefaultLayerIndex;
 
         public int Revision => _store.Revision;
+
+        public float RenderDisplayHeightScale => _renderDisplayHeightScale;
+
+        public float RenderColorContrast => _renderColorContrast;
+
+        public bool RenderFlatOverview => _renderFlatOverview;
+
+        public VisualHeightmapRenderColorMode RenderColorMode => _renderColorMode;
+
+        public bool RenderUseAbsoluteHeightColorRange => _renderUseAbsoluteHeightColorRange;
+
+        public float RenderMinHeightCm => _renderMinHeightCm;
+
+        public float RenderMaxHeightCm => _renderMaxHeightCm;
+
+        public int RenderPresentationRevision => _renderPresentationRevision;
+
+        public void SetRenderPresentation(
+            float displayHeightScale,
+            float colorContrast,
+            bool flatOverview,
+            VisualHeightmapRenderColorMode colorMode = VisualHeightmapRenderColorMode.TerrainRamp,
+            bool useAbsoluteHeightColorRange = false,
+            float minHeightCm = 0f,
+            float maxHeightCm = 1f)
+        {
+            if (!float.IsFinite(displayHeightScale) || displayHeightScale <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(displayHeightScale));
+            }
+
+            if (!float.IsFinite(colorContrast) || colorContrast <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(colorContrast));
+            }
+
+            if (!float.IsFinite(minHeightCm))
+            {
+                throw new ArgumentOutOfRangeException(nameof(minHeightCm));
+            }
+
+            if (!float.IsFinite(maxHeightCm))
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxHeightCm));
+            }
+
+            if (!Enum.IsDefined(colorMode))
+            {
+                throw new ArgumentOutOfRangeException(nameof(colorMode));
+            }
+
+            if (useAbsoluteHeightColorRange && maxHeightCm < minHeightCm)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxHeightCm), "Absolute render height color range cannot be inverted.");
+            }
+
+            displayHeightScale = Math.Clamp(displayHeightScale, 0.01f, 64f);
+            colorContrast = Math.Clamp(colorContrast, 0.01f, 16f);
+            if (!useAbsoluteHeightColorRange)
+            {
+                minHeightCm = 0f;
+                maxHeightCm = 1f;
+            }
+
+            if (MathF.Abs(_renderDisplayHeightScale - displayHeightScale) <= 0.0001f &&
+                MathF.Abs(_renderColorContrast - colorContrast) <= 0.0001f &&
+                _renderFlatOverview == flatOverview &&
+                _renderColorMode == colorMode &&
+                _renderUseAbsoluteHeightColorRange == useAbsoluteHeightColorRange &&
+                MathF.Abs(_renderMinHeightCm - minHeightCm) <= 0.001f &&
+                MathF.Abs(_renderMaxHeightCm - maxHeightCm) <= 0.001f)
+            {
+                return;
+            }
+
+            _renderDisplayHeightScale = displayHeightScale;
+            _renderColorContrast = colorContrast;
+            _renderFlatOverview = flatOverview;
+            _renderColorMode = colorMode;
+            _renderUseAbsoluteHeightColorRange = useAbsoluteHeightColorRange;
+            _renderMinHeightCm = minHeightCm;
+            _renderMaxHeightCm = maxHeightCm;
+            _renderPresentationRevision++;
+        }
 
         public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
         {

@@ -223,6 +223,10 @@ namespace Ludots.Core.Engine
                 LoadBoardTerrainData(session, session.MapConfig);
                 LoadNavForMap(session.MapId.Value, session.MapConfig);
             }
+            else if (session.VisualHeightmap is Ludots.Core.Presentation.Terrain.IVisualHeightmapRenderSource visualHeightmapSource)
+            {
+                ApplyVisualHeightmapSpatialConfig(visualHeightmapSource);
+            }
 
             LoadPathingForSession(session);
             SetMapEntitiesSuspended(session.MapId, GetMapLoadStatus(session.MapId).Succeeded ? false : true);

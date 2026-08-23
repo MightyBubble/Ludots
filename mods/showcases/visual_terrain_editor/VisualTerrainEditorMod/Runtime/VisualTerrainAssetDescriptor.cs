@@ -20,7 +20,8 @@ internal sealed class VisualTerrainAssetDescriptor
         VisualTerrainBindingDescriptor? binding = null,
         VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
         VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.TriangleHeightfield,
-        VisualHeightSampleScale? sampleScale = null)
+        VisualHeightSampleScale? sampleScale = null,
+        bool useAbsoluteHeightColorRamp = false)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -92,6 +93,7 @@ internal sealed class VisualTerrainAssetDescriptor
         InterpolationMode = interpolationMode;
         SampleScale = sampleScale ?? VisualHeightSampleScale.IdentityCentimeters;
         SampleScale.Validate();
+        UseAbsoluteHeightColorRamp = useAbsoluteHeightColorRamp;
     }
 
     public string Id { get; }
@@ -121,6 +123,8 @@ internal sealed class VisualTerrainAssetDescriptor
     public VisualHeightmapInterpolationMode InterpolationMode { get; }
 
     public VisualHeightSampleScale SampleScale { get; }
+
+    public bool UseAbsoluteHeightColorRamp { get; }
 
     public int DefaultLayerIndex => 0;
 

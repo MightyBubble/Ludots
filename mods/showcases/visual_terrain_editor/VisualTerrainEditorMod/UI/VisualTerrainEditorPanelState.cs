@@ -1,3 +1,4 @@
+using Ludots.Core.Presentation.Terrain;
 using VisualTerrainEditorMod.Runtime;
 
 namespace VisualTerrainEditorMod.UI;
@@ -27,7 +28,12 @@ internal sealed record VisualTerrainEditorPanelState(
     float WorldHeightMeters,
     TerrainViewMode ViewMode,
     bool LowerBrush,
+    bool ApplyErosion,
     float BrushRadiusMeters,
+    float DisplayHeightScale,
+    float DisplayColorContrast,
+    bool DisplayFlatOverview,
+    VisualHeightmapRenderColorMode DisplayColorMode,
     float Scale,
     float Strength,
     float GullyWeight,

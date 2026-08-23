@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using NUnit.Framework;
 using Ludots.Core.Hosting;
 using Ludots.Launcher.Backend;
@@ -49,6 +50,92 @@ namespace Ludots.Tests.Architecture
             finally
             {
                 await Task.Delay(1_600);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void LauncherConfig_ExposesAllEastAsiaPlayableTerrainEntries()
+        {
+            var repoRoot = FindRepoRoot();
+
+            using JsonDocument config = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, "launcher.config.json")));
+            var bindingNames = config.RootElement
+                .GetProperty("bindings")
+                .EnumerateArray()
+                .Select(binding => binding.GetProperty("name").GetString())
+                .ToArray();
+
+            Assert.That(bindingNames, Does.Contain("east_asia_grid"));
+            Assert.That(bindingNames, Does.Contain("east_asia_hex"));
+            Assert.That(bindingNames, Does.Contain("east_asia_visual_heightmap"));
+
+            using JsonDocument presets = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, "launcher.presets.json")));
+            var presetIds = presets.RootElement
+                .GetProperty("presets")
+                .EnumerateArray()
+                .Select(preset => preset.GetProperty("id").GetString())
+                .ToArray();
+
+            Assert.That(presetIds, Does.Contain("east_asia_grid_raylib"));
+            Assert.That(presetIds, Does.Contain("east_asia_hex_raylib"));
+            Assert.That(presetIds, Does.Contain("east_asia_visual_heightmap_raylib"));
+        }
+
+        [Test]
+        public void Launcher_ResolvesEastAsiaPlayableTerrainEntries_WithSharedAssetsAndEditor()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-east-asia-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var originalGraph = CaptureFile(graphPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                AssertEastAsiaPlayableTerrainPlan(
+                    launcher.Resolve(
+                        new[] { "preset:east_asia_grid_raylib" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "EastAsiaGridEntryMod",
+                    expectedStartupMapId: "east_asia_grid");
+
+                AssertEastAsiaPlayableTerrainPlan(
+                    launcher.Resolve(
+                        new[] { "preset:east_asia_hex_raylib" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "EastAsiaHexEntryMod",
+                    expectedStartupMapId: "east_asia_hex");
+
+                AssertEastAsiaPlayableTerrainPlan(
+                    launcher.Resolve(
+                        new[] { "preset:east_asia_visual_heightmap_raylib" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "EastAsiaVisualHeightmapEntryMod",
+                    expectedStartupMapId: "east_asia_visual_heightmap");
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
                 if (Directory.Exists(tempDirectory))
                 {
                     Directory.Delete(tempDirectory, recursive: true);
@@ -1161,6 +1248,29 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
+
+            var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
+            Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));
+            Assert.That(startupMapSetting.EffectiveSource, Does.Contain(expectedRootModId));
+        }
+
+        private static void AssertEastAsiaPlayableTerrainPlan(
+            LauncherLaunchPlan plan,
+            string expectedRootModId,
+            string expectedStartupMapId)
+        {
+            Assert.That(plan.RootModIds, Is.EqualTo(new[] { expectedRootModId }));
+            Assert.That(plan.OrderedModIds, Is.SubsetOf(new[]
+            {
+                "LudotsCoreMod",
+                "CoreInputMod",
+                "EastAsiaPlayableTerrainMod",
+                "VisualTerrainEditorMod",
+                expectedRootModId
+            }));
+            Assert.That(plan.OrderedModIds, Does.Contain("EastAsiaPlayableTerrainMod"));
+            Assert.That(plan.OrderedModIds, Does.Contain("VisualTerrainEditorMod"));
+            Assert.That(plan.OrderedModIds, Does.Contain(expectedRootModId));
 
             var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
             Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));

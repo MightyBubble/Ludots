@@ -138,6 +138,63 @@ namespace Ludots.Tool
                 ctx.ExitCode = 0;
             });
             mapCommand.AddCommand(genReactBinCommand);
+
+            var genEastAsiaPlayableCommand = new Command("gen-east-asia-playable", "Generate playable Grid, HexGrid, and VisualHeightmap East Asia terrain assets");
+            var eastAsiaSourceRootOption = new Option<string>(
+                "--sourceRoot",
+                "Directory containing the exported East Asia heightmap tiles and editor map_data.bin files")
+            { IsRequired = true };
+            var eastAsiaOutRootOption = new Option<string>(
+                "--outRoot",
+                () => "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod",
+                "Output mod root that receives assets/Data/Maps and assets/terrain files");
+            var eastAsiaOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite generated assets if they exist");
+            var eastAsiaGridWidthOption = new Option<int>("--gridWidthChunks", () => EastAsiaTerrainAssetGenerator.DefaultGridWidthChunks, "Grid map width in 64-cell chunks");
+            var eastAsiaGridHeightOption = new Option<int>("--gridHeightChunks", () => EastAsiaTerrainAssetGenerator.DefaultGridHeightChunks, "Grid map height in 64-cell chunks");
+            var eastAsiaHexWidthOption = new Option<int>("--hexWidthChunks", () => EastAsiaTerrainAssetGenerator.DefaultHexWidthChunks, "Hex map width in 64-cell chunks");
+            var eastAsiaHexHeightOption = new Option<int>("--hexHeightChunks", () => EastAsiaTerrainAssetGenerator.DefaultHexHeightChunks, "Hex map height in 64-cell chunks");
+            var eastAsiaVisualColumnsOption = new Option<int>("--visualSampleColumns", () => EastAsiaTerrainAssetGenerator.DefaultVisualSampleColumns, "Continuous visual heightmap sample columns");
+            var eastAsiaVisualRowsOption = new Option<int>("--visualSampleRows", () => EastAsiaTerrainAssetGenerator.DefaultVisualSampleRows, "Continuous visual heightmap sample rows");
+            genEastAsiaPlayableCommand.AddOption(eastAsiaSourceRootOption);
+            genEastAsiaPlayableCommand.AddOption(eastAsiaOutRootOption);
+            genEastAsiaPlayableCommand.AddOption(eastAsiaOverwriteOption);
+            genEastAsiaPlayableCommand.AddOption(eastAsiaGridWidthOption);
+            genEastAsiaPlayableCommand.AddOption(eastAsiaGridHeightOption);
+            genEastAsiaPlayableCommand.AddOption(eastAsiaHexWidthOption);
+            genEastAsiaPlayableCommand.AddOption(eastAsiaHexHeightOption);
+            genEastAsiaPlayableCommand.AddOption(eastAsiaVisualColumnsOption);
+            genEastAsiaPlayableCommand.AddOption(eastAsiaVisualRowsOption);
+            genEastAsiaPlayableCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var sourceRoot = ctx.ParseResult.GetValueForOption(eastAsiaSourceRootOption);
+                var outRoot = ctx.ParseResult.GetValueForOption(eastAsiaOutRootOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(eastAsiaOverwriteOption);
+                var gridWidthChunks = ctx.ParseResult.GetValueForOption(eastAsiaGridWidthOption);
+                var gridHeightChunks = ctx.ParseResult.GetValueForOption(eastAsiaGridHeightOption);
+                var hexWidthChunks = ctx.ParseResult.GetValueForOption(eastAsiaHexWidthOption);
+                var hexHeightChunks = ctx.ParseResult.GetValueForOption(eastAsiaHexHeightOption);
+                var visualSampleColumns = ctx.ParseResult.GetValueForOption(eastAsiaVisualColumnsOption);
+                var visualSampleRows = ctx.ParseResult.GetValueForOption(eastAsiaVisualRowsOption);
+
+                EastAsiaTerrainGenerationSummary summary = EastAsiaTerrainAssetGenerator.GeneratePlayableSet(
+                    sourceRoot,
+                    outRoot,
+                    overwrite,
+                    gridWidthChunks,
+                    gridHeightChunks,
+                    hexWidthChunks,
+                    hexHeightChunks,
+                    visualSampleColumns,
+                    visualSampleRows);
+
+                Console.WriteLine($"Wrote Grid React terrain: {Path.GetFullPath(summary.GridMapDataPath)}");
+                Console.WriteLine($"Wrote Hex VertexMap terrain: {Path.GetFullPath(summary.HexVertexMapPath)}");
+                Console.WriteLine($"Wrote Hex React source terrain: {Path.GetFullPath(summary.HexSourceReactMapDataPath)}");
+                Console.WriteLine($"Wrote VisualHeightmap terrain: {Path.GetFullPath(summary.VisualHeightmapPath)}");
+                Console.WriteLine($"Wrote terrain profile: {Path.GetFullPath(summary.ManifestPath)}");
+                ctx.ExitCode = 0;
+            });
+            mapCommand.AddCommand(genEastAsiaPlayableCommand);
             rootCommand.AddCommand(mapCommand);
 
             var navCommand = new Command("nav", "Navigation utilities");

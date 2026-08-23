@@ -4,7 +4,7 @@ namespace VisualTerrainEditorMod.Runtime;
 
 internal sealed class VisualTerrainEditorMapManifest
 {
-    public int Version { get; set; } = 3;
+    public int Version { get; set; } = 4;
 
     public string MapId { get; set; } = string.Empty;
 
@@ -55,6 +55,8 @@ internal sealed class VisualTerrainEditorMapManifest
     public int SampleScaleUnitsPerSampleDenominator { get; set; }
 
     public string BindingKind { get; set; } = string.Empty;
+
+    public bool UseAbsoluteHeightColorRamp { get; set; }
 
     public int LogicalColumns { get; set; }
 

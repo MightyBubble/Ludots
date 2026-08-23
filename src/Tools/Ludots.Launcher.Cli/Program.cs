@@ -343,6 +343,12 @@ static void PrintResolveResult(LauncherResolveResult result, bool asJson)
     Console.WriteLine($"orderedMods={string.Join(", ", result.Plan.OrderedModIds)}");
     Console.WriteLine($"bootstrap={result.Plan.BootstrapArtifactPath}");
     PrintPlanDiagnostics(result.Plan.Diagnostics);
+    if (result.Plan.BrowserRuntime != null)
+    {
+        Console.WriteLine(
+            $"hostBrowserRuntime={result.Plan.BrowserRuntime.Provider} required={result.Plan.BrowserRuntime.Required.ToString().ToLowerInvariant()} @ launcher plan");
+    }
+
     Console.WriteLine();
     foreach (var mod in result.Plan.Mods)
     {

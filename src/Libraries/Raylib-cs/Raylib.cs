@@ -594,6 +594,16 @@ namespace Raylib_cs
             MATERIAL_MAP_BRDF
         }
 
+        public enum TextureFilter
+        {
+            TEXTURE_FILTER_POINT = 0,
+            TEXTURE_FILTER_BILINEAR,
+            TEXTURE_FILTER_TRILINEAR,
+            TEXTURE_FILTER_ANISOTROPIC_4X,
+            TEXTURE_FILTER_ANISOTROPIC_8X,
+            TEXTURE_FILTER_ANISOTROPIC_16X
+        }
+
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe Image GenImageColor(int width, int height, Color color);
 
@@ -617,6 +627,9 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe void UpdateTextureRec(Texture2D texture, Rectangle rec, void* pixels);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetTextureFilter(Texture2D texture, TextureFilter filter);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawTexture(Texture2D texture, int posX, int posY, Color tint);

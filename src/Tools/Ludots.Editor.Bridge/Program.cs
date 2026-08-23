@@ -2388,8 +2388,40 @@ static class EditorRepo
 
     public static string ResolveWritableMapConfigPath(ModContext ctx, string mapId)
     {
+        var directSources = FindDirectMapConfigSources(ctx, mapId);
+        if (directSources.Count > 0)
+        {
+            return directSources[^1];
+        }
+
         var mod = ctx.ModsById[ctx.TargetModId];
         return Path.Combine(mod.RootPath, "assets", "Maps", $"{SanitizeId(mapId)}.json");
+    }
+
+    public static List<string> FindDirectMapConfigSources(ModContext ctx, string mapId)
+    {
+        var sources = new List<string>();
+        string fileName = $"{SanitizeId(mapId)}.json";
+
+        void AddIfExists(string path)
+        {
+            if (File.Exists(path))
+            {
+                sources.Add(path);
+            }
+        }
+
+        AddIfExists(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Maps", fileName));
+        AddIfExists(Path.Combine(ctx.RepoRoot, "assets", "Maps", fileName));
+
+        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        {
+            var mod = ctx.ModsById[ctx.LoadOrder[i]];
+            AddIfExists(Path.Combine(mod.RootPath, "assets", "Configs", "Maps", fileName));
+            AddIfExists(Path.Combine(mod.RootPath, "assets", "Maps", fileName));
+        }
+
+        return sources;
     }
 
     public static BoardMutationResult CreateBoard(ModContext ctx, string mapId, BoardCreateRequest request)
@@ -2744,6 +2776,11 @@ static class EditorRepo
 
     public static string ResolveWritableDataFilePath(ModContext ctx, string dataFile)
     {
+        if (TryResolveDataFile(ctx, dataFile, out string existingPath, out _))
+        {
+            return existingPath;
+        }
+
         var mod = ctx.ModsById[ctx.TargetModId];
         string rel = dataFile.TrimStart('\\', '/').Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
         if (rel.StartsWith("assets" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
@@ -3100,6 +3137,10 @@ static class EditorRepo
     private static void MergeMapConfig(Ludots.Core.Config.MapConfig target, Ludots.Core.Config.MapConfig source)
     {
         if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
+        if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset)) target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+        if (!string.IsNullOrWhiteSpace(source.StructureCollisionAsset)) target.StructureCollisionAsset = source.StructureCollisionAsset;
+        if (source.StructureAwareGrounding) target.StructureAwareGrounding = true;
+        if (source.StructureAwareNavigation) target.StructureAwareNavigation = true;
 
         if (source.Dependencies != null)
         {
@@ -3109,6 +3150,36 @@ static class EditorRepo
             }
         }
         if (source.Entities != null) target.Entities.AddRange(source.Entities);
+        if (source.Teams != null) target.Teams.AddRange(source.Teams);
+        if (source.Players != null) target.Players.AddRange(source.Players);
+        if (source.ParticipantRelationships != null)
+        {
+            target.ParticipantRelationships ??= new Ludots.Core.Config.ParticipantRelationshipConfig();
+
+            if (source.ParticipantRelationships.Teams != null)
+            {
+                target.ParticipantRelationships.Teams.AddRange(source.ParticipantRelationships.Teams);
+            }
+
+            if (source.ParticipantRelationships.Players != null)
+            {
+                target.ParticipantRelationships.Players.AddRange(source.ParticipantRelationships.Players);
+            }
+
+            if (source.ParticipantRelationships.PlayerTeams != null)
+            {
+                target.ParticipantRelationships.PlayerTeams.AddRange(source.ParticipantRelationships.PlayerTeams);
+            }
+        }
+
+        if (source.Metadata != null)
+        {
+            foreach (var kvp in source.Metadata)
+            {
+                target.Metadata[kvp.Key] = kvp.Value?.DeepClone();
+            }
+        }
+
         if (source.Tags != null)
         {
             for (int i = 0; i < source.Tags.Count; i++)
@@ -3152,6 +3223,11 @@ static class EditorRepo
             }
         }
 
+        if (source.VisualHeightmap != null)
+        {
+            target.VisualHeightmap = source.VisualHeightmap;
+        }
+
         if (source.TriggerTypes != null)
         {
             foreach (var tt in source.TriggerTypes)
@@ -3161,6 +3237,11 @@ static class EditorRepo
                     target.TriggerTypes.Add(tt);
                 }
             }
+        }
+
+        if (source.DefaultCamera != null)
+        {
+            target.DefaultCamera = source.DefaultCamera;
         }
     }
 

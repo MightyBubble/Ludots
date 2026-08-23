@@ -376,6 +376,48 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "east_asia_grid_raylib",
+      "name": "East Asia Grid Raylib",
+      "selectors": [
+        "$east_asia_grid"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "east_asia_hex_raylib",
+      "name": "East Asia HexGrid Raylib",
+      "selectors": [
+        "$east_asia_hex"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "east_asia_visual_heightmap_raylib",
+      "name": "East Asia Visual Heightmap Raylib",
+      "selectors": [
+        "$east_asia_visual_heightmap"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
     }
   ]
 }

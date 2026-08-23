@@ -327,6 +327,27 @@
         "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
         "projectPath": "WeaponBenchShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "east_asia_grid",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaGridEntryMod"
+      }
+    },
+    {
+      "name": "east_asia_hex",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaHexEntryMod"
+      }
+    },
+    {
+      "name": "east_asia_visual_heightmap",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapEntryMod"
+      }
     }
   ],
   "adapters": {

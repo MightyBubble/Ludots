@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using System.Threading.Tasks;
 using Ludots.Core.Mathematics;
@@ -13,7 +14,18 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 {
     private const float WaterHeight = 0.46f;
     private const float Tau = MathF.PI * 2f;
-    private const float HeightAmplitudeCm = 4_000f;
+    private const float HeightAmplitudeCm = 6_000f;
+    private const int ImportedSamplesPerChunk = 257;
+    private const int ImportedRenderSamplesPerChunk = 193;
+    private const int ImportedEagerProceduralMeshChunkThreshold = 512;
+    private const int ImportedEagerProceduralMeshVertexThreshold = 262_144;
+    private const float DefaultDisplayColorContrast = 2.2f;
+    // Vertical exaggeration bounds. Continent-scale visual heightmaps (e.g. East Asia)
+    // have tiny relief (~50m) spread over thousands of km, so a 1:1 scale renders as a
+    // flat sheet. A large default plus a wide clamp lets authors dial in visible 3D relief.
+    private const float MinDisplayHeightScale = 0.25f;
+    private const float MaxDisplayHeightScale = 5000f;
+    private const float ImportedDefaultDisplayHeightScale = 500f;
     private readonly VisualTerrainAssetDescriptor _asset;
     private readonly int _defaultMaterialAssetId;
     private readonly VisualTerrainErosionParameters _parameters = new();
@@ -49,6 +61,16 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     public VisualTerrainAssetDescriptor Asset => _asset;
 
     public IVisualHeightmap HeightmapRuntime => _heightmapRuntime;
+
+    public bool ApplyErosion { get; private set; } = true;
+
+    public float DisplayHeightScale { get; private set; } = 1f;
+
+    public float DisplayColorContrast { get; private set; } = DefaultDisplayColorContrast;
+
+    public bool DisplayFlatOverview { get; private set; } = false;
+
+    public VisualHeightmapRenderColorMode DisplayColorMode { get; private set; } = VisualHeightmapRenderColorMode.TerrainRamp;
 
     public float Scale => _parameters.Scale;
 
@@ -156,9 +178,15 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         _parameters.Reset();
         LowerBrush = false;
         ViewMode = TerrainViewMode.Eroded;
+        ApplyErosion = true;
+        DisplayHeightScale = 1f;
+        DisplayColorContrast = DefaultDisplayColorContrast;
+        DisplayFlatOverview = false;
+        DisplayColorMode = VisualHeightmapRenderColorMode.TerrainRamp;
         BrushRadiusMeters = Math.Clamp(MathF.Min(_asset.Bounds.Width, _asset.Bounds.Height) * 0.01f * 0.03f, 5f, 100f);
         MinHeightCm = 0f;
         MaxHeightCm = 0f;
+        PushRenderPresentation();
     }
 
     public bool Update()
@@ -166,7 +194,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         _dirtyChunksScratch.Clear();
         foreach (ChunkState state in _chunks.Values)
         {
-            if (!state.Dirty)
+            if (!state.Dirty && !state.HeightDirty)
             {
                 continue;
             }
@@ -181,16 +209,26 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
         for (int i = 0; i < _dirtyChunksScratch.Count; i++)
         {
-            RecomputeChunk(_dirtyChunksScratch[i]);
+            ChunkState state = _dirtyChunksScratch[i];
+            if (state.HeightDirty)
+            {
+                RecomputeChunk(state);
+                state.HeightDirty = false;
+            }
         }
 
         for (int i = 0; i < _dirtyChunksScratch.Count; i++)
         {
             ChunkState state = _dirtyChunksScratch[i];
-            RebuildChunkProceduralMesh(state);
-            state.Dirty = false;
+            if (state.Dirty)
+            {
+                RebuildChunkProceduralMesh(state);
+                state.Dirty = false;
+            }
         }
 
+        float previousMinHeightCm = MinHeightCm;
+        float previousMaxHeightCm = MaxHeightCm;
         float minHeightCm = float.PositiveInfinity;
         float maxHeightCm = float.NegativeInfinity;
         foreach (ChunkState state in _chunks.Values)
@@ -201,6 +239,16 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
         MinHeightCm = float.IsFinite(minHeightCm) ? minHeightCm : 0f;
         MaxHeightCm = float.IsFinite(maxHeightCm) ? maxHeightCm : 0f;
+        if (MathF.Abs(previousMinHeightCm - MinHeightCm) > 0.001f ||
+            MathF.Abs(previousMaxHeightCm - MaxHeightCm) > 0.001f)
+        {
+            PushRenderPresentation();
+            if (_asset.UseAbsoluteHeightColorRamp)
+            {
+                MarkAllLoadedChunksMeshDirty();
+            }
+        }
+
         return true;
     }
 
@@ -292,7 +340,102 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         baseHeight.CopyTo(state.BaseHeight);
         state.Edited = true;
         state.Dirty = true;
+        state.HeightDirty = true;
         MarkNeighbourhoodDirty(chunkX, chunkY);
+    }
+
+    public static VisualTerrainEditorDocument CreateFromVisualHeightmapAsset(
+        string id,
+        string displayName,
+        VisualHeightmapAsset source,
+        int defaultMaterialAssetId,
+        float defaultHeight01)
+    {
+        if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(id));
+        if (string.IsNullOrWhiteSpace(displayName)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(displayName));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (source.DefaultLayerIndex != 0)
+        {
+            throw new InvalidDataException("Visual terrain editor imports only single default-layer visual heightmaps.");
+        }
+
+        int chunkColumns = ResolveImportedChunkCount(source.SampleColumns, nameof(source.SampleColumns));
+        int chunkRows = ResolveImportedChunkCount(source.SampleRows, nameof(source.SampleRows));
+        var asset = new VisualTerrainAssetDescriptor(
+            id,
+            displayName,
+            source.Bounds,
+            chunkColumns,
+            chunkRows,
+            ImportedSamplesPerChunk,
+            ImportedSamplesPerChunk,
+            ImportedRenderSamplesPerChunk,
+            ImportedRenderSamplesPerChunk,
+            defaultHeight01,
+            VisualTerrainBindingDescriptor.None,
+            VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
+            source.InterpolationMode,
+            useAbsoluteHeightColorRamp: true);
+
+        var document = new VisualTerrainEditorDocument(asset, defaultMaterialAssetId);
+        document.ApplyErosion = false;
+        document.ViewMode = TerrainViewMode.Base;
+        // Imported real-world heightmaps span continental distances with small absolute
+        // relief; exaggerate vertically by default so terrain reads as 3D, not a flat sheet.
+        document.SetDisplayHeightScale(ImportedDefaultDisplayHeightScale);
+        document.RestoreSourceHeightmap(source);
+        if (ShouldEagerBuildImportedProceduralMeshes(document.Asset))
+        {
+            document.MarkAllLoadedChunksDirty();
+            document.Update();
+        }
+
+        return document;
+    }
+
+    internal static bool ShouldEagerBuildImportedProceduralMeshes(VisualTerrainAssetDescriptor asset)
+    {
+        if (asset == null) throw new ArgumentNullException(nameof(asset));
+
+        long totalRenderVertices = checked((long)asset.ChunkCount * asset.RuntimeVertexCapacityPerChunk);
+        return asset.ChunkCount <= ImportedEagerProceduralMeshChunkThreshold &&
+            totalRenderVertices <= ImportedEagerProceduralMeshVertexThreshold;
+    }
+
+    public VisualHeightmapAsset CreateVisualHeightmapAsset(string layerName)
+    {
+        EnsureAllChunksLoaded(requireProceduralMesh: false);
+        MarkAllLoadedChunksDirty();
+        Update();
+
+        var samples = new short[checked(_asset.SampleColumns * _asset.SampleRows)];
+        int chunkStepX = _asset.SamplesPerChunkColumn - 1;
+        int chunkStepY = _asset.SamplesPerChunkRow - 1;
+        for (int chunkY = 0; chunkY < _asset.ChunkRows; chunkY++)
+        {
+            for (int chunkX = 0; chunkX < _asset.ChunkColumns; chunkX++)
+            {
+                ChunkState state = EnsureChunkLoaded(chunkX, chunkY, requireProceduralMesh: false);
+                for (int localY = 0; localY < _asset.SamplesPerChunkRow; localY++)
+                {
+                    int globalY = (chunkY * chunkStepY) + localY;
+                    for (int localX = 0; localX < _asset.SamplesPerChunkColumn; localX++)
+                    {
+                        int globalX = (chunkX * chunkStepX) + localX;
+                        int globalIndex = (globalY * _asset.SampleColumns) + globalX;
+                        samples[globalIndex] = state.HeightSamplesCm[GetChunkSampleIndex(localX, localY)];
+                    }
+                }
+            }
+        }
+
+        return VisualHeightmapAsset.CreateSingleLayer(
+            _asset.Bounds,
+            _asset.SampleColumns,
+            _asset.SampleRows,
+            samples,
+            layerName,
+            _asset.InterpolationMode);
     }
 
     public void PaintWorld(int worldXCm, int worldYCm)
@@ -351,6 +494,17 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         }
     }
 
+    public void SetApplyErosion(bool applyErosion)
+    {
+        if (ApplyErosion == applyErosion)
+        {
+            return;
+        }
+
+        ApplyErosion = applyErosion;
+        MarkAllLoadedChunksDirty();
+    }
+
     public void SetBrushMode(bool lowerBrush)
     {
         LowerBrush = lowerBrush;
@@ -391,8 +545,87 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         MarkAllLoadedChunksDirty();
     }
 
+    public void AdjustDisplayHeightScale(float delta)
+    {
+        float next = Math.Clamp(DisplayHeightScale + delta, MinDisplayHeightScale, MaxDisplayHeightScale);
+        if (MathF.Abs(next - DisplayHeightScale) <= 0.0001f)
+        {
+            return;
+        }
+
+        DisplayHeightScale = next;
+        PushRenderPresentation();
+        MarkAllLoadedChunksMeshDirty();
+    }
+
+    public void SetDisplayHeightScale(float value)
+    {
+        float next = Math.Clamp(value, MinDisplayHeightScale, MaxDisplayHeightScale);
+        if (MathF.Abs(next - DisplayHeightScale) <= 0.0001f)
+        {
+            return;
+        }
+
+        DisplayHeightScale = next;
+        PushRenderPresentation();
+        MarkAllLoadedChunksMeshDirty();
+    }
+
+    public void AdjustDisplayColorContrast(float delta)
+    {
+        float next = Math.Clamp(DisplayColorContrast + delta, 0.5f, 4f);
+        if (MathF.Abs(next - DisplayColorContrast) <= 0.0001f)
+        {
+            return;
+        }
+
+        DisplayColorContrast = next;
+        PushRenderPresentation();
+        MarkAllLoadedChunksMeshDirty();
+    }
+
+    public void SetDisplayFlatOverview(bool flatOverview)
+    {
+        if (DisplayFlatOverview == flatOverview)
+        {
+            return;
+        }
+
+        DisplayFlatOverview = flatOverview;
+        PushRenderPresentation();
+    }
+
+    public void SetDisplayColorMode(VisualHeightmapRenderColorMode colorMode)
+    {
+        if (!Enum.IsDefined(colorMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(colorMode));
+        }
+
+        if (DisplayColorMode == colorMode)
+        {
+            return;
+        }
+
+        DisplayColorMode = colorMode;
+        PushRenderPresentation();
+        MarkAllLoadedChunksMeshDirty();
+    }
+
     public void Dispose()
     {
+    }
+
+    private void PushRenderPresentation()
+    {
+        _heightmapRuntime.SetRenderPresentation(
+            DisplayHeightScale,
+            DisplayColorContrast,
+            DisplayFlatOverview,
+            DisplayColorMode,
+            _asset.UseAbsoluteHeightColorRamp,
+            MinHeightCm,
+            MaxHeightCm);
     }
 
     private ChunkState EnsureChunkLoaded(int chunkX, int chunkY, bool requireProceduralMesh = true)
@@ -420,8 +653,77 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         PopulateDefaultChunkBaseHeights(state);
         _chunks.Add(key, state);
         _heightmapStore.SetChunk(state.HeightChunk);
+        state.HeightDirty = true;
         state.Dirty = requireProceduralMesh;
         return state;
+    }
+
+    private void EnsureAllChunksLoaded(bool requireProceduralMesh)
+    {
+        for (int chunkY = 0; chunkY < _asset.ChunkRows; chunkY++)
+        {
+            for (int chunkX = 0; chunkX < _asset.ChunkColumns; chunkX++)
+            {
+                EnsureChunkLoaded(chunkX, chunkY, requireProceduralMesh);
+            }
+        }
+    }
+
+    private void RestoreSourceHeightmap(VisualHeightmapAsset source)
+    {
+        int chunkStepX = _asset.SamplesPerChunkColumn - 1;
+        int chunkStepY = _asset.SamplesPerChunkRow - 1;
+        for (int chunkY = 0; chunkY < _asset.ChunkRows; chunkY++)
+        {
+            for (int chunkX = 0; chunkX < _asset.ChunkColumns; chunkX++)
+            {
+                ChunkState state = EnsureChunkLoaded(chunkX, chunkY, requireProceduralMesh: false);
+                float minHeightCm = float.PositiveInfinity;
+                float maxHeightCm = float.NegativeInfinity;
+                for (int localY = 0; localY < _asset.SamplesPerChunkRow; localY++)
+                {
+                    int globalY = (chunkY * chunkStepY) + localY;
+                    for (int localX = 0; localX < _asset.SamplesPerChunkColumn; localX++)
+                    {
+                        int globalX = (chunkX * chunkStepX) + localX;
+                        int sampleIndex = GetChunkSampleIndex(localX, localY);
+                        float heightCm = ReadSourceHeightCm(source, globalX, globalY);
+                        float height01 = HeightCmToBaseHeightValue(heightCm, _asset.DefaultHeight01);
+                        state.BaseHeight[sampleIndex] = height01;
+                        state.ErodedHeight[sampleIndex] = height01;
+                        state.RidgeMap[sampleIndex] = 0f;
+                        state.Drainage[sampleIndex] = 0f;
+                        state.HeightSamplesCm[sampleIndex] = (short)Math.Clamp(MathF.Round(heightCm), short.MinValue, short.MaxValue);
+                        minHeightCm = MathF.Min(minHeightCm, heightCm);
+                        maxHeightCm = MathF.Max(maxHeightCm, heightCm);
+                    }
+                }
+
+                state.Edited = true;
+                state.Dirty = false;
+                state.HeightDirty = false;
+                state.MinHeightCm = float.IsFinite(minHeightCm) ? minHeightCm : 0f;
+                state.MaxHeightCm = float.IsFinite(maxHeightCm) ? maxHeightCm : 0f;
+                _heightmapStore.TouchChunk(state.ChunkX, state.ChunkY);
+            }
+        }
+
+        RefreshLoadedHeightRange();
+        PushRenderPresentation();
+    }
+
+    private void RefreshLoadedHeightRange()
+    {
+        float minHeightCm = float.PositiveInfinity;
+        float maxHeightCm = float.NegativeInfinity;
+        foreach (ChunkState state in _chunks.Values)
+        {
+            minHeightCm = MathF.Min(minHeightCm, state.MinHeightCm);
+            maxHeightCm = MathF.Max(maxHeightCm, state.MaxHeightCm);
+        }
+
+        MinHeightCm = float.IsFinite(minHeightCm) ? minHeightCm : 0f;
+        MaxHeightCm = float.IsFinite(maxHeightCm) ? maxHeightCm : 0f;
     }
 
     private void PopulateDefaultChunkBaseHeights(ChunkState state)
@@ -475,7 +777,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                 float falloff = t * t * (3f - (2f * t));
                 int index = GetChunkSampleIndex(localX, localY);
                 float current = state.BaseHeight[index];
-                float next = Clamp01(current + (amount * falloff));
+                float next = ClampEditableHeightValue(current + (amount * falloff));
                 if (MathF.Abs(next - current) <= 1e-6f)
                 {
                     continue;
@@ -499,12 +801,22 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                 if (_chunks.TryGetValue(key, out ChunkState? state))
                 {
                     state.Dirty = true;
+                    state.HeightDirty = true;
                 }
             }
         }
     }
 
     private void MarkAllLoadedChunksDirty()
+    {
+        foreach (ChunkState state in _chunks.Values)
+        {
+            state.Dirty = true;
+            state.HeightDirty = true;
+        }
+    }
+
+    private void MarkAllLoadedChunksMeshDirty()
     {
         foreach (ChunkState state in _chunks.Values)
         {
@@ -537,8 +849,10 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                         globalX / (float)(_asset.SampleColumns - 1),
                         globalY / (float)(_asset.SampleRows - 1));
 
-                    FilterOutput output = EvaluateErosion(uv, height, slope, fadeTarget, _parameters);
-                    float erodedHeight = Clamp01(height + output.HeightDelta);
+                    FilterOutput output = ApplyErosion
+                        ? EvaluateErosion(uv, height, slope, fadeTarget, _parameters)
+                        : new FilterOutput(0f, 0f);
+                    float erodedHeight = ClampEditableHeightValue(height + output.HeightDelta);
                     state.RidgeMap[index] = output.RidgeMap;
                     state.ErodedHeight[index] = erodedHeight;
 
@@ -563,6 +877,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
         state.MinHeightCm = float.IsFinite(minHeightCm) ? minHeightCm : 0f;
         state.MaxHeightCm = float.IsFinite(maxHeightCm) ? maxHeightCm : 0f;
+        _heightmapStore.TouchChunk(state.ChunkX, state.ChunkY);
     }
 
     private void RebuildChunkProceduralMesh(ChunkState state)
@@ -570,6 +885,8 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         float meshStepX = 1f / (_asset.RenderColumnsPerChunk - 1);
         float meshStepY = 1f / (_asset.RenderRowsPerChunk - 1);
         WorldAabbCm chunkBounds = GetChunkBounds(state.ChunkX, state.ChunkY);
+        float chunkCenterXMeters = ((chunkBounds.Left + chunkBounds.Right) * 0.5f) * 0.01f;
+        float chunkCenterZMeters = ((chunkBounds.Top + chunkBounds.Bottom) * 0.5f) * 0.01f;
         int renderColumns = _asset.RenderColumnsPerChunk;
         int renderRows = _asset.RenderRowsPerChunk;
         int vertexCount = renderColumns * renderRows;
@@ -581,7 +898,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             for (int x = 0; x < renderColumns; x++)
             {
                 float u = x * meshStepX;
-                RenderVertexData vertex = BuildRenderVertex(chunkBounds, u, v);
+                RenderVertexData vertex = BuildRenderVertex(chunkBounds, chunkCenterXMeters, chunkCenterZMeters, u, v);
                 WriteProceduralVertex(state.ProceduralMesh, (y * renderColumns) + x, in vertex, u, v);
             }
         });
@@ -611,12 +928,12 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             new[] { new ProceduralSubmeshDescriptor(0, indexCount, state.MaterialAssetId) },
             new ProceduralMeshBounds(
                 new Vector3(
-                    ((chunkBounds.Left + chunkBounds.Right) * 0.5f) * 0.01f,
-                    ((state.MinHeightCm + state.MaxHeightCm) * 0.5f) * 0.01f,
-                    ((chunkBounds.Top + chunkBounds.Bottom) * 0.5f) * 0.01f),
+                    0f,
+                    ((state.MinHeightCm + state.MaxHeightCm) * 0.5f) * 0.01f * DisplayHeightScale,
+                    0f),
                 new Vector3(
                     chunkBounds.Width * 0.005f,
-                    MathF.Max(0.5f, (state.MaxHeightCm - state.MinHeightCm) * 0.005f),
+                    MathF.Max(0.5f, (state.MaxHeightCm - state.MinHeightCm) * 0.005f * DisplayHeightScale),
                     chunkBounds.Height * 0.005f)),
             ProceduralMeshUsageHint.Static);
     }
@@ -627,7 +944,12 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         return normal.Y < 0f ? -normal : normal;
     }
 
-    private RenderVertexData BuildRenderVertex(WorldAabbCm chunkBounds, float localU, float localV)
+    private RenderVertexData BuildRenderVertex(
+        WorldAabbCm chunkBounds,
+        float chunkCenterXMeters,
+        float chunkCenterZMeters,
+        float localU,
+        float localV)
     {
         float worldXMeters = Lerp(chunkBounds.Left, chunkBounds.Right, localU) * 0.01f;
         float worldZMeters = Lerp(chunkBounds.Top, chunkBounds.Bottom, localV) * 0.01f;
@@ -637,35 +959,45 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         float ridge = SampleFieldWorld(worldXCm, worldYCm, TerrainFieldKind.Ridge);
         float drainage = SampleFieldWorld(worldXCm, worldYCm, TerrainFieldKind.Drainage);
         float height;
+        float heightCm;
         Vector3 normal;
-        if (ViewMode == TerrainViewMode.Base)
+        bool useAbsoluteHeightColor = _asset.UseAbsoluteHeightColorRamp && ViewMode != TerrainViewMode.Ridges;
+        if (useAbsoluteHeightColor)
+        {
+            TrySampleRuntimeSurface(worldXCm, worldYCm, out height, out heightCm, out normal);
+        }
+        else if (ViewMode == TerrainViewMode.Base)
         {
             height = baseHeight;
+            heightCm = HeightValueToCm(height, _asset.DefaultHeight01);
             normal = ComputeBaseRenderNormal(worldXCm, worldYCm);
         }
         else
         {
-            TrySampleRuntimeSurface(worldXCm, worldYCm, out height, out normal);
+            TrySampleRuntimeSurface(worldXCm, worldYCm, out height, out heightCm, out normal);
         }
 
         Vector3 position = new(
-            worldXMeters,
-            HeightToMeters(height, _asset.DefaultHeight01),
-            worldZMeters);
-        Vector3 color = ViewMode switch
+            worldXMeters - chunkCenterXMeters,
+            HeightToDisplayMeters(height, _asset.DefaultHeight01),
+            worldZMeters - chunkCenterZMeters);
+        Vector3 color = useAbsoluteHeightColor
+            ? ShadeAbsoluteHeight(heightCm, normal, DisplayColorMode)
+            : ViewMode switch
         {
             TerrainViewMode.Base => ShadeSurface(baseHeight, normal, ridge, 0f),
             TerrainViewMode.Eroded => ShadeSurface(height, normal, ridge, drainage),
             _ => ShadeRidges(ridge, drainage),
         };
 
-        return new RenderVertexData(position, normal, color);
+        return new RenderVertexData(position, normal, useAbsoluteHeightColor ? color : ApplyColorContrast(color, DisplayColorContrast));
     }
 
-    private void TrySampleRuntimeSurface(float worldXCm, float worldYCm, out float height, out Vector3 normal)
+    private void TrySampleRuntimeSurface(float worldXCm, float worldYCm, out float height, out float heightCm, out Vector3 normal)
     {
         if (_heightmapRuntime.TrySampleSurface(worldXCm, worldYCm, out float runtimeHeightCm, out normal))
         {
+            heightCm = runtimeHeightCm;
             height = _asset.DefaultHeight01 + (runtimeHeightCm / HeightAmplitudeCm);
             return;
         }
@@ -713,10 +1045,10 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         float vPrev = MathF.Max(_asset.Bounds.Top, worldYCm - sampleStepY);
         float vNext = MathF.Min(_asset.Bounds.Bottom, worldYCm + sampleStepY);
 
-        float hL = HeightToMeters(SampleFieldWorld(uPrev, worldYCm, field), _asset.DefaultHeight01);
-        float hR = HeightToMeters(SampleFieldWorld(uNext, worldYCm, field), _asset.DefaultHeight01);
-        float hD = HeightToMeters(SampleFieldWorld(worldXCm, vPrev, field), _asset.DefaultHeight01);
-        float hU = HeightToMeters(SampleFieldWorld(worldXCm, vNext, field), _asset.DefaultHeight01);
+        float hL = HeightToDisplayMeters(SampleFieldWorld(uPrev, worldYCm, field), _asset.DefaultHeight01);
+        float hR = HeightToDisplayMeters(SampleFieldWorld(uNext, worldYCm, field), _asset.DefaultHeight01);
+        float hD = HeightToDisplayMeters(SampleFieldWorld(worldXCm, vPrev, field), _asset.DefaultHeight01);
+        float hU = HeightToDisplayMeters(SampleFieldWorld(worldXCm, vNext, field), _asset.DefaultHeight01);
 
         float spanMetersX = MathF.Max(0.001f, (uNext - uPrev) * 0.01f);
         float spanMetersZ = MathF.Max(0.001f, (vNext - vPrev) * 0.01f);
@@ -961,6 +1293,57 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         return Clamp01(defaultHeight01 + (mountain * 0.16f) - (basin * 0.05f) + (noise * 0.025f));
     }
 
+    private static int ResolveImportedChunkCount(int sampleCount, string name)
+    {
+        int step = ImportedSamplesPerChunk - 1;
+        int spans = sampleCount - 1;
+        if (spans <= 0 || spans % step != 0)
+        {
+            throw new InvalidDataException(
+                $"Visual terrain editor import requires {(ImportedSamplesPerChunk - 1)}-sample chunk spans; {name} was {sampleCount}.");
+        }
+
+        return spans / step;
+    }
+
+    private static float ReadSourceHeightCm(VisualHeightmapAsset source, int globalX, int globalY)
+    {
+        VisualHeightmapLayerDefinition layer = source.Layers[source.DefaultLayerIndex];
+        int index = layer.SampleOffset + (globalY * source.SampleColumns) + globalX;
+        if (source.UsesRawUInt16Samples)
+        {
+            return source.SampleScale.Decode(source.HeightSamplesRaw[index]);
+        }
+
+        return source.HeightSamplesCm[index];
+    }
+
+    private static float HeightCmToBaseHeightValue(float heightCm, float defaultHeight01)
+    {
+        return defaultHeight01 + (heightCm / HeightAmplitudeCm);
+    }
+
+    private Vector3 ShadeAbsoluteHeight(float heightCm, Vector3 normal, VisualHeightmapRenderColorMode colorMode)
+    {
+        if (colorMode == VisualHeightmapRenderColorMode.HeightmapGrayscale)
+        {
+            float rangeCm = MathF.Max(1f, MaxHeightCm - MinHeightCm);
+            float rawBand = Math.Clamp((heightCm - MinHeightCm) / rangeCm, 0f, 1f);
+            float colorBand = VisualHeightmapColorRamp.ResolveHeightBandContrast(rawBand, DisplayColorContrast);
+            return VisualHeightmapColorRamp.ResolveGrayscale(colorBand);
+        }
+
+        if (colorMode != VisualHeightmapRenderColorMode.TerrainRamp)
+        {
+            throw new ArgumentOutOfRangeException(nameof(colorMode));
+        }
+
+        // Land and sea normalize within their own vertical spans so land relief stays readable
+        // even when the sea floor spans a far larger depth range.
+        float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
+        return VisualHeightmapColorRamp.ResolveColorRanged(heightCm, slope, MinHeightCm, MaxHeightCm, seaLevelCm: 0f, DisplayColorContrast);
+    }
+
     private static Vector3 ShadeSurface(float height, Vector3 normal, float ridge, float drainage)
     {
         Vector3 lightDir = Vector3.Normalize(new Vector3(-0.55f, 1f, 0.35f));
@@ -1058,11 +1441,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         proceduralMesh.Normals[floatOffset + 2] = vertex.Normal.Z;
 
         int tangentOffset = vertexIndex * 4;
-        Vector3 tangent = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, vertex.Normal));
-        if (tangent.LengthSquared() <= 1e-6f)
-        {
-            tangent = Vector3.UnitX;
-        }
+        Vector3 tangent = ComputeRenderTangent(vertex.Normal);
 
         proceduralMesh.Tangents[tangentOffset + 0] = tangent.X;
         proceduralMesh.Tangents[tangentOffset + 1] = tangent.Y;
@@ -1080,9 +1459,55 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         }
     }
 
+    private static Vector3 ComputeRenderTangent(Vector3 normal)
+    {
+        Vector3 tangent = Vector3.Cross(Vector3.UnitY, normal);
+        if (!IsFiniteNonZero(tangent))
+        {
+            tangent = Vector3.Cross(Vector3.UnitZ, normal);
+        }
+
+        if (!IsFiniteNonZero(tangent))
+        {
+            tangent = Vector3.UnitX;
+        }
+
+        return Vector3.Normalize(tangent);
+    }
+
+    private static bool IsFiniteNonZero(Vector3 value)
+    {
+        return float.IsFinite(value.X) &&
+            float.IsFinite(value.Y) &&
+            float.IsFinite(value.Z) &&
+            value.LengthSquared() > 1e-10f;
+    }
+
     private static float HeightToMeters(float height, float defaultHeight01)
     {
-        return (height - defaultHeight01) * HeightAmplitudeCm * 0.01f;
+        return HeightValueToCm(height, defaultHeight01) * 0.01f;
+    }
+
+    private static float HeightValueToCm(float height, float defaultHeight01)
+    {
+        return (height - defaultHeight01) * HeightAmplitudeCm;
+    }
+
+    private float ClampEditableHeightValue(float height)
+    {
+        if (!_asset.UseAbsoluteHeightColorRamp)
+        {
+            return Clamp01(height);
+        }
+
+        float minValue = _asset.DefaultHeight01 + (short.MinValue / HeightAmplitudeCm);
+        float maxValue = _asset.DefaultHeight01 + (short.MaxValue / HeightAmplitudeCm);
+        return Math.Clamp(height, minValue, maxValue);
+    }
+
+    private float HeightToDisplayMeters(float height, float defaultHeight01)
+    {
+        return HeightToMeters(height, defaultHeight01) * DisplayHeightScale;
     }
 
     private int WorldToChunkX(int worldXCm)
@@ -1112,6 +1537,12 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private static Vector3 Clamp01(Vector3 value)
     {
         return Vector3.Clamp(value, Vector3.Zero, Vector3.One);
+    }
+
+    private static Vector3 ApplyColorContrast(Vector3 color, float contrast)
+    {
+        contrast = Math.Clamp(contrast, 0.5f, 4f);
+        return Clamp01(((color - new Vector3(0.5f)) * contrast) + new Vector3(0.5f));
     }
 
     private static float PowInv(float value, float power)
@@ -1244,6 +1675,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                 includeColors32: true);
             HeightChunk = new ChunkedVisualHeightmapChunk(chunkX, chunkY, HeightSamplesCm);
             Dirty = true;
+            HeightDirty = true;
             MaterialAssetId = materialAssetId;
         }
 
@@ -1268,6 +1700,8 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         public ChunkedVisualHeightmapChunk HeightChunk { get; }
 
         public bool Dirty { get; set; }
+
+        public bool HeightDirty { get; set; }
 
         public bool Edited { get; set; }
 

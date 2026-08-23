@@ -14,7 +14,8 @@ namespace Ludots.Core.Gameplay.Camera
             {
                 behaviors.Add(new ZoomBehavior(
                     definition.ZoomCmPerWheel,
-                    definition.MinDistanceCm, definition.MaxDistanceCm));
+                    definition.MinDistanceCm, definition.MaxDistanceCm,
+                    definition.ZoomFactorPerWheel));
             }
 
             switch (definition.PanMode)

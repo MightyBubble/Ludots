@@ -2014,6 +2014,10 @@ namespace Ludots.Core.Engine
                     ApplyBoardSpatialConfig(primaryBoard);
                     LoadBoardTerrainData(session, mapConfig);
                 }
+                else if (session.VisualHeightmap is IVisualHeightmapRenderSource visualHeightmapSource)
+                {
+                    ApplyVisualHeightmapSpatialConfig(visualHeightmapSource);
+                }
 
                 LoadNavForMap(mapId, mapConfig);
                 LoadPathingForSession(session);
@@ -2187,6 +2191,10 @@ namespace Ludots.Core.Engine
                 ApplyBoardSpatialConfig(primaryBoard);
                 LoadBoardTerrainData(session, mapConfig);
                 LoadNavForMap(innerMapId, mapConfig);
+            }
+            else if (session.VisualHeightmap is IVisualHeightmapRenderSource visualHeightmapSource)
+            {
+                ApplyVisualHeightmapSpatialConfig(visualHeightmapSource);
             }
             LoadPathingForSession(session);
 
@@ -2496,6 +2504,63 @@ namespace Ludots.Core.Engine
                 _spatialPartitionUpdateSystem?.SetPartition(_spatialPartition, WorldSizeSpec);
         }
 
+        private void ApplyVisualHeightmapSpatialConfig(IVisualHeightmapRenderSource visualHeightmap)
+        {
+            if (visualHeightmap == null)
+            {
+                throw new ArgumentNullException(nameof(visualHeightmap));
+            }
+
+            WorldAabbCm bounds = visualHeightmap.Bounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Visual heightmap world bounds must be positive, got {bounds}.");
+            }
+
+            int gridCellSizeCm = ResolveVisualHeightmapGridCellSizeCm(visualHeightmap);
+            WorldSizeSpec = new WorldSizeSpec(bounds, gridCellSizeCm);
+            SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
+            _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: SpatialScaleDefaults.PartitionChunkCells);
+
+            if (SpatialQueries is not SpatialQueryService sharedSpatialQueries)
+            {
+                throw new InvalidOperationException(
+                    $"Engine SpatialQueries must remain a stable {nameof(SpatialQueryService)} instance during visual heightmap spatial swaps.");
+            }
+
+            sharedSpatialQueries.SetBackend(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
+            sharedSpatialQueries.SetCoordinateConverter(SpatialCoords);
+            sharedSpatialQueries.SetLoadedChunks(null);
+            SpatialQueries = sharedSpatialQueries;
+            WireUpPositionProvider();
+
+            RemoveService(CoreServiceKeys.HexMetrics);
+            RemoveService(CoreServiceKeys.LoadedChunks);
+            RemoveService(CoreServiceKeys.LoadedGraphRuntime);
+            HexGridAOI = null;
+            _gasGraphRuntimeApi?.BindLoadedGraphRuntime(null);
+
+            SetService(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
+            SetService(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
+            SetService(CoreServiceKeys.SpatialQueryService, SpatialQueries);
+
+            _worldToGridSyncSystem?.SetCoordinateConverter(SpatialCoords);
+            _spatialPartitionUpdateSystem?.SetPartition(_spatialPartition, WorldSizeSpec);
+        }
+
+        private static int ResolveVisualHeightmapGridCellSizeCm(IVisualHeightmapRenderSource visualHeightmap)
+        {
+            int chunkStepColumns = Math.Max(1, visualHeightmap.SamplesPerChunkColumn - 1);
+            int chunkStepRows = Math.Max(1, visualHeightmap.SamplesPerChunkRow - 1);
+            int totalStepColumns = checked(Math.Max(1, visualHeightmap.ChunkColumns) * chunkStepColumns);
+            int totalStepRows = checked(Math.Max(1, visualHeightmap.ChunkRows) * chunkStepRows);
+            float sampleStepXCm = visualHeightmap.Bounds.Width / (float)totalStepColumns;
+            float sampleStepYCm = visualHeightmap.Bounds.Height / (float)totalStepRows;
+            float cellSizeCm = MathF.Min(sampleStepXCm, sampleStepYCm);
+            return Math.Max(1, (int)MathF.Round(cellSizeCm));
+        }
+
         private void LoadBoardTerrainData(MapSession session, MapConfig mapConfig)
         {
             VertexMap?.UnsubscribeFromLoadedChunks();
@@ -2512,33 +2577,48 @@ namespace Ludots.Core.Engine
                     string dataFile = boardConfig?.DataFile;
                     if (!string.IsNullOrWhiteSpace(dataFile))
                     {
-                        var vtxMap = LoadVertexMapFromFile(dataFile);
-                        if (vtxMap != null)
+                        if (boardConfig == null)
                         {
-                            terrainBoard.VertexMap = vtxMap;
-                            terrainBoard.LogicTerrain = new VertexMapLogicTerrainField(vtxMap);
-                            VertexMap = vtxMap;
-                            LogicTerrain = terrainBoard.LogicTerrain;
-                            SetService(CoreServiceKeys.VertexMap, vtxMap);
-                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
-                            Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
+                            throw new InvalidOperationException($"Board '{board.Name}' declares DataFile '{dataFile}' but has no matching BoardConfig.");
                         }
 
+                        if (board is GridBoard gridBoard)
+                        {
+                            LogicTerrainField gridTerrain = LoadGridLogicTerrainFromFile(dataFile, boardConfig);
+                            gridBoard.LogicTerrain = gridTerrain;
+                            if (LogicTerrain == null)
+                            {
+                                LogicTerrain = gridTerrain;
+                                SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                            }
+
+                            Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded Grid LogicTerrain {gridTerrain.WidthChunks}x{gridTerrain.HeightChunks} chunks for board '{board.Name}'");
+                            continue;
+                        }
+
+                        var vtxMap = LoadVertexMapFromFile(dataFile);
+                        terrainBoard.VertexMap = vtxMap;
+                        terrainBoard.LogicTerrain = new VertexMapLogicTerrainField(vtxMap);
+                        VertexMap = vtxMap;
+                        LogicTerrain = terrainBoard.LogicTerrain;
+                        SetService(CoreServiceKeys.VertexMap, vtxMap);
+                        SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                        Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
                         continue;
                     }
 
-                    if (board is GridBoard gridBoard && boardConfig != null)
+                    if (board is GridBoard flatGridBoard && boardConfig != null)
                     {
                         int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
                         int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-                        gridBoard.LogicTerrain = new FlatGridLogicTerrainField(
+                        flatGridBoard.LogicTerrain = new FlatGridLogicTerrainField(
                             widthCells,
                             heightCells,
                             boardConfig.GridCellSizeCm,
                             boardConfig.ChunkSizeCells);
                         if (LogicTerrain == null)
                         {
-                            LogicTerrain = gridBoard.LogicTerrain;
+                            LogicTerrain = flatGridBoard.LogicTerrain;
                             SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
                         }
 
@@ -2565,60 +2645,104 @@ namespace Ludots.Core.Engine
 
         private VertexMap LoadVertexMapFromFile(string dataFile)
         {
-            if (string.IsNullOrWhiteSpace(dataFile)) return null;
-
-            if (dataFile.StartsWith("/") || dataFile.StartsWith("\\")) dataFile = dataFile.Substring(1);
-
-            string rel = dataFile.Replace('\\', '/');
-            var candidates = new List<string>(6) { rel };
-            if (!rel.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
-            {
-                candidates.Add($"assets/{rel}");
-            }
-            if (!rel.Contains("Data/Maps", StringComparison.OrdinalIgnoreCase))
-            {
-                candidates.Add($"assets/Data/Maps/{rel}");
-            }
-
-            Stream TryOpen(string uri)
-            {
-                try { return VFS.GetStream(uri); }
-                catch { return null; }
-            }
-
-            Stream stream = null;
-            for (int i = 0; i < candidates.Count && stream == null; i++)
-            {
-                stream = TryOpen($"Core:{candidates[i]}");
-            }
-
-            if (stream == null)
-            {
-                foreach (var modId in ModLoader.LoadedModIds)
-                {
-                    for (int i = 0; i < candidates.Count && stream == null; i++)
-                    {
-                        stream = TryOpen($"{modId}:{candidates[i]}");
-                    }
-                    if (stream != null) break;
-                }
-            }
-
-            if (stream == null) return null;
-
+            using Stream stream = OpenBoardDataFileStream(dataFile);
             try
             {
                 return VertexMapBinary.Read(stream);
             }
             catch (Exception ex)
             {
-                Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to load VertexMapBinary '{dataFile}': {ex.Message}");
-                return null;
+                throw new InvalidDataException($"Failed to load VertexMapBinary '{dataFile}': {ex.Message}", ex);
             }
-            finally
+        }
+
+        private LogicTerrainField LoadGridLogicTerrainFromFile(string dataFile, BoardConfig boardConfig)
+        {
+            using Stream stream = OpenBoardDataFileStream(dataFile);
+            try
             {
-                stream.Dispose();
+                return ReactLogicTerrainBinary.ReadGridLogicTerrainField(
+                    dataFile,
+                    stream,
+                    boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm);
             }
+            catch (Exception ex)
+            {
+                throw new InvalidDataException($"Failed to load Grid terrain data '{dataFile}': {ex.Message}", ex);
+            }
+        }
+
+        private Stream OpenBoardDataFileStream(string dataFile)
+        {
+            if (string.IsNullOrWhiteSpace(dataFile))
+            {
+                throw new ArgumentException("Board DataFile is required.", nameof(dataFile));
+            }
+
+            if (dataFile.StartsWith("/") || dataFile.StartsWith("\\")) dataFile = dataFile.Substring(1);
+            string rel = dataFile.Replace('\\', '/');
+            var candidates = new List<string>(6);
+            void AddCandidate(string candidate)
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    if (string.Equals(candidates[i], candidate, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    candidates.Add(candidate);
+                }
+            }
+
+            AddCandidate(rel);
+            if (!rel.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                AddCandidate($"assets/{rel}");
+            }
+            if (!rel.Contains("Data/Maps", StringComparison.OrdinalIgnoreCase))
+            {
+                AddCandidate($"assets/Data/Maps/{rel}");
+            }
+
+            var matches = new List<string>();
+            void AddMatchIfExists(string uri)
+            {
+                if (VFS.TryResolveFullPath(uri, out string fullPath) && File.Exists(fullPath))
+                {
+                    matches.Add(uri);
+                }
+            }
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                AddMatchIfExists($"Core:{candidates[i]}");
+            }
+
+            foreach (var modId in ModLoader.LoadedModIds)
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    AddMatchIfExists($"{modId}:{candidates[i]}");
+                }
+            }
+
+            if (matches.Count == 0)
+            {
+                throw new FileNotFoundException(
+                    $"Board DataFile '{dataFile}' could not be resolved. Checked relative paths: {string.Join(", ", candidates)}.");
+            }
+
+            if (matches.Count > 1)
+            {
+                throw new InvalidOperationException(
+                    $"Board DataFile '{dataFile}' resolves to multiple mounted assets ({string.Join(", ", matches)}). DataFile must be unique across loaded mods.");
+            }
+
+            return VFS.GetStream(matches[0]);
         }
 
         private List<Trigger> InstantiateMapTriggers(MapDefinition definition, MapConfig mapConfig)
