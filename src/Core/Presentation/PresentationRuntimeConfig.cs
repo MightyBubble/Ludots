@@ -14,6 +14,7 @@ namespace Ludots.Core.Presentation
         private int? _presentationEventStreamCapacity;
         private int? _presentationOwnerChangeCapacity;
         private int? _presenterCommandCapacity;
+        private int? _presenterTimerCapacity;
         private int? _primitiveDrawBufferCapacity;
         private int? _visualSnapshotBufferCapacity;
         private int? _visualProxyBufferCapacity;
@@ -42,6 +43,7 @@ namespace Ludots.Core.Presentation
         public int PresentationEventStreamCapacity { get => _presentationEventStreamCapacity ?? 0; set => _presentationEventStreamCapacity = value; }
         public int PresentationOwnerChangeCapacity { get => _presentationOwnerChangeCapacity ?? 0; set => _presentationOwnerChangeCapacity = value; }
         public int PresenterCommandCapacity { get => _presenterCommandCapacity ?? 0; set => _presenterCommandCapacity = value; }
+        public int PresenterTimerCapacity { get => _presenterTimerCapacity ?? 0; set => _presenterTimerCapacity = value; }
         public int PrimitiveDrawBufferCapacity { get => _primitiveDrawBufferCapacity ?? 0; set => _primitiveDrawBufferCapacity = value; }
         public int VisualSnapshotBufferCapacity { get => _visualSnapshotBufferCapacity ?? 0; set => _visualSnapshotBufferCapacity = value; }
         public int VisualProxyBufferCapacity { get => _visualProxyBufferCapacity ?? 0; set => _visualProxyBufferCapacity = value; }
@@ -82,6 +84,7 @@ namespace Ludots.Core.Presentation
             RequirePositive(_presentationEventStreamCapacity, "presentation.presentationEventStreamCapacity");
             RequirePositive(_presentationOwnerChangeCapacity, "presentation.presentationOwnerChangeCapacity");
             RequirePositive(_presenterCommandCapacity, "presentation.presenterCommandCapacity");
+            RequirePositive(_presenterTimerCapacity, "presentation.presenterTimerCapacity");
             RequirePositive(_primitiveDrawBufferCapacity, "presentation.primitiveDrawBufferCapacity");
             RequirePositive(_visualSnapshotBufferCapacity, "presentation.visualSnapshotBufferCapacity");
             RequirePositive(_visualProxyBufferCapacity, "presentation.visualProxyBufferCapacity");
