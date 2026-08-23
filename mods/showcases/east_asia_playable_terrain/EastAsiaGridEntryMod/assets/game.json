@@ -5,7 +5,7 @@
   "windowResizable": true,
   "windowStartMaximized": true,
   "presentation": {
-    "performerInstanceCapacity": 8192,
+    "presenterInstanceCapacity": 8192,
     "gasPresentationEventCapacity": 65536
   }
 }
