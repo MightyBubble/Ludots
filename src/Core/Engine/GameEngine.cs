@@ -1070,6 +1070,7 @@ namespace Ludots.Core.Engine
                 presentationOwnerChanges);
             var globalPresentationEventProjectionSystem = new GlobalPresentationEventProjectionSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
             var presenterCommandBuffer = new PresenterCommandBuffer(presentationConfig.PresenterCommandCapacity);
+            var presenterTimerTable = new PresenterTimerTable(presentationConfig.PresenterTimerCapacity);
             var meshAssets = new MeshAssetRegistry();
             var particleVfx = new ParticleVfxRegistry();
             var materialAssets = new PresentationMaterialRegistry();
@@ -1166,6 +1167,7 @@ namespace Ludots.Core.Engine
                 AbilityPresentationTextValidator.RejectTokenizedPresentationWithoutLocaleCatalog(abilityDefinitions);
             }
             var presenterRuleSystem = new PresenterRuleSystem(World, presentationEventStream, presenterCommandBuffer, presenterDefinitions, presenterRuntime, graphProgramRegistry, gasGraphApi, GlobalContext, graphHandlers);
+            var presenterTimerSystem = new PresenterTimerSystem(World, presenterTimerTable, presentationEventStream);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
                 World,
                 presentationEventStream,
@@ -1186,7 +1188,8 @@ namespace Ludots.Core.Engine
                 presenterAnimatorStates,
                 stableDrawCache,
                 presenterVisualStableIds,
-                performerCommandKinds);
+                performerCommandKinds,
+                presenterTimerTable);
             var presenterBehaviorSystem = new PresenterBehaviorSystem(
                 World,
                 presenterRuntime,
@@ -1943,6 +1946,9 @@ namespace Ludots.Core.Engine
                 instancedBatchOperations,
                 presentationEventStream,
                 presentationOwnerChanges));
+            // PresenterTimerSystem advances named timers and publishes TimerExpired before rules run,
+            // so an expiry is consumable by PresenterRuleSystem in the same frame.
+            RegisterPresentationSystem(presenterTimerSystem);
             // PresenterRuleSystem reads events and produces commands.
             RegisterPresentationSystem(presenterRuleSystem);
             // PresenterRuntimeSystem consumes commands, manages instance lifecycle.
