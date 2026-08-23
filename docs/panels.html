@@ -187,7 +187,7 @@
     }
     host.innerHTML = html;
 
-    var filter = document.getElementById("wiki-filter");
+    var filter = document.getElementById("panel-filter");
     filter.addEventListener("input", function () {
       var q = filter.value.trim().toLowerCase();
       host.querySelectorAll(".grp").forEach(function (grp) {
@@ -205,7 +205,7 @@
   }
 
   function markActive() {
-    document.querySelectorAll("#wiki-tree a[data-doc]").forEach(function (a) {
+    document.querySelectorAll("#panel-tree a[data-doc]").forEach(function (a) {
       a.classList.toggle("active", a.getAttribute("data-doc") === currentDoc);
     });
   }
@@ -307,6 +307,7 @@
       body.innerHTML = marked.parse(md);
       rewriteLinks(body);
       LudotsSite.bindCopyButtons(body);
+      renderHifi(body);
       renderPager(file);
       markActive();
       window.scrollTo({ top: 0, behavior: "auto" });
