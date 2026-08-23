@@ -119,17 +119,33 @@ namespace Ludots.Core.Gameplay.Attachment
                     $"{ParentPositionMissingError}: parent={parent.Id}.");
             }
 
-            // 挂接链唯一 mass nav 约定：子实体是 nav 成员时挂起成员身份（求解器槽位由绑定系统
-            // 在下一 RuntimeEntityBinding pass 回收），detach / 孤儿自愈时恢复。
-            Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Suspend(world, child);
+            ValidateAttachedPose(world, child, parent, in localPose);
+            ValidateAttachedAuthority(world, arbiter, child);
+            ValidateParentCapacity(world, child, parent);
+            AttachmentStateSnapshot snapshot = AttachmentStateSnapshot.Capture(world, child, parent);
+            bool authorityPendingAdded = false;
 
-            // 写权授予：持有 PoseAuthority 的子实体必须切到 Attached（无竞争写者化）；
-            // 无 PoseAuthority 的子实体（未声明 MovementParticipation）没有其他写者，
-            // attachment sink 即其唯一位姿写者，无需授予。
-            TryGrantAttachedAuthority(world, arbiter, child);
+            try
+            {
+                // 挂接链唯一 mass nav 约定：子实体是 nav 成员时挂起成员身份（求解器槽位由绑定系统
+                // 在下一 RuntimeEntityBinding pass 回收），detach / 孤儿自愈时恢复。
+                Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Suspend(world, child);
 
-            RelationOps.SetParent(world, child, parent);
-            ApplyAttachedPose(world, child, parent, in localPose);
+                // 写权授予：持有 PoseAuthority 的子实体必须切到 Attached（无竞争写者化）。
+                authorityPendingAdded = TryGrantAttachedAuthority(world, arbiter, child);
+                RelationOps.SetParent(world, child, parent);
+                ApplyAttachedPose(world, child, parent, in localPose);
+            }
+            catch
+            {
+                if (authorityPendingAdded)
+                {
+                    arbiter!.RemovePendingTransition(child);
+                }
+
+                snapshot.Restore(world, child);
+                throw;
+            }
         }
 
         /// <summary>
@@ -158,19 +174,35 @@ namespace Ludots.Core.Gameplay.Attachment
                     $"{TargetInvalidError}: child={child.Id}, parent={parent.Id}, reason=perimeter-requires-live-parent.");
             }
 
-            HandbackAttachedAuthority(world, arbiter, child);
-            Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
+            ValidateAttachedHandback(world, arbiter, child);
 
             Fix64Vec2 ringOffset = AttachedPoseMath.PerimeterRingOffsetCm(ringSlot, ringSlotCount, perimeterRadiusCm);
             Fix64Vec2 ringPosition = world.Get<WorldPositionCm>(parent).Value + ringOffset;
-            Upsert(world, child, new WorldPositionCm { Value = ringPosition });
-            Upsert(world, child, new PreviousWorldPositionCm { Value = ringPosition });
-            if (world.Has<AttachedLocalPose>(child))
+            AttachmentStateSnapshot snapshot = AttachmentStateSnapshot.Capture(world, child, parent);
+            bool authorityPendingAdded = false;
+            try
             {
-                world.Remove<AttachedLocalPose>(child);
-            }
+                authorityPendingAdded = HandbackAttachedAuthority(world, arbiter, child);
+                Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
+                Upsert(world, child, new WorldPositionCm { Value = ringPosition });
+                Upsert(world, child, new PreviousWorldPositionCm { Value = ringPosition });
+                if (world.Has<AttachedLocalPose>(child))
+                {
+                    world.Remove<AttachedLocalPose>(child);
+                }
 
-            RelationOps.RemoveParent(world, child);
+                RelationOps.RemoveParent(world, child);
+            }
+            catch
+            {
+                if (authorityPendingAdded)
+                {
+                    arbiter!.RemovePendingTransition(child);
+                }
+
+                snapshot.Restore(world, child);
+                throw;
+            }
         }
 
         public static void Detach(
@@ -212,19 +244,7 @@ namespace Ludots.Core.Gameplay.Attachment
                     $"{TargetInvalidError}: child={child.Id}, parent={parent.Id}, reason=perimeter-requires-live-parent.");
             }
 
-            if (world.Has<PoseAuthority>(child) &&
-                world.Get<PoseAuthority>(child).Value == PoseAuthorityKind.Attached)
-            {
-                if (arbiter == null)
-                {
-                    throw new InvalidOperationException(
-                        $"{MissingArbiterError}: child={child.Id}, operation=AttachedHandback.");
-                }
-
-                arbiter.RequestAttachedHandback(world, child);
-            }
-
-            Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
+            ValidateAttachedHandback(world, arbiter, child);
 
             if (placement == DetachPlacement.ParentPerimeterRing)
             {
@@ -234,21 +254,65 @@ namespace Ludots.Core.Gameplay.Attachment
                         $"{ParentPositionMissingError}: parent={parent.Id}.");
                 }
 
-                Fix64Vec2 ringOffset = AttachedPoseMath.PerimeterRingOffsetCm(ringSlot, ringSlotCount, perimeterRadiusCm);
-                Fix64Vec2 ringPosition = world.Get<WorldPositionCm>(parent).Value + ringOffset;
-                Upsert(world, child, new WorldPositionCm { Value = ringPosition });
-                Upsert(world, child, new PreviousWorldPositionCm { Value = ringPosition });
             }
 
-            if (world.Has<AttachedLocalPose>(child))
+            Fix64Vec2 ringPosition = default;
+            if (placement == DetachPlacement.ParentPerimeterRing)
             {
-                world.Remove<AttachedLocalPose>(child);
+                ringPosition = world.Get<WorldPositionCm>(parent).Value +
+                    AttachedPoseMath.PerimeterRingOffsetCm(ringSlot, ringSlotCount, perimeterRadiusCm);
             }
 
-            RelationOps.RemoveParent(world, child);
+            AttachmentStateSnapshot snapshot = AttachmentStateSnapshot.Capture(world, child, parent);
+            bool authorityPendingAdded = false;
+            try
+            {
+                authorityPendingAdded = HandbackAttachedAuthority(world, arbiter, child);
+                Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
+                if (placement == DetachPlacement.ParentPerimeterRing)
+                {
+                    Upsert(world, child, new WorldPositionCm { Value = ringPosition });
+                    Upsert(world, child, new PreviousWorldPositionCm { Value = ringPosition });
+                }
+
+                if (world.Has<AttachedLocalPose>(child))
+                {
+                    world.Remove<AttachedLocalPose>(child);
+                }
+
+                RelationOps.RemoveParent(world, child);
+            }
+            catch
+            {
+                if (authorityPendingAdded)
+                {
+                    arbiter!.RemovePendingTransition(child);
+                }
+
+                snapshot.Restore(world, child);
+                throw;
+            }
         }
 
-        private static void HandbackAttachedAuthority(World world, PoseAuthorityArbiter? arbiter, Entity child)
+        private static bool HandbackAttachedAuthority(World world, PoseAuthorityArbiter? arbiter, Entity child)
+        {
+            if (!world.Has<PoseAuthority>(child) ||
+                world.Get<PoseAuthority>(child).Value != PoseAuthorityKind.Attached)
+            {
+                return false;
+            }
+
+            if (arbiter == null)
+            {
+                throw new InvalidOperationException(
+                    $"{MissingArbiterError}: child={child.Id}, operation=AttachedHandback.");
+            }
+
+            arbiter.RequestAttachedHandback(world, child);
+            return true;
+        }
+
+        private static void ValidateAttachedHandback(World world, PoseAuthorityArbiter? arbiter, Entity child)
         {
             if (!world.Has<PoseAuthority>(child) ||
                 world.Get<PoseAuthority>(child).Value != PoseAuthorityKind.Attached)
@@ -261,8 +325,69 @@ namespace Ludots.Core.Gameplay.Attachment
                 throw new InvalidOperationException(
                     $"{MissingArbiterError}: child={child.Id}, operation=AttachedHandback.");
             }
+        }
 
-            arbiter.RequestAttachedHandback(world, child);
+        private static void ValidateAttachedAuthority(World world, PoseAuthorityArbiter? arbiter, Entity child)
+        {
+            if (!world.Has<PoseAuthority>(child))
+            {
+                return;
+            }
+
+            PoseAuthorityKind current = world.Get<PoseAuthority>(child).Value;
+            if (current == PoseAuthorityKind.Physics || current == PoseAuthorityKind.Displacement)
+            {
+                throw new InvalidOperationException(
+                    $"{AuthorityConflictError}: child={child.Id}, current={current}.");
+            }
+
+            if (current == PoseAuthorityKind.Nav && arbiter == null)
+            {
+                throw new InvalidOperationException(
+                    $"{MissingArbiterError}: child={child.Id}, operation=AttachedGrant.");
+            }
+        }
+
+        private static void ValidateAttachedPose(
+            World world,
+            Entity child,
+            Entity parent,
+            in AttachedLocalPose localPose)
+        {
+            float parentFacing = world.Has<FacingDirection>(parent)
+                ? world.Get<FacingDirection>(parent).AngleRad
+                : 0f;
+            float ownFacing = AttachedPoseMath.ResolveOwnFacingRad(
+                world.Has<FacingDirection>(child),
+                world.Has<FacingDirection>(child) ? world.Get<FacingDirection>(child).AngleRad : 0f,
+                parentFacing);
+            _ = AttachedPoseMath.ComposeWorldPosition(
+                in world.Get<WorldPositionCm>(parent).Value,
+                parentFacing,
+                ownFacing,
+                in localPose);
+
+            if (localPose.InheritParentFacing != 0 && !world.Has<FacingDirection>(parent))
+            {
+                throw new InvalidOperationException(
+                    $"{ParentPositionMissingError}: parent={parent.Id}, reason=inherit-facing-without-parent-facing.");
+            }
+        }
+
+        private static void ValidateParentCapacity(World world, Entity child, Entity parent)
+        {
+            if (!world.Has<ChildrenBuffer>(parent))
+            {
+                return;
+            }
+
+            ChildrenBuffer children = world.Get<ChildrenBuffer>(parent);
+            if (!children.Contains(in child) &&
+                children.Count >= GasConstants.MAX_CHILDREN_BUFFER_CAPACITY)
+            {
+                throw new InvalidOperationException(
+                    $"{RelationOps.ChildrenCapacityExceededError}: parent={parent.Id}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
+            }
         }
 
         /// <summary>环检测单点在 <see cref="RelationOps.WouldCreateCycle"/>（组件边基座的所有入口共用）。</summary>
@@ -360,6 +485,122 @@ namespace Ludots.Core.Gameplay.Attachment
             else
             {
                 world.Add(entity, component);
+            }
+        }
+
+        private struct AttachmentStateSnapshot
+        {
+            private bool _childOfExisted;
+            private ChildOf _childOf;
+            private bool _attachedPoseExisted;
+            private AttachedLocalPose _attachedPose;
+            private bool _facingExisted;
+            private FacingDirection _facing;
+            private bool _worldPositionExisted;
+            private WorldPositionCm _worldPosition;
+            private bool _previousPositionExisted;
+            private PreviousWorldPositionCm _previousPosition;
+            private bool _navAgentExisted;
+            private Ludots.Core.MassNavigation.Runtime.MassNavigationAgent _navAgent;
+            private bool _navIndexExisted;
+            private Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex _navIndex;
+            private bool _navProfileExisted;
+            private Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile _navProfile;
+            private bool _suspendedNavExisted;
+            private Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership _suspendedNav;
+            private Entity _oldParent;
+            private Entity _targetParent;
+            private bool _oldParentChildrenExisted;
+            private ChildrenBuffer _oldParentChildren;
+            private bool _targetParentChildrenExisted;
+            private ChildrenBuffer _targetParentChildren;
+
+            public static AttachmentStateSnapshot Capture(World world, Entity child, Entity targetParent)
+            {
+                AttachmentStateSnapshot snapshot = new()
+                {
+                    _childOfExisted = world.Has<ChildOf>(child),
+                    _attachedPoseExisted = world.Has<AttachedLocalPose>(child),
+                    _facingExisted = world.Has<FacingDirection>(child),
+                    _worldPositionExisted = world.Has<WorldPositionCm>(child),
+                    _previousPositionExisted = world.Has<PreviousWorldPositionCm>(child),
+                    _navAgentExisted = world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child),
+                    _navIndexExisted = world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child),
+                    _navProfileExisted = world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(child),
+                    _suspendedNavExisted = world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child),
+                    _targetParent = targetParent,
+                    _targetParentChildrenExisted = world.Has<ChildrenBuffer>(targetParent),
+                };
+
+                if (snapshot._childOfExisted)
+                {
+                    snapshot._childOf = world.Get<ChildOf>(child);
+                    snapshot._oldParent = snapshot._childOf.Parent;
+                }
+
+                if (snapshot._attachedPoseExisted) snapshot._attachedPose = world.Get<AttachedLocalPose>(child);
+                if (snapshot._facingExisted) snapshot._facing = world.Get<FacingDirection>(child);
+                if (snapshot._worldPositionExisted) snapshot._worldPosition = world.Get<WorldPositionCm>(child);
+                if (snapshot._previousPositionExisted) snapshot._previousPosition = world.Get<PreviousWorldPositionCm>(child);
+                if (snapshot._navAgentExisted) snapshot._navAgent = world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child);
+                if (snapshot._navIndexExisted) snapshot._navIndex = world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child);
+                if (snapshot._navProfileExisted) snapshot._navProfile = world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(child);
+                if (snapshot._suspendedNavExisted) snapshot._suspendedNav = world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child);
+                if (snapshot._targetParentChildrenExisted) snapshot._targetParentChildren = world.Get<ChildrenBuffer>(targetParent);
+
+                if (snapshot._childOfExisted &&
+                    snapshot._oldParent != targetParent &&
+                    world.IsAlive(snapshot._oldParent) &&
+                    world.Has<ChildrenBuffer>(snapshot._oldParent))
+                {
+                    snapshot._oldParentChildrenExisted = true;
+                    snapshot._oldParentChildren = world.Get<ChildrenBuffer>(snapshot._oldParent);
+                }
+
+                return snapshot;
+            }
+
+            public void Restore(World world, Entity child)
+            {
+                RestoreComponent(world, child, _childOfExisted, _childOf);
+                RestoreComponent(world, child, _attachedPoseExisted, _attachedPose);
+                RestoreComponent(world, child, _facingExisted, _facing);
+                RestoreComponent(world, child, _worldPositionExisted, _worldPosition);
+                RestoreComponent(world, child, _previousPositionExisted, _previousPosition);
+                RestoreComponent(world, child, _navAgentExisted, _navAgent);
+                RestoreComponent(world, child, _navIndexExisted, _navIndex);
+                RestoreComponent(world, child, _navProfileExisted, _navProfile);
+                RestoreComponent(world, child, _suspendedNavExisted, _suspendedNav);
+                RestoreChildren(world, _oldParent, _oldParentChildrenExisted, _oldParentChildren);
+                RestoreChildren(world, _targetParent, _targetParentChildrenExisted, _targetParentChildren);
+            }
+
+            private static void RestoreComponent<T>(World world, Entity entity, bool existed, in T value)
+                where T : struct
+            {
+                if (existed)
+                {
+                    if (world.Has<T>(entity)) world.Get<T>(entity) = value;
+                    else world.Add(entity, value);
+                }
+                else if (world.Has<T>(entity))
+                {
+                    world.Remove<T>(entity);
+                }
+            }
+
+            private static void RestoreChildren(World world, Entity parent, bool existed, in ChildrenBuffer value)
+            {
+                if (parent == Entity.Null || !world.IsAlive(parent)) return;
+                if (existed)
+                {
+                    if (world.Has<ChildrenBuffer>(parent)) world.Get<ChildrenBuffer>(parent) = value;
+                    else world.Add(parent, value);
+                }
+                else if (world.Has<ChildrenBuffer>(parent))
+                {
+                    world.Remove<ChildrenBuffer>(parent);
+                }
             }
         }
     }

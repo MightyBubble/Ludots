@@ -112,6 +112,14 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly bool[] _relationAuthorityPendingHandback;
     private readonly byte[] _relationNavMembershipOps;
     private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[] _relationNavAgentValues;
+    private readonly bool[] _relationNavAgentOriginalExisted;
+    private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[] _relationNavAgentOriginalValues;
+    private readonly bool[] _relationNavAgentIndexOriginalExisted;
+    private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex[] _relationNavAgentIndexOriginalValues;
+    private readonly bool[] _relationNavAgentProfileOriginalExisted;
+    private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile[] _relationNavAgentProfileOriginalValues;
+    private readonly bool[] _relationSuspendedNavOriginalExisted;
+    private readonly Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership[] _relationSuspendedNavOriginalValues;
     private readonly int[] _relationParentRingTotal;
     private readonly ushort[] _relationParentRingSlotsTaken;
     private readonly Ludots.Core.Movement.PoseAuthorityArbiter? _poseAuthorityArbiter;
@@ -253,10 +261,18 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationAuthorityPendingHandback = new bool[attributeEntityCapacity];
         _relationNavMembershipOps = new byte[attributeEntityCapacity];
         _relationNavAgentValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[attributeEntityCapacity];
+        _relationNavAgentOriginalExisted = new bool[attributeEntityCapacity];
+        _relationNavAgentOriginalValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[attributeEntityCapacity];
+        _relationNavAgentIndexOriginalExisted = new bool[attributeEntityCapacity];
+        _relationNavAgentIndexOriginalValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex[attributeEntityCapacity];
+        _relationNavAgentProfileOriginalExisted = new bool[attributeEntityCapacity];
+        _relationNavAgentProfileOriginalValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile[attributeEntityCapacity];
+        _relationSuspendedNavOriginalExisted = new bool[attributeEntityCapacity];
+        _relationSuspendedNavOriginalValues = new Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership[attributeEntityCapacity];
         _relationParentRingTotal = new int[relationParentCapacity];
         _relationParentRingSlotsTaken = new ushort[relationParentCapacity];
         _poseAuthorityArbiter = poseAuthorityArbiter;
-        _structuralCommandCapacity = checked(attributeEntityCapacity * 8);
+        _structuralCommandCapacity = checked(attributeEntityCapacity * 16);
         _structuralCommands = new CommandBuffer(_structuralCommandCapacity);
         _structuralRollbackCommands = new CommandBuffer(_structuralCommandCapacity);
     }
@@ -2371,6 +2387,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                     _world.Get<PreviousWorldPositionCm>(subject) = _relationPreviousPositionOriginalValues[i];
                 }
             }
+
+            RestoreNavMembershipSnapshot(i, subject);
         }
 
         for (int i = 0; i < _attributeCount; i++)
@@ -2451,6 +2469,73 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         if (_structuralRollbackCommands.Size > 0)
         {
             _structuralRollbackCommands.Playback(_world);
+        }
+    }
+
+    private void RestoreNavMembershipSnapshot(int index, Entity subject)
+    {
+        if (_relationNavAgentOriginalExisted[index])
+        {
+            if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject))
+            {
+                _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject) = _relationNavAgentOriginalValues[index];
+            }
+            else
+            {
+                _structuralRollbackCommands.Add(subject, _relationNavAgentOriginalValues[index]);
+            }
+        }
+        else if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject))
+        {
+            _structuralRollbackCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject);
+        }
+
+        if (_relationNavAgentIndexOriginalExisted[index])
+        {
+            if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject))
+            {
+                _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject) = _relationNavAgentIndexOriginalValues[index];
+            }
+            else
+            {
+                _structuralRollbackCommands.Add(subject, _relationNavAgentIndexOriginalValues[index]);
+            }
+        }
+        else if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject))
+        {
+            _structuralRollbackCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject);
+        }
+
+        if (_relationNavAgentProfileOriginalExisted[index])
+        {
+            if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject))
+            {
+                _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject) = _relationNavAgentProfileOriginalValues[index];
+            }
+            else
+            {
+                _structuralRollbackCommands.Add(subject, _relationNavAgentProfileOriginalValues[index]);
+            }
+        }
+        else if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject))
+        {
+            _structuralRollbackCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject);
+        }
+
+        if (_relationSuspendedNavOriginalExisted[index])
+        {
+            if (_world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject))
+            {
+                _world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject) = _relationSuspendedNavOriginalValues[index];
+            }
+            else
+            {
+                _structuralRollbackCommands.Add(subject, _relationSuspendedNavOriginalValues[index]);
+            }
+        }
+        else if (_world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject))
+        {
+            _structuralRollbackCommands.Remove<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject);
         }
     }
 
@@ -2567,6 +2652,26 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             : default;
         _relationFacingValues[index] = _relationFacingOriginalValues[index];
         _relationFacingWrite[index] = false;
+        bool navAgentExisted = _world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject);
+        _relationNavAgentOriginalExisted[index] = navAgentExisted;
+        _relationNavAgentOriginalValues[index] = navAgentExisted
+            ? _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject)
+            : default;
+        bool navIndexExisted = _world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject);
+        _relationNavAgentIndexOriginalExisted[index] = navIndexExisted;
+        _relationNavAgentIndexOriginalValues[index] = navIndexExisted
+            ? _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject)
+            : default;
+        bool navProfileExisted = _world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject);
+        _relationNavAgentProfileOriginalExisted[index] = navProfileExisted;
+        _relationNavAgentProfileOriginalValues[index] = navProfileExisted
+            ? _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject)
+            : default;
+        bool suspendedNavExisted = _world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject);
+        _relationSuspendedNavOriginalExisted[index] = suspendedNavExisted;
+        _relationSuspendedNavOriginalValues[index] = suspendedNavExisted
+            ? _world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject)
+            : default;
         _relationAuthorityPendingAttached[index] = false;
         _relationAuthorityPendingHandback[index] = false;
         _relationNavMembershipOps[index] = NavMembershipNone;

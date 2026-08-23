@@ -351,6 +351,53 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Attach_MissingArbiter_DoesNotSuspendNavMembership()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity child = world.Create(
+                WorldPositionCm.FromCm(10, 20),
+                new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent { ProfileId = 4 },
+                new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex { Value = 9 },
+                new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile { ProfileId = 4 },
+                new PoseAuthority { Value = PoseAuthorityKind.Nav });
+
+            Assert.Throws<InvalidOperationException>(() =>
+                AttachmentOps.Attach(world, null, child, parent, OffsetPose(0, 0)));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Has<ChildOf>(child), Is.False);
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child), Is.True);
+                Assert.That(world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child).Value, Is.EqualTo(9));
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(child), Is.True);
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child), Is.False);
+            });
+        }
+
+        [Test]
+        public void Attach_InvalidInheritedFacing_DoesNotLeavePartialState()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(100, 200));
+            Entity child = world.Create(
+                WorldPositionCm.FromCm(10, 20),
+                new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent { ProfileId = 4 });
+
+            Assert.Throws<InvalidOperationException>(() =>
+                AttachmentOps.Attach(world, new PoseAuthorityArbiter(), child, parent, OffsetPose(0, 30, inheritFacing: true)));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Has<ChildOf>(child), Is.False);
+                Assert.That(world.Has<AttachedLocalPose>(child), Is.False);
+                Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(10, 20)));
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child), Is.True);
+                Assert.That(world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child), Is.False);
+            });
+        }
+
+        [Test]
         public void RemoveParent_Staged_CommitsAndRollsBackSymmetrically()
         {
             using World world = World.Create();
