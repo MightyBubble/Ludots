@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Modding;
 using Ludots.Core.Map;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -16,7 +18,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             MapSession session,
             GraphProgramRegistry? programs,
             EntityTriggerGraphMounts? entityMounts,
-            CustomEventNameRegistry? customEvents = null)
+            CustomEventNameRegistry? customEvents = null,
+            AbilityDefinitionRegistry? abilityDefinitions = null)
         {
             if (session == null)
             {
@@ -26,12 +29,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             string mapId = session.MapId.Value;
             List<TriggerGraphMount> mounts = TriggerGraphMount.ParseList(session.MapConfig?.TriggerGraphs, mapId);
             var triggers = new List<Trigger>();
-            if (mounts.Count == 0)
-            {
-                return triggers;
-            }
-
-            if (programs == null)
+            if (programs == null && (mounts.Count > 0 || abilityDefinitions != null))
             {
                 throw new InvalidOperationException(
                     $"Map '{mapId}' declares {TriggerGraphMount.FieldName} but GraphProgramRegistry is not available.");
@@ -63,6 +61,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         break;
                 }
 
+            }
+
+            if (abilityDefinitions != null && programs != null)
+            {
+                triggers.AddRange(BuildAbilityMountTriggers(programs, abilityDefinitions, $"Map '{mapId}'"));
             }
 
             return triggers;
@@ -110,6 +113,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 mount.Graph,
                 scope,
                 TriggerGraphMountDomain.Map,
+                mount.Route,
+                0,
                 TriggerGraphMount.FieldName,
                 $"Map '{mapId}'",
                 customEvents);
@@ -133,8 +138,80 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 graph,
                 scope,
                 TriggerGraphMountDomain.Entity,
+                TriggerGraphMountRoute.Local,
+                0,
                 TriggerGraphMount.FieldName,
                 ownerLabel);
+        }
+
+        public static List<Trigger> BuildAbilityMountTriggers(
+            GraphProgramRegistry programs,
+            AbilityDefinitionRegistry abilityDefinitions,
+            string ownerLabel)
+        {
+            if (programs == null) throw new ArgumentNullException(nameof(programs));
+            if (abilityDefinitions == null) throw new ArgumentNullException(nameof(abilityDefinitions));
+
+            var triggers = new List<Trigger>();
+            IReadOnlyList<int> abilityIds = abilityDefinitions.RegisteredAbilityIds;
+            for (int i = 0; i < abilityIds.Count; i++)
+            {
+                int abilityId = abilityIds[i];
+                if (!abilityDefinitions.TryGet(abilityId, out AbilityDefinition definition) ||
+                    definition.TriggerGraphs == null || definition.TriggerGraphs.Count == 0)
+                {
+                    continue;
+                }
+
+                for (int g = 0; g < definition.TriggerGraphs.Count; g++)
+                {
+                    string graph = definition.TriggerGraphs[g];
+                    AppendEntryTriggers(
+                        triggers,
+                        RequireGraphRegistration(programs, graph, TriggerGraphMount.FieldName, $"{ownerLabel} ability '{abilityId}'"),
+                        graph,
+                        Entity.Null,
+                        TriggerGraphMountDomain.Ability,
+                        TriggerGraphMountRoute.Local,
+                        abilityId,
+                        TriggerGraphMount.FieldName,
+                        $"{ownerLabel} ability '{abilityId}'");
+                }
+            }
+
+            return triggers;
+        }
+
+        public static List<Trigger> BuildModMountTriggers(
+            GraphProgramRegistry programs,
+            ModManifest manifest)
+        {
+            if (programs == null) throw new ArgumentNullException(nameof(programs));
+            if (manifest == null) throw new ArgumentNullException(nameof(manifest));
+
+            var triggers = new List<Trigger>();
+            if (manifest.TriggerGraphs == null || manifest.TriggerGraphs.Count == 0)
+            {
+                return triggers;
+            }
+
+            for (int g = 0; g < manifest.TriggerGraphs.Count; g++)
+            {
+                string graph = manifest.TriggerGraphs[g];
+                AppendEntryTriggers(
+                    triggers,
+                    RequireGraphRegistration(programs, graph, "triggerGraphs", $"Mod '{manifest.Name}'"),
+                    graph,
+                    Entity.Null,
+                    TriggerGraphMountDomain.Mod,
+                    TriggerGraphMountRoute.Local,
+                    0,
+                    "triggerGraphs",
+                    $"Mod '{manifest.Name}'",
+                    modIdFilter: manifest.Name);
+            }
+
+            return triggers;
         }
 
         private static GraphProgramRegistration RequireGraphRegistration(
@@ -173,9 +250,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             string graph,
             Entity scope,
             TriggerGraphMountDomain domain,
+            TriggerGraphMountRoute route,
+            int abilityIdFilter,
             string fieldName,
             string ownerLabel,
-            CustomEventNameRegistry? customEvents = null)
+            CustomEventNameRegistry? customEvents = null,
+            string? modIdFilter = null)
         {
             IReadOnlyList<TriggerGraphEntry> entries = registration.TriggerGraphEntries;
             if (entries == null || entries.Count == 0)
@@ -218,7 +298,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     entry,
                     scope,
                     refirePolicy,
-                    domain);
+                    domain,
+                    route,
+                    abilityIdFilter,
+                    modIdFilter);
                 triggers.Add(mountTrigger);
                 if (!mountTrigger.EntryIsResumeEvent)
                 {

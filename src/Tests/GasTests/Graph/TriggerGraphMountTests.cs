@@ -146,6 +146,56 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void ParseObject_GlobalRoute_IsExplicitAndMapScoped()
+        {
+            TriggerGraphMount mount = TriggerGraphMount.ParseObject(
+                (JsonObject)JsonNode.Parse(
+                    """{ "graph": "Graph.Probe", "route": "global" }""")!,
+                "map probe");
+
+            Assert.That(mount.Domain, Is.EqualTo(TriggerGraphMountDomain.Map));
+            Assert.That(mount.Route, Is.EqualTo(TriggerGraphMountRoute.Global));
+        }
+
+        [Test]
+        public void AbilityMount_FiltersByAbilityId()
+        {
+            var mount = new TriggerGraphMountTrigger(
+                1,
+                GraphName,
+                new TriggerGraphEntry("cast", "Ability.CastStarted", 0, once: false),
+                Entity.Null,
+                TriggerGraphRefirePolicy.Ignore,
+                TriggerGraphMountDomain.Ability,
+                TriggerGraphMountRoute.Local,
+                abilityIdFilter: 42);
+
+            var matching = new ScriptContext();
+            matching.Set(MapTriggerEventPayloadKeys.AbilityId, 42);
+            Assert.That(mount.CheckConditions(matching), Is.True);
+
+            var other = new ScriptContext();
+            other.Set(MapTriggerEventPayloadKeys.AbilityId, 43);
+            Assert.That(mount.CheckConditions(other), Is.False);
+        }
+
+        [Test]
+        public void GlobalMapRoute_BroadcastsAndUnregistersWithOwnerMap()
+        {
+            var manager = new TriggerManager();
+            var global = new CountingTrigger { EventKey = new EventKey("CrossMap.Probe") };
+            manager.RegisterMapTriggers(new MapId("map-a"), new[] { global });
+            manager.RegisterMapTriggers(new MapId("map-b"), Array.Empty<Trigger>());
+
+            manager.FireMapEvent(new MapId("map-b"), global.EventKey, new ScriptContext());
+            Assert.That(global.Count, Is.EqualTo(1));
+
+            manager.UnregisterMapTriggers(new MapId("map-a"), new ScriptContext());
+            manager.FireMapEvent(new MapId("map-b"), global.EventKey, new ScriptContext());
+            Assert.That(global.Count, Is.EqualTo(1));
+        }
+
+        [Test]
         public void ParseList_MissingNode_YieldsNoMounts()
         {
             List<TriggerGraphMount> mounts = TriggerGraphMount.ParseList(null, MapId);
@@ -562,6 +612,18 @@ namespace Ludots.Tests.Gas.Graph
         {
             int id = GraphIdRegistry.Register(name);
             programs.Register(id, program, kind, GraphInstructionSourceMap.Empty, null, entries);
+        }
+
+        private sealed class CountingTrigger : Trigger, IMapTriggerRoute
+        {
+            public int Count { get; private set; }
+            public bool IsGlobalRoute => true;
+
+            public override System.Threading.Tasks.Task ExecuteAsync(ScriptContext context)
+            {
+                Count++;
+                return System.Threading.Tasks.Task.CompletedTask;
+            }
         }
 
         private sealed class TriggerGraphEngineFixture : IDisposable

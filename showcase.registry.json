@@ -5086,7 +5086,9 @@
       "tags": [
         "graph",
         "map-trigger",
-        "override"
+        "override",
+        "mod-trigger",
+        "cross-map"
       ],
       "binding": "night_raid_override",
       "preset": null,

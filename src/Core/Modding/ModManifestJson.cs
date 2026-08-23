@@ -19,7 +19,8 @@ namespace Ludots.Core.Modding
             "url",
             "changelog",
             "tags",
-            "processSharedAssemblies"
+            "processSharedAssemblies",
+            "triggerGraphs"
         };
 
         private static readonly JsonSerializerOptions CanonicalJsonOptions = new JsonSerializerOptions
@@ -153,6 +154,37 @@ namespace Ludots.Core.Modding
                     }
 
                     manifest.ProcessSharedAssemblies.Add(assemblyName.Trim());
+                }
+            }
+
+            if (root.TryGetProperty("triggerGraphs", out var triggerGraphsEl))
+            {
+                if (triggerGraphsEl.ValueKind != JsonValueKind.Array)
+                {
+                    throw new Exception($"Invalid mod.json ('triggerGraphs' must be array): {manifestPath}");
+                }
+
+                manifest.TriggerGraphs = new List<string>();
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var graphItem in triggerGraphsEl.EnumerateArray())
+                {
+                    if (graphItem.ValueKind != JsonValueKind.String)
+                    {
+                        throw new Exception($"Invalid mod.json ('triggerGraphs' elements must be strings): {manifestPath}");
+                    }
+
+                    string graph = graphItem.GetString() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(graph) || !string.Equals(graph, graph.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new Exception($"Invalid mod.json ('triggerGraphs' elements must be trimmed non-empty strings): {manifestPath}");
+                    }
+
+                    if (!seen.Add(graph))
+                    {
+                        throw new Exception($"Invalid mod.json ('triggerGraphs' repeats graph '{graph}'): {manifestPath}");
+                    }
+
+                    manifest.TriggerGraphs.Add(graph);
                 }
             }
 
