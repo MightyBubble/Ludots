@@ -54,6 +54,26 @@ internal sealed class MassNavigationPoseAuthorityBridge : IPoseAuthorityTransiti
             return;
         }
 
+        // Attached 与 Displacement 共用 displaced 求解器状态：外部写权持有者驱动
+        // WorldPositionCm（位移窗口每步直写；attachment 由 AttachmentPositionSyncSystem
+        // 从父位姿派生），求解器跳过积分、邻居持续避让、每 entity-sync 节拍回灌。
+        if (from == PoseAuthorityKind.Nav && to == PoseAuthorityKind.Attached)
+        {
+            simulation.MassNavigationFlow.MarkAgentDisplaced(agentIndex);
+            return;
+        }
+
+        if (from == PoseAuthorityKind.Attached && to == PoseAuthorityKind.Nav)
+        {
+            ref WorldPositionCm attachedPosition = ref world.Get<WorldPositionCm>(entity);
+            simulation.MassNavigationFlow.ApplyCommittedWorldPose(
+                agentIndex,
+                attachedPosition.Value.X.ToFloat(),
+                attachedPosition.Value.Y.ToFloat());
+            simulation.MassNavigationFlow.ClearAgentDisplaced(agentIndex);
+            return;
+        }
+
         throw new System.InvalidOperationException(
             $"MassNavigation pose-authority bridge does not support the {from}->{to} transition for agent entity {entity.Id}.");
     }

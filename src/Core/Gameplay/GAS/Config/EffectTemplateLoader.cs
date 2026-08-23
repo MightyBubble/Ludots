@@ -642,10 +642,85 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Effect template '{ownerId}' in {relativePath}: relation.parent cannot be None when operation=EnsureLink.");
             }
 
+            if (operation == RelationOperation.Attach && parent == RelationEntitySlot.None)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.parent cannot be None when operation=Attach.");
+            }
+
             if (operation != RelationOperation.SetParent && snapSubjectToParentPosition)
             {
                 throw new InvalidOperationException(
                     $"Effect template '{ownerId}' in {relativePath}: relation.snapSubjectToParentPosition is only valid when operation=SetParent.");
+            }
+
+            if (operation != RelationOperation.Attach && cfg.LocalPose != null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.localPose is only valid when operation=Attach.");
+            }
+
+            if (operation != RelationOperation.Detach &&
+                (!string.IsNullOrWhiteSpace(cfg.DetachPlacement) || cfg.DetachPerimeterRadiusCm != null))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.detachPlacement/detachPerimeterRadiusCm are only valid when operation=Detach.");
+            }
+
+            Ludots.Core.Components.AttachedOffsetRotation attachOffsetRotation = Ludots.Core.Components.AttachedOffsetRotation.None;
+            int attachOffsetXCm = 0;
+            int attachOffsetYCm = 0;
+            int attachFacingDeg = 0;
+            bool attachInheritParentFacing = false;
+            if (operation == RelationOperation.Attach)
+            {
+                if (cfg.LocalPose == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: operation=Attach requires a 'relation.localPose' block.");
+                }
+
+                attachOffsetXCm = RequireInt(cfg.LocalPose.OffsetXCm, ownerId, relativePath, "relation.localPose.offsetXCm");
+                attachOffsetYCm = RequireInt(cfg.LocalPose.OffsetYCm, ownerId, relativePath, "relation.localPose.offsetYCm");
+                attachFacingDeg = RequireInt(cfg.LocalPose.FacingDeg, ownerId, relativePath, "relation.localPose.facingDeg");
+                attachInheritParentFacing = RequireBool(
+                    cfg.LocalPose.InheritParentFacing,
+                    ownerId,
+                    relativePath,
+                    "relation.localPose.inheritParentFacing");
+                attachOffsetRotation = ParseAttachedOffsetRotation(cfg.LocalPose.OffsetRotation, ownerId, relativePath);
+            }
+
+            Ludots.Core.Gameplay.Attachment.DetachPlacement detachPlacement =
+                Ludots.Core.Gameplay.Attachment.DetachPlacement.KeepWorldPose;
+            int detachPerimeterRadiusCm = 0;
+            if (operation == RelationOperation.Detach)
+            {
+                if (string.IsNullOrWhiteSpace(cfg.DetachPlacement))
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: operation=Detach requires relation.detachPlacement.");
+                }
+
+                detachPlacement = ParseDetachPlacement(cfg.DetachPlacement, ownerId, relativePath);
+                if (detachPlacement == Ludots.Core.Gameplay.Attachment.DetachPlacement.ParentPerimeterRing)
+                {
+                    detachPerimeterRadiusCm = RequireInt(
+                        cfg.DetachPerimeterRadiusCm,
+                        ownerId,
+                        relativePath,
+                        "relation.detachPerimeterRadiusCm");
+                    if (detachPerimeterRadiusCm <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: relation.detachPerimeterRadiusCm must be > 0.");
+                    }
+                }
+                else if (cfg.DetachPerimeterRadiusCm != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: relation.detachPerimeterRadiusCm is only valid when detachPlacement=ParentPerimeterRing.");
+                }
             }
 
             int relationshipTypeId = 0;
@@ -681,7 +756,49 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 Subject = subject,
                 Parent = parent,
                 SnapSubjectToParentPosition = snapSubjectToParentPosition,
-                RelationshipTypeId = relationshipTypeId
+                RelationshipTypeId = relationshipTypeId,
+                AttachOffsetXCm = attachOffsetXCm,
+                AttachOffsetYCm = attachOffsetYCm,
+                AttachFacingDeg = attachFacingDeg,
+                AttachInheritParentFacing = attachInheritParentFacing,
+                AttachOffsetRotation = attachOffsetRotation,
+                DetachPlacementKind = detachPlacement,
+                DetachPerimeterRadiusCm = detachPerimeterRadiusCm,
+            };
+        }
+
+        private static Ludots.Core.Components.AttachedOffsetRotation ParseAttachedOffsetRotation(
+            string? value,
+            string ownerId,
+            string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.localPose.offsetRotation is required (None, ParentFacing or OwnFacing).");
+            }
+
+            return value switch
+            {
+                "None" => Ludots.Core.Components.AttachedOffsetRotation.None,
+                "ParentFacing" => Ludots.Core.Components.AttachedOffsetRotation.ParentFacing,
+                "OwnFacing" => Ludots.Core.Components.AttachedOffsetRotation.OwnFacing,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.localPose.offsetRotation '{value}'. Supported: None, ParentFacing, OwnFacing."),
+            };
+        }
+
+        private static Ludots.Core.Gameplay.Attachment.DetachPlacement ParseDetachPlacement(
+            string? value,
+            string ownerId,
+            string relativePath)
+        {
+            return value switch
+            {
+                "KeepWorldPose" => Ludots.Core.Gameplay.Attachment.DetachPlacement.KeepWorldPose,
+                "ParentPerimeterRing" => Ludots.Core.Gameplay.Attachment.DetachPlacement.ParentPerimeterRing,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.detachPlacement '{value}'. Supported: KeepWorldPose, ParentPerimeterRing."),
             };
         }
 
@@ -1102,8 +1219,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "SetParent" => RelationOperation.SetParent,
                 "RemoveParent" => RelationOperation.RemoveParent,
                 "EnsureLink" => RelationOperation.EnsureLink,
+                "Attach" => RelationOperation.Attach,
+                "Detach" => RelationOperation.Detach,
                 _ => throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.operation '{value}'. Supported: SetParent, RemoveParent, EnsureLink.")
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.operation '{value}'. Supported: SetParent, RemoveParent, EnsureLink, Attach, Detach.")
             };
         }
 

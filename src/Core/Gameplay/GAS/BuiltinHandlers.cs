@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Association;
+using Ludots.Core.Gameplay.Attachment;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -525,18 +526,36 @@ namespace Ludots.Core.Gameplay.GAS
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.EffectSideEffects?.IsActive == true)
             {
-                if (relation.Operation != RelationOperation.SetParent)
+                switch (relation.Operation)
                 {
-                    throw new InvalidOperationException(
-                        $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={relation.Operation}.");
+                    case RelationOperation.SetParent:
+                    {
+                        Entity stagedParent = ResolveRelationEntity(in context, relation.Parent);
+                        runtime.EffectSideEffects.StageSetParent(
+                            subject,
+                            stagedParent,
+                            relation.SnapSubjectToParentPosition);
+                        return;
+                    }
+                    case RelationOperation.Attach:
+                    {
+                        Entity stagedParent = ResolveRelationEntity(in context, relation.Parent);
+                        runtime.EffectSideEffects.StageAttach(subject, stagedParent, ToAttachedLocalPose(in relation));
+                        return;
+                    }
+                    case RelationOperation.Detach:
+                        runtime.EffectSideEffects.StageDetach(
+                            subject,
+                            relation.DetachPlacementKind,
+                            relation.DetachPerimeterRadiusCm);
+                        return;
+                    case RelationOperation.RemoveParent:
+                        runtime.EffectSideEffects.StageRemoveParent(subject);
+                        return;
+                    default:
+                        throw new InvalidOperationException(
+                            $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={relation.Operation}.");
                 }
-
-                Entity stagedParent = ResolveRelationEntity(in context, relation.Parent);
-                runtime.EffectSideEffects.StageSetParent(
-                    subject,
-                    stagedParent,
-                    relation.SnapSubjectToParentPosition);
-                return;
             }
 
             if (!world.IsAlive(subject))
@@ -570,6 +589,31 @@ namespace Ludots.Core.Gameplay.GAS
                 }
                 case RelationOperation.RemoveParent:
                     RelationOps.RemoveParent(world, subject);
+                    break;
+                case RelationOperation.Attach:
+                {
+                    Entity parent = ResolveRelationEntity(in context, relation.Parent);
+                    if (!world.IsAlive(parent))
+                    {
+                        throw new InvalidOperationException(
+                            $"GAS.RELATION.ERR.ParentInvalid: entity={parent.Id}.");
+                    }
+
+                    AttachmentOps.Attach(
+                        world,
+                        runtime?.PoseAuthorityArbiter,
+                        subject,
+                        parent,
+                        ToAttachedLocalPose(in relation));
+                    break;
+                }
+                case RelationOperation.Detach:
+                    AttachmentOps.Detach(
+                        world,
+                        runtime?.PoseAuthorityArbiter,
+                        subject,
+                        relation.DetachPlacementKind,
+                        relation.DetachPerimeterRadiusCm);
                     break;
                 case RelationOperation.EnsureLink:
                 {
@@ -605,15 +649,26 @@ namespace Ludots.Core.Gameplay.GAS
             return templateData.Relation.Operation switch
             {
                 RelationOperation.SetParent => EffectOperationMetadata.GasTransactional("ApplyRelation.SetParent"),
-                RelationOperation.RemoveParent => EffectOperationMetadata.Unsupported(
-                    EffectAtomicDomain.Relationship,
-                    "ApplyRelation.RemoveParent"),
+                RelationOperation.RemoveParent => EffectOperationMetadata.GasTransactional("ApplyRelation.RemoveParent"),
                 RelationOperation.EnsureLink => EffectOperationMetadata.Unsupported(
                     EffectAtomicDomain.Relationship,
                     "ApplyRelation.EnsureLink"),
+                RelationOperation.Attach => EffectOperationMetadata.GasTransactional("ApplyRelation.Attach"),
+                RelationOperation.Detach => EffectOperationMetadata.GasTransactional("ApplyRelation.Detach"),
                 _ => EffectOperationMetadata.Unsupported(
                     EffectAtomicDomain.Relationship,
                     "ApplyRelation.Invalid"),
+            };
+        }
+
+        private static Ludots.Core.Components.AttachedLocalPose ToAttachedLocalPose(in RelationDescriptor relation)
+        {
+            return new Ludots.Core.Components.AttachedLocalPose
+            {
+                OffsetCm = Fix64Vec2.FromInt(relation.AttachOffsetXCm, relation.AttachOffsetYCm),
+                LocalFacingRad = Fix64.FromInt(relation.AttachFacingDeg) * (Fix64.Pi / Fix64.FromInt(180)),
+                InheritParentFacing = relation.AttachInheritParentFacing ? (byte)1 : (byte)0,
+                OffsetRotation = relation.AttachOffsetRotation,
             };
         }
 

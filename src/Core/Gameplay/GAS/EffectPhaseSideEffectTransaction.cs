@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS;
 
@@ -96,6 +97,20 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly bool[] _relationSnapSourceWorldPositionExisted;
     private readonly PreviousWorldPositionCm[] _relationSnapSourcePreviousPositionOriginalValues;
     private readonly bool[] _relationSnapSourcePreviousPositionExisted;
+    private readonly Ludots.Core.Components.AttachedLocalPose[] _relationAttachedOriginalValues;
+    private readonly Ludots.Core.Components.AttachedLocalPose[] _relationAttachedValues;
+    private readonly bool[] _relationAttachedOriginalExisted;
+    private readonly bool[] _relationAttachedStaged;
+    private readonly bool[] _relationDetachRequested;
+    private readonly byte[] _relationDetachPlacement;
+    private readonly int[] _relationDetachRadiusCm;
+    private readonly bool[] _relationFacingWrite;
+    private readonly FacingDirection[] _relationFacingValues;
+    private readonly bool[] _relationFacingOriginalExisted;
+    private readonly FacingDirection[] _relationFacingOriginalValues;
+    private readonly bool[] _relationAuthorityPendingAttached;
+    private readonly bool[] _relationAuthorityPendingHandback;
+    private readonly Ludots.Core.Movement.PoseAuthorityArbiter? _poseAuthorityArbiter;
     private CommandBuffer _structuralCommands;
     private readonly CommandBuffer _structuralRollbackCommands;
     private readonly int _structuralCommandCapacity;
@@ -136,7 +151,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         RuntimeEntitySpawnQueue? spawnRequests,
         GasPresentationEventBuffer? presentationEvents,
         int attributeEntityCapacity,
-        RootBudgetTable? rootBudget = null)
+        RootBudgetTable? rootBudget = null,
+        Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null)
     {
         if (attributeEntityCapacity <= 0)
         {
@@ -218,6 +234,20 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationSnapSourceWorldPositionExisted = new bool[attributeEntityCapacity];
         _relationSnapSourcePreviousPositionOriginalValues = new PreviousWorldPositionCm[attributeEntityCapacity];
         _relationSnapSourcePreviousPositionExisted = new bool[attributeEntityCapacity];
+        _relationAttachedOriginalValues = new Ludots.Core.Components.AttachedLocalPose[attributeEntityCapacity];
+        _relationAttachedValues = new Ludots.Core.Components.AttachedLocalPose[attributeEntityCapacity];
+        _relationAttachedOriginalExisted = new bool[attributeEntityCapacity];
+        _relationAttachedStaged = new bool[attributeEntityCapacity];
+        _relationDetachRequested = new bool[attributeEntityCapacity];
+        _relationDetachPlacement = new byte[attributeEntityCapacity];
+        _relationDetachRadiusCm = new int[attributeEntityCapacity];
+        _relationFacingWrite = new bool[attributeEntityCapacity];
+        _relationFacingValues = new FacingDirection[attributeEntityCapacity];
+        _relationFacingOriginalExisted = new bool[attributeEntityCapacity];
+        _relationFacingOriginalValues = new FacingDirection[attributeEntityCapacity];
+        _relationAuthorityPendingAttached = new bool[attributeEntityCapacity];
+        _relationAuthorityPendingHandback = new bool[attributeEntityCapacity];
+        _poseAuthorityArbiter = poseAuthorityArbiter;
         _structuralCommandCapacity = checked(attributeEntityCapacity * 8);
         _structuralCommands = new CommandBuffer(_structuralCommandCapacity);
         _structuralRollbackCommands = new CommandBuffer(_structuralCommandCapacity);
@@ -314,6 +344,291 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationWorldPositionValues[childIndex] = stagedParentPosition;
         _relationPreviousPositionValues[childIndex] = stagedPreviousPosition;
         CaptureRelationSnapSource(childIndex, parent);
+    }
+
+    /// <summary>
+    /// Stage attachment 绑定（AttachOp 事务路径）：ChildOf + AttachedLocalPose + 初始派生位姿 +
+    /// Attached 写权授予。写权切换经仲裁器 pending 在下一固定步边界结算；事务回滚撤销 pending。
+    /// detach 与 attach 可在同一事务内交错（后 stage 者生效，写权待办相应抵消）。
+    /// </summary>
+    public void StageAttach(
+        Entity subject,
+        Entity parent,
+        in Ludots.Core.Components.AttachedLocalPose localPose)
+    {
+        RequireActive();
+        if (!_world.IsAlive(subject) || !_world.IsAlive(parent) || subject == parent)
+        {
+            throw new InvalidOperationException(
+                $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.TargetInvalidError}: subject={subject.Id}, parent={parent.Id}.");
+        }
+
+        int childIndex = GetOrAddRelationChild(subject);
+        ThrowIfStagedRelationCycle(subject, parent);
+        WorldPositionCm parentPosition;
+        if (!TryReadRelationWorldPosition(parent, out parentPosition))
+        {
+            throw new InvalidOperationException(
+                $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.ParentPositionMissingError}: parent={parent.Id}.");
+        }
+
+        StageAttachedAuthorityGrant(childIndex, subject);
+
+        Entity currentParent = _relationChildValues[childIndex].Parent;
+        int newParentIndex = GetOrAddRelationParent(parent);
+        ref ChildrenBuffer newParentChildren = ref _relationParentValues[newParentIndex];
+        bool alreadyContained = newParentChildren.Contains(in subject);
+        if (!alreadyContained && newParentChildren.Count >= GasConstants.MAX_CHILDREN_BUFFER_CAPACITY)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=ChildrenBuffer, entity={parent.Id}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
+        }
+
+        if (currentParent != Entity.Null && currentParent != parent && _world.IsAlive(currentParent))
+        {
+            int oldParentIndex = GetOrAddRelationParent(currentParent);
+            _relationParentValues[oldParentIndex].Remove(in subject);
+        }
+        if (!alreadyContained && !newParentChildren.Add(in subject))
+        {
+            throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.ValidatedRelationCommitFailed");
+        }
+
+        _relationParentShouldExist[newParentIndex] = true;
+        _relationChildValues[childIndex] = new ChildOf { Parent = parent };
+        _relationDetachRequested[childIndex] = false;
+        _relationAttachedStaged[childIndex] = true;
+        _relationAttachedValues[childIndex] = localPose;
+
+        float parentFacing = _world.Has<FacingDirection>(parent) ? _world.Get<FacingDirection>(parent).AngleRad : 0f;
+        float ownFacing = _world.Has<FacingDirection>(subject) ? _world.Get<FacingDirection>(subject).AngleRad : 0f;
+        Fix64Vec2 worldPosition = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.ComposeWorldPosition(
+            in parentPosition.Value,
+            parentFacing,
+            ownFacing,
+            in localPose);
+        _relationSnapPositions[childIndex] = true;
+        _relationWorldPositionValues[childIndex] = new WorldPositionCm { Value = worldPosition };
+        _relationPreviousPositionValues[childIndex] = new PreviousWorldPositionCm { Value = worldPosition };
+        CaptureRelationSnapSource(childIndex, parent);
+
+        if (localPose.InheritParentFacing != 0)
+        {
+            if (!_world.Has<FacingDirection>(parent))
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.ParentPositionMissingError}: parent={parent.Id}, reason=inherit-facing-without-parent-facing.");
+            }
+
+            _relationFacingWrite[childIndex] = true;
+            _relationFacingValues[childIndex] = new FacingDirection
+            {
+                AngleRad = parentFacing + localPose.LocalFacingRad.ToFloat(),
+            };
+        }
+        else if (!_relationFacingOriginalExisted[childIndex] && localPose.LocalFacingRad != Fix64.Zero)
+        {
+            _relationFacingWrite[childIndex] = true;
+            _relationFacingValues[childIndex] = new FacingDirection
+            {
+                AngleRad = localPose.LocalFacingRad.ToFloat(),
+            };
+        }
+    }
+
+    /// <summary>
+    /// Stage attachment 解除（DetachOp 事务路径）：拆边 + Attached 写权归还 + 按落位参数写终位姿。
+    /// 周界环的槽序取子实体在（staged）父 ChildrenBuffer 中的序号，同批多 detach 天然错开。
+    /// </summary>
+    public void StageDetach(Entity subject, Ludots.Core.Gameplay.Attachment.DetachPlacement placement, int perimeterRadiusCm)
+    {
+        RequireActive();
+        if (!_world.IsAlive(subject))
+        {
+            throw new InvalidOperationException(
+                $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.MissingChildOfError}: subject={subject.Id}.");
+        }
+
+        int childIndex = GetOrAddRelationChild(subject);
+        Entity parent = _relationChildValues[childIndex].Parent;
+        if (_relationDetachRequested[childIndex] || parent == Entity.Null)
+        {
+            throw new InvalidOperationException(
+                $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.MissingChildOfError}: subject={subject.Id}, parent={parent.Id}.");
+        }
+
+        int ringSlot = 0;
+        int ringSlotCount = 0;
+        int parentIndex = -1;
+        if (_world.IsAlive(parent))
+        {
+            parentIndex = GetOrAddRelationParent(parent);
+            ChildrenBuffer stagedChildren = _relationParentValues[parentIndex];
+            ringSlotCount = stagedChildren.Count;
+            ringSlot = Ludots.Core.Gameplay.Attachment.AttachmentOps.FindChildIndex(in stagedChildren, in subject);
+            if (ringSlot < 0)
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.ParentBufferMissingError}: parent={parent.Id}, subject={subject.Id}.");
+            }
+        }
+        else if (placement == Ludots.Core.Gameplay.Attachment.DetachPlacement.ParentPerimeterRing)
+        {
+            throw new InvalidOperationException(
+                $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.TargetInvalidError}: subject={subject.Id}, parent={parent.Id}, reason=perimeter-requires-live-parent.");
+        }
+
+        StageDetachedAuthorityHandback(childIndex, subject);
+
+        if (placement == Ludots.Core.Gameplay.Attachment.DetachPlacement.ParentPerimeterRing)
+        {
+            if (!TryReadRelationWorldPosition(parent, out WorldPositionCm parentPosition))
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.ParentPositionMissingError}: parent={parent.Id}.");
+            }
+
+            Fix64Vec2 ringOffset = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.PerimeterRingOffsetCm(
+                ringSlot,
+                ringSlotCount,
+                perimeterRadiusCm);
+            Fix64Vec2 ringPosition = parentPosition.Value + ringOffset;
+            _relationSnapPositions[childIndex] = true;
+            _relationWorldPositionValues[childIndex] = new WorldPositionCm { Value = ringPosition };
+            _relationPreviousPositionValues[childIndex] = new PreviousWorldPositionCm { Value = ringPosition };
+            CaptureRelationSnapSource(childIndex, parent);
+        }
+
+        if (parentIndex >= 0)
+        {
+            _relationParentValues[parentIndex].Remove(in subject);
+        }
+
+        _relationChildValues[childIndex] = default;
+        _relationDetachRequested[childIndex] = true;
+        _relationDetachPlacement[childIndex] = (byte)placement;
+        _relationDetachRadiusCm[childIndex] = perimeterRadiusCm;
+        _relationAttachedStaged[childIndex] = false;
+        _relationFacingWrite[childIndex] = false;
+    }
+
+    /// <summary>Stage 普通拆边（RemoveParent 的事务对称化）：等价于 KeepWorldPose 落位的 detach。</summary>
+    public void StageRemoveParent(Entity subject)
+    {
+        StageDetach(subject, Ludots.Core.Gameplay.Attachment.DetachPlacement.KeepWorldPose, 0);
+    }
+
+    private void StageAttachedAuthorityGrant(int childIndex, Entity subject)
+    {
+        if (_relationAuthorityPendingHandback[childIndex])
+        {
+            if (_poseAuthorityArbiter == null || !_poseAuthorityArbiter.RemovePendingTransition(subject))
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.MissingArbiterError}: subject={subject.Id}, operation=CancelHandbackPending.");
+            }
+
+            _relationAuthorityPendingHandback[childIndex] = false;
+            return;
+        }
+
+        if (_relationAuthorityPendingAttached[childIndex])
+        {
+            return;
+        }
+
+        if (!_world.Has<PoseAuthority>(subject))
+        {
+            return;
+        }
+
+        PoseAuthorityKind current = _world.Get<PoseAuthority>(subject).Value;
+        if (current == PoseAuthorityKind.Physics || current == PoseAuthorityKind.Displacement)
+        {
+            throw new InvalidOperationException(
+                $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.AuthorityConflictError}: subject={subject.Id}, current={current}.");
+        }
+
+        if (current == PoseAuthorityKind.Nav)
+        {
+            if (_poseAuthorityArbiter == null)
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.MissingArbiterError}: subject={subject.Id}, operation=AttachedGrant.");
+            }
+
+            _poseAuthorityArbiter.RequestAttachedAuthority(_world, subject);
+            _relationAuthorityPendingAttached[childIndex] = true;
+        }
+    }
+
+    private void StageDetachedAuthorityHandback(int childIndex, Entity subject)
+    {
+        if (_relationAuthorityPendingAttached[childIndex])
+        {
+            if (_poseAuthorityArbiter == null || !_poseAuthorityArbiter.RemovePendingTransition(subject))
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.MissingArbiterError}: subject={subject.Id}, operation=CancelAttachedPending.");
+            }
+
+            _relationAuthorityPendingAttached[childIndex] = false;
+            return;
+        }
+
+        if (!_world.Has<PoseAuthority>(subject) ||
+            _world.Get<PoseAuthority>(subject).Value != PoseAuthorityKind.Attached)
+        {
+            return;
+        }
+
+        if (_relationAuthorityPendingHandback[childIndex])
+        {
+            return;
+        }
+
+        if (_poseAuthorityArbiter == null)
+        {
+            throw new InvalidOperationException(
+                $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.MissingArbiterError}: subject={subject.Id}, operation=AttachedHandback.");
+        }
+
+        _poseAuthorityArbiter.RequestAttachedHandback(_world, subject);
+        _relationAuthorityPendingHandback[childIndex] = true;
+    }
+
+    /// <summary>环检测走 staged 视图：已 stage 的 ChildOf（含本事务内的 detach）优先于世界态。</summary>
+    private void ThrowIfStagedRelationCycle(Entity child, Entity parent)
+    {
+        Entity current = parent;
+        int steps = 0;
+        while (current != Entity.Null)
+        {
+            if (current == child)
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.CycleError}: child={child.Id}, parent={parent.Id}.");
+            }
+
+            current = FindStagedChildParent(current);
+            steps++;
+            if (steps > 1024)
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.CycleError}: staged walk exceeded 1024 ancestors without reaching a root.");
+            }
+        }
+    }
+
+    private Entity FindStagedChildParent(Entity entity)
+    {
+        int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
+        if (index >= 0)
+        {
+            return _relationDetachRequested[index] ? Entity.Null : _relationChildValues[index].Parent;
+        }
+
+        return _world.Has<ChildOf>(entity) ? _world.Get<ChildOf>(entity).Parent : Entity.Null;
     }
 
     public bool TryReadAttributeCurrent(Entity entity, int attributeId, out float value)
@@ -943,7 +1258,28 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             for (int i = 0; i < _relationChildCount; i++)
             {
                 Entity subject = _relationChildEntities[i];
+                if (_relationDetachRequested[i])
+                {
+                    // 结构删除已在 PrepareRelationValues 入 _structuralCommands 并回放；
+                    // 这里只落 detach 的落位写（周界环走 snap 通道）。
+                    if (_relationSnapPositions[i])
+                    {
+                        _world.Get<WorldPositionCm>(subject) = _relationWorldPositionValues[i];
+                        _world.Get<PreviousWorldPositionCm>(subject) = _relationPreviousPositionValues[i];
+                    }
+
+                    continue;
+                }
+
                 _world.Get<ChildOf>(subject) = _relationChildValues[i];
+                if (_relationAttachedStaged[i])
+                {
+                    _world.Get<Ludots.Core.Components.AttachedLocalPose>(subject) = _relationAttachedValues[i];
+                }
+                if (_relationFacingWrite[i])
+                {
+                    _world.Get<FacingDirection>(subject) = _relationFacingValues[i];
+                }
                 if (_relationSnapPositions[i])
                 {
                     _world.Get<WorldPositionCm>(subject) = _relationWorldPositionValues[i];
@@ -1011,6 +1347,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             RollbackWorldWrites();
         }
+        RollbackStagedAuthorityPendings();
         ResetAbortedStructuralCommands();
         if (_rootBudget != null)
         {
@@ -1018,6 +1355,25 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
 
         End();
+    }
+
+    /// <summary>撤销本事务 stage 的写权待结算切换：attach/detach 授予或归还从未生效，必须从仲裁器摘除。</summary>
+    private void RollbackStagedAuthorityPendings()
+    {
+        if (_poseAuthorityArbiter == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _relationChildCount; i++)
+        {
+            if (!_relationAuthorityPendingAttached[i] && !_relationAuthorityPendingHandback[i])
+            {
+                continue;
+            }
+
+            _poseAuthorityArbiter.RemovePendingTransition(_relationChildEntities[i]);
+        }
     }
 
     private int GetOrAddAttributeEntity(Entity entity)
@@ -1503,7 +1859,38 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 throw new InvalidOperationException(
                     $"{RelationTargetInvalidError}: positionSubject={subject.Id}.");
             }
+            bool attachedExists = _world.IsAlive(subject) && _world.Has<Ludots.Core.Components.AttachedLocalPose>(subject);
+            if (attachedExists != _relationAttachedOriginalExisted[i] ||
+                (attachedExists &&
+                 !AttachedPosesEqual(
+                     in _world.Get<Ludots.Core.Components.AttachedLocalPose>(subject),
+                     in _relationAttachedOriginalValues[i])))
+            {
+                throw new InvalidOperationException(
+                    $"{RelationTargetInvalidError}: attachedPoseSubject={subject.Id}.");
+            }
+            if (_relationFacingWrite[i] || _relationFacingOriginalExisted[i])
+            {
+                bool facingExists = _world.IsAlive(subject) && _world.Has<FacingDirection>(subject);
+                if (facingExists != _relationFacingOriginalExisted[i] ||
+                    (facingExists &&
+                     _world.Get<FacingDirection>(subject).AngleRad != _relationFacingOriginalValues[i].AngleRad))
+                {
+                    throw new InvalidOperationException(
+                        $"{RelationTargetInvalidError}: facingSubject={subject.Id}.");
+                }
+            }
         }
+    }
+
+    private static bool AttachedPosesEqual(
+        in Ludots.Core.Components.AttachedLocalPose left,
+        in Ludots.Core.Components.AttachedLocalPose right)
+    {
+        return left.OffsetCm == right.OffsetCm &&
+               left.LocalFacingRad == right.LocalFacingRad &&
+               left.OffsetRotation == right.OffsetRotation &&
+               left.InheritParentFacing == right.InheritParentFacing;
     }
 
     private bool RelationPositionsMatchOriginal(Entity subject, int index)
@@ -1576,9 +1963,30 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         for (int i = 0; i < _relationChildCount; i++)
         {
             Entity subject = _relationChildEntities[i];
+            if (_relationDetachRequested[i])
+            {
+                if (_relationChildExisted[i])
+                {
+                    _structuralCommands.Remove<ChildOf>(subject);
+                }
+                if (_relationAttachedOriginalExisted[i])
+                {
+                    _structuralCommands.Remove<Ludots.Core.Components.AttachedLocalPose>(subject);
+                }
+                continue;
+            }
+
             if (!_relationChildExisted[i])
             {
                 _structuralCommands.Add(subject, _relationChildValues[i]);
+            }
+            if (_relationAttachedStaged[i] && !_relationAttachedOriginalExisted[i])
+            {
+                _structuralCommands.Add(subject, _relationAttachedValues[i]);
+            }
+            if (_relationFacingWrite[i] && !_relationFacingOriginalExisted[i])
+            {
+                _structuralCommands.Add(subject, _relationFacingValues[i]);
             }
             if (!_relationSnapPositions[i])
             {
@@ -1830,9 +2238,46 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             {
                 continue;
             }
-            if (_relationChildExisted[i] && _world.Has<ChildOf>(subject))
+            if (_relationDetachRequested[i])
             {
-                _world.Get<ChildOf>(subject) = _relationChildOriginalValues[i];
+                // commit 可能已把拆边结构命令回放掉：组件在则回值，组件不在则结构回补。
+                if (_relationChildExisted[i])
+                {
+                    if (_world.Has<ChildOf>(subject))
+                    {
+                        _world.Get<ChildOf>(subject) = _relationChildOriginalValues[i];
+                    }
+                    else
+                    {
+                        _structuralRollbackCommands.Add(subject, _relationChildOriginalValues[i]);
+                    }
+                }
+                if (_relationAttachedOriginalExisted[i])
+                {
+                    if (_world.Has<Ludots.Core.Components.AttachedLocalPose>(subject))
+                    {
+                        _world.Get<Ludots.Core.Components.AttachedLocalPose>(subject) = _relationAttachedOriginalValues[i];
+                    }
+                    else
+                    {
+                        _structuralRollbackCommands.Add(subject, _relationAttachedOriginalValues[i]);
+                    }
+                }
+            }
+            else
+            {
+                if (_relationChildExisted[i] && _world.Has<ChildOf>(subject))
+                {
+                    _world.Get<ChildOf>(subject) = _relationChildOriginalValues[i];
+                }
+                if (_relationAttachedOriginalExisted[i] && _world.Has<Ludots.Core.Components.AttachedLocalPose>(subject))
+                {
+                    _world.Get<Ludots.Core.Components.AttachedLocalPose>(subject) = _relationAttachedOriginalValues[i];
+                }
+                if (_relationFacingOriginalExisted[i] && _world.Has<FacingDirection>(subject))
+                {
+                    _world.Get<FacingDirection>(subject) = _relationFacingOriginalValues[i];
+                }
             }
             if (_relationSnapPositions[i])
             {
@@ -1892,9 +2337,22 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             {
                 continue;
             }
-            if (!_relationChildExisted[i] && _world.Has<ChildOf>(subject))
+            if (!_relationChildExisted[i] && !_relationDetachRequested[i] && _world.Has<ChildOf>(subject))
             {
                 _structuralRollbackCommands.Remove<ChildOf>(subject);
+            }
+            if (!_relationAttachedOriginalExisted[i] &&
+                !_relationDetachRequested[i] &&
+                _relationAttachedStaged[i] &&
+                _world.Has<Ludots.Core.Components.AttachedLocalPose>(subject))
+            {
+                _structuralRollbackCommands.Remove<Ludots.Core.Components.AttachedLocalPose>(subject);
+            }
+            if (!_relationFacingOriginalExisted[i] &&
+                _relationFacingWrite[i] &&
+                _world.Has<FacingDirection>(subject))
+            {
+                _structuralRollbackCommands.Remove<FacingDirection>(subject);
             }
             if (_relationSnapPositions[i] &&
                 !_relationWorldPositionExisted[i] &&
@@ -2009,6 +2467,25 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationPreviousPositionValues[index] = _relationPreviousPositionOriginalValues[index];
         _relationSnapPositions[index] = false;
         _relationSnapSourceEntities[index] = Entity.Null;
+        bool attachedExisted = _world.Has<Ludots.Core.Components.AttachedLocalPose>(subject);
+        _relationAttachedOriginalExisted[index] = attachedExisted;
+        _relationAttachedOriginalValues[index] = attachedExisted
+            ? _world.Get<Ludots.Core.Components.AttachedLocalPose>(subject)
+            : default;
+        _relationAttachedValues[index] = _relationAttachedOriginalValues[index];
+        _relationAttachedStaged[index] = false;
+        _relationDetachRequested[index] = false;
+        _relationDetachPlacement[index] = 0;
+        _relationDetachRadiusCm[index] = 0;
+        bool facingExisted = _world.Has<FacingDirection>(subject);
+        _relationFacingOriginalExisted[index] = facingExisted;
+        _relationFacingOriginalValues[index] = facingExisted
+            ? _world.Get<FacingDirection>(subject)
+            : default;
+        _relationFacingValues[index] = _relationFacingOriginalValues[index];
+        _relationFacingWrite[index] = false;
+        _relationAuthorityPendingAttached[index] = false;
+        _relationAuthorityPendingHandback[index] = false;
         return index;
     }
 
