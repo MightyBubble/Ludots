@@ -11,7 +11,7 @@
 ## 2. 结构
 
 ```text
-panel_kit_quest_objective_showcase/PanelKitQuestObjectiveShowcaseMod/
+panel_kit_task_objective_showcase/PanelKitTaskObjectiveShowcaseMod/
   Assets/PanelKit/
     panel_manifest.json          # 只声明一个 objective
     profile.rts.json             # RTS 文案与字段
