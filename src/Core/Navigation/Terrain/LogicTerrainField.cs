@@ -99,6 +99,16 @@ namespace Ludots.Core.Navigation.Terrain
 
         public abstract int VerticalStepCm { get; }
 
+        public virtual float GetHeightMeters(int col, int row, float heightScaleMeters)
+        {
+            if (heightScaleMeters <= 0f || float.IsNaN(heightScaleMeters))
+            {
+                throw new ArgumentOutOfRangeException(nameof(heightScaleMeters));
+            }
+
+            return GetCell(col, row).HeightLevel * heightScaleMeters;
+        }
+
         public bool IsInBounds(int col, int row)
             => (uint)col < (uint)WidthCells && (uint)row < (uint)HeightCells;
 

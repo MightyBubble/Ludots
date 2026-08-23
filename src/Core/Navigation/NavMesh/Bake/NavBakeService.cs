@@ -38,7 +38,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             out NavBakeArtifact artifact)
         {
             BakePipelineResult result = BakePipeline.Execute(
-                context.Terrain,
+                context.TerrainForBake,
                 target.ChunkX,
                 target.ChunkY,
                 context.TileVersion,

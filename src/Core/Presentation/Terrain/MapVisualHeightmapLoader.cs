@@ -9,7 +9,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    internal static class MapVisualHeightmapLoader
+    public static class MapVisualHeightmapLoader
     {
         public static IVisualHeightmap? Load(IVirtualFileSystem vfs, IEnumerable<string>? loadedModIds, MapConfig mapConfig)
         {

@@ -12,6 +12,7 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Platform.Abstractions;
 using Ludots.NavBake.Recast;
 using Ludots.Tool;
 using Microsoft.AspNetCore.Http.Features;
@@ -2022,18 +2023,10 @@ static bool TryBuildEditorUploadRecastContext(
         return false;
     }
 
+    Ludots.Core.Map.Board.NavBakePolicy policy;
     try
     {
-        Ludots.Core.Map.Board.NavBakePolicy policy =
-            Ludots.Core.Map.Board.NavBakePolicyValidator.Require(boardConfig);
-        if (string.Equals(policy.HeightSource, Ludots.Core.Map.Board.NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal))
-        {
-            error = Results.BadRequest(new
-            {
-                error = $"Board '{boardConfig.Name}' selects direct continuous-heightmap baking, but the Recast editor endpoint only accepts the authored board terrain until the continuous-height backend is enabled. No projection was performed."
-            });
-            return false;
-        }
+        policy = Ludots.Core.Map.Board.NavBakePolicyValidator.Require(boardConfig);
     }
     catch (Exception ex)
     {
@@ -2054,7 +2047,9 @@ static bool TryBuildEditorUploadRecastContext(
 
     try
     {
-        obstacles = NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId);
+        obstacles = string.Equals(policy.StaticObstacleSource, Ludots.Core.Map.Board.NavBakeSourceKinds.MapEntities, StringComparison.Ordinal)
+            ? NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId)
+            : new NavObstacleSet();
     }
     catch (Exception ex)
     {
@@ -2065,6 +2060,20 @@ static bool TryBuildEditorUploadRecastContext(
     try
     {
         var terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
+        IVisualHeightmap? continuousHeightmap = string.Equals(
+            policy.HeightSource,
+            Ludots.Core.Map.Board.NavBakeSourceKinds.ContinuousHeightmap,
+            StringComparison.Ordinal)
+            ? NavBakeHeightmapLoader.LoadFromRepoRoot(repoRoot, mapConfig, modId)
+            : null;
+        _ = new NavBakeInput(
+            boardConfig,
+            terrain,
+            continuousHeightmap,
+            obstacles,
+            string.Equals(policy.RuntimeObstacleSource, Ludots.Core.Map.Board.NavBakeSourceKinds.RuntimeEntities, StringComparison.Ordinal)
+                ? null
+                : new NavObstacleSet());
         targets = NavBakeTileSelection.Resolve(terrain, dirtyJson, includeNeighbors, dirtyOnly);
         NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
         navBakeContext = new NavBakeContext
@@ -2073,6 +2082,7 @@ static bool TryBuildEditorUploadRecastContext(
             ModId = modId ?? string.Empty,
             SourceUri = ToEditorUploadSourceUri(fileName),
             Terrain = terrain,
+            ContinuousHeightmap = continuousHeightmap,
             Obstacles = obstacles,
             Config = bakeConfig,
             AgentProfiles = bakeConfigContext.AgentProfiles,

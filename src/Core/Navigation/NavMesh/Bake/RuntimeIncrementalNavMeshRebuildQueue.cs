@@ -239,6 +239,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 ModId = _baseContext.ModId,
                 SourceUri = _baseContext.SourceUri,
                 Terrain = _baseContext.Terrain,
+                ContinuousHeightmap = _baseContext.ContinuousHeightmap,
                 Obstacles = _baseContext.Obstacles,
                 Config = _baseContext.Config,
                 AgentProfiles = _baseContext.AgentProfiles,

@@ -9,6 +9,7 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
 using Ludots.NavBake.Recast;
 using NUnit.Framework;
@@ -54,6 +55,40 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void ContinuousHeightmapChangesGeometryWithoutReplacingLogicTerrainClassification()
+        {
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            var heightmap = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(0, 0, 300, 300),
+                    2,
+                    2,
+                    new short[] { 0, 100, 200, 300 }));
+            var context = new NavBakeContext
+            {
+                MapId = "nav_continuous_height_contract",
+                SourceUri = "Core:Maps/nav_continuous_height_contract.vhtm",
+                Terrain = terrain,
+                ContinuousHeightmap = heightmap,
+                Obstacles = new NavObstacleSet(),
+                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmCdt),
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Cdt,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+
+            NavBakeResult result = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(context);
+
+            Assert.That(result.FailureCount, Is.EqualTo(0), result.Entries[0].Artifact.Message);
+            Assert.That(result.Entries[0].Tile.VertexYcm, Does.Contain(300));
+            Assert.That(result.Entries[0].Tile.TriangleCount, Is.GreaterThan(0));
+        }
+
+        [Test]
         public void RecastBake_FlatGridProducesNonEmptyTile()
         {
             var context = new NavBakeContext
@@ -79,6 +114,37 @@ namespace Ludots.Tests.Architecture
             Assert.That(result.Entries[0].Tile.VertexCount, Is.GreaterThan(0));
             Assert.That(result.Entries[0].Tile.TriangleCount, Is.GreaterThan(0));
             Assert.That(result.Entries[0].DetourTileBytes.Length, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void RecastBake_UsesContinuousHeightmapForGeometry()
+        {
+            var context = new NavBakeContext
+            {
+                MapId = "nav_recast_continuous_height_contract",
+                SourceUri = "Core:Maps/nav_recast_continuous_height_contract.vhtm",
+                Terrain = new FlatGridLogicTerrainField(16, 16, chunkSizeCells: 16),
+                ContinuousHeightmap = new VisualHeightmapRuntime(
+                    VisualHeightmapAsset.CreateSingleLayer(
+                        new WorldAabbCm(0, 0, 1500, 1500),
+                        2,
+                        2,
+                        new short[] { 0, 20, 20, 40 })),
+                Obstacles = new NavObstacleSet(),
+                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Recast,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+
+            NavBakeResult result = new NavBakeService(new RecastNavBakeAlgorithm()).Bake(context);
+
+            Assert.That(result.FailureCount, Is.EqualTo(0), result.Entries[0].Artifact.Message);
+            Assert.That(result.Entries[0].Tile.VertexYcm, Has.Some.GreaterThan(0));
         }
 
         [Test]

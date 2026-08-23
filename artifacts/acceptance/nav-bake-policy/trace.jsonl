@@ -1,3 +1,5 @@
 {"id":"policy.parse","event":"board_policy_loaded","result":"accepted","heightSource":"continuous-heightmap","classificationSource":"board-logic-terrain","staticObstacleSource":"map-entities","runtimeObstacleSource":"runtime-entities"}
 {"id":"policy.guard.nodegraph","event":"nodegraph_navmesh_roles","result":"rejected","reason":"NodeGraph has no NavMesh bake input"}
 {"id":"policy.guard.missing-height","event":"selected_height_input_missing","result":"rejected","reason":"continuousHeightmap is required by policy"}
+{"id":"bake.direct-vhtm","event":"continuous_height_geometry","result":"accepted","reason":"NavTile vertex Y samples IVisualHeightmap directly; logic terrain remains classification-only"}
+{"id":"bake.obstacles.runtime","event":"authored_obstacles_bound","result":"accepted","reason":"Physics2D authoring provider maps Polygon/Box/Circle/Compound to RuntimeNavMeshObstacles"}

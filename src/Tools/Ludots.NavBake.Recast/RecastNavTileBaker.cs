@@ -31,7 +31,7 @@ namespace Ludots.NavBake.Recast
             out NavBakeArtifact artifact)
         {
             return RecastNavTileBaker.TryBake(
-                context.Terrain,
+                context.TerrainForBake,
                 target.ChunkX,
                 target.ChunkY,
                 context.TileVersion,

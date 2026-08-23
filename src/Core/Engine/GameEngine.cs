@@ -2030,6 +2030,25 @@ namespace Ludots.Core.Engine
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
             SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
 
+            const string navObstacleAuthoringProviderTypeName = "Ludots.Core.Physics2D.Navigation.Physics2DNavObstacleAuthoringProvider";
+            Type? navObstacleAuthoringProviderType = TryResolveOptionalAssemblyType(
+                physics2dAssemblyName,
+                navObstacleAuthoringProviderTypeName);
+            if (navObstacleAuthoringProviderType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Physics2D startup requires '{navObstacleAuthoringProviderTypeName}' when '{physics2dAssemblyName}' is present.");
+            }
+
+            object? navObstacleAuthoringProviderObject = Activator.CreateInstance(navObstacleAuthoringProviderType);
+            if (navObstacleAuthoringProviderObject is not INavObstacleAuthoringProvider navObstacleAuthoringProvider)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to create nav obstacle authoring provider '{navObstacleAuthoringProviderTypeName}'.");
+            }
+
+            SetService(CoreServiceKeys.NavObstacleAuthoringProvider, navObstacleAuthoringProvider);
+
             var physics2dKinematicPoses = new Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D(
                 physics2dKinematicConfig.KinematicBodyCapacity);
             var physics2dContactEvents = new Ludots.Core.Physics2D.ContactEventQueue2D(
@@ -3015,10 +3034,14 @@ namespace Ludots.Core.Engine
             }
 
             NavBakePolicy policy = NavBakePolicyValidator.Require(navBoard);
+            IVisualHeightmap? continuousHeightmap = null;
             if (string.Equals(policy.HeightSource, NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException(
-                    $"Board '{navBoard.Name}' selects direct continuous-heightmap baking, but the runtime bake backend is not connected yet. No projection was performed.");
+                if (!TryGetService(CoreServiceKeys.VisualHeightmap, out continuousHeightmap) || continuousHeightmap == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Board '{navBoard.Name}' selects continuous-heightmap baking but CoreServiceKeys.VisualHeightmap is not loaded. The bake did not project a fallback terrain.");
+                }
             }
 
             if (LogicTerrain == null) throw new InvalidOperationException($"NavMesh enabled but LogicTerrainField is not loaded for map '{mapId}'.");
@@ -3074,6 +3097,21 @@ namespace Ludots.Core.Engine
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
                 var runtimeObstacles = new NavObstacleSet();
+                NavObstacleSet authoredObstacles = new NavObstacleSet();
+                if (string.Equals(policy.StaticObstacleSource, NavBakeSourceKinds.MapEntities, StringComparison.Ordinal))
+                {
+                    authoredObstacles = BuildRuntimeNavMeshAuthoredObstacles(mapConfig, bakeConfig.Layers[0].Id);
+                    runtimeObstacles.Obstacles.AddRange(authoredObstacles.Obstacles);
+                    SetService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles, authoredObstacles);
+                }
+                _ = new NavBakeInput(
+                    navBoard,
+                    LogicTerrain,
+                    continuousHeightmap,
+                    authoredObstacles,
+                    string.Equals(policy.RuntimeObstacleSource, NavBakeSourceKinds.RuntimeEntities, StringComparison.Ordinal)
+                        ? runtimeObstacles
+                        : new NavObstacleSet());
                 SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
                 var runtimeContext = new NavBakeContext
                 {
@@ -3081,6 +3119,7 @@ namespace Ludots.Core.Engine
                     ModId = string.Empty,
                     SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
                     Terrain = LogicTerrain,
+                    ContinuousHeightmap = continuousHeightmap,
                     Obstacles = runtimeObstacles,
                     Config = bakeConfig,
                     AgentProfiles = agentProfiles,
@@ -3112,11 +3151,52 @@ namespace Ludots.Core.Engine
             LoadNavForMap(mapId, mapConfig);
         }
 
+        private NavObstacleSet BuildRuntimeNavMeshAuthoredObstacles(MapConfig mapConfig, string layerId)
+        {
+            if (mapConfig == null) throw new ArgumentNullException(nameof(mapConfig));
+            if (mapConfig.Entities == null)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig.Id}' selects map-entities nav obstacles but does not declare an entities list.");
+            }
+
+            if (mapConfig.Entities.Count == 0)
+            {
+                return new NavObstacleSet();
+            }
+
+            if (!TryGetService(CoreServiceKeys.NavObstacleAuthoringProvider, out INavObstacleAuthoringProvider provider) || provider == null)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig.Id}' declares entities for nav obstacles, but CoreServiceKeys.NavObstacleAuthoringProvider is not registered.");
+            }
+
+            var templates = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
+            foreach (EntityTemplate template in MapLoader.TemplateRegistry.GetAll())
+            {
+                if (template == null || string.IsNullOrWhiteSpace(template.Id))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' cannot build nav obstacles because the entity template registry contains an invalid template.");
+                }
+
+                if (!templates.TryAdd(template.Id, template))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' cannot build nav obstacles because template '{template.Id}' is registered more than once.");
+                }
+            }
+
+            return provider.BuildForMap(mapConfig, templates, layerId)
+                ?? throw new InvalidOperationException("Nav obstacle authoring provider returned null.");
+        }
+
         private void ClearNavServices()
         {
             RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles);
             RemoveService(CoreServiceKeys.RuntimeNavMeshObstacles);
             RemoveService(CoreServiceKeys.RuntimeNavMeshRebuildQueue);
         }
