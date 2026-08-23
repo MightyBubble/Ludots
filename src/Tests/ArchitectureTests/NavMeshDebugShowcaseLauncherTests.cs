@@ -84,6 +84,25 @@ namespace Ludots.Tests.Architecture
             Assert.That(startupMapSetting.EffectiveSource, Does.Contain(expectedMapSelectorModId));
         }
 
+        [Test]
+        public void NavMeshDebugMaps_SuppressHostDebugGuides()
+        {
+            string repoRoot = FindRepoRoot();
+            string mapsRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod", "assets", "Maps");
+            string[] mapIds = { "navmesh_debug_openworld", "navmesh_debug_grid", "navmesh_debug_vhtm" };
+
+            foreach (string mapId in mapIds)
+            {
+                string mapPath = Path.Combine(mapsRoot, $"{mapId}.json");
+                Assert.That(File.Exists(mapPath), Is.True, $"navmesh debug map '{mapId}' must exist at {mapPath}");
+                string mapJson = File.ReadAllText(mapPath);
+                Assert.That(
+                    mapJson,
+                    Does.Contain("\"Raylib.DebugGuides:Off\""),
+                    $"navmesh debug map '{mapId}' must suppress the camera-anchored host debug grid; without the tag the infinite grid renders as a gray slab that reads as terrain.");
+            }
+        }
+
         private static string FindRepoRoot()
         {
             string? dir = TestContext.CurrentContext.TestDirectory;
