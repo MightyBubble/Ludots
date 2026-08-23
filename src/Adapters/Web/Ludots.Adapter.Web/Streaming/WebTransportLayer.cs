@@ -102,12 +102,13 @@ namespace Ludots.Adapter.Web.Streaming
             }
         }
 
-        public void BroadcastFrame(ReadOnlySpan<byte> frameData)
+        public void BroadcastFrame(ReadOnlySpan<byte> fullFrame, ReadOnlySpan<byte> deltaFrame, uint frameNumber)
         {
-            byte[] copy = frameData.ToArray();
+            byte[] fullCopy = fullFrame.ToArray();
+            byte[]? deltaCopy = deltaFrame.IsEmpty ? null : deltaFrame.ToArray();
             foreach (var kvp in _sessions)
             {
-                kvp.Value.EnqueueFrame(copy);
+                kvp.Value.EnqueueFrame(fullCopy, deltaCopy, frameNumber);
             }
         }
 
@@ -123,6 +124,7 @@ namespace Ludots.Adapter.Web.Streaming
                     FramesSent = s.FramesSent,
                     BytesSent = s.BytesSent,
                     FramesDropped = s.FramesDropped,
+                    DeltaFramesSent = s.DeltaFramesSent,
                     ConnectedAt = s.ConnectedAt,
                 });
             }
@@ -197,15 +199,17 @@ namespace Ludots.Adapter.Web.Streaming
         {
             while (!ct.IsCancellationRequested && session.Socket.State == WebSocketState.Open)
             {
-                byte[]? frame = session.DequeueFrame();
-                if (frame != null)
+                var pending = session.DequeueFrame();
+                if (pending != null)
                 {
+                    bool useDelta = session.TrySelectDelta(pending);
+                    byte[] frame = useDelta ? pending.DeltaFrame! : pending.FullFrame;
                     await session.Socket.SendAsync(
                         new ArraySegment<byte>(frame),
                         WebSocketMessageType.Binary,
                         true,
                         ct);
-                    session.RecordSent(frame.Length);
+                    session.RecordSent(pending, useDelta);
                 }
                 else
                 {
@@ -232,7 +236,8 @@ namespace Ludots.Adapter.Web.Streaming
 
         private sealed class ClientSession
         {
-            private volatile byte[]? _pendingFrame;
+            private volatile PendingFrame? _pendingFrame;
+            private uint _lastSentFrameNumber;
 
             public ClientSession(string id, WebSocket socket)
             {
@@ -246,22 +251,36 @@ namespace Ludots.Adapter.Web.Streaming
             public long FramesSent { get; private set; }
             public long BytesSent { get; private set; }
             public long FramesDropped { get; private set; }
+            public long DeltaFramesSent { get; private set; }
 
-            public void EnqueueFrame(byte[] frame)
+            public void EnqueueFrame(byte[] fullFrame, byte[]? deltaFrame, uint frameNumber)
             {
-                if (Interlocked.Exchange(ref _pendingFrame, frame) != null)
+                var pending = new PendingFrame(fullFrame, deltaFrame, frameNumber);
+                if (Interlocked.Exchange(ref _pendingFrame, pending) != null)
                 {
                     FramesDropped++;
                 }
             }
 
-            public byte[]? DequeueFrame() => Interlocked.Exchange(ref _pendingFrame, null);
+            public PendingFrame? DequeueFrame() => Interlocked.Exchange(ref _pendingFrame, null);
 
-            public void RecordSent(int bytes)
+            public bool TrySelectDelta(PendingFrame pending)
+            {
+                return pending.DeltaFrame != null && _lastSentFrameNumber == pending.FrameNumber - 1;
+            }
+
+            public void RecordSent(PendingFrame pending, bool usedDelta)
             {
                 FramesSent++;
-                BytesSent += bytes;
+                BytesSent += usedDelta ? pending.DeltaFrame!.Length : pending.FullFrame.Length;
+                if (usedDelta)
+                {
+                    DeltaFramesSent++;
+                }
+                _lastSentFrameNumber = pending.FrameNumber;
             }
+
+            public sealed record PendingFrame(byte[] FullFrame, byte[]? DeltaFrame, uint FrameNumber);
         }
     }
 
@@ -271,6 +290,7 @@ namespace Ludots.Adapter.Web.Streaming
         public long FramesSent { get; set; }
         public long BytesSent { get; set; }
         public long FramesDropped { get; set; }
+        public long DeltaFramesSent { get; set; }
         public DateTime ConnectedAt { get; set; }
     }
 }

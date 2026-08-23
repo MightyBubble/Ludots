@@ -48,6 +48,7 @@ export class EntityManager {
 
       mesh.position.set(item.posX, item.posY, item.posZ);
       mesh.scale.set(item.scaleX, item.scaleY, item.scaleZ);
+      mesh.quaternion.set(item.rotX, item.rotY, item.rotZ, item.rotW);
 
       const mat = mesh.material as THREE.MeshLambertMaterial;
       mat.color.setRGB(item.r, item.g, item.b);

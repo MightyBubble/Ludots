@@ -185,8 +185,14 @@ namespace Ludots.Adapter.Web
 
                         if (setup.Transport.HasClients)
                         {
-                            var (data, len) = extractor.CaptureFrame();
-                            setup.Transport.BroadcastFrame(data.AsSpan(0, len));
+                            var captured = extractor.CaptureFrame();
+                            var deltaSpan = captured.DeltaData is null
+                                ? ReadOnlySpan<byte>.Empty
+                                : captured.DeltaData.AsSpan(0, captured.DeltaLength);
+                            setup.Transport.BroadcastFrame(
+                                captured.FullData.AsSpan(0, captured.FullLength),
+                                deltaSpan,
+                                captured.FrameNumber);
                         }
 
                         if (nowMs - lastDiagMs > 5000)
