@@ -120,7 +120,12 @@ namespace Ludots.AgentBridge.Tools
             {
                 GraphDebugTraceRecord record = buffer[i];
                 int sourcePc = record.SourcePc >= 0 ? record.SourcePc : record.CursorPc;
-                sourceMap.TryGetSource(sourcePc, out GraphInstructionSource source);
+                if (!sourceMap.TryGetSource(sourcePc, out GraphInstructionSource source))
+                {
+                    throw new AgentToolException(
+                        AgentBridgeErrorCodes.ServiceUnavailable,
+                        $"Graph debug source map has no instruction source for graph '{mount.GraphName}', pc={sourcePc}.");
+                }
                 events.Add(ToJson(record, source));
             }
 

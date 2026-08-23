@@ -1617,7 +1617,20 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
         });
     }
 
-    return Results.Ok(new { ok = true, kind = graphKind.ToString(), descriptors });
+    var authoringSugars = new List<object>();
+    if (graphKind is GraphKind.Script or GraphKind.TriggerGraph)
+    {
+        authoringSugars.Add(new
+        {
+            op = GraphAuthoringSugar.Break,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Target },
+            valueInputPorts = Array.Empty<string>(),
+            outputType = GraphValueType.Void.ToString(),
+            lowersTo = GraphNodeOp.Jump.ToString(),
+        });
+    }
+
+    return Results.Ok(new { ok = true, kind = graphKind.ToString(), descriptors, authoringSugars });
 });
 
 app.MapGet("/api/mods/{modId}/gas/graph-editor/{graphId}", (string modId, string graphId) =>
