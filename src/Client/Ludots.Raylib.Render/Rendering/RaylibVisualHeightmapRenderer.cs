@@ -353,10 +353,11 @@ namespace Ludots.Raylib.Render
                 }
             }
 
-            if ((_frameIndex % 300) == 0)
+            if ((_frameIndex % 300) == 0 && _frameLighting != null)
             {
                 RenderDiagnostics.Info(
-                    "[visual-heightmap] f" + _frameIndex + " overview=" + OverviewActiveLastFrame + " drawn=" + DrawnChunkCountLastFrame + " verts=" + TerrainVertexCountLastFrame + " radiusCm=" + effectiveVisibleRadiusCm.ToString("F0") + " fogOff=" + _disableDistanceFog);
+                    "[visual-heightmap] f" + _frameIndex + " overview=" + OverviewActiveLastFrame + " drawn=" + DrawnChunkCountLastFrame + " verts=" + TerrainVertexCountLastFrame + " radiusCm=" + effectiveVisibleRadiusCm.ToString("F0") + " fogOff=" + _disableDistanceFog
+                    + " sunY=" + _frameLighting.SunDirectionToward.Y.ToString("F3") + " sunI=" + _frameLighting.LightIntensity.ToString("F2") + " amb=" + _frameLighting.AmbientRgba.ToString());
             }
 
             EvictUnusedChunks(240);

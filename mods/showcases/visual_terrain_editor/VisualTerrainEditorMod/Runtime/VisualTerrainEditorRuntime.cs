@@ -42,7 +42,7 @@ internal sealed class VisualTerrainEditorRuntime
     private const int MaxVisibleChunkRadius = 16;
     private const int LargeMapChunkCountThreshold = 512;
     private const float LargeMapWorldSpanThresholdCm = 100_000_000f;
-    private const int LargeMapVisibleChunkRadius = 1;
+    private const int LargeMapVisibleChunkRadius = 14;
     // Overview must engage before the camera pulls back past what the detail window
     // (visibleRadius=1 => a 3-chunk-wide patch) can cover, otherwise there is a dead zone
     // where only an isolated 3x3 detail patch floats in an empty continent-scale view.
@@ -172,18 +172,10 @@ internal sealed class VisualTerrainEditorRuntime
         ApplyPendingAssetReplacement(engine);
         UpdateSharedTerrainOverviewDebug(engine);
 
-        // 远距全景期间画面完全交给宿主全景粗网格：清空并停更编辑器窗口块，
-        // 回到细节距离时 EnsureChunkWindowLoaded/SyncRenderedChunks 按需重建。
-        bool sharedTerrainOverview = ShouldUseSharedTerrainOverview(engine);
-        if (sharedTerrainOverview && _renderedChunks.Count > 0)
-        {
-            ClearRenderedChunks(engine);
-        }
-
         bool viewportChanged = TrackViewport(engine);
 
         int loadedBefore = _document.LoadedChunkCount;
-        bool chunkWindowChanged = sharedTerrainOverview ? false : EnsureChunkWindowLoaded(engine);
+        bool chunkWindowChanged = EnsureChunkWindowLoaded(engine);
         if (loadedBefore != _document.LoadedChunkCount || chunkWindowChanged)
         {
             _panelDirty = true;
@@ -198,11 +190,7 @@ internal sealed class VisualTerrainEditorRuntime
         HandleWorldPainting(engine);
 
         bool terrainChanged = _document.Update();
-        if (!sharedTerrainOverview)
-        {
-            SyncRenderedChunks(engine);
-        }
-
+        SyncRenderedChunks(engine);
         PublishBrushWorldFact(engine);
 
         if (_panelDirty)
@@ -1028,7 +1016,13 @@ internal sealed class VisualTerrainEditorRuntime
 
     private bool ShouldUseSharedTerrainOverview(GameEngine engine)
     {
-        return ShouldUseSharedTerrainOverview(_document.Asset, ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.DistanceCm);
+        // 与宿主渲染器同一政策源：全景切换倍数取 map 的 RenderProfile，不再用本地常量。
+        MapConfig? mapConfig = engine.CurrentMapSession?.MapConfig;
+        float switchChunkSpans = (mapConfig?.VisualHeightmap?.RenderProfile
+            ?? Ludots.Platform.Abstractions.VisualHeightmapRenderProfile.CreateDefault())
+            .NormalizeAndValidate()
+            .OverviewSwitchChunkSpans;
+        return ShouldUseSharedTerrainOverview(_document.Asset, ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.DistanceCm, switchChunkSpans);
     }
 
     private void RestoreRenderDebug(GameEngine engine)
@@ -1096,7 +1090,10 @@ internal sealed class VisualTerrainEditorRuntime
             longestWorldSpanCm >= LargeMapWorldSpanThresholdCm;
     }
 
-    internal static bool ShouldUseSharedTerrainOverview(VisualTerrainAssetDescriptor asset, float cameraDistanceCm)
+    internal static bool ShouldUseSharedTerrainOverview(
+        VisualTerrainAssetDescriptor asset,
+        float cameraDistanceCm,
+        float switchChunkSpans = LargeMapOverviewDistanceInChunks)
     {
         if (asset == null) throw new ArgumentNullException(nameof(asset));
 
@@ -1106,7 +1103,7 @@ internal sealed class VisualTerrainEditorRuntime
         }
 
         float chunkSpanCm = MathF.Max(asset.ChunkWorldWidthCm, asset.ChunkWorldHeightCm);
-        float overviewDistanceCm = chunkSpanCm * LargeMapOverviewDistanceInChunks;
+        float overviewDistanceCm = chunkSpanCm * MathF.Max(0.25f, switchChunkSpans);
         return cameraDistanceCm >= overviewDistanceCm;
     }
 

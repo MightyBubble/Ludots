@@ -21,12 +21,14 @@ namespace Ludots.Platform.Abstractions
         {
             float distanceMeters = System.Numerics.Vector3.Distance(Position, Target);
             float farMeters = CameraClipPlanes.DefaultFarPlaneMeters;
+            float nearMeters = CameraClipPlanes.DefaultNearPlaneMeters;
             if (float.IsFinite(distanceMeters) && distanceMeters > 0f)
             {
                 farMeters = MathF.Max(farMeters, distanceMeters * CameraClipPlanes.FarPlaneDistanceMultiplier);
+                nearMeters = MathF.Max(nearMeters, distanceMeters * CameraClipPlanes.NearPlaneDistanceRatio);
             }
 
-            return new CameraClipPlanes(CameraClipPlanes.DefaultNearPlaneMeters, farMeters);
+            return new CameraClipPlanes(nearMeters, farMeters);
         }
     }
 }
