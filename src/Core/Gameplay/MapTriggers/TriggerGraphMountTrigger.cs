@@ -2,6 +2,8 @@ using System;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map;
@@ -54,9 +56,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// as the spawn; map-domain observers of EntitySpawned keep think-wave
     /// granularity), and an "EntityDied" entry executes on the destroy tick for
     /// that entity's own mounts. Entity mounts may declare entries on any other
-    /// event key; those dispatch through the map's bus registration normally. A
-    /// dead entity's mounts are inert (CheckConditions false) and lazily swept
-    /// at think waves by the mount pipeline.
+    /// event key; those dispatch through the map's bus registration normally and
+    /// are filtered to the mounted entity's source/target. A scope carrying
+    /// EntityTriggerGraphAggregateRoot also accepts attached descendants. A dead
+    /// entity's mounts are inert (CheckConditions false) and lazily swept at think
+    /// waves by the mount pipeline.
     /// </summary>
     public sealed class TriggerGraphMountTrigger : Trigger
     {
@@ -182,12 +186,78 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return false;
             }
 
+            if (!MatchesEntityScope(context))
+            {
+                return false;
+            }
+
             if (!TriggerGraphEntryFiltersEvaluator.Matches(context, _entry.Filters))
             {
                 return false;
             }
 
             return base.CheckConditions(context);
+        }
+
+        private bool MatchesEntityScope(ScriptContext context)
+        {
+            if (_domain != TriggerGraphMountDomain.Entity || _lifecycleDispatch)
+            {
+                return true;
+            }
+
+            bool hasEntityPayload = false;
+            bool matches = false;
+            if (context.Contains(MapTriggerEventPayloadKeys.SourceEntity))
+            {
+                hasEntityPayload = true;
+                Entity source = context.Get<Entity>(MapTriggerEventPayloadKeys.SourceEntity);
+                matches |= IsInScope(source);
+            }
+
+            if (context.Contains(MapTriggerEventPayloadKeys.TargetEntity))
+            {
+                hasEntityPayload = true;
+                Entity target = context.Get<Entity>(MapTriggerEventPayloadKeys.TargetEntity);
+                matches |= IsInScope(target);
+            }
+
+            return !hasEntityPayload || matches;
+        }
+
+        private bool IsInScope(Entity entity)
+        {
+            if (entity == Entity.Null || entity == default || !_world.IsAlive(entity))
+            {
+                return false;
+            }
+
+            if (entity == _scope)
+            {
+                return true;
+            }
+
+            if (!_world.Has<EntityTriggerGraphAggregateRoot>(_scope))
+            {
+                return false;
+            }
+
+            Entity current = entity;
+            for (int depth = 0; depth < 1024 && _world.IsAlive(current); depth++)
+            {
+                if (!_world.Has<ChildOf>(current))
+                {
+                    return false;
+                }
+
+                current = _world.Get<ChildOf>(current).Parent;
+                if (current == _scope)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public override Task ExecuteAsync(ScriptContext context)
