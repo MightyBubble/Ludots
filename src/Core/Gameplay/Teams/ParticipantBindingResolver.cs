@@ -287,8 +287,9 @@ namespace Ludots.Core.Gameplay.Teams
         /// The sole seat's declared ControlSchemeId is the per-entry launch truth and activates the
         /// global ControlSchemeRuntime (P2.5 sole consumption path); seats without a declaration keep
         /// the runtime's initial/preference activation. Multi-seat scheme routing is P3: with more
-        /// than one seat nothing activates here. Declared-but-uninstalled or refused schemes are
-        /// configuration errors and fail fast instead of falling back to the initial scheme.
+        /// than one seat nothing activates here. A declared scheme with the runtime unregistered,
+        /// uninstalled, or refused by the allowed-set is a configuration error and fails fast instead
+        /// of falling back to the initial scheme.
         /// </summary>
         private static void ActivateSoleSeatControlScheme(
             IDictionary<string, object> globals,
@@ -299,16 +300,17 @@ namespace Ludots.Core.Gameplay.Teams
                 return;
             }
 
-            if (!globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out object? schemeObj) ||
-                schemeObj is not ControlSchemeRuntime schemes)
-            {
-                return;
-            }
-
             ClientLocalSeat seat = seats.Require(seats.SeatIds[0]);
             if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
             {
                 return;
+            }
+
+            if (!globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out object? schemeObj) ||
+                schemeObj is not ControlSchemeRuntime schemes)
+            {
+                throw new InvalidOperationException(
+                    $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{seat.ControlSchemeId}' but the ControlSchemeRuntime service is not registered.");
             }
 
             string schemeId = seat.ControlSchemeId!.Trim();

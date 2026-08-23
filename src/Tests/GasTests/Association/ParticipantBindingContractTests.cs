@@ -440,6 +440,29 @@ namespace Ludots.Tests.GAS
                 "multi-seat scheme routing is P3; publishing multiple seats must not activate any declared scheme.");
         }
 
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_SoleSeatControlSchemeId_FailsFastWhenRuntimeNotRegistered()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
+                [CoreServiceKeys.PlayerEntityLookup.Name] = players,
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+            };
+            var result = SoleSeatResult(players, 7, player, controlSchemeId: "scheme.seat.declared");
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ParticipantBindingResolver.PublishFocused(globals, result));
+
+            Assert.That(error!.Message, Does.Contain("scheme.seat.declared"));
+            Assert.That(error.Message, Does.Contain("ControlSchemeRuntime"));
+        }
+
         private static ParticipantBindingResult SoleSeatResult(
             PlayerEntityLookup players,
             int playerId,

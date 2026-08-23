@@ -16,8 +16,8 @@
 | **ClientLocalSeat** | 本机 I/O：设备、ControlScheme、InteractionContextStack | 有设备才有 |
 | **PresentBinding** | Seat → 某个 LogicView 的呈现绑定（rect / 呈现分辨率） | 仅要画时 |
 
-`EntityCollectionStore` 地址仍是 `(participantRep, collectionKey)`。  
-Control Plane = 化身当前可控对象（拓扑现算）。  
+`EntityCollectionStore` 地址仍是 `(participantRep, collectionKey)`。
+Control Plane = 化身当前可控对象（拓扑现算）。
 Cast 是几何原语；写集合是业务/蓝图另线。
 
 ## 2. 结构
@@ -81,7 +81,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 8. MapLoaded；快照 session.LocalSeats
 ```
 
-非法 seat / 未绑定 player → map load fail-fast。  
+非法 seat / 未绑定 player → map load fail-fast。
 **不是每个 Participant 都有 LogicView**：今天只对「本机座位占有」自动建；AI/其它玩家代表可只有身份。
 
 ### 3.3 消费规则
@@ -132,20 +132,20 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 
 ## 4. 场景
 
-- 单机单人：`startupLocalSeats: [{ seat.0, playerId: 1 }]` → 占有甲 → PresentBinding 全屏  
-- 同屏双人：两条 seat 写入 launch / game 默认  
-- AI bot：地图 Players 有代表，无 seat → 无自动 LogicView  
-- 换 client：改 Possession / PresentBinding；甲的集合与 LogicView 不动  
-- 旁观：Seat 可 PresentBinding 盯乙的 LogicView，而不 possess 乙  
+- 单机单人：`startupLocalSeats: [{ seat.0, playerId: 1 }]` → 占有甲 → PresentBinding 全屏
+- 同屏双人：两条 seat 写入 launch / game 默认
+- AI bot：地图 Players 有代表，无 seat → 无自动 LogicView
+- 换 client：改 Possession / PresentBinding；甲的集合与 LogicView 不动
+- 旁观：Seat 可 PresentBinding 盯乙的 LogicView，而不 possess 乙
 
 ## 5. 边界
 
-- Seat ≠ 「玩家属于 client」  
-- `GameConfig.startupLocalSeats` 不是运行时座位真相；进图后以 `ClientLocalSeatRegistry` 为准  
-- 不把 InteractionContextStack 的 ownerToken 当成座位表  
-- 本页不定义 Cast→Query→WriteCollection 业务图（见交互/蓝图合同）  
-- 分屏布局是 PresentBinding.rect 配置，不另起视觉子系统  
-- 画面剔除挂 PresentBinding，不挂裸 LogicView；LogicView 只提供镜头权威  
+- Seat ≠ 「玩家属于 client」
+- `GameConfig.startupLocalSeats` 不是运行时座位真相；进图后以 `ClientLocalSeatRegistry` 为准
+- 不把 InteractionContextStack 的 ownerToken 当成座位表
+- 本页不定义 Cast→Query→WriteCollection 业务图（见交互/蓝图合同）
+- 分屏布局是 PresentBinding.rect 配置，不另起视觉子系统
+- 画面剔除挂 PresentBinding，不挂裸 LogicView；LogicView 只提供镜头权威
 
 ## 6. UAT
 
@@ -219,8 +219,8 @@ Feature: 本机座位与逻辑视觉
 
 ## 7. 分期
 
-- P0 合同（本页 + participant 合同修订 + RFC 修订）— #897  
-- P1 SeatRegistry + Possession + 删除全局 LocalPlayer* — #898  
-- P2 LogicView 多实例 + PresentBinding 呈现/拾取 — #899（Sole PresentBinding → Presenter / ScreenRay / ScreenProjector / 呈现剔除；LogicView 自有相机权威；已删除 `GameSession.Camera` 会话单例；无座图可用 `logicview.client.present`）  
-- P2.5 多分屏基建底座 — PresentBinding.rect 布局工厂 + `CopyPresentBindings` / per-seat 解析；Sole 消费路径仍是今日默认。已收口：存档 `launchContext.localSeats[]` round-trip 直接测试（mapSessions 存档域）+ sole seat `controlSchemeId` 激活链（3.3）  
+- P0 合同（本页 + participant 合同修订 + RFC 修订）— #897
+- P1 SeatRegistry + Possession + 删除全局 LocalPlayer* — #898
+- P2 LogicView 多实例 + PresentBinding 呈现/拾取 — #899（Sole PresentBinding → Presenter / ScreenRay / ScreenProjector / 呈现剔除；LogicView 自有相机权威；已删除 `GameSession.Camera` 会话单例；无座图可用 `logicview.client.present`）
+- P2.5 多分屏基建底座 — PresentBinding.rect 布局工厂 + `CopyPresentBindings` / per-seat 解析；Sole 消费路径仍是今日默认。已收口：存档 `launchContext.localSeats[]` round-trip 直接测试（mapSessions 存档域）+ sole seat `controlSchemeId` 激活链（3.3）
 - P3 分屏布局产品化、per-seat scheme 路由与 UI per-seat owner（同模型，另开子单）
