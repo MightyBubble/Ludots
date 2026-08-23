@@ -8,6 +8,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -279,6 +280,49 @@ namespace Ludots.Core.Gameplay.Teams
 
             seats.ReplaceAll(built);
             ConfigureLogicViewCameras(globals, views);
+            ActivateSoleSeatControlScheme(globals, seats);
+        }
+
+        /// <summary>
+        /// The sole seat's declared ControlSchemeId is the per-entry launch truth and activates the
+        /// global ControlSchemeRuntime (P2.5 sole consumption path); seats without a declaration keep
+        /// the runtime's initial/preference activation. Multi-seat scheme routing is P3: with more
+        /// than one seat nothing activates here. Declared-but-uninstalled or refused schemes are
+        /// configuration errors and fail fast instead of falling back to the initial scheme.
+        /// </summary>
+        private static void ActivateSoleSeatControlScheme(
+            IDictionary<string, object> globals,
+            ClientLocalSeatRegistry seats)
+        {
+            if (seats.Count != 1)
+            {
+                return;
+            }
+
+            if (!globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out object? schemeObj) ||
+                schemeObj is not ControlSchemeRuntime schemes)
+            {
+                return;
+            }
+
+            ClientLocalSeat seat = seats.Require(seats.SeatIds[0]);
+            if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+            {
+                return;
+            }
+
+            string schemeId = seat.ControlSchemeId!.Trim();
+            if (!schemes.SchemeIdRegistry.TryGetId(schemeId, out int compiledSchemeId))
+            {
+                throw new InvalidOperationException(
+                    $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{schemeId}' which is not installed.");
+            }
+
+            if (!schemes.TrySwitch(compiledSchemeId))
+            {
+                throw new InvalidOperationException(
+                    $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{schemeId}' which the mod allowed-set refuses.");
+            }
         }
 
         private static bool TryResolvePresentResolutionPx(

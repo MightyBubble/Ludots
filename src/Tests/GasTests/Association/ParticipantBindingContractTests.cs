@@ -14,9 +14,12 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using NUnit.Framework;
@@ -337,6 +340,213 @@ namespace Ludots.Tests.GAS
             Assert.That(ClientLocalSeatAccess.RequireLogicViews(globals).Count, Is.EqualTo(2));
             Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out _), Is.False);
             Assert.Throws<InvalidOperationException>(() => seats.RequireSolePossessedRep());
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_SoleSeatControlSchemeId_ActivatesDeclaredScheme()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
+                "install activates the first allowed scheme before any seat is published.");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var result = SoleSeatResult(players, 7, player, controlSchemeId: "scheme.seat.declared");
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.declared")),
+                "the sole seat's declared ControlSchemeId is the per-entry launch truth and must activate.");
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_SoleSeatWithoutScheme_LeavesRuntimeActivationUnchanged()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var result = SoleSeatResult(players, 7, player, controlSchemeId: null);
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
+                "seats without a declaration keep the runtime's initial/preference activation.");
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_SoleSeatControlSchemeId_FailsFastWhenSchemeNotInstalled()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var result = SoleSeatResult(players, 7, player, controlSchemeId: "scheme.seat.missing");
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ParticipantBindingResolver.PublishFocused(globals, result));
+
+            Assert.That(error!.Message, Does.Contain("scheme.seat.missing"));
+            Assert.That(error.Message, Does.Contain("not installed"));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_SoleSeatControlSchemeId_FailsFastWhenRefusedByAllowedSet()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(
+                world, "scheme.seat.first", "scheme.seat.declared", allowedSchemes: new List<string> { "scheme.seat.first" });
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var result = SoleSeatResult(players, 7, player, controlSchemeId: "scheme.seat.declared");
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ParticipantBindingResolver.PublishFocused(globals, result));
+
+            Assert.That(error!.Message, Does.Contain("allowed-set"));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_DoNotActivateSeatControlSchemes()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.seat.declared"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.first"),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
+                "multi-seat scheme routing is P3; publishing multiple seats must not activate any declared scheme.");
+        }
+
+        private static ParticipantBindingResult SoleSeatResult(
+            PlayerEntityLookup players,
+            int playerId,
+            Entity player,
+            string controlSchemeId)
+        {
+            return new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[] { new ResolvedLocalSeatPossession("seat.0", playerId, player, controlSchemeId) });
+        }
+
+        private static Dictionary<string, object> CreateSeatPublishGlobals(PlayerEntityLookup players, ControlSchemeRuntime schemes)
+        {
+            return new Dictionary<string, object>
+            {
+                [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
+                [CoreServiceKeys.PlayerEntityLookup.Name] = players,
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+                [CoreServiceKeys.ControlSchemeRuntime.Name] = schemes,
+            };
+        }
+
+        private static ControlSchemeRuntime CreateInstalledControlSchemeRuntime(
+            World world,
+            string initialScheme,
+            string alternateScheme,
+            List<string> allowedSchemes = null)
+        {
+            CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
+            InstallSeatGroundIntent(intents, "intent.seat.default");
+            InstallSeatGroundIntent(intents, "intent.seat.alt");
+
+            var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                "collection.seat.command_source",
+                "view.seat.default"));
+
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(
+                new CastDispatchProfileDefinition
+                {
+                    Id = "dispatch.seat.default",
+                    Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                    Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+                },
+                new CastDispatchProfileDefinition
+                {
+                    Id = "dispatch.seat.alt",
+                    Selector = new CastDispatchSelectorDefinition { Kind = "cycle", AdvanceOn = "orderAccepted" },
+                    Router = new CastDispatchRouterDefinition { Kind = "sequential" },
+                }));
+
+            var runtime = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                intents.Intents,
+                dispatch,
+                orderTypes);
+            runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    new()
+                    {
+                        Id = initialScheme,
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.seat.default",
+                            CastDispatchProfileId = "dispatch.seat.default",
+                        },
+                    },
+                    new()
+                    {
+                        Id = alternateScheme,
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.seat.alt",
+                            CastDispatchProfileId = "dispatch.seat.alt",
+                        },
+                    },
+                },
+                AllowedSchemes = allowedSchemes,
+            });
+            return runtime;
+        }
+
+        private static void InstallSeatGroundIntent(CommandIntentProfileTests.Harness intents, string profileId)
+        {
+            intents.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = profileId,
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
         }
 
         [Test]

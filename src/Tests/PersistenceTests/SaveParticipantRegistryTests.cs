@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Relationships;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
@@ -278,6 +279,50 @@ public sealed class SaveParticipantRegistryTests
         Assert.That(target.HasPendingReturn, Is.True);
         Assert.That(target.GetSession(new MapId("outer"))?.State, Is.EqualTo(MapSessionState.Suspended));
         Assert.That(target.GetSession(new MapId("inner"))?.State, Is.EqualTo(MapSessionState.Active));
+    }
+
+    [Test]
+    public void MapSessionParticipant_RoundTripsLaunchContextLocalSeatsAndMetadata()
+    {
+        var source = new MapSessionManager();
+        MapSession sourceSession = source.CreateSession(new MapId("seats"), new Ludots.Core.Config.MapConfig());
+        sourceSession.LaunchContext = MapLaunchContext.Create(
+            new[]
+            {
+                new LocalSeatLaunchBinding("seat.0", 1, "scheme.wasd"),
+                new LocalSeatLaunchBinding("seat.1", 2, null),
+            },
+            new Dictionary<string, object> { ["difficulty"] = "hard" });
+        source.PushFocused(new MapId("seats"));
+
+        var target = new MapSessionManager();
+        target.CreateSession(new MapId("seats"), new Ludots.Core.Config.MapConfig());
+
+        ISaveParticipant participant = CoreSaveParticipants.CreateMapSessionsParticipant(source);
+        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateMapSessionsParticipant(target);
+
+        JsonNode captured = participant.CaptureState();
+        JsonNode? seatZero = captured["sessions"]![0]!["launchContext"]!["localSeats"]![0];
+        JsonNode? seatOne = captured["sessions"]![0]!["launchContext"]!["localSeats"]![1];
+        Assert.That(seatZero!["controlSchemeId"]!.GetValue<string>(), Is.EqualTo("scheme.wasd"));
+        Assert.That(seatZero["seatId"]!.GetValue<string>(), Is.EqualTo("seat.0"));
+        Assert.That(seatZero["playerId"]!.GetValue<int>(), Is.EqualTo(1));
+        Assert.That(seatOne is JsonObject { Count: > 0 } seatOneObject && seatOneObject.ContainsKey("controlSchemeId"), Is.False,
+            "an undeclared controlSchemeId is omitted instead of serialized as an empty default.");
+
+        targetParticipant.RestoreState(captured);
+
+        MapLaunchContext? restored = target.GetSession(new MapId("seats"))!.LaunchContext;
+        Assert.That(restored, Is.Not.Null);
+        Assert.That(restored!.LocalSeats.Count, Is.EqualTo(2));
+        Assert.That(restored.LocalSeats[0].SeatId, Is.EqualTo("seat.0"));
+        Assert.That(restored.LocalSeats[0].PlayerId, Is.EqualTo(1));
+        Assert.That(restored.LocalSeats[0].ControlSchemeId, Is.EqualTo("scheme.wasd"));
+        Assert.That(restored.LocalSeats[1].SeatId, Is.EqualTo("seat.1"));
+        Assert.That(restored.LocalSeats[1].PlayerId, Is.EqualTo(2));
+        Assert.That(restored.LocalSeats[1].ControlSchemeId, Is.Null);
+        Assert.That(restored.Metadata!, Is.Not.Null);
+        Assert.That(restored.Metadata!["difficulty"], Is.EqualTo("hard"));
     }
 
     [Test]
