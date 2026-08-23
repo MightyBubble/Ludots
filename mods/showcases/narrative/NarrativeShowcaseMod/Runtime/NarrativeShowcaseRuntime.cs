@@ -11,7 +11,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
@@ -120,31 +120,31 @@ namespace NarrativeShowcaseMod.Runtime
             return Task.CompletedTask;
         }
 
-        public Task HandleQuestStageChangedAsync(ScriptContext context)
+        public Task HandleTaskActivatedAsync(ScriptContext context)
         {
             if (context.GetEngine() is not GameEngine engine || !IsShowcaseActive(engine))
             {
                 return Task.CompletedTask;
             }
 
-            AppendHistory(_frontendConfig.Templates.QuestStageChanged, new Dictionary<string, string>
+            AppendHistory(_frontendConfig.Templates.TaskActivated, new Dictionary<string, string>
             {
-                ["bodyText"] = context.Get(QuestServiceKeys.ObjectiveText) ?? string.Empty,
+                ["bodyText"] = context.Get(TaskServiceKeys.ObjectiveText) ?? string.Empty,
             });
             RefreshPanel(engine);
             return Task.CompletedTask;
         }
 
-        public Task HandleQuestCompletedAsync(ScriptContext context)
+        public Task HandleTaskCompletedAsync(ScriptContext context)
         {
             if (context.GetEngine() is not GameEngine engine || !IsShowcaseActive(engine))
             {
                 return Task.CompletedTask;
             }
 
-            AppendHistory(_frontendConfig.Templates.QuestCompleted, new Dictionary<string, string>
+            AppendHistory(_frontendConfig.Templates.TaskCompleted, new Dictionary<string, string>
             {
-                ["questId"] = context.Get(QuestServiceKeys.QuestId) ?? string.Empty,
+                ["taskId"] = context.Get(TaskServiceKeys.TaskId) ?? string.Empty,
             });
             RefreshPanel(engine);
             return Task.CompletedTask;
@@ -197,14 +197,14 @@ namespace NarrativeShowcaseMod.Runtime
             return Task.CompletedTask;
         }
 
-        public Task HandleQuestSignalAsync(ScriptContext context)
+        public Task HandleTaskSignalAsync(ScriptContext context)
         {
             if (context.GetEngine() is not GameEngine engine || !IsShowcaseActive(engine))
             {
                 return Task.CompletedTask;
             }
 
-            string signalId = context.Get(QuestServiceKeys.SignalId) ?? string.Empty;
+            string signalId = context.Get(TaskServiceKeys.SignalId) ?? string.Empty;
             AppendHistory(_frontendConfig.Templates.Signal, new Dictionary<string, string>
             {
                 ["signalId"] = signalId,
@@ -357,33 +357,46 @@ namespace NarrativeShowcaseMod.Runtime
 
         private NarrativeFrontendSurfaceModel BuildObjectiveSurface(NarrativeDirector director)
         {
-            IReadOnlyList<QuestView> quests = director.GetQuestViews();
-            QuestView? activeQuest = null;
-            for (int i = 0; i < quests.Count; i++)
+            IReadOnlyList<TaskView> tasks = director.GetTaskViews();
+            TaskView? activeTask = null;
+            for (int i = 0; i < tasks.Count; i++)
             {
-                if (quests[i].State == QuestState.Active)
+                if (tasks[i].State == TaskInstanceState.Active)
                 {
-                    activeQuest = quests[i];
+                    activeTask = tasks[i];
                     break;
                 }
             }
 
-            if (activeQuest == null)
+            if (activeTask == null)
             {
                 return CreateSurface(_frontendConfig.ObjectiveTracker, NarrativeFrontendSurfaceKind.ObjectiveTracker, _frontendConfig.ObjectiveTracker.Title, director.BuildObjectiveSummary());
             }
 
+            TaskObjectiveProgressView objective = ResolveCurrentObjective(activeTask.Value);
             string title = ReplaceTokens(_frontendConfig.Templates.ObjectiveTitleFormat, new Dictionary<string, string>
             {
-                ["quest"] = activeQuest.DisplayName,
-                ["stage"] = activeQuest.StageTitle,
+                ["task"] = activeTask.Value.DisplayName,
             });
             return CreateSurface(
                 _frontendConfig.ObjectiveTracker,
                 NarrativeFrontendSurfaceKind.ObjectiveTracker,
                 title,
-                activeQuest.ObjectiveText,
-                activeQuest.ObjectiveHint);
+                objective.Title,
+                objective.Hint);
+        }
+
+        private static TaskObjectiveProgressView ResolveCurrentObjective(TaskView task)
+        {
+            for (int i = 0; i < task.Objectives.Count; i++)
+            {
+                if (!task.Objectives[i].Completed)
+                {
+                    return task.Objectives[i];
+                }
+            }
+
+            return task.Objectives.Count > 0 ? task.Objectives[0] : default;
         }
 
         private NarrativeFrontendSurfaceModel BuildHistorySurface()
@@ -554,7 +567,7 @@ namespace NarrativeShowcaseMod.Runtime
             ResetHistory();
             director.ResetState();
             RebindEntities(engine);
-            director.StartQuest(NarrativeShowcaseIds.QuestId);
+            director.StartTask(NarrativeShowcaseIds.BriefingTaskId);
             director.StartCinematic(NarrativeShowcaseIds.IntroCinematicId);
             engine.GlobalContext[NarrativeShowcaseIds.BootstrappedKey] = true;
             engine.GlobalContext[NarrativeShowcaseIds.BeastSpawnedKey] = false;
@@ -779,7 +792,7 @@ namespace NarrativeShowcaseMod.Runtime
                 ? $"{cinematic.CinematicId}|{cinematic.StepId}|{cinematic.Progress01:0.00}|{cinematic.RequiresAdvance}"
                 : string.Empty;
             return string.Join("||",
-                director.BuildQuestSummary(),
+                director.BuildTaskSummary(),
                 director.BuildObjectiveSummary(),
                 director.BuildVariableSummary(NarrativeShowcaseIds.TrustVariableId, NarrativeShowcaseIds.LoreVariableId, NarrativeShowcaseIds.EndingVariableId),
                 dialogueSig,
