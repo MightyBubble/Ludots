@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Scripting;
 using NavMeshDebugLaunchMod.Input;
 using NavMeshDebugLaunchMod.Runtime;
@@ -64,7 +65,8 @@ namespace NavMeshDebugLaunchMod.Systems
             {
                 var camera = ClientLocalSeatAccess.ResolveAuthorityCamera(_engine);
                 System.Numerics.Vector2 target = camera.State.TargetCm;
-                SpawnObstacle((int)target.X, (int)target.Y, _config.DefaultObstacleRadiusCm, reason: "keypress");
+                (int clampedX, int clampedY) = ClampToTerrainExtent((int)target.X, (int)target.Y);
+                SpawnObstacle(clampedX, clampedY, _config.DefaultObstacleRadiusCm, reason: "keypress");
             }
 
             if (_input.PressedThisFrame(NavMeshDebugInputActions.ClearObstacles))
@@ -82,6 +84,33 @@ namespace NavMeshDebugLaunchMod.Systems
 
             return new NavMeshDebugShowcaseConfigLoader(engine.ConfigPipeline)
                 .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        }
+
+        /// <summary>
+        /// 相机目标可能落在地形范围之外（虚拟相机未收拢、窗口外拖拽后的残余机位）；
+        /// 直接以界外坐标创建实体会触发 WorldPositionOutOfBounds 未处理异常。
+        /// 按键生成路径必须把落点钳回地形范围。
+        /// </summary>
+        private (int XCm, int YCm) ClampToTerrainExtent(int xCm, int yCm)
+        {
+            LogicTerrainField? terrain = null;
+            if (_engine.TryGetService(CoreServiceKeys.LogicTerrain, out LogicTerrainField? loaded) && loaded != null)
+            {
+                terrain = loaded;
+            }
+
+            if (terrain == null)
+            {
+                return (xCm, yCm);
+            }
+
+            terrain.GetWorldPositionMeters(0, 0, out float minWorldX, out float minWorldZ);
+            terrain.GetWorldPositionMeters(terrain.WidthCells - 1, terrain.HeightCells - 1, out float maxWorldX, out float maxWorldZ);
+            int minX = (int)MathF.Floor(MathF.Min(minWorldX, maxWorldX) * 100f);
+            int maxX = (int)MathF.Ceiling(MathF.Max(minWorldX, maxWorldX) * 100f);
+            int minY = (int)MathF.Floor(MathF.Min(minWorldZ, maxWorldZ) * 100f);
+            int maxY = (int)MathF.Ceiling(MathF.Max(minWorldZ, maxWorldZ) * 100f);
+            return (Math.Clamp(xCm, minX, maxX), Math.Clamp(yCm, minY, maxY));
         }
 
         private bool RuntimeNavMeshReady()
