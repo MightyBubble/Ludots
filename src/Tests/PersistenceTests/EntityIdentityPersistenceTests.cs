@@ -3,7 +3,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Map;
 using Ludots.Core.Persistence;
 using NUnit.Framework;
@@ -168,37 +168,37 @@ public sealed class EntityIdentityPersistenceTests
     }
 
     [Test]
-    public void QuestInstanceScopeHostIsAliveAndReadableAfterRoundTrip()
+    public void TaskInstanceScopeHostIsAliveAndReadableAfterRoundTrip()
     {
         using World world = World.Create();
-        Entity scopeHost = world.Create(new Name { Value = "quest-scope" });
-        world.Create(new QuestInstanceCm
+        Entity scopeHost = world.Create(new Name { Value = "task-scope" });
+        world.Create(new TaskInstanceCm
         {
             DefinitionId = 1,
-            State = QuestState.Active,
-            StageIndex = 0,
+            InstanceId = 1,
+            State = TaskInstanceState.Active,
             ScopeHost = scopeHost,
             Revision = 1
         });
 
         using World restored = CoreRoundTrip(world);
-        Entity restoredQuest = FindSingle<QuestInstanceCm>(restored);
-        Entity restoredScopeHost = restored.Get<QuestInstanceCm>(restoredQuest).ScopeHost;
+        Entity restoredTask = FindSingle<TaskInstanceCm>(restored);
+        Entity restoredScopeHost = restored.Get<TaskInstanceCm>(restoredTask).ScopeHost;
 
         Assert.That(restoredScopeHost.WorldId, Is.EqualTo(restored.Id));
-        AssertAliveName(restored, restoredScopeHost, "quest-scope");
+        AssertAliveName(restored, restoredScopeHost, "task-scope");
     }
 
     [Test]
-    public void EntityReferenceAuditFailsFastWhenQuestScopeHostReferencesExcludedEntity()
+    public void EntityReferenceAuditFailsFastWhenTaskScopeHostReferencesExcludedEntity()
     {
         using World world = World.Create();
-        Entity excludedScopeHost = world.Create(new Name { Value = "excluded-quest-scope" }, new SaveExcludedTag());
-        world.Create(new QuestInstanceCm
+        Entity excludedScopeHost = world.Create(new Name { Value = "excluded-task-scope" }, new SaveExcludedTag());
+        world.Create(new TaskInstanceCm
         {
             DefinitionId = 1,
-            State = QuestState.Active,
-            StageIndex = 0,
+            InstanceId = 1,
+            State = TaskInstanceState.Active,
             ScopeHost = excludedScopeHost,
             Revision = 1
         });
@@ -207,8 +207,8 @@ public sealed class EntityIdentityPersistenceTests
             () => SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default));
 
         Assert.That(error!.Message, Does.Contain("excluded entity"));
-        Assert.That(error.Message, Does.Contain(nameof(QuestInstanceCm)));
-        Assert.That(error.Message, Does.Contain(nameof(QuestInstanceCm.ScopeHost)));
+        Assert.That(error.Message, Does.Contain(nameof(TaskInstanceCm)));
+        Assert.That(error.Message, Does.Contain(nameof(TaskInstanceCm.ScopeHost)));
     }
 
     [Test]

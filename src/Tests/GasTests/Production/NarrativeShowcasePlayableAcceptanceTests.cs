@@ -14,7 +14,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -88,9 +88,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             Assert.That(AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains("Narrative Showcase", StringComparison.Ordinal)), Is.True);
-            AssertQuestStage(director, NarrativeShowcaseMod.NarrativeShowcaseIds.QuestId, QuestState.Active, "briefing");
+            AssertTaskState(director, NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingTaskId, TaskInstanceState.Active);
             CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "map_loaded");
-            timeline.Add("[T+001] Loaded the narrative showcase hub; HUD mounted and quest entered briefing stage.");
+            timeline.Add("[T+001] Loaded the narrative showcase hub; HUD mounted and task chain entered the briefing beat.");
 
             SelectNamedEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/enter", frameTimesMs);
@@ -107,9 +107,9 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, frameTimesMs, () => !director.HasActiveDialogue, 20);
             Assert.That(director.GetVariable(NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId).IntValue, Is.EqualTo(1));
             Assert.That(director.GetVariable(NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId).IntValue, Is.EqualTo(2));
-            AssertQuestStage(director, NarrativeShowcaseMod.NarrativeShowcaseIds.QuestId, QuestState.Active, "trial");
+            AssertTaskState(director, NarrativeShowcaseMod.NarrativeShowcaseIds.TrialTaskId, TaskInstanceState.Active);
             CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "briefing_branch_complete");
-            timeline.Add("[T+003] Took the lore branch, raised shared narrative variables, and advanced the reusable quest runtime into the trial stage.");
+            timeline.Add("[T+003] Took the lore branch, raised shared narrative variables, and advanced the reusable task runtime into the trial beat.");
 
             float baselineMoveSpeed = ReadAttribute(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, "MoveSpeed");
             MoveNearEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.ShrineName, 250f, frameTimesMs);
@@ -143,25 +143,25 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => director.TryGetQuestState(NarrativeShowcaseMod.NarrativeShowcaseIds.QuestId, out var state, out string stageId) && state == QuestState.Active && string.Equals(stageId, "return", StringComparison.OrdinalIgnoreCase),
+                () => director.TryGetTaskState(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnTaskId, out var state) && state == TaskInstanceState.Active,
                 120,
-                () => BuildQuestProgressDiagnostics(engine, director, beast));
+                () => BuildTaskProgressDiagnostics(engine, director, beast));
             Assert.That(ReadHealth(engine.World, beast), Is.LessThanOrEqualTo(0f));
             CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "beast_defeated");
-            timeline.Add("[T+007] Finished the encounter through GAS effects, which the narrative runtime converted into the return stage via signal tracking.");
+            timeline.Add("[T+007] Finished the encounter through GAS effects, which the narrative runtime converted into the return beat via signal tracking.");
 
             MoveNearEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.ElderName, 260f, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             TickUntil(engine, frameTimesMs, () => director.HasActiveDialogue, 30);
             PressButton(engine, backend, "<Keyboard>/2", frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => director.TryGetQuestState(NarrativeShowcaseMod.NarrativeShowcaseIds.QuestId, out var state, out _) && state == QuestState.Completed, 60);
+            TickUntil(engine, frameTimesMs, () => director.TryGetTaskState(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnTaskId, out var state) && state == TaskInstanceState.Completed, 60);
             Tick(engine, 10, frameTimesMs);
             float rewardedMoveSpeed = ReadAttribute(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, "MoveSpeed");
             Assert.That(director.GetVariable(NarrativeShowcaseMod.NarrativeShowcaseIds.EndingVariableId).StringValue, Is.EqualTo("Mercy"));
             Assert.That(director.GetVariable(NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId).IntValue, Is.EqualTo(4));
             Assert.That(rewardedMoveSpeed, Is.GreaterThan(baselineMoveSpeed));
             CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "mercy_ending");
-            timeline.Add("[T+008] Returned to the elder, unlocked the Mercy branch from earlier lore knowledge, completed the quest, and received the trigger-driven GAS blessing reward.");
+            timeline.Add("[T+008] Returned to the elder, unlocked the Mercy branch from earlier lore knowledge, completed the task chain, and received the trigger-driven GAS blessing reward.");
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
@@ -346,11 +346,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ReadHealth(engine.World, target), Is.LessThanOrEqualTo(0f));
         }
 
-        private static void AssertQuestStage(NarrativeDirector director, string questId, QuestState expectedState, string expectedStage)
+        private static void AssertTaskState(NarrativeDirector director, string taskId, TaskInstanceState expectedState)
         {
-            Assert.That(director.TryGetQuestState(questId, out var actualState, out string actualStage), Is.True);
+            Assert.That(director.TryGetTaskState(taskId, out var actualState), Is.True);
             Assert.That(actualState, Is.EqualTo(expectedState));
-            Assert.That(actualStage, Is.EqualTo(expectedStage));
         }
 
         private static Entity FindEntityByName(World world, string name)
@@ -552,11 +551,11 @@ namespace Ludots.Tests.GAS.Production
             return string.Join(" || ", details);
         }
 
-        private static string BuildQuestProgressDiagnostics(GameEngine engine, NarrativeDirector director, Entity beast)
+        private static string BuildTaskProgressDiagnostics(GameEngine engine, NarrativeDirector director, Entity beast)
         {
             var details = new List<string>
             {
-                $"quest={director.BuildQuestSummary()}",
+                $"task={director.BuildTaskSummary()}",
                 $"objective={director.BuildObjectiveSummary()}",
                 $"beastHealth={ReadHealth(engine.World, beast):0.##}"
             };
@@ -576,9 +575,9 @@ namespace Ludots.Tests.GAS.Production
                 details.Add($"beastDefeatedFlag={defeated}");
             }
 
-            if (engine.GetService(CoreServiceKeys.QuestRuntimeService) is QuestRuntimeService quests)
+            if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService tasks)
             {
-                quests.Signals.TryGetValue(NarrativeShowcaseMod.NarrativeShowcaseIds.BeastDefeatedSignal, out int signalCount);
+                tasks.Signals.TryGetValue(NarrativeShowcaseMod.NarrativeShowcaseIds.BeastDefeatedSignal, out int signalCount);
                 details.Add($"beastSignalCount={signalCount}");
             }
 
@@ -824,7 +823,7 @@ namespace Ludots.Tests.GAS.Production
             var snapshot = new AcceptanceSnapshot(
                 step,
                 frame.ScreenshotFileName,
-                director.BuildQuestSummary(),
+                director.BuildTaskSummary(),
                 director.BuildObjectiveSummary(),
                 director.BuildDialogueSummary(),
                 director.BuildCinematicSummary(),
@@ -848,14 +847,14 @@ namespace Ludots.Tests.GAS.Production
         {
             return step switch
             {
-                "map_loaded" => ("T+001", "Arcweaver, Warden Mirelle, and the shared HUD", "Boot the showcase and confirm quest tracker, journal, variables, and prompt ribbon are mounted.", "narrative_showcase_hub", "Verify the reusable frontend is live before any branch begins.", "Load the real mod set, tick the engine, and snapshot the mounted UIRoot scene."),
+                "map_loaded" => ("T+001", "Arcweaver, Warden Mirelle, and the shared HUD", "Boot the showcase and confirm task tracker, journal, variables, and prompt ribbon are mounted.", "narrative_showcase_hub", "Verify the reusable frontend is live before any branch begins.", "Load the real mod set, tick the engine, and snapshot the mounted UIRoot scene."),
                 "intro_complete" => ("T+002", "Arcweaver and Warden Mirelle", "Advance the intro until the transmission overlay hands off into overlay dialogue.", "The shrine approach briefing inside the hub map.", "Show cinematic-to-dialogue handoff works through one shared frontend owner.", "Drive production input with Enter and wait for NarrativeDirector to enter dialogue state."),
-                "briefing_branch_complete" => ("T+003", "Arcweaver, Mirelle, and the branch state panel", "Take the lore branch, unlock trust, and advance the quest into the trial stage.", "The elder dialogue flow with variables and objective tracker still visible.", "Prove conditions, variables, and choice availability remain data-driven.", "Commit choice shortcuts with number keys and validate NarrativeDirector variables plus quest stage."),
+                "briefing_branch_complete" => ("T+003", "Arcweaver, Mirelle, and the branch state panel", "Take the lore branch, unlock trust, and advance the task chain into the trial beat.", "The elder dialogue flow with variables and objective tracker still visible.", "Prove conditions, variables, and choice availability remain data-driven.", "Commit choice shortcuts with number keys and validate NarrativeDirector variables plus task state."),
                 "shrine_interacted" => ("T+004", "Arcweaver, the shrine, and the subtitle bubble", "Trigger the shrine reveal and capture the non-wait-input subtitle bubble state.", "The shrine arena on the trial objective.", "Validate the frontend supports skippable cinematic/subtitle beats without blocking on wait-input.", "Use ECS move and interaction loops to hit the trigger, then wait until the shared frontend mounts the subtitle bubble."),
                 "beast_spawned" => ("T+005", "Arcweaver, the Ashen Beast, and the history journal", "Complete the reveal callback and show the spawned beast arriving while the flow review updates.", "The shrine arena after the cinematic signal resolves.", "Prove cinematic callbacks can wake gameplay entities and the frontend reflects the transition.", "Advance once, wait for the runtime entity spawn queue, and resnapshot the mounted frontend."),
                 "beast_pressured" => ("T+006", "Arcweaver, the Ashen Beast, and the combat prompt ribbon", "Damage the newly spawned beast through the shared combat input before the deterministic finisher lands.", "The shrine arena while the return stage is still unresolved.", "Close the evidence gap between spawn and defeat with a real playable combat step.", "Aim at the beast, fire Arcweaver's inherited combat action, and snapshot the mounted frontend after health drops."),
                 "beast_defeated" => ("T+007", "Arcweaver, the fallen beast, and the objective tracker", "Finish the encounter and show the quest state shifting into the return leg.", "The trial arena after combat resolution.", "Validate GAS combat, signals, and narrative callbacks converge without a parallel quest pipeline.", "Apply deterministic production effect requests until the beast dies and the return stage is published."),
-                "mercy_ending" => ("T+008", "Arcweaver, Mirelle, and the completed quest surfaces", "Choose the Mercy ending and confirm the reward branch lands as shared frontend state.", "Back at the elder after the trial.", "Demonstrate branch gating on prior lore knowledge and trigger-driven reward callbacks.", "Return to Mirelle, pick the unlocked ending, and validate the reward raises MoveSpeed while quest status completes."),
+                "mercy_ending" => ("T+008", "Arcweaver, Mirelle, and the completed task surfaces", "Choose the Mercy ending and confirm the reward branch lands as shared frontend state.", "Back at the elder after the trial.", "Demonstrate branch gating on prior lore knowledge and trigger-driven reward callbacks.", "Return to Mirelle, pick the unlocked ending, and validate the reward raises MoveSpeed while task status completes."),
                 _ => ($"T+{step}", "Narrative showcase actors", "Capture the current narrative frontend state.", "The active showcase map.", "Keep the screenshot flow auditable.", "Snapshot the mounted UIRoot scene.")
             };
         }
@@ -872,7 +871,7 @@ namespace Ludots.Tests.GAS.Production
                     logical_time = $"T+{i + 1:000}",
                     step = snapshot.Step,
                     screenshot = snapshot.ScreenshotFileName,
-                    quest = snapshot.QuestSummary,
+                    task = snapshot.TaskSummary,
                     objective = snapshot.ObjectiveSummary,
                     dialogue = snapshot.DialogueSummary,
                     cinematic = snapshot.CinematicSummary,
@@ -904,7 +903,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- clock: `fixed 1/60s`");
             sb.AppendLine();
             sb.AppendLine("## Intent");
-            sb.AppendLine("- Player goal: play a full quest/dialogue/cinematic loop that starts in a camera-led intro, branches on dialogue knowledge, wakes a shrine, defeats a spawned beast, and returns for an ending choice.");
+            sb.AppendLine("- Player goal: play a full task/dialogue/cinematic loop that starts in a camera-led intro, branches on dialogue knowledge, wakes a shrine, defeats a spawned beast, and returns for an ending choice.");
             sb.AppendLine("- Gameplay domain: shared Ludots ECS movement, interaction showcase combat/GAS, trigger callbacks, runtime entity spawning, virtual cameras, and a single reusable narrative frontend scene.");
             sb.AppendLine();
             sb.AppendLine("## Determinism Inputs");
@@ -923,9 +922,9 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("5. Return to the elder, choose the Mercy ending, and validate the trigger-driven GAS blessing reward.");
             sb.AppendLine();
             sb.AppendLine("## Expected Outcomes");
-            sb.AppendLine("- Primary success condition: quest, dialogue, cinematic, interaction, and reward callbacks stay on shared runtime infrastructure from start to finish.");
+            sb.AppendLine("- Primary success condition: task, dialogue, cinematic, interaction, and reward callbacks stay on shared runtime infrastructure from start to finish.");
             sb.AppendLine("- Failure branch condition: without prior lore knowledge, the Mercy branch remains unavailable at return dialogue.");
-            sb.AppendLine("- Key metrics: quest stage, trust/lore/ending variables, cinematic state, active UI surfaces, beast health, and reward movement speed delta.");
+            sb.AppendLine("- Key metrics: task state, trust/lore/ending variables, cinematic state, active UI surfaces, beast health, and reward movement speed delta.");
             sb.AppendLine();
             sb.AppendLine("## Evidence Artifacts");
             sb.AppendLine("- `artifacts/acceptance/narrative-showcase/trace.jsonl`");
@@ -940,7 +939,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine();
             sb.AppendLine("## Outcome");
             sb.AppendLine("- success: yes");
-            sb.AppendLine($"- final quest: `{final.QuestSummary}`");
+            sb.AppendLine($"- final task: `{final.TaskSummary}`");
             sb.AppendLine($"- final variables: `{final.VariableSummary}`");
             sb.AppendLine($"- final dialogue card: `{final.DialogueSummary}`");
             sb.AppendLine("- reason: the showcase stayed on `ConfigPipeline`, `NarrativeDirector`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.");
@@ -961,17 +960,17 @@ namespace Ludots.Tests.GAS.Production
                 "flowchart TD",
                 "    A[Load narrative_showcase_hub] --> B[Intro cinematic steps advance]",
                 "    B --> C[Briefing dialogue lore branch]",
-                "    C --> D[Quest stage advances to trial]",
+                "    C --> D[Task chain advances to trial]",
                 "    D --> E[Right-click move near shrine]",
                 "    E --> F[Press E -> reveal cinematic]",
                 "    F --> G[Trigger callback spawns Ashen Beast]",
                 "    G --> H[Arcweaver combat damages beast]",
                 "    H --> I[GAS finisher defeats beast -> signal emitted]",
-                "    I --> J[Quest stage advances to return]",
+                "    I --> J[Task chain advances to return]",
                 "    J --> K{Lore learned?}",
                 "    K -- no --> L[Guard branch: Mercy ending stays locked]",
                 "    K -- yes --> M[Return dialogue unlocks Mercy branch]",
-                "    M --> N[Reward signal applies GAS blessing and quest completes]"
+                "    M --> N[Reward signal applies GAS blessing and task completes]"
             }) + Environment.NewLine;
         }
 
@@ -994,7 +993,7 @@ namespace Ludots.Tests.GAS.Production
             return (ordered.Length & 1) == 0 ? (ordered[middle - 1] + ordered[middle]) * 0.5d : ordered[middle];
         }
 
-        private sealed record AcceptanceSnapshot(string Step, string ScreenshotFileName, string QuestSummary, string ObjectiveSummary, string DialogueSummary, string CinematicSummary, string VariableSummary, IReadOnlyList<string> UiText, string ActiveModeId, double TickMs, IReadOnlyList<EntityState> Entities);
+        private sealed record AcceptanceSnapshot(string Step, string ScreenshotFileName, string TaskSummary, string ObjectiveSummary, string DialogueSummary, string CinematicSummary, string VariableSummary, IReadOnlyList<string> UiText, string ActiveModeId, double TickMs, IReadOnlyList<EntityState> Entities);
         private sealed record EntityState(string Name, bool Alive, float X, float Y, float Health);
 
         private sealed class TestInputBackend : IInputBackend
