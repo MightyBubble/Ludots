@@ -3196,7 +3196,7 @@ namespace Ludots.Core.Engine
             {
                 return provider.BuildForMap(
                     mapConfig,
-                    MapLoader.TemplateRegistry.GetAll(),
+                    MapLoader.TemplateRegistry.GetAll().ToDictionary(template => template.Id),
                     layerId)
                     ?? throw new InvalidOperationException("Nav obstacle authoring provider returned null.");
             }
