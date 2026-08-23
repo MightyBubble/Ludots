@@ -4939,7 +4939,7 @@
       "id": "map_trigger_night_raid",
       "path": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod",
       "title": "夜袭三波",
-      "summary": "MapTriggerGraph 旗舰展厅：英雄进圈开袭、清场跨思考波过第二波、Boss 阵亡翻阶段并开出胜利面板；关卡流全部在地图 JSON + 触发图数据里。",
+      "summary": "MapTriggerGraph 旗舰展厅：英雄进圈后按真实事件生成两波敌人，累计击杀达阈值后在营地生成 Boss；阶段链与胜利面板全数据驱动。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -4955,7 +4955,7 @@
       "artifactDir": "artifacts/evidence/map_trigger_night_raid",
       "screenshot": null,
       "status": "active",
-      "notes": "Headless data-flow acceptance; raid parties are map-data pre-placed, boss 由 SpawnTemplate 图 op（op 447）在 kill 阈值达标时图内生成；阶段链与胜利面板全数据驱动。"
+      "notes": "波次 raider 不再预置于地图；RegionEntered 触发 wave1，EntityAliveCountChanged(team 2, cross_below 0) 触发 wave2，累计 kill_threshold=5 后由 SpawnTemplate 图 op（op 447）在 boss_camp 锚点生成 Boss；阶段链与胜利面板全数据驱动。"
     },
     {
       "id": "night_raid_showcase",

@@ -21,7 +21,7 @@
     {
       "name": "kill_threshold",
       "type": "int",
-      "initial": 3
+      "initial": 5
     },
     {
       "name": "tool_uses",
@@ -64,70 +64,12 @@
       "Template": "night_raid_gate"
     },
     {
-      "InstanceId": "wave1_raider_a",
-      "Template": "night_raid_raider",
-      "Overrides": {
-        "WorldPositionCm": {
-          "Value": {
-            "X": 600,
-            "Y": -120
-          }
-        }
-      }
+      "InstanceId": "night_raid_wave1_anchor",
+      "Template": "night_raid_wave1_anchor"
     },
     {
-      "InstanceId": "wave1_raider_b",
-      "Template": "night_raid_raider",
-      "Overrides": {
-        "WorldPositionCm": {
-          "Value": {
-            "X": 600,
-            "Y": 0
-          }
-        }
-      }
-    },
-    {
-      "InstanceId": "wave1_raider_c",
-      "Template": "night_raid_raider",
-      "Overrides": {
-        "WorldPositionCm": {
-          "Value": {
-            "X": 600,
-            "Y": 120
-          }
-        }
-      }
-    },
-    {
-      "InstanceId": "wave2_raider_a",
-      "Template": "night_raid_raider",
-      "Overrides": {
-        "Team": {
-          "Id": 3
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 900,
-            "Y": -80
-          }
-        }
-      }
-    },
-    {
-      "InstanceId": "wave2_raider_b",
-      "Template": "night_raid_raider",
-      "Overrides": {
-        "Team": {
-          "Id": 3
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 900,
-            "Y": 80
-          }
-        }
-      }
+      "InstanceId": "night_raid_wave2_anchor",
+      "Template": "night_raid_wave2_anchor"
     },
     {
       "InstanceId": "boss_camp",
@@ -141,11 +83,11 @@
     },
     {
       "TeamId": 2,
-      "RepresentativeInstanceId": "wave1_raider_b"
+      "RepresentativeInstanceId": "night_raid_wave1_anchor"
     },
     {
       "TeamId": 3,
-      "RepresentativeInstanceId": "wave2_raider_a"
+      "RepresentativeInstanceId": "night_raid_wave2_anchor"
     },
     {
       "TeamId": 4,

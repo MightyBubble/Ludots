@@ -28,6 +28,26 @@
     }
    },
    {
+    "label": "on_elite_raider_died",
+    "event": "EntityDied",
+    "start": "rd_scope",
+    "refire": "restart",
+    "filters": {
+     "team": 3
+    }
+   },
+   {
+    "label": "on_wave1_cleared",
+    "event": "EntityAliveCountChanged",
+    "start": "wave1_clear_scope",
+    "once": true,
+    "filters": {
+     "team": 2,
+     "direction": "cross_below",
+     "threshold": 0
+    }
+   },
+   {
     "label": "on_boss_died",
     "event": "EntityDied",
     "start": "hero_scope",
@@ -102,12 +122,108 @@
     "var": "stage"
    },
    {
-    "id": "circle_ok",
+    "id": "wave1_scope",
+    "op": "LoadExplicitTarget"
+   },
+   {
+    "id": "wave1_x_a",
+    "op": "ConstFloat",
+    "floatValue": 420.0
+   },
+   {
+    "id": "wave1_y_a",
+    "op": "ConstFloat",
+    "floatValue": -140.0
+   },
+   {
+    "id": "spawn_wave1_a",
+    "op": "SpawnTemplate",
+    "template": "night_raid_raider"
+   },
+   {
+    "id": "wave1_x_b",
+    "op": "ConstFloat",
+    "floatValue": 420.0
+   },
+   {
+    "id": "wave1_y_b",
+    "op": "ConstFloat",
+    "floatValue": 0.0
+   },
+   {
+    "id": "spawn_wave1_b",
+    "op": "SpawnTemplate",
+    "template": "night_raid_raider"
+   },
+   {
+    "id": "wave1_x_c",
+    "op": "ConstFloat",
+    "floatValue": 420.0
+   },
+   {
+    "id": "wave1_y_c",
+    "op": "ConstFloat",
+    "floatValue": 140.0
+   },
+   {
+    "id": "spawn_wave1_c",
+    "op": "SpawnTemplate",
+    "template": "night_raid_raider"
+   },
+   {
+    "id": "wave1_spawn_ok",
     "op": "ConstInt",
     "intValue": 2
    },
    {
-    "id": "circle_done",
+    "id": "wave1_spawn_done",
+    "op": "HaltReturnInt"
+   },
+   {
+    "id": "wave1_clear_scope",
+    "op": "LoadExplicitTarget"
+   },
+   {
+    "id": "wave2_scope",
+    "op": "LoadExplicitTarget"
+   },
+   {
+    "id": "wave2_x_a",
+    "op": "ConstFloat",
+    "floatValue": 760.0
+   },
+   {
+    "id": "wave2_y_a",
+    "op": "ConstFloat",
+    "floatValue": -110.0
+   },
+   {
+    "id": "spawn_wave2_a",
+    "op": "SpawnTemplate",
+    "template": "night_raid_raider_elite"
+   },
+   {
+    "id": "wave2_x_b",
+    "op": "ConstFloat",
+    "floatValue": 760.0
+   },
+   {
+    "id": "wave2_y_b",
+    "op": "ConstFloat",
+    "floatValue": 110.0
+   },
+   {
+    "id": "spawn_wave2_b",
+    "op": "SpawnTemplate",
+    "template": "night_raid_raider_elite"
+   },
+   {
+    "id": "wave2_spawn_ok",
+    "op": "ConstInt",
+    "intValue": 3
+   },
+   {
+    "id": "wave2_spawn_done",
     "op": "HaltReturnInt"
    },
    {
@@ -169,6 +285,20 @@
     "id": "write_stage_three",
     "op": "WriteMapVarInt",
     "var": "stage"
+   },
+   {
+    "id": "stage_boss",
+    "op": "ConstInt",
+    "intValue": 3
+   },
+   {
+    "id": "write_stage_boss",
+    "op": "WriteMapVarInt",
+    "var": "stage"
+   },
+   {
+    "id": "boss_scope",
+    "op": "LoadExplicitTarget"
    },
    {
     "id": "spawn_boss",
@@ -336,7 +466,7 @@
     "fromPort": "next",
     "to": "circle_two"
    },
-   {
+    {
     "from": "circle_two",
     "fromPort": "next",
     "to": "write_stage_two"
@@ -344,12 +474,117 @@
    {
     "from": "write_stage_two",
     "fromPort": "next",
-    "to": "circle_ok"
+    "to": "wave1_scope"
    },
    {
-    "from": "circle_ok",
+    "from": "wave1_scope",
     "fromPort": "next",
-    "to": "circle_done"
+    "to": "wave1_x_a"
+   },
+   {
+    "from": "wave1_x_a",
+    "fromPort": "next",
+    "to": "wave1_y_a"
+   },
+   {
+    "from": "wave1_y_a",
+    "fromPort": "next",
+    "to": "spawn_wave1_a"
+   },
+   {
+    "from": "spawn_wave1_a",
+    "fromPort": "next",
+    "to": "wave1_x_b"
+   },
+   {
+    "from": "wave1_x_b",
+    "fromPort": "next",
+    "to": "wave1_y_b"
+   },
+   {
+    "from": "wave1_y_b",
+    "fromPort": "next",
+    "to": "spawn_wave1_b"
+   },
+   {
+    "from": "spawn_wave1_b",
+    "fromPort": "next",
+    "to": "wave1_x_c"
+   },
+   {
+    "from": "wave1_x_c",
+    "fromPort": "next",
+    "to": "wave1_y_c"
+   },
+   {
+    "from": "wave1_y_c",
+    "fromPort": "next",
+    "to": "spawn_wave1_c"
+   },
+   {
+    "from": "spawn_wave1_c",
+    "fromPort": "next",
+    "to": "wave1_spawn_ok"
+   },
+   {
+    "from": "wave1_spawn_ok",
+    "fromPort": "next",
+    "to": "wave1_spawn_done"
+   },
+   {
+    "from": "wave1_clear_scope",
+    "fromPort": "next",
+    "to": "stage_three"
+   },
+   {
+    "from": "stage_three",
+    "fromPort": "next",
+    "to": "write_stage_three"
+   },
+   {
+    "from": "write_stage_three",
+    "fromPort": "next",
+    "to": "wave2_scope"
+   },
+   {
+    "from": "wave2_scope",
+    "fromPort": "next",
+    "to": "wave2_x_a"
+   },
+   {
+    "from": "wave2_x_a",
+    "fromPort": "next",
+    "to": "wave2_y_a"
+   },
+   {
+    "from": "wave2_y_a",
+    "fromPort": "next",
+    "to": "spawn_wave2_a"
+   },
+   {
+    "from": "spawn_wave2_a",
+    "fromPort": "next",
+    "to": "wave2_x_b"
+   },
+   {
+    "from": "wave2_x_b",
+    "fromPort": "next",
+    "to": "wave2_y_b"
+   },
+   {
+    "from": "wave2_y_b",
+    "fromPort": "next",
+    "to": "spawn_wave2_b"
+   },
+   {
+    "from": "spawn_wave2_b",
+    "fromPort": "next",
+    "to": "wave2_spawn_ok"
+   },
+   {
+    "from": "wave2_spawn_ok",
+    "fromPort": "next",
+    "to": "wave2_spawn_done"
    },
    {
     "from": "rd_scope",
@@ -394,7 +629,7 @@
    {
     "from": "rd_wait",
     "fromPort": "true",
-    "to": "stage_three"
+    "to": "stage_boss"
    },
    {
     "from": "rd_wait",
@@ -407,9 +642,19 @@
     "to": "rd_halt"
    },
    {
-    "from": "stage_three",
+    "from": "stage_boss",
     "fromPort": "next",
-    "to": "write_stage_three"
+    "to": "write_stage_boss"
+   },
+   {
+    "from": "write_stage_boss",
+    "fromPort": "next",
+    "to": "boss_scope"
+   },
+   {
+    "from": "boss_scope",
+    "fromPort": "next",
+    "to": "boss_x"
    },
    {
     "from": "rd_done_const",
@@ -497,11 +742,6 @@
     "to": "bd_ok"
    },
    {
-    "from": "write_stage_three",
-    "fromPort": "next",
-    "to": "boss_x"
-   },
-   {
     "from": "boss_x",
     "fromPort": "next",
     "to": "boss_y"
@@ -571,6 +811,12 @@
     "toPort": "value"
    },
    {
+    "from": "wave1_clear_scope",
+    "fromPort": "value",
+    "to": "write_stage_three",
+    "toPort": "source"
+   },
+   {
     "from": "load_ok",
     "fromPort": "value",
     "to": "load_done",
@@ -589,9 +835,105 @@
     "toPort": "value"
    },
    {
-    "from": "circle_ok",
+    "from": "wave1_scope",
     "fromPort": "value",
-    "to": "circle_done",
+    "to": "spawn_wave1_a",
+    "toPort": "source"
+   },
+   {
+    "from": "wave1_scope",
+    "fromPort": "value",
+    "to": "spawn_wave1_b",
+    "toPort": "source"
+   },
+   {
+    "from": "wave1_scope",
+    "fromPort": "value",
+    "to": "spawn_wave1_c",
+    "toPort": "source"
+   },
+   {
+    "from": "wave1_x_a",
+    "fromPort": "value",
+    "to": "spawn_wave1_a",
+    "toPort": "a"
+   },
+   {
+    "from": "wave1_y_a",
+    "fromPort": "value",
+    "to": "spawn_wave1_a",
+    "toPort": "b"
+   },
+   {
+    "from": "wave1_x_b",
+    "fromPort": "value",
+    "to": "spawn_wave1_b",
+    "toPort": "a"
+   },
+   {
+    "from": "wave1_y_b",
+    "fromPort": "value",
+    "to": "spawn_wave1_b",
+    "toPort": "b"
+   },
+   {
+    "from": "wave1_x_c",
+    "fromPort": "value",
+    "to": "spawn_wave1_c",
+    "toPort": "a"
+   },
+   {
+    "from": "wave1_y_c",
+    "fromPort": "value",
+    "to": "spawn_wave1_c",
+    "toPort": "b"
+   },
+   {
+    "from": "wave1_spawn_ok",
+    "fromPort": "value",
+    "to": "wave1_spawn_done",
+    "toPort": "value"
+   },
+   {
+    "from": "wave2_scope",
+    "fromPort": "value",
+    "to": "spawn_wave2_a",
+    "toPort": "source"
+   },
+   {
+    "from": "wave2_scope",
+    "fromPort": "value",
+    "to": "spawn_wave2_b",
+    "toPort": "source"
+   },
+   {
+    "from": "wave2_x_a",
+    "fromPort": "value",
+    "to": "spawn_wave2_a",
+    "toPort": "a"
+   },
+   {
+    "from": "wave2_y_a",
+    "fromPort": "value",
+    "to": "spawn_wave2_a",
+    "toPort": "b"
+   },
+   {
+    "from": "wave2_x_b",
+    "fromPort": "value",
+    "to": "spawn_wave2_b",
+    "toPort": "a"
+   },
+   {
+    "from": "wave2_y_b",
+    "fromPort": "value",
+    "to": "spawn_wave2_b",
+    "toPort": "b"
+   },
+   {
+    "from": "wave2_spawn_ok",
+    "fromPort": "value",
+    "to": "wave2_spawn_done",
     "toPort": "value"
    },
    {
@@ -643,16 +985,22 @@
     "toPort": "value"
    },
    {
-    "from": "rd_scope",
-    "fromPort": "value",
-    "to": "write_stage_three",
-    "toPort": "source"
-   },
-   {
     "from": "stage_three",
     "fromPort": "value",
     "to": "write_stage_three",
     "toPort": "value"
+   },
+   {
+    "from": "stage_boss",
+    "fromPort": "value",
+    "to": "write_stage_boss",
+    "toPort": "value"
+   },
+   {
+    "from": "boss_scope",
+    "fromPort": "value",
+    "to": "write_stage_boss",
+    "toPort": "source"
    },
    {
     "from": "rd_done_const",
@@ -739,7 +1087,7 @@
     "toPort": "b"
    },
    {
-    "from": "rd_scope",
+    "from": "boss_scope",
     "fromPort": "value",
     "to": "spawn_boss",
     "toPort": "source"
@@ -751,7 +1099,7 @@
     "toPort": "source"
    },
    {
-    "from": "rd_scope",
+    "from": "boss_scope",
     "fromPort": "value",
     "to": "boss_alert_panel",
     "toPort": "source"

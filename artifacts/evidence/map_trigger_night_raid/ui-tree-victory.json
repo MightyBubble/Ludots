@@ -1,0 +1,8 @@
+{
+  "stage": 5,
+  "kill_count": 5,
+  "kill_threshold": 5,
+  "panels": ["panel.night_raid.progress", "panel.night_raid.boss_alert", "panel.night_raid.victory"],
+  "victory": true,
+  "heroHealth": 100
+}

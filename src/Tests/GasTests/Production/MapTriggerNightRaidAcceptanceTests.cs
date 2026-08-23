@@ -63,18 +63,33 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.That(CountBossEntities(world), Is.EqualTo(0),
             "The boss must not exist before the raid threshold — two-phase reveal is graph-spawned.");
 
-        // Kill three raiders through the data path: zero health -> DeathRule destroys
-        // -> EntityDied(team 2) -> graph increments kill_count.
+        TickUntil(engine, () => CountTeamEntities(world, teamId: 2) == 3, HeartbeatIntervalTicks * 3,
+            () => "Entering the raid circle must materialize the three wave 1 raiders before they can be defeated.");
+
+        // Kill wave1 through the data path: zero health -> DeathRule destroys
+        // -> EntityDied(team 2) -> graph increments kill_count. The clear event
+        // then spawns wave2 from its independent team/template data.
         for (int kill = 1; kill <= 3; kill++)
         {
-            KillOneRaider(engine, world);
+            KillOneTeamEntity(world, teamId: 2, maxKills: 1);
             int expected = kill;
             TickUntil(engine, () => variables.ReadInt("kill_count") == expected, HeartbeatIntervalTicks * 3,
                 () => $"Raider kill {kill} must increment kill_count to {expected} via EntityDied (got {variables.ReadInt("kill_count")}).");
         }
 
-        Assert.That(variables.ReadInt("stage"), Is.EqualTo(3).Or.EqualTo(4),
-            "Reaching kill_threshold=3 must advance the stage out of the raider phase.");
+        TickUntil(engine, () => CountTeamEntities(world, teamId: 3) == 2, HeartbeatIntervalTicks * 3,
+            () => "Clearing team 2 must spawn two team 3 elite raiders.");
+
+        for (int kill = 4; kill <= 5; kill++)
+        {
+            KillOneTeamEntity(world, teamId: 3, maxKills: 1);
+            int expected = kill;
+            TickUntil(engine, () => variables.ReadInt("kill_count") == expected, HeartbeatIntervalTicks * 3,
+                () => $"Elite raider kill {kill - 3} must increment kill_count to {expected} (got {variables.ReadInt("kill_count")}).");
+        }
+
+        Assert.That(variables.ReadInt("stage"), Is.EqualTo(3),
+            "Reaching kill_threshold=5 must advance to the boss phase.");
 
         // Boss phase: the graph spawns the boss at stage 3 — before that it must not exist.
         TickUntil(engine, () => CountBossEntities(world) == 1, HeartbeatIntervalTicks * 3,
@@ -85,7 +100,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Tick(engine, HeartbeatIntervalTicks);
         Assert.That(variables.ReadInt("stage"), Is.EqualTo(4),
             "One beat after stage 4 the graph must still be waiting in its Yield delay.");
-        TickUntil(engine, () => variables.ReadInt("stage") == 5, HeartbeatIntervalTicks * 2,
+        TickUntil(engine, () => variables.ReadInt("stage") == 5, HeartbeatIntervalTicks * 4,
             () => "Two beats after stage 4 the Yield delay must release into stage 5.");
 
         var panelHost = engine.GetService(CoreServiceKeys.PanelHost)
@@ -107,7 +122,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         float heroHealth = engine.World.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(hero).GetCurrent(AttributeRegistry.GetId("Health"));
         Assert.That(FindVictoryPanelValue(panelHost, "heroHealth"), Is.EqualTo(heroHealth),
             "heroHealth must equal the mount anchor hero's current health — pinning the LoadSelfAttribute query-graph scope semantics.");
-        Assert.That(FindPanelValue(panelHost, "panel.night_raid.progress", "kill_count"), Is.EqualTo(3f),
+        Assert.That(FindPanelValue(panelHost, "panel.night_raid.progress", "kill_count"), Is.EqualTo(5f),
             "progress panel kill_count must flow through the Schema v2 query graph reading the map variable.");
         Assert.That(FindPanelValue(panelHost, "panel.night_raid.progress", "stage"), Is.EqualTo(5f),
             "progress panel stage must flow through the Schema v2 query graph reading the map variable.");
@@ -161,7 +176,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         var world = engine.World;
 
         Assert.That(variables.ReadInt("kill_threshold"), Is.EqualTo(2),
-            "The override mod's map fragment must replace kill_threshold 3 -> 2.");
+            "The override mod's map fragment must replace the base kill threshold with 2.");
         Assert.That(variables.ReadInt("override_active"), Is.EqualTo(1),
             "The stacked override graph must run on MapLoaded alongside the base graph.");
 
@@ -170,10 +185,13 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         TickUntil(engine, () => variables.ReadInt("stage") == 2, HeartbeatIntervalTicks * 3,
             () => "RegionEntered must still start the raid with the override mod loaded.");
 
-        KillOneRaider(engine, world);
+        TickUntil(engine, () => CountTeamEntities(world, teamId: 2) == 3, HeartbeatIntervalTicks * 3,
+            () => "The override flow must also materialize wave 1 before the first kill.");
+
+        KillOneTeamEntity(world, teamId: 2, maxKills: 1);
         TickUntil(engine, () => variables.ReadInt("kill_count") == 1, HeartbeatIntervalTicks * 3,
             () => "First raider kill must count.");
-        KillOneRaider(engine, world);
+        KillOneTeamEntity(world, teamId: 2, maxKills: 1);
         TickUntil(engine, () => variables.ReadInt("stage") >= 3, HeartbeatIntervalTicks * 3,
             () => "With threshold 2 the second raider kill must leave the raider phase immediately.");
         Assert.That(variables.ReadInt("kill_count"), Is.LessThan(3),
@@ -183,8 +201,8 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         // equality crossing guard must keep the boss population at exactly one.
         TickUntil(engine, () => CountBossEntities(world) == 1, HeartbeatIntervalTicks * 3,
             () => "Crossing the overridden threshold must spawn exactly one boss.");
-        KillOneRaider(engine, world);
-        KillOneRaider(engine, world);
+        KillOneTeamEntity(world, teamId: 2, maxKills: 1);
+        KillOneTeamEntity(world, teamId: 2, maxKills: 1);
         Tick(engine, HeartbeatIntervalTicks * 2);
         Assert.That(CountBossEntities(world), Is.EqualTo(1),
             "Post-threshold kills must never spawn a second boss (equality crossing guard).");
@@ -200,9 +218,24 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             "The night raid level flow must stay code-free: map + graphs + events + panel data only.");
     }
 
-    private static void KillOneRaider(GameEngine engine, World world)
+    private static int CountTeamEntities(World world, int teamId)
     {
-        ZeroTeamHealth(world, teamId: 2, maxKills: 1);
+        int count = 0;
+        world.Query(
+            new QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team, Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(),
+            (Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
+            {
+                if (team.Id == teamId)
+                {
+                    count++;
+                }
+            });
+        return count;
+    }
+
+    private static void KillOneTeamEntity(World world, int teamId, int maxKills)
+    {
+        ZeroTeamHealth(world, teamId, maxKills);
     }
 
     private static int CountBossEntities(World world)

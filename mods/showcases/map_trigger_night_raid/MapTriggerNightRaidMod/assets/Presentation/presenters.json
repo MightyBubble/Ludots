@@ -53,6 +53,30 @@
       {
         "event": {
           "kind": "EntitySpawned",
+          "key": "night_raid_raider_elite"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "night_raid_raider_elite",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "night_raid_raider_elite"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
           "key": "night_raid_boss"
         },
         "condition": {
@@ -412,6 +436,37 @@
           "orientationParamKey": "none",
           "orientationOffsetRad": 0,
           "orientationLengthPx": 5
+        }
+      }
+    ]
+  },
+  {
+    "id": "night_raid_raider_elite",
+    "extends": "night_raid_raider",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "night_raid.agent.soldier",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.58,
+            0.58,
+            0.58
+          ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.72,
+            0.12,
+            1
+          ]
         }
       }
     ]
