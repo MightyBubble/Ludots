@@ -58,7 +58,7 @@
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 701 },
       "VisionEmitterCm": {
-        "scope": "rts.frontline.local",
+        "scope": "rts.frontline.north",
         "layers": ["ground"],
         "polarity": "Reveal",
         "aperture": { "kind": "Disk", "rangeCm": 4500 }
@@ -105,7 +105,7 @@
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 702 },
       "VisionEmitterCm": {
-        "scope": "rts.frontline.local",
+        "scope": "rts.frontline.north",
         "layers": ["ground"],
         "polarity": "Reveal",
         "aperture": { "kind": "Disk", "rangeCm": 2600 }
@@ -154,7 +154,7 @@
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 703 },
       "VisionEmitterCm": {
-        "scope": "rts.frontline.local",
+        "scope": "rts.frontline.north",
         "layers": ["ground"],
         "polarity": "Reveal",
         "aperture": { "kind": "Disk", "rangeCm": 3200 }
