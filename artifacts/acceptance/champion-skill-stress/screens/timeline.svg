@@ -32,5 +32,5 @@
   <rect x="40" y="736" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="772" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">008 scaled_up</text>
   <text x="420" y="772" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View Command Snapshot | A 48/56 | B 48/56 | Proj 2 peak 21 | HUD BTF</text>
-  <text x="72" y="800" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=4 | feedback=107/412</text>
+  <text x="72" y="800" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=4 | feedback=113/412</text>
 </svg>
