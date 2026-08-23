@@ -1,53 +1,66 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>面板矩阵 — Ludots 门户</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面板矩阵 — Ludots</title>
+<meta name="description" content="Ludots 面板矩阵：35 类面板设计一站式——高保真 web 预期（三主题切换）、设计文档直达、showcase 预留位。目录数据由构建脚本从 panel-case-designs.md 解析生成。">
 <link rel="stylesheet" href="site-assets/site.css">
 <style>
-  :root {
-    --p-bg: #14141f; --p-panel: #191924; --p-border: #2c2c3a; --p-fg: #e8e8f0;
-    --p-muted: #9a9ab0; --p-accent: #6c8cff; --p-green: #4cc38a; --p-red: #e5484d;
+  .docs-layout {
+    display: grid; grid-template-columns: 320px 1fr; gap: 26px; align-items: start;
   }
-  /* 三主题（提炼自 PanelThemes/{ink-wash,fantasy,minimal}/theme.css 的核心变量） */
-  body[data-skin="ink-wash"] .mock { --p-panel:#f5f0e4e0; --p-border:#2b2b2bd0; --p-fg:#1c1c1c; --p-muted:#786e64; --p-accent:#8c1d18; font-family:"KaiTi","STKaiti",serif; }
-  body[data-skin="fantasy"] .mock { --p-panel:#3d2c1ceb; --p-border:#c9a65a; --p-fg:#e2d6bc; --p-muted:#a08a68; --p-accent:#e4c47a; font-family:Georgia,"Palatino Linotype",serif; }
-  body[data-skin="minimal"] .mock { --p-panel:#fafafaf5; --p-border:#141414c8; --p-fg:#111; --p-muted:#999; --p-accent:#111; font-family:"Segoe UI","Helvetica Neue",sans-serif; }
-  body[data-skin="default"] .mock { --p-panel:#191924; --p-border:#44448c; --p-fg:#e8e8f0; --p-muted:#9a9ab0; --p-accent:#ff6600; }
+  .docs-tree {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 14px;
+    max-height: 74vh; overflow-y: auto; position: sticky; top: 84px;
+  }
+  .docs-tree .tree-title {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    padding: 0 10px 10px; letter-spacing: 1px;
+  }
+  .docs-tree a, .docs-tree .entry {
+    display: block; padding: 5px 10px; border-radius: var(--radius-sm);
+    color: var(--fg); font-size: 13.5px; line-height: 1.55;
+  }
+  .docs-tree a:hover { background: var(--accent-light); color: var(--accent); text-decoration: none; }
+  .docs-tree a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  .docs-tree .grp > .entry { font-weight: 600; }
+  .docs-tree .children { margin-left: 14px; border-left: 1px solid var(--border); padding-left: 6px; }
+  .docs-tree .id { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--faint); margin-right: 6px; }
+  .wiki-filter {
+    width: 100%; margin: 0 0 10px; padding: 7px 10px; font-size: 13px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--fg);
+  }
+  .md-body { min-width: 0; }
+  .docs-loading { color: var(--muted); padding: 40px 0; text-align: center; }
 
-  .panels-toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:18px 0 26px; }
-  .panels-toolbar select, .panels-toolbar button {
-    background: var(--p-panel); color: var(--p-fg); border:1px solid var(--p-border);
-    border-radius:8px; padding:8px 14px; font-size:14px; cursor:pointer; }
-  .panels-toolbar button.on { border-color: var(--p-accent); color: var(--p-accent); font-weight:700; }
-  .group-h { margin:34px 0 14px; display:flex; align-items:baseline; gap:10px; }
-  .group-h h2 { margin:0; font-size:20px; }
-  .group-h span { color: var(--p-muted); font-size:13px; }
-  .pgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
-  .pcard { background:var(--p-panel); border:1px solid var(--p-border); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; }
-  .pcard .head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .pcard .head h3 { margin:0; font-size:15.5px; flex:1; min-width:140px; }
-  .pcard code.pid { font-size:11.5px; color:var(--p-muted); }
-  .badge { font-size:11px; padding:2px 9px; border-radius:99px; border:1px solid var(--p-border); color:var(--p-muted); }
-  .badge.g { color:var(--p-green); border-color:var(--p-green); }
-  .badge.r { color:#e0a24a; border-color:#e0a24a; }
-  .badge.b { color:var(--p-red); border-color:var(--p-red); }
-  .mock { background:var(--p-panel); border:1.5px solid var(--p-border); border-radius:10px; color:var(--p-fg);
-          padding:12px 14px; font-size:13px; min-height:64px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
-  .mock .row { display:flex; align-items:center; gap:8px; }
-  .mock .bar { flex:1; height:8px; border-radius:4px; background:color-mix(in srgb, var(--p-muted) 25%, transparent); overflow:hidden; }
-  .mock .bar > i { display:block; height:100%; background:var(--p-accent); border-radius:4px; }
-  .mock .bar.hp > i { background:#e5484d; } .mock .bar.mp > i { background:#4c7ce5; }
-  .mock .t { font-size:12px; color:var(--p-muted); }
-  .mock .title { font-weight:700; letter-spacing:1px; color:var(--p-accent); }
-  .mock .chip { border:1px solid var(--p-border); border-radius:6px; padding:3px 8px; font-size:12px; color:var(--p-fg); }
-  .mock .chip.on { border-color:var(--p-accent); color:var(--p-accent); font-weight:700; }
-  .mock .item { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed color-mix(in srgb, var(--p-border) 60%, transparent); }
-  .mock .mini { background:color-mix(in srgb, var(--p-accent) 12%, var(--p-panel)); border-radius:8px; height:86px; position:relative; overflow:hidden; }
-  .mock .mini i { position:absolute; width:6px; height:6px; border-radius:50%; background:var(--p-accent); }
-  .pcard .foot { display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--p-muted); }
-  .pcard .foot a { color: var(--p-accent); text-decoration:none; font-weight:600; }
+  .panels-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 18px; }
+  .panels-toolbar button {
+    background: var(--card); color: var(--fg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 6px 13px; font-size: 13px; cursor: pointer;
+  }
+  .panels-toolbar button.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+
+  .st { font-size: 12px; padding: 1px 9px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  .st.g { color: var(--green); border-color: var(--green); }
+  .st.r { color: #e0a24a; border-color: #e0a24a; }
+  .st.b { color: var(--red); border-color: var(--red); }
+  .st.x { color: var(--steel); border-color: var(--steel); }
+
+  /* 三主题皮肤：仅作用于正文里的线框代码块（```text 预期图） */
+  .md-body pre code.wire { display: block; padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--card); overflow-x: auto; }
+  body[data-skin="ink-wash"] .md-body pre code.wire {
+    background: #f5f0e4e0; border-color: #2b2b2bd0; color: #1c1c1c;
+    font-family: "KaiTi", "STKaiti", serif; }
+  body[data-skin="fantasy"] .md-body pre code.wire {
+    background: #3d2c1ceb; border-color: #c9a65a; color: #e2d6bc;
+    font-family: Georgia, "Palatino Linotype", serif; }
+  body[data-skin="minimal"] .md-body pre code.wire {
+    background: #fafafaf5; border-color: #141414c8; color: #111;
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif; }
 </style>
 </head>
 <body data-skin="default">
@@ -64,103 +77,150 @@
     <div class="section-head">
       <div class="kicker">PANEL MATRIX</div>
       <h1>面板矩阵 — 35 类设计 · 高保真预期 · Showcase 预留位</h1>
-      <p>面板=一张图的输出引脚集（graph + pins）。下列卡片为<b>高保真设计预期</b>（web 预览，非实机）——
-        实机以 launcher 预设为准。切换主题皮肤可预览同一面板在水墨 / 西方魔幻 / 极简下的观感。
-        合同与全部设计细节：<a href="index.html#docs/architecture/panel-case-designs.md">35 案全设计</a> ·
-        <a href="index.html#docs/architecture/panel-catalog-designs.md">总合同</a> ·
-        <a href="index.html#docs/architecture/panel-quickstart.md">快速上手</a></p>
+      <p>面板 = 一张图的输出引脚集（graph + pins）。正文即 35 案全设计文档（与本页同源，
+        <a href="index.html#docs/architecture/panel-quickstart.md">快速上手</a> ·
+        <a href="index.html#docs/architecture/panel-catalog-designs.md">总合同</a>）；
+        主题皮肤切换作用于各案线框预期图的观感预览。实机以 launcher 预设为准。</p>
     </div>
     <div class="panels-toolbar">
-      <span style="color:var(--p-muted);font-size:13px;">主题皮肤：</span>
+      <span style="color:var(--muted);font-size:13px;">线框主题皮肤：</span>
       <button data-skin="default" class="on">默认</button>
       <button data-skin="ink-wash">水墨</button>
       <button data-skin="fantasy">西方魔幻</button>
       <button data-skin="minimal">极简</button>
       <span style="flex:1"></span>
-      <span style="color:var(--p-muted);font-size:13px;">状态：<b class="badge g">🟢 可开发</b> <b class="badge r">🔴 运行链缺口</b> <b class="badge b">⛔ 装载即拒</b> <b class="badge">⚙ 机制</b></span>
+      <span style="color:var(--muted);font-size:13px;">
+        <span class="st g">🟢 可开发</span> <span class="st r">🔴 链缺口</span>
+        <span class="st b">⛔ 装载拒</span> <span class="st x">⚙ 机制</span>
+        · showcase 位随阶段 5 逐案点亮
+      </span>
     </div>
-    <div id="matrix"></div>
+    <div class="docs-layout">
+      <aside class="docs-tree" id="panel-tree">
+        <div class="docs-loading">目录加载中…（请先运行 python scripts/build-site.py）</div>
+      </aside>
+      <article class="md-body" id="panel-body">
+        <div class="docs-loading">文档加载中…</div>
+      </article>
+    </div>
   </section>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="site-assets/site.js"></script>
+<script src="site-assets/panels-nav.js"></script>
 <script>
-const D = [
- { g:"一 · 全局 HUD", cases:[
-  { id:"panel.player.aggregate", n:"玩家信息聚合", s:"g", m:["stat",["⛁ 1,240","👥 8/20"]] },
-  { id:"panel.time.elapsed", n:"时间流逝", s:"g", m:["rowtext",["☀ 12:34"]] },
-  { id:"panel.date.cycle", n:"日期", s:"g", m:["rowtext",["第 3 年 · 春 · 7"]] },
-  { id:"panel.time.control", n:"时间控制", s:"r", m:["chips",["⏸","1x","2x","3x"],1] },
-  { id:"panel.command.global", n:"全局指令", s:"b", m:["chips",["全选","集结","停止","撤退"],-1] },
-  { id:"panel.tabs.global", n:"全局功能 tab", s:"r", m:["chips",["信息","科技","外交","生产"],0] },
-  { id:"panel.info.banner", n:"全局信息横幅", s:"r", m:["rowtext",["⚠ 敌军逼近北门"]] },
-  { id:"panel.settings", n:"设置", s:"b", m:["list",[["音量","▁▂▃▅▆▇"],["","【退出到主菜单】"]]] },
-  { id:"panel.subsystem.entries", n:"子系统入口", s:"r", m:["list",[["🔬 科技","3 未读"],["🛠 建设",""],["📜 外交",""]]] } ]},
- { g:"二 · 地图 / 空间指示", cases:[
-  { id:"panel.minimap", n:"小地图", s:"r", m:["mini",[[20,30],[60,22],[45,60],[70,55]]] },
-  { id:"panel.relation.indicator", n:"关系图指示", s:"r", m:["rowtext",["⊕ 关系网 4 节点 / 7 边"]] },
-  { id:"panel.selection.marker", n:"选中标记", s:"g", m:["rowtext",["◎ 长枪兵 ×12 已选中"]] },
-  { id:"panel.offscreen.indicator", n:"屏外指示", s:"r", m:["chips",["↖ 敌","↗ 援","↘ 集"],-1] },
-  { id:"panel.scene.tint", n:"场景染色", s:"g", m:["rowtext",["🎨 夜幕遮罩 35%（全屏效果）"]] },
-  { id:"panel.region.indicator", n:"区域指示", s:"g", m:["rowtext",["▣ 北门禁区 · 剩余 02:31"]] },
-  { id:"panel.road.indicator", n:"路网指示", s:"g", m:["rowtext",["⇗ 商路 3 条 · 畅通"]]} ]},
- { g:"三 · 选择与实体", cases:[
-  { id:"panel.entity.list", n:"实体列表", s:"r", m:["list",[["长枪兵","HP 82%"],["弓手","HP 64%"],["医师","HP 97%"]]] },
-  { id:"panel.entity.aggregate", n:"实体信息聚合", s:"r", m:["bars",["HP",82],["MP",40]] },
-  { id:"panel.entity.relation", n:"实体关系", s:"r", m:["rowtext",["长枪兵 ⇄ 医师：护卫"]] },
-  { id:"panel.collection.aggregate", n:"集合聚合", s:"r", m:["stat",["队总 HP 1,240","均 78"]] },
-  { id:"panel.context.route", n:"选中上下文路由", s:"x", m:["rowtext",["⚙ 机制：选中→面板路由决策"]] },
-  { id:"panel.linked.entities", n:"关联实体集", s:"r", m:["list",[["编队 α","5 员"],["编队 β","3 员"]]] } ]},
- { g:"四 · 信息流", cases:[
-  { id:"panel.events.feed", n:"事件面板", s:"r", m:["list",[["12:01","北门遇袭"],["12:03","援军抵达"]]] },
-  { id:"panel.events.entry", n:"日志入口", s:"r", m:["chips",["📜 日志 (7)"],0] },
-  { id:"panel.events.log", n:"事件日志", s:"r", m:["list",[["春 7","丰收 +200"],["春 6","暴风 −50"]]] } ]},
- { g:"五 · 编队 / 生产 / 任务", cases:[
-  { id:"panel.formation.info", n:"编队信息", s:"r", m:["stat",["楔形阵","12 员"]] },
-  { id:"panel.quests", n:"任务面板", s:"r", m:["list",[["主线：夺回北门","2/3"],["支线：粮草","完成"]]] },
-  { id:"panel.progress.tree", n:"进度节点树", s:"b", m:["list",[["✓ 铁器",""],["✓ 弩机",""],["▶ 攻城","37%"]]] },
-  { id:"panel.production.queue", n:"生产队列", s:"b", m:["queue",66,["弩手","弩手","▢"]]} ]},
- { g:"六 · 单位操作", cases:[
-  { id:"panel.unit.status", n:"状态条", s:"g", m:["bars",["HP",72],["MP",55]] },
-  { id:"panel.abilities", n:"技能 / 指令", s:"r", m:["chips",["Q 火球","W 治疗","E 冲锋"],0] },
-  { id:"panel.loadout", n:"物品装备", s:"r", m:["list",[["武器","铁剑 ATK+5"],["护甲","皮甲 HP+20"]]] } ]},
- { g:"七 · 其他", cases:[
-  { id:"panel.view.filter", n:"视图过滤器", s:"r", m:["chips",["军事","经济","外交"],0] },
-  { id:"panel.extra.text", n:"额外文本", s:"g", m:["rowtext",["“北风呼啸……”"]] },
-  { id:"panel.collection.book", n:"图鉴 / 背包", s:"b", m:["list",[["长枪兵","已收录"],["攻城塔","未收录"]]] } ]}
-];
+(function () {
+  "use strict";
+  var esc = LudotsSite.esc;
+  var DOC_PATH = "gitbook/architecture/panel-case-designs.md";
+  var STATUS = { "🟢": ["可开发", "g"], "🔴": ["链缺口", "r"], "⛔": ["装载拒", "b"], "⚙": ["机制", "x"] };
 
-const DOC = "index.html#docs/architecture/panel-case-designs.md";
-const SB = { g:["🟢 可开发","g"], r:["🔴 链缺口","r"], b:["⛔ 装载拒","b"], x:["⚙ 机制",""] };
+  function flatCases() {
+    var flat = [];
+    var nav = window.PANELS_NAV;
+    if (!nav) return flat;
+    for (var i = 0; i < nav.groups.length; i++) {
+      for (var j = 0; j < nav.groups[i].cases.length; j++) flat.push(nav.groups[i].cases[j]);
+    }
+    return flat;
+  }
 
-function renderMock(m){
-  const [t,...a] = m;
-  if(t==="stat") return `<div class="row" style="gap:18px">${a[0].map(x=>`<b>${x}</b>`).join("")}</div>`;
-  if(t==="rowtext") return `<div class="row">${a[0][0]}</div>`;
-  if(t==="bars") return a.map(([l,v])=>`<div class="row"><span style="width:26px">${l}</span><div class="bar ${l.toLowerCase()}"><i style="width:${v}%"></i></div><span class="t">${v}%</span></div>`).join("");
-  if(t==="chips"){ const on=a[1]; return `<div class="row" style="flex-wrap:wrap">${a[0].map((c,i)=>`<span class="chip${i===on?" on":""}">${c}</span>`).join("")}</div>`; }
-  if(t==="list") return a[0].map(([k,v])=>`<div class="item"><span>${k}</span><span class="t">${v||"&nbsp;"}</span></div>`).join("");
-  if(t==="queue") return `<div class="row"><div class="bar hp" style="height:12px"><i style="width:${a[0]}%"></i></div><span class="t">${a[0]}%</span></div><div class="row" style="flex-wrap:wrap">${a[1].map(c=>`<span class="chip">${c}</span>`).join("")}</div>`;
-  if(t==="mini") return `<div class="mini">${a[0].map(([x,y])=>`<i style="left:${x}%;top:${y}%"></i>`).join("")}</div>`;
-  return "";
-}
+  function buildTree() {
+    var host = document.getElementById("panel-tree");
+    var nav = window.PANELS_NAV;
+    if (!nav || !nav.groups) {
+      host.innerHTML = '<div class="tree-title">目录不可用</div><div class="docs-loading">请先运行构建。</div>';
+      return;
+    }
+    var html = '<div class="tree-title">面板矩阵 · ' + nav.total + " 案 · " + nav.groups.length + " 组</div>";
+    html += '<input class="wiki-filter" id="panel-filter" type="search" placeholder="过滤：面板 id / 名称 / 状态">';
+    for (var i = 0; i < nav.groups.length; i++) {
+      var g = nav.groups[i];
+      html += '<div class="grp"><div class="entry">' + esc(g.title) +
+        ' <span style="color:var(--faint);font-weight:400;font-size:12px;">' + g.cases.length + "</span></div><div class=\"children\">";
+      for (var j = 0; j < g.cases.length; j++) {
+        var c = g.cases[j];
+        var st = STATUS[c.status] || ["?", ""];
+        html += '<a href="#panel/' + esc(c.id) + '"><span class="id">' + esc(c.no) + "</span>" + esc(c.title || c.id) +
+          ' <span class="st ' + st[1] + '">' + esc(st[0]) + "</span></a>";
+      }
+      html += "</div></div>";
+    }
+    host.innerHTML = html;
 
-document.getElementById("matrix").innerHTML = D.map(gr=>`
-  <div class="group-h"><h2>${gr.g}</h2><span>${gr.cases.length} 类</span></div>
-  <div class="pgrid">${gr.cases.map(c=>`
-    <div class="pcard">
-      <div class="head"><h3>${c.n}</h3><span class="badge ${SB[c.s][1]}">${SB[c.s][0]}</span></div>
-      <code class="pid">${c.id}</code>
-      <div class="mock">${renderMock(c.m)}</div>
-      <div class="foot">
-        <a href="${DOC}">设计文档 →</a>
-        <span>Showcase：<b>${c.s==="g"?"待立项（可开工）":"随缺口批次"}</b></span>
-      </div>
-    </div>`).join("")}</div>`).join("");
+    var filter = document.getElementById("panel-filter");
+    filter.addEventListener("input", function () {
+      var q = filter.value.trim().toLowerCase();
+      host.querySelectorAll(".grp").forEach(function (grp) {
+        var visible = 0;
+        grp.querySelectorAll("a").forEach(function (a) {
+          var hit = !q || a.textContent.toLowerCase().indexOf(q) >= 0;
+          a.style.display = hit ? "" : "none";
+          if (hit) visible++;
+        });
+        grp.style.display = visible ? "" : "none";
+      });
+    });
+  }
 
-document.querySelectorAll(".panels-toolbar button").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll(".panels-toolbar button").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on"); document.body.dataset.skin = b.dataset.skin;
-});
+  function loadDoc() {
+    var body = document.getElementById("panel-body");
+    LudotsSite.fetchText(DOC_PATH).then(function (md) {
+      body.innerHTML = marked.parse(md);
+      // 线框预期图（```text 块）加皮肤钩子；案标题注入状态徽章 + showcase 预留位
+      body.querySelectorAll("pre code.language-text").forEach(function (c) { c.classList.add("wire"); });
+      var byId = {};
+      flatCases().forEach(function (c) { byId[c.id] = c; });
+      body.querySelectorAll("h2, h3, h4").forEach(function (h) {
+        var m = h.textContent.match(/(panel\.[a-z_.]+)/);
+        if (!m) return;
+        var c = byId[m[1]];
+        if (!c) return;
+        var st = STATUS[c.status] || ["?", ""];
+        var span = document.createElement("span");
+        span.className = "st " + st[1];
+        span.style.marginLeft = "10px";
+        span.textContent = st[0] + " · showcase " + (c.status === "🟢" ? "待立项（可开工）" : "随缺口批次");
+        h.appendChild(span);
+      });
+      route(true);
+    }).catch(function () {
+      body.innerHTML = '<div class="docs-loading">无法加载 ' + esc(DOC_PATH) + "</div>";
+    });
+  }
+
+  function route(scroll) {
+    var h = window.location.hash || "";
+    if (h.indexOf("#panel/") !== 0) return;
+    var pid = decodeURIComponent(h.slice("#panel/".length));
+    var hit = null;
+    document.querySelectorAll("#panel-body h2, #panel-body h3, #panel-body h4").forEach(function (el) {
+      if (!hit && el.textContent.indexOf(pid) >= 0) hit = el;
+    });
+    document.querySelectorAll("#panel-tree a").forEach(function (a) {
+      a.classList.toggle("active", a.getAttribute("href") === "#" + h.slice(1) || a.getAttribute("href") === h);
+    });
+    if (hit && scroll) hit.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  document.querySelectorAll(".panels-toolbar button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".panels-toolbar button").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+      document.body.dataset.skin = b.dataset.skin;
+    });
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (window.marked && marked.setOptions) {
+      marked.setOptions({ gfm: true, breaks: false, headerIds: true, mangle: false });
+    }
+    buildTree();
+    loadDoc();
+    window.addEventListener("hashchange", function () { route(true); });
+  });
+})();
 </script>
 </body>
 </html>
