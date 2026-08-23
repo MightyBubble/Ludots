@@ -70,11 +70,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly TriggerGraphRefirePolicy _refirePolicy;
         private readonly bool _entryIsResumeEvent;
         private readonly int[] _vmIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
+        private readonly int[] _previousIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
         private readonly byte[] _vmBoolRegisters = new byte[GraphVmLimits.MaxBoolRegisters];
+        private readonly byte[] _previousBoolRegisters = new byte[GraphVmLimits.MaxBoolRegisters];
         private readonly float[] _vmFloatRegisters = new float[GraphVmLimits.MaxFloatRegisters];
+        private readonly float[] _previousFloatRegisters = new float[GraphVmLimits.MaxFloatRegisters];
         private readonly Entity[] _vmEntityRegisters = new Entity[GraphVmLimits.MaxEntityRegisters];
+        private readonly Entity[] _previousEntityRegisters = new Entity[GraphVmLimits.MaxEntityRegisters];
         private readonly Entity[] _vmTargetRegisters = new Entity[GraphVmLimits.MaxTargets];
         private readonly int[] _vmCallStack = new int[GraphVmLimits.MaxCallStackDepth];
+        private readonly GraphDebugTrace _debugTrace = new();
         private GraphExecutionCursor _cursor;
         private Entity _runCaster;
         private bool _runActive;
@@ -131,6 +136,18 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public override string Name => $"TriggerGraph:{_graphName}:{_entry.Label}";
 
         public TriggerGraphMountDomain Domain => _domain;
+
+        public int GraphId => _graphId;
+
+        public string GraphName => _graphName;
+
+        public string EntryLabel => _entry.Label;
+
+        public Entity Scope => _scope;
+
+        public GraphDebugTrace DebugTrace => _debugTrace;
+
+        public GraphExecutionCursor Cursor => _cursor;
 
         public GraphSliceResult LastSliceResult { get; private set; }
 
@@ -262,6 +279,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 GraphKind.TriggerGraph,
                 "触发器图挂载");
 
+            int sourcePcBefore = _cursor.Pc;
             GraphSliceResult result = GraphExecutor.ExecuteScriptSlice(
                 dependencies.Engine.World,
                 _runCaster,
@@ -280,6 +298,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 TriggerGraphLimits.SliceBudgetSteps);
             LastSliceResult = result;
 
+            RecordDebugTrace(sourcePcBefore, result);
+
             if (result.Halted)
             {
                 _runActive = false;
@@ -293,6 +313,66 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 throw new InvalidOperationException(
                     $"TriggerGraph '{_graphName}' entry '{_entry.Label}' exceeded the per-run instruction cap "
                     + $"{nameof(GraphVmLimits.MaxInstructionsPerExecution)} ({GraphVmLimits.MaxInstructionsPerExecution} steps across resumes) without halting.");
+            }
+        }
+
+        private void RecordDebugTrace(int sourcePcBefore, GraphSliceResult result)
+        {
+            if (_debugTrace.Mode == GraphDebugTraceMode.Disabled)
+            {
+                return;
+            }
+
+            _debugTrace.RecordNode(sourcePcBefore, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.NodeEnter);
+            _debugTrace.RecordNode(sourcePcBefore, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.NodeExit);
+            if (result.Halted)
+            {
+                _debugTrace.RecordNode(sourcePcBefore, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Halted);
+            }
+            else if (result.Yielded || result.BudgetSuspended)
+            {
+                _debugTrace.RecordNode(sourcePcBefore, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Suspended);
+            }
+
+            if (_debugTrace.Mode != GraphDebugTraceMode.NodeAndPins)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _vmIntRegisters.Length; i++)
+            {
+                if (_vmIntRegisters[i] != _previousIntRegisters[i])
+                {
+                    _debugTrace.RecordIntPin(sourcePcBefore, i, _vmIntRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _previousIntRegisters[i] = _vmIntRegisters[i];
+                }
+            }
+
+            for (int i = 0; i < _vmBoolRegisters.Length; i++)
+            {
+                if (_vmBoolRegisters[i] != _previousBoolRegisters[i])
+                {
+                    _debugTrace.RecordBoolPin(sourcePcBefore, i, _vmBoolRegisters[i] != 0, _cursor.Pc, _cursor.Steps);
+                    _previousBoolRegisters[i] = _vmBoolRegisters[i];
+                }
+            }
+
+            for (int i = 0; i < _vmFloatRegisters.Length; i++)
+            {
+                if (_vmFloatRegisters[i] != _previousFloatRegisters[i])
+                {
+                    _debugTrace.RecordFloatPin(sourcePcBefore, i, _vmFloatRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _previousFloatRegisters[i] = _vmFloatRegisters[i];
+                }
+            }
+
+            for (int i = 0; i < _vmEntityRegisters.Length; i++)
+            {
+                if (_vmEntityRegisters[i] != _previousEntityRegisters[i])
+                {
+                    _debugTrace.RecordEntityPin(sourcePcBefore, i, _vmEntityRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _previousEntityRegisters[i] = _vmEntityRegisters[i];
+                }
             }
         }
 
@@ -354,9 +434,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private void ResetExecutionState()
         {
             Array.Clear(_vmIntRegisters, 0, _vmIntRegisters.Length);
+            Array.Clear(_previousIntRegisters, 0, _previousIntRegisters.Length);
             Array.Clear(_vmBoolRegisters, 0, _vmBoolRegisters.Length);
+            Array.Clear(_previousBoolRegisters, 0, _previousBoolRegisters.Length);
             Array.Clear(_vmFloatRegisters, 0, _vmFloatRegisters.Length);
+            Array.Clear(_previousFloatRegisters, 0, _previousFloatRegisters.Length);
             Array.Clear(_vmEntityRegisters, 0, _vmEntityRegisters.Length);
+            Array.Clear(_previousEntityRegisters, 0, _previousEntityRegisters.Length);
             Array.Clear(_vmTargetRegisters, 0, _vmTargetRegisters.Length);
             Array.Clear(_vmCallStack, 0, _vmCallStack.Length);
             _runCaster = _scope;

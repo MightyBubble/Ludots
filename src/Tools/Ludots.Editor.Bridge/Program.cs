@@ -1556,6 +1556,105 @@ app.MapGet("/api/mods/{modId}/gas/graphs", (string modId) =>
     return Results.Ok(new { ok = true, graphs, path = graphsPath });
 });
 
+app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
+{
+    if (!Enum.TryParse<GraphKind>(kind, ignoreCase: true, out GraphKind graphKind) ||
+        graphKind == GraphKind.None)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Unknown graph kind '{kind}'." });
+    }
+
+    var descriptors = new List<object>();
+    foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(graphKind))
+    {
+        GraphOpDescriptor descriptor = GraphOpDescriptorTable.Get(op);
+        descriptors.Add(new
+        {
+            op = op.ToString(),
+            code = (ushort)op,
+            linearOutputType = descriptor.LinearOutputType.ToString(),
+            queryOutputType = descriptor.QueryOutputType.ToString(),
+            linearInputPorts = descriptor.LinearInputPorts,
+            queryInputPorts = descriptor.QueryInputPorts,
+            scriptInputPorts = descriptor.ScriptInputPorts,
+            dstRole = descriptor.DstRole.ToString(),
+            flagsRole = descriptor.FlagsRole.ToString(),
+            immRole = descriptor.ImmRole.ToString(),
+            scriptSliceOnly = descriptor.ScriptSliceOnly,
+        });
+    }
+
+    return Results.Ok(new { ok = true, kind = graphKind.ToString(), descriptors });
+});
+
+app.MapGet("/api/mods/{modId}/gas/graph-editor/{graphId}", (string modId, string graphId) =>
+{
+    if (!TryResolveModRoot(launcher, modId, out string modRoot, out IResult? error))
+        return error!;
+
+    string sidecarPath = Path.Combine(modRoot, "assets", "GAS", "graph_editor.json");
+    if (!File.Exists(sidecarPath))
+        return Results.Ok(new { ok = true, graphId, path = sidecarPath, layout = new JsonObject() });
+
+    try
+    {
+        JsonNode? rootNode = JsonNode.Parse(File.ReadAllText(sidecarPath));
+        if (rootNode is not JsonObject root || root["graphs"] is not JsonObject graphs)
+            return Results.BadRequest(new { ok = false, error = "graph_editor.json must contain an object property 'graphs'." });
+
+        return Results.Ok(new
+        {
+            ok = true,
+            graphId,
+            path = sidecarPath,
+            layout = graphs[graphId]?.DeepClone() ?? new JsonObject(),
+        });
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Malformed graph_editor.json: {ex.Message}" });
+    }
+});
+
+app.MapPut("/api/mods/{modId}/gas/graph-editor/{graphId}", async (string modId, string graphId, HttpRequest req) =>
+{
+    if (!TryResolveModRoot(launcher, modId, out string modRoot, out IResult? error))
+        return error!;
+
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    JsonNode? layoutNode;
+    try { layoutNode = JsonNode.Parse(body); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed layout JSON: {ex.Message}" }); }
+    if (layoutNode is not JsonObject layout)
+        return Results.BadRequest(new { ok = false, error = "Layout must be a JSON object." });
+
+    string sidecarPath = Path.Combine(modRoot, "assets", "GAS", "graph_editor.json");
+    JsonObject root;
+    if (File.Exists(sidecarPath))
+    {
+        JsonNode? existing;
+        try { existing = JsonNode.Parse(File.ReadAllText(sidecarPath)); }
+        catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed graph_editor.json: {ex.Message}" }); }
+        if (existing is not JsonObject existingRoot)
+            return Results.BadRequest(new { ok = false, error = "graph_editor.json must contain an object root." });
+        if (existingRoot["graphs"] is not JsonObject)
+            return Results.BadRequest(new { ok = false, error = "graph_editor.json must contain an object property 'graphs'." });
+        root = existingRoot;
+    }
+    else
+    {
+        root = new JsonObject { ["graphs"] = new JsonObject() };
+    }
+
+    JsonObject graphs = (JsonObject)root["graphs"]!;
+
+    graphs[graphId] = layout.DeepClone();
+    Directory.CreateDirectory(Path.GetDirectoryName(sidecarPath)!);
+    WriteTextAtomically(sidecarPath, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+    return Results.Ok(new { ok = true, graphId, path = sidecarPath });
+});
+
 app.MapGet("/api/mods/{modId}/gas/graphs/{graphId}", (string modId, string graphId) =>
 {
     if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
@@ -1804,6 +1903,27 @@ static bool TryResolveModGraphsPath(LauncherService launcher, string modId, out 
         return false;
     }
 
+    return true;
+}
+
+static bool TryResolveModRoot(LauncherService launcher, string modId, out string modRoot, out IResult? error)
+{
+    modRoot = string.Empty;
+    error = null;
+    if (string.IsNullOrWhiteSpace(modId))
+    {
+        error = Results.BadRequest(new { ok = false, error = "Missing modId." });
+        return false;
+    }
+
+    var mod = launcher.DiscoverMods().FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
+    if (mod == null)
+    {
+        error = Results.NotFound(new { ok = false, error = $"Mod not found: {modId}" });
+        return false;
+    }
+
+    modRoot = mod.RootPath;
     return true;
 }
 
