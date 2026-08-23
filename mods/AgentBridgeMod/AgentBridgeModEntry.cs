@@ -49,8 +49,8 @@ namespace AgentBridgeMod
                 tools.Register(new GasDiagnosticsTool());
                 tools.Register(new OrdersInspectTool());
                 tools.Register(new OrdersIssueTool());
-                tools.Register(new InputStateTool());
-                tools.Register(new InputInjectTool());
+                tools.Register(new InputStateTool(runtime));
+                tools.Register(new InputInjectTool(runtime));
                 tools.Register(new InputRawTool());
                 tools.Register(new ScreenshotTool(runtime));
                 tools.Register(new RecordingStartTool(recording, runtime));

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
@@ -114,8 +115,7 @@ namespace Ludots.AgentBridge
                     WriteJson(context.Response, 200, new JsonObject
                     {
                         ["ok"] = true,
-                        ["pid"] = Environment.ProcessId,
-                        ["port"] = Port,
+                        ["instance"] = BuildInstanceIdentity(),
                         ["pendingRequests"] = _runtime.PendingCount,
                         ["pumpCount"] = _runtime.PumpCount,
                         ["lastPumpUtc"] = _runtime.LastPumpUtc == DateTime.MinValue ? null : _runtime.LastPumpUtc.ToString("O"),
@@ -194,6 +194,19 @@ namespace Ludots.AgentBridge
                     ["jsonrpc"] = "2.0",
                     ["id"] = id,
                     ["result"] = new JsonObject { ["tools"] = _runtime.Tools.DescribeAll() },
+                    ["instance"] = BuildInstanceIdentity(),
+                });
+                return;
+            }
+
+            if (string.Equals(rpcMethod, "ludots.diag.status", StringComparison.Ordinal))
+            {
+                WriteJson(context.Response, 200, new JsonObject
+                {
+                    ["jsonrpc"] = "2.0",
+                    ["id"] = id,
+                    ["result"] = BuildDiagStatus(),
+                    ["instance"] = BuildInstanceIdentity(),
                 });
                 return;
             }
@@ -210,12 +223,13 @@ namespace Ludots.AgentBridge
                     ["jsonrpc"] = "2.0",
                     ["id"] = id,
                     ["result"] = result,
+                    ["instance"] = BuildInstanceIdentity(),
                 });
             }
             catch (AgentToolException ex)
             {
                 int code = ex.Code == "method.not_found" ? -32601 : (ex.Code == AgentBridgeErrorCodes.InvalidParams ? -32602 : -32000);
-                WriteJsonRpcError(context.Response, id, code, ex.Message, ex.Code);
+                WriteJsonRpcError(context.Response, id, code, ex.Message, ex.Code, ex.Data, BuildInstanceIdentity());
             }
             catch (Exception ex)
             {
@@ -230,8 +244,7 @@ namespace Ludots.AgentBridge
             {
                 ["name"] = "Ludots Agent Debug Bridge",
                 ["version"] = 1,
-                ["port"] = Port,
-                ["pid"] = Environment.ProcessId,
+                ["instance"] = BuildInstanceIdentity(),
                 ["discoveryFile"] = _discoveryFile,
                 ["endpoints"] = new JsonObject
                 {
@@ -239,14 +252,77 @@ namespace Ludots.AgentBridge
                     ["GET /tools"] = "self-describing tool catalog (name/description/inputSchema)",
                     ["POST /rpc"] = "JSON-RPC 2.0: {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"<tool>\",\"params\":{...}}",
                 },
+                ["directMethods"] = new JsonObject
+                {
+                    ["ludots.tools.list"] = "tool catalog; answered on the HTTP thread",
+                    ["ludots.diag.status"] = "loop health / instance identity / input ledger; answered on the HTTP thread even when the game loop is stalled",
+                },
                 ["tools"] = _runtime.Tools.DescribeAll(),
+            };
+        }
+
+        /// <summary>
+        /// Every response carries the answering process's identity: on http.sys
+        /// multiple listeners can share a port, so callers must be able to detect
+        /// when a different instance answered than the one they intended.
+        /// </summary>
+        private JsonObject BuildInstanceIdentity()
+        {
+            return new JsonObject
+            {
+                ["pid"] = Environment.ProcessId,
+                ["port"] = Port,
+                ["mapId"] = _runtime.MapId,
+                ["processPath"] = Environment.ProcessPath,
+            };
+        }
+
+        /// <summary>
+        /// Served on the HTTP thread without going through the game-thread queue,
+        /// so it keeps answering when the loop is stalled or wedged.
+        /// </summary>
+        private JsonObject BuildDiagStatus()
+        {
+            _runtime.DescribeLoopHealth(out JsonObject loopData);
+            int runningThreads = 0;
+            int waitThreads = 0;
+            try
+            {
+                using var process = Process.GetCurrentProcess();
+                foreach (ProcessThread thread in process.Threads)
+                {
+                    if (thread.ThreadState == System.Diagnostics.ThreadState.Running) runningThreads++;
+                    if (thread.ThreadState == System.Diagnostics.ThreadState.Wait) waitThreads++;
+                }
+            }
+            catch
+            {
+                // Thread enumeration is best-effort diagnostics; never fail the tool.
+            }
+
+            return new JsonObject
+            {
+                ["loop"] = loopData,
+                ["mapId"] = _runtime.MapId,
+                ["inputEventLog"] = _runtime.InputEventLog(),
+                ["process"] = new JsonObject
+                {
+                    ["pid"] = Environment.ProcessId,
+                    ["threadCount"] = runningThreads + waitThreads,
+                    ["runningThreads"] = runningThreads,
+                    ["waitingThreads"] = waitThreads,
+                },
+                ["note"] = "Served from the HTTP thread; answers even when the game loop is stalled.",
             };
         }
 
         private void WriteDiscoveryFile()
         {
             Directory.CreateDirectory(_discoveryDirectory);
-            _discoveryFile = Path.Combine(_discoveryDirectory, "session.json");
+            SweepStaleDiscoveryFiles();
+            string sessionsDirectory = Path.Combine(_discoveryDirectory, "sessions");
+            Directory.CreateDirectory(sessionsDirectory);
+            _discoveryFile = Path.Combine(sessionsDirectory, $"{Environment.ProcessId}.json");
             var payload = new JsonObject
             {
                 ["pid"] = Environment.ProcessId,
@@ -259,6 +335,39 @@ namespace Ludots.AgentBridge
             File.WriteAllText(_discoveryFile, payload.ToJsonString(SerializerOptions));
         }
 
+        private void SweepStaleDiscoveryFiles()
+        {
+            string sessionsDirectory = Path.Combine(_discoveryDirectory, "sessions");
+            if (!Directory.Exists(sessionsDirectory))
+            {
+                return;
+            }
+
+            foreach (string file in Directory.GetFiles(sessionsDirectory, "*.json"))
+            {
+                string name = Path.GetFileNameWithoutExtension(file);
+                if (!int.TryParse(name, out int pid) || IsProcessAlive(pid))
+                {
+                    continue;
+                }
+
+                try { File.Delete(file); } catch { /* best effort */ }
+            }
+        }
+
+        private static bool IsProcessAlive(int pid)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(pid);
+                return !process.HasExited;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
+        }
+
         private static void WriteJson(HttpListenerResponse response, int status, JsonObject payload)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(payload.ToJsonString(SerializerOptions));
@@ -268,7 +377,7 @@ namespace Ludots.AgentBridge
             response.OutputStream.Write(bytes, 0, bytes.Length);
         }
 
-        private static void WriteJsonRpcError(HttpListenerResponse response, JsonNode? id, int code, string message, string? domainCode)
+        private static void WriteJsonRpcError(HttpListenerResponse response, JsonNode? id, int code, string message, string? domainCode, JsonObject? data = null, JsonObject? instance = null)
         {
             var error = new JsonObject
             {
@@ -277,15 +386,30 @@ namespace Ludots.AgentBridge
             };
             if (!string.IsNullOrEmpty(domainCode))
             {
-                error["data"] = new JsonObject { ["code"] = domainCode };
+                var errorData = new JsonObject { ["code"] = domainCode };
+                if (data != null)
+                {
+                    foreach (KeyValuePair<string, JsonNode?> field in data)
+                    {
+                        errorData[field.Key] = field.Value?.DeepClone();
+                    }
+                }
+
+                error["data"] = errorData;
             }
 
-            WriteJson(response, 200, new JsonObject
+            var payload = new JsonObject
             {
                 ["jsonrpc"] = "2.0",
                 ["id"] = id,
                 ["error"] = error,
-            });
+            };
+            if (instance != null)
+            {
+                payload["instance"] = instance;
+            }
+
+            WriteJson(response, 200, payload);
         }
 
         private static void TryWriteError(HttpListenerResponse response, int status, string code, string message)

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -184,14 +185,14 @@ static string ResolveBaseUrl(string[] argv)
     if (!string.IsNullOrWhiteSpace(env)) return env;
 
     string? discovery = Environment.GetEnvironmentVariable("LUDOTS_AGENT_BRIDGE_DISCOVERY");
-    if (!string.IsNullOrWhiteSpace(discovery) && File.Exists(discovery))
+    if (!string.IsNullOrWhiteSpace(discovery))
     {
         try
         {
-            var session = JsonNode.Parse(File.ReadAllText(discovery)) as JsonObject;
-            if (session?["port"] is JsonValue port && port.TryGetValue(out int p))
+            string? resolved = ResolveDiscoveryPort(discovery);
+            if (resolved != null)
             {
-                return $"http://127.0.0.1:{p}";
+                return resolved;
             }
         }
         catch
@@ -201,4 +202,55 @@ static string ResolveBaseUrl(string[] argv)
     }
 
     return "http://127.0.0.1:47921";
+}
+
+// Discovery accepts either a session file or a directory: a directory is scanned
+// for per-pid session files (sessions/<pid>.json), newest start wins. Per-pid
+// files are the multi-instance format; a stale single session.json is ignored
+// when the directory form is present.
+static string? ResolveDiscoveryPort(string path)
+{
+    if (File.Exists(path))
+    {
+        return ReadPort(File.ReadAllText(path));
+    }
+
+    if (!Directory.Exists(path))
+    {
+        return null;
+    }
+
+    string sessionsDir = Path.Combine(path, "sessions");
+    string[] candidates = Directory.Exists(sessionsDir)
+        ? Directory.GetFiles(sessionsDir, "*.json")
+        : Directory.GetFiles(path, "*.json");
+    string? best = null;
+    DateTime bestStart = DateTime.MinValue;
+    foreach (string file in candidates)
+    {
+        try
+        {
+            var session = JsonNode.Parse(File.ReadAllText(file)) as JsonObject;
+            string? started = session?["startedAtUtc"]?.GetValue<string>();
+            if (started != null && DateTime.TryParse(started, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime when) && when > bestStart)
+            {
+                bestStart = when;
+                best = ReadPort(File.ReadAllText(file));
+            }
+        }
+        catch
+        {
+            // unreadable candidate: skip
+        }
+    }
+
+    return best;
+}
+
+static string? ReadPort(string json)
+{
+    var session = JsonNode.Parse(json) as JsonObject;
+    return session?["port"] is JsonValue port && port.TryGetValue(out int p)
+        ? $"http://127.0.0.1:{p}"
+        : null;
 }
