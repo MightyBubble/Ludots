@@ -383,7 +383,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             try
             {
                 var knowledge = _engine.GetService(CoreServiceKeys.KnowledgeProjectionStore);
-                var viewers = _frontline.Config.Sides;
+                var viewers = _frontlineRuntime.Config.Sides;
                 dbg.Append("sides=");
                 foreach (var sd in viewers) { dbg.Append(sd.Id).Append('/').Append(sd.VisionScopeKey).Append(' '); }
                 var emitterQuery = new Arch.Core.QueryDescription().WithAll<FrontlineParticipant, VisionEmitterCm>();
