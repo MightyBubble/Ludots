@@ -7523,6 +7523,30 @@
       ]
     },
     {
+      "id": "panel_entity_aggregate",
+      "path": "mods/showcases/panel_entity_aggregate/PanelEntityAggregateShowcaseMod",
+      "projectPath": null,
+      "title": "Entity Aggregate Panel",
+      "summary": "Schema v2 entity health, mana, and attack projection from a Query graph",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_entity_aggregate",
+      "preset": "panel_entity_aggregate_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-entity-aggregate.md",
+      "readmePath": null,
+      "acceptanceTest": "PanelEntityAggregateShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_entity_aggregate",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "schema-v2",
+        "entity-aggregate",
+        "showcase"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_SpawnTemplate",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
       "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj",

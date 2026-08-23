@@ -1,0 +1,11 @@
+[
+  {
+    "id": "panel.entity.aggregate",
+    "graph": "Graph.Panel.EntityAggregate.Values",
+    "pins": [
+      { "name": "health", "key": "entity.aggregate.health", "mode": "realtime", "default": 0 },
+      { "name": "mana", "key": "entity.aggregate.mana", "mode": "realtime", "default": 0 },
+      { "name": "attack", "key": "entity.aggregate.attack", "mode": "realtime", "default": 0 }
+    ]
+  }
+]

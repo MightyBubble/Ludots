@@ -1,0 +1,46 @@
+[
+  {
+    "id": "Graph.Panel.EntityAggregate.Values",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      { "id": "hp", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "mp", "op": "LoadSelfAttribute", "attribute": "Mana" },
+      { "id": "atk", "op": "LoadSelfAttribute", "attribute": "Attack" }
+    ],
+    "controlEdges": [
+      { "from": "hp", "fromPort": "next", "to": "mp" },
+      { "from": "mp", "fromPort": "next", "to": "atk" }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      { "id": "health", "destination": "Summary", "type": "Float", "source": "hp", "key": "entity.aggregate.health" },
+      { "id": "mana", "destination": "Summary", "type": "Float", "source": "mp", "key": "entity.aggregate.mana" },
+      { "id": "attack", "destination": "Summary", "type": "Float", "source": "atk", "key": "entity.aggregate.attack" }
+    ]
+  },
+  {
+    "id": "Graph.Entity.Aggregate.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.entity.aggregate", "panelAnchor": "screen.bottomLeft" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.entity.aggregate" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

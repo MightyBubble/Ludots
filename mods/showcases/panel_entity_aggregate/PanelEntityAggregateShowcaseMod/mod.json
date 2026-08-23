@@ -1,0 +1,9 @@
+{
+  "name": "PanelEntityAggregateShowcaseMod",
+  "version": "1.0.0",
+  "description": "Schema v2 entity aggregate panel backed by the fireball entity Query graph",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0"
+  }
+}
