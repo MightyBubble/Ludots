@@ -1,4 +1,5 @@
 import {
+  ChevronDown,
   FolderOpen,
   Gamepad2,
   Globe,
@@ -13,6 +14,7 @@ import {
   Trash2,
   Wifi,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useLauncherStore } from "@/stores/launcherStore";
 
@@ -43,6 +45,18 @@ export function TopBar() {
   const selectedPreset = presets.find((preset) => preset.id === selectedPresetId) ?? null;
   const isBusy = buildState === "building" || launching;
   const canDeletePreset = selectedPreset !== null && selectedPreset.id !== "default";
+
+  // 自绘下拉：CEF 离屏表面不绘制原生 <select> 弹层（CefBrowserSurface.OnPaint 丢弃 IsPopup 帧）。
+  const [presetMenuOpen, setPresetMenuOpen] = useState(false);
+  const presetMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!presetMenuOpen) return;
+    const close = (event: MouseEvent) => {
+      if (!presetMenuRef.current?.contains(event.target as Node)) setPresetMenuOpen(false);
+    };
+    window.addEventListener("mousedown", close);
+    return () => window.removeEventListener("mousedown", close);
+  }, [presetMenuOpen]);
 
   const handleSave = async () => {
     if (selectedPreset) {
@@ -145,17 +159,36 @@ export function TopBar() {
 
       <div className="flex min-w-[240px] items-center gap-2">
         <span className="text-[10px] uppercase tracking-[0.3em] text-gray-500">Preset</span>
-        <select
-          value={selectedPresetId ?? ""}
-          onChange={(event) => void selectPreset(event.target.value)}
-          className="min-w-[180px] rounded-lg border border-bg-border bg-bg px-3 py-2 text-xs transition hover:border-accent/40 focus:border-accent focus:outline-none"
-        >
-          {presets.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.name}
-            </option>
-          ))}
-        </select>
+        <div className="relative min-w-[180px]" ref={presetMenuRef}>
+          <button
+            type="button"
+            onClick={() => setPresetMenuOpen((open) => !open)}
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-bg-border bg-bg px-3 py-2 text-xs transition hover:border-accent/40 focus:border-accent focus:outline-none"
+          >
+            <span className="truncate">{selectedPreset?.name ?? "Select preset"}</span>
+            <ChevronDown size={14} className="shrink-0 text-gray-400" />
+          </button>
+          {presetMenuOpen ? (
+            <div className="absolute left-0 top-full z-50 mt-1 max-h-72 w-72 overflow-y-auto rounded-lg border border-bg-border bg-bg-panel shadow-2xl">
+              {presets.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => {
+                    void selectPreset(preset.id);
+                    setPresetMenuOpen(false);
+                  }}
+                  className={cn(
+                    "block w-full truncate px-3 py-2 text-left text-xs transition hover:bg-bg-hover",
+                    preset.id === selectedPresetId ? "bg-accent/10 text-accent" : "text-gray-200",
+                  )}
+                >
+                  {preset.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         {presetDirty ? (
           <span className="rounded-full border border-warn/30 bg-warn/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-warn">
             Unsaved
