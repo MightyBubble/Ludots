@@ -9,6 +9,7 @@ internal static class NavGateInputActions
     public const string ClearObstacles = "NavGate_ClearObstacles";
     public const string CycleRadius = "NavGate_CycleRadius";
     public const string CyclePace = "NavGate_CyclePace";
+    public const string ToggleMarch = "NavGate_ToggleMarch";
 }
 
 internal static class NavGateInputContexts

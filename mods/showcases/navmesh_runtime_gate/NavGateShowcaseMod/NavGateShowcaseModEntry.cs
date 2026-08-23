@@ -18,9 +18,16 @@ namespace NavGateShowcaseMod
     {
         public void OnLoad(IModContext context)
         {
-            context.Log("[NavGateShowcaseMod] Loaded - G drop/lift gate | F freeze rebake (ablation) | N navmesh view | P/O manual obstacle | R radius | T pace");
-
             var shared = new NavGateState();
+            string? autoTour = Environment.GetEnvironmentVariable("LUDOTS_NAVGATE_AUTOTOUR");
+            if (autoTour is "0" or "false" or "off")
+            {
+                shared.AutoTour = false;
+            }
+
+            context.Log(shared.AutoTour
+                ? "[NavGateShowcaseMod] Loaded (auto tour) - G drop/lift gate | F freeze rebake (ablation) | N navmesh view | P/O manual obstacle | R radius | T pace"
+                : "[NavGateShowcaseMod] Loaded (MANUAL) - M march/hold | G drop/lift gate | F freeze rebake | N navmesh view | P/O manual obstacle | R radius | T pace");
 
             context.SystemFactoryRegistry.RegisterPresentation("NavGateTimeline", scriptCtx =>
             {

@@ -45,7 +45,28 @@ public sealed class NavGateTimelineSystem : ISystem<float>
         }
 
         HandleInput();
-        AdvanceTimeline();
+        if (_state.AutoTour)
+        {
+            AdvanceTimeline();
+        }
+        else
+        {
+            ManualTick();
+        }
+    }
+
+    /// <summary>
+    /// 手动模式：只出生一次小队，其余全部由玩家驱动（M 出发/回营，G/F/P/O/R/T 同自动模式）。
+    /// 无自动阶段推进、无自动落门、无熔断循环。
+    /// </summary>
+    private void ManualTick()
+    {
+        if (!_state.SpawnedOnce)
+        {
+            _state.SpawnedOnce = true;
+            SpawnSquad();
+            Console.WriteLine("[NavGate] 手动模式：小队待命于 A 营 —— M 出发 / G 落门 / F 冻结重烤 / P 障碍");
+        }
     }
 
     private void HandleInput()
@@ -92,6 +113,23 @@ public sealed class NavGateTimelineSystem : ISystem<float>
         {
             _state.PaceIndex = (_state.PaceIndex + 1) % NavGateIds.PaceMultipliers.Length;
             Console.WriteLine($"[NavGate] 巡演节奏 → {NavGateIds.PaceMultipliers[_state.PaceIndex]:0.0}x");
+        }
+
+        if (!_state.AutoTour && _input.PressedThisFrame(NavGateInputActions.ToggleMarch))
+        {
+            if (_state.ArrivedCount >= NavGateIds.SquadCount)
+            {
+                bool goingToB = _state.GoalXcm == NavGateIds.CampBXcm && _state.GoalYcm == NavGateIds.CampBYcm;
+                _state.GoalXcm = goingToB ? NavGateIds.CampAXcm : NavGateIds.CampBXcm;
+                _state.GoalYcm = goingToB ? NavGateIds.CampAYcm : NavGateIds.CampBYcm;
+                _state.ManualMarch = true;
+                Console.WriteLine($"[NavGate] 下令行军 → {(_state.GoalXcm == NavGateIds.CampBXcm ? "B 营" : "A 营")}");
+            }
+            else
+            {
+                _state.ManualMarch = !_state.ManualMarch;
+                Console.WriteLine(_state.ManualMarch ? "[NavGate] 小队出发" : "[NavGate] 小队停止待命");
+            }
         }
 
         if (_input.PressedThisFrame(NavGateInputActions.SpawnObstacle))

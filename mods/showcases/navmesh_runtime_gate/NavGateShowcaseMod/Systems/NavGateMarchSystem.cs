@@ -124,6 +124,12 @@ public sealed class NavGateMarchSystem : ISystem<float>
             return;
         }
 
+        // 手动模式待命：路径照常计算与改道显示（玩家能实时看到规划路线变化），只冻结位移。
+        if (!_state.AutoTour && !_state.ManualMarch)
+        {
+            return;
+        }
+
         FollowWaypoints(agent, dt);
     }
 

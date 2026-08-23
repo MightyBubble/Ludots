@@ -39,6 +39,11 @@ public sealed class NavGateState
     public NavGatePhase Phase = NavGatePhase.Briefing;
     public int PhaseTicks;
 
+    /// <summary>LUDOTS_NAVGATE_AUTOTOUR=0 时为 false：无自动巡演，全部由玩家驱动。</summary>
+    public bool AutoTour = true;
+    public bool ManualMarch;
+    public bool SpawnedOnce;
+
     public readonly List<NavGateAgent> Agents = new(NavGateIds.SquadCount);
     public int GoalXcm = NavGateIds.CampBXcm;
     public int GoalYcm = NavGateIds.CampBYcm;
@@ -59,7 +64,13 @@ public sealed class NavGateState
     public int PendingTiles;
 
     public float Pace => NavGateIds.PaceMultipliers[PaceIndex];
-    public string PhaseLabel => Phase switch
+    public string PhaseLabel => !AutoTour
+        ? (ArrivedCount >= NavGateIds.SquadCount
+            ? "手动模式 · 小队已抵达 · M 下令回营"
+            : ManualMarch
+                ? "手动模式 · 行军中 · M 停止"
+                : "手动模式 · 待命 · M 出发")
+        : Phase switch
     {
         NavGatePhase.Briefing => "集结 · 小队整备于 A 营",
         NavGatePhase.MarchToB => "行军 · A 营 → B 营",
