@@ -27,7 +27,6 @@ public static class NavBakeHeightmapLoader
         var candidates = new List<string>();
         AddCandidate(candidates, root, assetPath);
         string modsRoot = Path.Combine(root, "mods");
-        bool targetFound = false;
         if (Directory.Exists(modsRoot))
         {
             foreach (string manifest in Directory.EnumerateFiles(modsRoot, "mod.json", SearchOption.AllDirectories))
@@ -43,23 +42,11 @@ public static class NavBakeHeightmapLoader
                         continue;
                     }
 
-                    targetFound = true;
                     AddCandidate(candidates, modRoot, assetPath);
                     continue;
                 }
 
                 AddCandidate(candidates, modRoot, assetPath);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(targetModId) && (candidates.Count == 0 || !targetFound))
-        {
-            foreach (string manifest in Directory.Exists(modsRoot)
-                ? Directory.EnumerateFiles(modsRoot, "mod.json", SearchOption.AllDirectories)
-                : Array.Empty<string>())
-            {
-                string? modRoot = Path.GetDirectoryName(manifest);
-                if (modRoot != null) AddCandidate(candidates, modRoot, assetPath);
             }
         }
 

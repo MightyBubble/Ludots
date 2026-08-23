@@ -796,9 +796,7 @@ namespace {modId}
                 terrain,
                 continuousHeightmap,
                 obstacles,
-                string.Equals(policy.RuntimeObstacleSource, NavBakeSourceKinds.RuntimeEntities, StringComparison.Ordinal)
-                    ? null
-                    : new NavObstacleSet());
+                new NavObstacleSet());
 
             NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
             return new NavBakeContext
@@ -827,18 +825,18 @@ namespace {modId}
         static LogicTerrainField CreateReactEditorLogicTerrain(string inputReactBinPath, BoardConfig boardConfig)
         {
             if (boardConfig == null) throw new ArgumentNullException(nameof(boardConfig));
-            string spatialType = (boardConfig.SpatialType ?? "Grid").Trim();
+            string spatialType = boardConfig.SpatialType?.Trim()
+                ?? throw new InvalidOperationException(
+                    $"Map board '{boardConfig.Name}' has empty SpatialType. Expected exact value Grid, HexGrid, or NodeGraph.");
 
-            if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase))
+            if (spatialType.Equals("Grid", StringComparison.Ordinal))
             {
                 return ReactMapDataBinConverter.ReadGridLogicTerrainField(
                     inputReactBinPath,
                     boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm);
             }
 
-            if (spatialType.Equals("HexGrid", StringComparison.OrdinalIgnoreCase) ||
-                spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) ||
-                spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase))
+            if (spatialType.Equals("HexGrid", StringComparison.Ordinal))
             {
                 using var ms = new MemoryStream();
                 _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(inputReactBinPath, ms);
@@ -847,7 +845,7 @@ namespace {modId}
                 return new VertexMapLogicTerrainField(map);
             }
 
-            if (spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+            if (spatialType.Equals("NodeGraph", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
                     $"Map board '{boardConfig.Name}' is NodeGraph; NodeGraph boards use graph data and do not bake navmesh.");
