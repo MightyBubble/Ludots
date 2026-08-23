@@ -1,3 +1,4 @@
+using RtsDemoMod.Runtime;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -420,8 +421,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             confidencePermille: 1000,
             revision: 1));
 
-        using var commandPanel = new RtsCommandSourceCommandPanelSystem(engine);
-        commandPanel.Update(1f / 60f);
+        RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(engine, mirrors[(int)FrontlineReplicationKind.Core], snapCamera: false);
         CameraPoseRequest commandSourceFocus = engine.GetService(CoreServiceKeys.CameraPoseRequest)
             ?? throw new InvalidOperationException("RTS command-source focus did not publish a camera pose.");
         Vector2 authoredFocusTarget = commandSourceFocus.TargetCm
@@ -605,8 +605,9 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     {
         using GameEngine engine = CreateStartedReplicatedClientEngine();
         engine.LoadStartupMap();
-        Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity _), Is.False);
-        Assert.That(ClientLocalSeatAccess.RequireRegistry(engine).Count, Is.Zero);
+        Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity _), Is.True,
+            "the merged cold-start recipe seats the replicated client at map load; the handshake rebinds it.");
+        Assert.That(ClientLocalSeatAccess.RequireRegistry(engine).Count, Is.EqualTo(1));
         engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
         {
             Id = "Rts.Frontline",
@@ -1550,7 +1551,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             VisionEmitterCm emitter = engine.World.Get<VisionEmitterCm>(ownInfantry);
             Assert.That(emitter.ScopeKeyId, Is.EqualTo(RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[sideIndex].VisionScopeKey)));
             Assert.That(emitter.LayerMask, Is.EqualTo(layers.ToMask(groundLayer)));
-            Assert.That(emitter.Aperture.RangeCm, Is.EqualTo(3_200));
+            Assert.That(emitter.Aperture.RangeCm, Is.EqualTo(1_000));
             Assert.That(fields.TryGet(emitter.ScopeKeyId, groundLayer, out FogField field), Is.True);
             Assert.That(
                 field.GetVisibility(field.WorldToCell(meeting.ToWorldCmInt2())),

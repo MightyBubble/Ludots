@@ -11,7 +11,9 @@ using Ludots.Core.Scripting;
 
 namespace RtsDemoMod.Runtime
 {
-    internal static class RtsShowcaseCommandSourceHelper
+    // Public for the frontline showcase's opening-view seeding; stays in the rts_demo runtime as the
+    // shared RTS command-source helper.
+    public static class RtsShowcaseCommandSourceHelper
     {
         public static void EnsureCommandSourceBinding(GameEngine engine)
         {

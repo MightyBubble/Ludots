@@ -1,3 +1,4 @@
+using RtsDemoMod.Runtime;
 using Ludots.Core.Client;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -799,6 +800,15 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         {
             throw new InvalidOperationException(
                 $"RTS Frontline opening camera found {ownedCoreCount} owned core mirrors for player {localPlayerId}; expected one.");
+        }
+
+        // Seed the initial command source on the own core mirror under the seat model: main removed
+        // the name-based EnsureDefaultCommandSource seeding, and the opening camera waits on the
+        // focus request this publishes.
+        if (RtsShowcaseCommandSourceHelper.GetCommandSourceCount(_engine) == 0)
+        {
+            RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(_engine, ownedCore, snapCamera: false);
+            return;
         }
 
         CameraCullingDebugState culling = _engine.GetService(CoreServiceKeys.CameraCullingDebugState)

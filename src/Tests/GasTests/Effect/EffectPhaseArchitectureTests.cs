@@ -360,8 +360,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        [Ignore("Contract not implemented on the merged executor: synchronous reentrant ExecuteGraph from inside a builtin handler needs an explicit guard (#711 follow-up).")]
-        public void PhaseExecutor_CustomBuiltinSynchronousReentry_ThrowsBeforeNestedExecution()
+                public void PhaseExecutor_CustomBuiltinSynchronousReentry_ThrowsBeforeNestedExecution()
         {
             using var world = World.Create();
             const int graphId = 601;

@@ -28,6 +28,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// </summary>
     public sealed class EffectPhaseExecutor
     {
+        private bool _graphExecuting;
         public const string PhaseListenerDispatchCapacityExceededError = "GAS.PHASE_LISTENER.ERR.DispatchCapacityExceeded";
         public const string ExternalAtomicListenerConflictError = "GAS.EFFECT_PLAN.ERR.ExternalAtomicListenerConflict";
         public const string GraphProgramScratchCapacityExceededError = "GAS.EFFECT_PHASE.ERR.GraphProgramScratchCapacityExceeded";
@@ -791,7 +792,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref byte validationResult,
             bool requireListenerCompatibility = false)
         {
+            if (_graphExecuting)
+            {
+                throw new InvalidOperationException(
+                    "EffectPhaseExecutor does not support reentrant execution; a nested synchronous ExecuteGraph from inside a graph handler is rejected before nested execution.");
+            }
+
             if (graphProgramId <= 0) return;
+
             if (!_programs.TryGetProgram(graphProgramId, out var program))
             {
                 throw new InvalidOperationException(
@@ -880,6 +888,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ownsBuiltinInvocation = true;
             }
 
+            _graphExecuting = true;
             try
             {
                 GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
@@ -891,6 +900,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
             finally
             {
+                _graphExecuting = false;
                 if (ownsBuiltinInvocation)
                 {
                     graphHost!.EndBuiltinInvocation();

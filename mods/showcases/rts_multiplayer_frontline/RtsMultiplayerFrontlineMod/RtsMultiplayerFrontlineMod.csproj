@@ -8,5 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\rts_demo\RtsDemoMod\RtsDemoMod.csproj" />
   </ItemGroup>
 </Project>

@@ -1446,105 +1446,59 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        [Ignore("Main's GraphKindOperationPolicy bans InvokeBuiltin in listener graphs (no owner EffectTemplate context); listener-builtin effect-context contract needs a Core design decision (#711 follow-up).")]
-        public void ExecutorDispatch_ListenerGraphBuiltin_ReceivesEffectContextAndMergedConfig()
+        public void ExecutorDispatch_ListenerGraphBuiltin_IsRejectedByListenerOperationPolicy()
         {
+            // Main's GraphKindOperationPolicy bans InvokeBuiltin in listener graphs because listener
+            // execution carries no owner EffectTemplate context; the PR-era "listener builtin receives
+            // effect context" contract was retired with that policy decision.
             using var world = World.Create();
-            Entity source = world.Create();
-            Entity target = world.Create();
-            Entity effect = world.Create();
-
-            const int graphId = 2;
-            const int templateId = 2305;
-            const int configKeyId = 201;
+            var caster = world.Create();
+            var target = world.Create();
             var programs = new GraphProgramRegistry();
-            programs.Register(graphId, new[]
-            {
-                new GraphInstruction
-                {
-                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
-                    Imm = (int)BuiltinHandlerId.ApplyModifiers,
-                },
+            const int graphId = 2;
+            programs.Register(graphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.InvokeBuiltin, Imm = (int)BuiltinHandlerId.ApplyModifiers },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
-            }, GraphKind.Effect);
-
+            ], GraphKind.Effect);
             var listenerBuffer = new EffectPhaseListenerBuffer();
             That(listenerBuffer.TryAdd(
                 listenTagId: 0,
-                listenEffectId: templateId,
-                phase: EffectPhaseId.OnApply,
-                scope: PhaseListenerScope.Target,
-                flags: PhaseListenerActionFlags.ExecuteGraph,
-                graphProgramId: graphId,
+                listenEffectId: 0,
+                EffectPhaseId.OnApply,
+                PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph,
+                graphId,
                 eventTagId: 0,
-                priority: 50,
+                priority: 0,
                 ownerEffectId: 1), Is.True);
             world.Add(target, listenerBuffer);
-
-            var templateParams = new EffectConfigParams();
-            That(templateParams.TryAddInt(configKeyId, 11), Is.True);
-            var templates = new EffectTemplateRegistry();
-            templates.Register(templateId, new EffectTemplateData
-            {
-                ConfigParams = templateParams,
-            });
-
-            Entity receivedEffect = Entity.Null;
-            int receivedRootId = 0;
-            int receivedConfigValue = 0;
-            var builtinHandlers = new BuiltinHandlerRegistry();
-            builtinHandlers.Register(
-                BuiltinHandlerId.ApplyModifiers,
-                (World _, Entity effectEntity, ref EffectContext effectContext, in EffectConfigParams config, in EffectTemplateData _) =>
-                {
-                    receivedEffect = effectEntity;
-                    receivedRootId = effectContext.RootId;
-                    That(config.TryGetInt(configKeyId, out receivedConfigValue), Is.True);
-                },
-                EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
 
             var executor = new EffectPhaseExecutor(
                 programs,
                 new PresetTypeRegistry(),
-                builtinHandlers,
+                new BuiltinHandlerRegistry(),
                 GasGraphOpHandlerTable.Instance,
-                templates);
+                new EffectTemplateRegistry());
             var api = new GasGraphRuntimeApi(world);
-            var context = new EffectContext
-            {
-                RootId = 47,
-                Source = source,
-                Target = target,
-                TargetContext = Entity.Null,
-            };
-            var callerParams = new EffectConfigParams();
-            That(callerParams.TryAddInt(configKeyId, 29), Is.True);
-            var mergedParams = templateParams;
-            mergedParams.MergeFrom(in callerParams);
-            var runtime = new BuiltinHandlerExecutionContext();
-            var behavior = new EffectPhaseGraphBindings();
+            EffectPhaseGraphBindings behavior = default;
 
-            executor.ExecutePhase(
-                world,
-                api,
-                context.Source,
-                context.Target,
-                context.TargetContext,
-                default,
-                EffectPhaseId.OnApply,
-                in behavior,
-                EffectPresetType.None,
-                effectTagId: 0,
-                effectTemplateId: templateId,
-                mergedParams: in mergedParams,
-                builtinRuntime: runtime,
-                rootId: context.RootId);
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    api,
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectTagId: 1,
+                    effectTemplateId: 1))!;
 
-            That(receivedEffect, Is.EqualTo(Entity.Null));
-            That(receivedRootId, Is.EqualTo(47));
-            That(receivedConfigValue, Is.EqualTo(29));
+            That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
         }
-
         [Test]
         public void ExecutorDispatch_PublishesEvent_OnCasterBuffer()
         {
