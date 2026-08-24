@@ -1,0 +1,10 @@
+flowchart TD
+    A[Load presenter catalog] --> B{BehaviorSlot payload valid?}
+    B -- no --> X[Reject at load or compile]
+    B -- yes --> C[Build per-slot compiled views]
+    C --> D[Emit runtime output from slot payload]
+    D --> E{Second slot changes?}
+    E -- no --> F[Only selected slot output changes]
+    E -- yes --> X2[Regression: slot isolation failure]
+    F --> G[Launch real Blacksmith showcase]
+    G --> H[Raylib screenshot and diagnostics]
