@@ -1,0 +1,7 @@
+{"seq":1,"scenario":"dialogue_gate","at":"[T\u002B001] [map] hub loaded; default camera \u0027Camera.Profile.Tactical\u0027 active"}
+{"seq":2,"scenario":"dialogue_gate","at":"[T\u002B002] [dialogue] gate dialogue visible on the presenter chain"}
+{"seq":3,"scenario":"dialogue_gate","at":"[T\u002B003] [dialogue] locked choice hidden: choices=[open_yes] while gallery_lore=0"}
+{"seq":4,"scenario":"dialogue_gate","at":"[T\u002B004] [dialogue] grant node committed: gallery_lore=1, signal slice.gate.granted emitted"}
+{"seq":5,"scenario":"dialogue_gate","at":"[T\u002B005] [dialogue] locked choice revealed: gallery_lore\u003E=1 satisfied"}
+{"seq":6,"scenario":"dialogue_gate","at":"[T\u002B006] [dialogue] locked choice walked to the seal node; signal slice.gate.finished emitted"}
+{"seq":7,"scenario":"dialogue_gate","at":"[T\u002B007] [gate] both signals received in order; slice_counter=2; lore not double-counted"}

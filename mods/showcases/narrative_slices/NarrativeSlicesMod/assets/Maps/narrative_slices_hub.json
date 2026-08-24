@@ -1,0 +1,16 @@
+{
+  "Id": "narrative_slices_hub",
+  "Tags": ["narrative.slices.showcase", "slice.gate", "slice.gallery"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1500,
+    "TargetYCm": 950,
+    "DistanceCm": 3400,
+    "Pitch": 50,
+    "FovYDeg": 42
+  },
+  "Entities": [],
+  "Variables": [
+    { "name": "slice_counter", "type": "int", "initial": 0 }
+  ]
+}

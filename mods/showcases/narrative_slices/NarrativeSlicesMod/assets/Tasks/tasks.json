@@ -1,0 +1,22 @@
+[
+  {
+    "id": "Slice.Gallery.Alpha",
+    "display_name": "Gallery Alpha",
+    "summary": "Gallery slice objective track: started then completed by narrative actions.",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "alpha", "kind": "signal", "title": "Alpha track done", "signal_key": "gallery.alpha.done" }
+    ]
+  },
+  {
+    "id": "Slice.Gallery.Beta",
+    "display_name": "Gallery Beta",
+    "summary": "Gallery slice objective track: started then failed by narrative actions.",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "beta", "kind": "signal", "title": "Beta track done", "signal_key": "gallery.beta.done" }
+    ]
+  }
+]

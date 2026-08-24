@@ -1,0 +1,12 @@
+flowchart TD
+    start([StartSlice dialogue_gate]) --> root[gate_root choices]
+    root -->|"gallery_lore = 0"| yes[open_yes visible]
+    root -.->|"guard: gallery_lore >= 1 fails"| lockedHidden[open_locked hidden by condition]
+    yes --> grant[node_grant: AddVariable gallery_lore+1, EmitSignal slice.gate.granted]
+    grant --> end1([dialogue closed])
+    end1 --> restart([StartSlice dialogue_gate again])
+    restart --> root2[gate_root choices]
+    root2 -->|"gallery_lore = 1"| both[open_yes + open_locked both visible]
+    both --> pick[choice 2: open_locked]
+    pick --> seal[node_seal: EmitSignal slice.gate.finished]
+    seal --> done([slice finished: lore=1, counter=2])

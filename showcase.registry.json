@@ -5069,6 +5069,30 @@
       "status": "active"
     },
     {
+      "id": "narrative_slices",
+      "path": "mods/showcases/narrative_slices/NarrativeSlicesMod",
+      "projectPath": "NarrativeSlicesMod.csproj",
+      "title": "叙事切片",
+      "summary": "单一职责验收 showcase：dialogue_gate 证对话选项条件门控（变量条件隐藏/揭示），action_gallery 一条对话串行驱动 8 种叙事动作（变量/任务生命周期/相机激活与清除/信号）并断言可观测终态。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "narrative",
+        "slice",
+        "dialogue",
+        "task",
+        "camera"
+      ],
+      "binding": null,
+      "preset": null,
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "NarrativeSliceAcceptanceTests",
+      "artifactDir": "narrative-slices",
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "narrative_frontend",
       "path": "mods/capabilities/narrativefrontend/NarrativeFrontendMod",
       "projectPath": "NarrativeFrontendMod.csproj",

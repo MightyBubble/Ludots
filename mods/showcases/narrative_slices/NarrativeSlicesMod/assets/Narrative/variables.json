@@ -1,0 +1,4 @@
+[
+  { "id": "gallery_lore", "kind": "Int", "defaultInt": 0, "displayName": "Gallery Lore", "description": "Unlocked by the gate slice grant node; gates the locked dialogue choice." },
+  { "id": "slice_var", "kind": "Int", "defaultInt": 0, "displayName": "Slice Var", "description": "Counter written by the gallery slice SetVariable/AddVariable actions." }
+]

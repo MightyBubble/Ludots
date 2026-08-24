@@ -1,0 +1,13 @@
+flowchart TD
+    start([StartSlice action_gallery]) --> setvar[gallery_setvar: SetVariable slice_var=7]
+    setvar --> addvar[gallery_addvar: AddVariable +1]
+    addvar --> alphaOn[gallery_start_alpha: StartTask Alpha]
+    alphaOn --> alphaDone[gallery_complete_alpha: CompleteTask Alpha]
+    alphaDone --> betaOn[gallery_start_beta: StartTask Beta]
+    betaOn --> betaFail[gallery_fail_beta: FailTask Beta]
+    betaFail --> camOn[gallery_camera_on: ActivateCamera Camera.Profile.Inspect]
+    camOn -->|brain resolves Inspect| camClear[gallery_camera_clear: ClearCamera]
+    camClear -->|brain falls back to map default Tactical| done[gallery_done: EmitSignal slice.gallery.done]
+    done --> finish([slice finished: slice_var=8, Alpha=Completed, Beta=Failed])
+    alphaOn -.->|task lifecycle events| trace[trigger trace: activated/completed/failed]
+    betaOn -.-> trace

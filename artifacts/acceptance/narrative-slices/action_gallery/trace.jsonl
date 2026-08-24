@@ -1,0 +1,7 @@
+{"seq":1,"scenario":"action_gallery","at":"[T\u002B001] [map] hub loaded; default camera \u0027Camera.Profile.Tactical\u0027 active"}
+{"seq":2,"scenario":"action_gallery","at":"[T\u002B002] [dialogue] gallery dialogue started; nine action nodes chained by auto-advance"}
+{"seq":3,"scenario":"action_gallery","at":"[T\u002B003] [camera] ActivateCamera action observed live: brain active id=\u0027Camera.Profile.Inspect\u0027"}
+{"seq":4,"scenario":"action_gallery","at":"[T\u002B004] [dialogue] gallery sequence finished"}
+{"seq":5,"scenario":"action_gallery","at":"[T\u002B005] [camera] ClearCamera action observed live: brain back to \u0027Camera.Profile.Tactical\u0027"}
+{"seq":6,"scenario":"action_gallery","at":"[T\u002B006] [actions] slice_var=8 (Set 7 \u002B Add 1); Alpha=Completed; Beta=Failed"}
+{"seq":7,"scenario":"action_gallery","at":"[T\u002B007] [gallery] camera requests, task lifecycle and slice.gallery.done all traced; slice_counter=1"}

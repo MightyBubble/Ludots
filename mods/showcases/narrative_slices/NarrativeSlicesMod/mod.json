@@ -1,0 +1,15 @@
+{
+  "name": "NarrativeSlicesMod",
+  "version": "1.0.0",
+  "description": "Single-responsibility narrative slices showcase: dialogue_gate proves choice condition gating with variable conditions; action_gallery drives eight narrative actions (variables, task lifecycle, camera, signals) with observable end state.",
+  "main": "bin/net8.0/NarrativeSlicesMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "NarrativeFrontendMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["narrative", "slice", "dialogue", "task", "camera", "showcase"]
+}

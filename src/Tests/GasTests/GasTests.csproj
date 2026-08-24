@@ -79,6 +79,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\relationship\RelationshipShowcaseMod\RelationshipShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\narrative_chain\NarrativeChainShowcaseMod\NarrativeChainShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\narrative_slices\NarrativeSlicesMod\NarrativeSlicesMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\entity_query_tactics\EntityQueryTacticsShowcaseMod\EntityQueryTacticsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\minimap\MinimapShowcaseMod\MinimapShowcaseMod.csproj" />

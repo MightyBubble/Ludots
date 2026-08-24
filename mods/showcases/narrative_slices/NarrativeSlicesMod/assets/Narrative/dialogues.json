@@ -1,0 +1,156 @@
+[
+  {
+    "id": "Dialogue.Slice.Gate",
+    "displayName": "Gallery Gate",
+    "startNodeId": "gate_root",
+    "nodes": [
+      {
+        "id": "gate_root",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "The gallery ledger is open. Some margins stay sealed until you hold the lore.",
+        "choices": [
+          {
+            "id": "open_yes",
+            "text": "Take the open page.",
+            "nextNodeId": "node_grant"
+          },
+          {
+            "id": "open_locked",
+            "text": "Read the sealed margin note.",
+            "nextNodeId": "node_seal",
+            "conditions": [
+              { "kind": "Variable", "variableId": "gallery_lore", "operator": "GreaterOrEqual", "intValue": 1 }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "node_grant",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Granted. One page of lore enters your keeping.",
+        "autoAdvanceSeconds": 0.1,
+        "onEnter": [
+          { "kind": "AddVariable", "variableId": "gallery_lore", "valueKind": "Int", "intValue": 1 },
+          { "kind": "EmitSignal", "signalId": "slice.gate.granted" }
+        ]
+      },
+      {
+        "id": "node_seal",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "The sealed margin opens. The gate slice is finished.",
+        "autoAdvanceSeconds": 0.1,
+        "onEnter": [
+          { "kind": "EmitSignal", "signalId": "slice.gate.finished" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "Dialogue.Slice.Gallery",
+    "displayName": "Action Gallery",
+    "startNodeId": "gallery_setvar",
+    "nodes": [
+      {
+        "id": "gallery_setvar",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Set the counter to seven.",
+        "autoAdvanceSeconds": 0.1,
+        "nextNodeId": "gallery_addvar",
+        "onEnter": [
+          { "kind": "SetVariable", "variableId": "slice_var", "valueKind": "Int", "intValue": 7 }
+        ]
+      },
+      {
+        "id": "gallery_addvar",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Add one more.",
+        "autoAdvanceSeconds": 0.1,
+        "nextNodeId": "gallery_start_alpha",
+        "onEnter": [
+          { "kind": "AddVariable", "variableId": "slice_var", "valueKind": "Int", "intValue": 1 }
+        ]
+      },
+      {
+        "id": "gallery_start_alpha",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Start the alpha track.",
+        "autoAdvanceSeconds": 0.1,
+        "nextNodeId": "gallery_complete_alpha",
+        "onEnter": [
+          { "kind": "StartTask", "taskId": "Slice.Gallery.Alpha" }
+        ]
+      },
+      {
+        "id": "gallery_complete_alpha",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Complete the alpha track.",
+        "autoAdvanceSeconds": 0.1,
+        "nextNodeId": "gallery_start_beta",
+        "onEnter": [
+          { "kind": "CompleteTask", "taskId": "Slice.Gallery.Alpha" }
+        ]
+      },
+      {
+        "id": "gallery_start_beta",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Start the beta track.",
+        "autoAdvanceSeconds": 0.1,
+        "nextNodeId": "gallery_fail_beta",
+        "onEnter": [
+          { "kind": "StartTask", "taskId": "Slice.Gallery.Beta" }
+        ]
+      },
+      {
+        "id": "gallery_fail_beta",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Fail the beta track.",
+        "autoAdvanceSeconds": 0.1,
+        "nextNodeId": "gallery_camera_on",
+        "onEnter": [
+          { "kind": "FailTask", "taskId": "Slice.Gallery.Beta" }
+        ]
+      },
+      {
+        "id": "gallery_camera_on",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Raise the inspection camera.",
+        "autoAdvanceSeconds": 0.1,
+        "nextNodeId": "gallery_camera_clear",
+        "onEnter": [
+          { "kind": "ActivateCamera", "cameraId": "Camera.Profile.Inspect" }
+        ]
+      },
+      {
+        "id": "gallery_camera_clear",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "Clear the inspection camera.",
+        "autoAdvanceSeconds": 0.1,
+        "nextNodeId": "gallery_done",
+        "onEnter": [
+          { "kind": "ClearCamera" }
+        ]
+      },
+      {
+        "id": "gallery_done",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "The gallery slice is done.",
+        "autoAdvanceSeconds": 0.1,
+        "onEnter": [
+          { "kind": "EmitSignal", "signalId": "slice.gallery.done" }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "actions": [
+    { "id": "NarrativeInteract", "name": "Narrative_Slices_Interact", "type": "Button" },
+    { "id": "NarrativeAdvance", "name": "Narrative_Slices_Advance", "type": "Button" },
+    { "id": "NarrativeSkip", "name": "Narrative_Slices_Skip", "type": "Button" },
+    { "id": "NarrativeChoice1", "name": "Narrative_Slices_Choice1", "type": "Button" },
+    { "id": "NarrativeChoice2", "name": "Narrative_Slices_Choice2", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "NarrativeSlices.Controls",
+      "name": "Narrative Slices Controls",
+      "priority": 110,
+      "bindings": [
+        { "actionId": "NarrativeInteract", "path": "<Keyboard>/e" },
+        { "actionId": "NarrativeAdvance", "path": "<Keyboard>/enter" },
+        { "actionId": "NarrativeSkip", "path": "<Keyboard>/tab" },
+        { "actionId": "NarrativeChoice1", "path": "<Keyboard>/1" },
+        { "actionId": "NarrativeChoice2", "path": "<Keyboard>/2" }
+      ]
+    }
+  ]
+}

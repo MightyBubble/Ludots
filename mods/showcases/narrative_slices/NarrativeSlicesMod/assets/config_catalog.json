@@ -1,0 +1,6 @@
+[
+  { "Path": "Narrative/variables.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Narrative/dialogues.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Narrative/cinematics.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Tasks/tasks.json", "Policy": "ArrayById", "IdField": "id" }
+]
