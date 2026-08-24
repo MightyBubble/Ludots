@@ -338,8 +338,8 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             var filtered = new List<NavTile>(tiles.Length);
             int maxPolys = 0;
-            int minOriginXcm = int.MaxValue;
-            int minOriginZcm = int.MaxValue;
+            long baseOriginXcm = long.MaxValue;
+            long baseOriginZcm = long.MaxValue;
             for (int i = 0; i < tiles.Length; i++)
             {
                 NavTile tile = tiles[i];
@@ -350,8 +350,8 @@ namespace Ludots.Core.Navigation.NavMesh
 
                 filtered.Add(tile);
                 maxPolys = Math.Max(maxPolys, tile.TriangleCount);
-                minOriginXcm = Math.Min(minOriginXcm, tile.OriginXcm);
-                minOriginZcm = Math.Min(minOriginZcm, tile.OriginZcm);
+                baseOriginXcm = Math.Min(baseOriginXcm, (long)tile.OriginXcm - (long)tile.TileId.ChunkX * tileWidthCm);
+                baseOriginZcm = Math.Min(baseOriginZcm, (long)tile.OriginZcm - (long)tile.TileId.ChunkY * tileHeightCm);
             }
 
             if (filtered.Count == 0 || maxPolys == 0)
@@ -359,9 +359,12 @@ namespace Ludots.Core.Navigation.NavMesh
                 return null;
             }
 
+            // Detour 一边按 floor((pos-orig)/tileSize) 反算 tile 槽位、一边按 header 的 tileX/tileZ 落槽，
+            // orig 必须是 tile(0,0) 的世界原点（= tile 原点 − tileIndex×tileSize），不能用 tile 自身的世界原点，
+            // 否则非零 tile 坐标被平移两次；与 BuildNavMeshFromDetourTiles 的基原点算法保持一致
             var navMeshParams = new DtNavMeshParams
             {
-                orig = new RcVec3f(minOriginXcm / 100f, 0f, minOriginZcm / 100f),
+                orig = new RcVec3f(baseOriginXcm / 100f, 0f, baseOriginZcm / 100f),
                 tileWidth = tileWidthCm / 100f,
                 tileHeight = tileHeightCm / 100f,
                 maxTiles = Math.Max(1, filtered.Count),

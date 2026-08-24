@@ -297,6 +297,10 @@ namespace Ludots.Adapter.Raylib
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 using var fieldRenderPresenter = new RaylibFieldRenderPresenter();
+                Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer navMeshPresentationBuffer =
+                    engine.GetService(CoreServiceKeys.NavMeshPresentationBuffer)
+                        ?? throw new InvalidOperationException("Raylib host requires the Core NavMeshPresentationBuffer service.");
+                using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(navMeshPresentationBuffer.TileCapacity);
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
@@ -437,6 +441,13 @@ namespace Ludots.Adapter.Raylib
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
                         bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
+
+                        bool drawNavMeshOverlay = renderDebug.DrawNavMesh &&
+                            navMeshPresentationBuffer.TileCount > 0 &&
+                            engine.TryGetService(
+                                CoreServiceKeys.NavMeshPresentationState,
+                                out Ludots.Core.Presentation.Navigation.NavMeshPresentationState? navMeshFrameState) &&
+                            navMeshFrameState is { Enabled: true };
 
                         double uiInputMs = 0d;
                         bool uiCaptured = false;
@@ -727,6 +738,17 @@ namespace Ludots.Adapter.Raylib
                         else
                         {
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
+                        }
+
+                        if (drawNavMeshOverlay)
+                        {
+                            navMeshPresentationRenderer.Draw(navMeshPresentationBuffer);
+                            screenOverlayBuffer?.AddText(
+                                10,
+                                40,
+                                navMeshPresentationBuffer.FormatMetadataLine(),
+                                14,
+                                new Vector4(1f, 0.92f, 0.5f, 1f));
                         }
 
                         if (drawFieldOverlays && globalFieldVisualBuffer != null)

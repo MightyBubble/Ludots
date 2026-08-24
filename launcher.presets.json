@@ -1964,6 +1964,54 @@
       ]
     },
     {
+      "id": "capability_standard_level_blueprint_trial_raylib",
+      "name": "Capability Standard Level Blueprint Trial Raylib",
+      "selectors": [
+        "$capability_standard_level_blueprint_trial"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "navmesh_debug_raylib",
+      "name": "NavMesh Debug Raylib",
+      "selectors": [
+        "$navmesh_debug_hex_launch",
+        "$navmesh_debug"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "navmesh_debug_grid_raylib",
+      "name": "NavMesh Debug Grid Raylib",
+      "selectors": [
+        "$navmesh_debug_grid_launch",
+        "$navmesh_debug"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "navmesh_debug_vhtm_raylib",
+      "name": "NavMesh Debug Vhtm Raylib",
+      "selectors": [
+        "$navmesh_debug_vhtm_launch",
+        "$navmesh_debug"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "nav_gate_raylib",
+      "name": "NavGate Runtime Update Raylib",
+      "selectors": [
+        "$nav_gate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "engine_raylib_lighting",
       "name": "引擎画廊·光照全效",
       "selectors": [

@@ -169,10 +169,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             context.Validate();
 
             if (context.Mode == NavBakeMode.RuntimeIncremental &&
-                context.Algorithm != NavBakeAlgorithmKind.Cdt)
+                context.Algorithm != NavBakeAlgorithmKind.Cdt &&
+                context.Algorithm != NavBakeAlgorithmKind.Recast)
             {
                 throw new InvalidOperationException(
-                    "NavBakeService runtime-incremental mode requires algorithm 'cdt'.");
+                    "NavBakeService runtime-incremental mode requires algorithm 'cdt' or 'recast'.");
             }
 
             if (!_algorithms.TryGetValue(context.Algorithm, out INavBakeAlgorithm algorithm))

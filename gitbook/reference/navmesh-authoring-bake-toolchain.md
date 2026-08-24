@@ -35,7 +35,7 @@ Any implementation of this page must reuse:
 | Pathing cost | `Navigation/pathing.json` through `PathingConfig` |
 | Obstacles | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` |
 | Terrain input | official `VisualHeightmap` projection to official `LogicTerrainField` |
-| Runtime query | `NavTileStore`, `NavQueryServiceRegistry`, `NavQueryService` |
+| Runtime query | `NavTileStore`, `NavQueryServiceRegistry` (constructed with map tile dimensions from `LogicTerrainField.ChunkWidthCm`/`ChunkHeightCm`), `NavQueryService` |
 | Presentation/debug | `PresentationPrimitiveDrawBuffer`, `GroundOverlayBuffer`, `DebugDrawCommandBuffer` where appropriate |
 
 Do not add a second config loader, second obstacle file, direct navmesh authoring source, private `.lhtm` lane, casing alias, or fallback mesh generator.

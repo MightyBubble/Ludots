@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Numerics;
 using System.Text.Json.Nodes;
+using System.Threading;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 
@@ -8,12 +9,20 @@ namespace Ludots.AgentBridge.Tools
 {
     public sealed class InputStateTool : IAgentTool
     {
+        private readonly AgentBridgeRuntime _runtime;
+
+        public InputStateTool(AgentBridgeRuntime runtime)
+        {
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        }
+
         public string Name => "ludots.input.state";
 
         public string Description =>
             "Current input pipeline state: handler blocked flag, update revision, UI capture flags " +
-            "(uiCaptured, uiWheelCaptured, pointerInputCaptured), and the window-level synthetic device " +
-            "state when present (pointer override, held buttons/keys). No parameters.";
+            "(uiCaptured, uiWheelCaptured, pointerInputCaptured), the window-level synthetic device " +
+            "state when present (pointer override, held buttons/keys), and the recent ludots.input.inject " +
+            "event ledger (eventId/mode/pumpCount/tick). No parameters.";
 
         public JsonObject? InputSchema => null;
 
@@ -43,6 +52,7 @@ namespace Ludots.AgentBridge.Tools
                 };
             }
 
+            result["injectionLedger"] = _runtime.InputEventLog();
             return result;
         }
 
@@ -171,12 +181,21 @@ namespace Ludots.AgentBridge.Tools
 
     public sealed class InputInjectTool : IAgentTool
     {
+        private readonly AgentBridgeRuntime _runtime;
+        private static long _eventCounter;
+
+        public InputInjectTool(AgentBridgeRuntime runtime)
+        {
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        }
+
         public string Name => "ludots.input.inject";
 
         public string Description =>
             "Inject a synthetic input action into the player input handler (same path as game input bindings). " +
             "Params: {actionId: string, mode: 'press'|'release'|'set', value?: {x,y,z}}. " +
-            "press = InjectButtonPress (held until release), release = InjectButtonRelease, set = InjectAction with vector value.";
+            "press = InjectButtonPress (held until release), release = InjectButtonRelease, set = InjectAction with vector value. " +
+            "Response carries eventId + injectionHeld for causal confirmation; the ledger is readable via ludots.input.state.";
 
         public JsonObject? InputSchema => new JsonObject
         {
@@ -230,11 +249,17 @@ namespace Ludots.AgentBridge.Tools
                         $"Unknown mode '{mode}'. Expected press | release | set.");
             }
 
+            string eventId = $"inj-{Interlocked.Increment(ref _eventCounter)}";
+            _runtime.RecordInputEvent(eventId, actionId, mode);
             return new JsonObject
             {
                 ["actionId"] = actionId,
                 ["mode"] = mode,
                 ["injected"] = true,
+                ["eventId"] = eventId,
+                ["pumpCount"] = _runtime.PumpCount,
+                ["injectionHeld"] = handler.IsInjectionActive(actionId),
+                ["note"] = "Injection applies at the next InputCollection phase; injectionHeld is the post-inject handler state.",
             };
         }
 

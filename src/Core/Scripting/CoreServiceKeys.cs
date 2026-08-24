@@ -371,6 +371,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<MinimapScreenMarkerBuffer> MinimapScreenMarkerBuffer = new("MinimapScreenMarkerBuffer");
         public static readonly ServiceKey<ChunkDebugPanelRuntime> ChunkDebugPanelRuntime = new("ChunkDebugPanelRuntime");
         public static readonly ServiceKey<RenderDebugState> RenderDebugState = new("RenderDebugState");
+        public static readonly ServiceKey<Ludots.Core.Presentation.Navigation.NavMeshPresentationState> NavMeshPresentationState = new("NavMeshPresentationState");
+        public static readonly ServiceKey<Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer> NavMeshPresentationBuffer = new("NavMeshPresentationBuffer");
         public static readonly ServiceKey<bool> PresentationAudienceRevealHidden = new("PresentationAudienceRevealHidden");
         public static readonly ServiceKey<RenderCameraDebugState> RenderCameraDebugState = new("RenderCameraDebugState");
         public static readonly ServiceKey<CameraCullingDebugState> CameraCullingDebugState = new("CameraCullingDebugState");
@@ -406,6 +408,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");
         public static readonly ServiceKey<NavQueryServiceRegistry> NavQueryServices = new("NavQueryServices");
+        public static readonly ServiceKey<INavObstacleAuthoringProvider> NavObstacleAuthoringProvider = new("NavObstacleAuthoringProvider");
+        public static readonly ServiceKey<NavObstacleSet> RuntimeNavMeshAuthoredObstacles = new("RuntimeNavMeshAuthoredObstacles");
         public static readonly ServiceKey<NavObstacleSet> RuntimeNavMeshObstacles = new("RuntimeNavMeshObstacles");
         public static readonly ServiceKey<RuntimeIncrementalNavMeshRebuildQueue> RuntimeNavMeshRebuildQueue = new("RuntimeNavMeshRebuildQueue");
         public static readonly ServiceKey<PathingConfig> PathingConfig = new("PathingConfig");
