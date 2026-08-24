@@ -5,17 +5,17 @@ using Ludots.Core.Modding;
 
 namespace Ludots.Core.Presentation.Presenters
 {
-    public enum PerformerCommandRouteStrategy : byte
+    public enum PresenterCommandRouteStrategy : byte
     {
         None = 0,
         ExistingInstances = 1,
         ScopedInstance = 2,
         SingleRuntime = 3,
-        CreatePerformer = 4,
+        CreatePresenter = 4,
         DestroyScope = 5,
     }
 
-    public enum PerformerBehaviorExecutionLane : byte
+    public enum PresenterBehaviorExecutionLane : byte
     {
         None = 0,
         Bootstrap = 1,
@@ -27,17 +27,17 @@ namespace Ludots.Core.Presentation.Presenters
         Destroy = 7,
     }
 
-    public readonly struct PerformerCommandView
+    public readonly struct PresenterCommandView
     {
-        public PerformerCommandView(in PresenterCommand command)
+        public PresenterCommandView(in PresenterCommand command)
         {
             CommandKindId = command.CommandKindId;
             RouteStrategy = command.RouteStrategy;
-            PerformerEntity = command.PresenterEntity;
+            PresenterEntity = command.PresenterEntity;
             Source = command.Source;
             Target = command.Target;
             Viewer = command.Viewer;
-            PerformerDefinitionId = command.PresenterDefinitionId;
+            PresenterDefinitionId = command.PresenterDefinitionId;
             ScopeTag = command.ScopeTag;
             TargetBehaviorSlot = command.TargetBehaviorSlot;
             ParamKey = command.ParamKey;
@@ -49,12 +49,12 @@ namespace Ludots.Core.Presentation.Presenters
         }
 
         public int CommandKindId { get; }
-        public PerformerCommandRouteStrategy RouteStrategy { get; }
-        public Entity PerformerEntity { get; }
+        public PresenterCommandRouteStrategy RouteStrategy { get; }
+        public Entity PresenterEntity { get; }
         public Entity Source { get; }
         public Entity Target { get; }
         public Entity Viewer { get; }
-        public int PerformerDefinitionId { get; }
+        public int PresenterDefinitionId { get; }
         public int ScopeTag { get; }
         public int TargetBehaviorSlot { get; }
         public int ParamKey { get; }
@@ -65,49 +65,49 @@ namespace Ludots.Core.Presentation.Presenters
         public bool HasParamPayload { get; }
     }
 
-    public interface IPerformerCommandOps
+    public interface IPresenterCommandOps
     {
-        bool HasRoutedPerformer { get; }
+        bool HasRoutedPresenter { get; }
         void SetParam(int paramKey, ParamLane lane, float floatValue = 0f, int intValue = 0, Vector4 vectorValue = default);
         void ClearParam(int paramKey, ParamLane lane);
         void ActivateBehavior(int slotIndex);
         void DeactivateBehavior(int slotIndex);
     }
 
-    public readonly struct PerformerCommandExecutionContext
+    public readonly struct PresenterCommandExecutionContext
     {
-        public PerformerCommandExecutionContext(in PresenterCommand command, IPerformerCommandOps ops)
+        public PresenterCommandExecutionContext(in PresenterCommand command, IPresenterCommandOps ops)
         {
-            Command = new PerformerCommandView(in command);
+            Command = new PresenterCommandView(in command);
             Ops = ops ?? throw new ArgumentNullException(nameof(ops));
         }
 
-        public PerformerCommandView Command { get; }
-        public IPerformerCommandOps Ops { get; }
+        public PresenterCommandView Command { get; }
+        public IPresenterCommandOps Ops { get; }
     }
 
-    public delegate void PerformerCommandHandler(in PerformerCommandExecutionContext context);
+    public delegate void PresenterCommandHandler(in PresenterCommandExecutionContext context);
 
-    public readonly struct PerformerCommandExtensionDescriptor
+    public readonly struct PresenterCommandExtensionDescriptor
     {
-        public PerformerCommandExtensionDescriptor(
-            PerformerCommandRouteStrategy routeStrategy,
-            PerformerCommandHandler handler)
+        public PresenterCommandExtensionDescriptor(
+            PresenterCommandRouteStrategy routeStrategy,
+            PresenterCommandHandler handler)
         {
-            if (routeStrategy == PerformerCommandRouteStrategy.None)
+            if (routeStrategy == PresenterCommandRouteStrategy.None)
             {
-                throw new ArgumentOutOfRangeException(nameof(routeStrategy), "Extension performer command route must be explicit.");
+                throw new ArgumentOutOfRangeException(nameof(routeStrategy), "Extension presenter command route must be explicit.");
             }
 
             RouteStrategy = routeStrategy;
             Handler = handler ?? throw new ArgumentNullException(nameof(handler));
         }
 
-        public PerformerCommandRouteStrategy RouteStrategy { get; }
-        public PerformerCommandHandler Handler { get; }
+        public PresenterCommandRouteStrategy RouteStrategy { get; }
+        public PresenterCommandHandler Handler { get; }
     }
 
-    public sealed class PerformerCommandKindRegistry
+    public sealed class PresenterCommandKindRegistry
     {
         public const int FirstModCommandKindId = 1024;
         public const int MaxCommandKinds = 2048;
@@ -117,10 +117,10 @@ namespace Ludots.Core.Presentation.Presenters
             firstDynamicId: FirstModCommandKindId,
             maxIdExclusive: MaxCommandKinds,
             comparer: StringComparer.Ordinal);
-        private readonly PerformerCommandExtensionDescriptor[] _descriptors = new PerformerCommandExtensionDescriptor[MaxCommandKinds];
+        private readonly PresenterCommandExtensionDescriptor[] _descriptors = new PresenterCommandExtensionDescriptor[MaxCommandKinds];
         private readonly bool[] _registeredHandlers = new bool[MaxCommandKinds];
 
-        public PerformerCommandKindRegistry()
+        public PresenterCommandKindRegistry()
         {
             RegisterBuiltinKeys();
         }
@@ -136,26 +136,26 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
-        public int Register(string key, PerformerCommandHandler handler)
+        public int Register(string key, PresenterCommandHandler handler)
         {
             throw new InvalidOperationException(
-                "Performer command extensions must register a descriptor with an explicit route strategy.");
+                "Presenter command extensions must register a descriptor with an explicit route strategy.");
         }
 
-        public int Register(string key, in PerformerCommandExtensionDescriptor descriptor)
+        public int Register(string key, in PresenterCommandExtensionDescriptor descriptor)
         {
             if (Enum.TryParse(key, ignoreCase: false, out PresenterCommandKind reserved) &&
                 reserved != PresenterCommandKind.None &&
                 Enum.IsDefined(typeof(PresenterCommandKind), reserved))
             {
                 throw new InvalidOperationException(
-                    $"Performer command kind '{key}' is reserved by Core. Use a mod-qualified key.");
+                    $"Presenter command kind '{key}' is reserved by Core. Use a mod-qualified key.");
             }
 
             int id = _keys.RegisterDynamic(key);
             if (_registeredHandlers[id])
             {
-                throw new InvalidOperationException($"Performer command kind '{key}' is already registered.");
+                throw new InvalidOperationException($"Presenter command kind '{key}' is already registered.");
             }
 
             _descriptors[id] = descriptor;
@@ -178,7 +178,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         public int GetId(string key) => TryGetId(key, out int id) ? id : 0;
 
-        public bool TryGetDescriptor(int id, out PerformerCommandExtensionDescriptor descriptor)
+        public bool TryGetDescriptor(int id, out PresenterCommandExtensionDescriptor descriptor)
         {
             if ((uint)id < (uint)_descriptors.Length && _registeredHandlers[id])
             {
@@ -190,9 +190,9 @@ namespace Ludots.Core.Presentation.Presenters
             return false;
         }
 
-        public bool TryGetHandler(int id, out PerformerCommandHandler handler)
+        public bool TryGetHandler(int id, out PresenterCommandHandler handler)
         {
-            if (TryGetDescriptor(id, out PerformerCommandExtensionDescriptor descriptor))
+            if (TryGetDescriptor(id, out PresenterCommandExtensionDescriptor descriptor))
             {
                 handler = descriptor.Handler;
                 return true;
@@ -213,19 +213,19 @@ namespace Ludots.Core.Presentation.Presenters
         }
     }
 
-    public readonly struct PerformerBehaviorView
+    public readonly struct PresenterBehaviorView
     {
-        public PerformerBehaviorView(
-            Entity performer,
+        public PresenterBehaviorView(
+            Entity presenter,
             Entity owner,
             int definitionId,
             int slotIndex,
             int kindId,
-            PerformerBehaviorExecutionLane lane,
+            PresenterBehaviorExecutionLane lane,
             bool firstFrame,
             float deltaTime)
         {
-            Performer = performer;
+            Presenter = presenter;
             Owner = owner;
             DefinitionId = definitionId;
             SlotIndex = slotIndex;
@@ -235,17 +235,17 @@ namespace Ludots.Core.Presentation.Presenters
             DeltaTime = deltaTime;
         }
 
-        public Entity Performer { get; }
+        public Entity Presenter { get; }
         public Entity Owner { get; }
         public int DefinitionId { get; }
         public int SlotIndex { get; }
         public int KindId { get; }
-        public PerformerBehaviorExecutionLane Lane { get; }
+        public PresenterBehaviorExecutionLane Lane { get; }
         public bool FirstFrame { get; }
         public float DeltaTime { get; }
     }
 
-    public interface IPerformerBehaviorOps
+    public interface IPresenterBehaviorOps
     {
         bool TryResolveFloat(int paramKey, out float value);
         bool TryResolveInt(int paramKey, out int value);
@@ -254,40 +254,40 @@ namespace Ludots.Core.Presentation.Presenters
         void ClearParam(int paramKey, ParamLane lane);
     }
 
-    public readonly struct PerformerBehaviorExecutionContext
+    public readonly struct PresenterBehaviorExecutionContext
     {
-        public PerformerBehaviorExecutionContext(in PerformerBehaviorView behavior, IPerformerBehaviorOps ops)
+        public PresenterBehaviorExecutionContext(in PresenterBehaviorView behavior, IPresenterBehaviorOps ops)
         {
             Behavior = behavior;
             Ops = ops ?? throw new ArgumentNullException(nameof(ops));
         }
 
-        public PerformerBehaviorView Behavior { get; }
-        public IPerformerBehaviorOps Ops { get; }
+        public PresenterBehaviorView Behavior { get; }
+        public IPresenterBehaviorOps Ops { get; }
     }
 
-    public delegate void PerformerBehaviorHandler(in PerformerBehaviorExecutionContext context);
+    public delegate void PresenterBehaviorHandler(in PresenterBehaviorExecutionContext context);
 
-    public readonly struct PerformerBehaviorExtensionDescriptor
+    public readonly struct PresenterBehaviorExtensionDescriptor
     {
-        public PerformerBehaviorExtensionDescriptor(
-            PerformerBehaviorExecutionLane lane,
-            PerformerBehaviorHandler handler)
+        public PresenterBehaviorExtensionDescriptor(
+            PresenterBehaviorExecutionLane lane,
+            PresenterBehaviorHandler handler)
         {
-            if (lane == PerformerBehaviorExecutionLane.None)
+            if (lane == PresenterBehaviorExecutionLane.None)
             {
-                throw new ArgumentOutOfRangeException(nameof(lane), "Extension performer behavior lane must be explicit.");
+                throw new ArgumentOutOfRangeException(nameof(lane), "Extension presenter behavior lane must be explicit.");
             }
 
             Lane = lane;
             Handler = handler ?? throw new ArgumentNullException(nameof(handler));
         }
 
-        public PerformerBehaviorExecutionLane Lane { get; }
-        public PerformerBehaviorHandler Handler { get; }
+        public PresenterBehaviorExecutionLane Lane { get; }
+        public PresenterBehaviorHandler Handler { get; }
     }
 
-    public sealed class PerformerBehaviorKindRegistry
+    public sealed class PresenterBehaviorKindRegistry
     {
         public const int FirstModBehaviorKindId = 1024;
         public const int MaxBehaviorKinds = 2048;
@@ -297,10 +297,10 @@ namespace Ludots.Core.Presentation.Presenters
             firstDynamicId: FirstModBehaviorKindId,
             maxIdExclusive: MaxBehaviorKinds,
             comparer: StringComparer.Ordinal);
-        private readonly PerformerBehaviorExtensionDescriptor[] _descriptors = new PerformerBehaviorExtensionDescriptor[MaxBehaviorKinds];
+        private readonly PresenterBehaviorExtensionDescriptor[] _descriptors = new PresenterBehaviorExtensionDescriptor[MaxBehaviorKinds];
         private readonly bool[] _registeredHandlers = new bool[MaxBehaviorKinds];
 
-        public PerformerBehaviorKindRegistry()
+        public PresenterBehaviorKindRegistry()
         {
             RegisterBuiltinKeys();
         }
@@ -316,26 +316,26 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
-        public int Register(string key, PerformerBehaviorHandler handler)
+        public int Register(string key, PresenterBehaviorHandler handler)
         {
             throw new InvalidOperationException(
-                "Performer behavior extensions must register a descriptor with an explicit execution lane.");
+                "Presenter behavior extensions must register a descriptor with an explicit execution lane.");
         }
 
-        public int Register(string key, in PerformerBehaviorExtensionDescriptor descriptor)
+        public int Register(string key, in PresenterBehaviorExtensionDescriptor descriptor)
         {
             if (Enum.TryParse(key, ignoreCase: false, out BehaviorKind reserved) &&
                 reserved != BehaviorKind.None &&
                 Enum.IsDefined(typeof(BehaviorKind), reserved))
             {
                 throw new InvalidOperationException(
-                    $"Performer behavior kind '{key}' is reserved by Core. Use a mod-qualified key.");
+                    $"Presenter behavior kind '{key}' is reserved by Core. Use a mod-qualified key.");
             }
 
             int id = _keys.RegisterDynamic(key);
             if (_registeredHandlers[id])
             {
-                throw new InvalidOperationException($"Performer behavior kind '{key}' is already registered.");
+                throw new InvalidOperationException($"Presenter behavior kind '{key}' is already registered.");
             }
 
             _descriptors[id] = descriptor;
@@ -358,7 +358,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         public int GetId(string key) => TryGetId(key, out int id) ? id : 0;
 
-        public bool TryGetDescriptor(int id, out PerformerBehaviorExtensionDescriptor descriptor)
+        public bool TryGetDescriptor(int id, out PresenterBehaviorExtensionDescriptor descriptor)
         {
             if ((uint)id < (uint)_descriptors.Length && _registeredHandlers[id])
             {
@@ -370,9 +370,9 @@ namespace Ludots.Core.Presentation.Presenters
             return false;
         }
 
-        public bool TryGetHandler(int id, out PerformerBehaviorHandler handler)
+        public bool TryGetHandler(int id, out PresenterBehaviorHandler handler)
         {
-            if (TryGetDescriptor(id, out PerformerBehaviorExtensionDescriptor descriptor))
+            if (TryGetDescriptor(id, out PresenterBehaviorExtensionDescriptor descriptor))
             {
                 handler = descriptor.Handler;
                 return true;

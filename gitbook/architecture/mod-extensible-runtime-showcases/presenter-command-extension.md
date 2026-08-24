@@ -1,10 +1,10 @@
-# Showcase: Performer Command Extension
+# Showcase: Presenter Command Extension
 
 ## 概述
 
-这个 showcase 展示作者如何扩展 performer command。玩家进入地图后看到 `Performer Command Extension` 面板；点击 `Send Signal Ping` 后，按钮发布一个 presentation event，performer rule 把它路由到 Mod command handler，面板的 handled 数量变为 1。
+这个 showcase 展示作者如何扩展 presenter command。玩家进入地图后看到 `Presenter Command Extension` 面板；点击 `Send Signal Ping` 后，按钮发布一个 presentation event，presenter rule 把它路由到 Mod command handler，面板的 handled 数量变为 1。
 
-它证明一次性表现命令可以由 Mod 注册、由 performer rule 触发、由正式 Performer runtime 执行。
+它证明一次性表现命令可以由 Mod 注册、由 presenter rule 触发、由正式 Presenter runtime 执行。
 
 ## 结构
 
@@ -17,7 +17,7 @@ CapabilityStandardPerformerCommandExtensionShowcaseMod/
       capability_standard_performer_command_extension_showcase.json
     Configs/
       Presentation/
-        performers/
+        presenters/
           capability_standard.performer_command_extension.signal_rules.json
 ```
 
@@ -26,22 +26,22 @@ CapabilityStandardPerformerCommandExtensionShowcaseMod/
 Mod 启动时注册 command key，并声明 route：
 
 ```csharp
-context.Extensions.Presentation.RegisterPerformerCommand(
+context.Extensions.Presentation.RegisterPresenterCommand(
     "CapabilityStandardPerformerCommandExtensionShowcaseMod.EmitSignalPing",
-    new PerformerCommandExtensionDescriptor(
-        PerformerCommandRouteStrategy.ExistingInstances,
+    new PresenterCommandExtensionDescriptor(
+        PresenterCommandRouteStrategy.ExistingInstances,
         EmitSignalPing));
 ```
 
-performer rule 通过 key 发出 extension command。loader 会把它编译为 `PerformerCommandKind.Extension` 和动态 `CommandKindId`，并校验 JSON route 与注册 descriptor 一致。
+presenter rule 通过 key 发出 extension command。loader 会把它编译为 `PresenterCommandKind.Extension` 和动态 `CommandKindId`，并校验 JSON route 与注册 descriptor 一致。
 
 运行时流程：
 
 1. root mod 创建 owner entity。
-2. root mod 通过 `PerformerCommandBuffer` 创建 performer 实例。
+2. root mod 通过 `PresenterCommandBuffer` 创建 presenter 实例。
 3. 玩家点击按钮，root mod 向 `PresentationEventStream` 发布 gameplay event。
-4. `PerformerRuleSystem` 命中 rule，并向 command buffer 写入 extension command。
-5. `PerformerRuntimeSystem` 使用 ExistingInstances route 找到 performer，并调用 Mod command handler。
+4. `PresenterRuleSystem` 命中 rule，并向 command buffer 写入 extension command。
+5. `PresenterRuntimeSystem` 使用 ExistingInstances route 找到 presenter，并调用 Mod command handler。
 6. 面板显示 handled 计数。
 
 ## 场景
@@ -52,9 +52,9 @@ performer rule 通过 key 发出 extension command。loader 会把它编译为 `
 
 - extension command 必须声明 route。
 - JSON rule 的 route 必须与注册 descriptor 完全一致。
-- command handler 不能绕过 `PerformerCommandBuffer` 和 `PerformerRuntimeSystem`。
+- command handler 不能绕过 `PresenterCommandBuffer` 和 `PresenterRuntimeSystem`。
 - builtin command 不能写 extension route override。
-- 未注册 key、route 不匹配、没有 routed performer 时必须失败。
+- 未注册 key、route 不匹配、没有 routed presenter 时必须失败。
 
 ## UAT
 
@@ -63,7 +63,7 @@ Feature: 玩家点击信号按钮后看到信号被处理
 
   Scenario: Signal Ping 点击后处理计数增加
     Given 我启动 `capability_standard_performer_command_extension_showcase_raylib`
-    And 地图显示 Performer Command Extension 面板
+    And 地图显示 Presenter Command Extension 面板
     When 我点击 `Send Signal Ping`
     Then 面板显示信号已被处理
     And 面板的 Handled 数量变为 1
