@@ -68,16 +68,17 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            InstancedBatchBinding[] bindings = definition.InstancedBatches;
-            for (int bindingIndex = 0; bindingIndex < bindings.Length; bindingIndex++)
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int behaviorIndex = 0; behaviorIndex < behaviors.Length; behaviorIndex++)
             {
-                ref readonly InstancedBatchBinding binding = ref bindings[bindingIndex];
-                if (!IsBindingActive(in state, in binding))
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                if (slot.Kind != BehaviorKind.InstancedBatch ||
+                    !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                 {
                     continue;
                 }
 
-                int batchAssetId = binding.BatchAssetId;
+                int batchAssetId = slot.InstancedBatch.BatchAssetId;
                 if (!_batchAssets.TryGet(batchAssetId, out InstancedBatchAsset asset))
                 {
                     throw new InvalidOperationException(
@@ -143,10 +144,16 @@ namespace Ludots.Core.Presentation.Systems
 
                 _submissionRuntime.Remove(evt.PresenterEntity, (int)evt.Magnitude);
                 _removedThisFrame.Add(new RemovedPresenterKey(evt.PresenterEntity, (int)evt.Magnitude));
-                InstancedBatchBinding[] bindings = definition.InstancedBatches;
-                for (int bindingIndex = 0; bindingIndex < bindings.Length; bindingIndex++)
+                BehaviorSlot[] behaviors = definition.Behaviors;
+                for (int behaviorIndex = 0; behaviorIndex < behaviors.Length; behaviorIndex++)
                 {
-                    int batchAssetId = bindings[bindingIndex].BatchAssetId;
+                    ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                    if (slot.Kind != BehaviorKind.InstancedBatch)
+                    {
+                        continue;
+                    }
+
+                    int batchAssetId = slot.InstancedBatch.BatchAssetId;
                     if (!_batchAssets.TryGet(batchAssetId, out InstancedBatchAsset asset))
                     {
                         continue;
@@ -195,11 +202,9 @@ namespace Ludots.Core.Presentation.Systems
             return false;
         }
 
-        private static bool IsBindingActive(in PresenterState state, in InstancedBatchBinding binding)
+        private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
-            int slotIndex = binding.SlotIndex;
-            return slotIndex < 0 ||
-                   (slotIndex < 32 && (state.BehaviorActiveMask & (1u << slotIndex)) != 0);
+            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
         }
 
         private readonly struct RemovedPresenterKey

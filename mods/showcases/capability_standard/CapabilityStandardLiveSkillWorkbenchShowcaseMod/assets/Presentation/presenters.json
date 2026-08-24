@@ -150,7 +150,6 @@
     "visibility": {
       "inline": "None"
     },
-    "maxVisibilityDistanceCm": 20000,
     "bindings": [
       {
         "paramKey": "worldBar.width",
@@ -203,7 +202,6 @@
     "visibility": {
       "inline": "None"
     },
-    "maxVisibilityDistanceCm": 20000,
     "behaviors": [
       {
         "slot": "body",
@@ -239,7 +237,6 @@
     "visibility": {
       "inline": "None"
     },
-    "maxVisibilityDistanceCm": 20000,
     "behaviors": [
       {
         "slot": "body",
@@ -302,7 +299,6 @@
     "visibility": {
       "inline": "None"
     },
-    "maxVisibilityDistanceCm": 20000,
     "behaviors": [
       {
         "slot": "body",

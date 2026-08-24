@@ -14,6 +14,18 @@ namespace Ludots.Core.Presentation.Hud
             return Finalize(hash);
         }
 
+        public static int ComposePresenterStableId(
+            int ownerStableId,
+            WorldHudItemKind kind,
+            int definitionId,
+            int slotIndex)
+        {
+            int discriminator = slotIndex == 0
+                ? definitionId
+                : HashCode.Combine(definitionId, slotIndex);
+            return ComposeStableId(ownerStableId, kind, discriminator);
+        }
+
         public static int ComposeBarDirtySerial(
             float width,
             float height,

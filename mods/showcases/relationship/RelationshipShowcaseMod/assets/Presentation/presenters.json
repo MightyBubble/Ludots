@@ -187,7 +187,6 @@
   },
   {
     "id": "relationship.highlight.base",
-    "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
         "paramKey": "groundOverlay.radius",

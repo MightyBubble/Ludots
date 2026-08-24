@@ -414,7 +414,7 @@ namespace Ludots.Core.Presentation.Systems
                 return false;
             }
 
-            int stableId = HudItemIdentity.ComposeStableId(state.StableId, kind, state.DefId);
+            int stableId = HudItemIdentity.ComposePresenterStableId(state.StableId, kind, state.DefId, slot.SlotIndex);
 
             bool hasProjection = _worldHudBehavior.TryResolveProjection(
                 World,
@@ -439,8 +439,8 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             WorldHudItem next = kind == WorldHudItemKind.Bar
-                ? BuildWorldHudBarItemDirect(entity, in state, in definition, in asset, stableId, position.Value, in scale)
-                : BuildWorldHudTextItemDirect(entity, in state, in definition, in asset, stableId, position.Value);
+                ? BuildWorldHudBarItemDirect(entity, in state, in definition, in slot, in asset, stableId, position.Value, in scale)
+                : BuildWorldHudTextItemDirect(entity, in state, in definition, in slot, in asset, stableId, position.Value);
 
             if (!_worldHudBuffer.TryAdd(in next))
             {
@@ -473,13 +473,14 @@ namespace Ludots.Core.Presentation.Systems
             Entity entity,
             in PresenterState state,
             in PresenterDefinition definition,
+            in BehaviorSlot slot,
             in AssetBindingConfig asset,
             int stableId,
             in Vector3 worldPosition,
             in PresenterWorldScale presenterScale)
         {
             Vector3 resolvedScale = ResolveAssetScale(entity, in asset, presenterScale.Value);
-            Vector4 foreground = ResolveAssetColor(entity, in asset, definition.DefaultColor);
+            Vector4 foreground = ResolveAssetColor(entity, in asset, ResolveAuthoredColor(in slot));
             Vector4 background = new(0.2f, 0.2f, 0.2f, foreground.W);
             float value = asset.MaterialParamKey >= 0
                 ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
@@ -506,11 +507,12 @@ namespace Ludots.Core.Presentation.Systems
             Entity entity,
             in PresenterState state,
             in PresenterDefinition definition,
+            in BehaviorSlot slot,
             in AssetBindingConfig asset,
             int stableId,
             in Vector3 worldPosition)
         {
-            Vector4 color = ResolveAssetColor(entity, in asset, definition.DefaultColor);
+            Vector4 color = ResolveAssetColor(entity, in asset, ResolveAuthoredColor(in slot));
             int tokenId = ResolveAssetId(entity, in asset);
             if (tokenId <= 0)
             {
@@ -524,8 +526,8 @@ namespace Ludots.Core.Presentation.Systems
             float value1 = asset.MaterialParamKey >= 0
                 ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
                 : 0f;
-            WorldHudValueMode valueMode = definition.WorldTextMode;
-            int fontSize = definition.DefaultFontSize > 0 ? definition.DefaultFontSize : 16;
+            WorldHudValueMode valueMode = slot.WorldText.Mode;
+            int fontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
             int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
             PresentationTextPacket packet = PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
 
@@ -619,6 +621,21 @@ namespace Ludots.Core.Presentation.Systems
             return asset.ColorParamKey >= 0
                 ? RequireVectorParam(entity, asset.ColorParamKey, "AssetBinding.colorParamKey")
                 : defaultColor;
+        }
+
+        private static Vector4 ResolveAuthoredColor(in BehaviorSlot slot)
+        {
+            return slot.Style.HasColor ? slot.Style.Color : Vector4.One;
+        }
+
+        private static Vector4 ApplyAuthoredAlpha(Vector4 color, in PresenterState state, in PresenterDefinition definition, BehaviorAlphaPolicy policy)
+        {
+            if (policy == BehaviorAlphaPolicy.FadeOverLifetime && definition.DefaultLifetime > 0f)
+            {
+                color.W *= Math.Clamp(1f - state.Elapsed / definition.DefaultLifetime, 0f, 1f);
+            }
+
+            return color;
         }
 
         private int ResolveMaterialId(Entity entity, in AssetBindingConfig asset)
@@ -1076,8 +1093,7 @@ namespace Ludots.Core.Presentation.Systems
                 definition.UsesStableVisualCache ||
                 definition.UsesRetainedPresentationRequest ||
                 definition.DefaultLifetime > 0f ||
-                definition.PositionYDriftPerSecond != 0f ||
-                definition.AlphaFadeOverLifetime ||
+                definition.HasOutputMotionOrFade ||
                 definition.VisibilityCondition.Inline != InlineConditionKind.None ||
                 definition.VisibilityCondition.GraphProgramId > 0)
             {
@@ -1199,8 +1215,7 @@ namespace Ludots.Core.Presentation.Systems
                    !definition.UsesStableVisualCache &&
                    !definition.UsesRetainedPresentationRequest &&
                    definition.DefaultLifetime <= 0f &&
-                   definition.PositionYDriftPerSecond == 0f &&
-                   !definition.AlphaFadeOverLifetime &&
+                   !definition.HasOutputMotionOrFade &&
                    definition.VisibilityCondition.Inline == InlineConditionKind.None &&
                    definition.VisibilityCondition.GraphProgramId <= 0;
         }
@@ -1327,23 +1342,27 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitSurfaceSourceIfAny(in PresenterState state, Vector3 worldPos, PresenterDefinition definition, LODLevel lod)
         {
-            SurfaceAuthoringBlock? surface = definition.Surface;
-            if (surface == null)
+            int behaviorIndex = definition.SurfaceSourceBehaviorIndex;
+            if (behaviorIndex < 0)
             {
                 return;
             }
 
-            int behaviorIndex = definition.SurfaceSourceBehaviorIndex;
-            if (behaviorIndex >= 0)
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            if ((uint)behaviorIndex >= (uint)behaviors.Length)
             {
-                BehaviorSlot[] behaviors = definition.Behaviors;
-                if ((uint)behaviorIndex >= (uint)behaviors.Length ||
-                    !IsBehaviorActive(state.BehaviorActiveMask, behaviors[behaviorIndex].SlotIndex))
-                {
-                    return;
-                }
+                return;
             }
 
+            ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+            if (slot.Kind != BehaviorKind.SurfaceSource ||
+                slot.SurfaceSource == null ||
+                !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+            {
+                return;
+            }
+
+            SurfaceAuthoringBlock surface = slot.SurfaceSource;
             _requests.Add(PresentationRequest.FromSurfaceSource(state.OwnerEntity, new SurfaceSourceRequest
             {
                 StableId = state.StableId,
@@ -1388,7 +1407,7 @@ namespace Ludots.Core.Presentation.Systems
                         entity,
                         in state,
                         definition,
-                        slot.SlotIndex,
+                        in slot,
                         in asset,
                         lod,
                         presenterWorldPosition + definition.PositionOffset,
@@ -1405,7 +1424,7 @@ namespace Ludots.Core.Presentation.Systems
                     entity,
                     in state,
                     in definition,
-                    slot.SlotIndex,
+                    in slot,
                     in asset,
                     lod,
                     presenterWorldPosition,
@@ -1437,7 +1456,6 @@ namespace Ludots.Core.Presentation.Systems
 
             bool emittedStableVisual = false;
             BehaviorSlot[] behaviors = definition.Behaviors;
-            Vector3 resolvedPosition = presenterWorldPosition + definition.PositionOffset;
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
@@ -1447,6 +1465,11 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+                Vector3 resolvedPosition = PresenterAssetEmitRuntime.ResolvePosition(
+                    in state,
+                    in definition,
+                    presenterWorldPosition,
+                    slot.Motion.YDriftPerSecond);
                 VisualVisibility visibility = lod == LODLevel.Culled || (asset.HasMaxLod && lod > asset.MaxLod)
                     ? VisualVisibility.Culled
                     : VisualVisibility.Visible;
@@ -1455,7 +1478,7 @@ namespace Ludots.Core.Presentation.Systems
                         entity,
                         in state,
                         definition,
-                        slot.SlotIndex,
+                        in slot,
                         in asset,
                         lod,
                         resolvedPosition,
@@ -1473,7 +1496,7 @@ namespace Ludots.Core.Presentation.Systems
                         entity,
                         in state,
                         definition,
-                        slot.SlotIndex,
+                        in slot,
                         in asset,
                         lod,
                         resolvedPosition,
@@ -1492,7 +1515,7 @@ namespace Ludots.Core.Presentation.Systems
             Entity entity,
             in PresenterState state,
             PresenterDefinition definition,
-            int slotIndex,
+            in BehaviorSlot slot,
             in AssetBindingConfig asset,
             LODLevel lod,
             Vector3 resolvedPosition,
@@ -1527,8 +1550,8 @@ namespace Ludots.Core.Presentation.Systems
                 Position = ResolveAssetPosition(resolvedPosition, presenterWorldRotation, presenterWorldScale, in asset),
                 Rotation = ResolveAssetRotation(in asset, presenterWorldRotation),
                 Scale = ResolveAssetScale(entity, in asset, presenterWorldScale),
-                Color = ResolveAssetColor(entity, in asset, definition.DefaultColor),
-                StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
+                Color = ApplyAuthoredAlpha(ResolveAssetColor(entity, in asset, ResolveAuthoredColor(in slot)), in state, in definition, slot.Style.AlphaPolicy),
+                StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId),
                 MaterialId = ResolveMaterialId(entity, in asset),
                 TemplateId = state.DefId,
                 AnimationProfileId = definition.AnimationProfileId,
@@ -1554,7 +1577,7 @@ namespace Ludots.Core.Presentation.Systems
             Entity entity,
             in PresenterState state,
             PresenterDefinition definition,
-            int slotIndex,
+            in BehaviorSlot slot,
             in AssetBindingConfig asset,
             LODLevel lod,
             Vector3 resolvedPosition,
@@ -1578,8 +1601,8 @@ namespace Ludots.Core.Presentation.Systems
                 Position = ResolveAssetPosition(resolvedPosition, presenterWorldRotation, presenterWorldScale, in asset),
                 Rotation = ResolveAssetRotation(in asset, presenterWorldRotation),
                 Scale = ResolveAssetScale(entity, in asset, presenterWorldScale),
-                Color = ResolveAssetColor(entity, in asset, definition.DefaultColor),
-                StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
+                Color = ApplyAuthoredAlpha(ResolveAssetColor(entity, in asset, ResolveAuthoredColor(in slot)), in state, in definition, slot.Style.AlphaPolicy),
+                StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId),
                 MaterialId = ResolveMaterialId(entity, in asset),
                 TemplateId = state.DefId,
                 AnimationProfileId = definition.AnimationProfileId,
@@ -1724,8 +1747,8 @@ namespace Ludots.Core.Presentation.Systems
             ref readonly BehaviorSlot slot = ref definition.Behaviors[definition.AssetBehaviorIndices[0]];
             int stableId = slot.AssetBinding.AssetKind switch
             {
-                AssetKind.WorldHud => HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Bar, definition.Id),
-                AssetKind.WorldText => HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Text, definition.Id),
+                AssetKind.WorldHud => HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Bar, definition.Id, slot.SlotIndex),
+                AssetKind.WorldText => HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, definition.Id, slot.SlotIndex),
                 AssetKind.Spline => PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
                 AssetKind.GroundOverlay => PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
                 _ => 0,
@@ -1785,7 +1808,6 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Vector3 position = PresenterAssetEmitRuntime.ResolvePosition(in state, in definition, presenterWorldPosition);
             BehaviorSlot[] behaviors = definition.Behaviors;
             int[] cacheableAssetBehaviorIndices = definition.CacheableAssetBehaviorIndices;
             for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
@@ -1798,6 +1820,7 @@ namespace Ludots.Core.Presentation.Systems
                     state.DefId,
                     out int stableId))
                 {
+                    Vector3 position = PresenterAssetEmitRuntime.ResolvePosition(in state, in definition, presenterWorldPosition, slot.Motion.YDriftPerSecond);
                     _stableDrawCache.UpdatePosition(stableId, position);
                 }
             }

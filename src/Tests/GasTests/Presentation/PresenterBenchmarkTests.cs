@@ -674,11 +674,15 @@ namespace Ludots.Tests.Presentation
                             AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
                             VisibilityParamKey = -1,
-                        }
+                        },
+                        Style = new BehaviorStyleConfig
+                        {
+                            HasColor = true,
+                            Color = new Vector4(0f, 1f, 0f, 1f),
+                        },
                     }
                 },
                 VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
-                DefaultColor = new Vector4(0f, 1f, 0f, 1f),
                 PositionOffset = new Vector3(0f, 1.5f, 0f),
             });
         }

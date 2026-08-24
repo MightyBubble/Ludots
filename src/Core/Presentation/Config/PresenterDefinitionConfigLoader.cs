@@ -9,7 +9,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Platform.Abstractions;
@@ -500,10 +499,15 @@ namespace Ludots.Core.Presentation.Config
         {
             string key = RequireCanonicalString(node["id"]?.GetValue<string>() ?? string.Empty, "Presenter id");
 
+            if (node is not JsonObject definitionObject)
+            {
+                throw new InvalidOperationException($"Presenter '{key}' definition must be an object.");
+            }
+
             RejectRemovedFields(node, key);
+            RejectUnknownFields(definitionObject, $"Presenter '{key}'", DefinitionFields);
 
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
-            PresenterDefinitionAuthoringFacts behaviorFacts = BuildDefinitionAuthoringFacts(key, behaviors);
             ChildPresenterRef[] children = ParseChildren(node["children"]);
             ValidateChildrenCapacity(key, children);
 
@@ -511,21 +515,14 @@ namespace Ludots.Core.Presentation.Config
             {
                 Key = key,
                 Extends = ParseOptionalCanonicalString(node["extends"], $"Presenter '{key}' extends"),
-                DefaultColor = behaviorFacts.DefaultColor,
                 DefaultLifetime = ParseLifecycle(node["lifecycle"], key),
-                DefaultFontSize = behaviorFacts.DefaultFontSize,
-                WorldTextMode = behaviorFacts.WorldTextMode,
                 PositionOffset = ParseAnchorOffset(node["anchor"], key),
-                PositionYDriftPerSecond = behaviorFacts.PositionYDriftPerSecond,
-                AlphaFadeOverLifetime = behaviorFacts.AlphaFadeOverLifetime,
                 VisibilityCondition = ParseDefinitionVisibility(node["visibility"], key),
-                Rules = ParseRules(node["rules"]),
-                Bindings = ParseBindings(node["bindings"]),
+                Rules = ParseRules(node["rules"], key),
+                Bindings = ParseBindings(node["bindings"], key),
                 Children = children,
                 Behaviors = behaviors,
-                InstancedBatches = behaviorFacts.InstancedBatches,
-                ParamDefaults = ParseParamDefaults(node["paramDefaults"]),
-                Surface = behaviorFacts.Surface,
+                ParamDefaults = ParseParamDefaults(node["paramDefaults"], key),
             };
 
             def.Id = _registry.GetId(key);
@@ -577,6 +574,7 @@ namespace Ludots.Core.Presentation.Config
                 "surface",
                 "requiredAttributeIds",
                 "requiredAttributes",
+                "maxVisibilityDistanceCm",
             };
 
             for (int i = 0; i < removedVisualFields.Length; i++)
@@ -590,146 +588,222 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private readonly struct PresenterDefinitionAuthoringFacts
+        private static readonly string[] DefinitionFields =
         {
-            public PresenterDefinitionAuthoringFacts(
-                Vector4 defaultColor,
-                int defaultFontSize,
-                WorldHudValueMode worldTextMode,
-                float positionYDriftPerSecond,
-                bool alphaFadeOverLifetime,
-                SurfaceAuthoringBlock? surface,
-                InstancedBatchBinding[] instancedBatches)
-            {
-                DefaultColor = defaultColor;
-                DefaultFontSize = defaultFontSize;
-                WorldTextMode = worldTextMode;
-                PositionYDriftPerSecond = positionYDriftPerSecond;
-                AlphaFadeOverLifetime = alphaFadeOverLifetime;
-                Surface = surface;
-                InstancedBatches = instancedBatches ?? Array.Empty<InstancedBatchBinding>();
-            }
+            "id", "extends", "lifecycle", "anchor", "visibility",
+            "rules", "bindings", "paramDefaults", "behaviors", "children",
+            "_comment",
+        };
 
-            public readonly Vector4 DefaultColor;
-            public readonly int DefaultFontSize;
-            public readonly WorldHudValueMode WorldTextMode;
-            public readonly float PositionYDriftPerSecond;
-            public readonly bool AlphaFadeOverLifetime;
-            public readonly SurfaceAuthoringBlock? Surface;
-            public readonly InstancedBatchBinding[] InstancedBatches;
-        }
-
-        private static PresenterDefinitionAuthoringFacts BuildDefinitionAuthoringFacts(string key, BehaviorSlot[] behaviors)
+        private static readonly string[] BehaviorSlotFields =
         {
-            Vector4 defaultColor = new(1f, 1f, 1f, 1f);
-            int defaultFontSize = 16;
-            WorldHudValueMode worldTextMode = WorldHudValueMode.None;
-            float positionYDriftPerSecond = 0f;
-            bool alphaFadeOverLifetime = false;
-            bool hasWorldTextDefinitionFacts = false;
-            bool hasOutputStyleFacts = false;
-            SurfaceAuthoringBlock? surface = null;
-            List<InstancedBatchBinding>? instancedBatches = null;
+            "kind", "slot", "activeByDefault", "activationCondition", "execution",
+            "style", "motion",
+            "assetBinding", "attributeBinding", "tagBinding", "animator",
+            "attachment", "sound", "material", "spline", "grounding",
+            "minimapMarker", "worldText", "surfaceSource", "instancedBatch",
+        };
 
-            if (behaviors != null)
+        private static readonly string[] ChildFields =
+        {
+            "definitionId", "scopeTag", "overrides",
+        };
+
+        private static readonly string[] RuleFields =
+        {
+            "event", "condition", "command",
+        };
+
+        private static readonly string[] EventFilterFields =
+        {
+            "kind", "key", "keyId", "gained",
+        };
+
+        private static readonly string[] ConditionFields =
+        {
+            "inline", "graphProgramId",
+        };
+
+        private static readonly string[] LifecycleFields =
+        {
+            "durationSeconds", "persistence",
+        };
+
+        private static readonly string[] AnchorFields =
+        {
+            "offset",
+        };
+
+        private static readonly string[] BindingFields =
+        {
+            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId",
+        };
+
+        private static readonly string[] ParamDefaultFields =
+        {
+            "paramKey", "lane", "floatValue", "intValue", "vectorValue",
+        };
+
+        private static readonly string[] AssetBindingFields =
+        {
+            "assetKind", "assetId", "materialId", "renderPath", "mobility",
+            "localOffset", "localRotation", "localScale",
+            "scaleParamKey", "colorParamKey", "materialParamKey",
+            "assetIdParamKey", "assetSwapParamKey", "assetSwapTable",
+            "visibilityParamKey", "surfaceLayerKey", "sortId",
+            "materialCustomData", "maxLod",
+            "grounding", "groundingOffset",
+        };
+
+        private static readonly string[] WorldTextFields =
+        {
+            "textToken", "mode", "valueParamKey", "secondaryValueParamKey", "fontSize",
+        };
+
+        private static readonly string[] StyleFields =
+        {
+            "color", "alphaPolicy",
+        };
+
+        private static readonly string[] MotionFields =
+        {
+            "yDriftPerSecond",
+        };
+
+        private static readonly string[] AttachmentFields =
+        {
+            "target", "boneId", "offset", "rotationOffset", "inheritScale",
+        };
+
+        private static readonly string[] AttributeBindingFields =
+        {
+            "attributeId", "attributeName", "targetParamKey", "mode", "thresholds",
+        };
+
+        private static readonly string[] TagBindingFields =
+        {
+            "tagId", "tag", "targetParamKey", "invertLogic",
+        };
+
+        private static readonly string[] AnimatorFields =
+        {
+            "animatorControllerId", "animationProfileId", "speedParamKey", "stateParamKey",
+        };
+
+        private static readonly string[] SoundFields =
+        {
+            "soundAssetId", "loop", "volume", "volumeParamKey",
+        };
+
+        private static readonly string[] MaterialFields =
+        {
+            "baseMaterialId", "materialSwapParamKey", "swapTable",
+        };
+
+        private static readonly string[] SplineFields =
+        {
+            "splineAssetId", "usage", "widthParamKey", "colorParamKey",
+            "speedParamKey", "progressParamKey", "loop", "pingPong", "waypointEventId",
+        };
+
+        private static readonly string[] GroundingFields =
+        {
+            "mode", "offset", "updatePolicy",
+        };
+
+        private static readonly string[] MinimapMarkerFields =
+        {
+            "shape", "color", "sizePx", "colorParamKey", "sizeParamKey",
+            "visibilityParamKey", "orientationMode", "orientationParamKey",
+            "orientationOffsetRad", "orientationLengthPx",
+        };
+
+        private static readonly string[] SurfaceSourceFields =
+        {
+            "kind", "profileId", "geometrySource", "chunkBake", "materialSet",
+            "lodProfileId", "grounding", "boundsPolicy",
+        };
+
+        private static readonly string[] SurfaceGeometrySourceFields =
+        {
+            "controlPointSource", "widthSource", "flowDirectionSource", "segmentationPolicy",
+            "boundaryPointSource", "triangulationPolicy", "meshPayloadSource",
+        };
+
+        private static readonly string[] SurfaceChunkBakeFields =
+        {
+            "enabled", "ownership", "chunkInfluencePolicy", "rebakePolicy", "usageHint",
+        };
+
+        private static readonly string[] SurfaceMaterialSetFields =
+        {
+            "primaryMaterialId", "secondaryMaterialId", "allowInstanceOverride",
+        };
+
+        private static readonly string[] SurfaceGroundingPolicyFields =
+        {
+            "mode",
+        };
+
+        private static readonly string[] SurfaceValueSourceFields =
+        {
+            "kind", "id", "graphProgramId",
+        };
+
+        private static readonly string[] InstancedBatchFields =
+        {
+            "batchAssetId",
+        };
+
+        private static readonly string[] ThresholdFields =
+        {
+            "threshold", "outputParamKey", "outputValue",
+        };
+
+        private static readonly string[] MaterialCustomDataSlotFields =
+        {
+            "slot", "lane", "paramKey", "defaultFloatValue", "defaultIntValue", "defaultVectorValue",
+        };
+
+        private static readonly string[] MaterialSwapEntryFields =
+        {
+            "paramValue", "materialId",
+        };
+
+        private static readonly string[] AssetSwapEntryFields =
+        {
+            "paramValue", "assetId",
+        };
+
+        private static readonly string[] CommandFields =
+        {
+            "kind", "route", "definitionId", "scopeTag", "scopeSource", "ownerSource",
+            "useEventPosition", "paramKey", "paramLane", "valueSource",
+            "paramValue", "intValue", "vectorValue", "paramGraphProgramId",
+            "vectorXSource", "vectorYSource", "vectorZSource", "vectorWSource",
+            "targetBehaviorSlot", "timerName", "durationSeconds", "durationRangeSeconds",
+        };
+
+        private static void RejectUnknownFields(JsonObject obj, string context, string[] allowedFields)
+        {
+            foreach (var property in obj)
             {
-                for (int i = 0; i < behaviors.Length; i++)
+                bool known = false;
+                for (int i = 0; i < allowedFields.Length; i++)
                 {
-                    ref readonly BehaviorSlot slot = ref behaviors[i];
-                    switch (slot.Kind)
+                    if (string.Equals(property.Key, allowedFields[i], StringComparison.Ordinal))
                     {
-                        case BehaviorKind.AssetBinding:
-                            ApplyOutputBehaviorFacts(
-                                key,
-                                in slot,
-                                ref defaultColor,
-                                ref positionYDriftPerSecond,
-                                ref alphaFadeOverLifetime,
-                                ref hasOutputStyleFacts);
-                            break;
-
-                        case BehaviorKind.WorldText:
-                            if (hasWorldTextDefinitionFacts)
-                            {
-                                throw new InvalidOperationException(
-                                    $"Presenter '{key}' declares multiple WorldText behaviors. Runtime WorldText style and value mode are definition-scoped; split them into child presenters.");
-                            }
-
-                            hasWorldTextDefinitionFacts = true;
-                            defaultFontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
-                            worldTextMode = slot.WorldText.Mode;
-                            ApplyOutputBehaviorFacts(
-                                key,
-                                in slot,
-                                ref defaultColor,
-                                ref positionYDriftPerSecond,
-                                ref alphaFadeOverLifetime,
-                                ref hasOutputStyleFacts);
-                            break;
-
-                        case BehaviorKind.SurfaceSource:
-                            if (surface != null)
-                            {
-                                throw new InvalidOperationException(
-                                    $"Presenter '{key}' declares multiple SurfaceSource behaviors. A presenter instance may own only one surface source.");
-                            }
-
-                            surface = slot.SurfaceSource ?? throw new InvalidOperationException(
-                                $"Presenter '{key}' SurfaceSource behavior is missing parsed authoring payload.");
-                            break;
-
-                        case BehaviorKind.InstancedBatch:
-                            instancedBatches ??= new List<InstancedBatchBinding>(2);
-                            instancedBatches.Add(new InstancedBatchBinding(slot.InstancedBatch.BatchAssetId, slot.SlotIndex));
-                            break;
+                        known = true;
+                        break;
                     }
                 }
+
+                if (!known)
+                {
+                    throw new InvalidOperationException(
+                        $"{context} contains unknown field '{property.Key}'. Allowed fields: {string.Join(", ", allowedFields)}.");
+                }
             }
-
-            return new PresenterDefinitionAuthoringFacts(
-                defaultColor,
-                defaultFontSize,
-                worldTextMode,
-                positionYDriftPerSecond,
-                alphaFadeOverLifetime,
-                surface,
-                instancedBatches?.ToArray() ?? Array.Empty<InstancedBatchBinding>());
-        }
-
-        private static void ApplyOutputBehaviorFacts(
-            string key,
-            in BehaviorSlot slot,
-            ref Vector4 defaultColor,
-            ref float positionYDriftPerSecond,
-            ref bool alphaFadeOverLifetime,
-            ref bool hasOutputStyleFacts)
-        {
-            bool hasFacts = slot.Style.HasColor ||
-                            slot.Style.AlphaPolicy != BehaviorAlphaPolicy.None ||
-                            slot.Motion.YDriftPerSecond != 0f;
-            if (!hasFacts)
-            {
-                return;
-            }
-
-            if (hasOutputStyleFacts)
-            {
-                throw new InvalidOperationException(
-                    $"Presenter '{key}' declares style or motion on multiple output behaviors. Current runtime stores these facts at definition scope; split the outputs into child presenters.");
-            }
-
-            hasOutputStyleFacts = true;
-            if (slot.Style.HasColor)
-            {
-                defaultColor = slot.Style.Color;
-            }
-
-            if (slot.Style.AlphaPolicy == BehaviorAlphaPolicy.FadeOverLifetime)
-            {
-                alphaFadeOverLifetime = true;
-            }
-
-            positionYDriftPerSecond = slot.Motion.YDriftPerSecond;
         }
 
         private static float ParseLifecycle(JsonNode? node, string key)
@@ -743,6 +817,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException($"Presenter '{key}' lifecycle must be an object.");
             }
+
+            RejectUnknownFields(obj, $"Presenter '{key}' lifecycle", LifecycleFields);
 
             bool hasDuration = obj["durationSeconds"] != null;
             bool hasPersistence = obj["persistence"] != null;
@@ -791,6 +867,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"Presenter '{key}' anchor must be an object.");
             }
 
+            RejectUnknownFields(obj, $"Presenter '{key}' anchor", AnchorFields);
+
             if (obj["offset"] == null)
             {
                 throw new InvalidOperationException($"Presenter '{key}' anchor requires field 'offset'.");
@@ -799,7 +877,7 @@ namespace Ludots.Core.Presentation.Config
             return ParseVector3(obj["offset"]);
         }
 
-        private PresenterRule[] ParseRules(JsonNode? node)
+        private PresenterRule[] ParseRules(JsonNode? node, string owner)
         {
             if (node is not JsonArray arr || arr.Count == 0)
             {
@@ -809,11 +887,19 @@ namespace Ludots.Core.Presentation.Config
             var rules = new PresenterRule[arr.Count];
             for (int i = 0; i < arr.Count; i++)
             {
+                if (arr[i] is not JsonObject ruleObj)
+                {
+                throw new InvalidOperationException($"Presenter '{owner}' rules[{i}] must be an object.");
+                }
+
+                string ruleContext = $"Presenter '{owner}' rules[{i}]";
+                RejectUnknownFields(ruleObj, ruleContext, RuleFields);
+
                 rules[i] = new PresenterRule
                 {
-                    Event = ParseEventFilter(arr[i]!["event"], $"rules[{i}].event"),
-                    Condition = ParseConditionRef(arr[i]!["condition"]),
-                    Command = ParsePresenterCommand(arr[i]!["command"], $"rules[{i}].command"),
+                    Event = ParseEventFilter(ruleObj["event"], $"{ruleContext}.event"),
+                    Condition = ParseConditionRef(ruleObj["condition"], $"{ruleContext}.condition", allowGraphProgramId: true),
+                    Command = ParsePresenterCommand(ruleObj["command"], $"{ruleContext}.command"),
                 };
             }
 
@@ -826,6 +912,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException($"{context} requires an object with explicit field 'kind'.");
             }
+
+            RejectUnknownFields(obj, context, EventFilterFields);
 
             PresentationEventKind kind = ParseRequiredNonNoneEnum<PresentationEventKind>(obj["kind"], $"{context}.kind");
             return new EventFilter
@@ -929,6 +1017,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException($"{context} requires an object with explicit field 'kind'.");
             }
+
+            RejectUnknownFields(obj, context, CommandFields);
 
             string kindText = ParseRequiredSemanticString(obj["kind"], $"{context}.kind");
             if (!TryParseDefinedEnum(kindText, out PresenterCommandKind commandKind))
@@ -1548,7 +1638,7 @@ namespace Ludots.Core.Presentation.Config
             throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
         }
 
-        private PresenterParamBinding[] ParseBindings(JsonNode? node)
+        private PresenterParamBinding[] ParseBindings(JsonNode? node, string owner)
         {
             if (node is not JsonArray arr || arr.Count == 0)
             {
@@ -1558,10 +1648,19 @@ namespace Ludots.Core.Presentation.Config
             var bindings = new PresenterParamBinding[arr.Count];
             for (int i = 0; i < arr.Count; i++)
             {
+                if (arr[i] is not JsonObject bindingObj)
+                {
+                    throw new InvalidOperationException($"Presenter '{owner}' bindings[{i}] must be an object.");
+                }
+
+                string bindingContext = $"Presenter '{owner}' bindings[{i}]";
+                RejectRemovedBindingFields(bindingObj, bindingContext);
+                RejectUnknownFields(bindingObj, bindingContext, BindingFields);
+
                 bindings[i] = new PresenterParamBinding
                 {
-                    ParamKey = ParseRequiredParamKey(arr[i]!["paramKey"], $"bindings[{i}].paramKey"),
-                    Value = ParseValueRef(arr[i]!, $"bindings[{i}]"),
+                    ParamKey = ParseRequiredParamKey(bindingObj["paramKey"], $"{bindingContext}.paramKey"),
+                    Value = ParseValueRef(bindingObj, bindingContext),
                 };
             }
 
@@ -1712,6 +1811,8 @@ namespace Ludots.Core.Presentation.Config
                         $"children[{i}] uses snake_case transform fields. Author 'overrides.transform.localPosition/localRotation/localScale'.");
                 }
 
+                RejectUnknownFields(obj, $"children[{i}]", ChildFields);
+
                 children[i] = new ChildPresenterRef
                 {
                     DefinitionId = ResolveRequiredPresenterDefinitionId(obj["definitionId"], $"children[{i}].definitionId"),
@@ -1737,7 +1838,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             RejectUnknownOverrideKeys(obj, childIndex);
-            return ParseParamDefaults(obj["params"]);
+            return ParseParamDefaults(obj["params"], $"children[{childIndex}].overrides.params");
         }
 
         private static PresenterInstanceTransformOverride ParseChildTransformOverride(JsonNode? overridesNode, int childIndex)
@@ -1764,6 +1865,12 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"children[{childIndex}].overrides.transform must be an object.");
             }
 
+            if (transform["local_position"] != null || transform["local_rotation"] != null || transform["local_scale"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"children[{childIndex}].overrides.transform uses snake_case. Author localPosition/localRotation/localScale.");
+            }
+
             foreach (var property in transform)
             {
                 if (property.Key is not ("localPosition" or "localRotation" or "localScale"))
@@ -1771,12 +1878,6 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException(
                         $"children[{childIndex}].overrides.transform field '{property.Key}' is unsupported. Expected localPosition, localRotation (XYZ degrees), localScale.");
                 }
-            }
-
-            if (transform["local_position"] != null || transform["local_rotation"] != null || transform["local_scale"] != null)
-            {
-                throw new InvalidOperationException(
-                    $"children[{childIndex}].overrides.transform uses snake_case. Author localPosition/localRotation/localScale.");
             }
 
             Vector3 localPosition = ParseRequiredVector3(
@@ -1974,6 +2075,8 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"Presenter behavior[{i}] must be an object.");
                 }
 
+                RejectUnknownFields(obj, $"Presenter '{ownerKey}' behavior[{i}]", BehaviorSlotFields);
+
                 string kindText = ParseRequiredSemanticString(obj["kind"], $"Presenter '{ownerKey}' behavior[{i}].kind");
                 bool parsedBuiltinKind = TryParseDefinedEnum(kindText, out BehaviorKind kind);
                 if (parsedBuiltinKind && kind is BehaviorKind.None or BehaviorKind.Extension)
@@ -2095,7 +2198,6 @@ namespace Ludots.Core.Presentation.Config
                         slot.WorldText = ParseWorldText(obj["worldText"], ownerKey, i);
                         slot.Style = ParseBehaviorStyle(obj["style"], ownerKey, i);
                         slot.Motion = ParseBehaviorMotion(obj["motion"], ownerKey, i);
-                        slot.AssetBinding = BuildWorldTextAssetBinding(slot.WorldText);
                         break;
                     case BehaviorKind.SurfaceSource:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch");
@@ -2202,6 +2304,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context} requires an object.");
             }
 
+            RejectUnknownFields(obj, context, WorldTextFields);
+
             return new WorldTextConfig
             {
                 TextTokenId = ResolveTextTokenId(obj["textToken"], $"{context}.textToken"),
@@ -2228,28 +2332,6 @@ namespace Ludots.Core.Presentation.Config
             return fontSize;
         }
 
-        private static AssetBindingConfig BuildWorldTextAssetBinding(in WorldTextConfig worldText)
-        {
-            return new AssetBindingConfig
-            {
-                AssetKind = AssetKind.WorldText,
-                AssetId = worldText.TextTokenId,
-                RenderPath = VisualRenderPath.None,
-                Mobility = VisualMobility.Movable,
-                LocalOffset = Vector3.Zero,
-                LocalRotation = Quaternion.Identity,
-                LocalScale = Vector3.One,
-                ScaleParamKey = worldText.ValueParamKey,
-                MaterialParamKey = worldText.SecondaryValueParamKey,
-                AssetIdParamKey = PresenterParamKeyRegistry.UnsetParamKey,
-                AssetSwapParamKey = PresenterParamKeyRegistry.UnsetParamKey,
-                AssetSwapTable = Array.Empty<AssetSwapEntry>(),
-                VisibilityParamKey = PresenterParamKeyRegistry.UnsetParamKey,
-                SurfaceLayerKey = string.Empty,
-                MaterialCustomData = MaterialCustomDataBinding.Empty,
-            };
-        }
-
         private static BehaviorStyleConfig ParseBehaviorStyle(JsonNode? node, string ownerKey, int behaviorIndex)
         {
             if (node == null)
@@ -2262,6 +2344,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException($"{context} must be an object.");
             }
+
+            RejectUnknownFields(obj, context, StyleFields);
 
             var style = new BehaviorStyleConfig();
             if (obj["color"] != null)
@@ -2291,6 +2375,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context} must be an object.");
             }
 
+            RejectUnknownFields(obj, context, MotionFields);
+
             return new BehaviorMotionConfig
             {
                 YDriftPerSecond = obj["yDriftPerSecond"] == null
@@ -2306,6 +2392,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException($"{context} requires an object.");
             }
+
+            RejectUnknownFields(obj, context, InstancedBatchFields);
 
             string batchKey = ParseRequiredSemanticString(obj["batchAssetId"], $"{context}.batchAssetId");
             int batchAssetId = _resolveInstancedBatchAssetId(batchKey);
@@ -2336,7 +2424,7 @@ namespace Ludots.Core.Presentation.Config
             throw new InvalidOperationException($"{context} must be a semantic string.");
         }
 
-        private ParamDefault[] ParseParamDefaults(JsonNode? node)
+        private ParamDefault[] ParseParamDefaults(JsonNode? node, string owner)
         {
             if (node is not JsonArray arr || arr.Count == 0)
             {
@@ -2348,19 +2436,23 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (arr[i] is not JsonObject obj)
                 {
-                    throw new InvalidOperationException($"paramDefaults[{i}] must be an object.");
+                    throw new InvalidOperationException($"Presenter '{owner}' paramDefaults[{i}] must be an object.");
                 }
+
+                string defaultContext = $"Presenter '{owner}' paramDefaults[{i}]";
 
                 if (obj["value"] != null)
                 {
                     throw new InvalidOperationException(
-                        $"paramDefaults[{i}] uses removed field 'value'. Use explicit lane-specific fields 'floatValue', 'intValue', or 'vectorValue'.");
+                        $"{defaultContext} uses removed field 'value'. Use explicit lane-specific fields 'floatValue', 'intValue', or 'vectorValue'.");
                 }
 
-                ParamLane lane = ParseRequiredParamLane(obj, $"paramDefaults[{i}]");
+                RejectUnknownFields(obj, defaultContext, ParamDefaultFields);
+
+                ParamLane lane = ParseRequiredParamLane(obj, defaultContext);
                 var paramDefault = new ParamDefault
                 {
-                    ParamKey = ParseRequiredParamKey(obj["paramKey"], $"paramDefaults[{i}].paramKey"),
+                    ParamKey = ParseRequiredParamKey(obj["paramKey"], $"{defaultContext}.paramKey"),
                     Lane = lane,
                 };
 
@@ -2369,7 +2461,7 @@ namespace Ludots.Core.Presentation.Config
                     case ParamLane.Int:
                         if (obj["intValue"] is not JsonValue intValueNode || !intValueNode.TryGetValue<int>(out int intValue))
                         {
-                            throw new InvalidOperationException($"paramDefaults[{i}] lane '{ParamLane.Int}' requires integer field 'intValue'.");
+                            throw new InvalidOperationException($"{defaultContext} lane '{ParamLane.Int}' requires integer field 'intValue'.");
                         }
 
                         paramDefault.IntValue = intValue;
@@ -2377,7 +2469,7 @@ namespace Ludots.Core.Presentation.Config
                     case ParamLane.Vector:
                         if (obj["vectorValue"] is not JsonArray vectorValueNode || vectorValueNode.Count < 4)
                         {
-                            throw new InvalidOperationException($"paramDefaults[{i}] lane '{ParamLane.Vector}' requires 4-component array field 'vectorValue'.");
+                            throw new InvalidOperationException($"{defaultContext} lane '{ParamLane.Vector}' requires 4-component array field 'vectorValue'.");
                         }
 
                         paramDefault.VectorValue = ParseVector4(vectorValueNode);
@@ -2385,7 +2477,7 @@ namespace Ludots.Core.Presentation.Config
                     default:
                         if (obj["floatValue"] is not JsonValue floatValueNode || !floatValueNode.TryGetValue<float>(out float floatValue))
                         {
-                            throw new InvalidOperationException($"paramDefaults[{i}] lane '{ParamLane.Float}' requires numeric field 'floatValue'.");
+                            throw new InvalidOperationException($"{defaultContext} lane '{ParamLane.Float}' requires numeric field 'floatValue'.");
                         }
 
                         paramDefault.FloatValue = floatValue;
@@ -2410,6 +2502,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException(
                     "AssetBinding must not declare grounding or groundingOffset. Use a Grounding behavior with an explicit updatePolicy.");
             }
+
+            RejectUnknownFields(obj, "AssetBinding", AssetBindingFields);
 
             AssetKind assetKind = ParseRequiredEnum<AssetKind>(obj["assetKind"], "AssetBinding.assetKind");
             if (assetKind == AssetKind.Sound)
@@ -2509,6 +2603,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("AttributeBinding behavior requires object field 'attributeBinding'.");
             }
 
+            RejectUnknownFields(obj, "AttributeBinding", AttributeBindingFields);
+
             return new AttributeBindingConfig
             {
                 AttributeId = ResolveAttributeId(obj),
@@ -2543,6 +2639,8 @@ namespace Ludots.Core.Presentation.Config
                     "TagBinding behavior uses removed field 'tag'; use canonical semantic field 'tagBinding.tagId'.");
             }
 
+            RejectUnknownFields(obj, "TagBinding", TagBindingFields);
+
             int tagId = ResolveTagId(obj["tagId"]);
             if (tagId <= 0)
             {
@@ -2564,6 +2662,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("Animator behavior requires object field 'animator'.");
             }
 
+            RejectUnknownFields(obj, "Animator", AnimatorFields);
+
             return new AnimatorConfig
             {
                 AnimatorControllerId = ResolveRegisteredId(_resolveAnimatorControllerId, obj["animatorControllerId"], "animatorController"),
@@ -2579,6 +2679,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException("Attachment behavior requires object field 'attachment'.");
             }
+
+            RejectUnknownFields(obj, "Attachment", AttachmentFields);
 
             return new AttachmentConfig
             {
@@ -2596,6 +2698,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException("Grounding behavior requires object field 'grounding'.");
             }
+
+            RejectUnknownFields(obj, "Grounding", GroundingFields);
 
             return new GroundingConfig
             {
@@ -2690,6 +2794,8 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"materialCustomData[{i}] must be an object.");
                 }
 
+                RejectUnknownFields(obj, $"materialCustomData[{i}]", MaterialCustomDataSlotFields);
+
                 int slot = ParseRequiredInt(obj["slot"], $"materialCustomData[{i}].slot");
                 if ((uint)slot >= MaterialCustomDataBinding.MaxSlots)
                 {
@@ -2757,6 +2863,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException("MinimapMarker behavior requires object field 'minimapMarker'.");
             }
+
+            RejectUnknownFields(obj, "MinimapMarker", MinimapMarkerFields);
 
             MinimapMarkerShape shape = ParseRequiredEnum<MinimapMarkerShape>(
                 obj["shape"],
@@ -2834,6 +2942,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("Sound behavior requires object field 'sound'.");
             }
 
+            RejectUnknownFields(obj, "Sound", SoundFields);
+
             return new SoundConfig
             {
                 SoundAssetId = ResolveBehaviorAssetId(AssetKind.Sound, obj["soundAssetId"]),
@@ -2849,6 +2959,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException("Material behavior requires object field 'material'.");
             }
+
+            RejectUnknownFields(obj, "Material", MaterialFields);
 
             int materialSwapParamKey = ParseOptionalParamKey(obj["materialSwapParamKey"], "Material.materialSwapParamKey");
             MaterialSwapEntry[] swapTable = ParseMaterialSwapTable(obj["swapTable"]);
@@ -2876,6 +2988,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException("Spline behavior requires object field 'spline'.");
             }
+
+            RejectUnknownFields(obj, "Spline", SplineFields);
 
             SplineUsage usage = ParseEnum(obj["usage"]?.GetValue<string>(), SplineUsage.Render);
             int speedParamKey = ParseOptionalParamKey(obj["speedParamKey"], "Spline.speedParamKey");
@@ -3103,6 +3217,8 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"thresholds[{i}] must be an object.");
                 }
 
+                RejectUnknownFields(obj, $"thresholds[{i}]", ThresholdFields);
+
                 thresholds[i] = new ThresholdMapping
                 {
                     Threshold = obj["threshold"]?.GetValue<float>() ?? 0f,
@@ -3128,6 +3244,8 @@ namespace Ludots.Core.Presentation.Config
                 {
                     throw new InvalidOperationException($"swapTable[{i}] must be an object.");
                 }
+
+                RejectUnknownFields(obj, $"swapTable[{i}]", MaterialSwapEntryFields);
 
                 table[i] = new MaterialSwapEntry
                 {
@@ -3155,6 +3273,8 @@ namespace Ludots.Core.Presentation.Config
                 {
                     throw new InvalidOperationException($"assetSwapTable[{i}] must be an object.");
                 }
+
+                RejectUnknownFields(obj, $"assetSwapTable[{i}]", AssetSwapEntryFields);
 
                 table[i] = new AssetSwapEntry
                 {
@@ -3320,6 +3440,8 @@ namespace Ludots.Core.Presentation.Config
                     $"{context} requires the surface authoring object.");
             }
 
+            RejectUnknownFields(obj, context, SurfaceSourceFields);
+
             return new SurfaceAuthoringBlock
             {
                 Kind = ParseEnum(obj["kind"]?.GetValue<string>(), PresenterSurfaceKind.SplineRibbon),
@@ -3340,6 +3462,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"SurfaceSource presenter '{key}' must declare object field 'surface.geometrySource'.");
             }
 
+            RejectUnknownFields(obj, $"SurfaceSource presenter '{key}' surface.geometrySource", SurfaceGeometrySourceFields);
+
             return new PresenterSurfaceGeometrySource
             {
                 ControlPointSource = ParseSurfaceValueSource(obj["controlPointSource"]),
@@ -3359,6 +3483,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"SurfaceSource presenter '{key}' must declare object field 'surface.chunkBake'.");
             }
 
+            RejectUnknownFields(obj, $"SurfaceSource presenter '{key}' surface.chunkBake", SurfaceChunkBakeFields);
+
             return new PresenterSurfaceChunkBakePolicy
             {
                 Enabled = obj["enabled"]?.GetValue<bool>() ?? true,
@@ -3376,6 +3502,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"SurfaceSource presenter '{key}' must declare object field 'surface.materialSet'.");
             }
 
+            RejectUnknownFields(obj, $"SurfaceSource presenter '{key}' surface.materialSet", SurfaceMaterialSetFields);
+
             return new PresenterSurfaceMaterialSet
             {
                 PrimaryMaterialId = obj["primaryMaterialId"]?.GetValue<string>() ?? string.Empty,
@@ -3391,6 +3519,8 @@ namespace Ludots.Core.Presentation.Config
                 return new PresenterSurfaceGroundingPolicy();
             }
 
+            RejectUnknownFields(obj, "surface.grounding", SurfaceGroundingPolicyFields);
+
             return new PresenterSurfaceGroundingPolicy
             {
                 Mode = obj["mode"]?.GetValue<string>() ?? string.Empty,
@@ -3403,6 +3533,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 return null;
             }
+
+            RejectUnknownFields(obj, "surface value source", SurfaceValueSourceFields);
 
             return new PresenterSurfaceValueSource
             {
@@ -3423,11 +3555,6 @@ namespace Ludots.Core.Presentation.Config
             return ParseConditionRef(node, $"Presenter '{key}' visibility", allowGraphProgramId: false);
         }
 
-        private static ConditionRef ParseConditionRef(JsonNode? node)
-        {
-            return ParseConditionRef(node, "Presenter condition", allowGraphProgramId: true);
-        }
-
         private static ConditionRef ParseConditionRef(JsonNode? node, string context, bool allowGraphProgramId)
         {
             if (node == null)
@@ -3435,20 +3562,27 @@ namespace Ludots.Core.Presentation.Config
                 return ConditionRef.AlwaysTrue;
             }
 
-            var cond = new ConditionRef();
-            if (node["inline"] != null)
+            if (node is not JsonObject obj)
             {
-                cond.Inline = ParseRequiredEnumOrDefault(node["inline"], InlineConditionKind.None, $"{context}.inline");
+                throw new InvalidOperationException($"{context} must be an object.");
             }
 
-            if (node["graphProgramId"] != null)
+            RejectUnknownFields(obj, context, ConditionFields);
+
+            var cond = new ConditionRef();
+            if (obj["inline"] != null)
+            {
+                cond.Inline = ParseRequiredEnumOrDefault(obj["inline"], InlineConditionKind.None, $"{context}.inline");
+            }
+
+            if (obj["graphProgramId"] != null)
             {
                 if (!allowGraphProgramId)
                 {
                     throw new InvalidOperationException($"{context}.graphProgramId is not authorable here.");
                 }
 
-                cond.GraphProgramId = node["graphProgramId"]?.GetValue<int>() ?? 0;
+                cond.GraphProgramId = obj["graphProgramId"]?.GetValue<int>() ?? 0;
             }
 
             return cond;

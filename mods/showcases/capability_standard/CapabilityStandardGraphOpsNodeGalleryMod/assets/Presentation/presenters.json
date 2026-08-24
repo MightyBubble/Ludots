@@ -3,7 +3,6 @@
     "id": "graphops.hud.health_bar",
     "extends": "entity_health_bar",
     "visibility": { "inline": "None" },
-    "maxVisibilityDistanceCm": 20000,
     "behaviors": [
       {
         "slot": "body",
@@ -36,7 +35,6 @@
     "id": "graphops.hud.health_text",
     "extends": "entity_world_text",
     "visibility": { "inline": "None" },
-    "maxVisibilityDistanceCm": 20000,
     "behaviors": [
       {
         "slot": "body",
@@ -57,7 +55,6 @@
   {
     "id": "graphops.visual.caster",
     "visibility": { "inline": "None" },
-    "maxVisibilityDistanceCm": 20000,
     "children": [
       { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
       { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
@@ -93,7 +90,6 @@
   {
     "id": "graphops.visual.ally",
     "visibility": { "inline": "None" },
-    "maxVisibilityDistanceCm": 20000,
     "children": [
       { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
       { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
@@ -129,7 +125,6 @@
   {
     "id": "graphops.visual.enemy",
     "visibility": { "inline": "None" },
-    "maxVisibilityDistanceCm": 20000,
     "children": [
       { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
       { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
@@ -174,7 +169,6 @@
   {
     "id": "graphops.visual.scout",
     "visibility": { "inline": "None" },
-    "maxVisibilityDistanceCm": 20000,
     "children": [
       { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
       { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
