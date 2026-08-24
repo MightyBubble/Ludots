@@ -58,6 +58,7 @@ namespace Ludots.Adapter.Raylib
         private static float _lastUiPointerMoveX;
         private static float _lastUiPointerMoveY;
         private static bool _emptyBufferWarned;
+        private static bool _osCursorHiddenByVirtualCursor;
         private static readonly MouseButton[] MouseButtonsInPriorityOrder =
         {
             MouseButton.MOUSE_LEFT_BUTTON,
@@ -438,6 +439,7 @@ namespace Ludots.Adapter.Raylib
                         bool uiWheelCaptured = false;
                         bool uiInputHandled = false;
                         syntheticInput?.AdvanceFrame();
+                        UpdateVirtualCursorPresentation(engine, syntheticInput);
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();
@@ -888,6 +890,8 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveNativeDiagnosticHud(0d);
                         }
 
+                        DrawVirtualCursor(engine, syntheticInput);
+
                         long endDrawingStart = Stopwatch.GetTimestamp();
                         Rl.EndDrawing();
                         windowRepaintGuard.AfterPresent();
@@ -976,6 +980,7 @@ namespace Ludots.Adapter.Raylib
             }
             finally
             {
+                RestoreOsCursor();
                 if (windowOpened) Rl.CloseWindow();
                 terrainRenderer.Dispose();
                 visualHeightmapRenderer.Dispose();
@@ -1033,6 +1038,76 @@ namespace Ludots.Adapter.Raylib
             Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
             Rl.rlLoadIdentity();
             Rl.rlDisableDepthTest();
+        }
+
+        private static void UpdateVirtualCursorPresentation(GameEngine engine, SyntheticInputDevice? syntheticInput)
+        {
+            bool bridgeActive = engine.TryGetService(
+                CoreServiceKeys.VirtualCursorPresentation,
+                out VirtualCursorPresentationState? presentation) &&
+                presentation.IsEnabled;
+            if (bridgeActive && syntheticInput == null)
+            {
+                throw new InvalidOperationException(
+                    "AgentBridge virtual cursor presentation requires SyntheticInputDevice.");
+            }
+
+            if (bridgeActive == _osCursorHiddenByVirtualCursor)
+            {
+                return;
+            }
+
+            if (bridgeActive)
+            {
+                Rl.HideCursor();
+                _osCursorHiddenByVirtualCursor = true;
+            }
+            else
+            {
+                RestoreOsCursor();
+            }
+        }
+
+        private static void DrawVirtualCursor(GameEngine engine, SyntheticInputDevice? syntheticInput)
+        {
+            if (!engine.TryGetService(
+                    CoreServiceKeys.VirtualCursorPresentation,
+                    out VirtualCursorPresentationState? presentation) ||
+                !presentation.IsEnabled ||
+                syntheticInput == null ||
+                !syntheticInput.HasPointerOverride)
+            {
+                return;
+            }
+
+            Vector2 position = syntheticInput.PointerPosition;
+            if (!float.IsFinite(position.X) || !float.IsFinite(position.Y))
+            {
+                throw new InvalidOperationException(
+                    $"Virtual cursor position is not finite: ({position.X}, {position.Y}).");
+            }
+
+            int x = (int)MathF.Round(position.X);
+            int y = (int)MathF.Round(position.Y);
+            var shadow = new Color(8, 12, 18, 230);
+            var accent = new Color(245, 248, 255, 245);
+            Rl.DrawRectangleLines(x - 9, y - 9, 18, 18, shadow);
+            Rl.DrawRectangleLines(x - 7, y - 7, 14, 14, accent);
+            Rl.DrawRectangle(x - 13, y - 1, 9, 2, shadow);
+            Rl.DrawRectangle(x + 4, y - 1, 9, 2, shadow);
+            Rl.DrawRectangle(x - 1, y - 13, 2, 9, shadow);
+            Rl.DrawRectangle(x - 1, y + 4, 2, 9, shadow);
+        }
+
+        private static void RestoreOsCursor()
+        {
+            if (!_osCursorHiddenByVirtualCursor)
+            {
+                return;
+            }
+
+            Rl.ShowCursor();
+            _osCursorHiddenByVirtualCursor = false;
         }
 
         private static void AppendRaylibDiagnostic(string? diagnosticPath, string message)

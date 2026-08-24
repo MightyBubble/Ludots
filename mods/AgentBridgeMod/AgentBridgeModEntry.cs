@@ -2,6 +2,7 @@ using Ludots.AgentBridge;
 using Ludots.AgentBridge.Tools;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 
@@ -15,6 +16,7 @@ namespace AgentBridgeMod
     public sealed class AgentBridgeModEntry : IMod
     {
         private AgentBridgeHttpServer? _server;
+        private GameEngine? _activeEngine;
         private readonly AgentLogRingBackend _logRing = new();
         private bool _logRingInstalled;
 
@@ -55,6 +57,10 @@ namespace AgentBridgeMod
             // down any previous listener first, so a re-activated entry never
             // double-registers tools or leaks a zombie port.
             _server?.Dispose();
+            if (_activeEngine != null && !ReferenceEquals(_activeEngine, engine))
+            {
+                _activeEngine.RemoveService(CoreServiceKeys.VirtualCursorPresentation);
+            }
 
             var tools = new AgentToolRegistry();
             var time = new AgentTimeController();
@@ -101,6 +107,8 @@ namespace AgentBridgeMod
             tools.Register(new GraphDebugTool());
 
             engine.SetService(ToolRegistryKey, tools);
+            engine.SetService(CoreServiceKeys.VirtualCursorPresentation, new VirtualCursorPresentationState { IsEnabled = true });
+            _activeEngine = engine;
 
             var server = new AgentBridgeHttpServer(runtime, config, discoveryDir);
             server.Start();
@@ -114,6 +122,11 @@ namespace AgentBridgeMod
         {
             _server?.Dispose();
             _server = null;
+            if (_activeEngine != null)
+            {
+                _activeEngine.RemoveService(CoreServiceKeys.VirtualCursorPresentation);
+                _activeEngine = null;
+            }
         }
     }
 }
