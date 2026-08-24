@@ -5,7 +5,7 @@
 ## 1. 现状快照
 
 - 表 `Presentation/presenters.json`：ArrayById、AllowEmpty、ShardDirectories 启用（分片目录 `Presentation/presenters`；见事实页分片清单）。
-- 加载器字段：id、visibility（inline）、maxVisibilityDistanceCm、bindings（paramKey/source/constantValue）、behaviors（slot/kind/assetBinding）；构造注入 mesh/material/text/template/effect/animator/profile/batch 的 id 解析委托与 kind/slot 白名单。
+- 加载器字段：id、visibility（inline）、bindings（paramKey/source/constantValue）、behaviors（slot/kind/assetBinding）；构造注入 mesh/material/text/template/effect/animator/profile/batch 的 id 解析委托与 kind/slot 白名单。
 - `prefabs` 与 `presentation_behaviors` 两表**不存在**：MeshAssetConfigLoader 对 type:Prefab 显式抛错并指路"用带 AssetBinding 子项的表现器"；行为内联在 presenters 的 `behaviors` 数组与 instanced_batches 的 `behaviors` 字段。
 - 消费方：表现实体生命周期 / Presenter 生成系统。
 

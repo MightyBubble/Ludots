@@ -583,6 +583,7 @@ namespace Ludots.Core.Presentation.Config
                 "surface",
                 "requiredAttributeIds",
                 "requiredAttributes",
+                "maxVisibilityDistanceCm",
             };
 
             for (int i = 0; i < removedVisualFields.Length; i++)
@@ -600,7 +601,7 @@ namespace Ludots.Core.Presentation.Config
         {
             "id", "extends", "lifecycle", "anchor", "visibility",
             "rules", "bindings", "paramDefaults", "behaviors", "children",
-            "_comment", "maxVisibilityDistanceCm",
+            "_comment",
         };
 
         private static readonly string[] BehaviorSlotFields =

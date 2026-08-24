@@ -3270,7 +3270,6 @@ namespace Ludots.Tests.Presentation
                   {
                     "id": "meta_actor",
                     "_comment": "Authoring note kept out of runtime consumption.",
-                    "maxVisibilityDistanceCm": 9000,
                     "rules": [
                       {
                         "event": { "kind": "TagEffectiveChanged", "keyId": "Status.Buffed", "gained": true },
@@ -3290,6 +3289,28 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(registry.GetId("meta_actor"), out var definition), Is.True);
             Assert.That(definition.Rules.Length, Is.EqualTo(1));
             Assert.That(definition.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.TagEffectiveChanged));
+        }
+
+        [Test]
+        public void Load_RejectsRemovedMaxVisibilityDistanceField()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "removed_visibility_distance",
+                    "maxVisibilityDistanceCm": 9000
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("removed field 'maxVisibilityDistanceCm'"));
         }
 
         [Test]
@@ -3456,7 +3477,6 @@ namespace Ludots.Tests.Presentation
                   {
                     "id": "legal_nested",
                     "_comment": "Exercises every nested payload allowlist.",
-                    "maxVisibilityDistanceCm": 9000,
                     "children": [
                       {
                         "definitionId": "legal_child",
