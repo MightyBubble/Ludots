@@ -273,10 +273,10 @@
         "Value": "Frontline Infantry"
       },
       "Team": {
-        "Id": 1
+        "Id": 0
       },
       "PlayerOwner": {
-        "PlayerId": 1
+        "PlayerId": 0
       },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
