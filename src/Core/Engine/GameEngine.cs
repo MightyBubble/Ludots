@@ -1338,7 +1338,9 @@ namespace Ludots.Core.Engine
                 () => GetService(CoreServiceKeys.VisualHeightmap),
                 boneTransformProvider: null,
                 timingDiagnostics: presentationTimingDiagnostics,
-                extensionBehaviors: presenterBehaviorKinds);
+                extensionBehaviors: presenterBehaviorKinds,
+                graphPrograms: graphProgramRegistry,
+                graphApi: gasGraphApi);
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(
                 World,
                 animatorControllers,
