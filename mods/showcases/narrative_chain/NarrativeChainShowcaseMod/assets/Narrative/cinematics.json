@@ -2,7 +2,7 @@
   {
     "id": "Cinematic.Chain.Reveal",
     "displayName": "Relay Reveal",
-    "clearCameraOnComplete": false,
+    "clearCameraOnComplete": true,
     "steps": [
       {
         "id": "reveal_1",
@@ -16,7 +16,8 @@
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
         "text": "Second lamp: every oath sworn here leaves a mark on the wire.",
-        "durationSeconds": 0.5
+        "durationSeconds": 0.5,
+        "cameraId": "Camera.Profile.Tactical"
       },
       {
         "id": "reveal_3",

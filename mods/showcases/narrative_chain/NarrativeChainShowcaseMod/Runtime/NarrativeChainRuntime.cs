@@ -8,6 +8,8 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Scripting;
+using Ludots.WebUI.DataPlane;
+using UiRegionsMod.Runtime;
 
 namespace NarrativeChainShowcaseMod.Runtime
 {
@@ -19,6 +21,10 @@ namespace NarrativeChainShowcaseMod.Runtime
     /// </summary>
     public sealed class NarrativeChainRuntime
     {
+        private const string SystemsInstalledKey = "NarrativeChain.SystemsInstalled";
+        private const string HudInstalledKey = "NarrativeChain.HudInstalled";
+
+        private readonly string _hudManifestPath;
         private bool _inputActive;
 
         internal bool PendingCinematic;
@@ -28,12 +34,19 @@ namespace NarrativeChainShowcaseMod.Runtime
         public int PresenterCommandCount { get; private set; }
         public int HeraldEventCount { get; private set; }
         public IReadOnlyList<ChainEvent> Events => _events;
+        public UiRegionsHudInstallation? HudInstallation { get; private set; }
 
         private readonly List<ChainEvent> _events = new();
         private int _eventSerial;
 
-        public NarrativeChainRuntime()
+        public NarrativeChainRuntime(string hudManifestPath)
         {
+            if (string.IsNullOrWhiteSpace(hudManifestPath))
+            {
+                throw new ArgumentException("HUD manifest path is required.", nameof(hudManifestPath));
+            }
+
+            _hudManifestPath = hudManifestPath;
         }
 
         internal void Record(string phase, string eventName, string detail)
@@ -48,17 +61,18 @@ namespace NarrativeChainShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            if (engine.GlobalContext.TryGetValue("NarrativeChain.SystemsInstalled", out object? installed) &&
+            if (engine.GlobalContext.TryGetValue(SystemsInstalledKey, out object? installed) &&
                 installed is bool installedValue && installedValue)
             {
                 return Task.CompletedTask;
             }
 
-            engine.GlobalContext["NarrativeChain.SystemsInstalled"] = true;
+            engine.GlobalContext[SystemsInstalledKey] = true;
             engine.GlobalContext["NarrativeChain.Runtime"] = this;
             engine.RegisterSystem(new NarrativeChainAdvanceSystem(engine, this), SystemGroup.Cleanup);
+            engine.RegisterSystem(new NarrativeChainActivityInputSystem(engine, this), SystemGroup.Cleanup);
             engine.RegisterPresentationSystem(new NarrativeChainPanelPresentationSystem(engine));
-            Record("boot", "systems_installed", "advance + panel systems registered");
+            Record("boot", "systems_installed", "advance + activity input + panel systems registered");
             return Task.CompletedTask;
         }
 
@@ -70,6 +84,7 @@ namespace NarrativeChainShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
+            InstallChainHud(engine);
             PushInputContext(engine);
             if (engine.GetService(CoreServiceKeys.NarrativeDirector) is not NarrativeDirector director)
             {
@@ -79,6 +94,40 @@ namespace NarrativeChainShowcaseMod.Runtime
             director.StartDialogue(NarrativeChainIds.OpeningDialogueId);
             Record("map", "dialogue_started", NarrativeChainIds.OpeningDialogueId);
             return Task.CompletedTask;
+        }
+
+        private void InstallChainHud(GameEngine engine)
+        {
+            if (engine.GlobalContext.TryGetValue(HudInstalledKey, out object? installed) &&
+                installed is bool installedValue && installedValue)
+            {
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is not TaskRuntimeService tasks)
+            {
+                throw new InvalidOperationException("TaskRuntimeService is required for the chain HUD.");
+            }
+
+            if (engine.GetService(CoreServiceKeys.ActivityRuntimeService) is not ActivityRuntimeService activities)
+            {
+                throw new InvalidOperationException("ActivityRuntimeService is required for the chain HUD.");
+            }
+
+            UiRegionsHudInstallation installation = UiRegionsHudInstaller.Install(
+                engine,
+                _hudManifestPath,
+                new IWebUiTopicProducer[]
+                {
+                    new TaskObjectiveTopicProducer(NarrativeChainIds.HudObjectiveTopic, tasks),
+                    new ActivityModalTopicProducer(NarrativeChainIds.HudActivityTopic, activities, activities.Presentation),
+                });
+            engine.RegisterPresentationSystem(new NarrativeChainHudRefreshSystem(engine, installation));
+
+            engine.GlobalContext[HudInstalledKey] = true;
+            HudInstallation = installation;
+            Record("hud", "panels_installed",
+                $"{string.Join(",", installation.BoundPanelIds)} topics={string.Join(",", installation.Topics)}");
         }
 
         public Task HandleTaskSignalAsync(ScriptContext context)
@@ -197,13 +246,8 @@ namespace NarrativeChainShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            if (engine.GetService(CoreServiceKeys.NarrativeDirector) is not NarrativeDirector director)
-            {
-                return Task.CompletedTask;
-            }
-
-            director.StartDialogue(NarrativeChainIds.VerdictDialogueId);
-            Record("task", "completed->dialogue", NarrativeChainIds.VerdictDialogueId);
+            Record("task", "completed",
+                $"survey complete; verdict handoff declared by {NarrativeChainIds.DebriefTaskId} on_enter");
             return Task.CompletedTask;
         }
 

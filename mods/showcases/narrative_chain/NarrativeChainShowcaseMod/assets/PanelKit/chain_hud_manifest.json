@@ -1,0 +1,36 @@
+{
+  "manifestId": "chain.hud.narrative-chain",
+  "hostOwnerId": "NarrativeChain",
+  "panels": [
+    {
+      "panelId": "chain.hud.activity-modal",
+      "panelType": "activity-modal",
+      "surfaceRegionId": "region.center",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 90,
+      "anchor": "center",
+      "visibleConditionId": "condition.always",
+      "topic": "chain.topic.activity",
+      "profileId": "profile.activity-modal.generic",
+      "layoutId": "layout.modal.choice",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.activity.resolve",
+      "title": "Relay Decision"
+    },
+    {
+      "panelId": "chain.hud.objective",
+      "panelType": "objective",
+      "surfaceRegionId": "region.middle-left",
+      "surfaceSegment": "Main",
+      "surfacePriority": 40,
+      "anchor": "middle-left",
+      "visibleConditionId": "condition.always",
+      "topic": "chain.topic.objective",
+      "profileId": "profile.objective.generic",
+      "layoutId": "layout.list.vertical",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.list.select",
+      "title": "Chain Tasks"
+    }
+  ]
+}

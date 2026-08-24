@@ -2,7 +2,7 @@
   "Id": "narrative_chain_hub",
   "Tags": ["narrative.chain.showcase", "task.dialogue.cinematic"],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.Tactical",
+    "VirtualCameraId": "Camera.Profile.Inspect",
     "TargetXCm": 1500,
     "TargetYCm": 950,
     "DistanceCm": 3400,

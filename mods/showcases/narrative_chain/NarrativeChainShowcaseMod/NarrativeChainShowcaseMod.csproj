@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\..\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
+    <ProjectReference Include="..\..\..\capabilities\ui_regions\UiRegionsMod\UiRegionsMod.csproj" />
   </ItemGroup>
 
 </Project>
