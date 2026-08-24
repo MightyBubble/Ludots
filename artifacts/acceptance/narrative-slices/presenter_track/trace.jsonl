@@ -1,0 +1,7 @@
+{"seq":1,"scenario":"presenter_track","at":"[T\u002B001] [map] hub loaded; default camera \u0027Camera.Profile.Tactical\u0027 active"}
+{"seq":2,"scenario":"presenter_track","at":"[T\u002B002] [track] step 1 boundary: one presenter impulse emitted"}
+{"seq":3,"scenario":"presenter_track","at":"[T\u002B003] [track] step 2 boundary: impulse count incremented to 2"}
+{"seq":4,"scenario":"presenter_track","at":"[T\u002B004] [track] step 3 boundary: impulse count incremented to 3"}
+{"seq":5,"scenario":"presenter_track","at":"[T\u002B005] [camera] step 2 cameraId observed live: brain active id=\u0027Camera.Profile.Inspect\u0027"}
+{"seq":6,"scenario":"presenter_track","at":"[T\u002B006] [camera] cinematic finished: brain fell back to \u0027Camera.Profile.Tactical\u0027"}
+{"seq":7,"scenario":"presenter_track","at":"[T\u002B007] [track] presenter command track complete; slice_counter=1"}

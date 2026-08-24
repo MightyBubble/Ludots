@@ -37,6 +37,7 @@ namespace NarrativeSlicesMod.Runtime
             }
 
             _runtime.ConsumePendingSlice(_engine);
+            _runtime.ConsumePendingParityDialogue(_engine);
         }
 
         public void AfterUpdate(in float dt)

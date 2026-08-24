@@ -1,0 +1,10 @@
+flowchart TD
+    start([StartSlice activity_execute_condition]) --> offer[forced activity Slice.Execute offered]
+    offer --> opts[TryGetActiveOptions]
+    opts --> go[opt_go: Executable=true, BlockReason empty]
+    opts --> wait[opt_wait: is_baseline]
+    go --> resolveGo[ResolveOption opt_go: task.create effect activates Slice.Rules.AnyCheck]
+    wait --> second[second instance offered]
+    second --> resolveWait[ResolveOption opt_wait: settles Resolved]
+    resolveGo -.->|full path attempt| gap{{execute_condition task.counter_below: unknown_provider_key fail-fast at load}}
+    resolveWait --> finish([contract proven; condition gap documented])

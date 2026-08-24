@@ -1,0 +1,7 @@
+flowchart TD
+    start([StartSlice task_chain]) --> one[Slice.Chain.One Active]
+    one --> emit[EmitSignal chain.one.done]
+    emit --> oneDone[One Completed]
+    oneDone -->|next_task_id auto-start| two[Slice.Chain.Two Active]
+    two -->|on_enter_cinematic_id| intro[Cinematic.Slice.ChainIntro step chain_intro_1]
+    intro --> introDone([cinematic completed; Two stays Active])

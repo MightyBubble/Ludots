@@ -1,0 +1,6 @@
+{"seq":1,"scenario":"task_chain","at":"[T\u002B001] [map] hub loaded; default camera \u0027Camera.Profile.Tactical\u0027 active"}
+{"seq":2,"scenario":"task_chain","at":"[T\u002B002] [task] Slice.Chain.One active after slice start"}
+{"seq":3,"scenario":"task_chain","at":"[T\u002B003] [task] chain.one.done completed One; next_task_id auto-started Two"}
+{"seq":4,"scenario":"task_chain","at":"[T\u002B004] [cinematic] on_enter_cinematic_id started Cinematic.Slice.ChainIntro when Two activated"}
+{"seq":5,"scenario":"task_chain","at":"[T\u002B005] [cinematic] ChainIntro finished"}
+{"seq":6,"scenario":"task_chain","at":"[T\u002B006] [chain] task chain \u002B declared cinematic link traced; slice_counter=1"}

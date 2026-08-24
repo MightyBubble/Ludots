@@ -1,0 +1,5 @@
+{"seq":1,"scenario":"task_rules","at":"[T\u002B001] [map] hub loaded; default camera \u0027Camera.Profile.Tactical\u0027 active"}
+{"seq":2,"scenario":"task_rules","at":"[T\u002B002] [task] Slice.Rules.AnyCheck active after slice start (automatic policy)"}
+{"seq":3,"scenario":"task_rules","at":"[T\u002B003] [task] rules.second alone completed the any-rule task"}
+{"seq":4,"scenario":"task_rules","at":"[T\u002B004] [task] rules.first never emitted; only rules.second counted once"}
+{"seq":5,"scenario":"task_rules","at":"[T\u002B005] [rules] activated/completed traced; slice_counter=1"}

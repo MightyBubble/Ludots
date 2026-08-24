@@ -1,0 +1,5 @@
+flowchart TD
+    start([StartSlice subtitle_presenter]) --> s1[SUBTITLE-FIRST visible]
+    s1 --> s2[SUBTITLE-SECOND replaces FIRST]
+    s2 --> s3[SUBTITLE-THIRD replaces SECOND]
+    s3 --> clear([cinematic done: all step texts cleared])

@@ -1,1 +1,70 @@
-[]
+[
+  {
+    "id": "Cinematic.Slice.ChainIntro",
+    "displayName": "Chain Intro",
+    "steps": [
+      {
+        "id": "chain_intro_1",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "CHAIN-INTRO: the second link wakes and the chain holds.",
+        "durationSeconds": 0.3
+      }
+    ]
+  },
+  {
+    "id": "Cinematic.Slice.Subtitle",
+    "displayName": "Subtitle Relay",
+    "steps": [
+      {
+        "id": "subtitle_1",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "SUBTITLE-FIRST: the relay opens its ledger.",
+        "durationSeconds": 0.3
+      },
+      {
+        "id": "subtitle_2",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "SUBTITLE-SECOND: the middle line replaces the first.",
+        "durationSeconds": 0.3
+      },
+      {
+        "id": "subtitle_3",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "SUBTITLE-THIRD: the last line closes the relay.",
+        "durationSeconds": 0.3
+      }
+    ]
+  },
+  {
+    "id": "Cinematic.Slice.Track",
+    "displayName": "Track Relay",
+    "steps": [
+      {
+        "id": "track_1",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "TRACK-FIRST: the tactical lens holds.",
+        "durationSeconds": 0.3
+      },
+      {
+        "id": "track_2",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "TRACK-SECOND: the inspect lens locks on.",
+        "durationSeconds": 0.3,
+        "cameraId": "Camera.Profile.Inspect"
+      },
+      {
+        "id": "track_3",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "TRACK-THIRD: the track ends where it began.",
+        "durationSeconds": 0.3
+      }
+    ]
+  }
+]

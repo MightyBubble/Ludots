@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Scripting;
@@ -18,6 +20,9 @@ namespace NarrativeSlicesMod.Runtime
     {
         private bool _inputActive;
         private string? _pendingSliceId;
+        private string? _pendingParityDialogueId;
+
+        public int TrackImpulseCount { get; private set; }
 
         public IReadOnlyList<SliceEvent> Events => _events;
 
@@ -71,8 +76,31 @@ namespace NarrativeSlicesMod.Runtime
             string sliceId = _pendingSliceId;
             _pendingSliceId = null;
             BumpSliceCounter(engine);
-            StartSliceContent(director, sliceId);
+            StartSliceContent(engine, director, sliceId);
             Record("slice", "content_started", sliceId);
+        }
+
+        internal void ConsumePendingParityDialogue(GameEngine engine)
+        {
+            if (_pendingParityDialogueId == null)
+            {
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.NarrativeDirector) is not NarrativeDirector director)
+            {
+                throw new InvalidOperationException("NarrativeDirector is required for narrative slices.");
+            }
+
+            if (director.HasActiveDialogue || director.HasActiveCinematic)
+            {
+                return;
+            }
+
+            string dialogueId = _pendingParityDialogueId;
+            _pendingParityDialogueId = null;
+            director.StartDialogue(dialogueId);
+            Record("map", "parity_dialogue_started", dialogueId);
         }
 
         private static void ValidateSliceId(string sliceId)
@@ -81,13 +109,19 @@ namespace NarrativeSlicesMod.Runtime
             {
                 case NarrativeSlicesIds.SliceDialogueGate:
                 case NarrativeSlicesIds.SliceActionGallery:
+                case NarrativeSlicesIds.SliceTaskRules:
+                case NarrativeSlicesIds.SliceTaskChain:
+                case NarrativeSlicesIds.SliceActivityExecuteCondition:
+                case NarrativeSlicesIds.SliceSubtitlePresenter:
+                case NarrativeSlicesIds.SlicePresenterTrack:
+                case NarrativeSlicesIds.SliceMapVariableWrite:
                     break;
                 default:
                     throw new InvalidOperationException($"Unknown narrative slice '{sliceId}'.");
             }
         }
 
-        private static void StartSliceContent(NarrativeDirector director, string sliceId)
+        private static void StartSliceContent(GameEngine engine, NarrativeDirector director, string sliceId)
         {
             switch (sliceId)
             {
@@ -97,9 +131,37 @@ namespace NarrativeSlicesMod.Runtime
                 case NarrativeSlicesIds.SliceActionGallery:
                     director.StartDialogue(NarrativeSlicesIds.GalleryDialogueId);
                     break;
+                case NarrativeSlicesIds.SliceTaskRules:
+                    director.StartTask(NarrativeSlicesIds.RulesAnyCheckTaskId);
+                    break;
+                case NarrativeSlicesIds.SliceTaskChain:
+                    director.StartTask(NarrativeSlicesIds.ChainOneTaskId);
+                    break;
+                case NarrativeSlicesIds.SliceActivityExecuteCondition:
+                    OfferExecuteConditionActivity(engine);
+                    break;
+                case NarrativeSlicesIds.SliceSubtitlePresenter:
+                    director.StartCinematic(NarrativeSlicesIds.SubtitleCinematicId);
+                    break;
+                case NarrativeSlicesIds.SlicePresenterTrack:
+                    director.StartCinematic(NarrativeSlicesIds.TrackCinematicId);
+                    break;
+                case NarrativeSlicesIds.SliceMapVariableWrite:
+                    director.StartDialogue(NarrativeSlicesIds.MapTriggerDialogueId);
+                    break;
                 default:
                     throw new InvalidOperationException($"Unknown narrative slice '{sliceId}'.");
             }
+        }
+
+        private static void OfferExecuteConditionActivity(GameEngine engine)
+        {
+            if (engine.GetService(CoreServiceKeys.ActivityRuntimeService) is not ActivityRuntimeService activities)
+            {
+                throw new InvalidOperationException("ActivityRuntimeService is required for narrative slices.");
+            }
+
+            activities.OfferOrActivate(NarrativeSlicesIds.ActivitySliceExecuteId, engine.World.Create());
         }
 
         private void BumpSliceCounter(GameEngine engine)
@@ -197,8 +259,18 @@ namespace NarrativeSlicesMod.Runtime
                 return Task.CompletedTask;
             }
 
+            string cinematicId = context.Get(NarrativeServiceKeys.CinematicId) ?? string.Empty;
             Record("cinematic", "step_entered",
-                $"{context.Get(NarrativeServiceKeys.CinematicId)}/{context.Get(NarrativeServiceKeys.CinematicStepId)} body=\"{context.Get(NarrativeServiceKeys.BodyText)}\"");
+                $"{cinematicId}/{context.Get(NarrativeServiceKeys.CinematicStepId)} body=\"{context.Get(NarrativeServiceKeys.BodyText)}\"");
+
+            if (string.Equals(cinematicId, NarrativeSlicesIds.TrackCinematicId, StringComparison.Ordinal))
+            {
+                EmitPresenterImpulse(engine);
+                TrackImpulseCount++;
+                Record("cinematic", "presenter_command",
+                    $"step={context.Get(NarrativeServiceKeys.CinematicStepId)} impulse={TrackImpulseCount}");
+            }
+
             return Task.CompletedTask;
         }
 
@@ -222,7 +294,13 @@ namespace NarrativeSlicesMod.Runtime
                 return Task.CompletedTask;
             }
 
-            Record("signal", "signal", context.Get(TaskServiceKeys.SignalId) ?? string.Empty);
+            string signalId = context.Get(TaskServiceKeys.SignalId) ?? string.Empty;
+            Record("signal", "signal", signalId);
+            if (string.Equals(signalId, NarrativeSlicesIds.SignalMapWrite, StringComparison.Ordinal))
+            {
+                AdvanceMapCounterAndQueueParityDialogue(engine);
+            }
+
             return Task.CompletedTask;
         }
 
@@ -284,6 +362,39 @@ namespace NarrativeSlicesMod.Runtime
 
             Record("task", "abandoned", context.Get(TaskServiceKeys.TaskId) ?? string.Empty);
             return Task.CompletedTask;
+        }
+
+        private void AdvanceMapCounterAndQueueParityDialogue(GameEngine engine)
+        {
+            var variables = engine.CurrentMapSession?.Variables;
+            if (variables == null || !variables.Contains(NarrativeSlicesIds.MapVariableSliceCounter))
+            {
+                throw new InvalidOperationException(
+                    $"Map variable '{NarrativeSlicesIds.MapVariableSliceCounter}' is not declared on '{NarrativeSlicesIds.MapId}'.");
+            }
+
+            int updated = variables.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter) + 1;
+            variables.WriteInt(NarrativeSlicesIds.MapVariableSliceCounter, updated);
+            bool even = updated % 2 == 0;
+            _pendingParityDialogueId = even
+                ? NarrativeSlicesIds.MapEvenDialogueId
+                : NarrativeSlicesIds.MapOddDialogueId;
+            Record("map", "map_variable_written",
+                $"{NarrativeSlicesIds.MapVariableSliceCounter}={updated} parity={(even ? "even" : "odd")}");
+        }
+
+        private void EmitPresenterImpulse(GameEngine engine)
+        {
+            var impulse = engine.GetService(CoreServiceKeys.CameraImpulseRuntime);
+            impulse.Emit(new CameraImpulseSource
+            {
+                DurationSeconds = 0.15f,
+                FrequencyHz = 8f,
+                PositionAmplitudeCm = 4f,
+                YawAmplitudeDeg = 0.8f,
+                PitchAmplitudeDeg = 0.5f,
+                RadiusCm = 200000f,
+            });
         }
 
         private void PushInputContext(GameEngine engine)

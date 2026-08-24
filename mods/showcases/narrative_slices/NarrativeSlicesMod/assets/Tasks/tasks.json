@@ -18,5 +18,38 @@
     "objectives": [
       { "id": "beta", "kind": "signal", "title": "Beta track done", "signal_key": "gallery.beta.done" }
     ]
+  },
+  {
+    "id": "Slice.Rules.AnyCheck",
+    "display_name": "Rules Any Check",
+    "summary": "Completion-rule slice: a single objective signal satisfies the any rule.",
+    "start_policy": "automatic",
+    "completion_rule": "any",
+    "objectives": [
+      { "id": "first", "kind": "signal", "title": "First rule arm", "signal_key": "rules.first" },
+      { "id": "second", "kind": "signal", "title": "Second rule arm", "signal_key": "rules.second" }
+    ]
+  },
+  {
+    "id": "Slice.Chain.One",
+    "display_name": "Chain One",
+    "summary": "Chain slice first link: completes into Slice.Chain.Two.",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "one", "kind": "signal", "title": "Chain one done", "signal_key": "chain.one.done" }
+    ],
+    "next_task_id": "Slice.Chain.Two"
+  },
+  {
+    "id": "Slice.Chain.Two",
+    "display_name": "Chain Two",
+    "summary": "Chain slice second link: activation starts the declared ChainIntro cinematic.",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "two", "kind": "signal", "title": "Chain two done", "signal_key": "chain.two.done" }
+    ],
+    "on_enter_cinematic_id": "Cinematic.Slice.ChainIntro"
   }
 ]

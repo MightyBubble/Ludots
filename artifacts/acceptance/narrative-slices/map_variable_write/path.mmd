@@ -1,0 +1,8 @@
+flowchart TD
+    start([StartSlice map_variable_write]) --> trigger[Dialogue.Slice.MapTrigger onEnter: EmitSignal slice.map.write]
+    trigger --> handler[signal handler: slice_counter 1+1=2, parity even]
+    handler --> even[Dialogue.Slice.MapEven opened deferred]
+    even --> close[advance closes MapEven]
+    close --> again[EmitSignal slice.map.write again]
+    again --> handler2[signal handler: 2+1=3, parity odd]
+    handler2 --> odd([Dialogue.Slice.MapOdd opened; parity flipped])

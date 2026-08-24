@@ -1,0 +1,6 @@
+flowchart TD
+    start([StartSlice presenter_track]) --> t1[track_1: impulse 1, Tactical holds]
+    t1 --> t2[track_2: impulse 2, cameraId Camera.Profile.Inspect]
+    t2 -->|brain resolves| inspect[active camera = Inspect]
+    t3[track_3: impulse 3] --> done([cinematic done: brain falls back to Tactical])
+    inspect --> t3

@@ -5,9 +5,12 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
@@ -25,7 +28,13 @@ namespace Ludots.Tests.GAS.Production
     /// variables; action_gallery drives eight narrative actions (SetVariable, AddVariable,
     /// StartTask, CompleteTask, FailTask, ActivateCamera, ClearCamera, EmitSignal) and
     /// asserts their observable end state on variables, task instances and the authority
-    /// virtual camera brain.
+    /// virtual camera brain; task_rules proves the any completion rule; task_chain proves
+    /// next_task_id plus the on_enter_cinematic_id declared link; activity_execute_condition
+    /// proves the option executability contract and documents the missing condition
+    /// provider registration path as an engine gap; subtitle_presenter proves the per-step
+    /// subtitle replacement sequence; presenter_track proves the step-boundary presenter
+    /// command track with camera switching; map_variable_write proves map variable
+    /// read/write as a parity decision input.
     /// </summary>
     [NonParallelizable]
     [TestFixture]
@@ -56,7 +65,12 @@ namespace Ludots.Tests.GAS.Production
             // NarrativeFrontendService instance the mod registers; without it the loader loads
             // the repo-bin copy into its ModLoadContext and the typed service lookup splits
             // across two assemblies, leaving the slices panel publisher without a service.
+            // The slices mod itself needs the same preload: test methods only reference its
+            // const strings (inlined at compile time), so without an explicit touch the first
+            // engine of the process loads the repo-bin copy and the GlobalContext runtime
+            // lookup splits across two NarrativeSlicesRuntime identities.
             _ = typeof(NarrativeFrontendMod.NarrativeFrontendServiceKeys).Assembly;
+            _ = typeof(NarrativeSlicesIds).Assembly;
         }
 
         [Test]
@@ -174,6 +188,310 @@ namespace Ludots.Tests.GAS.Production
             WriteArtifacts(NarrativeSlicesIds.SliceActionGallery);
         }
 
+        [Test]
+        public void TaskRulesSlice_AnyCompletionRule_CompletesOnSingleSignal()
+        {
+            using GameEngine engine = CreateEngine();
+            NarrativeDirector director = GetDirector(engine);
+
+            _timeline.Clear();
+            LoadMap(engine);
+            TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.MapDefaultCameraId, 30);
+            Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
+
+            StartSlice(engine, NarrativeSlicesIds.SliceTaskRules);
+            TickUntil(engine, () => TaskStateOf(engine, NarrativeSlicesIds.RulesAnyCheckTaskId) == TaskInstanceState.Active, 30);
+            Record("task", "Slice.Rules.AnyCheck active after slice start (automatic policy)");
+
+            director.EmitSignal(NarrativeSlicesIds.SignalRulesSecond);
+            TickUntil(engine, () => TaskStateOf(engine, NarrativeSlicesIds.RulesAnyCheckTaskId) == TaskInstanceState.Completed, 30);
+            Record("task", "rules.second alone completed the any-rule task");
+
+            var tasks = engine.GetService(CoreServiceKeys.TaskRuntimeService) as TaskRuntimeService
+                ?? throw new InvalidOperationException("TaskRuntimeService was not installed.");
+            Assert.That(tasks.Signals.TryGetValue(NarrativeSlicesIds.SignalRulesSecond, out int secondCount) && secondCount == 1, Is.True);
+            Assert.That(tasks.Signals.ContainsKey(NarrativeSlicesIds.SignalRulesFirst), Is.False);
+            Record("task", "rules.first never emitted; only rules.second counted once");
+
+            var runtime = GetSlicesRuntime(engine);
+            var taskTrace = runtime.Events
+                .Where(e => e.Phase == "task")
+                .Select(e => $"{e.EventName}:{e.Detail}")
+                .ToList();
+            Assert.That(taskTrace, Does.Contain($"activated:{NarrativeSlicesIds.RulesAnyCheckTaskId}"));
+            Assert.That(taskTrace, Does.Contain($"completed:{NarrativeSlicesIds.RulesAnyCheckTaskId}"));
+            Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(1));
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Record("rules", "activated/completed traced; slice_counter=1");
+
+            WriteArtifacts(NarrativeSlicesIds.SliceTaskRules);
+        }
+
+        [Test]
+        public void TaskChainSlice_NextTaskLink_StartsDeclaredCinematic()
+        {
+            using GameEngine engine = CreateEngine();
+            NarrativeDirector director = GetDirector(engine);
+            UIRoot uiRoot = GetUiRoot(engine);
+
+            _timeline.Clear();
+            LoadMap(engine);
+            TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.MapDefaultCameraId, 30);
+            Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
+
+            StartSlice(engine, NarrativeSlicesIds.SliceTaskChain);
+            TickUntil(engine, () => TaskStateOf(engine, NarrativeSlicesIds.ChainOneTaskId) == TaskInstanceState.Active, 30);
+            Record("task", "Slice.Chain.One active after slice start");
+
+            director.EmitSignal(NarrativeSlicesIds.SignalChainOneDone);
+            TickUntil(engine, () => TaskStateOf(engine, NarrativeSlicesIds.ChainTwoTaskId) == TaskInstanceState.Active, 30);
+            Record("task", "chain.one.done completed One; next_task_id auto-started Two");
+
+            TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, "CHAIN-INTRO"), 30);
+            Record("cinematic", "on_enter_cinematic_id started Cinematic.Slice.ChainIntro when Two activated");
+
+            TickUntil(engine, () => !director.HasActiveCinematic, 30);
+            Record("cinematic", "ChainIntro finished");
+
+            Assert.That(TaskStateOf(engine, NarrativeSlicesIds.ChainOneTaskId), Is.EqualTo(TaskInstanceState.Completed));
+            Assert.That(TaskStateOf(engine, NarrativeSlicesIds.ChainTwoTaskId), Is.EqualTo(TaskInstanceState.Active));
+
+            var runtime = GetSlicesRuntime(engine);
+            var taskTrace = runtime.Events
+                .Where(e => e.Phase == "task")
+                .Select(e => $"{e.EventName}:{e.Detail}")
+                .ToList();
+            Assert.That(taskTrace, Does.Contain($"activated:{NarrativeSlicesIds.ChainOneTaskId}"));
+            Assert.That(taskTrace, Does.Contain($"completed:{NarrativeSlicesIds.ChainOneTaskId}"));
+            Assert.That(taskTrace, Does.Contain($"activated:{NarrativeSlicesIds.ChainTwoTaskId}"));
+
+            var cinematicTrace = runtime.Events
+                .Where(e => e.Phase == "cinematic")
+                .Select(e => $"{e.EventName}:{e.Detail}")
+                .ToList();
+            Assert.That(cinematicTrace.Any(t => t.StartsWith(
+                $"step_entered:{NarrativeSlicesIds.ChainIntroCinematicId}/", StringComparison.Ordinal)), Is.True);
+            Assert.That(cinematicTrace, Does.Contain($"completed:{NarrativeSlicesIds.ChainIntroCinematicId}"));
+            Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(1));
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Record("chain", "task chain + declared cinematic link traced; slice_counter=1");
+
+            WriteArtifacts(NarrativeSlicesIds.SliceTaskChain);
+        }
+
+        [Test]
+        public void ActivityExecuteConditionSlice_OptionExecutabilityContract()
+        {
+            using GameEngine engine = CreateEngine();
+
+            _timeline.Clear();
+            LoadMap(engine);
+            TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.MapDefaultCameraId, 30);
+            Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
+
+            StartSlice(engine, NarrativeSlicesIds.SliceActivityExecuteCondition);
+            TickUntil(engine, () => FindActivityView(engine, NarrativeSlicesIds.ActivitySliceExecuteId) != null, 30);
+            ActivityView view = FindActivityView(engine, NarrativeSlicesIds.ActivitySliceExecuteId)
+                ?? throw new InvalidOperationException("Slice.Execute activity was not offered.");
+            Assert.That(view.State, Is.EqualTo(ActivityInstanceState.Active));
+            Assert.That(view.DispatchPolicy, Is.EqualTo(ActivityDispatchPolicy.Forced));
+            Record("activity", "forced activity Slice.Execute offered through the slice conductor");
+
+            var activities = engine.GetService(CoreServiceKeys.ActivityRuntimeService) as ActivityRuntimeService
+                ?? throw new InvalidOperationException("ActivityRuntimeService was not installed.");
+            var options = new List<ActivityOptionView>();
+            Assert.That(activities.TryGetActiveOptions(view.Entity, null, options), Is.True);
+            ActivityOptionView optGo = options.Single(o => string.Equals(o.OptionId, NarrativeSlicesIds.ActivityOptionGoId, StringComparison.Ordinal));
+            ActivityOptionView optWait = options.Single(o => string.Equals(o.OptionId, NarrativeSlicesIds.ActivityOptionWaitId, StringComparison.Ordinal));
+            Assert.That(optGo.Executable, Is.True);
+            Assert.That(optGo.BlockReason, Is.Empty);
+            Assert.That(optWait.IsBaseline, Is.True);
+            Record("activity", "opt_go Executable=true with empty BlockReason; opt_wait is the baseline");
+
+            activities.ResolveOption(view.Entity, NarrativeSlicesIds.ActivityOptionGoId);
+            Assert.That(TaskStateOf(engine, NarrativeSlicesIds.RulesAnyCheckTaskId), Is.EqualTo(TaskInstanceState.Active));
+            Record("activity", "resolving executable opt_go ran its task.create effect");
+
+            Entity secondScope = engine.World.Create();
+            Entity second = activities.OfferOrActivate(NarrativeSlicesIds.ActivitySliceExecuteId, secondScope);
+            activities.ResolveOption(second, NarrativeSlicesIds.ActivityOptionWaitId);
+            Assert.That(activities.TryGetState(second, out ActivityInstanceState settled, out string settledId), Is.True);
+            Assert.That(settled, Is.EqualTo(ActivityInstanceState.Resolved));
+            Assert.That(settledId, Is.EqualTo(NarrativeSlicesIds.ActivitySliceExecuteId));
+            Record("activity", "baseline opt_wait resolved the second instance without effects");
+
+            const string gatedOptionJson = """
+                {
+                  "id": "opt_go",
+                  "title": "Open the rules check",
+                  "execute_condition": { "condition_key": "task.counter_below", "parameters": { "max": 3 } }
+                }
+                """;
+            var loadTimeProviders = new ProviderServices();
+            using JsonDocument doc = JsonDocument.Parse(gatedOptionJson);
+            var references = ProviderDefinitionValidator.CollectFromJsonDocument(
+                NarrativeSlicesIds.ActivitySliceExecuteId, doc.RootElement);
+            InvalidOperationException rejected = Assert.Throws<InvalidOperationException>(
+                () => loadTimeProviders.Validator.ValidateAndThrow(references))!;
+            Assert.That(rejected.Message, Does.Contain(ProviderFailureCodes.UnknownProviderKey));
+            Assert.That(rejected.Message, Does.Contain("task.counter_below"));
+            Record("activity", "full path attempt: execute_condition with an unregistered condition key fails provider validation at load (fail-fast, no fallback)");
+
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            WriteArtifacts(NarrativeSlicesIds.SliceActivityExecuteCondition, ActivityConditionOpenIssues);
+        }
+
+        [Test]
+        public void SubtitlePresenterSlice_CinematicStepsReplaceSubtitleText()
+        {
+            using GameEngine engine = CreateEngine();
+            NarrativeDirector director = GetDirector(engine);
+            UIRoot uiRoot = GetUiRoot(engine);
+
+            _timeline.Clear();
+            LoadMap(engine);
+            TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.MapDefaultCameraId, 30);
+            Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
+
+            string[] stepTexts = { "SUBTITLE-FIRST", "SUBTITLE-SECOND", "SUBTITLE-THIRD" };
+            StartSlice(engine, NarrativeSlicesIds.SliceSubtitlePresenter);
+            TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, stepTexts[0]), 30);
+            Record("subtitle", "step 1 text visible on the presenter chain");
+
+            for (int i = 1; i < stepTexts.Length; i++)
+            {
+                int previous = i - 1;
+                TickUntil(engine, () => UiContains(uiRoot, stepTexts[i]), 30);
+                Assert.That(UiContains(uiRoot, stepTexts[previous]), Is.False,
+                    $"Step {previous + 1} text must be gone once step {i + 1} is presented.");
+                Record("subtitle", $"step {i + 1} text replaces step {previous + 1}");
+            }
+
+            TickUntil(engine, () => !director.HasActiveCinematic, 30);
+            TickUntil(engine, () => stepTexts.All(text => !UiContains(uiRoot, text)), 30);
+            Record("subtitle", "cinematic finished; all three step texts cleared from the UI");
+
+            var runtime = GetSlicesRuntime(engine);
+            var stepTrace = runtime.Events
+                .Where(e => e.Phase == "cinematic" && e.EventName == "step_entered")
+                .Select(e => e.Detail)
+                .ToList();
+            Assert.That(stepTrace.Count, Is.EqualTo(3));
+            Assert.That(stepTrace[0], Does.Contain(stepTexts[0]));
+            Assert.That(stepTrace[1], Does.Contain(stepTexts[1]));
+            Assert.That(stepTrace[2], Does.Contain(stepTexts[2]));
+            Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(1));
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Record("subtitle", "three step_entered events in order; slice_counter=1");
+
+            WriteArtifacts(NarrativeSlicesIds.SliceSubtitlePresenter);
+        }
+
+        [Test]
+        public void PresenterTrackSlice_StepImpulsesAndCameraTrack()
+        {
+            using GameEngine engine = CreateEngine();
+            NarrativeDirector director = GetDirector(engine);
+            UIRoot uiRoot = GetUiRoot(engine);
+
+            _timeline.Clear();
+            LoadMap(engine);
+            TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.MapDefaultCameraId, 30);
+            Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
+
+            var runtime = GetSlicesRuntime(engine);
+            StartSlice(engine, NarrativeSlicesIds.SlicePresenterTrack);
+            TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, "TRACK-FIRST"), 30);
+            Assert.That(runtime.TrackImpulseCount, Is.EqualTo(1));
+            Record("track", "step 1 boundary: one presenter impulse emitted");
+
+            TickUntil(engine, () => UiContains(uiRoot, "TRACK-SECOND"), 30);
+            Assert.That(runtime.TrackImpulseCount, Is.EqualTo(2));
+            Record("track", "step 2 boundary: impulse count incremented to 2");
+
+            TickUntil(engine, () => UiContains(uiRoot, "TRACK-THIRD"), 30);
+            Assert.That(runtime.TrackImpulseCount, Is.EqualTo(3));
+            Record("track", "step 3 boundary: impulse count incremented to 3");
+
+            TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.GalleryInspectCameraId, 120);
+            Record("camera", $"step 2 cameraId observed live: brain active id='{NarrativeSlicesIds.GalleryInspectCameraId}'");
+
+            TickUntil(engine, () => !director.HasActiveCinematic, 30);
+            TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.MapDefaultCameraId, 120);
+            Record("camera", $"cinematic finished: brain fell back to '{NarrativeSlicesIds.MapDefaultCameraId}'");
+
+            var commandTrace = runtime.Events
+                .Where(e => e.EventName == "presenter_command")
+                .Select(e => e.Detail)
+                .ToList();
+            Assert.That(commandTrace.Count, Is.EqualTo(3));
+            Assert.That(commandTrace[0], Does.Contain("track_1"));
+            Assert.That(commandTrace[1], Does.Contain("track_2"));
+            Assert.That(commandTrace[2], Does.Contain("track_3"));
+            Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(1));
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Record("track", "presenter command track complete; slice_counter=1");
+
+            WriteArtifacts(NarrativeSlicesIds.SlicePresenterTrack);
+        }
+
+        [Test]
+        public void MapVariableWriteSlice_ParityBranchOnCounterValue()
+        {
+            using GameEngine engine = CreateEngine();
+            var backend = GetInputBackend(engine);
+            NarrativeDirector director = GetDirector(engine);
+            UIRoot uiRoot = GetUiRoot(engine);
+
+            _timeline.Clear();
+            LoadMap(engine);
+            TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.MapDefaultCameraId, 30);
+            Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
+
+            StartSlice(engine, NarrativeSlicesIds.SliceMapVariableWrite);
+            TickUntil(engine, () => UiContains(uiRoot, "MAP-EVEN"), 30);
+            Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(2));
+            Assert.That(UiContains(uiRoot, "MAP-ODD"), Is.False);
+            Record("map", "trigger dialogue emitted slice.map.write; counter 1+1=2 (even) opened Dialogue.Slice.MapEven");
+
+            var runtime = GetSlicesRuntime(engine);
+            var signalTrace = runtime.Events
+                .Where(e => e.EventName == "signal")
+                .Select(e => e.Detail)
+                .ToList();
+            Assert.That(signalTrace, Does.Contain(NarrativeSlicesIds.SignalMapWrite));
+
+            PressButton(engine, backend, "<Keyboard>/enter");
+            TickUntil(engine, () => !director.HasActiveDialogue, 30);
+            Record("dialogue", "MapEven closed by advance");
+
+            director.EmitSignal(NarrativeSlicesIds.SignalMapWrite);
+            TickUntil(engine, () => UiContains(uiRoot, "MAP-ODD"), 30);
+            Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(3));
+            Assert.That(UiContains(uiRoot, "MAP-EVEN"), Is.False);
+            Record("map", "second signal: counter 2+1=3 (odd) opened Dialogue.Slice.MapOdd; parity flipped");
+
+            var mapTrace = runtime.Events
+                .Where(e => e.Phase == "map" && e.EventName == "map_variable_written")
+                .Select(e => e.Detail)
+                .ToList();
+            Assert.That(mapTrace.Count, Is.EqualTo(2));
+            Assert.That(mapTrace[0], Does.Contain("slice_counter=2"));
+            Assert.That(mapTrace[0], Does.Contain("parity=even"));
+            Assert.That(mapTrace[1], Does.Contain("slice_counter=3"));
+            Assert.That(mapTrace[1], Does.Contain("parity=odd"));
+
+            var parityTrace = runtime.Events
+                .Where(e => e.EventName == "parity_dialogue_started")
+                .Select(e => e.Detail)
+                .ToList();
+            Assert.That(parityTrace, Is.EqualTo(new[] { NarrativeSlicesIds.MapEvenDialogueId, NarrativeSlicesIds.MapOddDialogueId }));
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Record("map", "map variable read/write traced as chain decision input");
+
+            WriteArtifacts(NarrativeSlicesIds.SliceMapVariableWrite);
+        }
+
         private static NarrativeDirector GetDirector(GameEngine engine) =>
             engine.GetService(CoreServiceKeys.NarrativeDirector)
                 ?? throw new InvalidOperationException("NarrativeDirector was not installed.");
@@ -217,6 +535,24 @@ namespace Ludots.Tests.GAS.Production
 
         private static bool UiContains(UIRoot uiRoot, string needle) =>
             AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains(needle, StringComparison.Ordinal));
+
+        private static ActivityView? FindActivityView(GameEngine engine, string activityId)
+        {
+            if (engine.GetService(CoreServiceKeys.ActivityRuntimeService) is not ActivityRuntimeService activities)
+            {
+                return null;
+            }
+
+            foreach (ActivityView view in activities.CaptureViews())
+            {
+                if (string.Equals(view.ActivityId, activityId, StringComparison.Ordinal))
+                {
+                    return view;
+                }
+            }
+
+            return null;
+        }
 
         private static GameEngine CreateEngine()
         {
@@ -307,7 +643,7 @@ namespace Ludots.Tests.GAS.Production
             throw new DirectoryNotFoundException("Failed to locate repository root.");
         }
 
-        private void WriteArtifacts(string scenario)
+        private void WriteArtifacts(string scenario, string? openIssues = null)
         {
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", ArtifactDirName, scenario);
@@ -339,6 +675,13 @@ namespace Ludots.Tests.GAS.Production
                 report.AppendLine($"- {line}");
             }
             report.AppendLine();
+            if (!string.IsNullOrWhiteSpace(openIssues))
+            {
+                report.AppendLine("## Open issues");
+                report.AppendLine();
+                report.AppendLine(openIssues.TrimEnd());
+                report.AppendLine();
+            }
             report.AppendLine("## Outcome");
             report.AppendLine();
             report.AppendLine($"- PASS: slice '{scenario}' completed with all anchors observed.");
@@ -352,6 +695,12 @@ namespace Ludots.Tests.GAS.Production
         {
             NarrativeSlicesIds.SliceDialogueGate => GatePathMermaid,
             NarrativeSlicesIds.SliceActionGallery => GalleryPathMermaid,
+            NarrativeSlicesIds.SliceTaskRules => TaskRulesPathMermaid,
+            NarrativeSlicesIds.SliceTaskChain => TaskChainPathMermaid,
+            NarrativeSlicesIds.SliceActivityExecuteCondition => ActivityExecutePathMermaid,
+            NarrativeSlicesIds.SliceSubtitlePresenter => SubtitlePathMermaid,
+            NarrativeSlicesIds.SlicePresenterTrack => TrackPathMermaid,
+            NarrativeSlicesIds.SliceMapVariableWrite => MapWritePathMermaid,
             _ => throw new InvalidOperationException($"Unknown slice scenario '{scenario}'."),
         };
 
@@ -384,6 +733,82 @@ namespace Ludots.Tests.GAS.Production
                 done --> finish([slice finished: slice_var=8, Alpha=Completed, Beta=Failed])
                 alphaOn -.->|task lifecycle events| trace[trigger trace: activated/completed/failed]
                 betaOn -.-> trace
+            """;
+
+        private const string TaskRulesPathMermaid = """
+            flowchart TD
+                start([StartSlice task_rules]) --> active[Slice.Rules.AnyCheck Active: completion_rule any]
+                active --> emit[EmitSignal rules.second]
+                emit --> done[one arm satisfied: task Completed]
+                unused[rules.first arm never emitted] -.-> done
+                done --> finish([slice finished: AnyCheck=Completed, counter=1])
+            """;
+
+        private const string TaskChainPathMermaid = """
+            flowchart TD
+                start([StartSlice task_chain]) --> one[Slice.Chain.One Active]
+                one --> emit[EmitSignal chain.one.done]
+                emit --> oneDone[One Completed]
+                oneDone -->|next_task_id auto-start| two[Slice.Chain.Two Active]
+                two -->|on_enter_cinematic_id| intro[Cinematic.Slice.ChainIntro step chain_intro_1]
+                intro --> introDone([cinematic completed; Two stays Active])
+            """;
+
+        private const string ActivityExecutePathMermaid = """
+            flowchart TD
+                start([StartSlice activity_execute_condition]) --> offer[forced activity Slice.Execute offered]
+                offer --> opts[TryGetActiveOptions]
+                opts --> go[opt_go: Executable=true, BlockReason empty]
+                opts --> wait[opt_wait: is_baseline]
+                go --> resolveGo[ResolveOption opt_go: task.create effect activates Slice.Rules.AnyCheck]
+                wait --> second[second instance offered]
+                second --> resolveWait[ResolveOption opt_wait: settles Resolved]
+                resolveGo -.->|full path attempt| gap{{execute_condition task.counter_below: unknown_provider_key fail-fast at load}}
+                resolveWait --> finish([contract proven; condition gap documented])
+            """;
+
+        private const string SubtitlePathMermaid = """
+            flowchart TD
+                start([StartSlice subtitle_presenter]) --> s1[SUBTITLE-FIRST visible]
+                s1 --> s2[SUBTITLE-SECOND replaces FIRST]
+                s2 --> s3[SUBTITLE-THIRD replaces SECOND]
+                s3 --> clear([cinematic done: all step texts cleared])
+            """;
+
+        private const string TrackPathMermaid = """
+            flowchart TD
+                start([StartSlice presenter_track]) --> t1[track_1: impulse 1, Tactical holds]
+                t1 --> t2[track_2: impulse 2, cameraId Camera.Profile.Inspect]
+                t2 -->|brain resolves| inspect[active camera = Inspect]
+                t3[track_3: impulse 3] --> done([cinematic done: brain falls back to Tactical])
+                inspect --> t3
+            """;
+
+        private const string MapWritePathMermaid = """
+            flowchart TD
+                start([StartSlice map_variable_write]) --> trigger[Dialogue.Slice.MapTrigger onEnter: EmitSignal slice.map.write]
+                trigger --> handler[signal handler: slice_counter 1+1=2, parity even]
+                handler --> even[Dialogue.Slice.MapEven opened deferred]
+                even --> close[advance closes MapEven]
+                close --> again[EmitSignal slice.map.write again]
+                again --> handler2[signal handler: 2+1=3, parity odd]
+                handler2 --> odd([Dialogue.Slice.MapOdd opened; parity flipped])
+            """;
+
+        private const string ActivityConditionOpenIssues = """
+            - execute_condition 在内容侧没有 condition provider 注册途径（引擎缺口，如实暴露，未绕过）：
+              activities.json 由 ActivityConfigLoader 在 GameEngine.InitializeWithConfigPipeline 内加载并做 provider 键校验；
+              彼时 ProviderServices 仅含 TaskBridgeProviderInstaller.Install 注册的 task.state_changed(source) 与 task.create(effect)，
+              condition 注册表为空。生产初始化路径没有任何 condition provider 注册点：
+              FixtureProviderInstaller.InstallMinimal（fixture.always_true）只被测试工程引用，
+              ProviderGapCatalog.RegisterFrameworkGaps 也只声明 task.create / task.state_changed 两条框架缺口。
+              mod 的 GameStart 订阅在 engine.Start() 才触发，晚于配置加载，注册来不及。
+              本方法在生产同构的空 ProviderServices 上复现 ValidateAndThrow 对
+              execute_condition "task.counter_below" 的 fail-fast（unknown_provider_key）。
+              另注：ProviderKey 的域白名单不含内容自定义域（如 slice），内容侧即使声明 slice.counter_below
+              也会先撞 provider_domain_not_allowed。
+              需要引擎提供初始化期的 condition provider 注册途径（内置条件族或声明式条件），
+              之后 opt_go 的 execute_condition 才能真正接入内容。
             """;
 
         private sealed class TestInputBackend : IInputBackend

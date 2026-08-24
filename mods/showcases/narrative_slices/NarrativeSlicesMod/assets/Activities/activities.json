@@ -1,0 +1,26 @@
+[
+  {
+    "id": "Slice.Execute",
+    "display_name": "Execute Condition Slice",
+    "summary": "Option executability contract: opt_go runs unrestricted; opt_wait is the baseline.",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "forced",
+    "options": [
+      {
+        "id": "opt_go",
+        "title": "Open the rules check",
+        "body": "Dispatch the any-rule task.",
+        "effects": [
+          { "effect_key": "task.create", "parameters": { "task_id": "Slice.Rules.AnyCheck" } }
+        ]
+      },
+      {
+        "id": "opt_wait",
+        "title": "Hold position",
+        "body": "Do nothing this beat.",
+        "is_baseline": true,
+        "effects": []
+      }
+    ]
+  }
+]

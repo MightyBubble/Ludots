@@ -1,0 +1,6 @@
+{"seq":1,"scenario":"activity_execute_condition","at":"[T\u002B001] [map] hub loaded; default camera \u0027Camera.Profile.Tactical\u0027 active"}
+{"seq":2,"scenario":"activity_execute_condition","at":"[T\u002B002] [activity] forced activity Slice.Execute offered through the slice conductor"}
+{"seq":3,"scenario":"activity_execute_condition","at":"[T\u002B003] [activity] opt_go Executable=true with empty BlockReason; opt_wait is the baseline"}
+{"seq":4,"scenario":"activity_execute_condition","at":"[T\u002B004] [activity] resolving executable opt_go ran its task.create effect"}
+{"seq":5,"scenario":"activity_execute_condition","at":"[T\u002B005] [activity] baseline opt_wait resolved the second instance without effects"}
+{"seq":6,"scenario":"activity_execute_condition","at":"[T\u002B006] [activity] full path attempt: execute_condition with an unregistered condition key fails provider validation at load (fail-fast, no fallback)"}

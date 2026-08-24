@@ -1,0 +1,5 @@
+{"seq":1,"scenario":"map_variable_write","at":"[T\u002B001] [map] hub loaded; default camera \u0027Camera.Profile.Tactical\u0027 active"}
+{"seq":2,"scenario":"map_variable_write","at":"[T\u002B002] [map] trigger dialogue emitted slice.map.write; counter 1\u002B1=2 (even) opened Dialogue.Slice.MapEven"}
+{"seq":3,"scenario":"map_variable_write","at":"[T\u002B003] [dialogue] MapEven closed by advance"}
+{"seq":4,"scenario":"map_variable_write","at":"[T\u002B004] [map] second signal: counter 2\u002B1=3 (odd) opened Dialogue.Slice.MapOdd; parity flipped"}
+{"seq":5,"scenario":"map_variable_write","at":"[T\u002B005] [map] map variable read/write traced as chain decision input"}

@@ -152,5 +152,48 @@
         ]
       }
     ]
+  },
+  {
+    "id": "Dialogue.Slice.MapTrigger",
+    "displayName": "Map Variable Trigger",
+    "startNodeId": "map_trigger_root",
+    "nodes": [
+      {
+        "id": "map_trigger_root",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "The ledger taps the map counter once.",
+        "autoAdvanceSeconds": 0.1,
+        "onEnter": [
+          { "kind": "EmitSignal", "signalId": "slice.map.write" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "Dialogue.Slice.MapEven",
+    "displayName": "Map Even Branch",
+    "startNodeId": "map_even_root",
+    "nodes": [
+      {
+        "id": "map_even_root",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "MAP-EVEN: the counter rests on an even beat."
+      }
+    ]
+  },
+  {
+    "id": "Dialogue.Slice.MapOdd",
+    "displayName": "Map Odd Branch",
+    "startNodeId": "map_odd_root",
+    "nodes": [
+      {
+        "id": "map_odd_root",
+        "speakerAlias": "keeper",
+        "speakerName": "Gallery Keeper",
+        "text": "MAP-ODD: the counter tips to an odd beat."
+      }
+    ]
   }
 ]
