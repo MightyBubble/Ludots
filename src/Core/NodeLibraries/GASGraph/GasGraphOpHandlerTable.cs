@@ -27,9 +27,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// </summary>
     public sealed class GasGraphOpHandlerTable
     {
-        private static readonly Arch.Core.QueryDescription SoleMapEntityQuery = new Arch.Core.QueryDescription()
-            .WithAll<MapEntity>();
-
         public static readonly GasGraphOpHandlerTable Instance = new();
 
         public GasGraphOpHandler[] Handlers { get; }
@@ -1074,49 +1071,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static MapId RequireMapVariableScopeMap(ref GraphExecutionState s, Entity scope, string opName)
         {
+            if (s.MapScope is { } mapScope)
+            {
+                return mapScope;
+            }
+
             MapEntity mapEntity = default;
             if (s.World == null ||
                 !s.World.IsAlive(scope) ||
                 !s.World.TryGet<MapEntity>(scope, out mapEntity))
             {
-                // Schema v2 panel query graphs evaluate with the panel scope (a gameplay
-                // entity, not a map anchor) as caster; their map variables resolve against
-                // the sole loaded map, mirroring QueryAllMapEntities' world-scoped semantics.
-                // Ambiguous multi-map loads stay fail-closed.
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.MapVariableScopeEntity: {opName} requires a scope entity with a MapEntity component (caster or explicit register).");
+                    $"GAS.GRAPH.ERR.MapVariableScopeEntity: {opName} requires a map-bound host scope or a live scope entity with a MapEntity component (caster or explicit register).");
             }
 
             return mapEntity.MapId;
-        }
-
-        private static bool TryResolveSoleLoadedMap(World? world, out MapId mapId)
-        {
-            mapId = default;
-            if (world == null)
-            {
-                return false;
-            }
-
-            bool found = false;
-            foreach (ref var chunk in world.Query(in SoleMapEntityQuery))
-            {
-                Span<MapEntity> maps = chunk.GetSpan<MapEntity>();
-                for (int i = 0; i < maps.Length; i++)
-                {
-                    if (!found)
-                    {
-                        mapId = maps[i].MapId;
-                        found = true;
-                    }
-                    else if (maps[i].MapId != mapId)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return found;
         }
 
         private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
