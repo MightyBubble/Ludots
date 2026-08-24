@@ -1,0 +1,12 @@
+[
+  {
+    "id": "east_asia_playable_terrain.sky",
+    "backendId": "raylib",
+    "enabled": true,
+    "mapIds": ["east_asia_visual_heightmap"],
+    "initialPhase": 0.42,
+    "clearSampleV": 0.72,
+    "clearRgb": [0.28, 0.48, 0.78],
+    "gradientUri": "EastAsiaPlayableTerrainMod:assets/Textures/sky_day_night_gradient.png"
+  }
+]
