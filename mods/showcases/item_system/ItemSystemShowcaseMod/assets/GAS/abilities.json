@@ -4,7 +4,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 8, "tag": "Cooldown.ItemShowcase.RifleFire" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.Lockout.RifleFire", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.RifleFire" },
         { "kind": "End", "tick": 0 }
       ]
@@ -16,7 +16,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 36, "tag": "Cooldown.ItemShowcase.MythicPulse" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.Lockout.MythicPulse", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.MythicPulse" },
         { "kind": "End", "tick": 0 }
       ]
@@ -28,7 +28,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.ItemShowcase.SecondWind" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.Lockout.SecondWind", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.SecondWind" },
         { "kind": "End", "tick": 0 }
       ]

@@ -26,18 +26,16 @@ namespace MobaDemoMod
 
         public sealed class AbilityConfig
         {
-            [JsonPropertyName("skillQ")] public SkillConfig SkillQ { get; set; } = new() { RangeCm = 600, CooldownTicks = 180 };
-            [JsonPropertyName("skillW")] public SkillConfig SkillW { get; set; } = new() { RangeCm = 0, CooldownTicks = 300 };
-            [JsonPropertyName("skillE")] public SkillConfig SkillE { get; set; } = new() { RangeCm = 800, CooldownTicks = 240 };
-            [JsonPropertyName("skillR")] public SkillConfig SkillR { get; set; } = new() { RangeCm = 1000, CooldownTicks = 600 };
-            [JsonPropertyName("globalCooldownTicks")] public int GlobalCooldownTicks { get; set; } = 15;
+            [JsonPropertyName("skillQ")] public SkillConfig SkillQ { get; set; } = new() { RangeCm = 600 };
+            [JsonPropertyName("skillW")] public SkillConfig SkillW { get; set; } = new() { RangeCm = 0 };
+            [JsonPropertyName("skillE")] public SkillConfig SkillE { get; set; } = new() { RangeCm = 800 };
+            [JsonPropertyName("skillR")] public SkillConfig SkillR { get; set; } = new() { RangeCm = 1000 };
             [JsonPropertyName("indicator")] public IndicatorConfig Indicator { get; set; } = new();
         }
 
         public sealed class SkillConfig
         {
             [JsonPropertyName("rangeCm")] public float RangeCm { get; set; }
-            [JsonPropertyName("cooldownTicks")] public int CooldownTicks { get; set; }
         }
 
         public sealed class IndicatorConfig

@@ -18,8 +18,8 @@ namespace Ludots.Core.Gameplay.GAS
             IntVector2 targetPosCm,
             int abilityId,
             in AbilityActivationPrecondition precondition,
-            GraphProgramRegistry graphPrograms,
-            IGraphRuntimeApi graphApi)
+            GraphProgramRegistry? graphPrograms,
+            IGraphRuntimeApi? graphApi)
         {
             if (precondition.ValidationGraphId <= 0)
             {
