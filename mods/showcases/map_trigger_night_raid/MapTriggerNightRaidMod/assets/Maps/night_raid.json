@@ -65,6 +65,10 @@
       "Template": "night_raid_hero"
     },
     {
+      "InstanceId": "night_raid_raid_circle",
+      "Template": "night_raid_raid_circle"
+    },
+    {
       "InstanceId": "night_raid_gate",
       "Template": "night_raid_gate"
     },
