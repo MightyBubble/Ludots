@@ -1,0 +1,30 @@
+[
+  {
+    "id": "Cinematic.Chain.Reveal",
+    "displayName": "Relay Reveal",
+    "clearCameraOnComplete": false,
+    "steps": [
+      {
+        "id": "reveal_1",
+        "speakerAlias": "warden",
+        "speakerName": "Relay Warden",
+        "text": "First lamp: the relay counts what the valley forgets.",
+        "durationSeconds": 0.5
+      },
+      {
+        "id": "reveal_2",
+        "speakerAlias": "warden",
+        "speakerName": "Relay Warden",
+        "text": "Second lamp: every oath sworn here leaves a mark on the wire.",
+        "durationSeconds": 0.5
+      },
+      {
+        "id": "reveal_3",
+        "speakerAlias": "warden",
+        "speakerName": "Relay Warden",
+        "text": "Third lamp: the relay only asks one thing of its witness.",
+        "durationSeconds": 0.5
+      }
+    ]
+  }
+]

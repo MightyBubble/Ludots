@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>NarrativeChainShowcaseMod</RootNamespace>
+    <AssemblyName>NarrativeChainShowcaseMod</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
+  </ItemGroup>
+
+</Project>

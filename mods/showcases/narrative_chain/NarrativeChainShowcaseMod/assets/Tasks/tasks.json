@@ -1,0 +1,12 @@
+[
+  {
+    "id": "Task.Chain.Survey",
+    "display_name": "Relay Survey",
+    "summary": "Walk the relay line and confirm the third lamp's reading.",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "survey", "kind": "signal", "title": "Confirm the third lamp's reading", "signal_key": "chain.objective.done" }
+    ]
+  }
+]

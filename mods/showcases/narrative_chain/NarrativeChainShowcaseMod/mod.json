@@ -1,0 +1,15 @@
+{
+  "name": "NarrativeChainShowcaseMod",
+  "version": "1.0.0",
+  "description": "Minimal end-to-end chain showcase: dialogue -> cinematic (subtitles + presenter impulse track) -> trigger -> activity -> task -> verdict dialogue branches, all cross-domain effects via triggers.",
+  "main": "bin/net8.0/NarrativeChainShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "NarrativeFrontendMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["narrative", "task", "dialogue", "cinematic", "activity", "showcase"]
+}

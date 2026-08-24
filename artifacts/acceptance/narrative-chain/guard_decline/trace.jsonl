@@ -1,0 +1,4 @@
+{"seq":1,"scenario":"guard_decline","at":"[T\u002B001] [dialogue] opening dialogue visible"}
+{"seq":2,"scenario":"guard_decline","at":"[T\u002B002] [cinematic] presenter commands=1"}
+{"seq":3,"scenario":"guard_decline","at":"[T\u002B003] [activity] forced decision activity offered"}
+{"seq":4,"scenario":"guard_decline","at":"[T\u002B004] [guard] decline baseline option: no task, no verdict dialogue, chain stays idle"}

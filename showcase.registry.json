@@ -5044,6 +5044,31 @@
       ]
     },
     {
+      "id": "narrative_chain",
+      "path": "mods/showcases/narrative_chain/NarrativeChainShowcaseMod",
+      "projectPath": "NarrativeChainShowcaseMod.csproj",
+      "title": "叙事链路",
+      "summary": "最简端到端链：对话→cinematic（字幕+presenter 冲动轨）→trigger→activity→task→回环对话分支（地图变量/事件广播），跨域效果全走 trigger。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "narrative",
+        "task",
+        "dialogue",
+        "cinematic",
+        "activity",
+        "chain"
+      ],
+      "binding": null,
+      "preset": null,
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "NarrativeChainAcceptanceTests",
+      "artifactDir": "narrative-chain",
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "narrative_frontend",
       "path": "mods/capabilities/narrativefrontend/NarrativeFrontendMod",
       "projectPath": "NarrativeFrontendMod.csproj",

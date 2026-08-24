@@ -1,0 +1,26 @@
+[
+  {
+    "id": "activity.chain.decide",
+    "display_name": "Relay Decision",
+    "summary": "The showing ended. Dispatch the survey crew, or hold the line?",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "forced",
+    "options": [
+      {
+        "id": "confirm",
+        "title": "Dispatch the survey crew",
+        "body": "Open the relay survey task.",
+        "effects": [
+          { "effect_key": "task.create", "parameters": { "task_id": "Task.Chain.Survey" } }
+        ]
+      },
+      {
+        "id": "decline",
+        "title": "Hold the line",
+        "body": "No survey tonight. The chain waits.",
+        "is_baseline": true,
+        "effects": []
+      }
+    ]
+  }
+]

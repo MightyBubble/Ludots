@@ -1,0 +1,16 @@
+flowchart TD
+    start([map loaded]) --> dlg[opening dialogue with choices]
+    dlg -->|choice 1/2| openEnd[open_end node: EmitSignal chain.opened]
+    openEnd -->|dialogue closed, advance system| cine[Cinematic.Chain.Reveal]
+    cine -->|per step: CinematicStepEntered| impulse[presenter command: camera impulse + subtitle]
+    impulse --> cine
+    cine -->|CinematicCompleted| act{{forced activity: activity.chain.decide}}
+    act -->|option confirm: task.create effect| task[Task.Chain.Survey active]
+    act -->|option decline baseline| idle[chain idle: no task, no verdict]
+    task -->|delayed objective signal| taskDone[task completed]
+    taskDone -->|Task.Completed trigger| verdict[verdict dialogue]
+    verdict -->|choice 1 seal: AddVariable + EmitSignal cmd| mapVar[map variable chain_alarms +1 via trigger]
+    verdict -->|choice 2 herald: EmitSignal event| event[herald event broadcast -> camera impulse]
+    mapVar --> done([chain.finished])
+    event --> done
+    idle -.guard branch.-> done

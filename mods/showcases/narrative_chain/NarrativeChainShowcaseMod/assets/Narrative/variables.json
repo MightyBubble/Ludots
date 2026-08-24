@@ -1,0 +1,3 @@
+[
+  { "id": "chain.lore", "kind": "Int", "defaultInt": 0, "displayName": "Chain Lore", "description": "Narrative-side counter written by the dialogue domain itself." }
+]
