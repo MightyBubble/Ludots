@@ -700,7 +700,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GraphOps_BlackboardRead_MissingComponent_ReturnsDefault()
+        public void GraphOps_BlackboardRead_MissingComponent_FailsFast()
         {
             var world = World.Create();
             try
@@ -714,8 +714,9 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ReadBlackboardFloat, Dst = 1, A = 0, Imm = 99 },
                 };
 
-                var result = ExecuteAndGetFloat(world, api, entity, entity, program, floatReg: 1);
-                That(result, Is.EqualTo(0f));
+                var ex = Throws<InvalidOperationException>(() =>
+                    ExecuteAndGetFloat(world, api, entity, entity, program, floatReg: 1));
+                That(ex!.Message, Does.Contain("GAS.GRAPH.ERR.MissingBlackboard"));
             }
             finally
             {

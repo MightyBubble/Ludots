@@ -15,15 +15,26 @@
             "id": "briefing_lore",
             "text": "Tell me what the shrine remembers.",
             "actions": [
-              { "kind": "AddVariable", "variableId": "lore", "valueKind": "Int", "intValue": 1 },
-              { "kind": "AddVariable", "variableId": "trust", "valueKind": "Int", "intValue": 1 }
+              {
+                "kind": "AddVariable",
+                "variableId": "lore",
+                "valueKind": "Int",
+                "intValue": 1
+              },
+              {
+                "kind": "AddVariable",
+                "variableId": "trust",
+                "valueKind": "Int",
+                "intValue": 1
+              }
             ],
             "nextNodeId": "briefing_lore_reply"
           },
           {
             "id": "briefing_accept_now",
             "text": "I am ready. Open the path.",
-            "nextNodeId": "briefing_accept"
+            "nextNodeId": "briefing_accept",
+            "actions": []
           }
         ]
       },
@@ -36,7 +47,8 @@
           {
             "id": "briefing_accept_after_lore",
             "text": "Then let the shrine judge me.",
-            "nextNodeId": "briefing_accept"
+            "nextNodeId": "briefing_accept",
+            "actions": []
           }
         ]
       },
@@ -46,9 +58,16 @@
         "speakerName": "Warden Mirelle",
         "text": "Go to the shrine. Wake what sleeps beneath it, and return when you can name what should survive.",
         "onEnter": [
-          { "kind": "AddVariable", "variableId": "trust", "valueKind": "Int", "intValue": 1 },
-          { "kind": "EmitSignal", "signalId": "showcase.briefing_accepted" },
-          { "kind": "CompleteTask", "taskId": "Task.Narrative.AshenOath.Briefing" }
+          {
+            "kind": "AddVariable",
+            "variableId": "trust",
+            "valueKind": "Int",
+            "intValue": 1
+          },
+          {
+            "kind": "EmitSignal",
+            "signalId": "showcase.briefing_accepted"
+          }
         ]
       }
     ]
@@ -69,11 +88,26 @@
             "id": "return_duty",
             "text": "Seal the story. Let duty keep the valley safe.",
             "actions": [
-              { "kind": "SetVariable", "variableId": "ending", "valueKind": "String", "stringValue": "Duty" },
-              { "kind": "AddVariable", "variableId": "trust", "valueKind": "Int", "intValue": 1 },
-              { "kind": "EmitSignal", "signalId": "showcase.reward_apply" },
-              { "kind": "EmitSignal", "signalId": "showcase.verdict_delivered" },
-              { "kind": "CompleteTask", "taskId": "Task.Narrative.AshenOath.Return" }
+              {
+                "kind": "SetVariable",
+                "variableId": "ending",
+                "valueKind": "String",
+                "stringValue": "Duty"
+              },
+              {
+                "kind": "AddVariable",
+                "variableId": "trust",
+                "valueKind": "Int",
+                "intValue": 1
+              },
+              {
+                "kind": "EmitSignal",
+                "signalId": "showcase.reward_apply"
+              },
+              {
+                "kind": "EmitSignal",
+                "signalId": "showcase.verdict_delivered"
+              }
             ],
             "nextNodeId": "return_duty_outro"
           },
@@ -81,14 +115,34 @@
             "id": "return_mercy",
             "text": "Remember it. Fear without memory will only grow back.",
             "conditions": [
-              { "kind": "Variable", "variableId": "lore", "operator": "GreaterOrEqual", "intValue": 1 }
+              {
+                "kind": "Variable",
+                "variableId": "lore",
+                "operator": "GreaterOrEqual",
+                "intValue": 1
+              }
             ],
             "actions": [
-              { "kind": "SetVariable", "variableId": "ending", "valueKind": "String", "stringValue": "Mercy" },
-              { "kind": "AddVariable", "variableId": "trust", "valueKind": "Int", "intValue": 2 },
-              { "kind": "EmitSignal", "signalId": "showcase.reward_apply" },
-              { "kind": "EmitSignal", "signalId": "showcase.verdict_delivered" },
-              { "kind": "CompleteTask", "taskId": "Task.Narrative.AshenOath.Return" }
+              {
+                "kind": "SetVariable",
+                "variableId": "ending",
+                "valueKind": "String",
+                "stringValue": "Mercy"
+              },
+              {
+                "kind": "AddVariable",
+                "variableId": "trust",
+                "valueKind": "Int",
+                "intValue": 2
+              },
+              {
+                "kind": "EmitSignal",
+                "signalId": "showcase.reward_apply"
+              },
+              {
+                "kind": "EmitSignal",
+                "signalId": "showcase.verdict_delivered"
+              }
             ],
             "nextNodeId": "return_mercy_outro"
           }

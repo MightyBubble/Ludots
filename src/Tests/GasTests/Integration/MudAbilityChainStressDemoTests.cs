@@ -148,6 +148,7 @@ namespace Ludots.Tests.GAS
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
+                var presentationEvents = new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(65536);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
@@ -162,6 +163,7 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    presentationEvents: presentationEvents,
                     tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = 2048
@@ -201,6 +203,7 @@ namespace Ludots.Tests.GAS
                     }
 
                     processing.Update(dt);
+                    presentationEvents.Clear();
                     clocks.AdvanceFixedFrame();
 
                     float hpA = world.Get<AttributeBuffer>(goblinA).GetCurrent(attrHealth);
@@ -325,6 +328,7 @@ namespace Ludots.Tests.GAS
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
+                var presentationEvents = new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(65536);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
@@ -339,6 +343,7 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    presentationEvents: presentationEvents,
                     tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
@@ -351,6 +356,7 @@ namespace Ludots.Tests.GAS
                 {
                     abilitySystem.TryActivateAbility(player, 0, in args);
                     processing.Update(dt);
+                    presentationEvents.Clear();
                     clocks.AdvanceFixedFrame();
                     clocks.AdvanceStep();
                 }

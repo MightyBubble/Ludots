@@ -392,7 +392,7 @@ namespace Ludots.Tests.GAS
                     world.Add(listenerEntity, listener);
                 }
 
-                var player = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var player = world.Create(new AttributeBuffer(), new DirtyFlags(), new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 });
                 world.Get<AttributeBuffer>(player).SetBase(attrHealth, 50f);
                 var opponent = world.Create(new AttributeBuffer(), new DirtyFlags());
                 world.Get<AttributeBuffer>(opponent).SetBase(attrHealth, 50f);

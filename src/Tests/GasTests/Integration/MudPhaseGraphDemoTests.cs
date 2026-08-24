@@ -138,10 +138,14 @@ namespace Ludots.Tests.GAS
                 configParams.TryAddFloat(ConfigKeyDmgMultiplier, 1.5f); // actual = 20 * 1.5 = 30
 
                 // ── Create entities ──
-                var caster = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var caster = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
                 world.Get<AttributeBuffer>(caster).SetBase(attrHealth, 100f);
                 world.Get<AttributeBuffer>(target).SetBase(attrHealth, 100f);
+                world.Get<BlackboardFloatBuffer>(caster).Set(BbKeyActualDamage, 0f);
+                world.Get<BlackboardFloatBuffer>(caster).Set(BbKeyAccumDamage, 0f);
+                world.Get<BlackboardFloatBuffer>(target).Set(BbKeyActualDamage, 0f);
+                world.Get<BlackboardFloatBuffer>(target).Set(BbKeyAccumDamage, 0f);
 
                 var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 

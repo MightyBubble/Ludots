@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -153,10 +154,11 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), requests, templates: templates, tagOps: tagOps);
             var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
+            Entity caster = world.Create(new PlayerOwner { PlayerId = 1 });
             requests.Publish(new EffectRequest
             {
                 RootId = 1,
-                Source = Entity.Null,
+                Source = caster,
                 Target = relationEntity,
                 TargetContext = Entity.Null,
                 TemplateId = 2301,

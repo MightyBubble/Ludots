@@ -354,7 +354,8 @@ namespace Ludots.Tests.GAS
                 _events,
                 session: null,
                 graphPrograms,
-                graphSetup.Api);
+                graphSetup.Api,
+                new GasGraphOpHandlerTable());
             _effects.Register(effectId, new EffectTemplateData
             {
                 TagId = TagRegistry.Register("Effect.Test.GraphPreview"),

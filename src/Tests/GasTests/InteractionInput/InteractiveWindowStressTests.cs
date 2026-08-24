@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -102,7 +103,7 @@ namespace Ludots.Tests.GAS
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
 
-                var source = world.Create();
+                var source = world.Create(new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 });
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(attrHealth, 1000f);

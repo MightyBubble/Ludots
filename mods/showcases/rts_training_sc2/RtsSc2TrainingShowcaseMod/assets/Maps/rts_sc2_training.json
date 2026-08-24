@@ -1,6 +1,10 @@
 {
   "Id": "rts_sc2_training",
-  "Tags": ["rts_showcase", "rts_training", "sc2"],
+  "Tags": [
+    "rts_showcase",
+    "rts_training",
+    "sc2"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Rts",
     "TargetXCm": 6200,
@@ -11,38 +15,82 @@
     "FovYDeg": 60
   },
   "Boards": [
-    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "sc2_highlands.vtxm" }
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "DataFile": "sc2_highlands.vtxm"
+    }
   ],
   "Entities": [
     {
       "Template": "rts_sc2_gateway",
       "InstanceId": "sc2_training_gateway",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 6200, "Y": 6200 } },
-        "Name": { "Value": "Gateway" }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6200,
+            "Y": 6200
+          }
+        },
+        "Name": {
+          "Value": "Gateway"
+        },
+        "Team": {
+          "Id": 1
+        }
       }
     },
     {
       "Template": "rts_sc2_zealot",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 8280, "Y": 6880 } },
-        "Name": { "Value": "Frontline Vanguard" }
-      }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8280,
+            "Y": 6880
+          }
+        },
+        "Name": {
+          "Value": "Frontline Vanguard"
+        }
+      },
+      "InstanceId": "sc2_training_vanguard"
     }
   ],
   "Teams": [
-    { "TeamId": 3, "RepresentativeInstanceId": "sc2_training_gateway" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "sc2_training_gateway"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "sc2_training_vanguard"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 3, "RepresentativeInstanceId": "sc2_training_gateway" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "sc2_training_gateway"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 3, "TeamB": 3, "TypeId": "RtsDemo.Participant", "Attitude": "Friendly", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "RtsDemo.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
     ],
     "Players": [],
     "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 3, "TypeId": "RtsDemo.Participant", "Symmetric": false }
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "RtsDemo.Participant",
+        "Symmetric": false
+      }
     ]
   }
 }

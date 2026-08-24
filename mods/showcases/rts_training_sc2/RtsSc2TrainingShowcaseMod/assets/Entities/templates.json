@@ -1,0 +1,95 @@
+[
+  {
+    "id": "rts_sc2_zealot",
+    "components": {
+      "Name": {
+        "Value": "Zealot"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Shield": 500,
+          "MoveSpeed": 600
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc2_gateway",
+    "components": {
+      "Name": {
+        "Value": "Gateway"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Shield": 1000,
+          "Minerals": 800,
+          "Gas": 300
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Sc2.TrainZealot",
+          "Ability.Rts.Strategy.Sc2.ResearchWarpGate"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "rts_sc2_gateway_forms"
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  }
+]

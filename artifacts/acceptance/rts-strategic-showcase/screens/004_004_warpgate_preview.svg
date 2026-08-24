@@ -1,0 +1,36 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920">
+  <rect width="1600" height="920" fill="#0b1017" />
+  <rect x="32" y="28" width="1536" height="864" rx="20" fill="#122031" stroke="#4c89c7" stroke-width="2" />
+  <text x="64" y="84" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">RTS Command Snapshot | 004_warpgate_preview</text>
+  <text x="64" y="126" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Focus: Gateway | RMB move, sample War3 build / C&amp;C placement / SC2 Warp paths, and use Reset Cam if the board drifts out of view.</text>
+  <rect x="64" y="170" width="690" height="336" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="88" y="210" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Quick Select</text>
+<text x="88" y="244" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] W3 Build (war3_build) #93C572</text>
+<text x="88" y="272" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] W3 Train (war3_train) #D4A15A</text>
+<text x="88" y="300" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] W3 Tower (war3_garrison) #C8A96B</text>
+<text x="88" y="328" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] C&amp;C Build (cnc_build) #F18F5A</text>
+<text x="88" y="356" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] C&amp;C Train (cnc_train) #B889FF</text>
+<text x="88" y="384" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] C&amp;C Bunker (cnc_garrison) #FF8FA3</text>
+<text x="88" y="412" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[x] SC2 Train (sc2_train) #62C8F3</text>
+<text x="88" y="440" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] Zerg Morph (zerg_morph) #7ED957</text>
+<text x="88" y="468" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] Reset Cam (camera_reset) #F2C36B</text>
+  <rect x="64" y="514" width="690" height="196" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="88" y="554" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Command Slots</text>
+<text x="88" y="588" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[0] 折跃狂热者 | SC2 神族式地面折跃，单位在落点短暂成型。 | Base|FormOverride | action=SkillQ</text>
+<text x="88" y="616" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[1] 待命 | 保留槽位，不执行任何命令。 | Base | action=SkillW</text>
+<text x="88" y="644" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[2] 训练狂热者 | 折跃门科技完成前，Gateway 仍采用常规训练。 | Base|Blocked | action=SkillE</text>
+<text x="88" y="672" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[3] 研究折跃门 | 完成后将 Gateway 解锁为 Warpgate 形态。 | Base|Blocked | action=SkillR</text>
+  <rect x="790" y="170" width="746" height="112" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="814" y="210" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Statuses</text>
+<text x="814" y="244" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">no active statuses</text>
+  <rect x="790" y="338" width="746" height="112" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="814" y="378" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Order Queue</text>
+<text x="814" y="412" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">queue empty</text>
+  <rect x="790" y="506" width="746" height="196" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="814" y="546" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Preview Ghost</text>
+<text x="814" y="580" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">presenter=core_input_preview_warp_site</text>
+<text x="814" y="608" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">worldPos=(-3, 0.55, 17.5)</text>
+<text x="814" y="636" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">scale=(0, 0, 0)</text>
+<text x="814" y="664" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">overlays=Circle:1, Ring:1, affected:0</text>
+  <text x="64" y="880" fill="#9db4cc" font-size="18" font-family="Consolas, monospace">Data source: gas.ability-slots + toolbar provider + AbilityAimPresentationRuntime presenter preview.</text>
+</svg>

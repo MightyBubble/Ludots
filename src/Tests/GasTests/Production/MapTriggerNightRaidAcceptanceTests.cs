@@ -267,7 +267,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
                 if (team.Id == teamId && killed < maxKills &&
                     attributes.GetCurrent(AttributeRegistry.GetId("Health")) > 0f)
                 {
-                    attributes.SetCurrent(AttributeRegistry.GetId("Health"), 0f);
+                    attributes.SetBase(AttributeRegistry.GetId("Health"), 0f);
                     killed++;
                 }
             });
