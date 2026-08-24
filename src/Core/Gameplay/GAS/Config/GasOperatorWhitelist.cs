@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Config
 {
