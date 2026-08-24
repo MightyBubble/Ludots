@@ -1,0 +1,73 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260824T_audit_replay\\screens\\client-a\\frontline_004_completed.png",
+    "expectedWidth":  1280,
+    "expectedHeight":  720,
+    "requirements":  [
+                         {
+                             "role":  "infantryBody",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "maximumChannelDifference":  48,
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  209,
+                                                        "green":  224,
+                                                        "blue":  230
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "51:16147765",
+                                                 "x":  333,
+                                                 "y":  320,
+                                                 "width":  38,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:17673833",
+                                                 "x":  401,
+                                                 "y":  245,
+                                                 "width":  34,
+                                                 "height":  32
+                                             },
+                                             {
+                                                 "id":  "51:31791884",
+                                                 "x":  650,
+                                                 "y":  309,
+                                                 "width":  27,
+                                                 "height":  34
+                                             },
+                                             {
+                                                 "id":  "51:34844020",
+                                                 "x":  603,
+                                                 "y":  306,
+                                                 "width":  27,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:41327887",
+                                                 "x":  688,
+                                                 "y":  310,
+                                                 "width":  29,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:44380023",
+                                                 "x":  665,
+                                                 "y":  310,
+                                                 "width":  28,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:47432159",
+                                                 "x":  665,
+                                                 "y":  329,
+                                                 "width":  28,
+                                                 "height":  34
+                                             }
+                                         ]
+                         }
+                     ]
+}

@@ -272,7 +272,9 @@
       "Name": {
         "Value": "Frontline Infantry"
       },
-      "Team": {},
+      "Team": {
+        "Id": 0
+      },
       "PlayerOwner": {},
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
