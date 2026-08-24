@@ -753,61 +753,9 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         }
     }
 
-    private long _probeCamNext;
-
-    private void ProbeOpeningCamera(MapSession? session)
-    {
-        long now = System.Diagnostics.Stopwatch.GetTimestamp();
-        if (now < _probeCamNext)
-        {
-            return;
-        }
-        _probeCamNext = now + (System.Diagnostics.Stopwatch.Frequency * 2);
-        try
-        {
-            int lpId = 0;
-            try
-            {
-                ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_engine);
-                lpId = seats.TryGetSoleSeat(out ClientLocalSeat seat) ? seat.PossessedPlayerId : -1;
-            }
-            catch (Exception ex) { lpId = -9; Console.WriteLine("[PROBE] seats err: " + ex.Message); }
-
-            int coreMirrors = 0;
-            if (lpId > 0)
-            {
-                foreach (ref Chunk chunk in _world.Query(in OpeningCameraTargetQuery))
-                {
-                    ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
-                    foreach (int index in chunk)
-                    {
-                        if (owners[index].PlayerId == lpId) coreMirrors++;
-                    }
-                }
-            }
-
-            CameraPoseRequest req = _engine.GetService(CoreServiceKeys.CameraPoseRequest);
-            string reqInfo = req == null ? "null" : $"target={(req.TargetCm.HasValue ? req.TargetCm.Value.ToString() : "null")} vcam={req.VirtualCameraId}";
-            string cmdInfo;
-            try
-            {
-                bool hasPrimary = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity primary);
-                cmdInfo = $"primary={(hasPrimary ? (_world.IsAlive(primary) ? "alive" : "dead") : "none")} count={RtsShowcaseCommandSourceHelper.GetCommandSourceCount(_engine)}";
-            }
-            catch (Exception ex) { cmdInfo = "ERR:" + ex.GetType().Name; }
-
-            Console.WriteLine($"[PROBE] openingcam: active={_runtime.IsActive} repClient={_isReplicatedClient} map={session?.MapId.Value} expected={_runtime.Config.MapId} lpId={lpId} coreMirrors={coreMirrors} poseReq={reqInfo} cmdsrc={cmdInfo}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("[PROBE] openingcam error: " + ex.GetType().Name + ": " + ex.Message);
-        }
-    }
-
     private void FocusOpeningCameraOnce()
     {
         MapSession? session = _engine.CurrentMapSession;
-        ProbeOpeningCamera(session);
         FrontlineOpeningViewSnapshot openingView = _runtime.OpeningView;
         if (!_isReplicatedClient || openingView.IsReady || session == null ||
             !string.Equals(session.MapId.Value, _runtime.Config.MapId, StringComparison.Ordinal))

@@ -573,7 +573,7 @@ function Read-ClientPresentationEvidence {
                 $timingLine = $lines[$detailIndex]
                 continue
             }
-            if ($null -eq $visualCountLine -and $lines[$detailIndex] -match '(?:^|\s)prefab-visual-counts lastFrame\(') {
+            if ($null -eq $visualCountLine -and $lines[$detailIndex] -match '(?:^|\s)typed-visual-counts lastFrame\(') {
                 $visualCountLine = $lines[$detailIndex]
                 continue
             }
@@ -598,7 +598,7 @@ function Read-ClientPresentationEvidence {
 
         $visualMatch = [regex]::Match(
             $visualCountLine,
-            'prefab-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)',
+            'typed-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)',
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
         if (-not $visualMatch.Success) {
             throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has malformed prefab visual diagnostics."

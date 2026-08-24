@@ -329,94 +329,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     }
 
-    private long _probeNextTimestamp;
-
-    private void ProbeConnectingGates(SessionHandshakeResponse handshake)
-    {
-        long now = Stopwatch.GetTimestamp();
-        if (now < _probeNextTimestamp)
-        {
-            return;
-        }
-        _probeNextTimestamp = now + (Stopwatch.Frequency * 2);
-        int seatCount = -1;
-        int possessed = -1;
-        try
-        {
-            ClientLocalSeatRegistry reg = ClientLocalSeatAccess.RequireRegistry(_engine);
-            seatCount = reg.Count;
-            possessed = reg.TryGetSoleSeat(out ClientLocalSeat s) ? s.PossessedPlayerId : -2;
-        }
-        catch (Exception ex)
-        {
-            possessed = -3;
-            Console.WriteLine("[PROBE] seat registry error: " + ex.Message);
-        }
-        Console.WriteLine($"[PROBE] connecting gates: hsAccepted={handshake.Accepted} hsPlayer={handshake.PlayerId.Value} epochEmpty={handshake.SessionEpoch.IsEmpty} established={_clientStatus?.HasEstablishedSession} connState={_clientStatus?.ConnectionState} awaitingSnap={_clientStatus?.IsAwaitingFullSnapshot} roomSnap={_observer.HasRoomSnapshot} faults={_observer.FaultCount} seats={seatCount} possessedPlayer={possessed}");
-    }
-
-    private long _probeDeepNextTimestamp;
-
-    private void ProbeConnectingDeep(int localPlayerId, int sideIndex)
-    {
-        long now = Stopwatch.GetTimestamp();
-        if (now < _probeDeepNextTimestamp)
-        {
-            return;
-        }
-        _probeDeepNextTimestamp = now + (Stopwatch.Frequency * 2);
-        try
-        {
-            bool ownCore = TryResolveOwnCore(localPlayerId, out Entity probeCore);
-            string coreInfo;
-            if (ownCore &&
-                _engine.World.TryGet(probeCore, out CullState coreCull) &&
-                _engine.World.TryGet(probeCore, out PresentationOwnerHasPresenterPayload corePayload))
-            {
-                coreInfo = $"coreVis={coreCull.IsVisible} coreLod={coreCull.LOD} payloadCount={corePayload.Count} rootCount={corePayload.RootCount} singleRoot={corePayload.SingleRootPresenter != Entity.Null}";
-            }
-            else
-            {
-                coreInfo = "coreVis=n/a";
-            }
-            int harvesters = CountOwned<ClientHarvesterMarker>(localPlayerId);
-            int infantry = CountOwned<ClientInfantryMarker>(localPlayerId);
-            int crystals = CountClientCrystals();
-            bool matchState = TryGetClientMatchState(out _);
-            bool bothSeats = BothSeatsConnected();
-            FrontlineOpeningViewSnapshot ov = _frontlineRuntime.OpeningView;
-            CameraCullingDebugState culling = _engine.GetService(CoreServiceKeys.CameraCullingDebugState);
-            string camInfo;
-            if (culling.CameraTargetCm.X == 0 && culling.CameraTargetCm.Y == 0 && culling.VisibleEntityCount == 0)
-            {
-                camInfo = "culling-empty";
-            }
-            else
-            {
-                camInfo = $"cullTarget=({culling.CameraTargetCm.X},{culling.CameraTargetCm.Y}) visRev={culling.VisibilityRevision} readyRev={ov.ReadyVisibilityRevision} visible={culling.VisibleEntityCount}";
-            }
-            string presentCam;
-            try
-            {
-                var cam = ClientLocalSeatAccess.RequireSolePresentCamera(_engine).State.TargetCm;
-                presentCam = $"({cam.X},{cam.Y})";
-            }
-            catch (Exception ex)
-            {
-                presentCam = "ERR:" + ex.GetType().Name;
-            }
-            Console.WriteLine($"[PROBE] deep gates: side={sideIndex} ownCore={ownCore} {coreInfo} harvesters={harvesters} infantry={infantry} crystals={crystals} matchState={matchState} bothSeats={bothSeats} ovFocus={ov.HasFocusTarget} ovReady={ov.IsReady} ovTarget=({ov.FocusTargetCm.X},{ov.FocusTargetCm.Y}) presentCam={presentCam} {camInfo}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("[PROBE] deep probe error: " + ex.GetType().Name + ": " + ex.Message);
-        }
-    }
-
     private void UpdateConnecting()
     {
         SessionHandshakeResponse handshake = _observer.LastClientHandshake;
-        ProbeConnectingGates(handshake);
         if (!handshake.Accepted || handshake.SessionEpoch.IsEmpty ||
             !_clientStatus!.HasEstablishedSession ||
             _clientStatus.ConnectionState != ReplicatedClientConnectionState.Connected ||
@@ -445,7 +360,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
 
         int sideIndex = _frontline.ResolveSideIndexForPlayer(localPlayerId);
-        ProbeConnectingDeep(localPlayerId, sideIndex);
         if (!TryResolveOwnCore(localPlayerId, out Entity core) ||
             CountOwned<ClientHarvesterMarker>(localPlayerId) != _plan.Expected.InitialHarvesterCount ||
             CountOwned<ClientInfantryMarker>(localPlayerId) != _plan.Expected.InitialInfantryCount ||
@@ -830,7 +744,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
             !AreSelectedActorsVisibleWithPresenterPayload() ||
             !AreMovedActorsOnscreenInPresentationReceipts())
         {
-            ProbeAdvancingWait();
             return;
         }
         if (_progress.Stage == AcceptanceProgressStage.Training)
@@ -2362,41 +2275,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 $"Observed {reachedCount} opposing infantry at the meeting point; expected {expectedCount}.");
         }
         return reachedCount == expectedCount;
-    }
-
-    private long _probeAdvancingNextTimestamp;
-
-    private void ProbeAdvancingWait()
-    {
-        long now = Stopwatch.GetTimestamp();
-        if (now < _probeAdvancingNextTimestamp)
-        {
-            return;
-        }
-        _probeAdvancingNextTimestamp = now + (Stopwatch.Frequency * 2);
-        try
-        {
-            var sb = new System.Text.StringBuilder();
-            foreach (var start in _evidence.Gameplay.MoveStartPositions)
-            {
-                if (TryResolveHandle(start.Handle, out Entity entity) && _world.IsAlive(entity))
-                {
-                    WorldCmInt2 current = GetWorldPosition(entity);
-                    long dx = current.X - (long)start.XCm;
-                    long dy = current.Y - (long)start.YCm;
-                    sb.Append($" {start.Handle}@({current.X},{current.Y}) moved={(long)Math.Sqrt(dx * dx + dy * dy)} vis={_world.TryGet(entity, out CullState c) && c.IsVisible}");
-                }
-                else
-                {
-                    sb.Append($" {start.Handle}=gone");
-                }
-            }
-            Console.WriteLine($"[PROBE] advancing wait:{sb} moved={HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm)} near={AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm)} visPayload={AreSelectedActorsVisibleWithPresenterPayload()} onscreen={AreMovedActorsOnscreenInPresentationReceipts()}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("[PROBE] advancing probe error: " + ex.GetType().Name + ": " + ex.Message);
-        }
     }
 
     private bool AreSelectedActorsNear(WorldCmInt2 destination, int toleranceCm)
