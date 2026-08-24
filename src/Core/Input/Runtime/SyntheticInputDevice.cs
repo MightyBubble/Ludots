@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Runtime
 {
@@ -186,6 +187,31 @@ namespace Ludots.Core.Input.Runtime
 
         public IReadOnlyCollection<string> KeysDown => _keysDown;
         public IReadOnlyCollection<SyntheticPointerButton> ButtonsDown => _buttonsDown;
+
+        /// <summary>
+        /// Expose this device as an <see cref="IInputDeviceWatcher"/> so AgentBridge mock
+        /// input is enumerable through the same device contract as host hardware.
+        /// </summary>
+        public IInputDeviceWatcher WatchAsDeviceWatcher() => new SyntheticDeviceWatcher();
+
+        private sealed class SyntheticDeviceWatcher : IInputDeviceWatcher
+        {
+            // The synthetic device fakes keys and a pointer with wheel; it has no touch surface.
+            // It lives for the whole process, so the device set is constant and never fires changes.
+            private static readonly InputDeviceDescriptor[] Devices =
+            {
+                new("synthetic-keyboard", InputDeviceKind.Keyboard, "AgentBridge Synthetic Keyboard", -1),
+                new("synthetic-mouse", InputDeviceKind.Mouse, "AgentBridge Synthetic Mouse", -1),
+            };
+
+            public event Action<InputDeviceChangeEvent>? DeviceChanged
+            {
+                add { }
+                remove { }
+            }
+
+            public IReadOnlyList<InputDeviceDescriptor> GetConnectedDevices() => Devices;
+        }
 
         public static string NormalizeKey(string key)
         {

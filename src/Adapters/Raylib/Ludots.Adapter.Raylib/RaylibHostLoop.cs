@@ -169,6 +169,11 @@ namespace Ludots.Adapter.Raylib
             var presentationTiming = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             engine.TryGetService(CoreServiceKeys.SyntheticInput, out SyntheticInputDevice? syntheticInput);
             engine.TryGetService(CoreServiceKeys.HostFrameCapture, out IHostFrameCapture? frameCapture);
+            ClientLocalSeatDeviceBinding seatDeviceBinding = engine.GetService(CoreServiceKeys.ClientLocalSeatDeviceBinding)
+                ?? throw new InvalidOperationException("ClientLocalSeatDeviceBinding missing.");
+            var deviceWatcher = new RaylibInputDeviceWatcher();
+            deviceWatcher.DeviceChanged += seatDeviceBinding.HandleDeviceChange;
+            engine.SetService(CoreServiceKeys.InputDeviceWatcher, deviceWatcher);
 
             int screenWidth = config.WindowWidth <= 0 ? 1280 : config.WindowWidth;
             int screenHeight = config.WindowHeight <= 0 ? 720 : config.WindowHeight;
@@ -438,6 +443,7 @@ namespace Ludots.Adapter.Raylib
                         bool uiWheelCaptured = false;
                         bool uiInputHandled = false;
                         syntheticInput?.AdvanceFrame();
+                        deviceWatcher.Poll();
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();

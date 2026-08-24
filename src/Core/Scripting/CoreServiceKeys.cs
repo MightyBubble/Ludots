@@ -155,6 +155,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<List<IInputFrameConsumer>> InputFrameConsumers = new("InputFrameConsumers");
         public static readonly ServiceKey<bool> PointerInputCaptured = new("PointerInputCaptured");
         public static readonly ServiceKey<InputActionAttributeBindingRegistry> InputActionAttributeBindingRegistry = new("InputActionAttributeBindingRegistry");
+        public static readonly ServiceKey<IInputDeviceWatcher> InputDeviceWatcher = new("InputDeviceWatcher");
 
         // --- Camera & View ---
         public static readonly ServiceKey<IViewController> ViewController = new("ViewController");
@@ -412,6 +413,7 @@ namespace Ludots.Core.Scripting
 
         // --- Client local seats & logical vision (Epic #896) ---
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatRegistry> ClientLocalSeatRegistry = new("ClientLocalSeatRegistry");
+        public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatDeviceBinding> ClientLocalSeatDeviceBinding = new("ClientLocalSeatDeviceBinding");
         public static readonly ServiceKey<Ludots.Core.Client.LogicViewRegistry> LogicViewRegistry = new("LogicViewRegistry");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
 
