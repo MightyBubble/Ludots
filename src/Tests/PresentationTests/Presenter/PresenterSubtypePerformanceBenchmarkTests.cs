@@ -210,7 +210,7 @@ namespace Ludots.Tests.Presentation
                 int y = i / side;
                 Vector3 position = new(x * 1.5f, 0f, y * 1.5f);
                 Entity presenter = runtime.Create(definitionId, owner, i, PresentationAnchorKind.WorldPosition, position, stableIdBase + i, Entity.Null, definition);
-                world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u;
+                world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u << definition.Behaviors[0].SlotIndex;
             }
         }
 
