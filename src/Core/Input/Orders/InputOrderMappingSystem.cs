@@ -3026,6 +3026,7 @@ namespace Ludots.Core.Input.Orders
             OrderSubmitResult result,
             int orderId = 0)
         {
+            Console.WriteLine($"[PROBE] rejected activation: result={result} actor={actor} orderId={orderId} explicit={_hasExplicitActivationContext} aiming={_isAiming} playerId={_playerId} soleRep={_solePossessedRep}\n{Environment.StackTrace}");
             _lastSubmittedOrderId = orderId;
             LastActivationResult = InputOrderActivationResult.Rejected(actor, orderId, result);
             return LastActivationResult;
