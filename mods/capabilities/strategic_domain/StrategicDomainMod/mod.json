@@ -1,0 +1,12 @@
+{
+  "name": "StrategicDomainMod",
+  "version": "1.0.0",
+  "description": "Reusable grand-strategy domain providers: supply, dual-defense siege, takeover, prisoner, governor.",
+  "main": "bin/net8.0/StrategicDomainMod.dll",
+  "priority": 40,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["capability", "strategic-domain", "supply", "siege", "takeover"]
+}
