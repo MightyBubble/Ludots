@@ -1771,12 +1771,24 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     _commandPort.LastSubmittedBatchSequence == 0)
                 {
                     InputOrderActivationResult activation = _inputOrderMapping?.LastActivationResult ?? default;
+                    string stackInfo = "stack=n/a";
+                    try
+                    {
+                        var stack = (InteractionContextStack)_engine.GlobalContext[CoreServiceKeys.InteractionContextStack.Name];
+                        stackInfo = stack.TryPeek(out InteractionContextFrame frame)
+                            ? $"stackPeek entity={frame.ContextEntity} alive={(frame.ContextEntity != Entity.Null && _world.IsAlive(frame.ContextEntity))} collectionKey={frame.ActiveCollectionKeyId}"
+                            : "stackEmpty";
+                    }
+                    catch (Exception ex)
+                    {
+                        stackInfo = "stackErr:" + ex.GetType().Name;
+                    }
                     throw new InvalidOperationException(
                         $"Input action '{_pendingCommandAction}' did not produce exactly one submitted network command batch; " +
                         $"revision={_commandPort.SubmissionRevision}, result={_commandPort.LastSubmitResult}, " +
                         $"sequence={_commandPort.LastSubmittedBatchSequence}, " +
                         $"activation={activation.State}, orderId={activation.OrderId}, rejection={activation.Rejection}, " +
-                        $"aiming={_inputOrderMapping?.IsAiming}.");
+                        $"aiming={_inputOrderMapping?.IsAiming}, {stackInfo}.");
                 }
                 _pendingCommandSequence = _commandPort.LastSubmittedBatchSequence;
                 CaptureSubmittedAttackTarget();
