@@ -2311,9 +2311,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         Is.EquivalentTo(new[]
                         {
                             new Vector3(40f, 0f, 140f),
-                            new Vector3(161f, 0f, 140f),
-                            new Vector3(40f, 0f, 261f),
-                            new Vector3(161f, 0f, 261f),
+                            new Vector3(160f, 0f, 140f),
+                            new Vector3(40f, 0f, 260f),
+                            new Vector3(160f, 0f, 260f),
                         }));
                 }
             }
@@ -2455,7 +2455,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(submitted.Select(order => order.Args.Spatial.WorldCm), Is.EquivalentTo(new[]
                 {
                     new Vector3(940f, 0f, 2000f),
-                    new Vector3(1061f, 0f, 2000f),
+                    new Vector3(1060f, 0f, 2000f),
                 }));
                 Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
                 Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(101));
@@ -2669,7 +2669,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(secondMove.OrderTypeId, Is.EqualTo(2));
                 Assert.That(secondMove.Target, Is.EqualTo(Entity.Null));
                 Assert.That(secondMove.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
-                Assert.That(secondMove.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(1061f, 0f, 2000f)));
+                Assert.That(secondMove.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(1060f, 0f, 2000f)));
 
                 Assert.That(attack.OrderTypeId, Is.EqualTo(1));
                 Assert.That(attack.Target, Is.EqualTo(clickedTarget));

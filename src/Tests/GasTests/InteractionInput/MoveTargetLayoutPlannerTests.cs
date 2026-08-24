@@ -63,7 +63,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void GridTargets_TreatConfiguredSpacingAsMinimumWithIntegerMovementMargin()
+        public void GridTargets_PlaceSlotCentersAtTheAuthoredSpacing()
         {
             Vector3 anchor = new(1000f, 0f, 2000f);
 
@@ -73,9 +73,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.Multiple(() =>
             {
                 Assert.That(left, Is.EqualTo(new Vector3(930f, 0f, 2000f)));
-                Assert.That(right, Is.EqualTo(new Vector3(1071f, 0f, 2000f)));
-                Assert.That(right.X - left.X, Is.GreaterThan(140f),
-                    "The authored spacing remains the minimum accepted separation after integer movement quantization.");
+                Assert.That(right, Is.EqualTo(new Vector3(1070f, 0f, 2000f)));
+                Assert.That(right.X - left.X, Is.EqualTo(140f),
+                    "The authored spacing is the exact slot-center separation.");
             });
         }
 

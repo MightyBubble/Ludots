@@ -7,8 +7,6 @@ namespace Ludots.Core.Input.Orders
 {
     internal static class MoveTargetLayoutPlanner
     {
-        private const int IntegerMovementSafetyMarginCm = 1;
-
         public static Vector3 ComputeOffsetTarget(Vector3 anchorWorldCm, int index, int totalCount, int spacingCm)
         {
             if (totalCount <= 0)
@@ -133,23 +131,11 @@ namespace Ludots.Core.Input.Orders
                 throw new ArgumentOutOfRangeException(nameof(spacingCm), spacingCm, "Target layout requires spacingCm > 0.");
             }
 
-            int slotSeparationCm = GetSlotSeparationCm(spacingCm);
             GetGridLayout(totalCount, out int cols, out int rows);
             GetGridCell(index, cols, out int row, out int col);
             return new WorldCmInt2(
-                GetCenteredOffset(col, cols, slotSeparationCm),
-                GetCenteredOffset(row, rows, slotSeparationCm));
-        }
-
-        private static int GetSlotSeparationCm(int spacingCm)
-        {
-            if (spacingCm == int.MaxValue)
-            {
-                throw new InvalidOperationException(
-                    "Target layout spacing leaves no room for the integer movement safety margin.");
-            }
-
-            return spacingCm + IntegerMovementSafetyMarginCm;
+                GetCenteredOffset(col, cols, spacingCm),
+                GetCenteredOffset(row, rows, spacingCm));
         }
 
         private static void GetGridLayout(int count, out int cols, out int rows)
