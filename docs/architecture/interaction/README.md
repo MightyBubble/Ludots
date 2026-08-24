@@ -161,7 +161,7 @@ ability 激活阶段只读取两类 gate：
 
 - `silenced`、`stunned`、`rooted` 等离散阻塞
 - combo stage、form、finisher-ready 等离散前置
-- cooldown ready、charge ready、mana ready 等已经投影成 tag 的结果
+- 技能锁定、充能、法力等已经投影成 tag 的结果
 
 ### 5.2 数值 / 上下文检查：最小 validation graph primitive
 

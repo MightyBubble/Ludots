@@ -28,21 +28,12 @@ namespace Ludots.Tests.GasTests.UI
         private const string PanelTemplateJson = """
         {
           "id": "tests.panel.entity_attributes",
-          "variables": [
-            { "name": "hp", "kind": "Float",
-              "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.attr.hp" } },
-            { "name": "attack", "kind": "Float",
-              "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.attr.attack" } },
-            { "name": "squadAttack", "kind": "Float",
-              "source": { "sourceKind": "AggregateProjection", "graphOutputKey": "tests.panel.squad.attack.total" } },
-            { "name": "rank.badge", "kind": "Int",
-              "source": { "sourceKind": "TableLookup", "lookupTable": "tests.rank_display", "lookupField": "displayToken", "keyAttribute": "tests.attr.level" } }
-          ],
-          "binds": [
-            { "control": "lbl.hp", "variable": "hp" },
-            { "control": "lbl.attack", "variable": "attack" },
-            { "control": "lbl.squad", "variable": "squadAttack" },
-            { "control": "lbl.rank", "variable": "rank.badge" }
+          "graph": "tests.graph.entity_attributes",
+          "pins": [
+            { "name": "hp", "key": "tests.panel.entity.hp", "mode": "realtime", "default": 0 },
+            { "name": "attack", "key": "tests.panel.entity.attack", "mode": "realtime", "default": 0 },
+            { "name": "squadAttack", "key": "tests.panel.squad.attack.total", "mode": "realtime", "default": 0 },
+            { "name": "rank.badge", "key": "tests.panel.entity.rank.badge", "mode": "snapshot", "default": 0 }
           ],
           "events": [
             { "eventId": "ui.entity.inspect", "gesture": "click", "control": "row.entity",
@@ -135,7 +126,11 @@ namespace Ludots.Tests.GasTests.UI
             outputs.SetFloat(_soldier, "tests.panel.squad.attack.total", 36f);
             outputs.SetFloat(factionOwner, "tests.panel.squad.attack.total", 36f);
 
-            var reader = new PanelProjectionReader(_world, outputs, AttributeRegistry.GetId, _tables);
+            outputs.SetFloat(_soldier, "tests.panel.entity.hp", 87f);
+            outputs.SetFloat(_soldier, "tests.panel.entity.attack", 12f);
+            outputs.SetFloat(_soldier, "tests.panel.entity.rank.badge", 11f);
+            outputs.SetFloat(factionOwner, "tests.panel.entity.rank.badge", 11f);
+            var reader = new PanelProjectionReader(_world, outputs);
             PanelVariableSet values = new PanelInstance(template, _soldier).Evaluate(reader);
 
             Assert.That(values.Get("hp"), Is.EqualTo(87f));

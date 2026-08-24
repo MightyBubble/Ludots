@@ -36,19 +36,21 @@ namespace Ludots.Core.Gameplay.AI.Systems
         public override void Update(in float dt)
         {
             int step = _clock.Now(ClockDomainId.Step);
-            var job = new ExecuteJob(_library, _orders, _orderTypeRegistry, step);
+            var job = new ExecuteJob(World, _library, _orders, _orderTypeRegistry, step);
             World.InlineEntityQuery<ExecuteJob, AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>(in _query, ref job);
         }
 
         private struct ExecuteJob : IForEachWithEntity<AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>
         {
+            private readonly World _world;
             private readonly ActionLibraryCompiled256 _library;
             private readonly OrderQueue _orders;
             private readonly OrderTypeRegistry? _orderTypeRegistry;
             private readonly int _step;
 
-            public ExecuteJob(ActionLibraryCompiled256 library, OrderQueue orders, OrderTypeRegistry? orderTypeRegistry, int step)
+            public ExecuteJob(World world, ActionLibraryCompiled256 library, OrderQueue orders, OrderTypeRegistry? orderTypeRegistry, int step)
             {
+                _world = world;
                 _library = library;
                 _orders = orders;
                 _orderTypeRegistry = orderTypeRegistry;
@@ -80,6 +82,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 }
 
                 bool ok = PlanExecutor.TrySubmitOrder(
+                    _world,
                     in _library.OrderSpec[actionId],
                     _library.GetBindings(actionId),
                     entity,

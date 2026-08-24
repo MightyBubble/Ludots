@@ -16,6 +16,13 @@ namespace Ludots.Core.UI.PanelHosting
 
         public int Count => _templates.Count;
 
+        public IReadOnlyList<PanelTemplate> Snapshot()
+        {
+            var list = new List<PanelTemplate>(_templates.Count);
+            list.AddRange(_templates.Values);
+            return list;
+        }
+
         public void Register(PanelTemplate template)
         {
             ArgumentNullException.ThrowIfNull(template);

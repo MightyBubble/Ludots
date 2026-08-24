@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.UI.PanelHosting;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -128,6 +129,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.LookupTable, "lookupTable", node, graphId, diagnostics);
                     break;
+                case GraphNodeOp.WeightedPick:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.Distribution, "distribution", node, graphId, diagnostics);
+                    break;
 
                 case GraphNodeOp.TableReadInt:
                 case GraphNodeOp.TableReadFloat:
@@ -249,10 +254,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.CreatePanel:
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     RequireNonEmpty(node.PanelAnchor, "panelAnchor", node, graphId, diagnostics);
+                    if (!PanelAnchorCatalog.IsSupported(node.PanelAnchor))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidPanelAnchor,
+                            $"Node '{node.Id}' panelAnchor '{node.PanelAnchor}' is not a supported panel anchor. Supported anchors: {PanelAnchorCatalog.Describe()}.", node.Id));
+                    }
                     break;
 
                 case GraphNodeOp.DestroyPanel:
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SpawnTemplate:
+                    RequireNonEmpty(node.Template, "template", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SetWorldPosition:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ReadMapVarInt:
@@ -621,6 +640,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.LookupTable, "lookupTable", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
+                case GraphNodeOp.WeightedPick:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Distribution, "distribution", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
 
                 case GraphNodeOp.TableReadInt:
                 case GraphNodeOp.TableReadFloat:
@@ -799,6 +824,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
                         : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.SpawnTemplate:
+                    instruction.Imm = RequireSymbol(node.Template, "template", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    bool hasX = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.A));
+                    bool hasY = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.B));
+                    if (hasX != hasY)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}': SpawnTemplate explicit position requires both 'a' (xCm) and 'b' (yCm) value edges.",
+                            node.Id));
+                        break;
+                    }
+
+                    if (hasX)
+                    {
+                        instruction.Flags = 1;
+                        instruction.B = ResolveValueInput(
+                            node, GraphControlFlowPorts.A, GraphValueType.Float,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                        instruction.C = ResolveValueInput(
+                            node, GraphControlFlowPorts.B, GraphValueType.Float,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    }
+
+                    break;
+
+                case GraphNodeOp.SetWorldPosition:
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ReadMapVarInt:

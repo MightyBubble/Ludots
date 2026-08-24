@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Arch.Core;
 using EntityCommandPanelMod.Runtime;
 using Ludots.Core.Components;
@@ -50,7 +51,7 @@ namespace Ludots.Tests.GAS
         private const int TankTemplateKeyId = 21;
 
         private const string ByTemplateProfileId = "aggregation.by_template";
-        private const string ByFamilyProfileId = "aggregation.by_family";
+        private const string ByFamilyProfileId = "aggregation.tests.by_family";
 
         [SetUp]
         public void SetUp()
@@ -102,14 +103,13 @@ namespace Ludots.Tests.GAS
             var fixture = SelectionFixture.Create(engine);
 
             IEntityCommandPanelSource source = ResolveCollectionSource(engine);
-            var collectionSource = (CollectionGasEntityCommandPanelSource)source;
             var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
             var slots = new EntityCommandPanelSlotView[8];
 
             Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
             Assert.That(EntityCommandPanelSourceDispatch.TryGetRevision(source, in context, out uint byFamilyRevision), Is.True);
 
-            collectionSource.SetAggregationProfile(ByTemplateProfileId);
+            SetAggregationProfile(source, ByTemplateProfileId);
 
             Assert.That(EntityCommandPanelSourceDispatch.TryGetRevision(source, in context, out uint byTemplateRevision), Is.True);
             Assert.That(byTemplateRevision, Is.Not.EqualTo(byFamilyRevision),
@@ -125,12 +125,12 @@ namespace Ludots.Tests.GAS
             Assert.That(FirstDetail(slots, copied, EliteChargeAbilityId), Does.Not.Contain("owners |"),
                 "single-member unit-template cell keeps the plain detail.");
 
-            collectionSource.SetAggregationProfile(ByFamilyProfileId);
+            SetAggregationProfile(source, ByFamilyProfileId);
             Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3),
                 "switching back restores the family grouping on the next build.");
 
             Assert.Throws<InvalidOperationException>(
-                () => collectionSource.SetAggregationProfile("aggregation.not_installed"),
+                () => SetAggregationProfile(source, "aggregation.not_installed"),
                 "unknown profiles fail fast instead of silently keeping the old grouping.");
         }
 
@@ -502,7 +502,22 @@ namespace Ludots.Tests.GAS
             var registry = engine.GetService(CoreServiceKeys.EntityCommandPanelSourceRegistry)
                 ?? throw new InvalidOperationException("EntityCommandPanelSourceRegistry missing.");
             Assert.That(registry.TryGet(CollectionSourceId, out IEntityCommandPanelSource source), Is.True);
+            SetAggregationProfile(source, ByFamilyProfileId);
             return source;
+        }
+
+        private static void SetAggregationProfile(IEntityCommandPanelSource source, string profileId)
+        {
+            MethodInfo method = source.GetType().GetMethod("SetAggregationProfile", new[] { typeof(string) })
+                ?? throw new InvalidOperationException("Collection command panel source must expose SetAggregationProfile.");
+            try
+            {
+                method.Invoke(source, new object[] { profileId });
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException != null)
+            {
+                throw ex.InnerException;
+            }
         }
 
         private static InputOrderMappingSystem CreateMappingSystem(

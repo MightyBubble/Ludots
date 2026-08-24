@@ -147,6 +147,57 @@ namespace Ludots.Tests.Gas.Graph
                 d.Message.Contains(GraphControlFlowCompiler.SwitchIntOp, StringComparison.Ordinal)));
         }
 
+        [Test]
+        public void Break_LowersToExplicitJumpTarget()
+        {
+            var graph = new GraphControlFlowDocument
+            {
+                Id = "tests.script.break",
+                Kind = "Script",
+                Entry = "value",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "value", Op = nameof(GraphNodeOp.ConstInt), IntValue = 7 },
+                    new() { Id = "break", Op = GraphAuthoringSugar.Break },
+                    new() { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("value", GraphControlFlowPorts.Next, "break"),
+                    new("break", GraphControlFlowPorts.Target, "halt")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("value", GraphControlFlowPorts.Value, "halt", GraphControlFlowPorts.Value)
+                }
+            };
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph);
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.Jump));
+            Assert.That(ExecuteHaltReturn(compiled.Program), Is.EqualTo(7));
+        }
+
+        [Test]
+        public void Break_WithoutTarget_FailsClosed()
+        {
+            var graph = new GraphControlFlowDocument
+            {
+                Id = "tests.script.break.missing-target",
+                Kind = "Script",
+                Entry = "break",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "break", Op = GraphAuthoringSugar.Break }
+                }
+            };
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph);
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingControlEdge && d.NodeId == "break"));
+        }
+
         private static GraphControlFlowDocument CreateBranchBoolGraph(int left, int right)
         {
             return new GraphControlFlowDocument

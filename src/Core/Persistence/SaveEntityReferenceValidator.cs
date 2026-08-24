@@ -5,8 +5,9 @@ using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Tasks;
 
 namespace Ludots.Core.Persistence
 {
@@ -22,7 +23,8 @@ namespace Ludots.Core.Persistence
             ValidateActiveEffectContainer(world, policy);
             ValidateAbilityStateBuffer(world, policy);
             ValidateTeamEntityRef(world, policy);
-            ValidateQuestInstances(world, policy);
+            ValidateActivityInstances(world, policy);
+            ValidateTaskInstances(world, policy);
             ValidateRelationshipKeys<RelationshipEdgeSet>(world, policy);
             ValidateRelationshipKeys<InRelationship>(world, policy);
             ValidateRelationshipInstances(world, policy);
@@ -130,10 +132,10 @@ namespace Ludots.Core.Persistence
             });
         }
 
-        private static void ValidateQuestInstances(World world, SaveEntityInclusionPolicy policy)
+        private static void ValidateActivityInstances(World world, SaveEntityInclusionPolicy policy)
         {
-            var query = new QueryDescription().WithAll<QuestInstanceCm>();
-            world.Query(in query, (Entity owner, ref QuestInstanceCm quest) =>
+            var query = new QueryDescription().WithAll<ActivityInstanceCm>();
+            world.Query(in query, (Entity owner, ref ActivityInstanceCm activity) =>
             {
                 if (!policy.ShouldInclude(world, owner))
                 {
@@ -144,9 +146,29 @@ namespace Ludots.Core.Persistence
                     world,
                     policy,
                     owner,
-                    NormalizeOptionalEntity(quest.ScopeHost),
-                    nameof(QuestInstanceCm),
-                    nameof(QuestInstanceCm.ScopeHost));
+                    NormalizeOptionalEntity(activity.ScopeHost),
+                    nameof(ActivityInstanceCm),
+                    nameof(ActivityInstanceCm.ScopeHost));
+            });
+        }
+
+        private static void ValidateTaskInstances(World world, SaveEntityInclusionPolicy policy)
+        {
+            var query = new QueryDescription().WithAll<TaskInstanceCm>();
+            world.Query(in query, (Entity owner, ref TaskInstanceCm task) =>
+            {
+                if (!policy.ShouldInclude(world, owner))
+                {
+                    return;
+                }
+
+                ValidateTarget(
+                    world,
+                    policy,
+                    owner,
+                    NormalizeOptionalEntity(task.ScopeHost),
+                    nameof(TaskInstanceCm),
+                    nameof(TaskInstanceCm.ScopeHost));
             });
         }
 

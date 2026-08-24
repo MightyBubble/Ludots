@@ -369,7 +369,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_CompareEqInt",
@@ -1124,6 +1126,7 @@
         "Derived",
         "Effect",
         "TriggerGraph",
+        "Query",
         "Score",
         "Script",
         "Validation"
@@ -1146,7 +1149,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_LoadTargetPosX",
@@ -1168,7 +1173,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_LoadTargetPosY",
@@ -1839,6 +1846,7 @@
       "op": "ReadMapVarFloat",
       "authorableKinds": [
         "TriggerGraph",
+        "Query",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_ReadMapVarFloat",
@@ -1855,6 +1863,7 @@
       "op": "ReadMapVarInt",
       "authorableKinds": [
         "TriggerGraph",
+        "Query",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_ReadMapVarInt",
@@ -2368,6 +2377,27 @@
       ]
     },
     {
+      "op": "SetWorldPosition",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_SetWorldPosition",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPanelOpAcceptanceTests.SetWorldPositionVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
       "op": "ShowPanel",
       "authorableKinds": [
         "Derived",
@@ -2428,6 +2458,27 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
+      ]
+    },
+    {
+      "op": "SpawnTemplate",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_SpawnTemplate",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPanelOpAcceptanceTests.SpawnTemplateVignette_ExecutesOpWithoutThrow"
       ]
     },
     {
@@ -2599,6 +2650,27 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryMapVarAcceptanceTests.WriteMapVarIntVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
+      "op": "WeightedPick",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_WeightedPick",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRngAcceptanceTests.WeightedPickVignette_PicksFromDeclaredDistributionAndSettles",
+        "GraphOpsNodeGalleryRngAcceptanceTests.WeightedPick_AuthoringWithEmptyDistribution_FailsClosedAtCompile"
       ]
     },
     {

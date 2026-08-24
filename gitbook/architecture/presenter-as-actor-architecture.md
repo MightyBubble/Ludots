@@ -296,6 +296,8 @@ public enum PresenterCommandKind : byte
     ActivateBehavior = 5,
     DeactivateBehavior = 6,
     SinkParamToAsset = 7,      // 强制刷新 param �?asset 属�?
+    TimerSet = 10,             // 命名 timer：启动/重置（同名替换）
+    TimerKill = 11,            // 命名 timer：按名移除，"*" 清实例全部
 }
 ```
 
@@ -323,6 +325,7 @@ public enum PresentationEventKind : byte
     TagEffectiveChanged = 2,
     PresenterCreated = 10,
     PresenterDestroyed = 11,
+    TimerExpired = 12,         // 命名 timer 到期（KeyId=timer 名 id，"*" 通配）
     EffectApplied = 20,
     CastCommitted = 21,
     CastFailed = 22,
@@ -333,6 +336,47 @@ public enum PresentationEventKind : byte
     AttributeValueChanged = 40,
 }
 ```
+
+### 4.7 命名 Timer 原语（TimerSet / TimerExpired / TimerKill）
+
+Presenter 层内置 SC2 actor 式命名 timer，用于实例本地视觉时序（受击闪黄、施法分段演出、滚动条收束等），
+替代 "lifecycle 自毁 + PresenterDestroyed 接力建下一段" 的迂回写法。
+
+语义契约：
+
+- `TimerSet`：对实例启动/重置一个命名 timer。同名重设 = 替换（重置剩余时长），不叠加。
+  `durationSeconds` 必须 > 0；可选 `durationRangeSeconds`（≥ 0）在 base + range 内做可注入种子的随机。
+  保留名 `"*"` 只允许 `TimerKill` 使用，`TimerSet` 使用它在配置加载期直接报错。
+- `TimerExpired`：到期当帧由 `PresenterTimerSystem` 发布（`PresenterTimerSystem` 排在 `PresenterRuleSystem`
+  之前，到期事件当帧可消费）。事件载荷：`KeyId` = timer 名 id，`Source`/`Target` = owner，
+  `PresenterEntity` = 实例，`Magnitude` = stableId。规则事件 `keyId: "*"` 解析为通配（匹配任意到期）。
+- `TimerKill`：按名移除；`"*"` 移除该实例全部 timer。被 Kill 的 timer 不会再到期。
+- 时钟域：timer 走渲染 dt（表现层时钟），与逻辑时钟无关，亦与输入无关。
+- 销毁单一漏斗：presenter 销毁（DestroyPresenter / DestroyScope / owner 死亡回收）统一 KillAll 清表。
+  销毁竞态守卫：owner 已死或已携带 `PresentationDestroyPending` 的实例，到期不发事件（同帧排队的销毁
+  在 runtime 段才执行，规则不得先消费到将死实例的到期）。
+- 容量闸门：`presentation.presenterTimerCapacity`（game.json，Core mod 16384）；表满 fail-fast。
+
+JSON 用法：
+
+```json
+{
+  "id": "my_flash_unit",
+  "rules": [
+    { "event": { "kind": "GameplayEvent", "keyId": "My.HitFlash" },
+      "command": { "kind": "TimerSet", "timerName": "my.flash", "durationSeconds": 0.6, "durationRangeSeconds": 0.1 } },
+    { "event": { "kind": "TimerExpired", "keyId": "my.flash" },
+      "command": { "kind": "SetParam", "paramKey": "my.flash.yellow", "paramLane": "Float", "valueSource": "Fixed", "paramValue": 0.0 } },
+    { "event": { "kind": "TagEffectiveChanged", "keyId": "My.Suppressed" }, "condition": { "inline": "TagLost" },
+      "command": { "kind": "TimerKill", "timerName": "*" } }
+  ]
+}
+```
+
+实现要点：`PresenterTimerTable` 为 SoA 存储 + 开放寻址索引（(stableId, nameId) → slot，backward-shift
+删除无墓碑），Set/Kill/Tick 稳态 O(1)、0 alloc。基准与验收证据：
+`artifacts/benchmarks/presenter-timer/benchmark-report.md`（90k timer tick avg 1.34ms / 0 alloc），
+`artifacts/acceptance/presenter-timer/`（受击闪黄 E2E 三件套）。
 
 ## 5 系统职责与数据流
 

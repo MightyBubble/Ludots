@@ -1,0 +1,18 @@
+{
+  "profileId": "profile.objective.showcase",
+  "genre": "fourx",
+  "coachLine": "Unlock Colony Charter; the blocked reason tells you what is missing.",
+  "objective": {
+    "taskId": "task.fourx.unlock-next-node",
+    "titleTokenId": "token.objective.fourx.next.title",
+    "detailTokenId": "token.objective.fourx.next.detail",
+    "blockedReasonTokenId": "token.objective.fourx.next.blocked",
+    "progressCurrent": 0,
+    "progressTarget": 1
+  },
+  "tokens": {
+    "token.objective.fourx.next.title": "Unlock Colony Charter",
+    "token.objective.fourx.next.detail": "Spend research from the pinned command to push the next node.",
+    "token.objective.fourx.next.blocked": "Waiting for research commitment"
+  }
+}

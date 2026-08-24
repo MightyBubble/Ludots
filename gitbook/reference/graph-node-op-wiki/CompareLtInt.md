@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived / Script |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph |
 | 返回 | Bool → 布尔槽 |
 | 输入端口（值边 toPort） | `a`（第一操作数）、`b`（第二操作数） |
 | 特殊写法 | 结果写入 dst 寄存器 |
@@ -44,7 +44,7 @@ LoadExplicitTarget → ReadBlackboardInt → ConstInt → **CompareLtInt**（本
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived / Script；Query 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Script / TriggerGraph；Query 图不可用（编译期白名单拒绝）。
 - 同类用法：按属性读写与直写、层数叠加引爆、先查对方状态再决定出手。
 ## 怎么进
 

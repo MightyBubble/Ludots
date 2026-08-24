@@ -192,6 +192,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         WriteMapVarInt = 445,
         /// <summary>Map variable (Imm=varName keyId) of the map owning E[B] (B=0xFF → caster) := F[A].</summary>
         WriteMapVarFloat = 446,
+
+        // ── Runtime entity spawning ──
+        /// <summary>Enqueue a template entity spawn. Imm = entity template symbol; E[A] = spawn source map anchor (A=0xFF → caster); F[B]/F[C] = optional explicit xCm/yCm (Flags bit 0 = position wired).</summary>
+        SpawnTemplate = 447,
+
+        /// <summary>Set an entity's world position. E[A] = target (A=0xFF → caster); I[B] = xCm; I[C] = yCm (int centimeters, matches LoadTargetPosX/Y).</summary>
+        SetWorldPosition = 448,
+
+        /// <summary>Pick an integer outcome from a named deterministic distribution. Imm = distribution symbol; I[A] = stream salt.</summary>
+        WeightedPick = 449,
     }
 
     public static class GraphNodeOpParser

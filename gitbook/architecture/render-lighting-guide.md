@@ -7,7 +7,9 @@
 | 合批管线 | 静态网格群 / 蒙皮人群（大量实例） | `PrimitiveDrawItem` → `RaylibPrimitiveRenderer`（`instancing` / `skinning_instanced` 着色器） |
 | 单物体通道 | 道具、少量模型、验收场景陪衬 | `RaylibLitModel`（`model_lit` 着色器） |
 
-两车道都是 **Cook-Torrance GGX 单灯 metallic-roughness + split-sum 天空 IBL** + 光照总线 `RaylibFrameLighting`（光向/环境/光色/强度/雾/视点）。
+两车道都是 **Cook-Torrance GGX 单灯 metallic-roughness + split-sum 天空 IBL** + 光照总线 `RaylibFrameLighting`（光向/环境/光色/强度/雾/视点）。全效实拍（引擎画廊 `lighting` 场景：粗糙度×金属度梯度球阵 + 环绕太阳 + 阴影）：
+
+<img src="artifacts/acceptance/engine_raylib_lighting/screen.png" alt="光照全效验收截图" width="880">
 
 ## 单物体带光照：RaylibLitModel
 
@@ -56,12 +58,16 @@ shadow.EndFrame();
 - **深度 pass shader 族**：`shadow_depth`（实体）、`shadow_depth_instanced`（ISM 合批）、`shadow_depth_skinning_instanced`（蒙皮合批）、`shadow_depth_cutout`（镂空 billboard）；镂空与实体打包编码逐字一致，合同测试锁定。
 - 无 `1/2048` 之类的硬编码：`uShadowMapTexel` 由 `RaylibShadowConfig.MapSize` 推导。
 
+打孔阴影实拍（引擎画廊 `vegetation_cutout` 场景：树冠影斑驳而非实心矩形）：
+
+<img src="artifacts/acceptance/engine_gallery_all/vegetation_cutout.png" alt="镂空植被打孔阴影验收截图" width="880">
+
 ## 材质标量 PBR 合同
 
-材质资产 JSON（`Presentation/materials.json`）新增可选标量字段（贴图槽位不变：sourceUris[0..3] = albedo/roughness/metallic/normal，走 host_assets）：
+材质资产 JSON（`Presentation/material_assets.json`，字段全表见[渲染配置结构](../reference/raylib-render-config-structure.md)）新增可选标量字段（贴图槽位不变：sourceUris[0..3] = albedo/roughness/metallic/normal，走 host_assets）：
 
 ```json
-{ "id": "stone.wall", "domain": "Surface", "flags": "Opaque", "roughness": 0.7, "metalness": 0.1 }
+{ "id": "stone.wall", "domain": "Surface", "flags": ["Opaque"], "roughness": 0.7, "metalness": 0.1 }
 ```
 
 - 有贴图 → 贴图优先（标量忽略）；无贴图 → 标量直达 `uRoughness`/`uMetallic`。
@@ -77,7 +83,9 @@ shadow.EndFrame();
 - **自定义着色行为**：`ShaderKey`（默认 `lit`）+ `RaylibShaderCatalog` 注册表分派。`RaylibLaneShader` 接线契约挂在实例化合批车道（`RegisterInstancingShader(key, lane)`）；非实例化车道遇非默认 shaderKey 一律 fail-loud，不静默降级。
 - **命名参数直推 uniform**：`FloatParams` / `ColorParams` 字典按键名直达 shader uniform（如 emissive 强度/颜色），实例材质改参数即生效。
 
-范式见引擎画廊 `material_binding` 场景：`[iron] 基础金属 → [rusty] 实例覆盖 albedo+roughness`、`[emissive] shaderKey=emissive 自发光车道 → [hot] 实例参数覆盖`。
+范式见引擎画廊 `material_binding` 场景：`[iron] 基础金属 → [rusty] 实例覆盖 albedo+roughness`、`[emissive] shaderKey=emissive 自发光车道 → [hot] 实例参数覆盖`：
+
+<img src="artifacts/acceptance/engine_gallery_all/material_binding.png" alt="材质绑定验收截图" width="880">
 
 ## split-sum 天空 IBL（预滤波环境立方图 + BRDF LUT）
 

@@ -47,6 +47,7 @@ namespace Ludots.Core.GraphRuntime
         public int? Team { get; set; }
         public float? Threshold { get; set; }
         public string? Direction { get; set; }
+        public string? Action { get; set; }
     }
 
     public sealed class GraphControlFlowNode
@@ -64,6 +65,8 @@ namespace Ludots.Core.GraphRuntime
         public string? Tag { get; set; }
         public string? LookupTable { get; set; }
         public string? LookupField { get; set; }
+        /// <summary>Distribution id symbol for WeightedPick; resolved to a key id at patch time.</summary>
+        public string? Distribution { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }

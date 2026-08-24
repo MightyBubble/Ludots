@@ -37,7 +37,8 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         RelationshipFlagRegistry flags,
         RelationshipReasonRegistry reasons,
         TargetDispatchPresetRegistry dispatchPresets,
-        GraphLookupTableRegistry? lookupTables = null)
+        GraphLookupTableRegistry? lookupTables = null,
+        Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null)
     {
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _types = types ?? throw new ArgumentNullException(nameof(types));
@@ -46,6 +47,20 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
         _dispatchPresets = dispatchPresets ?? throw new ArgumentNullException(nameof(dispatchPresets));
         _lookupTables = lookupTables;
+        _rngPicks = rngPicks;
+    }
+
+    private readonly Ludots.Core.Gameplay.Rng.RngPickService? _rngPicks;
+
+    public int ResolveRngDistribution(string name)
+    {
+        if (_rngPicks == null)
+        {
+            throw new InvalidOperationException(
+                "GAS.GRAPH.ERR.RngDistributionUnavailable");
+        }
+
+        return _rngPicks.ResolveDistributionKey(name);
     }
 
     public static GraphOpsNodeGallerySymbolResolver CreateStandalone(string assetsRoot)
@@ -85,7 +100,35 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             flags,
             reasons,
             presets,
-            LoadLookupTables(Path.Combine(assetsRoot, "GraphTables")));
+            LoadLookupTables(Path.Combine(assetsRoot, "GraphTables")),
+            LoadDistributionPicks(assetsRoot));
+    }
+
+    private static Ludots.Core.Gameplay.Rng.RngPickService? LoadDistributionPicks(string assetsRoot)
+    {
+        string path = Path.Combine(assetsRoot, "Rng", "distributions.json");
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        var configs = System.Text.Json.JsonSerializer.Deserialize<Ludots.Core.Gameplay.Rng.DistributionConfig[]>(
+            File.ReadAllText(path),
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (configs == null || configs.Length == 0)
+        {
+            return null;
+        }
+
+        var tables = new List<Ludots.Core.Gameplay.Rng.DistributionTable>(configs.Length);
+        foreach (var config in configs)
+        {
+            tables.Add(new Ludots.Core.Gameplay.Rng.DistributionTable(config.Id, config.Stream, config.Entries));
+        }
+
+        return new Ludots.Core.Gameplay.Rng.RngPickService(
+            new Ludots.Core.Engine.Randomization.RngStreamService(),
+            tables);
     }
 
     public int ResolveGraphLookupTable(string name)

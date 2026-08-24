@@ -78,13 +78,13 @@ namespace NarrativeShowcaseMod.Runtime
 
     internal sealed class NarrativeShowcaseTemplateConfig
     {
-        public string ObjectiveTitleFormat { get; set; } = "{quest}: {stage}";
+        public string ObjectiveTitleFormat { get; set; } = "{task}";
         public string VariableCaptionFormat { get; set; } = "{label}: {value}";
-        public string QuestStageChanged { get; set; } = string.Empty;
+        public string TaskActivated { get; set; } = string.Empty;
         public string DialogueEntered { get; set; } = string.Empty;
         public string DialogueChoiceCommitted { get; set; } = string.Empty;
         public string CinematicEntered { get; set; } = string.Empty;
-        public string QuestCompleted { get; set; } = string.Empty;
+        public string TaskCompleted { get; set; } = string.Empty;
         public string Signal { get; set; } = string.Empty;
         public string BeastSpawned { get; set; } = string.Empty;
         public string RewardApplied { get; set; } = string.Empty;

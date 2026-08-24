@@ -1,5 +1,10 @@
 [
   {
+    "Path": "Input/trigger_actions.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
     "Path": "Entities/templates.json",
     "Policy": "ArrayById",
     "IdField": "id"
@@ -21,6 +26,16 @@
   },
   {
     "Path": "Presentation/presenters.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/host_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Events/custom_events.json",
     "Policy": "ArrayById",
     "IdField": "id"
   }

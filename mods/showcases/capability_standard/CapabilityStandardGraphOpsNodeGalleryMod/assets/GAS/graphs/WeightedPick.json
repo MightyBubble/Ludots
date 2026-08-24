@@ -1,0 +1,25 @@
+[
+  {
+    "id": "showcase.graph_op.WeightedPick",
+    "kind": "Effect",
+    "entry": "permille",
+    "nodes": [
+      { "id": "permille", "op": "ConstInt", "intValue": 500 },
+      { "id": "pick", "op": "WeightedPick", "distribution": "showcase.graph_op.loot_dice" },
+      { "id": "drain", "op": "ConstFloat", "floatValue": -3.0 },
+      { "id": "explicit", "op": "LoadExplicitTarget" },
+      { "id": "hit", "op": "ModifyAttributeAdd", "attribute": "Health" }
+    ],
+    "controlEdges": [
+      { "from": "permille", "fromPort": "next", "to": "pick" },
+      { "from": "pick", "fromPort": "next", "to": "drain" },
+      { "from": "drain", "fromPort": "next", "to": "explicit" },
+      { "from": "explicit", "fromPort": "next", "to": "hit" }
+    ],
+    "valueEdges": [
+      { "from": "permille", "fromPort": "value", "to": "pick", "toPort": "value" },
+      { "from": "drain", "fromPort": "value", "to": "hit", "toPort": "value" },
+      { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" }
+    ]
+  }
+]

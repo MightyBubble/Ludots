@@ -10,8 +10,10 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Gameplay.Spawning.Systems
 {
     /// <summary>
-    /// Keeps runtime manifestations anchored to a parent and updates their facing
-    /// from sweep velocity or parent execution target data.
+    /// Updates runtime manifestation facing from sweep velocity or parent execution
+    /// target data. Position following moved to the general AttachmentPositionSyncSystem:
+    /// manifestations with followParentPosition get an AttachedLocalPose at component
+    /// application time (forward offset rotated by own facing), so the sink anchors them.
     /// </summary>
     public sealed class ManifestationMotion2DSystem : BaseSystem<World, float>
     {
@@ -44,21 +46,6 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
                 {
                     Upsert(entity, new FacingDirection { AngleRad = facing.Value });
                 }
-
-                if (motion.FollowParentPosition != 0 && World.TryGet(parent, out WorldPositionCm parentPosition))
-                {
-                    Fix64Vec2 anchoredPosition = parentPosition.Value;
-                    float? offsetFacing = facing ?? ResolveOffsetFacing(entity, parent);
-                    if (motion.ForwardOffsetCm != 0 && offsetFacing.HasValue)
-                    {
-                        anchoredPosition += WorldPlane2D.Fix64OffsetCmFromFacingRad(
-                            offsetFacing.Value,
-                            motion.ForwardOffsetCm);
-                    }
-
-                    Upsert(entity, new WorldPositionCm { Value = anchoredPosition });
-                    Upsert(entity, new PreviousWorldPositionCm { Value = anchoredPosition });
-                }
             });
         }
 
@@ -86,21 +73,6 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
             }
 
             return WorldPlane2D.FacingRadFromDirection(in delta);
-        }
-
-        private float? ResolveOffsetFacing(Entity entity, Entity parent)
-        {
-            if (World.Has<FacingDirection>(entity))
-            {
-                return World.Get<FacingDirection>(entity).AngleRad;
-            }
-
-            if (World.Has<FacingDirection>(parent))
-            {
-                return World.Get<FacingDirection>(parent).AngleRad;
-            }
-
-            return null;
         }
 
         private void Upsert<T>(Entity entity, in T component)

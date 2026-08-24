@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using EntityCommandPanelMod.Runtime;
@@ -368,7 +368,7 @@ namespace EntityCommandPanelMod.UI
                                         .Justify(UiJustifyContent.SpaceBetween)
                                         .Align(UiAlignItems.Center),
                                     BuildShowcaseBar("Resource", "Mana Ready", 0.84f, "#2C8CE4", "#102035", 564f),
-                                    BuildShowcaseBar("Cooldown Sync", ResolveModeBadge(interactionModeKey), ResolveModeProgress(interactionModeKey), "#D2A755", "#241C0D", 564f),
+                                    BuildShowcaseBar("Lockout Sync", ResolveModeBadge(interactionModeKey), ResolveModeProgress(interactionModeKey), "#D2A755", "#241C0D", 564f),
                                     Ui.Row(primarySlots).Gap(8f),
                                     Ui.Row(utilitySlots).Gap(8f))
                                 .Gap(10f)
@@ -563,7 +563,7 @@ namespace EntityCommandPanelMod.UI
                 glyph,
                 hotkey,
                 accent,
-                slot.CooldownPermille,
+                slot.LockoutPermille,
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked),
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active),
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty));
@@ -586,7 +586,7 @@ namespace EntityCommandPanelMod.UI
                             .FontSize(Math.Max(9f, labelFontSize - 1f))
                             .Color(ResolveThemeSubTextColor(themeId))
                             .Width(width - 4f)
-                        : Ui.Text(slot.CooldownPermille > 0 ? $"Cooldown {slot.CooldownPermille / 10f:0}%" : ResolveFlagSummary(slot.StateFlags))
+                        : Ui.Text(slot.LockoutPermille > 0 ? $"Locked {slot.LockoutPermille / 10f:0}%" : ResolveFlagSummary(slot.StateFlags))
                             .FontSize(Math.Max(9f, labelFontSize - 1f))
                             .Color(ResolveThemeSubTextColor(themeId))
                             .Width(width - 4f))
@@ -1517,9 +1517,9 @@ namespace EntityCommandPanelMod.UI
             {
                 return slot.DetailLabel;
             }
-            if (slot.CooldownPermille > 0 || slot.ChargesMax > 0)
+            if (slot.LockoutPermille > 0 || slot.ChargesMax > 0)
             {
-                return $"CD {slot.CooldownPermille / 10f:0.#}% · Charges {slot.ChargesCurrent}/{slot.ChargesMax}";
+                return $"Lock {slot.LockoutPermille / 10f:0.#}% · Charges {slot.ChargesCurrent}/{slot.ChargesMax}";
             }
 
             if (slot.TemplateEntityId != 0)

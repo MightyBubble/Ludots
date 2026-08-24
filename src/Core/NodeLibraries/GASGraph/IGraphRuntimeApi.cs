@@ -62,6 +62,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
         }
 
+        int WeightedPick(int distributionKeyId, int modulationPermille)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RngPickUnavailable");
+        }
+
         int TableReadInt(int fieldId, int rowHandle)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
@@ -81,6 +86,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
         }
+
+        /// <summary>Sets an entity's world position in centimeters (int, matches LoadTargetPosX/Y).</summary>
+        void SetWorldPosition(Entity target, int xCm, int yCm);
+
+        /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
+        void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 
         void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
         {
@@ -366,6 +377,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
 
+        // ── TriggerManager bridge (map-scoped event firing) ──
+
+        /// <summary>
+        /// Fires a TriggerManager event resolved from a config-key id. Resolves the
+        /// scope entity's map and fires map-scoped when one is present; otherwise falls
+        /// back to the global event bus. Optional bridge — requires a bound TriggerManager.
+        /// </summary>
+        void FireEventKey(Entity scope, int eventKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
         // ── Entity lifecycle graph composition ──
         void BeginLifecycleTransaction()
         {
@@ -421,6 +444,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveRngDistribution(string name)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RngDistributionUnavailable");
+        }
+
         int ResolveGraphLookupTable(string name)
         {
             throw new InvalidOperationException(

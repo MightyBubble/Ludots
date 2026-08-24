@@ -419,8 +419,7 @@
       "name": "map_trigger_night_raid",
       "target": {
         "type": "path",
-        "value": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod",
-        "projectPath": "MapTriggerNightRaidMod.csproj"
+        "value": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod"
       }
     },
     {
@@ -1547,6 +1546,29 @@
       }
     },
     {
+      "name": "night_raid_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
+        "projectPath": "NightRaidShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "night_raid_override",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/map_trigger_night_raid_override/NightRaidOverrideMod"
+      }
+    },
+    {
+      "name": "agent_bridge",
+      "target": {
+        "type": "path",
+        "value": "mods/AgentBridgeMod",
+        "projectPath": "AgentBridgeMod.csproj"
+      }
+    },
+    {
       "name": "panel_theme_showcase",
       "target": {
         "type": "path",
@@ -1593,6 +1615,38 @@
       "target": {
         "type": "path",
         "value": "mods/showcases/panel_theme_minimal_web/PanelThemeMinimalWebMod"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SpawnTemplate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetWorldPosition",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetWorldPositionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetWorldPositionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "rng_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rng/RngShowcaseMod",
+        "projectPath": "RngShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WeightedPick",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj"
       }
     }
   ],

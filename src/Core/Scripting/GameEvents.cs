@@ -74,6 +74,7 @@ namespace Ludots.Core.Scripting
         /// captured at destroy time. Payload: SourceEntity, SourceTeamId.
         /// </summary>
         public static readonly EventKey EntityDied = new EventKey("EntityDied");
+        public static readonly EventKey InputActionFired = new EventKey("InputActionFired");
 
         /// <summary>
         /// Map-scoped: fired at think-wave granularity when a team's alive-entity count

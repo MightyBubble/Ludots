@@ -3021,7 +3021,7 @@ namespace Ludots.Tests.GAS.Production
             GameEngine engine,
             string actorName,
             string hitEffectTemplateName,
-            string cooldownTagName,
+            string lockoutTagName,
             string label)
         {
             World world = engine.World;
@@ -3065,7 +3065,7 @@ namespace Ludots.Tests.GAS.Production
                 }
             });
 
-            bool hasCooldown = EntityHasTag(world, actorName, cooldownTagName);
+            bool hasLockoutTag = EntityHasTag(world, actorName, lockoutTagName);
             int orderQueueCount = engine.GetService(CoreServiceKeys.OrderQueue)?.Count ?? -1;
             string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out var lastGroundObj)
                 ? lastGroundObj?.ToString() ?? "<null>"
@@ -3073,7 +3073,7 @@ namespace Ludots.Tests.GAS.Production
             string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out var lastOrderObj)
                 ? lastOrderObj?.ToString() ?? "<null>"
                 : "<missing>";
-            return $"{label}=cooldown:{hasCooldown},orderQueue:{orderQueueCount},lastGround:{lastGround},lastOrder:{lastOrder},projectiles:{projectileCount},withTargetPoint:{projectileWithTargetPointCount},withDirection:{projectileWithDirectionCount},withHitTemplate:{projectileHitTemplateCount},samples:[{string.Join(";", projectileSamples)}]";
+            return $"{label}=lockoutTag:{hasLockoutTag},orderQueue:{orderQueueCount},lastGround:{lastGround},lastOrder:{lastOrder},projectiles:{projectileCount},withTargetPoint:{projectileWithTargetPointCount},withDirection:{projectileWithDirectionCount},withHitTemplate:{projectileHitTemplateCount},samples:[{string.Join(";", projectileSamples)}]";
         }
 
         private static string FindRepoRoot()
