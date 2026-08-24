@@ -39,6 +39,7 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
         EnsureInitialized();
         if (_mapping == null)
         {
+            System.Console.WriteLine("[DIAG4] mapping is null after init");
             return;
         }
 
@@ -46,6 +47,10 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
         if (_helper.TryBindSoleSeatActor(_mapping, actor))
         {
             _mapping.Update(dt);
+        }
+        else
+        {
+            System.Console.WriteLine($"[DIAG4] seat bind failed actor={actor.Id} alive={actor != Entity.Null && _world.IsAlive(actor)}");
         }
     }
 

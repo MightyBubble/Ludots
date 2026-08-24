@@ -122,6 +122,18 @@ namespace CoreInputMod.Systems
             Entity commandOwner = TryGetCommandSourceOwner(out Entity resolvedOwner)
                 ? resolvedOwner
                 : Entity.Null;
+            Entity primaryDebug = Entity.Null;
+            bool primaryHasOwnerDebug = false;
+            int primaryOwnerPlayerIdDebug = -1;
+            if (commandOwner != Entity.Null &&
+                TryGetCommandSourcePrimary(commandOwner, out var diagCommandSourcePrimary))
+            {
+                primaryDebug = diagCommandSourcePrimary;
+                primaryHasOwnerDebug = _world.TryGet(diagCommandSourcePrimary, out PlayerOwner ownerDebug);
+                primaryOwnerPlayerIdDebug = primaryHasOwnerDebug ? ownerDebug.PlayerId : -1;
+            }
+
+            System.Console.WriteLine($"[DIAG6] GetControlledActor playerId={playerId} commandOwner={commandOwner.Id} primary={primaryDebug.Id} primaryHasOwner={primaryHasOwnerDebug} primaryOwnerPid={primaryOwnerPlayerIdDebug}");
             if (commandOwner != Entity.Null &&
                 TryGetCommandSourcePrimary(commandOwner, out var commandSourcePrimary) &&
                 _world.IsAlive(commandSourcePrimary) &&

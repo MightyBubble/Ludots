@@ -577,6 +577,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         public void Update(float dt)
         {
+            System.Console.WriteLine($"[DIAG3] Update dt={dt:0.000} hasSubmitHandler={_orderSubmitHandler != null} hasResolver={_orderTypeKeyResolver != null} cmdId='{_commandActionId}' cmdPressed={_commandActionId.Length > 0 && _input.PressedThisFrame(_commandActionId)}");
             if (_orderSubmitHandler == null) return;
             if (_orderTypeKeyResolver == null) return;
             if (dt > 0f)
@@ -636,6 +637,7 @@ namespace Ludots.Core.Input.Orders
 
                 if (IsCommandAction(actionId))
                 {
+                    System.Console.WriteLine($"[DIAG2] command action triggered: {actionId} pressed={_input.PressedThisFrame(actionId)} held={_input.IsDown(actionId)}");
                     SubmitCommandIntentOrder(effectiveMapping);
                     continue;
                 }
@@ -1973,8 +1975,11 @@ namespace Ludots.Core.Input.Orders
             return true;
         }
 
-        private OrderSubmitResult RejectCommandIntent(InputOrderMapping mapping, OrderSubmitResult result) =>
-            RejectInputActivation(mapping, result);
+        private OrderSubmitResult RejectCommandIntent(InputOrderMapping mapping, OrderSubmitResult result)
+        {
+            System.Console.WriteLine($"[DIAG2] RejectCommandIntent action={mapping.ActionId} result={result} solePossessed={_solePossessedRep.Id} hasGround={_groundPositionProvider != null}");
+            return RejectInputActivation(mapping, result);
+        }
 
         private OrderSubmitResult RejectInputActivation(InputOrderMapping mapping, OrderSubmitResult result)
         {
