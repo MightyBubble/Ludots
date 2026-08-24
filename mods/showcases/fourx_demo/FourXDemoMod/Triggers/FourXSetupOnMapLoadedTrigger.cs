@@ -42,7 +42,12 @@ namespace FourXDemoMod.Triggers
 
             EnsureTagComponents(world, entities.Governor);
 
-            int canColonize = TagRegistry.Register("Status.CanColonize");
+            int canColonize = TagRegistry.GetId("Status.CanColonize");
+            if (canColonize <= 0)
+            {
+                throw new InvalidOperationException("FourXDemoMod requires tag 'Status.CanColonize' to be declared in GAS/tag_rules.json.");
+            }
+
             tagOps.AddTag(world, entities.Governor, canColonize);
             SeedRelationshipEdges(engine, world, entities);
 

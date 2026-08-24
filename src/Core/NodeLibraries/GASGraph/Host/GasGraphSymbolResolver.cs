@@ -19,6 +19,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
         private readonly GraphLookupTableRegistry? _lookupTables;
+        private readonly Gameplay.Rng.RngPickService? _rngPicks;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
@@ -27,7 +28,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipReasonRegistry reasons,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
-            GraphLookupTableRegistry? lookupTables = null)
+            GraphLookupTableRegistry? lookupTables = null,
+            Gameplay.Rng.RngPickService? rngPicks = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -36,6 +38,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             _entityTemplateKeys = entityTemplateKeys;
             _lookupTables = lookupTables;
+            _rngPicks = rngPicks;
+        }
+
+        public int ResolveRngDistribution(string name)
+        {
+            if (_rngPicks == null)
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.RngDistributionUnavailable");
+            }
+
+            return _rngPicks.ResolveDistributionKey(name);
         }
 
         public int ResolveGraphLookupTable(string name)

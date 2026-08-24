@@ -36,7 +36,7 @@ internal sealed class UxPrototypeScenarioState
     private readonly List<ConstructionState> _construction = new();
     private readonly List<string> _events = new();
     private readonly Dictionary<int, List<WorldCmInt2>> _rallyPoints = new();
-    private readonly Dictionary<string, float> _skillCooldowns = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, float> _skillActionLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private bool _initialized;
     private string _activeMapId = string.Empty;
@@ -102,7 +102,7 @@ internal sealed class UxPrototypeScenarioState
         _construction.Clear();
         _rallyPoints.Clear();
         _events.Clear();
-        _skillCooldowns.Clear();
+        _skillActionLocks.Clear();
         _calendarDay = 112;
         _dayProgress = 0.2f;
         _year = 206;
@@ -170,7 +170,7 @@ internal sealed class UxPrototypeScenarioState
         AdvanceConstruction(engine, scaledDt);
         AdvanceNavmeshBake(scaledDt);
         AdvanceEconomy(engine, scaledDt);
-        AdvanceSkillCooldowns(scaledDt);
+        AdvanceSkillActionLocks(scaledDt);
     }
 
     private static Entity RequirePrototypeSolePossessedRep(GameEngine engine, string activeMapId)
@@ -671,18 +671,18 @@ internal sealed class UxPrototypeScenarioState
         AddEvent("Navmesh bake completed with zero leaked islands.");
     }
 
-    private void AdvanceSkillCooldowns(float scaledDt)
+    private void AdvanceSkillActionLocks(float scaledDt)
     {
-        if (_skillCooldowns.Count == 0)
+        if (_skillActionLocks.Count == 0)
         {
             return;
         }
 
         var completed = new List<string>();
-        foreach ((string actionId, float remaining) in _skillCooldowns)
+        foreach ((string actionId, float remaining) in _skillActionLocks)
         {
             float next = MathF.Max(0f, remaining - scaledDt);
-            _skillCooldowns[actionId] = next;
+            _skillActionLocks[actionId] = next;
             if (next <= 0f)
             {
                 completed.Add(actionId);
@@ -691,7 +691,7 @@ internal sealed class UxPrototypeScenarioState
 
         for (int i = 0; i < completed.Count; i++)
         {
-            _skillCooldowns.Remove(completed[i]);
+            _skillActionLocks.Remove(completed[i]);
         }
     }
 
@@ -1360,9 +1360,9 @@ internal sealed class UxPrototypeScenarioState
 
     private SkillEntry CreateSkillEntry(string actionId, string hotkey, string label, string summary, bool enabled)
     {
-        float cooldown = _skillCooldowns.TryGetValue(actionId, out float remaining) ? remaining : 0f;
-        bool active = cooldown > 0f;
-        string countText = active ? $"{MathF.Ceiling(cooldown):0}s" : "Ready";
+        float actionLockRemaining = _skillActionLocks.TryGetValue(actionId, out float remaining) ? remaining : 0f;
+        bool active = actionLockRemaining > 0f;
+        string countText = active ? $"{MathF.Ceiling(actionLockRemaining):0}s" : "Ready";
         return new SkillEntry(actionId, hotkey, label, summary, enabled && !active, active, countText);
     }
 
@@ -1371,29 +1371,29 @@ internal sealed class UxPrototypeScenarioState
         switch (actionId)
         {
             case "fireball":
-                StartCooldown(actionId, 4f);
+                StartSkillActionLock(actionId, 4f);
                 AddEvent("Mage cast Fireball at the current pointer locus.");
                 break;
             case "volley":
-                StartCooldown(actionId, 6f);
+                StartSkillActionLock(actionId, 6f);
                 AddEvent(_smartCastBatch
                     ? "Volley primed in batch mode for all valid ranged casters."
                     : "Volley channeled by the selected ranged unit.");
                 break;
             case "heal":
-                StartCooldown(actionId, 3f);
+                StartSkillActionLock(actionId, 3f);
                 AddEvent("Medic released Heal over the nearby formation.");
                 break;
             case "charge":
-                StartCooldown(actionId, 8f);
+                StartSkillActionLock(actionId, 8f);
                 AddEvent("Heavy Cavalry committed Charge along the frontline vector.");
                 break;
             case "siege_shot":
-                StartCooldown(actionId, 10f);
+                StartSkillActionLock(actionId, 10f);
                 AddEvent("Catapult released Siege Shot toward hostile fortifications.");
                 break;
             case "leap_slash":
-                StartCooldown(actionId, 5f);
+                StartSkillActionLock(actionId, 5f);
                 AddEvent("Soldier executed Leap Slash into melee range.");
                 break;
             default:
@@ -1402,9 +1402,9 @@ internal sealed class UxPrototypeScenarioState
         }
     }
 
-    private void StartCooldown(string actionId, float seconds)
+    private void StartSkillActionLock(string actionId, float seconds)
     {
-        _skillCooldowns[actionId] = Math.Max(seconds, 0.5f);
+        _skillActionLocks[actionId] = Math.Max(seconds, 0.5f);
     }
 
     private static bool TryResolveBuildTemplate(string actionId, out string? templateId)

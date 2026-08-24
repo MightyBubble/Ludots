@@ -18,6 +18,11 @@ export default defineConfig({
         target: 'http://localhost:5299',
         changeOrigin: true,
       },
+      '/agent-bridge': {
+        target: 'http://127.0.0.1:47921',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/agent-bridge/, ''),
+      },
     },
   },
   build: {

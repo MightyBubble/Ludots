@@ -43,14 +43,15 @@ public sealed class GraphScoreWoundedPriorityShowcaseAcceptanceTests
         float woundedBefore = ReadHealth(world, woundedDummy);
         Assert.That(woundedBefore, Is.LessThan(fullBefore));
 
-        int strikeAbilityId = AbilityIdRegistry.GetId(GraphScoreShowcaseContract.AbilityKey);
-        UtilityAiDecisionTrace submitted = TickUntilSubmitted(engine, world, caster, strikeAbilityId, maxFrames: 12);
+        int castAbilityOrderTypeId = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            .GetId("castAbility");
+        UtilityAiDecisionTrace submitted = TickUntilSubmitted(engine, world, caster, castAbilityOrderTypeId, maxFrames: 12);
         ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
             ?? throw new InvalidOperationException("残血打分短剧需要屏幕字幕缓冲。");
         Assert.Multiple(() =>
         {
             Assert.That(submitted.CandidateCount, Is.GreaterThan(0));
-            Assert.That(submitted.LastSubmittedAbilityId, Is.EqualTo(strikeAbilityId));
+            Assert.That(submitted.LastSubmittedOrderTypeId, Is.EqualTo(castAbilityOrderTypeId));
             Assert.That(submitted.BestTarget, Is.EqualTo(woundedDummy));
             Assert.That(submitted.BestScore, Is.GreaterThan(0f));
             Assert.That(OverlayContainsText(overlay, GraphScoreShowcaseContract.PlayerTitle), Is.True);
@@ -86,7 +87,7 @@ public sealed class GraphScoreWoundedPriorityShowcaseAcceptanceTests
         GameEngine engine,
         World world,
         Entity entity,
-        int abilityId,
+        int orderTypeId,
         int maxFrames)
     {
         UtilityAiDecisionTrace last = default;
@@ -94,14 +95,14 @@ public sealed class GraphScoreWoundedPriorityShowcaseAcceptanceTests
         {
             Tick(engine, 1);
             last = world.Get<UtilityAiDecisionTrace>(entity);
-            if (last.LastSubmittedAbilityId == abilityId && last.CandidateCount > 0)
+            if (last.LastSubmittedOrderTypeId == orderTypeId && last.CandidateCount > 0)
             {
                 return last;
             }
         }
 
         Assert.Fail(
-            $"打分短剧没有出手；last submitted={last.LastSubmittedAbilityId}, candidates={last.CandidateCount}, readiness={last.LastReadinessBlockReason}, best={last.BestTarget}.");
+            $"打分短剧没有出手；last submittedOrderType={last.LastSubmittedOrderTypeId}, candidates={last.CandidateCount}, best={last.BestTarget}.");
         return default;
     }
 

@@ -92,6 +92,7 @@ namespace Ludots.Core.Config
             Register<BlackboardSpatialBuffer>("BlackboardSpatialBuffer");
             Register<BlackboardEntityBuffer>("BlackboardEntityBuffer");
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
+            Register<BlackboardFloatBuffer>("BlackboardFloatBuffer");
             Register("AbilityExecAimSync", SetAbilityExecAimSync);
             Register<VisualTransform>("VisualTransform");
             Register<VisualHeightmapSampleState>("VisualHeightmapSampleState");

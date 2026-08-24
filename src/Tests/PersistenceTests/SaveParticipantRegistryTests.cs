@@ -90,6 +90,7 @@ public sealed class SaveParticipantRegistryTests
             "quests",
             "relationships",
             "tasks",
+            "rng",
             "teams",
             "timeFlow"
         }));

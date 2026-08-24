@@ -153,7 +153,7 @@ public readonly struct EntityCommandPanelSlotView
     public int SlotIndex { get; init; }
     public int AbilityId { get; init; }
     public EntityCommandSlotStateFlags StateFlags { get; init; }
-    public short CooldownPermille { get; init; }
+    public short LockoutPermille { get; init; }
     public short ChargesCurrent { get; init; }
     public short ChargesMax { get; init; }
 }

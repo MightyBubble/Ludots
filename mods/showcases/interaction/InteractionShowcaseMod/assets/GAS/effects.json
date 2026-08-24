@@ -609,5 +609,467 @@
         "value": -6
       }
     ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.E",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 48,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.F",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 12,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.F",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.Q",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 36,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.R",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.Rune",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 150,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.Rune",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.W",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.Z",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 72,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.Z",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.E",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 48,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.F",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 12,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.F",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.Q",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 36,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.R",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.Rune",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.Rune",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.W",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 80,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.Z",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 64,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.Z",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Stress.Fireball",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Stress.Fireball",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.E",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 42,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.F",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 12,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.F",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.Q",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.R",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 100,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.Rune",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.Rune",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.W",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.Z",
+    "tags": [
+      "Effect.Interaction.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 60,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.Z",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
   }
 ]

@@ -72,7 +72,7 @@ public sealed class CommandDeckWebUiTopicProducer : IWebUiTopicProducer
 				entry.RoutedOwnerEntityId,
 				entry.RoutedOwnerVersion,
 				entry.RoutedSlotIndex,
-				entry.CooldownPermille,
+				entry.LockoutPermille,
 				entry.ChargesCurrent,
 				entry.ChargesMax);
 		}
@@ -117,7 +117,7 @@ public sealed class CommandDeckWebUiTopicProducer : IWebUiTopicProducer
 		int RoutedOwnerEntityId,
 		int RoutedOwnerVersion,
 		int RoutedSlotIndex,
-		short CooldownPermille,
+		short LockoutPermille,
 		short ChargesCurrent,
 		short ChargesMax);
 }

@@ -20,8 +20,10 @@ namespace LudotsCoreMod.Triggers
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            var engine = context.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            if (!context.TryGet(CoreServiceKeys.Engine, out GameEngine? engine) || engine == null)
+            {
+                return Task.CompletedTask;
+            }
 
             // Prevent double installation
             if (engine.GlobalContext.TryGetValue(InstalledKey, out var installedObj) &&
