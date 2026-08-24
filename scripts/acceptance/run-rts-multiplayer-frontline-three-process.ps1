@@ -2783,7 +2783,8 @@ foreach ($requirement in $requiredWorldEvidence) {
         $layoutRegion = [string]$layout.region
         $maximumScreenOverlapRatio = [double]$layout.maximumScreenOverlapRatio
         $layoutSources = @(Get-DistinctEntityLayoutSources -Layout $layout)
-        $hasSeparationSource = -not [string]::IsNullOrWhiteSpace([string]$layout.minimumWorldSeparationSource)
+        $hasSeparationSource = $null -ne $layout.PSObject.Properties["minimumWorldSeparationSource"] -and
+            -not [string]::IsNullOrWhiteSpace([string]$layout.minimumWorldSeparationSource)
         $hasExplicitSeparation = $null -ne $layout.PSObject.Properties["minimumWorldSeparationCm"]
         if ([string]::IsNullOrWhiteSpace([string]$layout.template) -or
             [int]$layout.minimumInstances -lt 2 -or
