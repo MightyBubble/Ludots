@@ -37,6 +37,7 @@
   - [实体仿真阶段验收](architecture/entity-simulation-uat.md)
   - [能力标准 Showcase](architecture/capability-standard-showcases.md)
   - [UAT 可玩 Showcase 矩阵](architecture/uat-playable-showcase-matrix.md)
+  - [叙事线 Showcase](architecture/narrative-showcase-line.md)
   - [Map-Owned Participant Contract](architecture/map-owned-participant-contract.md)
   - [ClientLocalSeat · Possession · LogicView · PresentBinding](architecture/client-local-seat-and-logic-view.md)
   - [Transport Network SSOT](architecture/transport-network-ssot.md)
