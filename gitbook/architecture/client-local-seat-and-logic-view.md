@@ -4,6 +4,8 @@
 
 本页是本机座位与逻辑视觉的正式合同。取代全局 `LocalPlayerId` / `LocalPlayerEntity` 与「唯一 `GameSession.Camera` = 唯一本地视觉」的旧模型。禁止兼容桥、禁止镜像旧键。
 
+本页各概念在四层术语阶梯（Machine / App / Seat / Device）中的位置与四条术语禁则，见 [terminology.md](terminology.md)。
+
 ## 1. 概述
 
 四分职责，禁止混写：
