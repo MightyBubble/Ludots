@@ -220,6 +220,25 @@ namespace Ludots.Core.Engine
             return ctx;
         }
 
+        private void WireMapVariablePhaseDispatcher(MapSession session)
+        {
+            Gameplay.MapTriggers.MapVariableStore? variables = session?.Variables;
+            if (variables == null)
+            {
+                return;
+            }
+
+            variables.PhaseChangedDispatcher = (mapId, varName, newValue) =>
+            {
+                ScriptContext ctx = CreateMapEventContext(session!);
+                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyVarName, varName);
+                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyPhase, newValue);
+                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyVarValueInt, newValue);
+                CompleteLifecycleEvent(
+                    TriggerManager.FireMapEventAsync(mapId, new EventKey(Gameplay.MapTriggers.MapVariableStore.PhaseChangedEventName), ctx));
+            };
+        }
+
         private void RestoreFocusedMapSession(MapSession session)
         {
             SetCurrentMapSession(session);

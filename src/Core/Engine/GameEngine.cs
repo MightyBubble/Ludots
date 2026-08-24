@@ -28,6 +28,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Spawning.Systems;
 using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Gameplay.MapTriggers;
 using Schedulers; // Added for JobScheduler
 using Ludots.Core.Systems;
 using Ludots.Core.Engine.Pacemaker;
@@ -135,6 +136,9 @@ namespace Ludots.Core.Engine
         public IMapManager MapManager { get; private set; }
         public ConfigPipeline ConfigPipeline { get; private set; }
         public MapLoader MapLoader { get; private set; }
+
+        /// <summary>Entity-domain TriggerGraph mount pipeline; owns spawn/destroy-tick dispatch and dead-mount sweeps.</summary>
+        public Gameplay.MapTriggers.EntityTriggerGraphMounts EntityTriggerGraphMounts { get; private set; }
         public SystemFactoryRegistry SystemFactoryRegistry { get; private set; }
         public TriggerDecoratorRegistry TriggerDecoratorRegistry { get; private set; }
         internal ModExtensionHub ModExtensions { get; private set; }
@@ -525,6 +529,14 @@ namespace Ludots.Core.Engine
 
                 // 5. Setup Data Loaders
                 MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
+                EntityTriggerGraphMounts = new Gameplay.MapTriggers.EntityTriggerGraphMounts(
+                    World,
+                    () => MapSessions,
+                    TriggerManager,
+                    CreateContext,
+                    () => TriggerDecoratorRegistry,
+                    () => GetService(CoreServiceKeys.GraphProgramRegistry));
+                MapLoader.SetEntityTriggerGraphMounts(EntityTriggerGraphMounts);
                 MapLoader.LoadTemplates(ConfigCatalog, ConfigConflictReport);
                 SetService(CoreServiceKeys.EntityTemplateKeyRegistry, MapLoader.EntityTemplateKeys);
 
@@ -818,6 +830,8 @@ namespace Ludots.Core.Engine
                 visionFogFieldStore,
                 visionResolver,
                 fogKnowledgeProjector);
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.ScopeKeyRegistry, progressionScopeKeys);
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.VisionFogLayerRegistry, visionFogLayerRegistry);
             // Lookup TextToken columns resolve against PresentationTextCatalog; load catalog before graphs.
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphLookupTables = new GraphLookupTableLoader(ConfigPipeline, presentationTextCatalog)
@@ -957,10 +971,6 @@ namespace Ludots.Core.Engine
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            var panelHost = new PanelHost(
-                panelTemplates,
-                new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables));
-            gasGraphApi.BindPanelHost(panelHost);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,
@@ -968,6 +978,15 @@ namespace Ludots.Core.Engine
                 graphHandlers,
                 entityCollectionStore,
                 graphOutputValueStore);
+            var panelHost = new PanelHost(
+                panelTemplates,
+                new PanelProjectionReader(World, graphOutputValueStore),
+                new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi));
+            gasGraphApi.BindPanelHost(panelHost);
+            var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
+            var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
+            gasGraphApi.BindPanelActivation(panelActivationApi);
+            gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             var progressionEvaluator = new ProgressionRequirementEvaluator(
                 World,
                 progressionRequirements,
@@ -1050,6 +1069,7 @@ namespace Ludots.Core.Engine
                 presentationOwnerChanges);
             var globalPresentationEventProjectionSystem = new GlobalPresentationEventProjectionSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
             var presenterCommandBuffer = new PresenterCommandBuffer(presentationConfig.PresenterCommandCapacity);
+            var presenterTimerTable = new PresenterTimerTable(presentationConfig.PresenterTimerCapacity);
             var meshAssets = new MeshAssetRegistry();
             var particleVfx = new ParticleVfxRegistry();
             var materialAssets = new PresentationMaterialRegistry();
@@ -1146,6 +1166,7 @@ namespace Ludots.Core.Engine
                 AbilityPresentationTextValidator.RejectTokenizedPresentationWithoutLocaleCatalog(abilityDefinitions);
             }
             var presenterRuleSystem = new PresenterRuleSystem(World, presentationEventStream, presenterCommandBuffer, presenterDefinitions, presenterRuntime, graphProgramRegistry, gasGraphApi, GlobalContext, graphHandlers);
+            var presenterTimerSystem = new PresenterTimerSystem(World, presenterTimerTable, presentationEventStream);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
                 World,
                 presentationEventStream,
@@ -1166,7 +1187,8 @@ namespace Ludots.Core.Engine
                 presenterAnimatorStates,
                 stableDrawCache,
                 presenterVisualStableIds,
-                performerCommandKinds);
+                performerCommandKinds,
+                presenterTimerTable);
             var presenterBehaviorSystem = new PresenterBehaviorSystem(
                 World,
                 presenterRuntime,
@@ -1301,7 +1323,7 @@ namespace Ludots.Core.Engine
             SetService(
                 CoreServiceKeys.MinimapKnowledgeViewerProvider,
                 static (GameEngine engine, out Entity viewer) =>
-                    KnowledgeProjectionConsumer.TryResolveViewer(engine.World, engine.GlobalContext, Entity.Null, out viewer));
+                    KnowledgeProjectionConsumer.TryResolveSoleLocalSeatViewer(engine.World, engine.GlobalContext, out viewer));
 
             var abilitySystem = new AbilitySystem(
                 World,
@@ -1496,6 +1518,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.PanelHost, panelHost);
+            SetService(CoreServiceKeys.PanelTemplateRegistry, panelTemplates);
+            SetService(CoreServiceKeys.PanelActivationApi, panelActivationApi);
+            SetService(CoreServiceKeys.PanelActivationStore, panelActivationStore);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
             SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);
             SetService(CoreServiceKeys.GraphOutputValueStore, graphOutputValueStore);
@@ -1780,7 +1805,8 @@ namespace Ludots.Core.Engine
                 tagOps,
                 presenterRuntime,
                 presenterDefinitions,
-                componentAuthoringContext);
+                componentAuthoringContext,
+                entityTriggerGraphMounts: EntityTriggerGraphMounts);
             RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(
                 World,
@@ -1808,7 +1834,8 @@ namespace Ludots.Core.Engine
                 playerLookup: playerEntityLookup,
                 teamLookup: teamEntityLookup,
                 relationships: relationshipRuntime,
-                memberOfTypeId: memberOfRelationshipTypeId),
+                memberOfTypeId: memberOfRelationshipTypeId,
+                entityTriggerGraphMounts: EntityTriggerGraphMounts),
                 SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntityLifecycleSystem(
@@ -1861,6 +1888,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
 
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
@@ -1870,11 +1899,13 @@ namespace Ludots.Core.Engine
             RegisterSystem(new OrderAdmissionEntityIntakeEndSystem(orderAdmissionResults), SystemGroup.Cleanup);
 
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
+            RegisterSystem(new GasEventTriggerBridgeSystem(EventBus, TriggerManager, World, CreateContext), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget, gasDiagnostics, orderAdmissionResults), SystemGroup.EventDispatch);
 
             // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
             // and owner-change index consumed by presenter owner bindings.
             // Changed-bit components are cleared only after projection for the completed fixed step.
+            RegisterSystem(new TriggerGraphMomentBridgeSystem(gasPresentationEvents, TriggerManager, World, CreateContext), SystemGroup.ClearPresentationFlags);
             RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
             RegisterSystem(new OrderAdmissionGenerationEndSystem(orderAdmissionResults), SystemGroup.ClearPresentationFlags);
@@ -1914,6 +1945,9 @@ namespace Ludots.Core.Engine
                 instancedBatchOperations,
                 presentationEventStream,
                 presentationOwnerChanges));
+            // PresenterTimerSystem advances named timers and publishes TimerExpired before rules run,
+            // so an expiry is consumable by PresenterRuleSystem in the same frame.
+            RegisterPresentationSystem(presenterTimerSystem);
             // PresenterRuleSystem reads events and produces commands.
             RegisterPresentationSystem(presenterRuleSystem);
             // PresenterRuntimeSystem consumes commands, manages instance lifecycle.
@@ -2156,6 +2190,7 @@ namespace Ludots.Core.Engine
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
+                WireMapVariablePhaseDispatcher(session);
                 // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
                 session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
                 session.VisualHeightmap = visualHeightmap;
@@ -2202,7 +2237,7 @@ namespace Ludots.Core.Engine
 
                 // Instantiate map triggers + apply decorators
                 var definition = ((MapManager)MapManager).GetDefinition(mid);
-                var triggers = InstantiateMapTriggers(definition, mapConfig);
+                var triggers = InstantiateMapTriggers(definition, mapConfig, session);
                 ApplyTriggerDecorators(triggers);
                 if (triggers.Count > 0)
                 {
@@ -2255,6 +2290,7 @@ namespace Ludots.Core.Engine
             var focused = MapSessions.FocusedSession;
             bool wasFocused = focused != null && focused.MapId == mid;
 
+            EntityTriggerGraphMounts?.DropMap(mid);
             MapSessions.UnloadSession(mid, World);
             _mapLoadStatuses.Remove(mid);
 
@@ -2323,6 +2359,7 @@ namespace Ludots.Core.Engine
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = mapSessions.CreateSession(inner, mapConfig, parentCtx);
+            WireMapVariablePhaseDispatcher(session);
             session.VisualHeightmap = visualHeightmap;
             BindStructureCollisionSession(session, visualHeightmap, structureCollision);
 
@@ -2382,7 +2419,7 @@ namespace Ludots.Core.Engine
 
             // Instantiate, decorate, and register inner map triggers
             var definition = ((MapManager)MapManager).GetDefinition(inner);
-            var triggers = InstantiateMapTriggers(definition, mapConfig);
+            var triggers = InstantiateMapTriggers(definition, mapConfig, session);
             ApplyTriggerDecorators(triggers);
             if (triggers.Count > 0)
             {
@@ -2426,6 +2463,7 @@ namespace Ludots.Core.Engine
             var poppedId = MapSessions.PopFocused();
             if (innerSession != null)
             {
+                EntityTriggerGraphMounts?.DropMap(poppedId);
                 MapSessions.UnloadSession(poppedId, World);
                 _mapLoadStatuses.Remove(poppedId);
             }
@@ -2845,7 +2883,7 @@ namespace Ludots.Core.Engine
             }
         }
 
-        private List<Trigger> InstantiateMapTriggers(MapDefinition definition, MapConfig mapConfig)
+        private List<Trigger> InstantiateMapTriggers(MapDefinition definition, MapConfig mapConfig, MapSession session)
         {
             var triggers = new List<Trigger>();
 
@@ -2891,6 +2929,13 @@ namespace Ludots.Core.Engine
                 }
             }
 
+            // From JSON MapConfig.TriggerGraphs (graph mounts resolved against the entity index);
+            // entity-domain mounts declared in map JSON route through the entity mount pipeline
+            triggers.AddRange(TriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry), EntityTriggerGraphMounts));
+
+            // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
+            triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));
+
             return triggers;
         }
 
@@ -2900,6 +2945,16 @@ namespace Ludots.Core.Engine
 
             for (int i = 0; i < triggers.Count; i++)
             {
+                // Entity-domain mounts are decorated by EntityTriggerGraphMounts at creation
+                // (before their immediate lifecycle dispatch), not by this post-instantiation pass.
+                if (triggers[i] is Gameplay.MapTriggers.TriggerGraphMountTrigger
+                    {
+                        Domain: Gameplay.MapTriggers.TriggerGraphMountDomain.Entity
+                    })
+                {
+                    continue;
+                }
+
                 TriggerDecoratorRegistry.Apply(triggers[i]);
             }
         }

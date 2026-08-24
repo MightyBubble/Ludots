@@ -1,0 +1,26 @@
+[
+  {
+    "id": "pt_e2e.flash_unit",
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "PT.HitFlash" },
+        "command": { "kind": "TimerSet", "timerName": "pt.flash", "durationSeconds": 0.3 }
+      },
+      {
+        "event": { "kind": "TimerExpired", "keyId": "pt.flash" },
+        "command": { "kind": "CreatePresenter", "definitionId": "pt_e2e.phase_child", "scopeSource": "Fixed", "scopeTag": "pt.phase" }
+      },
+      {
+        "event": { "kind": "TimerExpired", "keyId": "*" },
+        "command": { "kind": "CreatePresenter", "definitionId": "pt_e2e.wildcard_marker", "scopeSource": "Fixed", "scopeTag": "pt.wildcard" }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "keyId": "PT.Suppressed" },
+        "condition": { "inline": "TagLost" },
+        "command": { "kind": "TimerKill", "timerName": "*" }
+      }
+    ]
+  },
+  { "id": "pt_e2e.phase_child" },
+  { "id": "pt_e2e.wildcard_marker" }
+]

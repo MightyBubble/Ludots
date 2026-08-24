@@ -21,11 +21,6 @@ namespace Ludots.Core.Scripting
         /// Fired when the game session ends or the application is closing.
         /// </summary>
         public static readonly EventKey GameEnd = new EventKey("GameEnd");
-        
-        /// <summary>
-        /// Fired every frame (Use with caution!)
-        /// </summary>
-        public static readonly EventKey Tick = new EventKey("Tick");
 
         /// <summary>
         /// Fired after a mod is successfully loaded.
@@ -60,5 +55,43 @@ namespace Ludots.Core.Scripting
         /// Fired when a previously suspended map is restored to active.
         /// </summary>
         public static readonly EventKey MapResumed = new EventKey("MapResumed");
+
+        /// <summary>
+        /// Map-scoped: fired when a map's think-wave interval of fixed ticks elapses.
+        /// Payload: MapTriggerEventPayloadKeys.HeartbeatIndex.
+        /// </summary>
+        public static readonly EventKey MapHeartbeat = new EventKey("MapHeartbeat");
+
+        /// <summary>
+        /// Map-scoped: fired at think-wave granularity for entities that joined the map
+        /// during the wave. Payload: SourceEntity, SourceTeamId.
+        /// </summary>
+        public static readonly EventKey EntitySpawned = new EventKey("EntitySpawned");
+
+        /// <summary>
+        /// Map-scoped: fired at think-wave granularity for entities destroyed during the
+        /// wave. The entity may already be recycled when the event fires; SourceTeamId was
+        /// captured at destroy time. Payload: SourceEntity, SourceTeamId.
+        /// </summary>
+        public static readonly EventKey EntityDied = new EventKey("EntityDied");
+
+        /// <summary>
+        /// Map-scoped: fired at think-wave granularity when a team's alive-entity count
+        /// (entities with AttributeBuffer) differs from the previous wave.
+        /// Payload: SourceTeamId, Count, Delta.
+        /// </summary>
+        public static readonly EventKey EntityAliveCountChanged = new EventKey("EntityAliveCountChanged");
+
+        /// <summary>
+        /// Map-scoped: fired by the region system when an entity enters a region.
+        /// Payload: SourceEntity, RegionId.
+        /// </summary>
+        public static readonly EventKey RegionEntered = new EventKey("RegionEntered");
+
+        /// <summary>
+        /// Map-scoped: fired by the region system when an entity exits a region.
+        /// Payload: SourceEntity, RegionId.
+        /// </summary>
+        public static readonly EventKey RegionExited = new EventKey("RegionExited");
     }
 }

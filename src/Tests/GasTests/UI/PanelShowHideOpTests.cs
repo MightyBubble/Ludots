@@ -19,6 +19,7 @@ namespace Ludots.Tests.GasTests.UI
     public sealed class PanelShowHideOpTests
     {
         private const string PanelTypeKey = "tests.panel.entity_attributes";
+        private const string AnchorKey = "tests.anchor.bottom_right";
 
         [SetUp]
         public void SetUp()
@@ -135,6 +136,33 @@ namespace Ludots.Tests.GasTests.UI
                 api.HidePanel(ConfigKeyRegistry.Register(PanelTypeKey));
                 Assert.That(store.IsVisible(PanelTypeKey), Is.False);
             }
+        }
+
+        [Test]
+        public void ShowPanel_WithoutBoundActivationApi_FailsClosed()
+        {
+            using World world = World.Create();
+            _ = world.Create();
+            var api = new GasGraphRuntimeApi(world);
+
+            Assert.That(
+                () => api.ShowPanel(ConfigKeyRegistry.Register(PanelTypeKey)),
+                Throws.InvalidOperationException.With.Message.Contains("PanelActivationUnavailable"));
+        }
+
+        [Test]
+        public void CreatePanel_WithoutBoundPanelHost_FailsClosed()
+        {
+            using World world = World.Create();
+            Entity caster = world.Create();
+            var api = new GasGraphRuntimeApi(world);
+
+            Assert.That(
+                () => api.CreatePanel(
+                    ConfigKeyRegistry.Register(PanelTypeKey),
+                    ConfigKeyRegistry.Register(AnchorKey),
+                    caster),
+                Throws.InvalidOperationException.With.Message.Contains("PanelHostUnavailable"));
         }
 
         [Test]

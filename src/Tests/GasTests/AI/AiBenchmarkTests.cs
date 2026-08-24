@@ -59,7 +59,7 @@ namespace Ludots.Tests.GAS
                     postValues: in postValues,
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
-                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 123, submitMode: OrderSubmitMode.Immediate, playerId: 0),
+                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 123, submitMode: OrderSubmitMode.Immediate, playerId: 1),
                     bindings: new[] { new ActionBinding(ActionBindingOp.IntToAbilitySlot, sourceKey: 1) })
             });
 
@@ -149,7 +149,7 @@ namespace Ludots.Tests.GAS
                     postValues: default,
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
-                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 123, submitMode: OrderSubmitMode.Immediate, playerId: 0),
+                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 123, submitMode: OrderSubmitMode.Immediate, playerId: 1),
                     bindings: new[] { new ActionBinding(ActionBindingOp.IntToAbilitySlot, sourceKey: 1) })
             });
 
@@ -191,7 +191,7 @@ namespace Ludots.Tests.GAS
                     postValues: default,
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
-                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.TargetEntity, orderTypeId: 124, submitMode: OrderSubmitMode.Immediate, playerId: 0),
+                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.TargetEntity, orderTypeId: 124, submitMode: OrderSubmitMode.Immediate, playerId: 1),
                     bindings: new[] { new ActionBinding(ActionBindingOp.EntityToTarget, sourceKey: 2) })
             });
 
@@ -236,7 +236,7 @@ namespace Ludots.Tests.GAS
                     postValues: default,
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
-                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.MoveToWorldCm, orderTypeId: 125, submitMode: OrderSubmitMode.Immediate, playerId: 0),
+                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.MoveToWorldCm, orderTypeId: 125, submitMode: OrderSubmitMode.Immediate, playerId: 1),
                     bindings: new[] { new ActionBinding(ActionBindingOp.EntityPositionToMoveDestination, sourceKey: 3) })
             });
 
@@ -282,7 +282,7 @@ namespace Ludots.Tests.GAS
                     postValues: default,
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
-                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.Stop, orderTypeId: 126, submitMode: OrderSubmitMode.Immediate, playerId: 0),
+                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.Stop, orderTypeId: 126, submitMode: OrderSubmitMode.Immediate, playerId: 1),
                     bindings: Array.Empty<ActionBinding>())
             });
 
@@ -325,7 +325,7 @@ namespace Ludots.Tests.GAS
                     postValues: default,
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
-                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.None, orderTypeId: 123, submitMode: OrderSubmitMode.Immediate, playerId: 0),
+                    orderSpec: new ActionOrderSpec(AiOrderPayloadKind.None, orderTypeId: 123, submitMode: OrderSubmitMode.Immediate, playerId: 1),
                     bindings: Array.Empty<ActionBinding>())
             });
 

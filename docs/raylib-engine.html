@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raylib 引擎画廊 — Ludots</title>
+<meta name="description" content="Ludots Raylib 引擎画廊 Wiki：20 个引擎渲染场景每场一页——验收截图、作者写法、车道接线、怎么跑。目录数据由构建脚本从 Wiki 总目录解析生成。">
+<link rel="stylesheet" href="site-assets/site.css">
+<style>
+  .docs-layout {
+    display: grid; grid-template-columns: 320px 1fr; gap: 26px; align-items: start;
+  }
+  .docs-tree {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 14px;
+    max-height: 74vh; overflow-y: auto; position: sticky; top: 84px;
+  }
+  .docs-tree .tree-title {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    padding: 0 10px 10px; letter-spacing: 1px;
+  }
+  .docs-tree a, .docs-tree .entry {
+    display: block; padding: 5px 10px; border-radius: var(--radius-sm);
+    color: var(--fg); font-size: 13.5px; line-height: 1.55;
+  }
+  .docs-tree a:hover { background: var(--accent-light); color: var(--accent); text-decoration: none; }
+  .docs-tree a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  .docs-tree .grp > .entry { font-weight: 600; }
+  .docs-tree .children { margin-left: 14px; border-left: 1px solid var(--border); padding-left: 6px; }
+  .docs-tree .id {
+    font-family: var(--mono); font-size: 11.5px; color: var(--accent);
+    background: var(--accent-light); border-radius: 4px; padding: 0 5px; margin-right: 6px;
+  }
+  .wiki-filter {
+    width: 100%; box-sizing: border-box; margin: 0 0 12px; padding: 7px 10px;
+    font-size: 13px; font-family: inherit; color: var(--fg);
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  }
+  .wiki-filter:focus { outline: none; border-color: var(--accent); }
+  .docs-view {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 36px 44px; min-height: 400px;
+    max-width: 100%; overflow-x: hidden;
+  }
+  .docs-view .doc-path { font-size: 12.5px; color: var(--faint); margin-bottom: 18px; font-family: var(--mono); }
+  .md-body h1 { font-size: 26px; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin: 0 0 18px; }
+  .md-body h2 { font-size: 21px; margin-top: 34px; border-bottom: 1px solid var(--border); padding-bottom: 7px; }
+  .md-body h3 { font-size: 17px; margin-top: 26px; }
+  .md-body h4 { font-size: 15.5px; margin-top: 22px; }
+  .md-body p { margin: 12px 0; }
+  .md-body ul, .md-body ol { margin: 12px 0; padding-left: 24px; }
+  .md-body li { margin: 4px 0; }
+  .md-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; display: block; overflow-x: auto; }
+  .md-body th, .md-body td { border: 1px solid var(--border); padding: 7px 12px; text-align: left; }
+  .md-body th { background: var(--bg-soft); font-weight: 600; }
+  .md-body blockquote {
+    border-left: 3px solid var(--accent); margin: 16px 0;
+    padding: 8px 16px; background: var(--bg-soft); color: var(--muted);
+  }
+  .md-body pre { background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; overflow-x: auto; font-size: 13px; }
+  .md-body code { font-family: var(--mono); font-size: 0.92em; background: var(--bg-soft); border-radius: 4px; padding: 1px 5px; }
+  .md-body pre code { background: none; padding: 0; }
+  .md-body img { max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); margin: 14px 0; }
+  .md-body video {
+    display: block; width: 100%; max-width: 900px; margin: 18px 0;
+    border: 1px solid var(--border); border-radius: var(--radius-sm); background: #000;
+  }
+  .md-body hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+  .op-pager {
+    display: flex; justify-content: space-between; gap: 16px;
+    margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--border);
+  }
+  .op-pager a { font-size: 13.5px; color: var(--accent); }
+  .op-pager .none { font-size: 13.5px; color: var(--faint); }
+  .docs-loading { color: var(--faint); padding: 40px 0; text-align: center; }
+
+  @media (max-width: 960px) {
+    .docs-layout { grid-template-columns: 1fr; }
+    .docs-tree { position: static; max-height: 320px; }
+    .docs-view { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body data-page="raylibengine">
+<header id="topbar"></header>
+
+<main class="page">
+  <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; margin-bottom: 14px;">
+    <a class="btn btn-primary" href="#readme">画廊总目录</a>
+    <a class="btn btn-ghost" href="index.html#docs/architecture/raylib-engine-capabilities.md">能力总览</a>
+    <a class="btn btn-ghost" href="index.html#docs/architecture/render-lighting-guide.md">渲染光照栈指南</a>
+    <a class="btn btn-ghost" href="index.html#docs/architecture/engine-capability-showcases.md">能力标准化 Showcase</a>
+    <a class="btn btn-ghost" href="gallery.html">Showcase 画廊 →</a>
+    <a class="btn btn-ghost" href="tests.html">测试与验收 →</a>
+  </div>
+  <div class="docs-layout">
+    <aside class="docs-tree" id="wiki-tree">
+      <div class="tree-title">目录加载中…</div>
+    </aside>
+    <article class="docs-view">
+      <div class="doc-path" id="doc-path"></div>
+      <div class="md-body" id="doc-body">
+        <div class="docs-loading">文档加载中…</div>
+      </div>
+      <div class="op-pager" id="scene-pager"></div>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>Ludots Raylib 引擎画廊 · 写作源 gitbook/reference/engine-gallery-wiki/</span>
+    <span>录像存 artifacts/evidence/engine_raylib_*/ · 截图与 stats 存 artifacts/acceptance/ · 发布于 GitHub Pages</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="site-assets/site.js"></script>
+<script src="site-assets/engine-gallery-nav.js"></script>
+<script>
+(function () {
+  "use strict";
+  var esc = LudotsSite.esc;
+
+  var WIKI_DIR = "reference/engine-gallery-wiki/";
+  var DEFAULT_DOC = "README.md";
+  var currentDoc = null;
+
+  if (window.marked && marked.setOptions) {
+    marked.setOptions({ gfm: true, breaks: false, headerIds: true, mangle: false });
+  }
+
+  /* ============ 目录树（数据源：site-assets/engine-gallery-nav.js） ============ */
+  function flatScenes() {
+    var flat = [];
+    var nav = window.ENGINE_GALLERY_NAV;
+    if (!nav) return flat;
+    for (var i = 0; i < nav.families.length; i++) {
+      for (var j = 0; j < nav.families[i].ops.length; j++) {
+        flat.push(nav.families[i].ops[j]);
+      }
+    }
+    return flat;
+  }
+
+  function sceneName(file) {
+    return file.replace(/\.md$/i, "");
+  }
+
+  function buildTree() {
+    var host = document.getElementById("wiki-tree");
+    if (!window.ENGINE_GALLERY_NAV || !window.ENGINE_GALLERY_NAV.families) {
+      host.innerHTML = '<div class="tree-title">目录不可用</div>' +
+        '<div class="docs-loading">请先运行 python scripts/build-site.py 重建站点。</div>';
+      return;
+    }
+    var nav = window.ENGINE_GALLERY_NAV;
+    var html = '<div class="tree-title">引擎画廊 · ' + nav.total + " 场景 · " + nav.families.length + " 家族</div>";
+    html += '<input class="wiki-filter" id="wiki-filter" type="search" placeholder="过滤：scene id / 人话标题 / 一句话简介">';
+    html += '<a data-doc="' + esc("README.md") + '" href="#readme">总目录 · 家族分组索引</a>';
+    for (var i = 0; i < nav.families.length; i++) {
+      var fam = nav.families[i];
+      html += '<div class="grp" data-family="' + esc(fam.title) + '">' +
+        '<div class="entry">' + esc(fam.title) +
+        ' <span style="color:var(--faint);font-weight:400;font-size:12px;">' + fam.ops.length + "</span></div>";
+      html += '<div class="children">';
+      for (var j = 0; j < fam.ops.length; j++) {
+        var op = fam.ops[j];
+        html += '<a data-doc="' + esc(op.file) + '" href="#scene/' + esc(sceneName(op.file)) + '">' +
+          '<span class="id">' + esc(sceneName(op.file)) + "</span>" + esc(op.title) + "</a>";
+      }
+      html += "</div></div>";
+    }
+    host.innerHTML = html;
+
+    var filter = document.getElementById("wiki-filter");
+    filter.addEventListener("input", function () {
+      var q = filter.value.trim().toLowerCase();
+      host.querySelectorAll(".grp").forEach(function (grp) {
+        var visible = 0;
+        grp.querySelectorAll("a[data-doc]").forEach(function (a) {
+          var hit = !q || a.textContent.toLowerCase().indexOf(q) >= 0 ||
+            (a.getAttribute("data-desc") || "").toLowerCase().indexOf(q) >= 0;
+          a.style.display = hit ? "" : "none";
+          if (hit) visible++;
+        });
+        grp.style.display = visible ? "" : "none";
+      });
+    });
+    markActive();
+  }
+
+  function markActive() {
+    document.querySelectorAll("#wiki-tree a[data-doc]").forEach(function (a) {
+      a.classList.toggle("active", a.getAttribute("data-doc") === currentDoc);
+    });
+  }
+
+  /* ============ 链接重写：同目录 .md 互链进页内路由，跨目录走门户文档区 ============ */
+  function rewriteLinks(container) {
+    container.querySelectorAll("a[href]").forEach(function (a) {
+      var href = a.getAttribute("href");
+      if (!href || /^(https?:|mailto:|#)/i.test(href)) return;
+      if (!/\.md$/i.test(href)) return;
+      var decoded = decodeURIComponent(href);
+      if (decoded.indexOf("..") < 0) {
+        var stem = decoded.replace(/\.md$/i, "");
+        a.setAttribute("href", stem.toLowerCase() === "readme" ? "#readme" : "#scene/" + stem);
+        return;
+      }
+      var base = "reference/engine-gallery-wiki".split("/");
+      decoded.replace(/\.md$/i, "").split("/").forEach(function (seg) {
+        if (seg === "" || seg === ".") return;
+        if (seg === "..") base.pop(); else base.push(seg);
+      });
+      a.setAttribute("href", LudotsSite.SITE_BASE + "index.html#docs/" + base.join("/"));
+    });
+  }
+
+  function renderPager(file) {
+    var host = document.getElementById("scene-pager");
+    var flat = flatScenes();
+    var idx = -1;
+    for (var i = 0; i < flat.length; i++) if (flat[i].file === file) { idx = i; break; }
+    if (idx < 0) { host.innerHTML = ""; return; }
+    var prev = idx > 0 ? flat[idx - 1] : null;
+    var next = idx < flat.length - 1 ? flat[idx + 1] : null;
+    var html = "";
+    if (prev) html += '<a href="#scene/' + esc(sceneName(prev.file)) + '">← ' + esc(prev.title) + "</a>";
+    else html += '<span class="none">已是第一场</span>';
+    if (next) html += '<a href="#scene/' + esc(sceneName(next.file)) + '">' + esc(next.title) + " →</a>";
+    else html += '<span class="none">已是最后一场</span>';
+    host.innerHTML = html;
+  }
+
+  function loadDoc(file) {
+    currentDoc = file;
+    var body = document.getElementById("doc-body");
+    var pathEl = document.getElementById("doc-path");
+    body.innerHTML = '<div class="docs-loading">加载中…</div>';
+    pathEl.textContent = "gitbook/" + WIKI_DIR + file;
+
+    LudotsSite.fetchText("gitbook/" + WIKI_DIR + file).then(function (md) {
+      body.innerHTML = marked.parse(md);
+      rewriteLinks(body);
+      LudotsSite.bindCopyButtons(body);
+      renderPager(file);
+      markActive();
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }).catch(function () {
+      body.innerHTML = '<div class="docs-loading">无法加载 <code>gitbook/' + esc(WIKI_DIR + file) +
+        '</code><br>该篇可能尚未撰写，或需要先运行 <code>python scripts/build-site.py</code> 重建站点。</div>';
+      renderPager("");
+    });
+  }
+
+  function route() {
+    var h = window.location.hash || "";
+    var target = null;
+    if (h.indexOf("#scene/") === 0) {
+      var stem = decodeURIComponent(h.slice("#scene/".length)).replace(/[^A-Za-z0-9_]/g, "");
+      if (stem) target = stem + ".md";
+    } else if (h === "#readme" || h === "" || h === "#") {
+      target = DEFAULT_DOC;
+    }
+    if (target && target !== currentDoc) loadDoc(target);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    buildTree();
+    route();
+  });
+
+  window.addEventListener("hashchange", route);
+})();
+</script>
+</body>
+</html>

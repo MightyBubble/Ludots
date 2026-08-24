@@ -22,11 +22,16 @@ namespace Ludots.Core.UI.PanelHosting
         private readonly List<Entry> _entries = new();
         private readonly Stack<int> _freeSlots = new();
 
-        public PanelHost(PanelTemplateRegistry templates, PanelProjectionReader reader)
+        public PanelHost(PanelTemplateRegistry templates, PanelProjectionReader reader, IPanelGraphEvaluator? graphEvaluator = null)
         {
+            _writerThreadId = Environment.CurrentManagedThreadId;
             _templates = templates ?? throw new ArgumentNullException(nameof(templates));
             _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+            _graphEvaluator = graphEvaluator;
         }
+
+        private readonly IPanelGraphEvaluator? _graphEvaluator;
+        private readonly int _writerThreadId;
 
         public int Count { get; private set; }
 
@@ -39,13 +44,18 @@ namespace Ludots.Core.UI.PanelHosting
         /// </summary>
         public PanelInstanceHandle Instantiate(string templateId, string anchor, Entity scope)
         {
+            return Instantiate(templateId, anchor, scope, null, 100);
+        }
+
+        public PanelInstanceHandle Instantiate(string templateId, string anchor, Entity scope, string? skin, int zOrder)
+        {
             if (string.IsNullOrWhiteSpace(anchor))
             {
                 throw new ArgumentException($"Panel '{templateId}' requires a non-empty anchor.", nameof(anchor));
             }
 
             PanelTemplate template = _templates.Require(templateId);
-            var entry = new Entry(template, anchor.Trim(), scope);
+            var entry = new Entry(template, anchor.Trim(), scope, skin, zOrder);
             EvaluateAll(entry);
 
             int slot = _freeSlots.Count > 0 ? _freeSlots.Pop() : _entries.Count;
@@ -112,21 +122,26 @@ namespace Ludots.Core.UI.PanelHosting
                     continue;
                 }
 
-                bool changed = false;
-                foreach (PanelTemplateVariable variable in entry.Template.Variables)
+                if (!EvaluateGraph(entry))
                 {
-                    if (!variable.Realtime)
+                    continue;
+                }
+
+                bool changed = false;
+                foreach (PanelPin pin in entry.Template.Pins)
+                {
+                    if (!pin.Realtime)
                     {
                         continue;
                     }
 
-                    PanelProjectionValue value = _reader.Resolve(entry.Scope, variable.ToBinding());
-                    uint previous = entry.Revisions[variable.Name];
+                    PanelProjectionValue value = _reader.Resolve(entry.Scope, pin);
+                    uint previous = entry.Revisions[pin.Name];
                     if (previous != value.Revision)
                     {
-                        entry.Values[variable.Name] = value.FloatValue;
-                        entry.Revisions[variable.Name] = value.Revision;
-                        entry.Revision ^= previous ^ value.Revision;
+                        entry.Values[pin.Name] = value.FloatValue;
+                        entry.Revisions[pin.Name] = value.Revision;
+                        entry.Revision = (entry.Revision ^ previous ^ value.Revision) * 16777619;
                         changed = true;
                     }
                 }
@@ -226,7 +241,9 @@ namespace Ludots.Core.UI.PanelHosting
                         entry.Template.Id,
                         entry.Anchor,
                         entry.Scope,
-                        entry.Revision));
+                        entry.Revision,
+                        entry.Skin,
+                        entry.ZOrder));
                 }
             }
 
@@ -235,22 +252,53 @@ namespace Ludots.Core.UI.PanelHosting
 
         private void EvaluateAll(Entry entry)
         {
-            uint revision = 0;
-            foreach (PanelTemplateVariable variable in entry.Template.Variables)
+            EvaluateGraph(entry);
+            uint revision = 2166136261;
+            foreach (PanelPin pin in entry.Template.Pins)
             {
-                PanelProjectionValue value = _reader.Resolve(entry.Scope, variable.ToBinding());
-                entry.Values[variable.Name] = value.FloatValue;
-                if (entry.Revisions.TryGetValue(variable.Name, out uint previous))
-                {
-                    revision ^= previous;
-                }
-
-                entry.Revisions[variable.Name] = value.Revision;
-                revision ^= value.Revision;
-                entry.HasRealtime |= variable.Realtime;
+                PanelProjectionValue value = _reader.Resolve(entry.Scope, pin);
+                entry.Values[pin.Name] = value.FloatValue;
+                revision = (revision ^ value.Revision) * 16777619;
+                entry.Revisions[pin.Name] = value.Revision;
+                entry.HasRealtime |= pin.Realtime;
             }
 
             entry.Revision = revision;
+        }
+
+        /// <summary>
+        /// Data-plane contract: graph execution failure logs and leaves previous/default
+        /// values standing — the panel keeps rendering; structural failures were rejected
+        /// at load. No evaluator (lightweight hosts) means read-only against the store.
+        /// </summary>
+        /// <summary>
+        /// Returns false when this pass's evaluation FAILED — the realtime sweep then
+        /// skips re-reading pins so externally written store values cannot leak through
+        /// a failed evaluation. No evaluator (lightweight hosts) or an unregistered
+        /// graph means "the store is the source": not a failure, returns true.
+        /// </summary>
+        private bool EvaluateGraph(Entry entry)
+        {
+            System.Diagnostics.Debug.Assert(
+                Environment.CurrentManagedThreadId == _writerThreadId,
+                "PanelHost is single-writer: all mutations must run on the thread that constructed it.");
+            if (_graphEvaluator == null || entry.Template.GraphId < 0)
+            {
+                return true;
+            }
+
+            try
+            {
+                _graphEvaluator.Evaluate(entry.Template.GraphId, entry.Scope);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log.Error(
+                    in Diagnostics.LogChannels.Engine,
+                    $"[PanelHost] graph '{entry.Template.Graph}' evaluation failed for panel '{entry.Template.Id}'; pins keep previous/default values: {ex.Message}");
+                return false;
+            }
         }
 
         private static PanelVariableSet Snapshot(Entry entry)
@@ -283,18 +331,22 @@ namespace Ludots.Core.UI.PanelHosting
 
         private sealed class Entry
         {
-            public Entry(PanelTemplate template, string anchor, Entity scope)
+            public Entry(PanelTemplate template, string anchor, Entity scope, string? skin, int zOrder)
             {
                 Template = template;
                 Anchor = anchor;
                 Scope = scope;
-                Values = new Dictionary<string, float>(template.Variables.Count, StringComparer.Ordinal);
-                Revisions = new Dictionary<string, uint>(template.Variables.Count, StringComparer.Ordinal);
+                Skin = skin;
+                ZOrder = zOrder;
+                Values = new Dictionary<string, float>(template.Pins.Count, StringComparer.Ordinal);
+                Revisions = new Dictionary<string, uint>(template.Pins.Count, StringComparer.Ordinal);
             }
 
             public PanelTemplate Template { get; }
             public string Anchor { get; }
             public Entity Scope { get; }
+            public string? Skin { get; }
+            public int ZOrder { get; }
             public Dictionary<string, float> Values { get; }
             public Dictionary<string, uint> Revisions { get; }
             public uint Revision { get; set; }

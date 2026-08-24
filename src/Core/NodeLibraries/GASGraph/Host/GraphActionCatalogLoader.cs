@@ -98,7 +98,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     if (!GraphActionHostYieldPolicy.TryParse(hostText, out GraphActionHost host))
                     {
                         throw new InvalidOperationException(
-                            $"ActionLib '{name}' host '{hostText}' must be BehaviorTree, Hfsm, Level, or Script.");
+                            $"ActionLib '{name}' host '{hostText}' must be BehaviorTree, Hfsm, Script, or TriggerGraph.");
                     }
 
                     if (!GraphActionHostYieldPolicy.AllowsYield(host) &&

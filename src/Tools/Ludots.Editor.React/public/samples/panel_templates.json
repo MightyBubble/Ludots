@@ -1,90 +1,35 @@
 {
-  "schema": "ludots.ui.panel_template/v1",
+  "schema": "ludots.ui.panel_template",
   "templates": [
     {
       "templateId": "panel.entity_info",
       "label": "实体信息卡",
       "blurb": "一张图多出口 → Panel 多引脚（像 Shader Graph）",
       "surfaceKind": "reactive",
-      "defaultGraphId": "graph.entity_info",
-      "variables": [
-        { "variableId": "hp", "label": "血量", "valueKind": "Float" },
-        { "variableId": "lastKill", "label": "上一次击杀", "valueKind": "Int" },
-        { "variableId": "curState", "label": "当前状态", "valueKind": "Int" }
-      ],
-      "bindings": [
+      "graph": "graph.entity_info",
+      "pins": [
         {
-          "variableId": "hp",
-          "sourceKind": "graphOutput",
-          "graphOutputKey": "panel.entity_info.hp"
+          "name": "hp",
+          "label": "血量",
+          "key": "panel.entity_info.hp",
+          "mode": "realtime",
+          "default": 0
         },
         {
-          "variableId": "lastKill",
-          "sourceKind": "graphOutput",
-          "graphOutputKey": "panel.entity_info.lastKill",
-          "semantic": "presentationToken"
-        },
-        {
-          "variableId": "curState",
-          "sourceKind": "graphOutput",
-          "graphOutputKey": "panel.entity_info.curState",
-          "semantic": "presentationToken"
-        }
-      ],
-      "outputs": [
-        { "id": "hp", "type": "Float", "key": "panel.entity_info.hp", "source": "hpAttr" },
-        {
-          "id": "lastKill",
-          "type": "Int",
+          "name": "lastKill",
+          "label": "上一次击杀",
           "key": "panel.entity_info.lastKill",
-          "source": "bbKill"
+          "mode": "realtime",
+          "default": 0
         },
         {
-          "id": "curState",
-          "type": "Int",
+          "name": "curState",
+          "label": "当前状态",
           "key": "panel.entity_info.curState",
-          "source": "readToken"
+          "mode": "snapshot",
+          "default": 0
         }
-      ],
-      "copyTemplate": "血量: {hp}\n上一次击杀的对象: {lastKill}\n当前状态: {curState}"
-    },
-    {
-      "templateId": "panel.player_aggregate",
-      "label": "玩家资源总览",
-      "blurb": "一张 Query 图双出口 → Panel 双引脚",
-      "surfaceKind": "webui",
-      "defaultGraphId": "graph.player_aggregate",
-      "variables": [
-        { "variableId": "oreTotal", "label": "矿石合计", "valueKind": "Float" },
-        { "variableId": "crystalTotal", "label": "晶体合计", "valueKind": "Float" }
-      ],
-      "bindings": [
-        {
-          "variableId": "oreTotal",
-          "sourceKind": "aggregateProjection",
-          "graphOutputKey": "ui.panel.player.ore.total"
-        },
-        {
-          "variableId": "crystalTotal",
-          "sourceKind": "aggregateProjection",
-          "graphOutputKey": "ui.panel.player.crystal.total"
-        }
-      ],
-      "outputs": [
-        {
-          "id": "oreTotal",
-          "type": "Float",
-          "key": "ui.panel.player.ore.total",
-          "source": "sumOre"
-        },
-        {
-          "id": "crystalTotal",
-          "type": "Float",
-          "key": "ui.panel.player.crystal.total",
-          "source": "sumCrystal"
-        }
-      ],
-      "copyTemplate": "矿 {oreTotal} · 晶 {crystalTotal}"
+      ]
     }
   ]
 }

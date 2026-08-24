@@ -133,14 +133,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.Dst), instruction.Dst, entrypoint);
                 }
 
-                // CreatePanel/DestroyPanel 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel→caster，DestroyPanel→任意 scope），不是寄存器引用。
+                // CreatePanel/DestroyPanel/ReadMapVar* 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel/ReadMapVar*→caster，DestroyPanel→任意 scope），不是寄存器引用。
                 bool aIsOptionalAbsent = instruction.A == byte.MaxValue &&
-                    op is GraphNodeOp.CreatePanel or GraphNodeOp.DestroyPanel;
+                    op is GraphNodeOp.CreatePanel
+                        or GraphNodeOp.DestroyPanel
+                        or GraphNodeOp.ReadMapVarInt
+                        or GraphNodeOp.ReadMapVarFloat;
+                // WriteMapVar* 的 B 是可选 scope 操作数：byte.MaxValue 表示"缺省"（→caster）。
+                // CreatePanel 的 B 是可选皮肤符号索引：byte.MaxValue 表示"未指定皮"（走模板/全局默认链）。
+                bool bIsOptionalAbsent = instruction.B == byte.MaxValue &&
+                    op is GraphNodeOp.WriteMapVarInt
+                        or GraphNodeOp.WriteMapVarFloat
+                        or GraphNodeOp.CreatePanel;
                 if (!aIsOptionalAbsent)
                 {
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.A), instruction.A, entrypoint);
                 }
-                RequireRegisterIndex(graphId, i, nameof(GraphInstruction.B), instruction.B, entrypoint);
+                if (!bIsOptionalAbsent)
+                {
+                    RequireRegisterIndex(graphId, i, nameof(GraphInstruction.B), instruction.B, entrypoint);
+                }
                 RequireRegisterIndex(graphId, i, nameof(GraphInstruction.C), instruction.C, entrypoint);
             }
         }
@@ -269,7 +281,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             out Violation violation)
         {
             ArgumentNullException.ThrowIfNull(handlers);
-            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
+            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script or GraphKind.TriggerGraph))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph operation policy requires an explicit supported kind.");
             }

@@ -140,12 +140,6 @@ namespace CoreInputMod.Systems
                 return collectionPrimary;
             }
 
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
-                _world.IsAlive(local))
-            {
-                return local;
-            }
-
             return default;
         }
 

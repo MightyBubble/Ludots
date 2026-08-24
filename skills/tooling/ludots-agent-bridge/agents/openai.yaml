@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ludots Agent Bridge"
+  short_description: "Drive a running Ludots process for debugging, acceptance, and evidence"
+  default_prompt: "Use $ludots-agent-bridge to verify runtime behavior: check /health liveness, inspect entities/GAS/UI/logs, drive orders/input/camera/events, and capture screenshot or recording evidence via 127.0.0.1:47921."

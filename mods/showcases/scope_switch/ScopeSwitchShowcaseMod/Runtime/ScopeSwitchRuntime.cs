@@ -201,6 +201,7 @@ public sealed class ScopeSwitchRuntime
             engine,
             _viewer,
             1,
+            "seat.0",
             presentResolutionPx: new System.Numerics.Vector2(1920f, 1080f));
     }
 

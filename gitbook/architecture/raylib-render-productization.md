@@ -43,6 +43,10 @@ Raylib 只消费 flush 后的 VFX 项与粒子 runtime snapshot。它不拥有�
 
 正式 Showcase 地形路径包含天空、光照/雾、水面、后处理与大地图远景。地图可通过 `VisualHeightmapRenderProfile` 声明海平面、水体开关、高度夸张和颜色对比度。超大 chunk 必须降采样，避免索引上限；截图证据必须做完整 PNG 校验，不允许“有文件就算过”。
 
+大地图远景实拍（引擎画廊 `terrain_heightmap` 场景：绝对海拔色带 + 水下陆架 + 超密降采样）：
+
+<img src="artifacts/acceptance/engine_gallery_all/terrain_heightmap.png" alt="视觉高度图验收截图" width="880">
+
 ## 演进方向
 
 继续扩展 Presentation-owned Quarks 合同（curve、burst、shape module、material binding、GPU buffer plan）。Raylib adapter 只增加执行能力；Core 仍然负责配置合同、校验和平台无关的 runtime 项。禁止回到 `vfx.emitter` 内嵌合同或在 mesh 资产上双写 spawnMode。
@@ -50,3 +54,7 @@ Raylib 只消费 flush 后的 VFX 项与粒子 runtime snapshot。它不拥有�
 ## 引擎能力画廊
 
 各渲染能力的标准化独立展示（零 Core 依赖、一能力一场景）见 [Raylib 引擎能力标准化 Showcase](engine-capability-showcases.md)；本文保持产品化合同与演进方向的真源。
+
+## 光照栈
+
+单物体 GGX 通道、方向光 shadow map、材质标量 PBR、解析式天空 IBL 的合同与用法见 [渲染光照栈与下游使用指南](render-lighting-guide.md)；本文保持产品化合同与演进方向真源。

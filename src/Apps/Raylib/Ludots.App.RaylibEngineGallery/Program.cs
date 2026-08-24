@@ -17,10 +17,18 @@ namespace Ludots.App.RaylibEngineGallery
             string? screenshotPath = ParseOption(args, "--screenshot");
             string? jsonPath = ParseOption(args, "--json");
             int frames = ParseFrames(args);
+            string? menuAuto = ParseOption(args, "--menu-auto");
+            string? interactiveShot = ParseOption(args, "--interactive-shot");
 
             if (sceneId == null && screenshotPath != null)
             {
                 Console.Error.WriteLine("--screenshot requires --scene <id>.");
+                return 2;
+            }
+
+            if (menuAuto != null && !SceneCatalog.TryCreate(menuAuto, out _))
+            {
+                Console.Error.WriteLine($"Unknown --menu-auto scene '{menuAuto}'.");
                 return 2;
             }
 
@@ -35,22 +43,39 @@ namespace Ludots.App.RaylibEngineGallery
                 return 2;
             }
 
-            return RunMenu();
+            return RunMenu(menuAuto, interactiveShot);
         }
 
         private static int RunScene(IEngineScene scene, string? screenshotPath, string? jsonPath, int frames)
         {
-            bool headless = screenshotPath != null;
+            // 多帧截屏与宿主 RaylibHostLoop 同一环境变量合同（录像脚本的取样通道）：
+            // LUDOTS_TAKE_SCREENSHOT_PATH 基名 + LUDOTS_TAKE_SCREENSHOT_FRAMES 1 起帧号表，
+            // 产物命名 <基名>_<序号:000>_f<帧:0000>.png。
+            string? stillBasePath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
+            int[] stillFrames = ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
+            bool stillSequence = !string.IsNullOrWhiteSpace(stillBasePath) && stillFrames.Length > 0;
+            string? stillDirectory = stillSequence
+                ? Path.GetDirectoryName(Path.GetFullPath(stillBasePath!))
+                : null;
+            var stillMoves = new List<(string Source, string Target)>();
+
+            bool headless = screenshotPath != null || stillSequence;
             if (headless)
             {
                 Rl.SetConfigFlags(GalleryWindowFlags.FlagWindowHidden);
             }
 
-            if (headless)
+            if (screenshotPath != null)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(screenshotPath!))!);
             }
 
+            if (stillDirectory != null)
+            {
+                Directory.CreateDirectory(stillDirectory);
+            }
+
+            GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Engine Gallery — {scene.Id}");
             Rl.SetTargetFPS(60);
 
@@ -62,6 +87,7 @@ namespace Ludots.App.RaylibEngineGallery
             var watch = Stopwatch.StartNew();
             double total = 0.0;
             int drawn = 0;
+            int stillIndex = 0;
 
             while (drawn < frames && !Rl.WindowShouldClose())
             {
@@ -75,14 +101,23 @@ namespace Ludots.App.RaylibEngineGallery
                 scene.Draw(dt, total, ref cam);
                 frameMs.Add((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
 
+                GalleryFont.Flush();
                 if (screenshotPath != null && drawn == frames - 1)
                 {
-                    // raylib 5.5 TakeScreenshot 读取的是当前帧缓冲，2D 文字尚在延迟批处理里，必须先冲刷。
+                    // raylib 5.5 TakeScreenshot 读取当前帧缓冲，须先冲刷 Skia 文字与 rl 渲染批次。
                     Rl.rlDrawRenderBatchActive();
                     Rl.TakeScreenshot(Path.GetFileName(screenshotPath));
                 }
 
-                GalleryFont.Flush();
+                if (stillSequence && stillIndex < stillFrames.Length && drawn == stillFrames[stillIndex] - 1)
+                {
+                    Rl.rlDrawRenderBatchActive();
+                    string stillName = BuildStillFileName(stillBasePath!, stillIndex, stillFrames[stillIndex]);
+                    Rl.TakeScreenshot(stillName);
+                    stillMoves.Add((stillName, Path.Combine(stillDirectory!, stillName)));
+                    stillIndex++;
+                }
+
                 Rl.EndDrawing();
                 drawn++;
             }
@@ -106,6 +141,23 @@ namespace Ludots.App.RaylibEngineGallery
                 }
             }
 
+            foreach ((string source, string target) in stillMoves)
+            {
+                string workingPath = Path.Combine(Environment.CurrentDirectory, source);
+                if (!File.Exists(workingPath))
+                {
+                    Console.Error.WriteLine($"Failed to write still '{source}'.");
+                    exitCode = exitCode == 0 ? 3 : exitCode;
+                    continue;
+                }
+
+                if (!string.Equals(workingPath, target, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Copy(workingPath, target, overwrite: true);
+                    File.Delete(workingPath);
+                }
+            }
+
             if (jsonPath != null)
             {
                 WriteStats(jsonPath, scene.Id, drawn, frameMs, watch.Elapsed.TotalMilliseconds);
@@ -116,17 +168,26 @@ namespace Ludots.App.RaylibEngineGallery
             return exitCode;
         }
 
-        private static int RunMenu()
+        private static int RunMenu(string? menuAuto, string? interactiveShot)
         {
+            GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Engine Gallery");
             Rl.SetTargetFPS(60);
 
             var scenes = SceneCatalog.Descriptors;
             int selected = 0;
             int hotkey = 0;
+            int menuFrames = 0;
 
             while (!Rl.WindowShouldClose())
             {
+                if (menuAuto != null && menuFrames++ >= 30)
+                {
+                    var autoScene = SceneCatalog.Create(menuAuto);
+                    Rl.CloseWindow();
+                    return RunSceneInteractive(autoScene, interactiveShot);
+                }
+
                 for (int i = 0; i < Math.Min(scenes.Count, 36); i++)
                 {
                     KeyboardKey key = HotkeyFor(i);
@@ -140,7 +201,7 @@ namespace Ludots.App.RaylibEngineGallery
                 {
                     var scene = SceneCatalog.Create(scenes[selected].Id);
                     Rl.CloseWindow();
-                    return RunSceneInteractive(scene);
+                    return RunSceneInteractive(scene, null);
                 }
 
                 Rl.BeginDrawing();
@@ -154,8 +215,9 @@ namespace Ludots.App.RaylibEngineGallery
             return 0;
         }
 
-        private static int RunSceneInteractive(IEngineScene scene)
+        private static int RunSceneInteractive(IEngineScene scene, string? interactiveShot)
         {
+            GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Engine Gallery — {scene.Title}");
             Rl.SetTargetFPS(60);
             var camera = new EngineOrbitCamera();
@@ -163,6 +225,7 @@ namespace Ludots.App.RaylibEngineGallery
 
             Camera3D cam = camera.Camera;
             double total = 0.0;
+            int frameIndex = 0;
             while (!Rl.WindowShouldClose())
             {
                 float dt = Rl.GetFrameTime();
@@ -174,25 +237,48 @@ namespace Ludots.App.RaylibEngineGallery
                 Rl.ClearBackground(GalleryColors.Black);
                 scene.Draw(dt, total, ref cam);
 
-                int y = 8;
                 GalleryFont.Draw($"[ESC] menu   [R] reset camera", 8, WindowHeight - 26, 18, GalleryColors.RayWhite);
                 GalleryFont.Draw($"{scene.Title} — {scene.Summary}", 8, WindowHeight - 48, 18, new Color(220, 220, 230, 255));
                 GalleryFont.Flush();
+
+                if (interactiveShot != null && frameIndex == 120)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(interactiveShot))!);
+                    Rl.rlDrawRenderBatchActive();
+                    Rl.TakeScreenshot(Path.GetFileName(interactiveShot));
+                    string full = Path.GetFullPath(interactiveShot);
+                    string working = Path.Combine(Environment.CurrentDirectory, Path.GetFileName(interactiveShot));
+                    if (!string.Equals(working, full, StringComparison.OrdinalIgnoreCase) && File.Exists(working))
+                    {
+                        File.Copy(working, full, overwrite: true);
+                        File.Delete(working);
+                    }
+
+                    Rl.EndDrawing();
+                    break;
+                }
+
                 Rl.EndDrawing();
+                frameIndex++;
             }
 
             scene.Dispose();
             Rl.CloseWindow();
 
-            Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Engine Gallery");
-            Rl.SetTargetFPS(60);
-            int back = RunMenu();
-            return back;
+            if (interactiveShot == null)
+            {
+                GalleryFont.Reset();
+                Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Engine Gallery");
+                Rl.SetTargetFPS(60);
+                return RunMenu(null, null);
+            }
+
+            return 0;
         }
 
         private static void DrawMenu(List<SceneDescriptor> scenes, int selected)
         {
-            GalleryFont.Draw("Ludots Engine Gallery — raylib 引擎渲染能力 18 项", 24, 20, 28, GalleryColors.RayWhite);
+            GalleryFont.Draw($"Ludots Engine Gallery — raylib 引擎渲染能力 {scenes.Count} 项", 24, 20, 28, GalleryColors.RayWhite);
             GalleryFont.Draw("数字/字母选择场景，Enter 启动，ESC 退出；场景内 ESC 返回菜单，R 复位相机", 24, 56, 18, new Color(160, 160, 175, 255));
 
             int y = 96;
@@ -230,6 +316,37 @@ namespace Ludots.App.RaylibEngineGallery
             };
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
             File.WriteAllText(path, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+        }
+
+        private static int[] ReadEnvFrameList(string key)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return Array.Empty<int>();
+            }
+
+            var parsed = new List<int>();
+            foreach (string part in raw.Split(','))
+            {
+                if (int.TryParse(part.Trim(), out int frame) && frame >= 1)
+                {
+                    parsed.Add(frame);
+                }
+            }
+
+            return parsed.ToArray();
+        }
+
+        private static string BuildStillFileName(string basePath, int sequenceIndex, int frame)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(basePath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = "screenshot";
+            }
+
+            return $"{fileName}_{sequenceIndex + 1:000}_f{frame:0000}.png";
         }
 
         private static string? ParseOption(string[] args, string name)

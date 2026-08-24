@@ -1,0 +1,10 @@
+flowchart TD
+    A[GameplayEvent Accept.HitFlash] --> B[TimerSet accept.flash 0.6s]
+    A --> P1[SetParam flash.yellow = 1 受击高亮]
+    B --> D{timer 随渲染 dt 推进}
+    D -->|到时| E[TimerExpired accept.flash]
+    E --> F[SetParam flash.yellow = 0 正常复原]
+    D -->|中途 Suppressed tag 丢失| G[condition TagLost]
+    G --> H[TimerKill * 清掉实例全部 timer]
+    G --> P0[SetParam flash.yellow = 0 强制复原]
+    H --> X[链路终止: 无 TimerExpired]

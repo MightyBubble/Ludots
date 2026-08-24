@@ -251,7 +251,6 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             Assert.That(actions, Is.Not.Null);
             Assert.That(functions.Require("demo.const.seven").GraphId, Is.GreaterThan(0));
             Assert.That(actions.Require("bt.patrol", GraphActionHost.BehaviorTree), Is.GreaterThan(0));
-            Assert.That(actions.Require("level.phaseAdvance", GraphActionHost.Level), Is.GreaterThan(0));
             GraphOutputValueStore graphOutputValues = engine.GetService(CoreServiceKeys.GraphOutputValueStore);
             Assert.That(graphOutputValues, Is.Not.Null);
             Assert.That(

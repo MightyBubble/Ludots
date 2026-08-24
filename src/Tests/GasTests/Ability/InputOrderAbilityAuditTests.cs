@@ -1543,7 +1543,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             using var world = World.Create();
             var queue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            var spec = new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
+            var spec = new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 42, submitMode: OrderSubmitMode.Immediate, playerId: 1);
             var ints = new BlackboardIntBuffer();
             var entities = new BlackboardEntityBuffer();
 
@@ -1567,7 +1567,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         {
             using var world = World.Create();
             var queue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-            var spec = new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
+            var spec = new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 42, submitMode: OrderSubmitMode.Immediate, playerId: 1);
             var ints = new BlackboardIntBuffer();
             var entities = new BlackboardEntityBuffer();
 

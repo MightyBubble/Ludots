@@ -98,7 +98,7 @@ namespace Ludots.Tests.GAS
                     new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f),
                     new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f)
                 },
-                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 102, 0, (int)OrderSubmitMode.Immediate, 0) },
+                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 102, 0, (int)OrderSubmitMode.Immediate, 1) },
                 Array.Empty<UtilityAiStanceDefinition>(),
                 Array.Empty<UtilityAiActuatorDefinition>());
             fixture.AddActor();
@@ -576,7 +576,7 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiInputDefinition(inputKind, inputKind == UtilityAiInputKind.Constant ? 1 : 0, 0) },
                     new[] { new UtilityAiNormalizationDefinition(inputKind == UtilityAiInputKind.Constant ? UtilityAiNormalizationKind.Identity : UtilityAiNormalizationKind.RangeInverse, 0f, 250000f) },
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
-                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, abilitySlotIndex, (int)OrderSubmitMode.Immediate, 0) },
+                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, abilitySlotIndex, (int)OrderSubmitMode.Immediate, 1) },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
             }
@@ -607,8 +607,8 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
                     new[]
                     {
-                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 201, 0, (int)OrderSubmitMode.Immediate, 0),
-                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 202, 0, (int)OrderSubmitMode.Immediate, 0)
+                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 201, 0, (int)OrderSubmitMode.Immediate, 1),
+                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 202, 0, (int)OrderSubmitMode.Immediate, 1)
                     },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
@@ -641,7 +641,7 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiInputDefinition(UtilityAiInputKind.GraphScore, 0, graphId) },
                     new[] { new UtilityAiNormalizationDefinition(UtilityAiNormalizationKind.Identity, 0f, 1f) },
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
-                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, 0, (int)OrderSubmitMode.Immediate, 0) },
+                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, 0, (int)OrderSubmitMode.Immediate, 1) },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
             }

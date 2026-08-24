@@ -639,6 +639,8 @@ namespace Ludots.Core.Presentation.Systems
                 PresenterCommandKind.DeactivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
                 PresenterCommandKind.InitializeTransform => PerformerCommandRouteStrategy.ExistingInstances,
                 PresenterCommandKind.DestroyPresenter => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.TimerSet => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.TimerKill => PerformerCommandRouteStrategy.ExistingInstances,
                 PresenterCommandKind.SinkParamToAsset => PerformerCommandRouteStrategy.SingleRuntime,
                 PresenterCommandKind.Extension => throw new InvalidOperationException(
                     $"Extension presenter command id {command.CommandKindId} must declare routeStrategy before rule routing."),

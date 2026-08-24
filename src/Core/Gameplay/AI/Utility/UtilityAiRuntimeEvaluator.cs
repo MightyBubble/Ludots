@@ -249,6 +249,12 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 return false;
             }
 
+            if (task.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Utility AI task attempted to submit order type id {task.OrderTypeId} without a positive player id.");
+            }
+
             Order order;
             OrderSubmitMode submitMode = (OrderSubmitMode)(byte)task.SubmitMode;
             switch (task.PayloadKind)

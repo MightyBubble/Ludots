@@ -947,7 +947,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
 
             if (_showcaseViewerEntity != Entity.Null && engine.World.IsAlive(_showcaseViewerEntity))
             {
-                ClientLocalSeatBindings.BindSoleSeat(engine, _showcaseViewerEntity, ShowcaseLocalPlayerId);
+                ClientLocalSeatBindings.BindSoleSeat(engine, _showcaseViewerEntity, ShowcaseLocalPlayerId, "seat.0");
                 return _showcaseViewerEntity;
             }
 
@@ -962,7 +962,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = ShowcaseLocalPlayerId },
                 new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = ShowcaseLocalPlayerId },
                 new Ludots.Core.Components.MapEntity { MapId = engine.CurrentMapSession.MapId });
-            ClientLocalSeatBindings.BindSoleSeat(engine, _showcaseViewerEntity, ShowcaseLocalPlayerId);
+            ClientLocalSeatBindings.BindSoleSeat(engine, _showcaseViewerEntity, ShowcaseLocalPlayerId, "seat.0");
             return _showcaseViewerEntity;
         }
 

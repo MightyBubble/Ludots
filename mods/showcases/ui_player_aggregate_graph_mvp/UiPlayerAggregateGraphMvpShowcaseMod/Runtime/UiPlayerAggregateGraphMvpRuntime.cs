@@ -253,20 +253,8 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
         var reader = new PanelProjectionReader(engine.World, values);
         UiPlayerAggregatePanelBinding oreBinding = _config.OreBinding;
         UiPlayerAggregatePanelBinding crystalBinding = _config.CrystalBinding;
-        _oreTotal = reader.ResolveFloat(
-            _owner,
-            new PanelVariableBinding(
-                oreBinding.VariableId,
-                PanelBindingSourceKind.AggregateProjection,
-                attributeId: null,
-                graphOutputKey: oreBinding.GraphOutputKey));
-        _crystalTotal = reader.ResolveFloat(
-            _owner,
-            new PanelVariableBinding(
-                crystalBinding.VariableId,
-                PanelBindingSourceKind.AggregateProjection,
-                attributeId: null,
-                graphOutputKey: crystalBinding.GraphOutputKey));
+        _oreTotal = reader.Resolve(_owner, new PanelPin(oreBinding.VariableId, oreBinding.GraphOutputKey, realtime: true, defaultValue: 0f)).FloatValue;
+        _crystalTotal = reader.Resolve(_owner, new PanelPin(crystalBinding.VariableId, crystalBinding.GraphOutputKey, realtime: true, defaultValue: 0f)).FloatValue;
         if (!_buildingShutDown)
         {
             _status = "Tally graph projections are live on the resource strip.";

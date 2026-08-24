@@ -1,0 +1,15 @@
+{
+  "startupMapId": "night_raid",
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
+  "windowTitle": "Ludots - Night Raid",
+  "windowWidth": 1600,
+  "windowHeight": 900
+}

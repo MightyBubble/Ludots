@@ -88,7 +88,7 @@ namespace Ludots.Tests.Presentation
             _healthAttrId = AttributeRegistry.Register("Health");
             _viewer = _world.Create();
             _knowledge = new KnowledgeProjectionStore();
-            ClientLocalSeatTestBindings.BindSoleSeat(_globals, _viewer);
+            ClientLocalSeatTestBindings.BindSoleSeat(_globals, _viewer, 1, "seat.0");
             _globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(_knowledge);
 
             LoadCorePresenterDefinitions(_defs, _healthAttrId);

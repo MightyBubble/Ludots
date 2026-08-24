@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.ReadMapVarInt",
+    "kind": "Script",
+    "entry": "readKills",
+    "nodes": [
+      {
+        "id": "readKills",
+        "op": "ReadMapVarInt",
+        "var": "gallery.kills"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readKills",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "readKills",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]
