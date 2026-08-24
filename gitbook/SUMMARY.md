@@ -19,6 +19,7 @@
     - [一次输入的完整旅程](architecture/four-layer-architecture/interaction-flow.md)
     - [术语禁则与已知缺口](architecture/four-layer-architecture/terminology.md)
   - [运行时总览](architecture/runtime-overview.md)
+  - [术语阶梯：Machine / App / Seat / Device](architecture/terminology.md)
   - [Agent 调试桥](architecture/agent-debug-bridge.md)
   - [确定性随机与加权分布](architecture/deterministic-rng.md)
   - [UI 渲染控制与 Surface 所有权](architecture/ui-rendering-and-surface-ownership.md)
