@@ -21,7 +21,9 @@ public sealed class WebUiPanelDeclaration
 		string profileId,
 		string layoutId,
 		string densityId,
-		string inputCapabilityId)
+		string inputCapabilityId,
+		string? title = null,
+		string? subtitle = null)
 	{
 		PanelId = RequireId(panelId, nameof(panelId));
 		PanelType = RequireId(panelType, nameof(panelType));
@@ -35,6 +37,8 @@ public sealed class WebUiPanelDeclaration
 		LayoutId = RequireId(layoutId, nameof(layoutId));
 		DensityId = RequireId(densityId, nameof(densityId));
 		InputCapabilityId = RequireId(inputCapabilityId, nameof(inputCapabilityId));
+		Title = RequireOptionalText(title, nameof(title));
+		Subtitle = RequireOptionalText(subtitle, nameof(subtitle));
 	}
 
 	public string PanelId { get; }
@@ -49,6 +53,27 @@ public sealed class WebUiPanelDeclaration
 	public string LayoutId { get; }
 	public string DensityId { get; }
 	public string InputCapabilityId { get; }
+
+	/// <summary>Display text owned by the manifest content layer; null means render the panel id.</summary>
+	public string? Title { get; }
+
+	/// <summary>Optional secondary display line owned by the manifest content layer.</summary>
+	public string? Subtitle { get; }
+
+	private static string? RequireOptionalText(string? value, string paramName)
+	{
+		if (value is null)
+		{
+			return null;
+		}
+
+		if (string.IsNullOrWhiteSpace(value))
+		{
+			throw new ArgumentException($"{paramName} must be non-empty when provided.", paramName);
+		}
+
+		return value.Trim();
+	}
 
 	private static string RequireId(string value, string paramName)
 	{

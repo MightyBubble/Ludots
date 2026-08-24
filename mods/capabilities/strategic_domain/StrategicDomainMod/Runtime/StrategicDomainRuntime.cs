@@ -290,16 +290,34 @@ namespace StrategicDomainMod.Runtime
 
         public bool IsSubnetOverCapacity(int subnetKey)
         {
-            _subnetCapacity.TryGetValue(subnetKey, out float capacity);
-            _subnetDemand.TryGetValue(subnetKey, out float demand);
+            RequireSubnet(subnetKey, out float capacity, out float demand);
             return demand > capacity;
         }
 
-        public float GetSubnetCapacity(int subnetKey) =>
-            _subnetCapacity.TryGetValue(subnetKey, out float capacity) ? capacity : 0f;
+        public float GetSubnetCapacity(int subnetKey)
+        {
+            RequireSubnet(subnetKey, out float capacity, out _);
+            return capacity;
+        }
 
-        public float GetSubnetDemand(int subnetKey) =>
-            _subnetDemand.TryGetValue(subnetKey, out float demand) ? demand : 0f;
+        public float GetSubnetDemand(int subnetKey)
+        {
+            RequireSubnet(subnetKey, out _, out float demand);
+            return demand;
+        }
+
+        private void RequireSubnet(int subnetKey, out float capacity, out float demand)
+        {
+            if (!_subnetCapacity.TryGetValue(subnetKey, out capacity))
+            {
+                throw new InvalidOperationException($"Unknown supply subnet '{subnetKey}'.");
+            }
+
+            if (!_subnetDemand.TryGetValue(subnetKey, out demand))
+            {
+                throw new InvalidOperationException($"Unknown supply subnet '{subnetKey}'.");
+            }
+        }
 
         public void RecalculateSubnets()
         {
@@ -363,6 +381,11 @@ namespace StrategicDomainMod.Runtime
         private void RecalculateDemand()
         {
             _subnetDemand.Clear();
+            foreach (int subnetKey in _subnetCapacity.Keys)
+            {
+                _subnetDemand[subnetKey] = 0f;
+            }
+
             foreach (KeyValuePair<int, Entity> pair in _forcesByKey)
             {
                 if (!_world.IsAlive(pair.Value) || !_world.Has<FieldForceCm>(pair.Value))
@@ -371,7 +394,6 @@ namespace StrategicDomainMod.Runtime
                 }
 
                 ref FieldForceCm force = ref _world.Get<FieldForceCm>(pair.Value);
-                // refresh subnet from node map if force still keyed; keep stored subnet
                 _subnetDemand.TryGetValue(force.SubnetKey, out float demand);
                 _subnetDemand[force.SubnetKey] = demand + force.Strength;
             }
@@ -402,9 +424,14 @@ namespace StrategicDomainMod.Runtime
 
         private bool NodeOwnedByViewer(int settlementKey)
         {
-            if (!_settlementsByKey.TryGetValue(settlementKey, out Entity entity))
+            if (settlementKey == 0)
             {
                 return true;
+            }
+
+            if (!_settlementsByKey.TryGetValue(settlementKey, out Entity entity))
+            {
+                throw new InvalidOperationException($"Unknown settlement '{settlementKey}'.");
             }
 
             return _world.Get<SettlementIdentityCm>(entity).FactionOwner == _viewerFaction;

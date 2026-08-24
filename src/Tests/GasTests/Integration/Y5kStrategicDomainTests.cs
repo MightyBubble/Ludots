@@ -127,16 +127,47 @@ namespace Ludots.Tests.GAS.Integration
         }
 
         [Test]
-        public void GapKeys_AreResolvableAfterInstall()
+        public void ProviderKeys_AreRegisteredAfterInstall()
         {
             using World world = World.Create();
             var providers = new ProviderServices(allowTestDomainOverride: true);
             StrategicDomainProviderInstaller.Install(providers, new StrategicDomainRuntime(world));
 
-            Assert.That(providers.Effects.TryGet("population.appoint_governor").Found, Is.True);
-            Assert.That(providers.Effects.TryGet("city_control.commit_troops_takeover").Found, Is.True);
-            Assert.That(providers.Effects.TryGet("combat.siege_invest").Found, Is.True);
-            Assert.That(providers.Gaps.Contains("population.appoint_governor"), Is.False);
+            string[] effectKeys =
+            {
+                "population.appoint_governor",
+                "city_control.commit_troops_takeover",
+                "combat.siege_invest",
+                "combat.siege_lift",
+                "combat.siege_accept_surrender",
+                "prisoner.recruit",
+                "prisoner.release",
+                "prisoner.execute",
+            };
+            foreach (string effectKey in effectKeys)
+            {
+                Assert.That(providers.Effects.TryGet(effectKey).Found, Is.True, effectKey);
+            }
+
+            Assert.That(providers.Sources.Contains("supply.network_changed"), Is.True);
+            Assert.That(providers.Sources.Contains("city_control.defense_breached"), Is.True);
+            Assert.That(providers.Conditions.Contains("city_control.owner"), Is.True);
+            Assert.That(providers.Conditions.Contains("city_control.capturable"), Is.True);
+        }
+
+        [Test]
+        public void UnknownSettlementOrSubnet_FailsFast()
+        {
+            using World world = World.Create();
+            var runtime = new StrategicDomainRuntime(world);
+            runtime.RegisterSettlement(1, factionOwner: 1, wallMax: 10, garrisonMax: 10);
+            runtime.RegisterSupplyNode(10, settlementKey: 99, providesSupply: false, isHub: false, capacity: 0, demandWeight: 0);
+            runtime.RegisterSupplyNode(20, settlementKey: 0, providesSupply: false, isHub: false, capacity: 0, demandWeight: 0);
+
+            Assert.Throws<InvalidOperationException>(() => runtime.GetSubnetCapacity(123));
+            Assert.Throws<InvalidOperationException>(() => runtime.GetSubnetDemand(123));
+            Assert.Throws<InvalidOperationException>(() => runtime.IsSubnetOverCapacity(123));
+            Assert.Throws<InvalidOperationException>(() => runtime.Connect(10, 20));
         }
     }
 }

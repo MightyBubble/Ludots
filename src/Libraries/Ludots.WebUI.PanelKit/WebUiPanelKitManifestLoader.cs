@@ -144,7 +144,9 @@ public static class WebUiPanelKitManifestLoader
 				panel.ProfileId,
 				panel.LayoutId,
 				panel.DensityId,
-				panel.InputCapabilityId));
+				panel.InputCapabilityId,
+				panel.Title,
+				panel.Subtitle));
 		}
 
 		return new WebUiPanelKitManifest(document.ManifestId, document.HostOwnerId, panels);
@@ -188,6 +190,12 @@ public sealed class WebUiPanelDeclarationDocument
 {
 	[JsonPropertyName("panelId")]
 	public string PanelId { get; set; } = string.Empty;
+
+	[JsonPropertyName("title")]
+	public string? Title { get; set; }
+
+	[JsonPropertyName("subtitle")]
+	public string? Subtitle { get; set; }
 
 	[JsonPropertyName("panelType")]
 	public string PanelType { get; set; } = string.Empty;

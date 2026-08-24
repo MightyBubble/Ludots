@@ -51,8 +51,7 @@ public sealed class UiRegionsHudInstallation : IDisposable
 			?? throw new InvalidOperationException("TaskRuntimeService missing.");
 		ActivityRuntimeService activities = _engine.GetService(CoreServiceKeys.ActivityRuntimeService)
 			?? throw new InvalidOperationException("ActivityRuntimeService missing.");
-		IReadOnlyList<string> bulletin = ResolveBulletin();
-		HudLiveSnapshot snapshot = HudLiveSnapshot.Capture(tasks, activities, bulletin);
+		HudLiveSnapshot snapshot = HudLiveSnapshot.Capture(tasks, activities);
 
 		foreach (WebUiPanelDeclaration panel in _binder.Manifest.Panels)
 		{
@@ -69,17 +68,6 @@ public sealed class UiRegionsHudInstallation : IDisposable
 					_viewportHeight,
 					snapshot));
 		}
-	}
-
-	private IReadOnlyList<string> ResolveBulletin()
-	{
-		if (_engine.TryGetService(UiRegionsServiceKeys.Runtime, out UiRegionsRuntime runtime) &&
-		    runtime.BulletinProvider != null)
-		{
-			return runtime.BulletinProvider() ?? Array.Empty<string>();
-		}
-
-		return Array.Empty<string>();
 	}
 
 	public void Dispose()
@@ -99,15 +87,13 @@ public sealed class UiRegionsHudInstallation : IDisposable
 public readonly record struct HudLiveSnapshot(
 	IReadOnlyList<string> TaskLines,
 	IReadOnlyList<string> ActivityOptionLines,
-	IReadOnlyList<string> BulletinLines,
 	string? ForcedActivityTitle,
 	string? ForcedActivitySummary,
 	bool HasForcedActivity)
 {
 	public static HudLiveSnapshot Capture(
 		TaskRuntimeService tasks,
-		ActivityRuntimeService activities,
-		IReadOnlyList<string>? bulletinLines = null)
+		ActivityRuntimeService activities)
 	{
 		ArgumentNullException.ThrowIfNull(tasks);
 		ArgumentNullException.ThrowIfNull(activities);
@@ -119,8 +105,7 @@ public readonly record struct HudLiveSnapshot(
 			TaskView view = taskViews[i];
 			if (view.State is TaskInstanceState.Offered or TaskInstanceState.Active)
 			{
-				string stateLabel = view.State == TaskInstanceState.Offered ? "可领取" : "进行中";
-				taskLines.Add($"{stateLabel} · {view.DisplayName}");
+				taskLines.Add($"{view.State} · {view.DisplayName}");
 			}
 		}
 
@@ -145,7 +130,7 @@ public readonly record struct HudLiveSnapshot(
 				for (int o = 0; o < options.Count; o++)
 				{
 					ActivityOptionView option = options[o];
-					string suffix = option.Executable ? string.Empty : $"（不可执行：{option.BlockReason}）";
+					string suffix = option.Executable ? string.Empty : $" [blocked: {option.BlockReason}]";
 					optionLines.Add($"○ {option.Title}{suffix}");
 				}
 			}
@@ -156,7 +141,6 @@ public readonly record struct HudLiveSnapshot(
 		return new HudLiveSnapshot(
 			taskLines,
 			optionLines,
-			bulletinLines ?? Array.Empty<string>(),
 			forcedTitle,
 			forcedSummary,
 			forcedTitle != null);
@@ -165,10 +149,14 @@ public readonly record struct HudLiveSnapshot(
 
 public static class UiRegionsHudInstaller
 {
+	/// <summary>
+	/// Topic producers are caller-supplied: the content pack owns topic naming (e.g. y5k.*)
+	/// and wires real runtimes. This mod registers no topics of its own.
+	/// </summary>
 	public static UiRegionsHudInstallation Install(
 		GameEngine engine,
 		string manifestPath,
-		IReadOnlyDictionary<string, Func<object>>? staticTopicFactories = null)
+		IReadOnlyList<IWebUiTopicProducer>? topicProducers = null)
 	{
 		ArgumentNullException.ThrowIfNull(engine);
 		if (string.IsNullOrWhiteSpace(manifestPath) || !File.Exists(manifestPath))
@@ -182,11 +170,9 @@ public static class UiRegionsHudInstaller
 			?? throw new InvalidOperationException("TaskRuntimeService is required.");
 		ActivityRuntimeService activities = engine.GetService(CoreServiceKeys.ActivityRuntimeService)
 			?? throw new InvalidOperationException("ActivityRuntimeService is required.");
-		ActivityPresentationBuffer activityPresentation = engine.GetService(CoreServiceKeys.ActivityPresentationBuffer)
-			?? throw new InvalidOperationException("ActivityPresentationBuffer is required.");
 
 		var dataPlane = new WebUiDataPlaneRuntime();
-		RegisterDefaultTopics(dataPlane, tasks, activities, activityPresentation, staticTopicFactories);
+		RegisterTopics(dataPlane, topicProducers);
 
 		WebUiPanelKitReferenceCatalog catalog = UiRegionsCatalogFactory.Create(dataPlane.IsTopicRegistered);
 		WebUiPanelKitManifest manifest = WebUiPanelKitManifestLoader.LoadFromFile(manifestPath, catalog);
@@ -205,13 +191,7 @@ public static class UiRegionsHudInstaller
 		var pumpSystem = new UiRegionsHudPumpSystem(pump);
 		engine.RegisterPresentationSystem(pumpSystem);
 
-		UiRegionsRuntime? uiRuntime = null;
-		if (engine.TryGetService(UiRegionsServiceKeys.Runtime, out UiRegionsRuntime existing) && existing != null)
-		{
-			uiRuntime = existing;
-		}
-
-		uiRuntime ??= new UiRegionsRuntime();
+		var uiRuntime = new UiRegionsRuntime();
 		uiRuntime.Install(dataPlane.IsTopicRegistered);
 		engine.SetService(UiRegionsServiceKeys.Runtime, uiRuntime);
 
@@ -225,42 +205,25 @@ public static class UiRegionsHudInstaller
 			viewportHeight);
 	}
 
-	private static void RegisterDefaultTopics(
+	private static void RegisterTopics(
 		WebUiDataPlaneRuntime dataPlane,
-		TaskRuntimeService tasks,
-		ActivityRuntimeService activities,
-		ActivityPresentationBuffer activityPresentation,
-		IReadOnlyDictionary<string, Func<object>>? staticTopicFactories)
+		IReadOnlyList<IWebUiTopicProducer>? topicProducers)
 	{
-		var registered = new HashSet<string>(StringComparer.Ordinal);
-
-		void Register(IWebUiTopicProducer producer)
-		{
-			if (registered.Add(producer.Topic))
-			{
-				dataPlane.RegisterTopic(producer);
-			}
-		}
-
-		Register(new TaskObjectiveTopicProducer("y5k.topic.objective", tasks));
-		Register(new ActivityModalTopicProducer("y5k.topic.activity", activities, activityPresentation));
-		Register(new StaticHudTopicProducer("y5k.topic.time", "time-control", () => new { paused = false, label = "cycle" }));
-		Register(new StaticHudTopicProducer("y5k.topic.filter", "view-filter", () => new { filters = Array.Empty<string>() }));
-		Register(new StaticHudTopicProducer("y5k.topic.notification", "notification", () => new { items = Array.Empty<object>() }));
-		Register(new StaticHudTopicProducer("y5k.topic.minimap", "minimap.web-shell", () => new { ready = true }));
-		Register(new StaticHudTopicProducer("y5k.topic.entity-insight", "entity-insight", () => new { selection = Array.Empty<object>() }));
-		Register(new StaticHudTopicProducer("y5k.topic.production", "production-overview", () => new { queues = Array.Empty<object>() }));
-		Register(new StaticHudTopicProducer("y5k.topic.entity-list", "entity-list", () => new { entities = Array.Empty<object>() }));
-		Register(new StaticHudTopicProducer("y5k.topic.command", "command-deck", () => new { slots = Array.Empty<object>() }));
-
-		if (staticTopicFactories == null)
+		if (topicProducers == null)
 		{
 			return;
 		}
 
-		foreach (KeyValuePair<string, Func<object>> pair in staticTopicFactories)
+		var registered = new HashSet<string>(StringComparer.Ordinal);
+		for (int i = 0; i < topicProducers.Count; i++)
 		{
-			Register(new StaticHudTopicProducer(pair.Key, "custom", pair.Value));
+			IWebUiTopicProducer producer = topicProducers[i];
+			if (!registered.Add(producer.Topic))
+			{
+				continue;
+			}
+
+			dataPlane.RegisterTopic(producer);
 		}
 	}
 
@@ -300,14 +263,20 @@ public static class UiRegionsHudInstaller
 		float viewportHeight,
 		HudLiveSnapshot snapshot)
 	{
-		(float xPct, float yPct, float wPct, float hPct) = ResolveNineGridPercent(panel.SurfaceRegionId);
-		float x = viewportWidth * xPct / 100f;
-		float y = viewportHeight * yPct / 100f;
-		float w = viewportWidth * wPct / 100f;
-		float h = viewportHeight * hPct / 100f;
-
 		bool isActivityModal =
 			string.Equals(panel.PanelType, WebUiRegionPanelDescriptors.ActivityModalPanelType, StringComparison.Ordinal);
+
+		if (!isActivityModal && string.Equals(panel.SurfaceRegionId, WebUiNineGridRegions.Center, StringComparison.Ordinal))
+		{
+			throw new InvalidOperationException(
+				$"Panel '{panel.PanelId}' declares the reserved center region; only overlays/modals may cover it.");
+		}
+
+		WebUiNineGridRegionRect rect = WebUiNineGridRegions.GetDefaultGeometry(panel.SurfaceRegionId);
+		float x = viewportWidth * rect.XPercent / 100f;
+		float y = viewportHeight * rect.YPercent / 100f;
+		float w = viewportWidth * rect.WidthPercent / 100f;
+		float h = viewportHeight * rect.HeightPercent / 100f;
 
 		if (isActivityModal && !snapshot.HasForcedActivity)
 		{
@@ -320,11 +289,11 @@ public static class UiRegionsHudInstaller
 					.ZIndex(panel.SurfacePriority));
 		}
 
-		if (isActivityModal && snapshot.HasForcedActivity)
+		if (isActivityModal)
 		{
 			var children = new List<UiElementBuilder>
 			{
-				Ui.Text("活动抉择").Id($"uir-{panel.PanelId}-title"),
+				Ui.Text(panel.Title ?? panel.PanelType).Id($"uir-{panel.PanelId}-title"),
 				Ui.Text(snapshot.ForcedActivityTitle ?? string.Empty).Id($"uir-{panel.PanelId}-name"),
 				Ui.Text(snapshot.ForcedActivitySummary ?? string.Empty).Id($"uir-{panel.PanelId}-summary"),
 			};
@@ -342,10 +311,9 @@ public static class UiRegionsHudInstaller
 					.ZIndex(panel.SurfacePriority));
 		}
 
-		string title = ResolvePlayerFacingTitle(panel.PanelType);
 		var lines = new List<UiElementBuilder>
 		{
-			Ui.Text(title).Id($"uir-{panel.PanelId}-title"),
+			Ui.Text(panel.Title ?? panel.PanelType).Id($"uir-{panel.PanelId}-title"),
 		};
 
 		if (string.Equals(panel.PanelType, "objective", StringComparison.Ordinal) && snapshot.TaskLines.Count > 0)
@@ -356,18 +324,9 @@ public static class UiRegionsHudInstaller
 				lines.Add(Ui.Text(snapshot.TaskLines[i]).Id($"uir-{panel.PanelId}-task-{i}"));
 			}
 		}
-		else if (string.Equals(panel.PanelType, "notification", StringComparison.Ordinal) &&
-		         snapshot.BulletinLines.Count > 0)
+		else if (!string.IsNullOrWhiteSpace(panel.Subtitle))
 		{
-			int limit = Math.Min(3, snapshot.BulletinLines.Count);
-			for (int i = 0; i < limit; i++)
-			{
-				lines.Add(Ui.Text(snapshot.BulletinLines[i]).Id($"uir-{panel.PanelId}-bulletin-{i}"));
-			}
-		}
-		else
-		{
-			lines.Add(Ui.Text(ResolvePlayerFacingSubtitle(panel.PanelType)).Id($"uir-{panel.PanelId}-subtitle"));
+			lines.Add(Ui.Text(panel.Subtitle).Id($"uir-{panel.PanelId}-subtitle"));
 		}
 
 		return UiSurfaceContribution.FromBuilder(() =>
@@ -378,55 +337,6 @@ public static class UiRegionsHudInstaller
 				.Height(h)
 				.ZIndex(panel.SurfacePriority));
 	}
-
-	private static string ResolvePlayerFacingTitle(string panelType) =>
-		panelType switch
-		{
-			"objective" => "任务追踪",
-			"time-control" => "时间控制",
-			"view-filter" => "视图过滤",
-			"notification" => "通报",
-			"minimap.web-shell" => "小地图",
-			"entity-insight" => "实体详情",
-			"production-overview" => "全局生产",
-			"entity-list" => "实体列表",
-			"command-deck" => "命令栏",
-			"activity-modal" => "活动抉择",
-			"event-log" => "事件日志",
-			_ => panelType,
-		};
-
-	private static string ResolvePlayerFacingSubtitle(string panelType) =>
-		panelType switch
-		{
-			"objective" => "进行中 / 可领取",
-			"time-control" => "推进 · 暂停",
-			"view-filter" => "收窄地图关注",
-			"notification" => "结算与告警",
-			"minimap.web-shell" => "跳转视野",
-			"entity-insight" => "选中城 / 英雄",
-			"production-overview" => "队列摘要",
-			"entity-list" => "Tab 切换浏览",
-			"command-deck" => "下令 / 技能位",
-			"activity-modal" => "当面拍板",
-			"event-log" => "最近条目",
-			_ => string.Empty,
-		};
-
-	private static (float X, float Y, float W, float H) ResolveNineGridPercent(string regionId) =>
-		regionId switch
-		{
-			WebUiNineGridRegions.TopLeft => (1f, 1f, 26f, 16f),
-			WebUiNineGridRegions.TopCenter => (28f, 1f, 42f, 12f),
-			WebUiNineGridRegions.TopRight => (71f, 1f, 28f, 18f),
-			WebUiNineGridRegions.MiddleLeft => (1f, 18f, 22f, 52f),
-			WebUiNineGridRegions.Center => (24f, 20f, 52f, 48f),
-			WebUiNineGridRegions.MiddleRight => (77f, 18f, 22f, 52f),
-			WebUiNineGridRegions.BottomLeft => (1f, 72f, 22f, 26f),
-			WebUiNineGridRegions.BottomCenter => (24f, 70f, 52f, 28f),
-			WebUiNineGridRegions.BottomRight => (77f, 72f, 22f, 26f),
-			_ => throw new InvalidOperationException($"Unknown nine-grid surface region '{regionId}'."),
-		};
 }
 
 internal sealed class UiRegionsHudPumpSystem : ISystem<float>

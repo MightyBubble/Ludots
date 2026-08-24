@@ -216,12 +216,6 @@ namespace StrategicDomainMod.Providers
             ArgumentNullException.ThrowIfNull(providers);
             ArgumentNullException.ThrowIfNull(runtime);
 
-            providers.Gaps.TryResolve("population.appoint_governor", out _);
-            providers.Gaps.TryResolve("city_control.commit_troops_takeover", out _);
-            providers.Gaps.TryResolve("combat.siege_invest", out _);
-            providers.Gaps.TryResolve("combat.siege_lift", out _);
-            providers.Gaps.TryResolve("combat.siege_accept_surrender", out _);
-
             var breach = new DefenseBreachedSource();
             var supplyChanged = new SupplyNetworkChangedSource();
 
