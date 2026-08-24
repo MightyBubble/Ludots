@@ -8,6 +8,7 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
 
@@ -83,7 +84,10 @@ namespace Ludots.Tests.GAS
                     new NavMeshAgentProfileConfig { Id = "graph_only", MaxClimbCm = 40, MaxSlopeDeg = 45 }
                 }
             }, agentProfiles);
-            var navRegistry = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>());
+            var navRegistry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>(),
+                tileWidthCm: SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm,
+                tileHeightCm: SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 16);
             var pathingConfig = new PathingConfig
             {

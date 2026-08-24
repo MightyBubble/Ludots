@@ -775,7 +775,7 @@ namespace GasTests
             var registry = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(0, 0)] = store
-            });
+            }, tileWidthCm: 400, tileHeightCm: 400);
             queue = new RuntimeIncrementalNavMeshRebuildQueue(
                 new NavBakeService(new CdtNavBakeAlgorithm()),
                 new NavBakeContext

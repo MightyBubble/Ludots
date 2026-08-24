@@ -118,8 +118,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             LogicTerrainField terrain = _baseContext.Terrain;
-            int tileWidthCm = checked(terrain.ChunkSizeCells * terrain.HorizontalStepCm);
-            int tileHeightCm = checked(terrain.ChunkSizeCells * terrain.VerticalStepCm);
+            int tileWidthCm = terrain.ChunkWidthCm;
+            int tileHeightCm = terrain.ChunkHeightCm;
             if (tileWidthCm <= 0 || tileHeightCm <= 0)
             {
                 throw new InvalidOperationException("LogicTerrainField chunk world size must be > 0.");
