@@ -126,6 +126,26 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_UnknownExecKind_IsRejectedByWhitelist()
+        {
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "Ability.Test.Unsupported", "tick": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("Ability.Test.Unsupported"));
+            That(ex.Message, Does.Contain("whitelist"));
+        }
+
+        [Test]
         public void CompileAbility_TooManyTimelineItems_IsRejected()
         {
             string items = string.Join(",\n", Enumerable.Range(0, 17).Select(i => $@"{{ ""kind"": ""End"", ""tick"": {i} }}"));

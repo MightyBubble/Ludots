@@ -1288,6 +1288,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 return typeId;
             }
 
+            GasOperatorWhitelist.ValidateEffectPresetType(presetType, ownerId);
+
             if (Enum.TryParse<EffectPresetType>(presetType, out EffectPresetType builtin) &&
                 Enum.IsDefined(typeof(EffectPresetType), builtin))
             {

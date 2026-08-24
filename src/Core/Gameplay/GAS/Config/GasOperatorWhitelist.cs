@@ -9,23 +9,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
     /// </summary>
     public static class GasOperatorWhitelist
     {
-        private static readonly HashSet<string> ExecItemKinds = new(StringComparer.Ordinal)
-        {
-            "TagClip",
-            "EffectSignal",
-            "End",
-            "Wait",
-            "Cue",
-        };
+        private static readonly HashSet<string> ExecItemKinds = BuildExecItemKinds();
 
-        private static readonly HashSet<string> EffectPresetTypes = new(StringComparer.Ordinal)
-        {
-            "Buff",
-            "Damage",
-            "CreateUnit",
-            "ApplyGameplayEffect",
-            "None",
-        };
+        private static readonly HashSet<string> EffectPresetTypes =
+            new(Enum.GetNames<EffectPresetType>(), StringComparer.Ordinal);
 
         public static void ValidateExecItemKind(string kind, string abilityId)
         {
@@ -35,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Ability '{abilityId}' has an empty exec item kind.");
             }
 
-            if (!ExecItemKinds.Contains(kind))
+            if (!ExecItemKinds.Contains(kind) || string.Equals(kind, nameof(ExecItemKind.None), StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
                     $"Ability '{abilityId}' references exec item kind '{kind}' outside the GAS operator whitelist.");
@@ -58,5 +45,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         public static IReadOnlyCollection<string> ExecKinds => ExecItemKinds;
         public static IReadOnlyCollection<string> PresetTypes => EffectPresetTypes;
+
+        private static HashSet<string> BuildExecItemKinds()
+        {
+            var result = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string name in Enum.GetNames<ExecItemKind>())
+            {
+                if (!string.Equals(name, nameof(ExecItemKind.None), StringComparison.Ordinal))
+                {
+                    result.Add(name);
+                }
+            }
+
+            return result;
+        }
     }
 }

@@ -622,6 +622,33 @@ namespace Ludots.Core.Engine
                              || string.Equals(group, "Quests", StringComparison.OrdinalIgnoreCase)
                              || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Quests/", StringComparison.OrdinalIgnoreCase));
 
+            bool reloadActivities = string.IsNullOrWhiteSpace(group)
+                                 || string.Equals(group, "Activities", StringComparison.OrdinalIgnoreCase)
+                                 || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Activities/", StringComparison.OrdinalIgnoreCase));
+            bool reloadTasks = string.IsNullOrWhiteSpace(group)
+                            || string.Equals(group, "Tasks", StringComparison.OrdinalIgnoreCase)
+                            || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Tasks/", StringComparison.OrdinalIgnoreCase));
+
+            if (reloadActivities &&
+                GetService(CoreServiceKeys.ActivityDefinitionRegistry) is ActivityDefinitionRegistry activityDefinitions &&
+                GetService(CoreServiceKeys.ProviderServices) is ProviderServices activityProviderServices &&
+                GetService(CoreServiceKeys.ActivityRuntimeService) is ActivityRuntimeService activityRuntime)
+            {
+                new ActivityConfigLoader(ConfigPipeline, activityDefinitions, activityProviderServices.Validator)
+                    .Load(ConfigCatalog, ConfigConflictReport);
+                activityRuntime.ResetState();
+            }
+
+            if (reloadTasks &&
+                GetService(CoreServiceKeys.TaskDefinitionRegistry) is TaskDefinitionRegistry taskDefinitions &&
+                GetService(CoreServiceKeys.ProviderServices) is ProviderServices taskProviderServices &&
+                GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService taskRuntime)
+            {
+                new TaskConfigLoader(ConfigPipeline, taskDefinitions, taskProviderServices.Validator)
+                    .Load(ConfigCatalog, ConfigConflictReport);
+                taskRuntime.ResetState();
+            }
+
             if (reloadQuests &&
                 GetService(CoreServiceKeys.QuestDefinitionRegistry) is QuestDefinitionRegistry questDefinitions &&
                 GetService(CoreServiceKeys.QuestRuntimeService) is QuestRuntimeService questRuntime)
