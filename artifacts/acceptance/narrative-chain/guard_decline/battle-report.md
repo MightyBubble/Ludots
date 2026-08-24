@@ -4,14 +4,14 @@
 - build: headless GameEngine + trigger pipeline
 - map: narrative_chain_hub (seed: fixed content, no rng)
 - clock: fixed 0.0167s per tick
-- executed: 2026-08-24 19:50:15
+- executed: 2026-08-24 23:28:33
 
 ## Timeline
 
 - [T+001] [dialogue] opening dialogue visible
 - [T+002] [cinematic] presenter commands=1
-- [T+003] [activity] forced decision activity offered
-- [T+004] [guard] decline baseline option: no task, no verdict dialogue, chain stays idle
+- [T+003] [activity] forced decision activity offered on the HUD modal
+- [T+004] [guard] decline baseline option: no task, no debrief, no verdict dialogue, chain stays idle
 
 ## Outcome
 
