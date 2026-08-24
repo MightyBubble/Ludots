@@ -1109,8 +1109,9 @@ namespace Ludots.Tests.Presentation
             LoadCorePresenterDefinitions(registry);
             registry.TryGet(registry.GetId(WellKnownPresenterKeys.FloatingCombatText), out var def);
 
-            Assert.That(def.PositionYDriftPerSecond, Is.GreaterThan(0f));
-            Assert.That(def.AlphaFadeOverLifetime, Is.True);
+            Assert.That(def.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.WorldText));
+            Assert.That(def.Behaviors[0].Motion.YDriftPerSecond, Is.GreaterThan(0f));
+            Assert.That(def.Behaviors[0].Style.AlphaPolicy, Is.EqualTo(BehaviorAlphaPolicy.FadeOverLifetime));
             Assert.That(def.DefaultLifetime, Is.GreaterThan(0f));
         }
 

@@ -1045,7 +1045,16 @@ namespace Ludots.Tests.Presentation
             int batchId = batches.GetId("batch.runtime");
             int defId = definitions.Register("presenter.batch", new PresenterDefinition
             {
-                InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.InstancedBatch,
+                        ActiveByDefault = true,
+                        InstancedBatch = new InstancedBatchConfig { BatchAssetId = batchId },
+                    },
+                ],
             });
             var runtime = new PresenterEntityRuntime(world);
             var owner = world.Create(new AttributeBuffer());
@@ -1119,7 +1128,16 @@ namespace Ludots.Tests.Presentation
             int batchId = batches.GetId("batch.lifecycle");
             int defId = definitions.Register("presenter.lifecycle", new PresenterDefinition
             {
-                InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.InstancedBatch,
+                        ActiveByDefault = true,
+                        InstancedBatch = new InstancedBatchConfig { BatchAssetId = batchId },
+                    },
+                ],
             });
             var runtime = new PresenterEntityRuntime(world);
             Entity owner = world.Create();
@@ -1182,9 +1200,10 @@ namespace Ludots.Tests.Presentation
             loader.Load(catalog);
 
             Assert.That(definitions.TryGet(definitions.GetId("presenter.batch"), out PresenterDefinition definition), Is.True);
-            Assert.That(definition.InstancedBatches.Length, Is.EqualTo(1));
-            Assert.That(definition.InstancedBatches[0].BatchAssetId, Is.EqualTo(42));
-            Assert.That(definition.InstancedBatches[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.InstancedBatch));
+            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(definition.Behaviors[0].InstancedBatch.BatchAssetId, Is.EqualTo(42));
+            Assert.That(definition.HasInstancedBatchBindings, Is.True);
 
             string badRoot = CreateTempCoreRoot();
             WritePresentationFile(badRoot, "presenters.json",
@@ -1251,7 +1270,16 @@ namespace Ludots.Tests.Presentation
             var definitions = new PresenterDefinitionRegistry();
             int defId = definitions.Register("presenter.batch", new PresenterDefinition
             {
-                InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.InstancedBatch,
+                        ActiveByDefault = true,
+                        InstancedBatch = new InstancedBatchConfig { BatchAssetId = batchId },
+                    },
+                ],
             });
             Entity owner = world.Create();
             Entity presenter = world.Create(new PresenterState
@@ -1260,6 +1288,7 @@ namespace Ludots.Tests.Presentation
                 StableId = 900,
                 OwnerEntity = owner,
                 AnchorKind = PresentationAnchorKind.Entity,
+                BehaviorActiveMask = 1u,
             });
             var requests = new InstancedBatchRequestBuffer();
             var events = new PresentationEventStream(8);
@@ -1336,7 +1365,16 @@ namespace Ludots.Tests.Presentation
             var definitions = new PresenterDefinitionRegistry();
             int defId = definitions.Register("presenter.external.batch", new PresenterDefinition
             {
-                InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.InstancedBatch,
+                        ActiveByDefault = true,
+                        InstancedBatch = new InstancedBatchConfig { BatchAssetId = batchId },
+                    },
+                ],
             });
             Entity owner = world.Create();
             world.Create(new PresenterState
@@ -1345,6 +1383,7 @@ namespace Ludots.Tests.Presentation
                 StableId = 901,
                 OwnerEntity = owner,
                 AnchorKind = PresentationAnchorKind.Entity,
+                BehaviorActiveMask = 1u,
             });
             var requests = new InstancedBatchRequestBuffer();
             var events = new PresentationEventStream(8);

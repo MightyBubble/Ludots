@@ -45,12 +45,21 @@ namespace Ludots.Tests.Presentation
             int overlayDefId = RegisterRetainedAsset(definitions, "subtype.retained.ground_overlay", AssetKind.GroundOverlay, (int)GroundOverlayShape.Circle);
             int surfaceDefId = definitions.Register("subtype.surface.source", new PresenterDefinition
             {
-                Surface = new SurfaceAuthoringBlock
-                {
-                    Kind = PresenterSurfaceKind.SplineRibbon,
-                    LodProfileId = "default_surface_lod",
-                    MaterialSet = new PresenterSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
-                },
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 12,
+                        Kind = BehaviorKind.SurfaceSource,
+                        ActiveByDefault = true,
+                        SurfaceSource = new SurfaceAuthoringBlock
+                        {
+                            Kind = PresenterSurfaceKind.SplineRibbon,
+                            LodProfileId = "default_surface_lod",
+                            MaterialSet = new PresenterSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
+                        },
+                    },
+                ],
             });
 
             long createStart = Stopwatch.GetTimestamp();

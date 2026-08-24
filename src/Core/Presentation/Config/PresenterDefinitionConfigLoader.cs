@@ -9,7 +9,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Platform.Abstractions;
@@ -509,7 +508,6 @@ namespace Ludots.Core.Presentation.Config
             RejectUnknownFields(definitionObject, $"Presenter '{key}'", DefinitionFields);
 
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
-            PresenterDefinitionAuthoringFacts behaviorFacts = BuildDefinitionAuthoringFacts(key, behaviors);
             ChildPresenterRef[] children = ParseChildren(node["children"]);
             ValidateChildrenCapacity(key, children);
 
@@ -517,21 +515,14 @@ namespace Ludots.Core.Presentation.Config
             {
                 Key = key,
                 Extends = ParseOptionalCanonicalString(node["extends"], $"Presenter '{key}' extends"),
-                DefaultColor = behaviorFacts.DefaultColor,
                 DefaultLifetime = ParseLifecycle(node["lifecycle"], key),
-                DefaultFontSize = behaviorFacts.DefaultFontSize,
-                WorldTextMode = behaviorFacts.WorldTextMode,
                 PositionOffset = ParseAnchorOffset(node["anchor"], key),
-                PositionYDriftPerSecond = behaviorFacts.PositionYDriftPerSecond,
-                AlphaFadeOverLifetime = behaviorFacts.AlphaFadeOverLifetime,
                 VisibilityCondition = ParseDefinitionVisibility(node["visibility"], key),
                 Rules = ParseRules(node["rules"], key),
                 Bindings = ParseBindings(node["bindings"], key),
                 Children = children,
                 Behaviors = behaviors,
-                InstancedBatches = behaviorFacts.InstancedBatches,
                 ParamDefaults = ParseParamDefaults(node["paramDefaults"], key),
-                Surface = behaviorFacts.Surface,
             };
 
             def.Id = _registry.GetId(key);
@@ -813,148 +804,6 @@ namespace Ludots.Core.Presentation.Config
                         $"{context} contains unknown field '{property.Key}'. Allowed fields: {string.Join(", ", allowedFields)}.");
                 }
             }
-        }
-
-        private readonly struct PresenterDefinitionAuthoringFacts
-        {
-            public PresenterDefinitionAuthoringFacts(
-                Vector4 defaultColor,
-                int defaultFontSize,
-                WorldHudValueMode worldTextMode,
-                float positionYDriftPerSecond,
-                bool alphaFadeOverLifetime,
-                SurfaceAuthoringBlock? surface,
-                InstancedBatchBinding[] instancedBatches)
-            {
-                DefaultColor = defaultColor;
-                DefaultFontSize = defaultFontSize;
-                WorldTextMode = worldTextMode;
-                PositionYDriftPerSecond = positionYDriftPerSecond;
-                AlphaFadeOverLifetime = alphaFadeOverLifetime;
-                Surface = surface;
-                InstancedBatches = instancedBatches ?? Array.Empty<InstancedBatchBinding>();
-            }
-
-            public readonly Vector4 DefaultColor;
-            public readonly int DefaultFontSize;
-            public readonly WorldHudValueMode WorldTextMode;
-            public readonly float PositionYDriftPerSecond;
-            public readonly bool AlphaFadeOverLifetime;
-            public readonly SurfaceAuthoringBlock? Surface;
-            public readonly InstancedBatchBinding[] InstancedBatches;
-        }
-
-        private static PresenterDefinitionAuthoringFacts BuildDefinitionAuthoringFacts(string key, BehaviorSlot[] behaviors)
-        {
-            Vector4 defaultColor = new(1f, 1f, 1f, 1f);
-            int defaultFontSize = 16;
-            WorldHudValueMode worldTextMode = WorldHudValueMode.None;
-            float positionYDriftPerSecond = 0f;
-            bool alphaFadeOverLifetime = false;
-            bool hasWorldTextDefinitionFacts = false;
-            bool hasOutputStyleFacts = false;
-            SurfaceAuthoringBlock? surface = null;
-            List<InstancedBatchBinding>? instancedBatches = null;
-
-            if (behaviors != null)
-            {
-                for (int i = 0; i < behaviors.Length; i++)
-                {
-                    ref readonly BehaviorSlot slot = ref behaviors[i];
-                    switch (slot.Kind)
-                    {
-                        case BehaviorKind.AssetBinding:
-                            ApplyOutputBehaviorFacts(
-                                key,
-                                in slot,
-                                ref defaultColor,
-                                ref positionYDriftPerSecond,
-                                ref alphaFadeOverLifetime,
-                                ref hasOutputStyleFacts);
-                            break;
-
-                        case BehaviorKind.WorldText:
-                            if (hasWorldTextDefinitionFacts)
-                            {
-                                throw new InvalidOperationException(
-                                    $"Presenter '{key}' declares multiple WorldText behaviors. Runtime WorldText style and value mode are definition-scoped; split them into child presenters.");
-                            }
-
-                            hasWorldTextDefinitionFacts = true;
-                            defaultFontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
-                            worldTextMode = slot.WorldText.Mode;
-                            ApplyOutputBehaviorFacts(
-                                key,
-                                in slot,
-                                ref defaultColor,
-                                ref positionYDriftPerSecond,
-                                ref alphaFadeOverLifetime,
-                                ref hasOutputStyleFacts);
-                            break;
-
-                        case BehaviorKind.SurfaceSource:
-                            if (surface != null)
-                            {
-                                throw new InvalidOperationException(
-                                    $"Presenter '{key}' declares multiple SurfaceSource behaviors. A presenter instance may own only one surface source.");
-                            }
-
-                            surface = slot.SurfaceSource ?? throw new InvalidOperationException(
-                                $"Presenter '{key}' SurfaceSource behavior is missing parsed authoring payload.");
-                            break;
-
-                        case BehaviorKind.InstancedBatch:
-                            instancedBatches ??= new List<InstancedBatchBinding>(2);
-                            instancedBatches.Add(new InstancedBatchBinding(slot.InstancedBatch.BatchAssetId, slot.SlotIndex));
-                            break;
-                    }
-                }
-            }
-
-            return new PresenterDefinitionAuthoringFacts(
-                defaultColor,
-                defaultFontSize,
-                worldTextMode,
-                positionYDriftPerSecond,
-                alphaFadeOverLifetime,
-                surface,
-                instancedBatches?.ToArray() ?? Array.Empty<InstancedBatchBinding>());
-        }
-
-        private static void ApplyOutputBehaviorFacts(
-            string key,
-            in BehaviorSlot slot,
-            ref Vector4 defaultColor,
-            ref float positionYDriftPerSecond,
-            ref bool alphaFadeOverLifetime,
-            ref bool hasOutputStyleFacts)
-        {
-            bool hasFacts = slot.Style.HasColor ||
-                            slot.Style.AlphaPolicy != BehaviorAlphaPolicy.None ||
-                            slot.Motion.YDriftPerSecond != 0f;
-            if (!hasFacts)
-            {
-                return;
-            }
-
-            if (hasOutputStyleFacts)
-            {
-                throw new InvalidOperationException(
-                    $"Presenter '{key}' declares style or motion on multiple output behaviors. Current runtime stores these facts at definition scope; split the outputs into child presenters.");
-            }
-
-            hasOutputStyleFacts = true;
-            if (slot.Style.HasColor)
-            {
-                defaultColor = slot.Style.Color;
-            }
-
-            if (slot.Style.AlphaPolicy == BehaviorAlphaPolicy.FadeOverLifetime)
-            {
-                alphaFadeOverLifetime = true;
-            }
-
-            positionYDriftPerSecond = slot.Motion.YDriftPerSecond;
         }
 
         private static float ParseLifecycle(JsonNode? node, string key)
@@ -2349,7 +2198,6 @@ namespace Ludots.Core.Presentation.Config
                         slot.WorldText = ParseWorldText(obj["worldText"], ownerKey, i);
                         slot.Style = ParseBehaviorStyle(obj["style"], ownerKey, i);
                         slot.Motion = ParseBehaviorMotion(obj["motion"], ownerKey, i);
-                        slot.AssetBinding = BuildWorldTextAssetBinding(slot.WorldText);
                         break;
                     case BehaviorKind.SurfaceSource:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch");
@@ -2482,28 +2330,6 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return fontSize;
-        }
-
-        private static AssetBindingConfig BuildWorldTextAssetBinding(in WorldTextConfig worldText)
-        {
-            return new AssetBindingConfig
-            {
-                AssetKind = AssetKind.WorldText,
-                AssetId = worldText.TextTokenId,
-                RenderPath = VisualRenderPath.None,
-                Mobility = VisualMobility.Movable,
-                LocalOffset = Vector3.Zero,
-                LocalRotation = Quaternion.Identity,
-                LocalScale = Vector3.One,
-                ScaleParamKey = worldText.ValueParamKey,
-                MaterialParamKey = worldText.SecondaryValueParamKey,
-                AssetIdParamKey = PresenterParamKeyRegistry.UnsetParamKey,
-                AssetSwapParamKey = PresenterParamKeyRegistry.UnsetParamKey,
-                AssetSwapTable = Array.Empty<AssetSwapEntry>(),
-                VisibilityParamKey = PresenterParamKeyRegistry.UnsetParamKey,
-                SurfaceLayerKey = string.Empty,
-                MaterialCustomData = MaterialCustomDataBinding.Empty,
-            };
         }
 
         private static BehaviorStyleConfig ParseBehaviorStyle(JsonNode? node, string ownerKey, int behaviorIndex)

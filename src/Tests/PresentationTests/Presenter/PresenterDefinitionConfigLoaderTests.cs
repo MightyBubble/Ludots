@@ -2083,7 +2083,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(child.Behaviors[0].AssetBinding.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
             Assert.That(child.Behaviors[0].AssetBinding.Mobility, Is.EqualTo(VisualMobility.Static));
             Assert.That(child.Behaviors[0].AssetBinding.LocalScale, Is.EqualTo(new Vector3(2f, 2f, 2f)));
-            Assert.That(child.DefaultColor, Is.EqualTo(new Vector4(0.9f, 0.8f, 0.7f, 1f)));
+            Assert.That(child.Behaviors[0].Style.HasColor, Is.True);
+            Assert.That(child.Behaviors[0].Style.Color, Is.EqualTo(new Vector4(0.9f, 0.8f, 0.7f, 1f)));
         }
 
         [Test]
@@ -2158,7 +2159,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(child.Behaviors[0].AssetBinding.ScaleParamKey, Is.EqualTo(PresenterParamKeyRegistry.UnsetParamKey));
             Assert.That(child.Behaviors[0].AssetBinding.ColorParamKey, Is.EqualTo(PresenterParamKeyRegistry.UnsetParamKey));
             Assert.That(child.Behaviors[0].AssetBinding.LocalScale, Is.EqualTo(new Vector3(0.5f, 0.5f, 0.5f)));
-            Assert.That(child.DefaultColor, Is.EqualTo(new Vector4(0.1f, 0.2f, 0.3f, 1f)));
+            Assert.That(child.Behaviors[0].Style.HasColor, Is.True);
+            Assert.That(child.Behaviors[0].Style.Color, Is.EqualTo(new Vector4(0.1f, 0.2f, 0.3f, 1f)));
         }
 
         [Test]
@@ -2269,12 +2271,13 @@ namespace Ludots.Tests.Presentation
             Assert.That(definition.DefaultLifetime, Is.EqualTo(1.2f).Within(0.001f));
             Assert.That(definition.PositionOffset, Is.EqualTo(new Vector3(0f, 1f, 0f)));
             Assert.That(definition.VisibilityCondition.Inline, Is.EqualTo(InlineConditionKind.SourceIsAlive));
-            Assert.That(definition.DefaultFontSize, Is.EqualTo(18));
-            Assert.That(definition.WorldTextMode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
-            Assert.That(definition.DefaultColor, Is.EqualTo(new Vector4(1f, 0.2f, 0.1f, 1f)));
-            Assert.That(definition.AlphaFadeOverLifetime, Is.True);
-            Assert.That(definition.PositionYDriftPerSecond, Is.EqualTo(0.8f).Within(0.001f));
             Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.WorldText));
+            Assert.That(definition.Behaviors[0].WorldText.FontSize, Is.EqualTo(18));
+            Assert.That(definition.Behaviors[0].WorldText.Mode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
+            Assert.That(definition.Behaviors[0].Style.HasColor, Is.True);
+            Assert.That(definition.Behaviors[0].Style.Color, Is.EqualTo(new Vector4(1f, 0.2f, 0.1f, 1f)));
+            Assert.That(definition.Behaviors[0].Style.AlphaPolicy, Is.EqualTo(BehaviorAlphaPolicy.FadeOverLifetime));
+            Assert.That(definition.Behaviors[0].Motion.YDriftPerSecond, Is.EqualTo(0.8f).Within(0.001f));
             Assert.That(definition.Behaviors[0].AssetBinding.AssetKind, Is.EqualTo(AssetKind.WorldText));
             Assert.That(definition.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(777));
             Assert.That(definition.Behaviors[0].AssetBinding.ScaleParamKey, Is.EqualTo(WellKnownPresenterParamKeys.TextValue0));
@@ -2282,7 +2285,98 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_SurfaceSourceBehavior_ParsesIntoDefinitionSurface()
+        public void Load_TwoIndependentWorldTextSlots_KeepPerSlotStyleMotionAndWorldText()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "dual_floating_text",
+                    "lifecycle": { "durationSeconds": 2.0 },
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "WorldText",
+                        "activeByDefault": true,
+                        "worldText": {
+                          "textToken": "hud.combat.delta",
+                          "mode": "AttributeCurrent",
+                          "fontSize": 14,
+                          "valueParamKey": "worldText.value0"
+                        },
+                        "style": {
+                          "color": [1, 0.2, 0.1, 1],
+                          "alphaPolicy": "FadeOverLifetime"
+                        },
+                        "motion": {
+                          "yDriftPerSecond": 0.8
+                        }
+                      },
+                      {
+                        "slot": "hud",
+                        "kind": "WorldText",
+                        "activeByDefault": true,
+                        "worldText": {
+                          "textToken": "hud.combat.heal",
+                          "mode": "AttributeCurrentOverBase",
+                          "fontSize": 22,
+                          "secondaryValueParamKey": "worldText.value1"
+                        },
+                        "style": {
+                          "color": [0.1, 0.9, 0.3, 1]
+                        },
+                        "motion": {
+                          "yDriftPerSecond": 1.6
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => key switch
+                {
+                    "hud.combat.delta" => 777,
+                    "hud.combat.heal" => 778,
+                    _ => 0,
+                });
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("dual_floating_text"), out var definition), Is.True);
+            Assert.That(definition.Behaviors.Length, Is.EqualTo(2));
+            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(definition.Behaviors[0].WorldText.FontSize, Is.EqualTo(14));
+            Assert.That(definition.Behaviors[0].WorldText.Mode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
+            Assert.That(definition.Behaviors[0].Style.Color, Is.EqualTo(new Vector4(1f, 0.2f, 0.1f, 1f)));
+            Assert.That(definition.Behaviors[0].Style.AlphaPolicy, Is.EqualTo(BehaviorAlphaPolicy.FadeOverLifetime));
+            Assert.That(definition.Behaviors[0].Motion.YDriftPerSecond, Is.EqualTo(0.8f).Within(0.001f));
+            Assert.That(definition.Behaviors[1].SlotIndex, Is.EqualTo(11));
+            Assert.That(definition.Behaviors[1].WorldText.FontSize, Is.EqualTo(22));
+            Assert.That(definition.Behaviors[1].WorldText.Mode, Is.EqualTo(WorldHudValueMode.AttributeCurrentOverBase));
+            Assert.That(definition.Behaviors[1].Style.Color, Is.EqualTo(new Vector4(0.1f, 0.9f, 0.3f, 1f)));
+            Assert.That(definition.Behaviors[1].Style.AlphaPolicy, Is.EqualTo(BehaviorAlphaPolicy.None));
+            Assert.That(definition.Behaviors[1].Motion.YDriftPerSecond, Is.EqualTo(1.6f).Within(0.001f));
+        }
+
+        [Test]
+        public void PresenterHudStableIds_DifferByBehaviorSlot()
+        {
+            int first = HudItemIdentity.ComposePresenterStableId(100, WorldHudItemKind.Text, 200, 0);
+            int second = HudItemIdentity.ComposePresenterStableId(100, WorldHudItemKind.Text, 200, 11);
+
+            Assert.That(first, Is.Not.EqualTo(second));
+            Assert.That(first, Is.EqualTo(HudItemIdentity.ComposeStableId(100, WorldHudItemKind.Text, 200)));
+        }
+
+        [Test]
+        public void Load_SurfaceSourceBehavior_ParsesIntoBehaviorSlotPayload()
         {
             WriteCatalog();
             WritePresenters(
@@ -2331,11 +2425,11 @@ namespace Ludots.Tests.Presentation
             loader.Load(catalog);
 
             Assert.That(registry.TryGet(registry.GetId("road_surface"), out var definition), Is.True);
-            Assert.That(definition.Surface, Is.Not.Null);
             Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.SurfaceSource));
             Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(12));
-            Assert.That(definition.Surface!.ProfileId, Is.EqualTo("road_surface_profile"));
-            Assert.That(definition.Surface.MaterialSet.PrimaryMaterialId, Is.EqualTo("mat.road"));
+            Assert.That(definition.Behaviors[0].SurfaceSource, Is.Not.Null);
+            Assert.That(definition.Behaviors[0].SurfaceSource!.ProfileId, Is.EqualTo("road_surface_profile"));
+            Assert.That(definition.Behaviors[0].SurfaceSource.MaterialSet.PrimaryMaterialId, Is.EqualTo("mat.road"));
         }
 
         [Test]
@@ -2373,9 +2467,9 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(registry.TryGet(registry.GetId("forest_patch"), out var definition), Is.True);
             Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.InstancedBatch));
-            Assert.That(definition.InstancedBatches.Length, Is.EqualTo(1));
-            Assert.That(definition.InstancedBatches[0].BatchAssetId, Is.EqualTo(42));
-            Assert.That(definition.InstancedBatches[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(definition.Behaviors[0].InstancedBatch.BatchAssetId, Is.EqualTo(42));
+            Assert.That(definition.HasInstancedBatchBindings, Is.True);
         }
 
         [TestCase("defaultFontSize", "18")]
@@ -3696,10 +3790,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(definition.Behaviors[6].Material.SwapTable[0].MaterialId, Is.EqualTo(200));
             Assert.That(definition.Behaviors[9].MinimapMarker.SizePx, Is.EqualTo(6f));
             Assert.That(definition.Behaviors[11].SurfaceSource, Is.Not.Null);
-            Assert.That(definition.Surface, Is.Not.Null);
+            Assert.That(definition.Behaviors[11].SurfaceSource!.ProfileId, Is.EqualTo("road_profile"));
             Assert.That(registry.TryGet(registry.GetId("legal_instanced"), out var instanced), Is.True);
-            Assert.That(instanced.InstancedBatches.Length, Is.EqualTo(1));
-            Assert.That(instanced.InstancedBatches[0].BatchAssetId, Is.EqualTo(55));
+            Assert.That(instanced.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.InstancedBatch));
+            Assert.That(instanced.Behaviors[0].InstancedBatch.BatchAssetId, Is.EqualTo(55));
         }
 
         [TestCase(

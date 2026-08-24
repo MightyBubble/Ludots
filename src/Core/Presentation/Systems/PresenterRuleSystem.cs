@@ -453,8 +453,8 @@ namespace Ludots.Core.Presentation.Systems
                    HasAny(definition.Children) ||
                    HasAny(definition.Bindings) ||
                    HasAny(definition.ParamDefaults) ||
-                   HasAny(definition.InstancedBatches) ||
-                   definition.Surface != null;
+                   definition.HasInstancedBatchBindings ||
+                   definition.HasSurfaceAuthoring;
         }
 
         private static bool HasAny<T>(T[]? items)
