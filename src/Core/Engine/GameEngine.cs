@@ -417,6 +417,7 @@ namespace Ludots.Core.Engine
             ConflictReport = new RegistrationConflictReport();
             Ludots.Core.Config.ComponentRegistry.SetConflictReport(ConflictReport);
             SetService(CoreServiceKeys.Engine, this);
+            SetService(CoreServiceKeys.AppHostRegistry, new AppHostRegistry());
             ModRegistryAmbient.Bind(RegistrySet);
             SetService(CoreServiceKeys.ModRegistrySet, RegistrySet);
             SetService(CoreServiceKeys.SystemRegistrar, _systemRegistrar);

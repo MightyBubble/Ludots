@@ -39,7 +39,7 @@ namespace Ludots.Adapter.Raylib
         {
         }
 
-        private static void ShutdownBrowserRuntimeForHostExit(RaylibHostSetup? setup, IBrowserRuntime? browserRuntime)
+        internal static void ShutdownBrowserRuntimeForHostExit(RaylibHostSetup? setup, IBrowserRuntime? browserRuntime)
         {
             if (setup == null || browserRuntime == null)
             {
