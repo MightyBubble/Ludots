@@ -1955,7 +1955,10 @@ namespace Ludots.Tests.GAS
 
         private static NavQueryServiceRegistry CreateNavRegistry()
         {
-            return new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>());
+            return new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>(),
+                tileWidthCm: SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm,
+                tileHeightCm: SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
         }
 
         private static PathingConfig CreatePathingConfig()

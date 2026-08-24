@@ -301,7 +301,7 @@ namespace Ludots.Tests.Architecture
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, tileWidthCm: 400, tileHeightCm: 400);
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
                 new NavBakeService(new CdtNavBakeAlgorithm()),
                 context,
@@ -343,7 +343,7 @@ namespace Ludots.Tests.Architecture
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, tileWidthCm: 400, tileHeightCm: 400);
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
                 new NavBakeService(new CdtNavBakeAlgorithm()),
                 context,
@@ -381,7 +381,7 @@ namespace Ludots.Tests.Architecture
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, tileWidthCm: 400, tileHeightCm: 400);
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
                 new NavBakeService(new CdtNavBakeAlgorithm()),
                 context,

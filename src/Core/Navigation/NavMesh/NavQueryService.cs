@@ -1,7 +1,5 @@
 using System;
-using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh
 {
@@ -56,11 +54,6 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly NavAreaCostTable _areaCosts;
         private readonly Fix64 _tileWidthCm;
         private readonly Fix64 _tileHeightCm;
-
-        public NavQueryService(NavTileStore store, int layer = 0, NavAreaCostTable areaCosts = null)
-            : this(store, layer, areaCosts, DefaultTileWidthCm, DefaultTileHeightCm)
-        {
-        }
 
         public NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, int tileWidthCm, int tileHeightCm)
             : this(
@@ -145,12 +138,6 @@ namespace Ludots.Core.Navigation.NavMesh
                 return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
         }
-
-        private static readonly Fix64 DefaultTileWidthCm =
-            Fix64.FromFloat(HexCoordinates.HexWidth * SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
-
-        private static readonly Fix64 DefaultTileHeightCm =
-            Fix64.FromFloat(HexCoordinates.RowSpacing * SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)
         {

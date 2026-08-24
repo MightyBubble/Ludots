@@ -8,6 +8,7 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Presentation.Navigation;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture
@@ -287,7 +288,9 @@ namespace Ludots.Tests.Architecture
                 new Dictionary<NavQueryServiceKey, NavTileStore>
                 {
                     [new NavQueryServiceKey(0, 0)] = store
-                });
+                },
+                tileWidthCm: SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm,
+                tileHeightCm: SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
             NavMeshBakeConfig config = CreateBakeConfig();
             var profileRegistry = new NavMeshProfileRegistry(config, CreateAgentProfiles());
 
