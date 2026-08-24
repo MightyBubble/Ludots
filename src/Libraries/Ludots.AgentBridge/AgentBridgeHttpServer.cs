@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 using Ludots.Core.Diagnostics;
+using Ludots.Platform.Abstractions.Hosting;
 
 namespace Ludots.AgentBridge
 {
@@ -39,6 +40,9 @@ namespace Ludots.AgentBridge
         }
 
         public int Port { get; private set; }
+
+        /// <summary>本进程所在机器的描述：MachineId 为主机名，指向本服务器的 discovery 目录。</summary>
+        public MachineContext GetMachineContext() => new(Environment.MachineName, _discoveryDirectory);
 
         public void Start()
         {
