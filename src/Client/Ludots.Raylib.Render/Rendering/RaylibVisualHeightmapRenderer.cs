@@ -37,6 +37,8 @@ namespace Ludots.Raylib.Render
         private bool _initialized;
         private int _frameIndex;
 
+        private int _locSkyZenith = -1;
+        private int _locSkyGround = -1;
         private int _locUseTerrainAlbedo = -1;
         private int _locTerrainTileScale = -1;
         private int _locAntiTile = -1;
@@ -524,6 +526,8 @@ namespace Ludots.Raylib.Render
             int locVertexNormal = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexNormal", "visual-heightmap terrain");
             int locVertexColor = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexColor", "visual-heightmap terrain");
 
+            _locSkyZenith = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uSkyZenith", "visual-heightmap terrain");
+            _locSkyGround = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uSkyGround", "visual-heightmap terrain");
             _locUseTerrainAlbedo = Rl.GetShaderLocation(_terrainShader, "uUseTerrainAlbedo");
             _locTerrainTileScale = Rl.GetShaderLocation(_terrainShader, "uTerrainTileScale");
             _locAntiTile = Rl.GetShaderLocation(_terrainShader, "uAntiTile");
@@ -566,7 +570,7 @@ namespace Ludots.Raylib.Render
             ApplyTerrainShadow();
             if (_frameLighting != null)
             {
-                _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+                ApplyLightingUniforms();
             }
         }
 
@@ -589,6 +593,10 @@ namespace Ludots.Raylib.Render
         private void ApplyLightingUniforms()
         {
             _frameLighting!.Apply(_terrainShader, in _terrainLightingLocs);
+            Vector3 zenith = _frameLighting.SkyZenithColor;
+            Vector3 ground = _frameLighting.SkyGroundColor;
+            Rl.SetShaderValue(_terrainShader, _locSkyZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_terrainShader, _locSkyGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             if (_disableDistanceFog)
             {
                 Vector4 fogOff = new(_frameLighting.FogParams.X, _frameLighting.FogParams.Y, _frameLighting.FogParams.Z, 0f);

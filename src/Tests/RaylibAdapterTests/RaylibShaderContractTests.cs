@@ -36,6 +36,31 @@ public sealed class RaylibShaderContractTests
     }
 
     [Test]
+    public void TerrainLighting_UsesHemisphereSkyWithoutSquaringAlbedo()
+    {
+        string repoRoot = FindRepoRoot();
+        string terrain = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "terrain.fs"));
+        string litModel = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Client",
+            "Ludots.Raylib.Render",
+            "Rendering",
+            "RaylibVisualHeightmapRenderer.cs"));
+
+        Assert.That(terrain, Does.Contain("uniform vec3 uSkyZenith"));
+        Assert.That(terrain, Does.Contain("uniform vec3 uSkyGround"));
+        Assert.That(terrain, Does.Contain("mix(uSkyGround, uSkyZenith, hemisphere)"));
+        Assert.That(terrain, Does.Contain("skyIrradiance + (uAmbient.rgb * uAmbient.a)"));
+        Assert.That(terrain, Does.Contain("albedo * (ambient + direct)"));
+        Assert.That(terrain, Does.Not.Contain("skyIrradiance * albedo"));
+        Assert.That(litModel, Does.Contain("SkyZenithColor"));
+        Assert.That(litModel, Does.Contain("SkyGroundColor"));
+        Assert.That(litModel, Does.Contain("uSkyZenith"));
+        Assert.That(litModel, Does.Contain("uSkyGround"));
+    }
+
+    [Test]
     public void ProceduralSkybox_ShaderContractRemainsSeparateFromDayNightSky()
     {
         string repoRoot = FindRepoRoot();
