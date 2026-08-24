@@ -168,6 +168,9 @@ jobs:
         shell: pwsh
         run: |
           dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" -v minimal
+      # RNG core suite shares the ci-gate slice membership.
+      - name: Test Rng core (ci-gate)
+        run: dotnet test src/Tests/RngCoreTests/RngCoreTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

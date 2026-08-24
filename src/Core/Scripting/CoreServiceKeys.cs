@@ -15,7 +15,9 @@ using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Providers;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
@@ -105,6 +107,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> HostFrameIndex = new("HostFrameIndex");
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");
         public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
+        public static readonly ServiceKey<Ludots.Core.Engine.Randomization.IRngStreamService> RngStreamService = new("RngStreamService");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
         public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
@@ -170,8 +173,19 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CameraImpulseRuntime> CameraImpulseRuntime = new("CameraImpulseRuntime");
         public static readonly ServiceKey<PlatformManagedCameraDriverRegistry> PlatformManagedCameraDriverRegistry = new("PlatformManagedCameraDriverRegistry");
         public static readonly ServiceKey<IPlatformManagedCameraHostService> PlatformManagedCameraHostService = new("PlatformManagedCameraHostService");
-        public static readonly ServiceKey<QuestDefinitionRegistry> QuestDefinitionRegistry = new("QuestDefinitionRegistry");
-        public static readonly ServiceKey<QuestRuntimeService> QuestRuntimeService = new("QuestRuntimeService");
+        public static readonly ServiceKey<ProviderServices> ProviderServices = new("ProviderServices");
+        public static readonly ServiceKey<ProviderGapCatalog> ProviderGapCatalog = new("ProviderGapCatalog");
+        public static readonly ServiceKey<SourceProviderRegistry> SourceProviderRegistry = new("SourceProviderRegistry");
+        public static readonly ServiceKey<SelectorProviderRegistry> SelectorProviderRegistry = new("SelectorProviderRegistry");
+        public static readonly ServiceKey<ConditionProviderRegistry> ConditionProviderRegistry = new("ConditionProviderRegistry");
+        public static readonly ServiceKey<EffectHandlerRegistry> EffectHandlerRegistry = new("EffectHandlerRegistry");
+        public static readonly ServiceKey<ProviderDefinitionValidator> ProviderDefinitionValidator = new("ProviderDefinitionValidator");
+        public static readonly ServiceKey<ActivityDefinitionRegistry> ActivityDefinitionRegistry = new("ActivityDefinitionRegistry");
+        public static readonly ServiceKey<ActivityRuntimeService> ActivityRuntimeService = new("ActivityRuntimeService");
+        public static readonly ServiceKey<ActivityPresentationBuffer> ActivityPresentationBuffer = new("ActivityPresentationBuffer");
+        public static readonly ServiceKey<TaskDefinitionRegistry> TaskDefinitionRegistry = new("TaskDefinitionRegistry");
+        public static readonly ServiceKey<TaskRuntimeService> TaskRuntimeService = new("TaskRuntimeService");
+        public static readonly ServiceKey<TaskPresentationBuffer> TaskPresentationBuffer = new("TaskPresentationBuffer");
         public static readonly ServiceKey<NarrativeDefinitionRegistry> NarrativeDefinitions = new("NarrativeDefinitions");
         public static readonly ServiceKey<NarrativeDirector> NarrativeDirector = new("NarrativeDirector");
 
@@ -223,6 +237,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ItemShapeRegistry> ItemShapeRegistry = new("ItemShapeRegistry");
         public static readonly ServiceKey<ItemLayoutRegistry> ItemLayoutRegistry = new("ItemLayoutRegistry");
         public static readonly ServiceKey<ItemDefinitionRegistry> ItemDefinitionRegistry = new("ItemDefinitionRegistry");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Rng.RngPickService> RngPickService = new("RngPickService");
         public static readonly ServiceKey<OwnershipResolver> OwnershipResolver = new("OwnershipResolver");
         public static readonly ServiceKey<InventoryRuntimeService> InventoryRuntimeService = new("InventoryRuntimeService");
         public static readonly ServiceKey<ExchangeOperationRegistry> ExchangeOperationRegistry = new("ExchangeOperationRegistry");

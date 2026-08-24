@@ -20,7 +20,9 @@ using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Providers;
+using Ludots.Core.Gameplay.Tasks;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -614,16 +616,31 @@ namespace Ludots.Core.Engine
             bool reloadNarrative = string.IsNullOrWhiteSpace(group)
                                  || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
                                  || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
-            bool reloadQuests = string.IsNullOrWhiteSpace(group)
-                             || string.Equals(group, "Quests", StringComparison.OrdinalIgnoreCase)
-                             || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Quests/", StringComparison.OrdinalIgnoreCase));
+            bool reloadActivities = string.IsNullOrWhiteSpace(group)
+                                 || string.Equals(group, "Activities", StringComparison.OrdinalIgnoreCase)
+                                 || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Activities/", StringComparison.OrdinalIgnoreCase));
+            bool reloadTasks = string.IsNullOrWhiteSpace(group)
+                            || string.Equals(group, "Tasks", StringComparison.OrdinalIgnoreCase)
+                            || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Tasks/", StringComparison.OrdinalIgnoreCase));
 
-            if (reloadQuests &&
-                GetService(CoreServiceKeys.QuestDefinitionRegistry) is QuestDefinitionRegistry questDefinitions &&
-                GetService(CoreServiceKeys.QuestRuntimeService) is QuestRuntimeService questRuntime)
+            if (reloadActivities &&
+                GetService(CoreServiceKeys.ActivityDefinitionRegistry) is ActivityDefinitionRegistry activityDefinitions &&
+                GetService(CoreServiceKeys.ProviderServices) is ProviderServices activityProviderServices &&
+                GetService(CoreServiceKeys.ActivityRuntimeService) is ActivityRuntimeService activityRuntime)
             {
-                new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-                questRuntime.ResetState();
+                new ActivityConfigLoader(ConfigPipeline, activityDefinitions, activityProviderServices.Validator)
+                    .Load(ConfigCatalog, ConfigConflictReport);
+                activityRuntime.ResetState();
+            }
+
+            if (reloadTasks &&
+                GetService(CoreServiceKeys.TaskDefinitionRegistry) is TaskDefinitionRegistry taskDefinitions &&
+                GetService(CoreServiceKeys.ProviderServices) is ProviderServices taskProviderServices &&
+                GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService taskRuntime)
+            {
+                new TaskConfigLoader(ConfigPipeline, taskDefinitions, taskProviderServices.Validator)
+                    .Load(ConfigCatalog, ConfigConflictReport);
+                taskRuntime.ResetState();
             }
 
             if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
@@ -635,9 +652,115 @@ namespace Ludots.Core.Engine
                 }
             }
 
+            if (GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry loadedNarrativeDefinitions)
+            {
+                ValidateTaskNarrativeReferences(loadedNarrativeDefinitions);
+            }
+
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
+        }
+
+        private void ValidateTaskNarrativeReferences(NarrativeDefinitionRegistry narrativeDefinitions)
+        {
+            if (GetService(CoreServiceKeys.TaskDefinitionRegistry) is not TaskDefinitionRegistry taskDefinitions)
+            {
+                throw new InvalidOperationException("Task definition registry is required before validating narrative references.");
+            }
+
+            foreach (TaskDefinition task in taskDefinitions.Definitions)
+            {
+                if (!string.IsNullOrWhiteSpace(task.NextTaskId) && !taskDefinitions.TryGet(task.NextTaskId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Task '{task.Id}' references missing next task '{task.NextTaskId}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(task.OnEnterDialogueId) &&
+                    !narrativeDefinitions.TryGetDialogue(task.OnEnterDialogueId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Task '{task.Id}' references missing narrative dialogue '{task.OnEnterDialogueId}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(task.OnEnterCinematicId) &&
+                    !narrativeDefinitions.TryGetCinematic(task.OnEnterCinematicId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Task '{task.Id}' references missing narrative cinematic '{task.OnEnterCinematicId}'.");
+                }
+            }
+
+            foreach (NarrativeDialogueDefinition dialogue in narrativeDefinitions.Dialogues)
+            {
+                foreach (NarrativeDialogueNodeDefinition node in dialogue.Nodes)
+                {
+                    ValidateNarrativeActions(dialogue.Id, node.OnEnter, taskDefinitions, narrativeDefinitions);
+                    foreach (NarrativeDialogueChoiceDefinition choice in node.Choices)
+                    {
+                        ValidateNarrativeConditions(dialogue.Id, choice.Conditions, taskDefinitions);
+                        ValidateNarrativeActions(dialogue.Id, choice.Actions, taskDefinitions, narrativeDefinitions);
+                    }
+                }
+            }
+
+            foreach (NarrativeCinematicDefinition cinematic in narrativeDefinitions.Cinematics)
+            {
+                foreach (NarrativeCinematicStepDefinition step in cinematic.Steps)
+                {
+                    ValidateNarrativeActions(cinematic.Id, step.OnEnter, taskDefinitions, narrativeDefinitions);
+                }
+            }
+        }
+
+        private static void ValidateNarrativeConditions(
+            string ownerId,
+            IReadOnlyList<NarrativeConditionDefinition> conditions,
+            TaskDefinitionRegistry taskDefinitions)
+        {
+            foreach (NarrativeConditionDefinition condition in conditions)
+            {
+                if (condition.Kind == NarrativeConditionKind.TaskState &&
+                    !taskDefinitions.TryGet(condition.TaskId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative '{ownerId}' references missing task '{condition.TaskId}' in a condition.");
+                }
+            }
+        }
+
+        private static void ValidateNarrativeActions(
+            string ownerId,
+            IReadOnlyList<NarrativeActionDefinition> actions,
+            TaskDefinitionRegistry taskDefinitions,
+            NarrativeDefinitionRegistry narrativeDefinitions)
+        {
+            foreach (NarrativeActionDefinition action in actions)
+            {
+                if (action.Kind is NarrativeActionKind.StartTask or NarrativeActionKind.CompleteTask or NarrativeActionKind.FailTask)
+                {
+                    if (!taskDefinitions.TryGet(action.TaskId, out _))
+                    {
+                        throw new InvalidOperationException(
+                            $"Narrative '{ownerId}' references missing task '{action.TaskId}' in an action.");
+                    }
+                }
+
+                if (action.Kind == NarrativeActionKind.StartDialogue &&
+                    !narrativeDefinitions.TryGetDialogue(action.DialogueId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative '{ownerId}' references missing dialogue '{action.DialogueId}' in an action.");
+                }
+
+                if (action.Kind == NarrativeActionKind.StartCinematic &&
+                    !narrativeDefinitions.TryGetCinematic(action.CinematicId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative '{ownerId}' references missing cinematic '{action.CinematicId}' in an action.");
+                }
+            }
         }
 
         private void InitializeWorld(int widthInMacroTiles, int heightInMacroTiles)
@@ -838,6 +961,10 @@ namespace Ludots.Core.Engine
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.VisionFogLayerRegistry, visionFogLayerRegistry);
             // Lookup TextToken columns resolve against PresentationTextCatalog; load catalog before graphs.
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var rngStreams = new Randomization.RngStreamService();
+            var rngTables = new Gameplay.Rng.DistributionConfigLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport, rngStreams);
+            var rngPickService = new Gameplay.Rng.RngPickService(rngStreams, rngTables);
             var graphLookupTables = new GraphLookupTableLoader(ConfigPipeline, presentationTextCatalog)
                 .Load(ConfigCatalog, ConfigConflictReport);
             var graphSymbolResolver = new GasGraphSymbolResolver(
@@ -847,7 +974,8 @@ namespace Ludots.Core.Engine
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 MapLoader.EntityTemplateKeys,
-                lookupTables: graphLookupTables);
+                lookupTables: graphLookupTables,
+                rngPicks: rngPickService);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -974,6 +1102,7 @@ namespace Ludots.Core.Engine
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
+            gasGraphApi.BindRngPickService(rngPickService);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphReturnWriter = new GraphReturnWriter(
@@ -1617,6 +1746,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ItemShapeRegistry, itemShapes);
             SetService(CoreServiceKeys.ItemLayoutRegistry, itemLayouts);
             SetService(CoreServiceKeys.ItemDefinitionRegistry, itemDefinitions);
+            SetService(CoreServiceKeys.RngStreamService, rngStreams);
+            SetService(CoreServiceKeys.RngPickService, rngPickService);
             SetService(CoreServiceKeys.OwnershipResolver, ownershipResolver);
             SetService(CoreServiceKeys.InventoryRuntimeService, inventoryRuntime);
             SetService(CoreServiceKeys.ExchangeOperationRegistry, exchangeOperations);
@@ -1708,14 +1839,43 @@ namespace Ludots.Core.Engine
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
-            var questDefinitions = new QuestDefinitionRegistry();
-            new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            var questRuntime = new QuestRuntimeService(World, questDefinitions);
-            SetService(CoreServiceKeys.QuestDefinitionRegistry, questDefinitions);
-            SetService(CoreServiceKeys.QuestRuntimeService, questRuntime);
+            var providerServices = new ProviderServices();
+            SetService(CoreServiceKeys.ProviderServices, providerServices);
+            SetService(CoreServiceKeys.ProviderGapCatalog, providerServices.Gaps);
+            SetService(CoreServiceKeys.SourceProviderRegistry, providerServices.Sources);
+            SetService(CoreServiceKeys.SelectorProviderRegistry, providerServices.Selectors);
+            SetService(CoreServiceKeys.ConditionProviderRegistry, providerServices.Conditions);
+            SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
+            SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
+            var activityDefinitions = new ActivityDefinitionRegistry();
+            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var activityPresentation = new ActivityPresentationBuffer();
+            var activityRuntime = new ActivityRuntimeService(
+                World,
+                activityDefinitions,
+                providerServices,
+                activityPresentation);
+            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
+            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
+            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
+            var taskDefinitions = new TaskDefinitionRegistry();
+            new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var taskPresentation = new TaskPresentationBuffer();
+            var taskRuntime = new TaskRuntimeService(
+                World,
+                taskDefinitions,
+                providerServices,
+                taskPresentation);
+            TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
+            SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
+            SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
+            SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
+            ValidateTaskNarrativeReferences(narrativeDefinitions);
+            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, taskRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             AttributeRegistry.Freeze();

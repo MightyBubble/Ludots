@@ -6,8 +6,8 @@ using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Persistence;
@@ -81,13 +81,15 @@ public sealed class SaveParticipantRegistryTests
 
         Assert.That(domains, Is.EqualTo(new[]
         {
+            "activities",
             "clock",
             "gameSession",
             "inventory",
             "mapSessions",
             "narrative",
-            "quests",
             "relationships",
+            "tasks",
+            "rng",
             "teams",
             "timeFlow"
         }));
@@ -343,12 +345,12 @@ public sealed class SaveParticipantRegistryTests
             }
         });
 
-        QuestRuntimeService questRuntime = engine.GetService(CoreServiceKeys.QuestRuntimeService);
-        var source = new NarrativeDirector(engine, definitions, questRuntime);
+        TaskRuntimeService taskRuntime = engine.GetService(CoreServiceKeys.TaskRuntimeService);
+        var source = new NarrativeDirector(engine, definitions, taskRuntime);
         source.StartDialogue("briefing");
         source.Update(1.25f);
 
-        var target = new NarrativeDirector(engine, definitions, questRuntime);
+        var target = new NarrativeDirector(engine, definitions, taskRuntime);
         ISaveParticipant participant = CoreSaveParticipants.CreateNarrativeParticipant(source);
         ISaveParticipant targetParticipant = CoreSaveParticipants.CreateNarrativeParticipant(target);
 
@@ -362,49 +364,40 @@ public sealed class SaveParticipantRegistryTests
     }
 
     [Test]
-    public void QuestParticipantRestoresSignalsAndRebuildsIndexFromWorld()
+    public void RetiredQuestSaveDomain_IsRejectedWithReadableError()
     {
-        var definitions = new QuestDefinitionRegistry();
-        definitions.Register("trial", new QuestDefinition
+        var registry = new SaveParticipantRegistry();
+        registry.Register(new SaveParticipantStub("tasks"));
+
+        var domains = new JsonObject
         {
-            DisplayName = "Trial",
-            Stages =
+            ["tasks"] = new JsonObject(),
+            ["quests"] = new JsonObject
             {
-                new QuestStageDefinition { Id = "start", Title = "Start" },
-                new QuestStageDefinition
-                {
-                    Id = "done",
-                    Title = "Done",
-                    RequiredSignals = { "closed" }
-                }
+                ["signals"] = new JsonObject()
             }
-        });
+        };
 
-        using World sourceWorld = World.Create();
-        var sourceRuntime = new QuestRuntimeService(sourceWorld, definitions);
-        sourceRuntime.StartQuest("trial");
-        sourceRuntime.EmitSignal("opened");
+        SaveContextException error = Assert.Throws<SaveContextException>(() => registry.RestoreDomains(domains));
+        Assert.That(error.Message, Does.Contain("quests"));
+        Assert.That(error.Message, Does.Contain("retired"));
+    }
 
-        using World targetWorld = World.Create();
-        var targetRuntime = new QuestRuntimeService(targetWorld, definitions);
-        targetWorld.Create(new QuestInstanceCm
+    private sealed class SaveParticipantStub : ISaveParticipant
+    {
+        public SaveParticipantStub(string domainKey)
         {
-            DefinitionId = definitions.GetId("trial"),
-            State = QuestState.Active,
-            StageIndex = 1,
-            Revision = 3
-        });
+            DomainKey = domainKey;
+        }
 
-        ISaveParticipant participant = CoreSaveParticipants.CreateQuestParticipant(sourceRuntime);
-        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateQuestParticipant(targetRuntime);
+        public string DomainKey { get; }
 
-        targetParticipant.RestoreState(participant.CaptureState());
+        public JsonNode CaptureState() => new JsonObject();
 
-        Assert.That(targetRuntime.Signals.TryGetValue("opened", out int count), Is.True);
-        Assert.That(count, Is.EqualTo(1));
-        Assert.That(targetRuntime.TryGetQuestState("trial", out QuestState state, out string stageId), Is.True);
-        Assert.That(state, Is.EqualTo(QuestState.Active));
-        Assert.That(stageId, Is.EqualTo("done"));
+        public void RestoreState(JsonNode state)
+        {
+            if (state == null) throw new ArgumentNullException(nameof(state));
+        }
     }
 
     [Test]

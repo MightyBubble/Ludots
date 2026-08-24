@@ -22,7 +22,7 @@ public sealed class NightRaidShowcaseModEntry : IMod
     {
         Ludots.Core.Diagnostics.Log.Info(
             in Ludots.Core.Diagnostics.LogChannels.Engine,
-            $"[NightRaidShowcase] MapLoaded ctx mapId={(context.TryGet(CoreServiceKeys.MapId, out Ludots.Core.Map.MapId probeMapId) ? probeMapId.Value : "MISSING")} engine={(context.GetEngine() != null ? "present" : "MISSING")}");
+            $"[NightRaidShowcase] MapLoaded ctx mapId={(context.TryGet(CoreServiceKeys.MapId, out Ludots.Core.Map.MapId probeMapId) ? probeMapId.Value : "MISSING")} world={(context.GetWorld() != null ? "present" : "MISSING")}");
 
         if (context.TryGet(CoreServiceKeys.MapId, out Ludots.Core.Map.MapId mapId) &&
             string.Equals(mapId.Value, MapId, System.StringComparison.OrdinalIgnoreCase))

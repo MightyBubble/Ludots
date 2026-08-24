@@ -199,6 +199,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>Set an entity's world position. E[A] = target (A=0xFF → caster); I[B] = xCm; I[C] = yCm (int centimeters, matches LoadTargetPosX/Y).</summary>
         SetWorldPosition = 448,
+
+        /// <summary>Pick an integer outcome from a named deterministic distribution. Imm = distribution symbol; I[A] = stream salt.</summary>
+        WeightedPick = 449,
     }
 
     public static class GraphNodeOpParser

@@ -6,7 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Scripting;
 using NarrativeShowcaseMod.Runtime;
 
@@ -67,18 +67,15 @@ namespace NarrativeShowcaseMod.Systems
                 return false;
             }
 
-            if (!director.TryGetQuestState(NarrativeShowcaseIds.QuestId, out var state, out string stageId))
-            {
-                return false;
-            }
-
-            if (state == QuestState.Active && string.Equals(stageId, "briefing", StringComparison.OrdinalIgnoreCase))
+            if (director.TryGetTaskState(NarrativeShowcaseIds.BriefingTaskId, out var briefingState) &&
+                briefingState == TaskInstanceState.Active)
             {
                 director.StartDialogue(NarrativeShowcaseIds.BriefingDialogueId);
                 return true;
             }
 
-            if (state == QuestState.Active && string.Equals(stageId, "return", StringComparison.OrdinalIgnoreCase))
+            if (director.TryGetTaskState(NarrativeShowcaseIds.ReturnTaskId, out var returnState) &&
+                returnState == TaskInstanceState.Active)
             {
                 director.StartDialogue(NarrativeShowcaseIds.ReturnDialogueId);
                 return true;
@@ -94,9 +91,8 @@ namespace NarrativeShowcaseMod.Systems
                 return;
             }
 
-            if (!director.TryGetQuestState(NarrativeShowcaseIds.QuestId, out var state, out string stageId) ||
-                state != QuestState.Active ||
-                !string.Equals(stageId, "trial", StringComparison.OrdinalIgnoreCase))
+            if (!director.TryGetTaskState(NarrativeShowcaseIds.TrialTaskId, out var trialState) ||
+                trialState != TaskInstanceState.Active)
             {
                 return;
             }

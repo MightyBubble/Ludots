@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Config;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.Narrative
@@ -29,7 +29,7 @@ namespace Ludots.Core.Gameplay.Narrative
     public enum NarrativeConditionKind
     {
         Variable = 0,
-        QuestState = 1,
+        TaskState = 1,
         SignalCount = 2,
         EntityTag = 3,
         EntityAttribute = 4,
@@ -39,13 +39,12 @@ namespace Ludots.Core.Gameplay.Narrative
     {
         SetVariable = 0,
         AddVariable = 1,
-        StartQuest = 2,
-        AdvanceQuestStage = 3,
+        StartTask = 2,
         StartDialogue = 4,
         StartCinematic = 5,
         EmitSignal = 6,
-        CompleteQuest = 7,
-        FailQuest = 8,
+        CompleteTask = 7,
+        FailTask = 8,
         ActivateCamera = 9,
         ClearCamera = 10,
     }
@@ -71,8 +70,8 @@ namespace Ludots.Core.Gameplay.Narrative
         public float FloatValue { get; set; }
         public bool BoolValue { get; set; }
         public string StringValue { get; set; } = string.Empty;
-        public string QuestId { get; set; } = string.Empty;
-        public QuestState QuestState { get; set; } = QuestState.Active;
+        public string TaskId { get; set; } = string.Empty;
+        public TaskInstanceState TaskState { get; set; } = TaskInstanceState.Active;
         public string SignalId { get; set; } = string.Empty;
         public string EntityAlias { get; set; } = string.Empty;
         public string TagId { get; set; } = string.Empty;
@@ -88,8 +87,7 @@ namespace Ludots.Core.Gameplay.Narrative
         public float FloatValue { get; set; }
         public bool BoolValue { get; set; }
         public string StringValue { get; set; } = string.Empty;
-        public string QuestId { get; set; } = string.Empty;
-        public string StageId { get; set; } = string.Empty;
+        public string TaskId { get; set; } = string.Empty;
         public string DialogueId { get; set; } = string.Empty;
         public string CinematicId { get; set; } = string.Empty;
         public string SignalId { get; set; } = string.Empty;
