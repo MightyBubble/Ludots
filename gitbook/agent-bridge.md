@@ -56,7 +56,7 @@ curl -s -X POST http://127.0.0.1:47921/rpc \
 | 点一个按钮 | `ludots.ui.click` | `{elementId}` 或裸坐标 `{x,y}`；返回 `handled:true/false` + 命中节点的 rect/pseudoState——点到容器会 `handled:false`，换 elementId |
 | 让实体做一件事（移动/施法/攻击） | `ludots.orders.issue` | `orderType` 是**字符串键或数字 id**；合法键在 `mods/LudotsCoreMod/assets/GAS/order_types.json`：实测 `castAbility` / `moveTo` / `attackTarget` / `stop` / `chainPass` 等；`targetEntityId` 或 `worldXCm/worldYCm` 按订单类型二选一 |
 | 模拟按键（放技能） | `ludots.input.inject` | `{actionId, mode:"press"|"release"|"set"}`——语义层，走游戏输入绑定表；**press 后记得 release** |
-| 模拟真实鼠标键盘（验证 UI 交互） | `ludots.input.raw` | `{op:"pointerMove"|...,"x","y"}`——窗口层，UI 命中/指针捕获全生效；下一帧才应用 |
+| 模拟窗口输入（验证 UI 交互） | `ludots.input.raw` | `{op:"pointerMove"|...,"x","y"}`——写入游戏内 `SyntheticInputDevice`，UI 命中/指针捕获全生效；下一帧才应用，不移动系统鼠标 |
 | 查输入管线状态 | `ludots.input.state` | 看 `uiCaptured`（UI 是否吃掉了输入）再决定用哪层注入 |
 | 冻结世界逐步看 | `ludots.time.control` | `pause` → `step {steps:N}`（响应带 `targetTick`）→ `resume`；pause 后 screenshot 依然可用 |
 | 把镜头对准目标 | `ludots.camera.control` | `follow {entityId}` 实体跟随；`set {yaw,pitch,distanceCm}` 部分姿态（持久）；`unfollow` 解除 |
