@@ -33,6 +33,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Entity ExplicitTarget;
         public MapId? MapScope;
         /// <summary>
+        /// Map binding declared by map-bound hosts at bind time. Map variable ops
+        /// resolve against it authoritatively; event casters may be destroyed
+        /// entities (EntityDied) and must never be the map scope source.
+        /// </summary>
+        public MapId? MapScope;
+        /// <summary>
         /// Additional context entity (e.g. AOE center, original target for chained effects).
         /// Set from EffectContext.TargetContext when executing phase graphs.
         /// </summary>

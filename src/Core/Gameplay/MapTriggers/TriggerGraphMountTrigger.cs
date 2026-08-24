@@ -417,6 +417,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 GraphKind.TriggerGraph,
                 "触发器图挂载");
 
+            MapId? mapScope = ResolveMapScopeOnce(dependencies);
             GraphSliceResult result = GraphExecutor.ExecuteScriptSlice(
                 dependencies.Engine.World,
                 _runCaster,
@@ -435,7 +436,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 TriggerGraphLimits.SliceBudgetSteps,
                 GraphKind.Script,
                 _debugTrace,
-                ResolveMapScopeOnce(dependencies),
+                mapScope,
                 _graphId);
             LastSliceResult = result;
 
@@ -522,6 +523,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
+        /// <summary>
+        /// The mount scope's map binding, resolved once while the anchor is alive and
+        /// then authoritative for map variable ops — event casters such as EntityDied's
+        /// dying entity must never be the scope source. Mounts whose scope carries no
+        /// MapEntity resolve null and keep the executor's entity-scope contract.
+        /// </summary>
         private MapId? ResolveMapScopeOnce(TriggerGraphTriggerDependencies dependencies)
         {
             if (!_mapScopeResolved)

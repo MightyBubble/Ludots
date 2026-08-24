@@ -496,12 +496,9 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
     delete rest.label;
     delete rest.descriptor;
     delete rest.sugar;
-<<<<<<< HEAD
     delete rest.controlOutputPorts;
-=======
     delete rest.role;
     delete rest.entry;
->>>>>>> 3d21aeecf (feat(graph-editor): event entry cards, map variable panel, and catalog tree)
     return toWireNode({
       ...n,
       ...rest,
