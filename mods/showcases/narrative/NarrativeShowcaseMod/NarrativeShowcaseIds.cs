@@ -14,7 +14,9 @@ namespace NarrativeShowcaseMod
         public const string ShrineAlias = "shrine";
         public const string BeastAlias = "beast";
 
-        public const string QuestId = "Quest.Narrative.AshenOath";
+        public const string BriefingTaskId = "Task.Narrative.AshenOath.Briefing";
+        public const string TrialTaskId = "Task.Narrative.AshenOath.Trial";
+        public const string ReturnTaskId = "Task.Narrative.AshenOath.Return";
         public const string BriefingDialogueId = "Dialogue.Narrative.Briefing";
         public const string ReturnDialogueId = "Dialogue.Narrative.Return";
         public const string IntroCinematicId = "Cinematic.Narrative.Intro";

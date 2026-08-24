@@ -27,6 +27,15 @@ namespace Ludots.Core.Gameplay.Tasks
 
         [JsonPropertyName("accumulate_key")]
         public string AccumulateKey { get; set; } = string.Empty;
+
+        [JsonPropertyName("hint")]
+        public string Hint { get; set; } = string.Empty;
+
+        [JsonPropertyName("text_token")]
+        public string TextToken { get; set; } = string.Empty;
+
+        [JsonPropertyName("hint_token")]
+        public string HintToken { get; set; } = string.Empty;
     }
 
     public sealed class TaskEffectRef
@@ -55,6 +64,9 @@ namespace Ludots.Core.Gameplay.Tasks
         [JsonPropertyName("summary")]
         public string Summary { get; set; } = string.Empty;
 
+        [JsonPropertyName("tags")]
+        public List<string> Tags { get; set; } = new();
+
         [JsonPropertyName("start_policy")]
         public TaskStartPolicy StartPolicy { get; set; } = TaskStartPolicy.PlayerAccept;
 
@@ -72,6 +84,12 @@ namespace Ludots.Core.Gameplay.Tasks
 
         [JsonPropertyName("next_task_id")]
         public string NextTaskId { get; set; } = string.Empty;
+
+        [JsonPropertyName("on_enter_dialogue_id")]
+        public string OnEnterDialogueId { get; set; } = string.Empty;
+
+        [JsonPropertyName("on_enter_cinematic_id")]
+        public string OnEnterCinematicId { get; set; } = string.Empty;
     }
 
     public sealed class TaskDefinitionRegistry

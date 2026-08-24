@@ -2,7 +2,7 @@
   { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Narrative/variables.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "Quests/quests.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Tasks/tasks.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Narrative/dialogues.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Narrative/cinematics.json", "Policy": "ArrayById", "IdField": "id" }
 ]

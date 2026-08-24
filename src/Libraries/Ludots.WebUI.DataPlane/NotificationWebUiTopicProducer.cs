@@ -5,7 +5,7 @@ namespace Ludots.WebUI.DataPlane;
 
 /// <summary>
 /// DataPlane topic producer for the Notification panel.
-/// SSOT is <see cref="NotificationRuntime"/> only — not Quest, NarrativeFrontend, or showcase toast state.
+/// SSOT is <see cref="NotificationRuntime"/> only — not Task, NarrativeFrontend, or showcase toast state.
 /// Web clients render the ordered snapshot; they do not reconstruct event history.
 /// </summary>
 public sealed class NotificationWebUiTopicProducer : IWebUiTopicProducer

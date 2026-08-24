@@ -1,10 +1,10 @@
 namespace Ludots.WebUI.PanelKit;
 
 /// <summary>
-/// Stable ids for the reusable Objective / Quest tracker panel (WPK-6).
-/// Composition only — gameplay truth stays in QuestRuntimeService / DataPlane producer.
+/// Stable ids for the reusable Objective / Task tracker panel (WPK-6).
+/// Composition only — gameplay truth stays in TaskRuntimeService / DataPlane producer.
 /// </summary>
-public static class WebUiQuestObjectivePanelDescriptors
+public static class WebUiTaskObjectivePanelDescriptors
 {
 	public const string PanelType = "objective";
 	public const string GenericProfileId = "profile.objective.generic";

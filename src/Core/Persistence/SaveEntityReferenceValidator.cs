@@ -5,7 +5,6 @@ using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Tasks;
@@ -24,7 +23,6 @@ namespace Ludots.Core.Persistence
             ValidateActiveEffectContainer(world, policy);
             ValidateAbilityStateBuffer(world, policy);
             ValidateTeamEntityRef(world, policy);
-            ValidateQuestInstances(world, policy);
             ValidateActivityInstances(world, policy);
             ValidateTaskInstances(world, policy);
             ValidateRelationshipKeys<RelationshipEdgeSet>(world, policy);
@@ -131,26 +129,6 @@ namespace Ludots.Core.Persistence
                 }
 
                 ValidateTarget(world, policy, owner, teamRef.Value, nameof(TeamEntityRef), nameof(TeamEntityRef.Value));
-            });
-        }
-
-        private static void ValidateQuestInstances(World world, SaveEntityInclusionPolicy policy)
-        {
-            var query = new QueryDescription().WithAll<QuestInstanceCm>();
-            world.Query(in query, (Entity owner, ref QuestInstanceCm quest) =>
-            {
-                if (!policy.ShouldInclude(world, owner))
-                {
-                    return;
-                }
-
-                ValidateTarget(
-                    world,
-                    policy,
-                    owner,
-                    NormalizeOptionalEntity(quest.ScopeHost),
-                    nameof(QuestInstanceCm),
-                    nameof(QuestInstanceCm.ScopeHost));
             });
         }
 
