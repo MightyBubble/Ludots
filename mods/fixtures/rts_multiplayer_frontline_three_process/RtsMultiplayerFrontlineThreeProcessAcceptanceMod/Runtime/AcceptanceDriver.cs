@@ -1770,10 +1770,13 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     _commandPort.LastSubmitResult != ReplicatedClientCommandSubmitResult.Submitted ||
                     _commandPort.LastSubmittedBatchSequence == 0)
                 {
+                    InputOrderActivationResult activation = _inputOrderMapping?.LastActivationResult ?? default;
                     throw new InvalidOperationException(
                         $"Input action '{_pendingCommandAction}' did not produce exactly one submitted network command batch; " +
                         $"revision={_commandPort.SubmissionRevision}, result={_commandPort.LastSubmitResult}, " +
-                        $"sequence={_commandPort.LastSubmittedBatchSequence}.");
+                        $"sequence={_commandPort.LastSubmittedBatchSequence}, " +
+                        $"activation={activation.State}, orderId={activation.OrderId}, rejection={activation.Rejection}, " +
+                        $"aiming={_inputOrderMapping?.IsAiming}.");
                 }
                 _pendingCommandSequence = _commandPort.LastSubmittedBatchSequence;
                 CaptureSubmittedAttackTarget();
