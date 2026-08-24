@@ -122,8 +122,6 @@ namespace Ludots.Core.Gameplay.AI.Config
     {
         public string OrderTypeKey { get; set; } = string.Empty;
         public int OrderTypeId { get; set; }
-        public string AbilityKey { get; set; } = string.Empty;
-        public int AbilityId { get; set; }
         public byte SubmitMode { get; set; }
         public int PlayerId { get; set; }
     }
@@ -134,5 +132,4 @@ namespace Ludots.Core.Gameplay.AI.Config
         public int SourceKey { get; set; }
     }
 }
-
 

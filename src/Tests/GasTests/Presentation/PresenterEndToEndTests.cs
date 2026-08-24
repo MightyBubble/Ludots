@@ -399,7 +399,7 @@ namespace Ludots.Tests.Presentation
                 Target = actor,
                 AbilityId = 9,
                 AbilitySlot = 1,
-                FailReason = AbilityCastFailReason.OnCooldown,
+                FailReason = AbilityCastFailReason.TimedLockout,
             });
 
             TickPipeline(0.016f);

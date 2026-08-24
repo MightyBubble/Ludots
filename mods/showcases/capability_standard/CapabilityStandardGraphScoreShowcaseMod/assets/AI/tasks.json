@@ -2,8 +2,8 @@
   {
     "id": "Task.GraphScore.Strike",
     "Kind": "SubmitOrder",
+    "OrderPayloadKind": "CastAbility",
     "OrderTypeKey": "castAbility",
-    "AbilityKey": "Ability.GraphScore.Strike",
     "AbilitySlotIndex": 0,
     "SubmitMode": 0,
     "PlayerId": 1

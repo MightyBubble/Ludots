@@ -126,24 +126,24 @@ Graph.Chain.OnHitBonus:
   LoadContextSource         E[0]                       // 攻击者
   LoadContextTarget         E[1]                       // 被攻击者
 
-  // 检查冷却
-  LoadAttribute             E[0], OnHitBonusCooldown → F[0]
-  ConstFloat                0.0                      → F[1]
-  CompareGtFloat            F[0], F[1]               → B[0]
-  JumpIfFalse               B[0], @on_cooldown
+  // 检查锁定 tag；这是一个 Mod 命名的限时状态，不是 Core cooldown 字段
+  HasTag                    E[0], Status.OnHitBonus.Lockout → B[0]
+  JumpIfFalse               B[0], @apply_bonus
+  Jump                      @locked
 
+@apply_bonus:
   // 追加额外伤害效果
   LoadConfigInt             "BonusDamageEffectId"   → I[0]
   ApplyEffectDynamic        E[0], E[1], I[0]
 
-  // 设置冷却
-  LoadConfigFloat           "CooldownTicks"         → F[2]
-  ModifyAttributeAdd        E[effect], E[0], OnHitBonusCooldown, F[2]
+  // 施加锁定 Effect；Effect 的 duration 决定 tag 何时到期
+  LoadConfigInt             "LockoutEffectId"       → I[1]
+  ApplyEffectDynamic        E[0], E[0], I[1]
 
   Jump                      @end
 
-@on_cooldown:
-  // 冷却中，不触发
+@locked:
+  // 锁定中，不触发
 @end:
 ```
 
@@ -200,13 +200,13 @@ Graph.Chain.OnHitBonus:
 | **截图要求** | Refraction 图标消失 |
 | **多帧录屏** | F0: 伤害 → F1: 消耗层数 → F2: Buff 移除 |
 
-### 场景 3: 被动触发额外伤害（冷却中不触发）
+### 场景 3: 被动触发额外伤害（锁定中不触发）
 
 | 项 | 内容 |
 |----|------|
-| **输入** | 攻击者有被动（OnHitBonusCooldown=0）；攻击目标；冷却设置为 60 ticks；再次攻击 |
-| **预期输出** | 第一次攻击触发额外伤害，冷却开始；第二次攻击不触发 |
-| **Log 关键字** | `[GAS] OnHitBonus triggered` → `[GAS] OnHitBonusCooldown=60` → `[GAS] OnHitBonus on_cooldown` |
+| **输入** | 攻击者有被动，且没有 `Status.OnHitBonus.Lockout`；攻击目标；锁定 Effect 时长为 60 ticks；再次攻击 |
+| **预期输出** | 第一次攻击触发额外伤害并授予限时锁定 tag；第二次攻击不触发 |
+| **Log 关键字** | `[GAS] OnHitBonus triggered` → `[GAS] TagGranted Status.OnHitBonus.Lockout` → `[GAS] OnHitBonus locked` |
 | **截图要求** | 第一次攻击有额外伤害浮字，第二次无 |
 | **多帧录屏** | F0: 第一次攻击 → F1: 额外伤害 → F60: 第二次攻击 → F61: 无额外伤害 |
 
@@ -246,9 +246,9 @@ public void O7_ChainAppend_Refraction_RemovedWhenChargesZero()
 }
 
 [Test]
-public void O7_ChainAppend_OnHitBonus_CooldownPreventsRetrigger()
+public void O7_ChainAppend_OnHitBonus_LockoutPreventsRetrigger()
 {
-    // 第一次攻击触发，冷却 60 ticks
+    // 第一次攻击触发，锁定 tag 持续 60 ticks
     // 第二次攻击（tick < 60）不触发
     // Assert: bonus damage applied once only
 }
@@ -261,7 +261,7 @@ public void O7_ChainAppend_OnHitBonus_CooldownPreventsRetrigger()
 3. 截图存档：
    - `artifacts/acceptance/response_window/o7_refraction_block.png`
    - `artifacts/acceptance/response_window/o7_charges_depleted.png`
-   - `artifacts/acceptance/response_window/o7_onhit_cooldown.png`
+   - `artifacts/acceptance/response_window/o7_onhit_lockout.png`
 4. 多帧录屏：
    - `artifacts/acceptance/response_window/o7_60frames.mp4`
    - 标注关键帧：OnApply Main 帧、Listener 触发帧、追加效果帧

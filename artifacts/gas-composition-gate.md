@@ -50,3 +50,19 @@ N/A — trace 不是执行 op，不改变 Graph program。
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
+
+## Issues #714-#719 AI/GAS Order Boundary — Pre-Implementation Gate — 2026-07-31
+
+- **Task / Issue**: Implement issues #714-#719 after PR #713, keeping ability lockout as duration Effect data, keeping Utility AI out of GAS ability eligibility, and converging AI output on typed Order contracts and read-only scoring.
+- **Date**: 2026-07-31
+- **Agent / Author**: Codex
+- **Baseline**: `origin/main` cached at `74513182ab420dc950844d26882000ec54e030a7` (`Merge pull request #713 from MightyBubble/codex/gas-graph-effect-ssot`). Network fetch retried but GitHub reset the connection; the cached remote head already includes the confirmed merged PR #713.
+- **Status**: PRE-IMPLEMENTATION PASS.
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A.
+
+结论: PASS.
+
+一句话理由: Temporary ability lockout is authored as duration Effects that grant tags; abilities read `blockTags`, AI submits typed Orders, and scoring stays read-only.

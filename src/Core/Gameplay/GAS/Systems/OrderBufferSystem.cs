@@ -271,6 +271,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             in _entityAdmissionReservationsScratch[i],
                             in _incomingBatchScratch[i],
                             _incomingBatchResultsScratch[i]);
+                        _entityAdmissionReservationsScratch[i] = default;
                     }
 
                     committed = true;
@@ -298,6 +299,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     CommitAdmission(in _entityAdmissionReservationsScratch[i], in order, result);
+                    _entityAdmissionReservationsScratch[i] = default;
                     IncomingRevision++;
                 }
 

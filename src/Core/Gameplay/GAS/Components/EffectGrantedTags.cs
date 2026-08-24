@@ -40,8 +40,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 TagContributionFormula.Linear => stackCount * Amount,
                 TagContributionFormula.LinearPlusBase => Base + stackCount * Amount,
                 TagContributionFormula.GraphProgram => throw new System.InvalidOperationException(
-                    "TagContributionFormula.GraphProgram is not supported until a tag contribution graph evaluator is wired."),
-                _ => throw new System.InvalidOperationException($"Unsupported tag contribution formula '{Formula}'."),
+                    "TagContributionFormula.GraphProgram needs a tag contribution graph evaluator before use."),
+                _ => throw new System.InvalidOperationException($"Unknown tag contribution formula '{Formula}'."),
             };
         }
     }
