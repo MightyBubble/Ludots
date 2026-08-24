@@ -1,11 +1,14 @@
+using System;
 using Ludots.Adapter.Raylib;
+using Ludots.Platform.Abstractions;
 
 var baseDir = AppDomain.CurrentDomain.BaseDirectory;
 try
 {
     var configFile = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) ? args[0] : "launcher.runtime.json";
-    using var host = new RaylibGameHost(baseDir, configFile);
-    host.Run();
+    var appHost = new RaylibAppHost(configFile);
+    appHost.Initialize(new AppInitContext(baseDir, Array.Empty<string>(), AssetsRoot: null));
+    appHost.Run();
 }
 catch (Exception ex)
 {
