@@ -134,7 +134,28 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
                 {
                     if (state.ExpectedMoveOrderId > 0 && state.ExpectedMoveObserved == 0)
                     {
-                        continue;
+                        if (buffer.HasPending)
+                        {
+                            continue;
+                        }
+
+                        if (buffer.HasActive)
+                        {
+                            if (buffer.ActiveOrder.Order.OrderId != state.ExpectedMoveOrderId)
+                            {
+                                state = default;
+                            }
+
+                            continue;
+                        }
+
+                        // OrderBufferSystem activates and MoveToWorldCmOrderSystem completes a
+                        // pursuit move earlier in this same frame when the actor already sits
+                        // inside the move stop radius, so the active window can pass unobserved;
+                        // an empty buffer at this point means the pursuit already resolved (or
+                        // never activated), and engagement must be re-evaluated instead of
+                        // waiting forever for an order that no longer exists.
+                        state.ExpectedMoveObserved = 1;
                     }
 
                     RouteOrEngage(

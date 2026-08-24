@@ -617,6 +617,51 @@ public sealed class GameplayActionLoopTests
         }
     }
 
+    [Test]
+    public void DirectAttack_StandoffPursuitResolvesWhenTheMoveCompletesBeforeObservation()
+    {
+        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
+        try
+        {
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using World world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orders = new OrderQueue(64, admissionResults);
+            var effects = new EffectRequestQueue();
+            var system = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
+
+            Entity target = world.Create(
+                new Team { Id = 2 },
+                new AttributeBuffer(),
+                WorldPositionCm.FromCm(2_000, 0));
+            Entity actor = world.Create(
+                StandoffProfile(),
+                new DirectAttackState
+                {
+                    Phase = DirectAttackPhase.Pursuing,
+                    Target = target,
+                    ExpectedMoveOrderId = 9,
+                    ExpectedMoveObserved = 0,
+                },
+                new OrderBuffer { ActiveIndex = -1 },
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                WorldPositionCm.FromCm(1_480, 0));
+
+            system.Update(1f / 30f);
+            Assert.That(world.Get<DirectAttackState>(actor).Phase, Is.EqualTo(DirectAttackPhase.Engaging));
+
+            system.Update(1f / 30f);
+            Assert.That(effects.Count, Is.EqualTo(1));
+        }
+        finally
+        {
+            TeamManager.RestoreSnapshot(relationships);
+        }
+    }
+
     private static DirectAttackProfile StandoffProfile() => new()
     {
         AttackOrderTypeId = 102,
