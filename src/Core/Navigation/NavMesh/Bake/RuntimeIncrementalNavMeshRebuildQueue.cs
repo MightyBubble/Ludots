@@ -77,7 +77,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
     /// </summary>
     public sealed class RuntimeIncrementalNavMeshRebuildQueue : IDisposable
     {
-        private const int MaxOutstandingBakeRequests = 64;
+        // 后台管线在途上限：限制障碍快照随提交累积的内存占用；管线满时游戏线程本轮少提交
+        private const int MaxOutstandingBakeRequests = 128;
         private static readonly TimeSpan DisposeJoinTimeout = TimeSpan.FromSeconds(10);
 
         private readonly NavBakeService _bakeService;
