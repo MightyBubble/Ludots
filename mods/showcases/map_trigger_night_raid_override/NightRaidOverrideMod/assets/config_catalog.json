@@ -3,5 +3,10 @@
     "Path": "GAS/graphs.json",
     "Policy": "ArrayById",
     "IdField": "id"
+  },
+  {
+    "Path": "Events/custom_events.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
   }
 ]
