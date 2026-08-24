@@ -2200,6 +2200,20 @@
         "required": true,
         "provider": "cef"
       }
+    },
+    {
+      "id": "east_asia_visual_heightmap_runtime_raylib",
+      "name": "East Asia Visual Heightmap Runtime Raylib (no editor)",
+      "selectors": [
+        "$east_asia_visual_heightmap_runtime"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
     }
   ]
 }
