@@ -286,7 +286,7 @@
         {
           "role": "defeatedCore",
           "template": "rts.frontline.core.base",
-          "scope": "screen"
+          "scope": "anchor"
         }
       ],
       "requireCompletedWorldState": true
