@@ -12,6 +12,8 @@ uniform float uLightIntensity;
 uniform vec3 uViewPos;
 uniform vec3 uFogColor;
 uniform vec4 uFogParams;
+uniform vec3 uSkyZenith;
+uniform vec3 uSkyGround;
 uniform int uUseTerrainAlbedo;
 uniform float uTerrainTileScale;
 uniform int uAntiTile;
@@ -155,7 +157,11 @@ void main()
     float gloss = mix(0.04, 0.18, smoothstep(0.32, 0.85, clamp(fragHeightBand, 0.0, 1.0)));
     float spec = pow(max(dot(N, H), 0.0), 48.0) * gloss * step(0.02, ndl);
     float shadow = SampleShadow(fragPos, N);
-    vec3 ambient = uAmbient.rgb * uAmbient.a;
+    // Hemisphere irradiance stays outside albedo so lit = albedo * (ambient + direct)
+    // matches model_lit's sky+ramp fill without squaring the terrain tint.
+    float hemisphere = N.y * 0.5 + 0.5;
+    vec3 skyIrradiance = mix(uSkyGround, uSkyZenith, hemisphere);
+    vec3 ambient = skyIrradiance + (uAmbient.rgb * uAmbient.a);
     vec3 direct = uLightColor * uLightIntensity * ndl * shadow;
     vec3 lit = albedo * (ambient + direct) + (uLightColor * uLightIntensity * spec * shadow);
     float fogAmount = DistanceFogAmount(length(fragPos - uViewPos));
