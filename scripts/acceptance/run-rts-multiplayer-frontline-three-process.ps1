@@ -2354,24 +2354,16 @@ function Assert-ClientWorldPresentationEvidence {
                         "'$layoutTemplate' entities; distinct layout requires at least $minimumInstances."
                 }
 
-                $explicitMinimumWorldSeparationCm = [int64]0
-                $hasExplicitMinimumWorldSeparation = $null -ne $layout.PSObject.Properties["minimumWorldSeparationCm"]
-                if ($hasExplicitMinimumWorldSeparation) {
-                    $explicitMinimumWorldSeparationCm = [int64]$layout.minimumWorldSeparationCm
-                    if ($explicitMinimumWorldSeparationCm -le 0) {
-                        throw "Client '$processName' screenshot milestone '$milestone' distinct layout explicit minimum world separation must be positive."
+                $checkWorldSeparation = $null -ne $layout.PSObject.Properties["minimumWorldSeparationSource"]
+                $minimumWorldSeparationCm = [int64]0
+                $minimumWorldSeparationSquared = [int64]0
+                if ($checkWorldSeparation) {
+                    if ([string]$layout.minimumWorldSeparationSource -cne [string]$GroupMoveLayoutEvidence.source) {
+                        throw "Client '$processName' screenshot milestone '$milestone' distinct layout does not use the formal group-move spacing source."
                     }
-                }
-                elseif ([string]$layout.minimumWorldSeparationSource -cne [string]$GroupMoveLayoutEvidence.source) {
-                    throw "Client '$processName' screenshot milestone '$milestone' distinct layout does not use the formal group-move spacing source."
-                }
-                if ($hasExplicitMinimumWorldSeparation) {
-                    $minimumWorldSeparationCm = $explicitMinimumWorldSeparationCm
-                }
-                else {
                     $minimumWorldSeparationCm = [int64]$GroupMoveLayoutEvidence.spacingCm
+                    $minimumWorldSeparationSquared = $minimumWorldSeparationCm * $minimumWorldSeparationCm
                 }
-                $minimumWorldSeparationSquared = $minimumWorldSeparationCm * $minimumWorldSeparationCm
                 $maximumScreenOverlapRatio = [double]$layout.maximumScreenOverlapRatio
                 foreach ($instance in $layoutInstances) {
                     $screenLeft = [double]$instance.screenLeftPx
@@ -2394,12 +2386,14 @@ function Assert-ClientWorldPresentationEvidence {
                             throw "Client '$processName' screenshot milestone '$milestone' duplicates owner stable id '$([int]$left.ownerStableId)' for '$layoutTemplate'."
                         }
 
-                        $worldSeparationSquared = Get-WorldEvidenceDistanceSquared `
-                            -LeftX ([int64]$left.worldXCm) -LeftY ([int64]$left.worldYCm) `
-                            -RightX ([int64]$right.worldXCm) -RightY ([int64]$right.worldYCm)
-                        if ($worldSeparationSquared -lt $minimumWorldSeparationSquared) {
-                            throw "Client '$processName' screenshot milestone '$milestone' overlaps '$layoutTemplate' entities " +
-                                "'$([int]$left.ownerStableId)' and '$([int]$right.ownerStableId)' in the world."
+                        if ($checkWorldSeparation) {
+                            $worldSeparationSquared = Get-WorldEvidenceDistanceSquared `
+                                -LeftX ([int64]$left.worldXCm) -LeftY ([int64]$left.worldYCm) `
+                                -RightX ([int64]$right.worldXCm) -RightY ([int64]$right.worldYCm)
+                            if ($worldSeparationSquared -lt $minimumWorldSeparationSquared) {
+                                throw "Client '$processName' screenshot milestone '$milestone' overlaps '$layoutTemplate' entities " +
+                                    "'$([int]$left.ownerStableId)' and '$([int]$right.ownerStableId)' in the world."
+                            }
                         }
 
                         $intersectionWidth = [Math]::Max(0.0,
@@ -2429,9 +2423,9 @@ function Assert-ClientWorldPresentationEvidence {
                     }
                 }
 
-                $minimumWorldSeparationSourceLabel = [string]$GroupMoveLayoutEvidence.source
-                if ($hasExplicitMinimumWorldSeparation) {
-                    $minimumWorldSeparationSourceLabel = "explicit"
+                $minimumWorldSeparationSourceLabel = "none"
+                if ($checkWorldSeparation) {
+                    $minimumWorldSeparationSourceLabel = [string]$GroupMoveLayoutEvidence.source
                 }
                 $distinctLayoutResult = [ordered]@{
                     template = $layoutTemplate
@@ -2785,12 +2779,10 @@ foreach ($requirement in $requiredWorldEvidence) {
         $layoutSources = @(Get-DistinctEntityLayoutSources -Layout $layout)
         $hasSeparationSource = $null -ne $layout.PSObject.Properties["minimumWorldSeparationSource"] -and
             -not [string]::IsNullOrWhiteSpace([string]$layout.minimumWorldSeparationSource)
-        $hasExplicitSeparation = $null -ne $layout.PSObject.Properties["minimumWorldSeparationCm"]
         if ([string]::IsNullOrWhiteSpace([string]$layout.template) -or
             [int]$layout.minimumInstances -lt 2 -or
-            ($hasSeparationSource -eq $hasExplicitSeparation) -or
             ($hasSeparationSource -and [string]$layout.minimumWorldSeparationSource -cne "groupMoveTargetLayout.spacingCm") -or
-            ($hasExplicitSeparation -and [int64]$layout.minimumWorldSeparationCm -le 0) -or
+            ($null -ne $layout.PSObject.Properties["minimumWorldSeparationCm"]) -or
             ($layoutScope -cne "allVisibleTemplate" -and $layoutScope -cne "stableEntitySources") -or
             ($layoutRegion -cne "screen" -and $layoutRegion -cne "anchor") -or
             ($layoutScope -ceq "allVisibleTemplate" -and $layoutSources.Count -ne 0) -or

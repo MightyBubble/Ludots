@@ -228,7 +228,6 @@
         "scope": "allVisibleTemplate",
         "region": "screen",
         "minimumInstances": 2,
-        "minimumWorldSeparationCm": 100,
         "maximumScreenOverlapRatio": 0.5
       },
       "requireObservedDamage": true
@@ -263,7 +262,6 @@
         "scope": "allVisibleTemplate",
         "region": "screen",
         "minimumInstances": 2,
-        "minimumWorldSeparationCm": 100,
         "maximumScreenOverlapRatio": 0.5
       },
       "requireObservedDamage": true
