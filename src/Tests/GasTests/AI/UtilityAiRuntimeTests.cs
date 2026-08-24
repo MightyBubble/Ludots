@@ -713,6 +713,8 @@ namespace Ludots.Tests.GAS
             public void WriteBlackboardEntity(Entity entity, int keyId, Entity value) { }
             public bool TryLoadConfigFloat(int keyId, out float value) { value = 0f; return false; }
             public bool TryLoadConfigInt(int keyId, out int value) { value = 0; return false; }
+            public void SetWorldPosition(Entity target, int xCm, int yCm) { }
+            public void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition) { }
         }
     }
 }
