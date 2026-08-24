@@ -80,7 +80,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         host.EntityIndex = engine.CurrentMapSession?.EntityIndex
             ?? throw new InvalidOperationException(
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
-        host.FinishResolver(Path.Combine(assetsRoot, "GraphTables"));
+        host.FinishResolver(Path.Combine(assetsRoot, "GraphTables"), engine.GetService(CoreServiceKeys.RngPickService));
         GraphOpsNodeGallerySymbolResolver.RegisterAuthoredCompileSymbols(assetsRoot);
         return host;
     }
@@ -256,7 +256,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         TeamManager.SetRelationship(2, 1, TeamRelationship.Hostile);
     }
 
-    private void FinishResolver(string? graphTablesDir)
+    private void FinishResolver(string? graphTablesDir, Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null)
     {
         Resolver = new GraphOpsNodeGallerySymbolResolver(
             Templates,
@@ -265,7 +265,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             RelationshipFlags,
             RelationshipReasons,
             DispatchPresets,
-            graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir));
+            graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir),
+            rngPicks);
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)

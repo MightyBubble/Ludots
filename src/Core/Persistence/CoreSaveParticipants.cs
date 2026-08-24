@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Randomization;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
@@ -32,6 +33,7 @@ namespace Ludots.Core.Persistence
             registry.Register(CreateQuestParticipant(engine.GetService(CoreServiceKeys.QuestRuntimeService)));
             registry.Register(CreateNarrativeParticipant(engine.GetService(CoreServiceKeys.NarrativeDirector)));
             registry.Register(CreateRelationshipParticipant(engine.GetService(CoreServiceKeys.RelationshipRuntime)));
+            registry.Register(CreateRngParticipant(engine.GetService(CoreServiceKeys.RngStreamService)));
             registry.Register(CreateTeamParticipant());
             registry.Register(CreateTimeFlowParticipant(engine.GetService(CoreServiceKeys.TimeFlow)));
         }
@@ -74,6 +76,11 @@ namespace Ludots.Core.Persistence
         public static ISaveParticipant CreateRelationshipParticipant(RelationshipRuntime runtime)
         {
             return new RelationshipSaveParticipant(runtime);
+        }
+
+        public static ISaveParticipant CreateRngParticipant(IRngStreamService streams)
+        {
+            return new RngSaveParticipant(streams);
         }
 
         private sealed class GameSessionSaveParticipant : ISaveParticipant
@@ -629,6 +636,100 @@ namespace Ludots.Core.Persistence
             }
         }
 
+        private sealed class RngSaveParticipant : ISaveParticipant
+        {
+            private readonly IRngStreamService _streams;
+
+            public RngSaveParticipant(IRngStreamService streams)
+            {
+                _streams = streams ?? throw new ArgumentNullException(nameof(streams));
+            }
+
+            public string DomainKey => "rng";
+
+            public JsonNode CaptureState()
+            {
+                var ids = new List<string>(_streams.DeclaredStreamIds);
+                ids.Sort(StringComparer.Ordinal);
+
+                var streams = new JsonArray();
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    RngStream stream = _streams.GetStream(ids[i]);
+                    RngStreamSnapshot snapshot = stream.CaptureSnapshot();
+                    streams.Add(new JsonObject
+                    {
+                        ["stream"] = snapshot.StreamId,
+                        ["seed"] = stream.DeclaredSeed,
+                        ["state"] = snapshot.State,
+                        ["position"] = snapshot.Position
+                    });
+                }
+
+                return new JsonObject
+                {
+                    ["streams"] = streams
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+
+                JsonObject root = state.AsObject();
+                JsonArray streamArray = RequireArray(root, "streams");
+                var snapshots = new Dictionary<string, RngStreamSnapshot>(streamArray.Count, StringComparer.Ordinal);
+                var seeds = new Dictionary<string, uint>(streamArray.Count, StringComparer.Ordinal);
+                for (int i = 0; i < streamArray.Count; i++)
+                {
+                    JsonObject entry = RequireObject(streamArray[i], $"streams[{i}]");
+                    string streamId = RequireString(entry, "stream");
+                    if (!snapshots.TryAdd(streamId, new RngStreamSnapshot(
+                            RequireUInt(entry, "state", $"streams[{i}]"),
+                            RequireLong(entry, "position", $"streams[{i}]"),
+                            streamId)))
+                    {
+                        throw new SaveContextException($"Rng save stream '{streamId}' is duplicated.");
+                    }
+
+                    seeds.Add(streamId, RequireUInt(entry, "seed", $"streams[{i}]"));
+                }
+
+                foreach (string streamId in snapshots.Keys)
+                {
+                    if (!_streams.DeclaredStreamIds.Contains(streamId))
+                    {
+                        throw new SaveContextException(
+                            $"Rng save stream '{streamId}' is not declared in this session.");
+                    }
+                }
+
+                foreach (string streamId in _streams.DeclaredStreamIds)
+                {
+                    if (!snapshots.ContainsKey(streamId))
+                    {
+                        throw new SaveContextException(
+                            $"Rng save is missing declared stream '{streamId}'.");
+                    }
+                }
+
+                foreach (KeyValuePair<string, RngStreamSnapshot> pair in snapshots)
+                {
+                    RngStream stream = _streams.GetStream(pair.Key);
+                    if (stream.DeclaredSeed != seeds[pair.Key])
+                    {
+                        throw new SaveContextException(
+                            $"Rng stream '{pair.Key}' declared seed does not match the save.");
+                    }
+                }
+
+                foreach (KeyValuePair<string, RngStreamSnapshot> pair in snapshots)
+                {
+                    _streams.GetStream(pair.Key).RestoreSnapshot(pair.Value);
+                }
+            }
+        }
+
         private static JsonObject WriteCamera(in CameraStateSnapshot camera)
         {
             return new JsonObject
@@ -837,6 +938,28 @@ namespace Ludots.Core.Persistence
             }
 
             return node.GetValue<int>();
+        }
+
+        private static uint RequireUInt(JsonObject root, string field, string path)
+        {
+            JsonNode? node = root[field];
+            if (node == null)
+            {
+                throw new SaveContextException($"Save domain field '{path}.{field}' is missing.");
+            }
+
+            return node.GetValue<uint>();
+        }
+
+        private static long RequireLong(JsonObject root, string field, string path)
+        {
+            JsonNode? node = root[field];
+            if (node == null)
+            {
+                throw new SaveContextException($"Save domain field '{path}.{field}' is missing.");
+            }
+
+            return node.GetValue<long>();
         }
 
         private static float RequireSingle(JsonObject root, string field)

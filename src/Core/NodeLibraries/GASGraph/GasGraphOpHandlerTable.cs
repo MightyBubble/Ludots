@@ -207,6 +207,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.AbsFloat or
                 GraphNodeOp.NegFloat or
                 GraphNodeOp.RandomFloat01 or
+                GraphNodeOp.WeightedPick or
                 GraphNodeOp.AddInt or
                 GraphNodeOp.CompareGtFloat or
                 GraphNodeOp.CompareLtInt or
@@ -750,6 +751,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.HasTag, HandleHasTag, "HasTag graph opcode.");
             Register(GraphNodeOp.CompareEqEntity, HandleCompareEqEntity, "CompareEqEntity graph opcode.");
             Register(GraphNodeOp.RandomFloat01, HandleRandomFloat01, "RandomFloat01 graph opcode.");
+            Register(GraphNodeOp.WeightedPick, HandleWeightedPick, "WeightedPick graph opcode.");
             Register(GraphNodeOp.QueryHexRange, HandleQueryHexRange, "QueryHexRange graph opcode.");
             Register(GraphNodeOp.QueryHexRing, HandleQueryHexRing, "QueryHexRing graph opcode.");
             Register(GraphNodeOp.QueryHexNeighbors, HandleQueryHexNeighbors, "QueryHexNeighbors graph opcode.");
@@ -1706,6 +1708,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             x ^= x << 5;
             s.RandomSeed = x;
             s.F[ins.Dst] = (x & 0x00FFFFFFu) / 16777215f;
+        }
+
+        private static void HandleWeightedPick(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.WeightedPick(ins.Imm, s.I[ins.A]);
         }
 
         // ── Hex Spatial Queries (130-132) ──

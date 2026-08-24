@@ -13,6 +13,7 @@
 - [架构](architecture/README.md)
   - [运行时总览](architecture/runtime-overview.md)
   - [Agent 调试桥](architecture/agent-debug-bridge.md)
+  - [确定性随机与加权分布](architecture/deterministic-rng.md)
   - [UI 渲染控制与 Surface 所有权](architecture/ui-rendering-and-surface-ownership.md)
   - [四皮面板：工程结构与换肤合同](architecture/panel-skins.md)
   - [面板快速上手：10 分钟加一个血条](architecture/panel-quickstart.md)
