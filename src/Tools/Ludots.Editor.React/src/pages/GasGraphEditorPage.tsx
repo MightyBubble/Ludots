@@ -5,19 +5,43 @@ import {
   Background,
   Controls,
   MiniMap,
-  Handle,
-  Position,
   applyNodeChanges,
+  applyEdgeChanges,
   addEdge,
+  SelectionMode,
   type Node,
   type Edge,
   type Connection,
-  type NodeProps,
   type NodeChange,
+  type EdgeChange,
+  type ReactFlowInstance,
   MarkerType,
 } from '@xyflow/react';
 import { Search, Plus } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
+import { GraphCatalogTree, type CatalogMod } from './gas-graph-editor/GraphCatalogTree';
+import {
+  GraphVariablePanel,
+  collectionTypeError,
+  decodeMapVarDrag,
+  emptyVariableDraft,
+  type GraphVariableRow,
+  type MapVariableDraft,
+  type MapVariableScalarType,
+} from './gas-graph-editor/GraphVariablePanel';
+import { GasNode, isPureValueOp } from './gas-graph-editor/GasNode';
+import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
+import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
+import { EventEntryInspector } from './gas-graph-editor/EventEntryInspector';
+import {
+  collectEventEntries,
+  createEmptyEventEntry,
+  entryLabelsFromNodes,
+  eventThenEdgeId,
+  uniqueEventLabel,
+  type EventEntryConfig,
+} from './gas-graph-editor/eventEntry';
+import './gas-graph-editor/editor.css';
 
 type GraphNodeConfig = {
   id: string;
@@ -71,7 +95,14 @@ type GraphNodeConfig = {
   pinRegister?: number;
 };
 
-type GasNodeData = GraphNodeConfig & { label: string; descriptor?: GraphDescriptor; sugar?: GraphSugarDescriptor; controlOutputPorts?: string[] };
+type GasNodeData = GraphNodeConfig & {
+  label: string;
+  role?: 'op' | 'event-entry';
+  entry?: GraphEntryConfig;
+  descriptor?: GraphDescriptor;
+  sugar?: GraphSugarDescriptor;
+  controlOutputPorts?: string[];
+};
 
 type GraphDescriptor = {
   op: string;
@@ -136,6 +167,7 @@ type GraphValueEdgeConfig = {
 
 type GasEdgeData = {
   kind: 'control' | 'value';
+  synthetic?: boolean;
 };
 
 type GraphOutputConfig = {
@@ -191,65 +223,6 @@ type ValidateResponse = {
 
 const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
 const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
-
-function GasNode({ data, selected }: NodeProps<Node<GasNodeData>>) {
-  const descriptor = data.descriptor;
-  const sugar = data.sugar;
-  const inputPorts = Array.from(new Set([
-    ...(descriptor?.linearInputPorts ?? []),
-    ...(descriptor?.queryInputPorts ?? []),
-    ...(descriptor?.scriptInputPorts ?? []),
-    ...(sugar?.valueInputPorts ?? []),
-  ]));
-  const outputType = descriptor?.queryOutputType !== 'Void'
-    ? descriptor?.queryOutputType
-    : descriptor?.linearOutputType;
-  const valueOutput = outputType && outputType !== 'Void' && outputType !== 'TargetList' ? 'value' : null;
-  const listOutput = outputType === 'TargetList' ? 'list' : null;
-
-  return (
-    <div
-      className={`relative min-w-[180px] rounded border px-3 py-2 text-xs shadow ${
-        selected ? 'border-sky-400 bg-slate-800' : 'border-slate-600 bg-slate-900'
-      }`}
-    >
-      <Handle id="control-in" type="target" position={Position.Left} className="!top-4 !bg-sky-400" />
-      {inputPorts.map((port, index) => (
-        <Handle
-          key={port}
-          id={port}
-          type="target"
-          position={Position.Left}
-          style={{ top: 42 + index * 18 }}
-          className="!bg-emerald-400"
-        />
-      ))}
-      <div className="font-semibold text-slate-100">{data.label}</div>
-      <div className="mt-1 text-[10px] text-sky-300">{data.op}</div>
-      <div className="mt-2 flex flex-wrap gap-1 text-[9px] uppercase tracking-wide text-slate-500">
-        <span className="rounded bg-sky-950 px-1 text-sky-300">next</span>
-        {valueOutput ? <span className="rounded bg-violet-950 px-1 text-violet-300">{valueOutput}</span> : null}
-        {inputPorts.map((port) => <span key={port} className="rounded bg-emerald-950 px-1 text-emerald-300">{port}</span>)}
-      </div>
-      {(data.controlOutputPorts ?? []).map((port, index) => (
-        <Handle
-          key={port}
-          id={port}
-          type="source"
-          position={Position.Right}
-          style={{ top: 16 + index * 18 }}
-          className="!bg-sky-400"
-        />
-      ))}
-      {valueOutput ? (
-        <Handle id={valueOutput} type="source" position={Position.Right} className="!top-12 !bg-violet-400" />
-      ) : null}
-      {listOutput ? (
-        <Handle id={listOutput} type="source" position={Position.Right} className="!top-12 !bg-emerald-400" />
-      ) : null}
-    </div>
-  );
-}
 
 const nodeTypes = { gas: GasNode };
 
@@ -320,6 +293,7 @@ function isControlFlowGraph(graph: GraphConfig): boolean {
 }
 
 function resolveControlOutputPorts(op: string, descriptor?: GraphDescriptor, sugar?: GraphSugarDescriptor): string[] {
+  if (isPureValueOp(op)) return [];
   if (sugar) return sugar.controlOutputPorts;
   if (descriptor) return descriptor.controlOutputPorts;
   throw new Error(`Descriptor missing for graph op '${op}'.`);
@@ -349,6 +323,7 @@ function graphToFlow(
     position: layout.nodes?.[n.id] ?? { x: 40 + index * 220, y: 80 + (index % 2) * 40 },
     data: {
       ...n,
+      role: 'op',
       label: n.id,
       descriptor: descriptors[n.op],
       sugar: sugars[n.op],
@@ -356,7 +331,46 @@ function graphToFlow(
     },
   }));
 
+  const startIndex = new Map<string, number>();
+  for (const entry of graph.entries ?? []) {
+    const count = startIndex.get(entry.start) ?? 0;
+    const id = eventEntryNodeId(entry.label);
+    const startNode = nodes.find((node) => node.id === entry.start);
+    const fallback = startNode?.position ?? { x: 40, y: 80 + count * 140 };
+    nodes.push({
+      id,
+      type: 'gas',
+      deletable: true,
+      selectable: true,
+      position: layout.nodes?.[id] ?? { x: fallback.x - 280, y: fallback.y + count * 28 },
+      data: {
+        id,
+        op: 'Event',
+        role: 'event-entry',
+        entry,
+        label: entry.event,
+        controlOutputPorts: ['exec'],
+      },
+    });
+    startIndex.set(entry.start, count + 1);
+  }
+
   const edges: Edge<GasEdgeData>[] = [];
+  for (const entry of graph.entries ?? []) {
+    const source = eventEntryNodeId(entry.label);
+    if (!nodes.some((node) => node.id === entry.start)) continue;
+    edges.push({
+      id: `c:${source}:exec:${entry.start}`,
+      source,
+      sourceHandle: 'exec',
+      target: entry.start,
+      targetHandle: 'control-in',
+      markerEnd: { type: MarkerType.ArrowClosed },
+      style: { stroke: '#fb7185', strokeWidth: 2 },
+      data: { kind: 'control', synthetic: true },
+    });
+  }
+
   if (isControlFlowGraph(graph)) {
     for (const edge of graph.controlEdges ?? []) {
       edges.push({
@@ -366,9 +380,7 @@ function graphToFlow(
         target: edge.to,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        label: edge.fromPort,
         style: { stroke: '#38bdf8', strokeWidth: 2 },
-        labelStyle: { fill: '#bae6fd', fontSize: 11 },
         data: { kind: 'control' },
       });
     }
@@ -381,9 +393,7 @@ function graphToFlow(
         target: edge.to,
         targetHandle: edge.toPort,
         markerEnd: { type: MarkerType.ArrowClosed },
-        label: `${edge.fromPort} -> ${edge.toPort}`,
         style: { stroke: edge.fromPort === 'list' ? '#34d399' : '#a78bfa', strokeWidth: 2 },
-        labelStyle: { fill: edge.fromPort === 'list' ? '#bbf7d0' : '#ddd6fe', fontSize: 11 },
         data: { kind: 'value' },
       });
     }
@@ -407,18 +417,87 @@ function graphToFlow(
   return { nodes, edges };
 }
 
+function toDisplayEdges(nodes: Node<GasNodeData>[], edges: Edge<GasEdgeData>[]): Edge<GasEdgeData>[] {
+  const opById = new Map(nodes.map((node) => [node.id, node.data.op]));
+  const isConst = (id: string) => isPureValueOp(opById.get(id) ?? '');
+  const control = edges.filter((edge) => edge.data?.kind === 'control');
+  const visible: Edge<GasEdgeData>[] = edges.filter((edge) => edge.data?.kind !== 'control');
+  const outgoing = new Map<string, Edge<GasEdgeData>[]>();
+  for (const edge of control) {
+    const list = outgoing.get(edge.source) ?? [];
+    list.push(edge);
+    outgoing.set(edge.source, list);
+  }
+
+  const terminalsAfter = (id: string, visited: Set<string>): string[] => {
+    if (!isConst(id)) return [id];
+    if (visited.has(id)) return [];
+    visited.add(id);
+    const next = outgoing.get(id) ?? [];
+    if (next.length === 0) return [];
+    return next.flatMap((edge) => terminalsAfter(edge.target, visited));
+  };
+
+  const emitted = new Set<string>();
+  const hasReal = (source: string, sourceHandle: string | null | undefined, target: string) =>
+    control.some((edge) =>
+      edge.source === source &&
+      edge.sourceHandle === sourceHandle &&
+      edge.target === target &&
+      !isConst(edge.source) &&
+      !isConst(edge.target));
+
+  for (const edge of control) {
+    if (!isConst(edge.source) && !isConst(edge.target)) {
+      visible.push(edge);
+      continue;
+    }
+    if (isConst(edge.source)) continue;
+    for (const terminal of terminalsAfter(edge.target, new Set())) {
+      if (terminal === edge.source || hasReal(edge.source, edge.sourceHandle, terminal)) continue;
+      const id = `c:${edge.source}:${edge.sourceHandle ?? ''}:${terminal}:value-bypass`;
+      if (emitted.has(id)) continue;
+      emitted.add(id);
+      visible.push({
+        id,
+        source: edge.source,
+        sourceHandle: edge.sourceHandle,
+        target: terminal,
+        targetHandle: 'control-in',
+        markerEnd: { type: MarkerType.ArrowClosed },
+        style: { stroke: '#38bdf8', strokeWidth: 2 },
+        deletable: false,
+        selectable: false,
+        data: { kind: 'control', synthetic: true },
+      });
+    }
+  }
+
+  return visible;
+}
+
 function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge<GasEdgeData>[]): GraphConfig {
   const sourceById = new Map(graph.nodes.map((n) => [n.id, n]));
-  const wireNodes = nodes.map((flowNode) => {
+  const wireNodes = nodes
+    .filter((flowNode) => flowNode.data.role !== 'event-entry' && !isEventEntryNodeId(flowNode.id))
+    .map((flowNode) => {
     const n = sourceById.get(flowNode.id);
     const edited = flowNode.data;
     if (!n) {
-      return toWireNode({ ...edited, id: flowNode.id, op: edited.op });
+      const created = { ...edited };
+      delete created.label;
+      delete created.descriptor;
+      delete created.sugar;
+      delete created.role;
+      delete created.entry;
+      return toWireNode({ ...created, id: flowNode.id, op: edited.op });
     }
     const rest = { ...edited };
     delete rest.label;
     delete rest.descriptor;
     delete rest.sugar;
+    delete rest.role;
+    delete rest.entry;
     return toWireNode({
       ...n,
       ...rest,
@@ -433,7 +512,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
       id: graph.id,
       kind: graph.kind,
       entry: graph.entry,
-      entries: graph.entries,
+      entries: collectEventEntries(nodes, edges),
       nodes: wireNodes.map((n) => {
         const rest = { ...n };
         delete rest.next;
@@ -441,7 +520,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
         return rest;
       }),
       controlEdges: edges
-        .filter((edge) => edge.data?.kind === 'control')
+        .filter((edge) => edge.data?.kind === 'control' && !edge.data.synthetic && !isEventEntryNodeId(edge.source))
         .map((edge) => {
           if (!edge.sourceHandle) throw new Error(`Control edge '${edge.id}' is missing a source port.`);
           return { from: edge.source, fromPort: edge.sourceHandle, to: edge.target };
@@ -463,17 +542,27 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
     kind: graph.kind,
     entry: graph.entry,
     outputs: graph.outputs,
-    entries: graph.entries,
+    entries: collectEventEntries(nodes, edges),
     nodes: wireNodes,
   };
 }
 
+function readEditorSelection(): { modId: string; graphId: string } {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    modId: params.get('mod')?.trim() || DEFAULT_MOD_ID,
+    graphId: params.get('graph')?.trim() || DEFAULT_GRAPH_ID,
+  };
+}
+
 export const GasGraphEditorPage: React.FC = () => {
-  const [modId, setModId] = React.useState(DEFAULT_MOD_ID);
-  const [graphId, setGraphId] = React.useState(DEFAULT_GRAPH_ID);
+  const initialSelection = React.useMemo(() => readEditorSelection(), []);
+  const [modId, setModId] = React.useState(initialSelection.modId);
+  const [graphId, setGraphId] = React.useState(initialSelection.graphId);
   const [graph, setGraph] = React.useState<GraphConfig | null>(null);
   const [descriptors, setDescriptors] = React.useState<Record<string, GraphDescriptor>>({});
   const [sugars, setSugars] = React.useState<Record<string, GraphSugarDescriptor>>({});
+  const [panelAnchors, setPanelAnchors] = React.useState<string[]>([]);
   const [nodeSearch, setNodeSearch] = React.useState('');
   const [layout, setLayout] = React.useState<EditorLayout>({});
   const [nodes, setNodes] = React.useState<Node<GasNodeData>[]>([]);
@@ -491,7 +580,25 @@ export const GasGraphEditorPage: React.FC = () => {
   const [debugStatus, setDebugStatus] = React.useState('Bridge idle');
   const [switchCaseValue, setSwitchCaseValue] = React.useState('0');
   const [switchCaseTarget, setSwitchCaseTarget] = React.useState('');
+  const [catalog, setCatalog] = React.useState<CatalogMod[]>([]);
+  const [catalogStatus, setCatalogStatus] = React.useState('Loading catalog…');
+  const [paletteMenu, setPaletteMenu] = React.useState<{ clientX: number; clientY: number; flowX: number; flowY: number } | null>(null);
+  const [selectedVariable, setSelectedVariable] = React.useState<string | null>(null);
+  const [declaredVariables, setDeclaredVariables] = React.useState<GraphVariableRow[]>([]);
+  const [variableMapId, setVariableMapId] = React.useState<string | null>(null);
+  const [variableStatus, setVariableStatus] = React.useState('Variables idle');
+  const [variableDraft, setVariableDraft] = React.useState<MapVariableDraft>(emptyVariableDraft());
+  const [variableBusy, setVariableBusy] = React.useState(false);
+  const [varDropMenu, setVarDropMenu] = React.useState<{
+    clientX: number;
+    clientY: number;
+    flowX: number;
+    flowY: number;
+    name: string;
+    type: MapVariableScalarType;
+  } | null>(null);
   const debugPollInFlight = React.useRef(false);
+  const reactFlowRef = React.useRef<ReactFlowInstance | null>(null);
 
   const selectedNode = React.useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
@@ -503,6 +610,64 @@ export const GasGraphEditorPage: React.FC = () => {
     () => edges.find((e) => e.id === selectedEdgeId) ?? null,
     [edges, selectedEdgeId],
   );
+
+  const loadMapVariables = React.useCallback(async (targetGraphId: string) => {
+    const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/gas/graphs/${encodeURIComponent(targetGraphId)}/map-variables`);
+    const payload = await res.json();
+    if (!res.ok || !payload.ok || !Array.isArray(payload.maps)) {
+      throw new Error(payload.error ?? `Map variable load failed (${res.status})`);
+    }
+    const hosts = payload.maps as Array<{
+      mapId: string;
+      variables: Array<{ name: string; type: string; initial: number; phase: boolean }>;
+    }>;
+    if (hosts.length === 0) {
+      setDeclaredVariables([]);
+      setVariableMapId(null);
+      setVariableDraft(emptyVariableDraft());
+      setVariableStatus('This graph is not mounted on a map, so it has no map variables.');
+      return;
+    }
+    const signature = (host: (typeof hosts)[0]) => JSON.stringify(host.variables);
+    if (hosts.length > 1 && hosts.some((host) => signature(host) !== signature(hosts[0]!))) {
+      setDeclaredVariables([]);
+      setVariableMapId(null);
+      setVariableDraft(emptyVariableDraft());
+      setVariableStatus(`This graph is mounted on ${hosts.map((host) => host.mapId).join(', ')} with different variable lists. Refuse to edit until those maps agree.`);
+      return;
+    }
+    const host = hosts[0]!;
+    const rows: GraphVariableRow[] = host.variables.map((variable) => {
+      if (variable.type !== 'int' && variable.type !== 'float') {
+        throw new Error(`Map '${host.mapId}' variable '${variable.name}' has unsupported type '${variable.type}'.`);
+      }
+      return {
+        name: variable.name,
+        type: variable.type,
+        initial: variable.initial,
+        phase: variable.phase,
+        declared: true,
+        reads: 0,
+        writes: 0,
+      };
+    });
+    setDeclaredVariables(rows);
+    setVariableMapId(host.mapId);
+    setSelectedVariable(rows[0]?.name ?? null);
+    setVariableDraft(rows[0]
+      ? {
+          name: rows[0].name,
+          kind: rows[0].type,
+          elementType: 'int',
+          keyType: 'int',
+          initial: String(rows[0].initial),
+          phase: rows[0].phase,
+        }
+      : emptyVariableDraft());
+    setVariableStatus(hosts.length > 1
+      ? `Shared variables from ${hosts.map((item) => item.mapId).join(', ')}.`
+      : `Loaded ${rows.length} variables from ${host.mapId}.`);
+  }, [modId]);
 
   const loadGraph = React.useCallback(async () => {
     setBusy(true);
@@ -541,47 +706,120 @@ export const GasGraphEditorPage: React.FC = () => {
       const missingDescriptor = loaded.nodes.find((node) => !nextDescriptors[node.op] && !nextSugars[node.op]);
       if (missingDescriptor) throw new Error(`Descriptor missing for graph op '${missingDescriptor.op}'.`);
       const nextLayout = (layoutPayload.layout ?? {}) as EditorLayout;
+      if (descriptorPayload.panelAnchors != null && !Array.isArray(descriptorPayload.panelAnchors)) {
+        throw new Error('Descriptor response is missing panel anchors.');
+      }
+      const nextAnchors = (descriptorPayload.panelAnchors ?? []) as string[];
       setDescriptors(nextDescriptors);
       setSugars(nextSugars);
-      setLayout(nextLayout);
+      setPanelAnchors(nextAnchors);
       setGraph(loaded);
       const flow = graphToFlow(loaded, nextDescriptors, nextSugars, nextLayout);
+      const hasSavedPositions = Object.keys(nextLayout.nodes ?? {}).length > 0;
+      if (!hasSavedPositions) {
+        const positions = computeAutoLayout(flow.nodes, flow.edges);
+        flow.nodes = flow.nodes.map((node) => ({
+          ...node,
+          position: positions[node.id] ?? node.position,
+        }));
+        setLayout({ ...nextLayout, nodes: positions });
+      } else {
+        setLayout(nextLayout);
+      }
       setNodes(flow.nodes);
       setEdges(flow.edges);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
+      setSelectedVariable(null);
       setStatus(`Loaded ${loaded.id} (${loaded.kind})`);
+      await loadMapVariables(loaded.id);
     } catch (err) {
       setGraph(null);
       setNodes([]);
       setEdges([]);
+      setDeclaredVariables([]);
+      setVariableMapId(null);
       setStatus(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
-  }, [modId, graphId]);
+  }, [loadMapVariables, modId, graphId]);
 
   React.useEffect(() => {
     void loadGraph();
   }, [loadGraph]);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('mod', modId);
+    params.set('graph', graphId);
+    const next = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, '', next);
+  }, [graphId, modId]);
+
+  const loadCatalog = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/gas/graph-catalog');
+      const payload = await res.json();
+      if (!res.ok || !payload.ok || !Array.isArray(payload.mods)) {
+        throw new Error(payload.error ?? `Catalog load failed (${res.status})`);
+      }
+      setCatalog(payload.mods as CatalogMod[]);
+      setCatalogStatus(`Loaded ${payload.mods.length} mods with graphs`);
+    } catch (err) {
+      setCatalog([]);
+      setCatalogStatus(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadCatalog();
+  }, [loadCatalog]);
+
+  React.useEffect(() => {
+    if (!paletteMenu && !varDropMenu) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPaletteMenu(null);
+        setVarDropMenu(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [paletteMenu, varDropMenu]);
+
+  const openPaletteAt = React.useCallback((clientX: number, clientY: number) => {
+    const flow = reactFlowRef.current?.screenToFlowPosition({ x: clientX, y: clientY }) ?? {
+      x: 80 + (nodes.length % 3) * 240,
+      y: 120 + Math.floor(nodes.length / 3) * 150,
+    };
+    setPaletteMenu({ clientX, clientY, flowX: flow.x, flowY: flow.y });
+    setNodeSearch('');
+  }, [nodes.length]);
 
   const currentGraph = React.useMemo(() => {
     if (!graph) return null;
     return flowToGraph(graph, nodes, edges);
   }, [graph, nodes, edges]);
 
-  const updateSelectedField = (field: 'teamId' | 'attribute' | 'next', value: string) => {
+  const updateSelectedField = (field: AuthoredFieldKey | 'next', value: string | boolean) => {
     if (!selectedNodeId || !graph) return;
     const nextNodes = nodes.map((n) => {
       if (n.id !== selectedNodeId) return n;
       const data: GasNodeData = { ...n.data };
-      if (field === 'teamId') {
-        const parsed = Number.parseInt(value, 10);
-        data.teamId = Number.isFinite(parsed) ? parsed : 0;
-      } else if (field === 'attribute') {
-        data.attribute = value;
+      if (field === 'next') {
+        data.next = String(value).trim() === '' ? null : String(value).trim();
+      } else if (field === 'boolValue') {
+        data.boolValue = Boolean(value);
+      } else if (field === 'intValue' || field === 'teamId') {
+        const parsed = Number.parseInt(String(value), 10);
+        data[field] = Number.isInteger(parsed) ? parsed : 0;
+      } else if (field === 'floatValue' || field === 'panelZOrder') {
+        const parsed = Number.parseFloat(String(value));
+        data[field] = Number.isFinite(parsed) ? parsed : 0;
       } else {
-        data.next = value.trim() === '' ? null : value.trim();
+        const text = String(value);
+        data[field] = text.trim() === '' ? null : text;
       }
       return { ...n, data };
     });
@@ -620,19 +858,85 @@ export const GasGraphEditorPage: React.FC = () => {
     }
   }, []);
 
+  const onEdgesChange = React.useCallback((changes: EdgeChange<Edge<GasEdgeData>>[]) => {
+    const removed = new Set(
+      changes.filter((change) => change.type === 'remove').map((change) => change.id),
+    );
+    if (removed.size > 0) {
+      const cleared = new Set(
+        edges
+          .filter((edge) => removed.has(edge.id) && isEventEntryNodeId(edge.source))
+          .map((edge) => edge.source),
+      );
+      if (cleared.size > 0) {
+        setNodes((previous) => previous.map((node) => (
+          cleared.has(node.id) && node.data.entry
+            ? { ...node, data: { ...node.data, entry: { ...node.data.entry, start: '' } } }
+            : node
+        )));
+      }
+    }
+    setEdges((prev) => applyEdgeChanges(changes, prev));
+  }, [edges]);
+
   const onConnect = React.useCallback((connection: Connection) => {
     if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) return;
     const kind: GasEdgeData['kind'] = connection.targetHandle === 'control-in' ? 'control' : 'value';
+    const sourceNode = nodes.find((node) => node.id === connection.source);
+    const sourceOp = sourceNode?.data.op ?? '';
+    const targetOp = nodes.find((node) => node.id === connection.target)?.data.op ?? '';
+    if (kind === 'control' && (isPureValueOp(sourceOp) || isPureValueOp(targetOp))) {
+      setStatus('Const nodes only carry values. Wire Then around them, not through them.');
+      return;
+    }
+    if (sourceNode?.data.role === 'event-entry') {
+      if (kind !== 'control') return;
+      setEdges((prev) => addEdge({
+        id: eventThenEdgeId(connection.source!, connection.target!),
+        source: connection.source,
+        sourceHandle: 'exec',
+        target: connection.target,
+        targetHandle: 'control-in',
+        markerEnd: { type: MarkerType.ArrowClosed },
+        style: { stroke: '#fb7185', strokeWidth: 2 },
+        data: { kind: 'control', synthetic: true },
+      }, prev.filter((edge) => !(edge.source === connection.source && edge.sourceHandle === 'exec'))));
+      setNodes((previous) => previous.map((node) => (
+        node.id === connection.source && node.data.entry
+          ? { ...node, data: { ...node.data, entry: { ...node.data.entry, start: connection.target! } } }
+          : node
+      )));
+      return;
+    }
     setEdges((prev) => addEdge({
       ...connection,
       id: `${kind}:${connection.source}:${connection.sourceHandle}:${connection.target}:${connection.targetHandle}`,
       markerEnd: { type: MarkerType.ArrowClosed },
-      label: kind === 'control'
-        ? connection.sourceHandle
-        : `${connection.sourceHandle} -> ${connection.targetHandle}`,
+      style: { stroke: kind === 'control' ? '#38bdf8' : '#a78bfa', strokeWidth: 2 },
       data: { kind },
     }, prev));
-  }, []);
+  }, [nodes]);
+
+  const applyAutoLayout = React.useCallback(() => {
+    const positions = computeAutoLayout(nodes, edges);
+    setNodes((previous) => previous.map((node) => ({
+      ...node,
+      position: positions[node.id] ?? node.position,
+    })));
+    setLayout((previous) => ({
+      ...previous,
+      nodes: {
+        ...previous.nodes,
+        ...positions,
+      },
+    }));
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        reactFlowRef.current?.fitView({ padding: 0.16, duration: 240, minZoom: 0.12, maxZoom: 1.75 });
+      });
+    });
+    setStatus('Auto-arranged. Save Layout to keep it.');
+  }, [edges, nodes]);
 
   const addSwitchCase = React.useCallback(() => {
     if (!selectedNodeId || !graph || !isControlFlowGraph(graph) || selectedData?.op !== 'SwitchInt') return;
@@ -673,9 +977,15 @@ export const GasGraphEditorPage: React.FC = () => {
       .sort((a, b) => a.op.localeCompare(b.op));
   }, [descriptors, nodeSearch, sugars]);
 
-  const addAuthoringNode = React.useCallback((op: string) => {
+  const addAuthoringNode = React.useCallback((op: string, position?: { x: number; y: number }, extras?: { var?: string }) => {
     if (!graph) return;
-    const idBase = op.replace(/[^A-Za-z0-9_]/g, '_').toLocaleLowerCase();
+    if (!descriptors[op] && !sugars[op]) {
+      setStatus(`Cannot add '${op}': this graph kind has no runtime descriptor for it.`);
+      return;
+    }
+    const idBase = extras?.var
+      ? `${op.startsWith('Write') ? 'set' : 'get'}_${extras.var}`.replace(/[^A-Za-z0-9_]/g, '_').toLocaleLowerCase()
+      : op.replace(/[^A-Za-z0-9_]/g, '_').toLocaleLowerCase();
     const used = new Set(nodes.map((node) => node.id));
     let suffix = 1;
     let id = idBase;
@@ -683,11 +993,13 @@ export const GasGraphEditorPage: React.FC = () => {
     const next: Node<GasNodeData> = {
       id,
       type: 'gas',
-      position: { x: 80 + (nodes.length % 3) * 240, y: 120 + Math.floor(nodes.length / 3) * 150 },
+      position: position ?? { x: 80 + (nodes.length % 3) * 240, y: 120 + Math.floor(nodes.length / 3) * 150 },
       data: {
         id,
         op,
+        role: 'op',
         label: id,
+        var: extras?.var ?? null,
         descriptor: descriptors[op],
         sugar: sugars[op],
         controlOutputPorts: resolveControlOutputPorts(op, descriptors[op], sugars[op]),
@@ -696,8 +1008,111 @@ export const GasGraphEditorPage: React.FC = () => {
     setNodes((previous) => [...previous, next]);
     setSelectedNodeId(id);
     setSelectedEdgeId(null);
-    setStatus(`Added ${op}; wire its pins before validation.`);
+    setPaletteMenu(null);
+    setVarDropMenu(null);
+    setStatus(extras?.var ? `Added ${op} for ${extras.var}.` : `Added ${op}; wire its pins before validation.`);
   }, [descriptors, graph, nodes, sugars]);
+
+  const addEventEntry = React.useCallback((position?: { x: number; y: number }) => {
+    if (!graph || graph.kind !== 'TriggerGraph') {
+      setStatus('Event cards only exist on TriggerGraph.');
+      return;
+    }
+    const label = uniqueEventLabel(entryLabelsFromNodes(nodes));
+    const id = eventEntryNodeId(label);
+    const next: Node<GasNodeData> = {
+      id,
+      type: 'gas',
+      deletable: true,
+      selectable: true,
+      position: position ?? { x: 40, y: 80 + nodes.filter((node) => node.data.role === 'event-entry').length * 140 },
+      data: {
+        id,
+        op: 'Event',
+        role: 'event-entry',
+        entry: createEmptyEventEntry(label),
+        label,
+        controlOutputPorts: ['exec'],
+      },
+    };
+    setNodes((previous) => [...previous, next]);
+    setSelectedNodeId(id);
+    setSelectedEdgeId(null);
+    setPaletteMenu(null);
+    setStatus('Added Event. Fill Event name, then wire Then to the first node.');
+  }, [graph, nodes]);
+
+  const updateSelectedEntry = (nextEntry: EventEntryConfig) => {
+    if (!selectedNodeId || !graph) return;
+    const selected = nodes.find((node) => node.id === selectedNodeId);
+    if (!selected?.data.entry) return;
+    const nextLabel = nextEntry.label.trim();
+    if (nextLabel.length === 0) {
+      setStatus('Event label cannot be empty.');
+      return;
+    }
+    const nextId = eventEntryNodeId(nextLabel);
+    if (nextId !== selectedNodeId && nodes.some((node) => node.id === nextId)) {
+      setStatus(`Event label '${nextLabel}' is already used.`);
+      return;
+    }
+
+    const previousStart = selected.data.entry.start;
+    const nextStart = nextEntry.start.trim();
+    setNodes((previous) => previous.map((node) => {
+      if (node.id !== selectedNodeId) return node;
+      return {
+        ...node,
+        id: nextId,
+        data: {
+          ...node.data,
+          id: nextId,
+          label: nextLabel,
+          entry: { ...nextEntry, label: nextLabel, start: nextStart },
+        },
+      };
+    }));
+    if (nextId !== selectedNodeId) {
+      setEdges((previous) => previous.map((edge) => {
+        const source = edge.source === selectedNodeId ? nextId : edge.source;
+        const target = edge.target === selectedNodeId ? nextId : edge.target;
+        if (source === edge.source && target === edge.target) return edge;
+        return {
+          ...edge,
+          id: edge.data?.kind === 'control' && isEventEntryNodeId(source)
+            ? eventThenEdgeId(source, target)
+            : edge.id.replace(selectedNodeId, nextId),
+          source,
+          target,
+        };
+      }));
+      setLayout((previous) => {
+        const current = previous.nodes?.[selectedNodeId];
+        if (!current) return previous;
+        const nodesLayout = { ...previous.nodes };
+        delete nodesLayout[selectedNodeId];
+        nodesLayout[nextId] = current;
+        return { ...previous, nodes: nodesLayout };
+      });
+      setSelectedNodeId(nextId);
+    }
+    if (nextStart !== previousStart) {
+      setEdges((previous) => {
+        const without = previous.filter((edge) => !(edge.source === nextId && edge.sourceHandle === 'exec'));
+        if (!nextStart || !nodes.some((node) => node.id === nextStart)) return without;
+        return addEdge({
+          id: eventThenEdgeId(nextId, nextStart),
+          source: nextId,
+          sourceHandle: 'exec',
+          target: nextStart,
+          targetHandle: 'control-in',
+          markerEnd: { type: MarkerType.ArrowClosed },
+          style: { stroke: '#fb7185', strokeWidth: 2 },
+          data: { kind: 'control', synthetic: true },
+        }, without);
+      });
+    }
+  };
 
   const saveLayout = React.useCallback(async () => {
     const nextLayout: EditorLayout = {
@@ -818,6 +1233,11 @@ export const GasGraphEditorPage: React.FC = () => {
     }
   }, [bridgeRpc, debugEntryLabel, graphId]);
 
+  React.useEffect(() => {
+    if (!graph) return;
+    void refreshDebugMounts();
+  }, [graph, refreshDebugMounts]);
+
   const pollDebug = React.useCallback(async () => {
     if (!debugEnabled || !debugEntryLabel) return;
     if (debugPollInFlight.current) return;
@@ -871,12 +1291,223 @@ export const GasGraphEditorPage: React.FC = () => {
     return ids;
   }, [debugEvents]);
 
-  const displayNodes = React.useMemo(() => nodes.map((node) => ({
-    ...node,
-    style: activeDebugNodes.has(node.id)
-      ? { ...node.style, border: '2px solid #facc15', boxShadow: '0 0 18px rgba(250,204,21,.45)' }
-      : node.style,
-  })), [activeDebugNodes, nodes]);
+  const displayNodes = React.useMemo(() => nodes.map((node) => {
+    const debug = activeDebugNodes.has(node.id);
+    const usesVar = selectedVariable != null && node.data.var === selectedVariable;
+    if (!debug && !usesVar) return node;
+    return {
+      ...node,
+      style: {
+        ...node.style,
+        border: debug ? '2px solid #facc15' : '2px solid #fbbf24',
+        boxShadow: debug ? '0 0 18px rgba(250,204,21,.45)' : '0 0 14px rgba(251,191,36,.35)',
+      },
+    };
+  }), [activeDebugNodes, nodes, selectedVariable]);
+
+  const displayEdges = React.useMemo(() => toDisplayEdges(nodes, edges), [edges, nodes]);
+
+  const mapVariables = React.useMemo<GraphVariableRow[]>(() => {
+    const rows = new Map<string, GraphVariableRow>();
+    for (const declared of declaredVariables) {
+      rows.set(declared.name, { ...declared, reads: 0, writes: 0 });
+    }
+    for (const node of nodes) {
+      const name = node.data.var;
+      if (!name) continue;
+      const current = rows.get(name) ?? {
+        name,
+        type: node.data.op.includes('Float') ? 'float' : 'int',
+        initial: 0,
+        phase: false,
+        declared: false,
+        reads: 0,
+        writes: 0,
+      };
+      if (node.data.op.startsWith('Read')) current.reads += 1;
+      if (node.data.op.startsWith('Write')) current.writes += 1;
+      rows.set(name, current);
+    }
+    return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [declaredVariables, nodes]);
+
+  const focusVariable = React.useCallback((name: string) => {
+    setSelectedVariable(name);
+    const declared = declaredVariables.find((variable) => variable.name === name);
+    if (declared) {
+      setVariableDraft({
+        name: declared.name,
+        kind: declared.type,
+        elementType: 'int',
+        keyType: 'int',
+        initial: String(declared.initial),
+        phase: declared.phase,
+      });
+    }
+    const target = nodes.find((node) => node.data.var === name);
+    if (!target) return;
+    setSelectedNodeId(target.id);
+    setSelectedEdgeId(null);
+    reactFlowRef.current?.setCenter(target.position.x + 110, target.position.y + 40, { zoom: 0.9, duration: 220 });
+  }, [declaredVariables, nodes]);
+
+  const parseDraftInitial = (draft: MapVariableDraft): number => {
+    if (draft.kind === 'int') {
+      const parsed = Number.parseInt(draft.initial, 10);
+      if (!Number.isInteger(parsed)) throw new Error('Integer variables need a whole-number default.');
+      return parsed;
+    }
+    const parsed = Number.parseFloat(draft.initial);
+    if (!Number.isFinite(parsed)) throw new Error('Float variables need a numeric default.');
+    return parsed;
+  };
+
+  const saveMapVariables = async (nextRows: GraphVariableRow[]) => {
+    if (!variableMapId) throw new Error('This graph is not mounted on a map.');
+    const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/maps/${encodeURIComponent(variableMapId)}/variables`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        variables: nextRows.map((variable) => ({
+          name: variable.name,
+          type: variable.type,
+          initial: variable.initial,
+          ...(variable.phase ? { phase: true } : {}),
+        })),
+      }),
+    });
+    const payload = await res.json();
+    if (!res.ok || !payload.ok) throw new Error(payload.error ?? `Variable save failed (${res.status})`);
+    await loadMapVariables(graphId);
+  };
+
+  const createMapVariable = async () => {
+    const blocked = collectionTypeError(variableDraft.kind);
+    if (blocked) {
+      setVariableStatus(blocked);
+      return;
+    }
+    try {
+      setVariableBusy(true);
+      const name = variableDraft.name.trim();
+      if (!name) throw new Error('Variable name is required.');
+      if (declaredVariables.some((variable) => variable.name === name)) {
+        throw new Error(`Variable '${name}' already exists.`);
+      }
+      const next: GraphVariableRow = {
+        name,
+        type: variableDraft.kind === 'float' ? 'float' : 'int',
+        initial: parseDraftInitial(variableDraft),
+        phase: variableDraft.kind === 'int' && variableDraft.phase,
+        declared: true,
+        reads: 0,
+        writes: 0,
+      };
+      await saveMapVariables([...declaredVariables, next]);
+      setSelectedVariable(name);
+      setVariableStatus(`Added ${name}. Drag it onto the canvas to place Get or Set.`);
+    } catch (err) {
+      setVariableStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setVariableBusy(false);
+    }
+  };
+
+  const updateMapVariable = async () => {
+    const blocked = collectionTypeError(variableDraft.kind);
+    if (blocked) {
+      setVariableStatus(blocked);
+      return;
+    }
+    if (!selectedVariable) {
+      setVariableStatus('Select a variable to update.');
+      return;
+    }
+    try {
+      setVariableBusy(true);
+      const name = variableDraft.name.trim();
+      if (!name) throw new Error('Variable name is required.');
+      if (name !== selectedVariable && declaredVariables.some((variable) => variable.name === name)) {
+        throw new Error(`Variable '${name}' already exists.`);
+      }
+      if (name !== selectedVariable && nodes.some((node) => node.data.var === selectedVariable)) {
+        throw new Error(`Rename '${selectedVariable}' after removing or retargeting its Get/Set nodes on this graph.`);
+      }
+      const nextRows = declaredVariables.map((variable) => (
+        variable.name === selectedVariable
+          ? {
+              ...variable,
+              name,
+              type: (variableDraft.kind === 'float' ? 'float' : 'int') as MapVariableScalarType,
+              initial: parseDraftInitial(variableDraft),
+              phase: variableDraft.kind === 'int' && variableDraft.phase,
+            }
+          : variable
+      ));
+      await saveMapVariables(nextRows);
+      setSelectedVariable(name);
+      setVariableStatus(`Updated ${name}.`);
+    } catch (err) {
+      setVariableStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setVariableBusy(false);
+    }
+  };
+
+  const deleteMapVariable = async () => {
+    if (!selectedVariable) {
+      setVariableStatus('Select a variable to delete.');
+      return;
+    }
+    if (nodes.some((node) => node.data.var === selectedVariable)) {
+      setVariableStatus(`Cannot delete '${selectedVariable}' while this graph still has Get/Set nodes for it.`);
+      return;
+    }
+    try {
+      setVariableBusy(true);
+      await saveMapVariables(declaredVariables.filter((variable) => variable.name !== selectedVariable));
+      setSelectedVariable(null);
+      setVariableDraft(emptyVariableDraft());
+      setVariableStatus(`Deleted ${selectedVariable}.`);
+    } catch (err) {
+      setVariableStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setVariableBusy(false);
+    }
+  };
+
+  const placeVariableAccess = (access: 'get' | 'set', position: { x: number; y: number }, name: string, type: MapVariableScalarType) => {
+    const op = access === 'get'
+      ? (type === 'float' ? 'ReadMapVarFloat' : 'ReadMapVarInt')
+      : (type === 'float' ? 'WriteMapVarFloat' : 'WriteMapVarInt');
+    addAuthoringNode(op, position, { var: name });
+  };
+
+  const onVariableDragOver = (event: React.DragEvent) => {
+    const payload = decodeMapVarDrag(event.dataTransfer.getData('text/plain'));
+    if (!payload && !event.dataTransfer.types.includes('text/plain')) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const onVariableDrop = (event: React.DragEvent) => {
+    const payload = decodeMapVarDrag(event.dataTransfer.getData('text/plain'));
+    if (!payload) return;
+    event.preventDefault();
+    const flow = reactFlowRef.current?.screenToFlowPosition({ x: event.clientX, y: event.clientY }) ?? {
+      x: 80,
+      y: 120,
+    };
+    setPaletteMenu(null);
+    setVarDropMenu({
+      clientX: event.clientX,
+      clientY: event.clientY,
+      flowX: flow.x,
+      flowY: flow.y,
+      name: payload.name,
+      type: payload.type,
+    });
+  };
 
   return (
     <div className="flex h-screen w-screen flex-col bg-slate-950 text-slate-100">
@@ -930,11 +1561,26 @@ export const GasGraphEditorPage: React.FC = () => {
         </button>
         <button
           type="button"
+          disabled={busy || nodes.length === 0}
+          onClick={applyAutoLayout}
+          className="rounded bg-indigo-700 px-3 py-1 text-xs font-semibold hover:bg-indigo-600 disabled:opacity-50"
+        >
+          Auto Layout
+        </button>
+        <button
+          type="button"
           disabled={busy || !currentGraph}
           onClick={() => void saveLayout()}
           className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50"
         >
           Save Layout
+        </button>
+        <button
+          type="button"
+          onClick={() => void loadCatalog()}
+          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+        >
+          Refresh Tree
         </button>
         <button
           type="button"
@@ -946,62 +1592,183 @@ export const GasGraphEditorPage: React.FC = () => {
         <div className="text-xs text-slate-400">{status}</div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[1fr_320px]">
+      <div className="grid min-h-0 flex-1 grid-cols-[260px_1fr_320px]">
+        <div className="flex min-h-0 flex-col border-r border-slate-800">
+          <div className="min-h-0 flex-[3] overflow-hidden [&_aside]:h-full [&_aside]:border-r-0">
+            <GraphCatalogTree
+              mods={catalog}
+              selectedModId={modId}
+              selectedGraphId={graphId}
+              status={catalogStatus}
+              onSelect={(nextModId, nextGraphId) => {
+                setModId(nextModId);
+                setGraphId(nextGraphId);
+                setSelectedVariable(null);
+              }}
+            />
+          </div>
+          <GraphVariablePanel
+            variables={mapVariables}
+            selectedName={selectedVariable}
+            mapId={variableMapId}
+            status={variableStatus}
+            draft={variableDraft}
+            busy={variableBusy || busy}
+            onSelect={focusVariable}
+            onDraftChange={setVariableDraft}
+            onCreate={() => void createMapVariable()}
+            onUpdate={() => void updateMapVariable()}
+            onDelete={() => void deleteMapVariable()}
+          />
+        </div>
         <div className="min-h-0">
           {graph ? (
-            <div className="relative h-full">
+            <div className="relative h-full" onDragOver={onVariableDragOver} onDrop={onVariableDrop}>
               <ReactFlow
+                className="gas-graph-flow"
                 nodes={displayNodes}
-                edges={edges}
+                edges={displayEdges}
                 nodeTypes={nodeTypes}
+                onInit={(instance) => { reactFlowRef.current = instance; }}
+                onPaneClick={() => {
+                  setPaletteMenu(null);
+                  setVarDropMenu(null);
+                }}
+                onPaneContextMenu={(event) => {
+                  event.preventDefault();
+                  openPaletteAt(event.clientX, event.clientY);
+                }}
+                onNodeContextMenu={(event) => {
+                  event.preventDefault();
+                  openPaletteAt(event.clientX, event.clientY);
+                }}
                 onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onSelectionChange={({ nodes: selected, edges: selectedEdges }) => {
                   setSelectedNodeId(selected[0]?.id ?? null);
                   setSelectedEdgeId(selectedEdges[0]?.id ?? null);
                 }}
+                panOnDrag={[1]}
+                selectionOnDrag
+                selectionMode={SelectionMode.Partial}
+                selectNodesOnDrag
+                minZoom={0.12}
+                maxZoom={1.75}
                 fitView
                 proOptions={{ hideAttribution: true }}
               >
                 <Background gap={16} color="#334155" />
                 <Controls />
-                <MiniMap pannable zoomable />
+                <MiniMap
+                  pannable
+                  zoomable
+                  bgColor="#020617"
+                  maskColor="rgba(2, 6, 23, 0.35)"
+                  nodeStrokeColor="#94a3b8"
+                  nodeColor={(node) => {
+                    if (node.data.role === 'event-entry') return '#fb7185';
+                    if (node.data.op === 'SwitchInt') return '#f59e0b';
+                    return '#38bdf8';
+                  }}
+                />
               </ReactFlow>
-              <div className="absolute left-3 top-3 z-10 w-72 rounded border border-slate-700 bg-slate-950/95 p-2 shadow-xl">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                  <Search size={14} className="text-slate-500" aria-hidden="true" />
-                  <input
-                    value={nodeSearch}
-                    onChange={(event) => setNodeSearch(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' && availableNodes[0]) addAuthoringNode(availableNodes[0].op);
-                    }}
-                    placeholder="Find node"
-                    aria-label="Find graph node"
-                    className="min-w-0 flex-1 bg-transparent text-xs text-slate-100 outline-none placeholder:text-slate-600"
-                  />
-                  <span className="text-[10px] text-slate-600">Enter</span>
-                </div>
-                <div className="mt-2 max-h-64 overflow-auto">
-                  {availableNodes.slice(0, 24).map((entry) => (
-                    <button
-                      key={entry.op}
-                      type="button"
-                      onClick={() => addAuthoringNode(entry.op)}
-                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-800"
-                    >
-                      <Plus size={12} className="text-emerald-400" aria-hidden="true" />
-                      <span className="font-mono">{entry.op}</span>
-                      {entry.sugar ? <span className="ml-auto text-[10px] text-amber-300">sugar</span> : null}
-                    </button>
-                  ))}
-                  {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-slate-600">No runtime node matches.</div> : null}
-                </div>
+              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-slate-800 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-400">
+                Middle-drag to pan · Left-drag to box-select · Right-click to add a node
               </div>
+              {paletteMenu ? (
+                <div
+                  className="fixed z-50 w-72 rounded border border-slate-700 bg-slate-950/95 p-2 shadow-xl"
+                  style={{
+                    left: Math.min(paletteMenu.clientX, window.innerWidth - 300),
+                    top: Math.min(paletteMenu.clientY, window.innerHeight - 360),
+                  }}
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
+                  <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <Search size={14} className="text-slate-500" aria-hidden="true" />
+                    <input
+                      autoFocus
+                      value={nodeSearch}
+                      onChange={(event) => setNodeSearch(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') setPaletteMenu(null);
+                        if (event.key === 'Enter' && availableNodes[0]) {
+                          addAuthoringNode(availableNodes[0].op, { x: paletteMenu.flowX, y: paletteMenu.flowY });
+                        }
+                      }}
+                      placeholder="Find node"
+                      aria-label="Find graph node"
+                      className="min-w-0 flex-1 bg-transparent text-xs text-slate-100 outline-none placeholder:text-slate-600"
+                    />
+                    <span className="text-[10px] text-slate-600">Enter</span>
+                  </div>
+                  <div className="mt-2 max-h-64 overflow-auto">
+                    {graph.kind === 'TriggerGraph' && (!nodeSearch.trim() || 'event'.includes(nodeSearch.trim().toLocaleLowerCase())) ? (
+                      <button
+                        type="button"
+                        onClick={() => addEventEntry({ x: paletteMenu.flowX, y: paletteMenu.flowY })}
+                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-rose-100 hover:bg-rose-950"
+                      >
+                        <Plus size={12} className="text-rose-400" aria-hidden="true" />
+                        <span className="font-mono">Event</span>
+                        <span className="ml-auto text-[10px] text-rose-300">entry</span>
+                      </button>
+                    ) : null}
+                    {availableNodes.slice(0, 24).map((entry) => (
+                      <button
+                        key={entry.op}
+                        type="button"
+                        onClick={() => addAuthoringNode(entry.op, { x: paletteMenu.flowX, y: paletteMenu.flowY })}
+                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-800"
+                      >
+                        <Plus size={12} className="text-emerald-400" aria-hidden="true" />
+                        <span className="font-mono">{entry.op}</span>
+                        {entry.sugar ? <span className="ml-auto text-[10px] text-amber-300">sugar</span> : null}
+                      </button>
+                    ))}
+                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-slate-600">No runtime node matches.</div> : null}
+                  </div>
+                </div>
+              ) : null}
+              {varDropMenu ? (
+                <div
+                  className="fixed z-50 w-56 rounded border border-amber-800 bg-slate-950/95 p-2 shadow-xl"
+                  style={{
+                    left: Math.min(varDropMenu.clientX, window.innerWidth - 240),
+                    top: Math.min(varDropMenu.clientY, window.innerHeight - 160),
+                  }}
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
+                  <div className="mb-2 px-1 text-[11px] text-amber-100">
+                    Place <span className="font-mono">{varDropMenu.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => placeVariableAccess('get', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
+                    className="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                  >
+                    <span>Get</span>
+                    <span className="font-mono text-[10px] text-slate-500">
+                      {varDropMenu.type === 'float' ? 'ReadMapVarFloat' : 'ReadMapVarInt'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => placeVariableAccess('set', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
+                    className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                  >
+                    <span>Set</span>
+                    <span className="font-mono text-[10px] text-slate-500">
+                      {varDropMenu.type === 'float' ? 'WriteMapVarFloat' : 'WriteMapVarInt'}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-slate-500">
-              No graph loaded. Check Bridge is running on :5299.
+              Select a graph in the left tree. Bridge must be running on :5299.
             </div>
           )}
         </div>
@@ -1013,6 +1780,15 @@ export const GasGraphEditorPage: React.FC = () => {
           <div className="space-y-3 overflow-auto p-3 text-xs">
             {selectedData ? (
               <>
+                {selectedData.role === 'event-entry' && selectedData.entry ? (
+                  <EventEntryInspector
+                    entry={selectedData.entry}
+                    startOptions={nodes.filter((node) => node.data.role !== 'event-entry').map((node) => node.id)}
+                    onChange={updateSelectedEntry}
+                    onAdd={() => addEventEntry()}
+                  />
+                ) : (
+                  <>
                 <div>
                   <div className="text-slate-500">Id</div>
                   <div className="font-mono text-slate-100">{selectedData.id}</div>
@@ -1021,6 +1797,54 @@ export const GasGraphEditorPage: React.FC = () => {
                   <div className="text-slate-500">Op</div>
                   <div className="font-mono text-sky-300">{selectedData.op}</div>
                 </div>
+                {authoredFieldsForOp(selectedData.op).map((field) => {
+                  const raw = selectedData[field.key];
+                  if (field.kind === 'bool') {
+                    return (
+                      <label key={field.key} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(raw)}
+                          onChange={(event) => updateSelectedField(field.key, event.target.checked)}
+                        />
+                        <span className="text-slate-400">{field.label}</span>
+                      </label>
+                    );
+                  }
+                  if (field.kind === 'anchor' && panelAnchors.length > 0) {
+                    const current = raw == null ? '' : String(raw);
+                    const options = current && !panelAnchors.includes(current)
+                      ? [...panelAnchors, current]
+                      : panelAnchors;
+                    return (
+                      <label key={field.key} className="block">
+                        <div className="mb-1 text-slate-500">{field.label}</div>
+                        <select
+                          value={current}
+                          onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                        >
+                          <option value="">Select anchor</option>
+                          {options.map((anchor) => (
+                            <option key={anchor} value={anchor}>{anchor}</option>
+                          ))}
+                        </select>
+                      </label>
+                    );
+                  }
+                  return (
+                    <label key={field.key} className="block">
+                      <div className="mb-1 text-slate-500">{field.label}</div>
+                      <input
+                        type={field.kind === 'string' ? 'text' : 'number'}
+                        step={field.kind === 'int' ? '1' : undefined}
+                        value={raw == null ? '' : String(raw)}
+                        onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                      />
+                    </label>
+                  );
+                })}
                 {selectedData.descriptor ? (
                   <div className="rounded border border-slate-800 bg-slate-950/70 p-2">
                     <div className="mb-1 text-slate-500">Descriptor ports</div>
@@ -1083,35 +1907,8 @@ export const GasGraphEditorPage: React.FC = () => {
                     />
                   </label>
                 ) : null}
-                <label className="block">
-                  <div className="mb-1 text-slate-500">TeamId</div>
-                  <input
-                    type="number"
-                    value={selectedData.teamId ?? 0}
-                    onChange={(e) => updateSelectedField('teamId', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
-                  />
-                </label>
-                <label className="block">
-                  <div className="mb-1 text-slate-500">Attribute</div>
-                  <input
-                    value={selectedData.attribute ?? ''}
-                    onChange={(e) => updateSelectedField('attribute', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
-                  />
-                </label>
-                {selectedData.tag ? (
-                  <div>
-                    <div className="text-slate-500">Tag</div>
-                    <div className="font-mono">{String(selectedData.tag)}</div>
-                  </div>
-                ) : null}
-                {selectedData.collectionKey ? (
-                  <div>
-                    <div className="text-slate-500">CollectionKey</div>
-                    <div className="font-mono">{String(selectedData.collectionKey)}</div>
-                  </div>
-                ) : null}
+                  </>
+                )}
               </>
             ) : selectedEdge ? (
               <>
@@ -1155,7 +1952,18 @@ export const GasGraphEditorPage: React.FC = () => {
                 ) : null}
               </>
             ) : (
-              <div className="text-slate-500">Select a node to edit TeamId / Attribute, or select an edge to edit pin endpoints.</div>
+              <div className="space-y-2">
+                <div className="text-slate-500">Select a node or an Event card.</div>
+                {graph?.kind === 'TriggerGraph' ? (
+                  <button
+                    type="button"
+                    onClick={() => addEventEntry()}
+                    className="w-full rounded bg-rose-800 px-2 py-1 font-semibold text-rose-50 hover:bg-rose-700"
+                  >
+                    Add Event
+                  </button>
+                ) : null}
+              </div>
             )}
           </div>
 
