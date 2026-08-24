@@ -2354,10 +2354,23 @@ function Assert-ClientWorldPresentationEvidence {
                         "'$layoutTemplate' entities; distinct layout requires at least $minimumInstances."
                 }
 
-                if ([string]$layout.minimumWorldSeparationSource -cne [string]$GroupMoveLayoutEvidence.source) {
+                $explicitMinimumWorldSeparationCm = [int64]0
+                $hasExplicitMinimumWorldSeparation = $null -ne $layout.PSObject.Properties["minimumWorldSeparationCm"]
+                if ($hasExplicitMinimumWorldSeparation) {
+                    $explicitMinimumWorldSeparationCm = [int64]$layout.minimumWorldSeparationCm
+                    if ($explicitMinimumWorldSeparationCm -le 0) {
+                        throw "Client '$processName' screenshot milestone '$milestone' distinct layout explicit minimum world separation must be positive."
+                    }
+                }
+                elseif ([string]$layout.minimumWorldSeparationSource -cne [string]$GroupMoveLayoutEvidence.source) {
                     throw "Client '$processName' screenshot milestone '$milestone' distinct layout does not use the formal group-move spacing source."
                 }
-                $minimumWorldSeparationCm = [int64]$GroupMoveLayoutEvidence.spacingCm
+                if ($hasExplicitMinimumWorldSeparation) {
+                    $minimumWorldSeparationCm = $explicitMinimumWorldSeparationCm
+                }
+                else {
+                    $minimumWorldSeparationCm = [int64]$GroupMoveLayoutEvidence.spacingCm
+                }
                 $minimumWorldSeparationSquared = $minimumWorldSeparationCm * $minimumWorldSeparationCm
                 $maximumScreenOverlapRatio = [double]$layout.maximumScreenOverlapRatio
                 foreach ($instance in $layoutInstances) {
@@ -2416,12 +2429,16 @@ function Assert-ClientWorldPresentationEvidence {
                     }
                 }
 
+                $minimumWorldSeparationSourceLabel = [string]$GroupMoveLayoutEvidence.source
+                if ($hasExplicitMinimumWorldSeparation) {
+                    $minimumWorldSeparationSourceLabel = "explicit"
+                }
                 $distinctLayoutResult = [ordered]@{
                     template = $layoutTemplate
                     scope = $layoutScope
                     region = $layoutRegion
                     instanceCount = $layoutInstances.Count
-                    minimumWorldSeparationSource = [string]$GroupMoveLayoutEvidence.source
+                    minimumWorldSeparationSource = $minimumWorldSeparationSourceLabel
                     minimumWorldSeparationCm = $minimumWorldSeparationCm
                     maximumScreenOverlapRatio = $maximumScreenOverlapRatio
                 }
@@ -2766,10 +2783,13 @@ foreach ($requirement in $requiredWorldEvidence) {
         $layoutRegion = [string]$layout.region
         $maximumScreenOverlapRatio = [double]$layout.maximumScreenOverlapRatio
         $layoutSources = @(Get-DistinctEntityLayoutSources -Layout $layout)
+        $hasSeparationSource = -not [string]::IsNullOrWhiteSpace([string]$layout.minimumWorldSeparationSource)
+        $hasExplicitSeparation = $null -ne $layout.PSObject.Properties["minimumWorldSeparationCm"]
         if ([string]::IsNullOrWhiteSpace([string]$layout.template) -or
             [int]$layout.minimumInstances -lt 2 -or
-            [string]$layout.minimumWorldSeparationSource -cne "groupMoveTargetLayout.spacingCm" -or
-            $null -ne $layout.PSObject.Properties["minimumWorldSeparationCm"] -or
+            ($hasSeparationSource -eq $hasExplicitSeparation) -or
+            ($hasSeparationSource -and [string]$layout.minimumWorldSeparationSource -cne "groupMoveTargetLayout.spacingCm") -or
+            ($hasExplicitSeparation -and [int64]$layout.minimumWorldSeparationCm -le 0) -or
             ($layoutScope -cne "allVisibleTemplate" -and $layoutScope -cne "stableEntitySources") -or
             ($layoutRegion -cne "screen" -and $layoutRegion -cne "anchor") -or
             ($layoutScope -ceq "allVisibleTemplate" -and $layoutSources.Count -ne 0) -or
