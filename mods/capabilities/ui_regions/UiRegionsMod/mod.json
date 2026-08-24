@@ -1,0 +1,12 @@
+{
+  "name": "UiRegionsMod",
+  "version": "1.0.0",
+  "description": "Generic UI Regions capability: nine-grid surface regions and UIR panelType catalog for HUD assembly.",
+  "main": "bin/net8.0/UiRegionsMod.dll",
+  "priority": 45,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["capability", "ui-regions", "panel-kit", "hud"]
+}
