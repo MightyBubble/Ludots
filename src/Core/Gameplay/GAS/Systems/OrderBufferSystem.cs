@@ -479,6 +479,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void PublishFailedTerminal(in Order order, OrderSubmitResult result)
         {
+            System.Console.WriteLine($"[DIAG10] failedTerminal orderId={order.OrderId} orderTypeId={order.OrderTypeId} actor={order.Actor.Id} playerId={order.PlayerId} result={result}");
             if (OrderSubmitResultSemantics.IsAccepted(result))
             {
                 throw new InvalidOperationException(

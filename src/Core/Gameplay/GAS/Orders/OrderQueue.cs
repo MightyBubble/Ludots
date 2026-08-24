@@ -171,6 +171,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return OrderSubmitResult.Queued;
             }
 
+            System.Console.WriteLine($"[DIAG9] TryEnqueueSharedBatch count={orders.Length} firstOrderId={orders[0].OrderId}");
+
             for (int i = 0; i < orders.Length; i++)
             {
                 ValidateOrderTypeId(orders[i].OrderTypeId);

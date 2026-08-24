@@ -205,6 +205,7 @@ namespace CoreInputMod.Systems
                 OrderSubmitResult result = _planner != null
                     ? _planner.TrySubmitSharedBatch(orders)
                     : _orders.TryEnqueueSharedBatch(orders);
+                System.Console.WriteLine($"[DIAG8] batchSubmit count={orders.Length} planner={_planner != null} result={result} firstOrderId={orders[0].OrderId}");
                 if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     for (int i = 0; i < orders.Length; i++)
@@ -323,9 +324,10 @@ namespace CoreInputMod.Systems
 
         public Entity GetControlledActor()
         {
-            return TryGetSolePossessedPlayerId(out int playerId)
-                ? _context.GetControlledActor(playerId)
-                : default;
+            bool hasPlayer = TryGetSolePossessedPlayerId(out int playerId);
+            Entity actor = hasPlayer ? _context.GetControlledActor(playerId) : default;
+            System.Console.WriteLine($"[DIAG5] GetControlledActor hasPlayer={hasPlayer} playerId={playerId} actor={actor.Id}");
+            return actor;
         }
 
         private T RequireService<T>(string key) where T : class

@@ -520,6 +520,7 @@ public sealed class MassNavigationSimulationRuntime
 
     public void MarkCommandApply()
     {
+        System.Console.WriteLine($"[DIAG11] MarkCommandApply frame={_frameIndex}");
         Telemetry.MarkCommandApply();
     }
 
