@@ -2657,6 +2657,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"

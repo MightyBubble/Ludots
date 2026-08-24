@@ -89,6 +89,7 @@ public sealed class GraphOpsNodeGallerySyncGateTests
         }
 
         var failures = new List<string>();
+        int vignetteCount = 0;
         foreach (string file in Directory.GetFiles(vignetteDir, "*.json").OrderBy(f => f))
         {
             string op = Path.GetFileNameWithoutExtension(file);
@@ -97,6 +98,7 @@ public sealed class GraphOpsNodeGallerySyncGateTests
                 continue;
             }
 
+            vignetteCount++;
             string sid = "capability_standard_graph_op_" + op;
             if (!entries.TryGetValue(sid, out JsonElement entry))
             {
@@ -119,7 +121,7 @@ public sealed class GraphOpsNodeGallerySyncGateTests
             }
         }
 
-        Assert.That(entries.Count, Is.EqualTo(126), "per-op registry entry count");
+        Assert.That(entries.Count, Is.EqualTo(vignetteCount), "per-op registry entry count must match vignettes");
         Assert.That(failures, Is.Empty, "Registry/vignette copy drift:\n" + string.Join("\n", failures));
     }
 
