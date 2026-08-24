@@ -1234,6 +1234,9 @@ namespace Ludots.Core.Engine
                 presentationConfig.GlobalFieldVisualDirtyRectCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
+            var navMeshPresentationState = new Ludots.Core.Presentation.Navigation.NavMeshPresentationState();
+            var navMeshPresentationBuffer = new Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer(
+                presentationConfig.NavMeshTileCapacity);
             var splineRibbonBuffer = new SplineRibbonBuffer(presentationConfig.SplineRibbonCapacity);
             var soundRequestBuffer = new SoundRequestBuffer();
             var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.WorldHudCapacity);
@@ -1809,6 +1812,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, skinnedVisualBatchBuffer);
             SetService(CoreServiceKeys.PresentationRequestBuffer, presentationRequestBuffer);
             SetService(CoreServiceKeys.GlobalFieldVisualBuffer, globalFieldVisualBuffer);
+            SetService(CoreServiceKeys.NavMeshPresentationState, navMeshPresentationState);
+            SetService(CoreServiceKeys.NavMeshPresentationBuffer, navMeshPresentationBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudBuffer, worldHudBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             SetService(CoreServiceKeys.PresentationTextCatalog, presentationTextCatalog);
@@ -2111,6 +2116,10 @@ namespace Ludots.Core.Engine
 
             RegisterPresentationSystem(new ProjectilePresentationBootstrapSystem(World, presentationStableIds));
             RegisterPresentationSystem(new PresentationStableIdBootstrapSystem(World, presentationStableIds));
+            RegisterPresentationSystem(new Ludots.Core.Presentation.Navigation.NavMeshPresentationSystem(
+                this,
+                navMeshPresentationState,
+                navMeshPresentationBuffer));
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
             // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
@@ -2220,6 +2229,25 @@ namespace Ludots.Core.Engine
                 ?? throw new InvalidOperationException("Failed to create Physics2D ShapeDataStorage2D.");
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
             SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
+
+            const string navObstacleAuthoringProviderTypeName = "Ludots.Core.Physics2D.Navigation.Physics2DNavObstacleAuthoringProvider";
+            Type? navObstacleAuthoringProviderType = TryResolveOptionalAssemblyType(
+                physics2dAssemblyName,
+                navObstacleAuthoringProviderTypeName);
+            if (navObstacleAuthoringProviderType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Physics2D startup requires '{navObstacleAuthoringProviderTypeName}' when '{physics2dAssemblyName}' is present.");
+            }
+
+            object? navObstacleAuthoringProviderObject = Activator.CreateInstance(navObstacleAuthoringProviderType);
+            if (navObstacleAuthoringProviderObject is not INavObstacleAuthoringProvider navObstacleAuthoringProvider)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to create nav obstacle authoring provider '{navObstacleAuthoringProviderTypeName}'.");
+            }
+
+            SetService(CoreServiceKeys.NavObstacleAuthoringProvider, navObstacleAuthoringProvider);
 
             var physics2dKinematicPoses = new Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D(
                 physics2dKinematicConfig.KinematicBodyCapacity);
@@ -2959,6 +2987,23 @@ namespace Ludots.Core.Engine
                     string dataFile = boardConfig?.DataFile;
                     if (!string.IsNullOrWhiteSpace(dataFile))
                     {
+                        string spatialType = (boardConfig?.SpatialType ?? "Grid").Trim();
+                        if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var gridTerrain = LoadGridTerrainFromFile(dataFile, boardConfig);
+                            if (gridTerrain != null)
+                            {
+                                terrainBoard.LogicTerrain = gridTerrain;
+                                LogicTerrain = gridTerrain;
+                                SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                                Diagnostics.Log.Info(
+                                    in LogChannels.Engine,
+                                    $"Loaded grid LogicTerrainField {gridTerrain.WidthChunks}x{gridTerrain.HeightChunks} for board '{board.Name}'");
+                            }
+
+                            continue;
+                        }
+
                         var vtxMap = LoadVertexMapFromFile(dataFile);
                         if (vtxMap != null)
                         {
@@ -2978,7 +3023,14 @@ namespace Ludots.Core.Engine
                     {
                         int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
                         int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-                        gridBoard.LogicTerrain = new FlatGridLogicTerrainField(
+                        LogicTerrainField? projected = TryProjectVisualHeightmapToGrid(
+                            session,
+                            widthCells,
+                            heightCells,
+                            boardConfig.GridCellSizeCm,
+                            board.Name,
+                            boardConfig);
+                        gridBoard.LogicTerrain = projected ?? new FlatGridLogicTerrainField(
                             widthCells,
                             heightCells,
                             boardConfig.GridCellSizeCm,
@@ -2991,7 +3043,9 @@ namespace Ludots.Core.Engine
 
                         Diagnostics.Log.Info(
                             in LogChannels.Engine,
-                            $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
+                            projected != null
+                                ? $"Projected VisualHeightmap to grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'"
+                                : $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
                     }
                 }
             }
@@ -3008,6 +3062,105 @@ namespace Ludots.Core.Engine
                 }
             }
             return null;
+        }
+
+        private LogicTerrainField? TryProjectVisualHeightmapToGrid(
+            MapSession session,
+            int widthCells,
+            int heightCells,
+            int cellSizeCm,
+            string boardName,
+            BoardConfig boardConfig)
+        {
+            Ludots.Platform.Abstractions.IVisualHeightmap? heightmap = session.VisualHeightmap;
+            if (heightmap == null)
+            {
+                return null;
+            }
+
+            float widthCm = checked(widthCells * cellSizeCm);
+            float heightCm = checked(heightCells * cellSizeCm);
+            bool covers =
+                heightmap.TrySampleHeightCm(0f, 0f, out _) &&
+                heightmap.TrySampleHeightCm(widthCm, 0f, out _) &&
+                heightmap.TrySampleHeightCm(0f, heightCm, out _) &&
+                heightmap.TrySampleHeightCm(widthCm, heightCm, out _);
+            if (!covers)
+            {
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"VisualHeightmap does not cover board '{boardName}' extent {widthCm}x{heightCm}cm; keeping flat grid terrain.");
+                return null;
+            }
+
+            int heightStepCm = boardConfig.TerrainHeightStepCm > 0
+                ? boardConfig.TerrainHeightStepCm
+                : SpatialScaleDefaults.CellCm;
+            return Ludots.Core.Navigation.Terrain.VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+                heightmap,
+                widthCells,
+                heightCells,
+                cellSizeCm,
+                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(heightStepCm));
+        }
+
+        private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)
+        {
+            if (string.IsNullOrWhiteSpace(dataFile)) return null;
+
+            if (dataFile.StartsWith("/") || dataFile.StartsWith("\\")) dataFile = dataFile.Substring(1);
+
+            string rel = dataFile.Replace('\\', '/');
+            var candidates = new List<string>(6) { rel };
+            if (!rel.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add($"assets/{rel}");
+            }
+            if (!rel.Contains("Data/Maps", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add($"assets/Data/Maps/{rel}");
+            }
+
+            Stream TryOpen(string uri)
+            {
+                try { return VFS.GetStream(uri); }
+                catch { return null; }
+            }
+
+            Stream stream = null;
+            for (int i = 0; i < candidates.Count && stream == null; i++)
+            {
+                stream = TryOpen($"Core:{candidates[i]}");
+            }
+
+            if (stream == null)
+            {
+                foreach (var modId in ModLoader.LoadedModIds)
+                {
+                    for (int i = 0; i < candidates.Count && stream == null; i++)
+                    {
+                        stream = TryOpen($"{modId}:{candidates[i]}");
+                    }
+                    if (stream != null) break;
+                }
+            }
+
+            if (stream == null) return null;
+
+            int cellSizeCm = boardConfig?.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
+            try
+            {
+                return Ludots.Core.Navigation.Terrain.ReactGridTerrainBinary.Read(dataFile, stream, cellSizeCm);
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to load grid terrain '{dataFile}': {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                stream.Dispose();
+            }
         }
 
         private VertexMap LoadVertexMapFromFile(string dataFile)
@@ -3243,11 +3396,22 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores);
+            var navRegistry = new NavQueryServiceRegistry(stores, LogicTerrain.ChunkWidthCm, LogicTerrain.ChunkHeightCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
+                if (bakeConfig.Layers.Count != 1)
+                {
+                    throw new InvalidOperationException("Runtime-incremental navmesh mode requires exactly one nav layer.");
+                }
+
+                NavObstacleSet authoredObstacles = BuildRuntimeNavMeshAuthoredObstacles(
+                    mapConfig,
+                    bakeConfig.Layers[0].Id);
+                SetService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles, authoredObstacles);
+
                 var runtimeObstacles = new NavObstacleSet();
+                runtimeObstacles.Obstacles.AddRange(authoredObstacles.Obstacles);
                 SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
                 var runtimeContext = new NavBakeContext
                 {
@@ -3269,7 +3433,7 @@ namespace Ludots.Core.Engine
                     Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
                 };
                 var runtimeQueue = new RuntimeIncrementalNavMeshRebuildQueue(
-                    new NavBakeService(new CdtNavBakeAlgorithm()),
+                    new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()),
                     runtimeContext,
                     navRegistry,
                     profileRegistry);
@@ -3286,11 +3450,39 @@ namespace Ludots.Core.Engine
             LoadNavForMap(mapId, mapConfig);
         }
 
+        private NavObstacleSet BuildRuntimeNavMeshAuthoredObstacles(
+            MapConfig mapConfig,
+            string layerId)
+        {
+            if (TryGetService(CoreServiceKeys.NavObstacleAuthoringProvider, out INavObstacleAuthoringProvider provider))
+            {
+                return provider.BuildForMap(
+                    mapConfig,
+                    MapLoader.TemplateRegistry.GetAll().ToDictionary(template => template.Id),
+                    layerId)
+                    ?? throw new InvalidOperationException("Nav obstacle authoring provider returned null.");
+            }
+
+            if (mapConfig.Entities != null && mapConfig.Entities.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime-incremental navmesh map '{mapConfig.Id}' contains authored entities, but no nav obstacle authoring provider is registered.");
+            }
+
+            return new NavObstacleSet();
+        }
+
         private void ClearNavServices()
         {
+            if (TryGetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, out RuntimeIncrementalNavMeshRebuildQueue rebuildQueue))
+            {
+                rebuildQueue.Dispose();
+            }
+
             RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles);
             RemoveService(CoreServiceKeys.RuntimeNavMeshObstacles);
             RemoveService(CoreServiceKeys.RuntimeNavMeshRebuildQueue);
         }

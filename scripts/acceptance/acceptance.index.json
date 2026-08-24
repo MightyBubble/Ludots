@@ -362,6 +362,14 @@
       "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
       "hasScreenshotEvidence": false
+    },
+    {
+      "id": "navmesh_runtime_gate",
+      "preset": "nav_gate_raylib",
+      "binding": "nav_gate",
+      "testFilter": "NavGateShowcaseContractTests",
+      "artifactDir": "artifacts/acceptance/navmesh_runtime_gate",
+      "hasScreenshotEvidence": true
     }
   ],
   "testOnly": []

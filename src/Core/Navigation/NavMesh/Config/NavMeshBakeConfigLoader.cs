@@ -48,9 +48,10 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             _ = config.ParsedAlgorithm;
 
             if (config.ParsedMode == NavBakeMode.RuntimeIncremental &&
-                config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt)
+                config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt &&
+                config.ParsedAlgorithm != NavBakeAlgorithmKind.Recast)
             {
-                throw new InvalidOperationException("NavMeshBakeConfig runtime-incremental mode must use algorithm 'cdt'.");
+                throw new InvalidOperationException("NavMeshBakeConfig runtime-incremental mode must use algorithm 'cdt' or 'recast'.");
             }
 
             if (config.Profiles == null || config.Profiles.Count == 0)

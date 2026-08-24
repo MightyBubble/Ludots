@@ -31,6 +31,7 @@ namespace Ludots.Core.Presentation
         private int? _worldHudCapacity;
         private int? _screenHudCapacity;
         private int? _minimapMarkerCapacity;
+        private int? _navMeshTileCapacity;
         private int? _runtimeEntitySpawnQueueCapacity;
         private int? _runtimeEntitySpawnReceiptQueueCapacity;
         private int? _runtimeEntityLifecycleQueueCapacity;
@@ -60,6 +61,7 @@ namespace Ludots.Core.Presentation
         public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
         public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
+        public int NavMeshTileCapacity { get => _navMeshTileCapacity ?? 4096; set => _navMeshTileCapacity = value; }
         public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
         public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
         public int RuntimeEntityLifecycleQueueCapacity { get => _runtimeEntityLifecycleQueueCapacity ?? 0; set => _runtimeEntityLifecycleQueueCapacity = value; }

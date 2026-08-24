@@ -145,6 +145,9 @@ namespace Ludots.Core.Input.Runtime
 
         public void InjectButtonRelease(string actionId) => _injections.Remove(actionId);
 
+        /// <summary>Whether a synthetic injection is currently held for this action (true after press, false after release).</summary>
+        public bool IsInjectionActive(string actionId) => _injections.ContainsKey(actionId);
+
         public void Update()
         {
             UpdateRevision++;

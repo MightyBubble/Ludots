@@ -141,6 +141,36 @@
     <None Include="raylib.formation-capability-showcase.launch.graph.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="launcher.navmesh-debug.runtime.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="launcher.nav-gate.runtime.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.nav-gate-bridge.launch.graph.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="launcher.nav-gate-bridge.runtime.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.nav-gate.launch.graph.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.navmesh-debug.launch.graph.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="launcher.navmesh-debug-grid.runtime.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.navmesh-debug-grid.launch.graph.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="launcher.navmesh-debug-vhtm.runtime.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.navmesh-debug-vhtm.launch.graph.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="game.moba.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
