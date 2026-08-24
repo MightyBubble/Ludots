@@ -180,6 +180,16 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.That(variables.ReadInt("override_active"), Is.EqualTo(1),
             "The stacked override graph must run on MapLoaded alongside the base graph.");
 
+        EventSchemaRegistry eventSchemas = engine.GetService(CoreServiceKeys.EventSchemaRegistry)
+            ?? throw new InvalidOperationException("EventSchemaRegistry missing.");
+        Assert.That(eventSchemas.TryGet("NightRaidOverride.ToolProbe.Used", out EventSchema probeSchema), Is.True,
+            "The override mod's param-declaring custom event must load into the schema registry.");
+        Assert.That(probeSchema!.Scope, Is.EqualTo(EventScope.Map));
+        Assert.That(probeSchema.Params.Select(p => p.Name).ToArray(),
+            Is.EqualTo(new[] { "toolUser", "probeTag" }),
+            "The declared params keep their authored order and names.");
+        Assert.That(probeSchema.Params[1].PayloadKey, Is.EqualTo("NightRaidOverride.ProbeTag"));
+
         Entity hero = FindHero(world);
         world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(0, 0) });
         TickUntil(engine, () => variables.ReadInt("stage") == 2, HeartbeatIntervalTicks * 3,

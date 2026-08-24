@@ -926,8 +926,10 @@ namespace Ludots.Core.Engine
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
-            var customEventRegistry = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventRegistry);
+            var customEventCatalog = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventCatalog.Names);
+            SetService(CoreServiceKeys.EventSchemaRegistry, customEventCatalog.Schemas);
+            TriggerManager.EventSchemas = customEventCatalog.Schemas;
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var scopeResolver = new ScopeResolver(World, progressionScopeKeys, entityCollectionStore, relationshipRuntime);

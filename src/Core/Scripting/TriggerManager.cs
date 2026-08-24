@@ -71,6 +71,12 @@ namespace Ludots.Core.Scripting
             }
         }
 
+        /// <summary>
+        /// Event parameter schema SSOT; when bound, every map-domain fire validates its
+        /// payload contract (missing / mistyped / undeclared MapTrigger.* keys fail closed).
+        /// </summary>
+        public EventSchemaRegistry? EventSchemas { get; set; }
+
         public TriggerManager()
         {
         }
@@ -297,6 +303,8 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public void FireMapEvent(MapId mapId, EventKey eventKey, ScriptContext context)
         {
+            EventSchemas?.ValidateFirePayload(eventKey, context);
+
             // EventHandlers (mod callbacks) always fire
             FireEventHandlers(eventKey, context);
 
@@ -324,6 +332,8 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public Task FireMapEventAsync(MapId mapId, EventKey eventKey, ScriptContext context)
         {
+            EventSchemas?.ValidateFirePayload(eventKey, context);
+
             // EventHandlers (mod callbacks)
             var handlerTask = FireEventHandlersAsync(eventKey, context);
 
