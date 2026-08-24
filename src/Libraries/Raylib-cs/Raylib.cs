@@ -667,6 +667,9 @@ namespace Raylib_cs
         public static extern void SetTextureFilter(Texture2D texture, TextureFilter filter);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void GenTextureMipmaps(ref Texture2D texture);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void SetTextureWrap(Texture2D texture, TextureWrap wrap);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]

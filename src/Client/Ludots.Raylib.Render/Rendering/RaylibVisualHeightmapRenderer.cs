@@ -687,7 +687,8 @@ namespace Ludots.Raylib.Render
                     loaded[i] = LoadTextureUriOrThrow(
                         descriptor.LayerUris[i],
                         descriptor.Id,
-                        $"layer[{i}]");
+                        $"layer[{i}]",
+                        generateMipmaps: true);
                 }
 
                 bool hasControlMap = !string.IsNullOrEmpty(descriptor.ControlMapUri);
@@ -696,7 +697,8 @@ namespace Ludots.Raylib.Render
                     controlMap = LoadTextureUriOrThrow(
                         descriptor.ControlMapUri!,
                         descriptor.Id,
-                        "controlMapUri");
+                        "controlMapUri",
+                        generateMipmaps: false);
                 }
 
                 BindTerrainAlbedo(loaded[0], loaded[1], loaded[2], loaded[3], descriptor.TileScale, ownsTextures: true);
@@ -736,7 +738,7 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        private Texture2D LoadTextureUriOrThrow(string uri, string descriptorId, string fieldLabel)
+        private Texture2D LoadTextureUriOrThrow(string uri, string descriptorId, string fieldLabel, bool generateMipmaps)
         {
             if (!_assetPaths!.TryResolveFullPath(uri, out string fullPath))
             {
@@ -760,6 +762,13 @@ namespace Ludots.Raylib.Render
 
                 throw new InvalidOperationException(
                     $"{nameof(RaylibVisualHeightmapRenderer)} LoadTexture failed for terrain albedo uri='{uri}' fullPath='{fullPath}' ({fieldLabel}).");
+            }
+
+            if (generateMipmaps)
+            {
+                // Tiling layers minify thousands-to-one at strategy zoom; without a mip chain they alias into static noise.
+                Rl.GenTextureMipmaps(ref texture);
+                Rl.SetTextureFilter(texture, Rl.TextureFilter.TEXTURE_FILTER_TRILINEAR);
             }
 
             return texture;
