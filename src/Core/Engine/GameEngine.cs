@@ -1694,6 +1694,7 @@ namespace Ludots.Core.Engine
             var logicViewRegistry = new Client.LogicViewRegistry();
             SetService(CoreServiceKeys.ClientLocalSeatRegistry, clientLocalSeatRegistry);
             SetService(CoreServiceKeys.LogicViewRegistry, logicViewRegistry);
+            SetService(CoreServiceKeys.ClientLocalSeatDeviceBinding, new Client.ClientLocalSeatDeviceBinding(clientLocalSeatRegistry));
             SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
             SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);

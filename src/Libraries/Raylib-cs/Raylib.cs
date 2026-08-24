@@ -495,6 +495,13 @@ namespace Raylib_cs
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool IsMouseButtonReleased(MouseButton button);
 
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsGamepadAvailable(int gamepad);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr GetGamepadName(int gamepad);
+
         // --- Instancing APIs ---
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
