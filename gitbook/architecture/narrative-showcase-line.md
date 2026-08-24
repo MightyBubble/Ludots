@@ -82,7 +82,7 @@ context.OnEvent(TaskEventKeys.Signal, ctx =>
 
 载荷键是**类型化 ServiceKey**（如 `TaskServiceKeys.SignalId` 是 `ServiceKey<string>`），`ctx.Get(键)` 直接返回对应类型的值；可用键见 `TaskServiceKeys` / `NarrativeServiceKeys`（对话/演出载荷如 `NarrativeServiceKeys.BodyText`、`CinematicStepId`）。信号的语义：每 `EmitSignal` 一次，该键的会话内计数 +1 并刷新所有活动任务的目标；计数不写存档、重开局清零。**信号的 `signalId` 与任务目标的 `signal_key` 必须逐字符一致**——不一致不会报错，但目标永远不完成（排错先查拼写）。
 
-**规矩**：写地图变量、开活动、发相机冲动（`CameraImpulseRuntime.Emit`）都只能在订阅方做；叙事域动作集只有十种（设/加变量、开任务/对话/演出、发信号、完成任务、失败任务、相机开/清）。
+**规矩**：写地图变量、开活动、发相机冲动（`CameraImpulseRuntime.Emit`——演出步进之外的瞬时镜头震动特效）都只能在订阅方做。叙事域动作集只有十种（设/加变量、开任务/对话/演出、发信号、完成任务、失败任务、相机开/清）；其中 `ActivateCamera/ClearCamera` 是切换**虚拟相机档案**（演出/对话的正式镜头语言），与"冲动"（叠加震动特效）是两回事，前者域内合法、后者域外。
 
 ### 4.3 最小改动手册：给 narrative_chain 加一段新对话 + 新任务
 
@@ -93,6 +93,8 @@ context.OnEvent(TaskEventKeys.Signal, ctx =>
 涉及两个文件（相对 mod 根 `mods/showcases/narrative_chain/NarrativeChainShowcaseMod/assets/`）：
 - `Narrative/dialogues.json`（对话，字段 camelCase）
 - `Tasks/tasks.json`（任务，字段 snake_case）
+
+注意：收口节点的 `onEnter EmitSignal` 在节点出现瞬间即发——演示里"任务瞬间完成"是这么来的；想让玩家读完再完成，把信号挪到后续节点或延长 `autoAdvanceSeconds`。
 
 注意大小写规则：**dialogues / cinematics / variables 用 camelCase；tasks / activities 用 snake_case**（如上两文件示例所示，§4.1 表格按各自惯例）。
 
@@ -125,12 +127,12 @@ context.OnEvent(TaskEventKeys.Signal, ctx =>
 ```
 
 多目标任务：`"objectives"` 数组放多条，配合 `"completion_rule": "any"`（任一达成即完成）或 `"all"`（全部达成）。
-3. 触发时机：`start_policy: "automatic"` 的任务在被创建的那一刻就是 Active（不等待玩家）；创建它的途径有三——某任务完成经 `next_task_id` 自动接续、活动选项 `task.create` 效果、或订阅方代码调 `OfferOrStart`。想声明式开对话：给任务加 `"on_enter_dialogue_id": "Dialogue.Chain.NewTalk"`（任务转 Active 时引擎自动开）。
+3. 触发时机：**新任务必须至少接入一条创建途径**（下面三选一），否则永远不会诞生。`start_policy: "automatic"` 的任务在被创建的那一刻就是 Active（不等待玩家）；创建它的途径有三——某任务完成经 `next_task_id` 自动接续、活动选项 `task.create` 效果、或订阅方代码调 `OfferOrStart`。想声明式开对话：给任务加 `"on_enter_dialogue_id": "Dialogue.Chain.NewTalk"`（任务转 Active 时引擎自动开）。
 4. **按键**：对话推进/选项用引擎既有的输入动作（`NarrativeAdvance`、`NarrativeChoice1/2`，已随 showcase 的 `Input/default_input.json` 绑好 Enter/1/2）；只有新增独立交互（如面板确认键）才需要改输入文件加 action 与 binding。
 5. **命令式接线**（不想用声明式时）：照 §4.2 的 `OnEvent` 代码示例在 ModEntry 里订阅 `TaskEventKeys.Signal`，命中你的信号键后调 `engine.GetService(CoreServiceKeys.NarrativeDirector).StartDialogue(...)`。
 6. `autoAdvanceSeconds` 是**无选项节点**自动翻页的等待秒数（0.1 ≈ 立即翻页；不写则等待玩家按推进键）。带 `choices[]` 的节点该字段无效，永远等待选择。
 7. 玩家文案直接写进 `text` / `title` / `hint`——**不要出现引擎词**（provider/trigger/signal/contract/GAS…），双通道审计会打回。
-5. 跑 `dotnet test src/Tests/GasTests/GasTests.csproj --filter FullyQualifiedName~NarrativeChainAcceptanceTests`，证据自动落到 `artifacts/acceptance/narrative-chain/`。
+8. 跑 `dotnet test src/Tests/GasTests/GasTests.csproj --filter FullyQualifiedName~NarrativeChainAcceptanceTests`，证据自动落到 `artifacts/acceptance/narrative-chain/`。
 
 ### 4.4 零代码面板（活动弹层 / 任务追踪）
 
