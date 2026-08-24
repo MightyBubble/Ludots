@@ -587,7 +587,7 @@ function Read-ClientPresentationEvidence {
 
         $visibleEntities = Get-RequiredDiagnosticCount -Line $timingLine -Field "visibleEntities" `
             -ProcessName $Capture.ProcessName -Milestone $milestone
-        $performerActive = Get-RequiredDiagnosticCount -Line $timingLine -Field "performerActive" `
+        $performerActive = Get-RequiredDiagnosticCount -Line $timingLine -Field "presenterActive" `
             -ProcessName $Capture.ProcessName -Milestone $milestone
         $primitiveRaw = Get-RequiredDiagnosticCount -Line $timingLine -Field "primitiveRaw" `
             -ProcessName $Capture.ProcessName -Milestone $milestone
