@@ -156,27 +156,27 @@ namespace Ludots.Core.Presentation.Presenters
             if (!Enum.IsDefined(typeof(PresenterCommandKind), command.CommandKind))
             {
                 throw new InvalidOperationException(
-                    $"Performer definition '{definitionKey}' rule {ruleIndex} has unsupported command kind '{command.CommandKind}'.");
+                    $"Presenter definition '{definitionKey}' rule {ruleIndex} has unsupported command kind '{command.CommandKind}'.");
             }
 
             if (command.CommandKind == PresenterCommandKind.None)
             {
                 throw new InvalidOperationException(
-                    $"Performer definition '{definitionKey}' rule {ruleIndex} must declare a performer command kind.");
+                    $"Presenter definition '{definitionKey}' rule {ruleIndex} must declare a presenter command kind.");
             }
 
             if (command.CommandKind == PresenterCommandKind.Extension)
             {
-                if (command.CommandKindId < PerformerCommandKindRegistry.FirstModCommandKindId)
+                if (command.CommandKindId < PresenterCommandKindRegistry.FirstModCommandKindId)
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definitionKey}' rule {ruleIndex} extension command must use a registered mod command kind id.");
+                        $"Presenter definition '{definitionKey}' rule {ruleIndex} extension command must use a registered mod command kind id.");
                 }
 
-                if (command.RouteStrategy == PerformerCommandRouteStrategy.None)
+                if (command.RouteStrategy == PresenterCommandRouteStrategy.None)
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definitionKey}' rule {ruleIndex} extension command must declare route strategy.");
+                        $"Presenter definition '{definitionKey}' rule {ruleIndex} extension command must declare route strategy.");
                 }
 
                 return;
@@ -186,7 +186,7 @@ namespace Ludots.Core.Presentation.Presenters
             if (command.CommandKindId != 0 && command.CommandKindId != builtinKindId)
             {
                 throw new InvalidOperationException(
-                    $"Performer definition '{definitionKey}' rule {ruleIndex} command kind id {command.CommandKindId} does not match builtin command kind '{command.CommandKind}'.");
+                    $"Presenter definition '{definitionKey}' rule {ruleIndex} command kind id {command.CommandKindId} does not match builtin command kind '{command.CommandKind}'.");
             }
         }
 

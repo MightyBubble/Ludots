@@ -313,16 +313,16 @@ namespace Ludots.Tests.GAS
 
             private sealed class RejectingPresentationRegistration : IPresentationModExtensionRegistration
             {
-                public int RegisterPerformerCommand(
+                public int RegisterPresenterCommand(
                     string key,
-                    in PerformerCommandExtensionDescriptor descriptor)
+                    in PresenterCommandExtensionDescriptor descriptor)
                 {
                     throw new NotSupportedException("This test mod context does not support extension registration.");
                 }
 
-                public int RegisterPerformerBehavior(
+                public int RegisterPresenterBehavior(
                     string key,
-                    in PerformerBehaviorExtensionDescriptor descriptor)
+                    in PresenterBehaviorExtensionDescriptor descriptor)
                 {
                     throw new NotSupportedException("This test mod context does not support extension registration.");
                 }

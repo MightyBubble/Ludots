@@ -29,29 +29,29 @@ namespace Ludots.Tests.Presentation
                 "ProviderMod.CustomOp",
                 GraphValueType.Void,
                 NoopGraphOp);
-            int commandKindId = provider.Extensions.Presentation.RegisterPerformerCommand(
+            int commandKindId = provider.Extensions.Presentation.RegisterPresenterCommand(
                 "ProviderMod.CustomCommand",
-                new PerformerCommandExtensionDescriptor(
-                    PerformerCommandRouteStrategy.SingleRuntime,
+                new PresenterCommandExtensionDescriptor(
+                    PresenterCommandRouteStrategy.SingleRuntime,
                     NoopCommand));
-            int behaviorKindId = provider.Extensions.Presentation.RegisterPerformerBehavior(
+            int behaviorKindId = provider.Extensions.Presentation.RegisterPresenterBehavior(
                 "ProviderMod.CustomBehavior",
-                new PerformerBehaviorExtensionDescriptor(
-                    PerformerBehaviorExecutionLane.ContinuousTick,
+                new PresenterBehaviorExtensionDescriptor(
+                    PresenterBehaviorExecutionLane.ContinuousTick,
                     NoopBehavior));
 
             hub.Freeze();
 
             Assert.That(builtinId, Is.GreaterThanOrEqualTo(BuiltinHandlerRegistry.FirstModHandlerId));
             Assert.That(opCode, Is.GreaterThanOrEqualTo(GasGraphOpRegistry.FirstModOpCode));
-            Assert.That(commandKindId, Is.GreaterThanOrEqualTo(PerformerCommandKindRegistry.FirstModCommandKindId));
-            Assert.That(behaviorKindId, Is.GreaterThanOrEqualTo(PerformerBehaviorKindRegistry.FirstModBehaviorKindId));
+            Assert.That(commandKindId, Is.GreaterThanOrEqualTo(PresenterCommandKindRegistry.FirstModCommandKindId));
+            Assert.That(behaviorKindId, Is.GreaterThanOrEqualTo(PresenterBehaviorKindRegistry.FirstModBehaviorKindId));
 
             Assert.That(hub.Gas.BuiltinHandlers.GetId("ProviderMod.ApplyCustom"), Is.EqualTo(builtinId));
             Assert.That(hub.Gas.GraphOps.TryGet("ProviderMod.CustomOp", out GasGraphOpDefinition definition), Is.True);
             Assert.That(definition.OpCode, Is.EqualTo(opCode));
-            Assert.That(hub.Presentation.PerformerCommands.GetId("ProviderMod.CustomCommand"), Is.EqualTo(commandKindId));
-            Assert.That(hub.Presentation.PerformerBehaviors.GetId("ProviderMod.CustomBehavior"), Is.EqualTo(behaviorKindId));
+            Assert.That(hub.Presentation.PresenterCommands.GetId("ProviderMod.CustomCommand"), Is.EqualTo(commandKindId));
+            Assert.That(hub.Presentation.PresenterBehaviors.GetId("ProviderMod.CustomBehavior"), Is.EqualTo(behaviorKindId));
 
             var handlerTable = new GasGraphOpHandlerTable(hub.Gas.GraphOps);
             Assert.That(handlerTable.Handlers[opCode], Is.Not.Null);
@@ -191,11 +191,11 @@ namespace Ludots.Tests.Presentation
         {
         }
 
-        private static void NoopCommand(in PerformerCommandExecutionContext context)
+        private static void NoopCommand(in PresenterCommandExecutionContext context)
         {
         }
 
-        private static void NoopBehavior(in PerformerBehaviorExecutionContext context)
+        private static void NoopBehavior(in PresenterBehaviorExecutionContext context)
         {
         }
     }

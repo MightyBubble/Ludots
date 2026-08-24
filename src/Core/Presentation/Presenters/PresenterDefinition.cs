@@ -3,12 +3,30 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Presenters
 {
+    public enum PresenterChildrenMode
+    {
+        Definition = 0,
+        Instance = 1,
+    }
+
+    /// <summary>
+    /// Instance-owned overrides attached to a single child reference. Lives beside the referenced
+    /// definition; the shared definition is never mutated by instance authoring.
+    /// </summary>
+    public sealed class PresenterChildInstanceOverride
+    {
+        public PresenterChildrenMode ChildrenMode = PresenterChildrenMode.Definition;
+        public ChildPresenterRef[] InstanceChildren = System.Array.Empty<ChildPresenterRef>();
+        public BehaviorSlot[] InstanceBehaviors = System.Array.Empty<BehaviorSlot>();
+    }
+
     public struct ChildPresenterRef
     {
         public int DefinitionId;
         public int ScopeTag;
         public ParamDefault[] ParamOverrides;
         public PresenterInstanceTransformOverride TransformOverride;
+        public PresenterChildInstanceOverride InstanceOverride;
     }
 
     public struct ParamDefault
@@ -614,12 +632,12 @@ namespace Ludots.Core.Presentation.Presenters
                         extensionBehaviorIndices.Add(i);
                         switch (slot.ExtensionLane)
                         {
-                            case PerformerBehaviorExecutionLane.Bootstrap:
+                            case PresenterBehaviorExecutionLane.Bootstrap:
                                 RequiresBootstrapProcessing = true;
                                 extensionBootstrapBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
                                 extensionBootstrapBehaviorIndices.Add(i);
                                 break;
-                            case PerformerBehaviorExecutionLane.ContinuousTick:
+                            case PresenterBehaviorExecutionLane.ContinuousTick:
                                 tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
                                 tickBehaviorIndices.Add(i);
                                 extensionTickBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
@@ -627,11 +645,11 @@ namespace Ludots.Core.Presentation.Presenters
                                 blocksEventDrivenStaticEmit = true;
                                 hasStaticOnlyVisuals = false;
                                 break;
-                            case PerformerBehaviorExecutionLane.OwnerAttributeDirty:
+                            case PresenterBehaviorExecutionLane.OwnerAttributeDirty:
                                 if (slot.ExtensionTriggerId <= 0)
                                 {
                                     throw new System.InvalidOperationException(
-                                        $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} requires a positive owner attribute trigger id.");
+                                        $"Presenter definition '{Key}' extension behavior slot {slot.SlotIndex} requires a positive owner attribute trigger id.");
                                 }
 
                                 HasOwnerAttributeBindingWork = true;
@@ -639,11 +657,11 @@ namespace Ludots.Core.Presentation.Presenters
                                 extensionAttributeBehaviorMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
                                 AddIndex(extensionAttributeBehaviorMap, slot.ExtensionTriggerId, i);
                                 break;
-                            case PerformerBehaviorExecutionLane.OwnerTagDirty:
+                            case PresenterBehaviorExecutionLane.OwnerTagDirty:
                                 if (slot.ExtensionTriggerId <= 0)
                                 {
                                     throw new System.InvalidOperationException(
-                                        $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} requires a positive owner tag trigger id.");
+                                        $"Presenter definition '{Key}' extension behavior slot {slot.SlotIndex} requires a positive owner tag trigger id.");
                                 }
 
                                 HasOwnerTagBindingWork = true;
@@ -653,7 +671,7 @@ namespace Ludots.Core.Presentation.Presenters
                                 break;
                             default:
                                 throw new System.InvalidOperationException(
-                                    $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} has unsupported execution lane '{slot.ExtensionLane}'.");
+                                    $"Presenter definition '{Key}' extension behavior slot {slot.SlotIndex} has unsupported execution lane '{slot.ExtensionLane}'.");
                         }
                         break;
                 }
@@ -753,21 +771,21 @@ namespace Ludots.Core.Presentation.Presenters
             if (!System.Enum.IsDefined(typeof(BehaviorKind), slot.Kind))
             {
                 throw new System.InvalidOperationException(
-                    $"Performer definition '{Key}' behavior slot {slot.SlotIndex} has unsupported behavior kind '{slot.Kind}'.");
+                    $"Presenter definition '{Key}' behavior slot {slot.SlotIndex} has unsupported behavior kind '{slot.Kind}'.");
             }
 
             if (slot.Kind == BehaviorKind.Extension)
             {
-                if (kindId < PerformerBehaviorKindRegistry.FirstModBehaviorKindId)
+                if (kindId < PresenterBehaviorKindRegistry.FirstModBehaviorKindId)
                 {
                     throw new System.InvalidOperationException(
-                        $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} must use a registered mod behavior kind id.");
+                        $"Presenter definition '{Key}' extension behavior slot {slot.SlotIndex} must use a registered mod behavior kind id.");
                 }
 
-                if (slot.ExtensionLane == PerformerBehaviorExecutionLane.None)
+                if (slot.ExtensionLane == PresenterBehaviorExecutionLane.None)
                 {
                     throw new System.InvalidOperationException(
-                        $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} must declare an execution lane.");
+                        $"Presenter definition '{Key}' extension behavior slot {slot.SlotIndex} must declare an execution lane.");
                 }
 
                 return;
@@ -777,13 +795,13 @@ namespace Ludots.Core.Presentation.Presenters
             if (slot.KindId != 0 && slot.KindId != builtinKindId)
             {
                 throw new System.InvalidOperationException(
-                    $"Performer definition '{Key}' behavior slot {slot.SlotIndex} kind id {slot.KindId} does not match builtin kind '{slot.Kind}'.");
+                    $"Presenter definition '{Key}' behavior slot {slot.SlotIndex} kind id {slot.KindId} does not match builtin kind '{slot.Kind}'.");
             }
 
-            if (slot.ExtensionLane != PerformerBehaviorExecutionLane.None || slot.ExtensionTriggerId != 0)
+            if (slot.ExtensionLane != PresenterBehaviorExecutionLane.None || slot.ExtensionTriggerId != 0)
             {
                 throw new System.InvalidOperationException(
-                    $"Performer definition '{Key}' behavior slot {slot.SlotIndex} uses extension execution data without BehaviorKind.Extension.");
+                    $"Presenter definition '{Key}' behavior slot {slot.SlotIndex} uses extension execution data without BehaviorKind.Extension.");
             }
         }
 
