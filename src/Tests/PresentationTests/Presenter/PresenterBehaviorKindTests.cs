@@ -1608,7 +1608,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void EntityTransform_InheritsOwnerScaleAndAppliesLocalScale()
+        public void EntityTransform_InheritsOwnerScaleAndKeepsAssetLocalScaleOutOfRoot()
         {
             using var world = World.Create();
             Entity owner = world.Create(new VisualTransform
@@ -1661,7 +1661,7 @@ namespace Ludots.Tests.Presentation
             ref var worldScale = ref world.Get<PresenterWorldScale>(presenter);
             ref var worldPos = ref world.Get<PresenterWorldPosition>(presenter);
             Assert.That(transformSource.Value, Is.EqualTo(TransformSource.EntityTransform));
-            Assert.That(worldScale.Value, Is.EqualTo(new Vector3(1f, 6f, 1f)));
+            Assert.That(worldScale.Value, Is.EqualTo(new Vector3(2f, 3f, 4f)), "Root scale inherits the owner scale; AssetBinding.localScale composes at the asset emit stage only.");
             Assert.That(worldPos.Value, Is.EqualTo(new Vector3(2f, 3f, 4f)));
         }
 

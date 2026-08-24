@@ -28,8 +28,7 @@
           "inheritScale": false
         }
       }
-    ],
-    "anchor": { "offset": [0, 2.35, 0] }
+    ]
   },
   {
     "id": "graphops.hud.health_text",
