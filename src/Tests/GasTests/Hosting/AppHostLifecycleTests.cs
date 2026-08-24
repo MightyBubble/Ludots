@@ -62,7 +62,7 @@ namespace Ludots.Tests.GAS.Hosting
         public void Transition_RejectsDuplicateAndBackwardPhases()
         {
             var lifecycle = new AppHostLifecycle(TestDescriptor());
-            lifecycle.TransitionTo(AppLifecyclePhase.Running);
+            AdvanceToRunning(lifecycle);
 
             Assert.That(() => lifecycle.TransitionTo(AppLifecyclePhase.Running), Throws.InvalidOperationException);
             Assert.That(() => lifecycle.TransitionTo(AppLifecyclePhase.Created), Throws.InvalidOperationException);
@@ -74,7 +74,7 @@ namespace Ludots.Tests.GAS.Hosting
         public void Transition_AllowsSuspendResumeCycleAndShutdownFromSuspend()
         {
             var lifecycle = new AppHostLifecycle(TestDescriptor());
-            lifecycle.TransitionTo(AppLifecyclePhase.Running);
+            AdvanceToRunning(lifecycle);
 
             lifecycle.TransitionTo(AppLifecyclePhase.Suspending);
             Assert.That(lifecycle.Phase, Is.EqualTo(AppLifecyclePhase.Suspending));
@@ -134,6 +134,13 @@ namespace Ludots.Tests.GAS.Hosting
             var registry = new AppHostRegistry();
 
             Assert.That(() => registry.Register(null!), Throws.ArgumentNullException);
+        }
+
+        private static void AdvanceToRunning(AppHostLifecycle lifecycle)
+        {
+            lifecycle.TransitionTo(AppLifecyclePhase.Configuring);
+            lifecycle.TransitionTo(AppLifecyclePhase.Initialized);
+            lifecycle.TransitionTo(AppLifecyclePhase.Running);
         }
 
         private static AppDescriptor TestDescriptor()

@@ -4,7 +4,8 @@ namespace Ludots.Platform.Abstractions
 {
     /// <summary>
     /// Phase state machine shared by <see cref="IAppHost"/> implementations:
-    /// forward-only, except a Suspending host may resume to Running.
+    /// forward one step at a time, except a Suspending host may resume to Running,
+    /// and Shutdown flow (ShuttingDown/Terminated) may be entered from any active phase.
     /// </summary>
     public sealed class AppHostLifecycle
     {
@@ -27,12 +28,16 @@ namespace Ludots.Platform.Abstractions
                 throw new InvalidOperationException($"App '{Descriptor.AppId}' is already in phase {Phase}.");
             }
 
-            bool forward = newPhase > Phase;
+            bool forwardOneStep = newPhase == Phase + 1;
             bool resumeFromSuspend = Phase == AppLifecyclePhase.Suspending && newPhase == AppLifecyclePhase.Running;
-            if (!forward && !resumeFromSuspend)
+            bool shutdownFromActive =
+                (Phase is AppLifecyclePhase.Running or AppLifecyclePhase.Suspending) &&
+                newPhase is AppLifecyclePhase.ShuttingDown or AppLifecyclePhase.Terminated;
+            if (!forwardOneStep && !resumeFromSuspend && !shutdownFromActive)
             {
                 throw new InvalidOperationException(
-                    $"App '{Descriptor.AppId}' cannot transition from {Phase} back to {newPhase}.");
+                    $"App '{Descriptor.AppId}' cannot transition from {Phase} to {newPhase}; " +
+                    "forward transitions advance exactly one phase (shutdown may be entered from any active phase).");
             }
 
             AppLifecyclePhase previous = Phase;
