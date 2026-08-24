@@ -47,7 +47,9 @@ narrative_slices   能力切片集          mods/showcases/narrative_slices
 
 ## 4. mod 作者怎么配
 
-### 4.1 内容文件家族（三个 showcase 同构）
+### 4.1 内容文件家族
+
+三个 showcase 用同一套配置文件格式，只是各自一份。**每个内容文件都是 JSON 数组**（如 dialogues.json 是 `[{对话1}, {对话2}]`），新增内容就是在数组里追加一条；`config_catalog.json` 登记的是整个文件路径，已有条目覆盖追加后的整个文件——**向已有文件追加内容不需要改 catalog**，只有新增文件才要登记。ID 全库唯一，重复即加载冲突。
 
 | 文件 | 管什么 | 关键字段（camelCase） |
 |---|---|---|
@@ -64,7 +66,21 @@ narrative_slices   能力切片集          mods/showcases/narrative_slices
 
 叙事侧发出的引擎事件：`NarrativeEventKeys.{DialogueNodeEntered, DialogueChoiceCommitted, CinematicStepEntered, CinematicCompleted}`、`TaskEventKeys.{Signal, Offered, Activated, Completed, Failed, Abandoned}`。对话/演出节点可用动作 `EmitSignal` 发信号（同时推进匹配的任务目标并广播事件）。
 
-mod 侧订阅：`context.OnEvent(EventKey, handler)`，handler 内 `context.GetEngine()` 取引擎、`ctx.Get(<ServiceKey>)` 读事件载荷。范式照抄 `NarrativeChainShowcaseModEntry.cs`。
+术语先分清：**事件**是引擎广播（别人发生的），**动作**是对话/演出节点 `onEnter[]` / 选项 `actions[]` 里声明的可执行操作，共十种：`SetVariable / AddVariable / StartTask / StartDialogue / StartCinematic / EmitSignal / CompleteTask / FailTask / ActivateCamera / ClearCamera`。
+
+mod 侧订阅事件的标准写法（在 ModEntry 的 `OnLoad` 里）：
+
+```csharp
+context.OnEvent(TaskEventKeys.Signal, ctx =>
+{
+    GameEngine engine = ctx.GetEngine() ?? throw new InvalidOperationException("no engine");
+    string signalId = ctx.Get(TaskServiceKeys.SignalId) ?? string.Empty;   // 类型化载荷键，返回 string
+    if (signalId == "chain.new.done") { /* 跨域效果只写在这里 */ }
+    return Task.CompletedTask;
+});
+```
+
+载荷键是**类型化 ServiceKey**（如 `TaskServiceKeys.SignalId` 是 `ServiceKey<string>`），`ctx.Get(键)` 直接返回对应类型的值；可用键见 `TaskServiceKeys` / `NarrativeServiceKeys`（对话/演出载荷如 `NarrativeServiceKeys.BodyText`、`CinematicStepId`）。信号是会话内的即时计数，不持久化、无需清理。
 
 **规矩**：写地图变量、开活动、发相机冲动（`CameraImpulseRuntime.Emit`）都只能在订阅方做；叙事域动作集只有十种（设/加变量、开任务/对话/演出、发信号、完成任务、失败任务、相机开/清）。
 
@@ -73,7 +89,10 @@ mod 侧订阅：`context.OnEvent(EventKey, handler)`，handler 内 `context.GetE
 1. `Tasks/tasks.json` 加一条任务：`{"id": "Task.Chain.NewErrand", "display_name": "…", "start_policy": "automatic", "completion_rule": "all", "objectives": [{"id": "done", "kind": "signal", "title": "…", "signal_key": "chain.new.done"}]}`
 2. `Narrative/dialogues.json` 加一棵对话：`{"id": "Dialogue.Chain.NewTalk", "startNodeId": "root", "nodes": [{"id": "root", "speakerName": "Relay Warden", "text": "…", "autoAdvanceSeconds": 0.1, "onEnter": [{"kind": "EmitSignal", "signalId": "chain.new.done"}]}]}`
 3. 想让它在链路里被声明式触发：给某个任务加 `"on_enter_dialogue_id": "Dialogue.Chain.NewTalk"`（任务激活自动开对话），或在触发器订阅方 `HandleTaskSignalAsync` 里对 `chain.new.done` 反应。
-4. 玩家文案直接写进 `text` / `title` / `hint`——**不要出现引擎词**（provider/trigger/signal/contract/GAS…），双通道审计会打回。
+4. **按键**：对话推进/选项用引擎既有的输入动作（`NarrativeAdvance`、`NarrativeChoice1/2`，已随 showcase 的 `Input/default_input.json` 绑好 Enter/1/2）；只有新增独立交互（如面板确认键）才需要改输入文件加 action 与 binding。
+5. **命令式接线**（不想用声明式时）：照 §4.2 的代码示例在 ModEntry 里订阅 `TaskEventKeys.Signal`，命中你的信号键后调 `engine.GetService(CoreServiceKeys.NarrativeDirector).StartDialogue(...)`。
+6. `autoAdvanceSeconds` 是无选项节点自动翻页的等待秒数（0.1 ≈ 立即翻页；不写则等待玩家按推进键）。
+7. 玩家文案直接写进 `text` / `title` / `hint`——**不要出现引擎词**（provider/trigger/signal/contract/GAS…），双通道审计会打回。
 5. 跑 `dotnet test src/Tests/GasTests/GasTests.csproj --filter FullyQualifiedName~NarrativeChainAcceptanceTests`，证据自动落到 `artifacts/acceptance/narrative-chain/`。
 
 ### 4.4 零代码面板（活动弹层 / 任务追踪）
@@ -85,7 +104,7 @@ mod 侧订阅：`context.OnEvent(EventKey, handler)`，handler 内 `context.GetE
 - 活动 `source_key` 必须是已注册的 `domain.snake_case` 源（当前内容侧可用 `task.state_changed`）。
 - `effect_key` / `condition_key` 在**引擎初始化加载期**校验，未注册即加载失败（fail-fast，无回退）。
 - 内容 JSON camelCase；地图顶层 PascalCase 但 `Variables` 例外。
-- scoped 任务实例查询用 `TaskRuntimeService.CaptureViews()`（`TryGetState` 只查默认 scope）。
+- 任务可按"scope 宿主实体"分组（活动选项创建的任务会挂在活动实体上）。`CaptureViews()` 返回**全部**任务实例视图，跨 scope 查询一律用它；`TryGetState(id)` 只查无宿主的默认 scope，查活动建的任务会漏。
 
 ## 5. 验收纪律
 
