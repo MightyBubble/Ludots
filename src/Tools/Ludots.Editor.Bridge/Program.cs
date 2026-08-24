@@ -1,5 +1,7 @@
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
@@ -369,6 +371,78 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}", async (string modId, string mapId, 
     }
 
     return Results.Ok(new { ok = true, path = outFile });
+});
+
+app.MapGet("/api/mods/{modId}/gas/graphs/{graphId}/map-variables", (string modId, string graphId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var maps = EditorRepo.ListGraphMapVariableHosts(ctx, graphId);
+        return Results.Ok(new { ok = true, graphId, maps });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapPut("/api/mods/{modId}/maps/{mapId}/variables", async (string modId, string mapId, HttpRequest req) =>
+{
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try
+    {
+        ctx = EditorRepo.CreateContext(repoRoot, modId);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    JsonNode? root;
+    try { root = JsonNode.Parse(string.IsNullOrWhiteSpace(body) ? "null" : body); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed variables JSON: {ex.Message}" }); }
+    if (root is not JsonObject payload || payload["variables"] is not JsonNode variablesNode)
+    {
+        return Results.BadRequest(new { ok = false, error = "Body must be an object with a 'variables' array." });
+    }
+
+    List<MapVariableDeclaration> declarations;
+    try
+    {
+        declarations = MapVariableDeclarations.Parse(variablesNode, mapId);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    string outFile = EditorRepo.ResolveWritableMapConfigPath(ctx, mapId);
+    if (!File.Exists(outFile))
+    {
+        return Results.NotFound(new { ok = false, error = $"Writable map file not found: {mapId}", path = outFile });
+    }
+
+    string previous = File.ReadAllText(outFile);
+    try
+    {
+        EditorRepo.WriteMapVariablesSurgical(outFile, declarations);
+        return Results.Ok(new
+        {
+            ok = true,
+            path = outFile,
+            variables = EditorRepo.ProjectMapVariables(declarations),
+        });
+    }
+    catch (Exception ex)
+    {
+        File.WriteAllText(outFile, previous);
+        return Results.BadRequest(new { ok = false, error = ex.Message, path = outFile });
+    }
 });
 
 app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
@@ -1565,6 +1639,54 @@ app.MapDelete("/api/bindings/{name}", (string name) =>
     }
 });
 
+app.MapGet("/api/gas/graph-catalog", () =>
+{
+    var catalog = new List<object>();
+    foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        var graphsPath = Path.Combine(mod.RootPath, "assets", "GAS", "graphs.json");
+        if (!File.Exists(graphsPath))
+            continue;
+
+        if (!TryReadGraphsArray(graphsPath, out var arr, out _))
+        {
+            catalog.Add(new
+            {
+                id = mod.Id,
+                name = string.IsNullOrWhiteSpace(mod.Name) ? mod.Id : mod.Name,
+                path = graphsPath,
+                error = $"graphs.json unreadable: {graphsPath}",
+                graphs = Array.Empty<object>(),
+            });
+            continue;
+        }
+
+        if (!TryCollectCatalogGraphs(arr, graphsPath, out var graphs, out var collectError))
+        {
+            catalog.Add(new
+            {
+                id = mod.Id,
+                name = string.IsNullOrWhiteSpace(mod.Name) ? mod.Id : mod.Name,
+                path = graphsPath,
+                error = collectError,
+                graphs,
+            });
+            continue;
+        }
+
+        catalog.Add(new
+        {
+            id = mod.Id,
+            name = string.IsNullOrWhiteSpace(mod.Name) ? mod.Id : mod.Name,
+            path = graphsPath,
+            error = (string?)null,
+            graphs,
+        });
+    }
+
+    return Results.Ok(new { ok = true, mods = catalog });
+});
+
 app.MapGet("/api/mods/{modId}/gas/graphs", (string modId) =>
 {
     if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
@@ -1573,17 +1695,8 @@ app.MapGet("/api/mods/{modId}/gas/graphs", (string modId) =>
     if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
         return readError!;
 
-    var graphs = new List<object>(arr.Count);
-    for (int i = 0; i < arr.Count; i++)
-    {
-        if (arr[i] is not JsonObject obj)
-            continue;
-        var id = obj["id"]?.GetValue<string>();
-        var kind = obj["kind"]?.GetValue<string>();
-        if (string.IsNullOrWhiteSpace(id))
-            continue;
-        graphs.Add(new { id, kind = kind ?? string.Empty });
-    }
+    if (!TryCollectCatalogGraphs(arr, graphsPath, out var graphs, out var collectError))
+        return Results.BadRequest(new { ok = false, error = collectError, graphs, path = graphsPath });
 
     return Results.Ok(new { ok = true, graphs, path = graphsPath });
 });
@@ -1674,7 +1787,14 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
         });
     }
 
-    return Results.Ok(new { ok = true, kind = graphKind.ToString(), descriptors, authoringSugars });
+    return Results.Ok(new
+    {
+        ok = true,
+        kind = graphKind.ToString(),
+        descriptors,
+        authoringSugars,
+        panelAnchors = PanelAnchorCatalog.All,
+    });
 });
 
 static string[] ControlOutputPorts(GraphNodeOp op)
@@ -1684,6 +1804,7 @@ static string[] ControlOutputPorts(GraphNodeOp op)
         GraphNodeOp.Call => new[] { GraphControlFlowPorts.Call, GraphControlFlowPorts.Next },
         GraphNodeOp.JumpIfFalse => new[] { GraphControlFlowPorts.True, GraphControlFlowPorts.False },
         GraphNodeOp.Return or GraphNodeOp.HaltReturnInt => Array.Empty<string>(),
+        GraphNodeOp.ConstInt or GraphNodeOp.ConstFloat or GraphNodeOp.ConstBool => Array.Empty<string>(),
         _ => new[] { GraphControlFlowPorts.Next },
     };
 
@@ -2035,6 +2156,31 @@ static bool TryResolveModRoot(LauncherService launcher, string modId, out string
     }
 
     modRoot = mod.RootPath;
+    return true;
+}
+
+static bool TryCollectCatalogGraphs(JsonArray arr, string graphsPath, out List<object> graphs, out string? error)
+{
+    graphs = new List<object>(arr.Count);
+    for (int i = 0; i < arr.Count; i++)
+    {
+        if (arr[i] is not JsonObject obj)
+        {
+            error = $"{graphsPath} graphs[{i}] is not an object.";
+            return false;
+        }
+
+        var id = obj["id"]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            error = $"{graphsPath} graphs[{i}] is missing id.";
+            return false;
+        }
+
+        graphs.Add(new { id, kind = obj["kind"]?.GetValue<string>() ?? string.Empty });
+    }
+
+    error = null;
     return true;
 }
 
@@ -2631,6 +2777,10 @@ static class EditorRepo
     }
 
     public sealed record MergedMapResult(bool Found, Ludots.Core.Config.MapConfig Map, List<string> Sources);
+
+    public sealed record MapVariableAuthoringDto(string Name, string Type, double Initial, bool Phase);
+
+    public sealed record GraphMapVariableHostDto(string MapId, string Path, IReadOnlyList<MapVariableAuthoringDto> Variables);
     public sealed record BoardMutationResult(
         Ludots.Core.Config.MapConfig Map,
         MapInfo MapInfo,
@@ -2952,6 +3102,194 @@ static class EditorRepo
     {
         var mod = ctx.ModsById[ctx.TargetModId];
         return Path.Combine(mod.RootPath, "assets", "Maps", $"{SanitizeId(mapId)}.json");
+    }
+
+    public static List<GraphMapVariableHostDto> ListGraphMapVariableHosts(ModContext ctx, string graphId)
+    {
+        if (string.IsNullOrWhiteSpace(graphId))
+        {
+            throw new InvalidOperationException("Graph id is required.");
+        }
+
+        var hostsByMapId = new Dictionary<string, GraphMapVariableHostDto>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<string> mapIds = DiscoverMaps(ctx);
+        for (int i = 0; i < mapIds.Count; i++)
+        {
+            string mapId = mapIds[i];
+            IReadOnlyList<string> paths = ListMapConfigPaths(ctx, mapId);
+            for (int p = 0; p < paths.Count; p++)
+            {
+                string path = paths[p];
+                JsonNode? root = JsonNode.Parse(File.ReadAllText(path));
+                if (root is not JsonObject obj || !JsonObjectMountsGraph(obj, graphId))
+                {
+                    continue;
+                }
+
+                JsonNode? variablesNode = null;
+                foreach (KeyValuePair<string, JsonNode?> field in obj)
+                {
+                    if (string.Equals(field.Key, "Variables", StringComparison.OrdinalIgnoreCase))
+                    {
+                        variablesNode = field.Value;
+                        break;
+                    }
+                }
+
+                hostsByMapId[mapId] = new GraphMapVariableHostDto(
+                    mapId,
+                    path,
+                    ProjectMapVariables(MapVariableDeclarations.Parse(variablesNode, mapId)));
+            }
+        }
+
+        return hostsByMapId.Values.ToList();
+    }
+
+    public static List<string> ListMapConfigPaths(ModContext ctx, string mapId)
+    {
+        var paths = new List<string>();
+        void Add(string path)
+        {
+            if (File.Exists(path))
+            {
+                paths.Add(path);
+            }
+        }
+
+        Add(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Maps", $"{mapId}.json"));
+        Add(Path.Combine(ctx.RepoRoot, "assets", "Maps", $"{mapId}.json"));
+        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        {
+            var mod = ctx.ModsById[ctx.LoadOrder[i]];
+            Add(Path.Combine(mod.RootPath, "assets", "Configs", "Maps", $"{mapId}.json"));
+            Add(Path.Combine(mod.RootPath, "assets", "Maps", $"{mapId}.json"));
+        }
+
+        return paths;
+    }
+
+    public static IReadOnlyList<MapVariableAuthoringDto> ProjectMapVariables(IReadOnlyList<MapVariableDeclaration>? declarations)
+    {
+        if (declarations == null || declarations.Count == 0)
+        {
+            return Array.Empty<MapVariableAuthoringDto>();
+        }
+
+        var rows = new MapVariableAuthoringDto[declarations.Count];
+        for (int i = 0; i < declarations.Count; i++)
+        {
+            MapVariableDeclaration declaration = declarations[i];
+            rows[i] = new MapVariableAuthoringDto(
+                declaration.Name,
+                declaration.Type == MapVariableType.Float ? "float" : "int",
+                declaration.Initial ?? 0,
+                declaration.Phase);
+        }
+
+        return rows;
+    }
+
+    public static bool JsonObjectMountsGraph(JsonObject map, string graphId)
+    {
+        JsonNode? mountsNode = null;
+        foreach (KeyValuePair<string, JsonNode?> field in map)
+        {
+            if (string.Equals(field.Key, "TriggerGraphs", StringComparison.OrdinalIgnoreCase))
+            {
+                mountsNode = field.Value;
+                break;
+            }
+        }
+
+        if (mountsNode is not JsonArray mounts)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < mounts.Count; i++)
+        {
+            if (mounts[i] is not JsonObject mount)
+            {
+                continue;
+            }
+
+            if (TryReadObjectString(mount, "graph", out string? mounted) &&
+                string.Equals(mounted, graphId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static void WriteMapVariablesSurgical(string path, IReadOnlyList<MapVariableDeclaration> declarations)
+    {
+        JsonNode? root = JsonNode.Parse(File.ReadAllText(path));
+        if (root is not JsonObject obj)
+        {
+            throw new InvalidOperationException($"Map file '{path}' must be a JSON object.");
+        }
+
+        string key = "Variables";
+        foreach (KeyValuePair<string, JsonNode?> field in obj)
+        {
+            if (string.Equals(field.Key, "Variables", StringComparison.OrdinalIgnoreCase))
+            {
+                key = field.Key;
+                break;
+            }
+        }
+
+        obj[key] = SerializeMapVariables(declarations);
+        File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    public static JsonArray SerializeMapVariables(IReadOnlyList<MapVariableDeclaration> declarations)
+    {
+        var array = new JsonArray();
+        for (int i = 0; i < declarations.Count; i++)
+        {
+            MapVariableDeclaration declaration = declarations[i];
+            var item = new JsonObject
+            {
+                ["name"] = declaration.Name,
+                ["type"] = declaration.Type == MapVariableType.Float ? "float" : "int",
+                ["initial"] = declaration.Initial ?? 0,
+            };
+            if (declaration.Phase)
+            {
+                item["phase"] = true;
+            }
+
+            array.Add(item);
+        }
+
+        return array;
+    }
+
+    private static bool TryReadObjectString(JsonObject obj, string name, out string? value)
+    {
+        foreach (KeyValuePair<string, JsonNode?> field in obj)
+        {
+            if (!string.Equals(field.Key, name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (field.Value is JsonValue jsonValue && jsonValue.TryGetValue(out string? text))
+            {
+                value = text;
+                return true;
+            }
+
+            value = null;
+            return false;
+        }
+
+        value = null;
+        return false;
     }
 
     public static BoardMutationResult CreateBoard(ModContext ctx, string mapId, BoardCreateRequest request)
