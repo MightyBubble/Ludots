@@ -367,7 +367,18 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _probeDeepNextTimestamp = now + (Stopwatch.Frequency * 2);
         try
         {
-            bool ownCore = TryResolveOwnCore(localPlayerId, out _);
+            bool ownCore = TryResolveOwnCore(localPlayerId, out Entity probeCore);
+            string coreInfo;
+            if (ownCore &&
+                _engine.World.TryGet(probeCore, out CullState coreCull) &&
+                _engine.World.TryGet(probeCore, out PresentationOwnerHasPresenterPayload corePayload))
+            {
+                coreInfo = $"coreVis={coreCull.IsVisible} coreLod={coreCull.LOD} payloadCount={corePayload.Count} rootCount={corePayload.RootCount} singleRoot={corePayload.SingleRootPresenter != Entity.Null}";
+            }
+            else
+            {
+                coreInfo = "coreVis=n/a";
+            }
             int harvesters = CountOwned<ClientHarvesterMarker>(localPlayerId);
             int infantry = CountOwned<ClientInfantryMarker>(localPlayerId);
             int crystals = CountClientCrystals();
@@ -394,7 +405,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             {
                 presentCam = "ERR:" + ex.GetType().Name;
             }
-            Console.WriteLine($"[PROBE] deep gates: side={sideIndex} ownCore={ownCore} harvesters={harvesters} infantry={infantry} crystals={crystals} matchState={matchState} bothSeats={bothSeats} ovFocus={ov.HasFocusTarget} ovReady={ov.IsReady} ovTarget=({ov.FocusTargetCm.X},{ov.FocusTargetCm.Y}) presentCam={presentCam} {camInfo}");
+            Console.WriteLine($"[PROBE] deep gates: side={sideIndex} ownCore={ownCore} {coreInfo} harvesters={harvesters} infantry={infantry} crystals={crystals} matchState={matchState} bothSeats={bothSeats} ovFocus={ov.HasFocusTarget} ovReady={ov.IsReady} ovTarget=({ov.FocusTargetCm.X},{ov.FocusTargetCm.Y}) presentCam={presentCam} {camInfo}");
         }
         catch (Exception ex)
         {
