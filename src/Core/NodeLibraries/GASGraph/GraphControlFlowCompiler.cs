@@ -58,7 +58,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// <summary>
     /// Compiles L1 ControlFlow documents (all GraphKinds) into <see cref="GraphInstruction"/> using GraphNodeOp.
     /// BranchBool / SwitchInt / While / Until are compile-time sugar only (not GraphNodeOp values).
-    /// Wait is an author alias for <see cref="GraphNodeOp.Yield"/> (Script only).
+    /// Wait is an author alias for <see cref="GraphNodeOp.Yield"/> (Script and TriggerGraph).
     /// </summary>
     public static partial class GraphControlFlowCompiler
     {
@@ -187,7 +187,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var ops = new AuthoredOp[nodes.Count];
             ParseOps(nodes, ops, graphKind, graphId, diagnostics);
 
-            if (!string.IsNullOrWhiteSpace(document.Entry) &&
+            List<TriggerGraphEntryConfig> triggerGraphEntries = ValidateTriggerGraphEntries(
+                document, nodeIndices, graphKind, graphId, diagnostics);
+
+            if (graphKind != GraphKind.TriggerGraph &&
+                !string.IsNullOrWhiteSpace(document.Entry) &&
                 !nodeIndices.ContainsKey(document.Entry))
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
@@ -206,7 +210,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AllocateOpScratches(nodes, ops, boolScratches, registers, graphId, diagnostics);
             AllocateDroppedOutputs(nodes, ops, outputRegisters, droppedRegisters, registers, graphId, diagnostics);
             ValidateRequiredEdges(nodes, ops, graphKind, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-            DetectUnreachable(document.Entry, nodes, document.ControlEdges, graphId, diagnostics);
+            DetectUnreachable(EntryRoots(document, graphKind, triggerGraphEntries), nodes, document.ControlEdges, graphId, diagnostics);
 
             var sugarScratches = new SugarScratch[nodes.Count];
             AllocateSugarScratches(nodes, ops, sugarScratches, registers, graphId, diagnostics);
@@ -230,7 +234,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             // Prefix jump to entry so entry need not be first authored node.
-            int entryBody = layouts[nodeIndices[document.Entry]].BodyIndex + 1; // +1 for prefix jump slot
+            // TriggerGraph graphs dispatch through per-entry PCs; the prefix targets the first entry's start node.
+            string primaryEntryNodeId = graphKind == GraphKind.TriggerGraph ? triggerGraphEntries[0].Start : document.Entry;
+            int entryBody = layouts[nodeIndices[primaryEntryNodeId]].BodyIndex + 1; // +1 for prefix jump slot
             for (int i = 0; i < layouts.Length; i++)
             {
                 layouts[i] = new NodeLayout(layouts[i].BodyIndex + 1, layouts[i].InstructionCount);
@@ -243,7 +249,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Op = (ushort)GraphNodeOp.Jump,
                 Imm = entryBody - 1 // relative: after fetch pc=1, 1+Imm = entryBody
             };
-            sources[0] = new GraphInstructionSource(graphId, document.Entry, nameof(GraphNodeOp.Jump), GraphControlFlowPorts.Enter);
+            sources[0] = new GraphInstructionSource(graphId, primaryEntryNodeId, nameof(GraphNodeOp.Jump), GraphControlFlowPorts.Enter);
+
+            TriggerGraphEntry[] compiledEntries = CompileTriggerGraphEntryTable(
+                triggerGraphEntries, nodeIndices, layouts, graphKind);
 
             var definedInts = new bool[GraphVmLimits.MaxIntRegisters];
             var definedBools = new bool[GraphVmLimits.MaxBoolRegisters];
@@ -297,13 +306,61 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             var sourceMap = new GraphInstructionSourceMap(graphId, sources);
-            var package = new GraphProgramPackage(graphId, symbols.ToArray(), program, graphKind);
+            var package = new GraphProgramPackage(graphId, symbols.ToArray(), program, graphKind, compiledEntries);
             return new GraphControlFlowCompileResult(
                 program,
                 sourceMap,
                 diagnostics,
                 package,
                 outputSchema);
+        }
+
+        private static TriggerGraphEntry[] CompileTriggerGraphEntryTable(
+            List<TriggerGraphEntryConfig> validatedEntries,
+            Dictionary<string, int> nodeIndices,
+            NodeLayout[] layouts,
+            GraphKind graphKind)
+        {
+            if (graphKind != GraphKind.TriggerGraph)
+            {
+                return Array.Empty<TriggerGraphEntry>();
+            }
+
+            var compiled = new TriggerGraphEntry[validatedEntries.Count];
+            for (int i = 0; i < validatedEntries.Count; i++)
+            {
+                TriggerGraphEntryConfig entry = validatedEntries[i];
+                compiled[i] = new TriggerGraphEntry(
+                    entry.Label,
+                    entry.Event,
+                    layouts[nodeIndices[entry.Start]].BodyIndex,
+                    entry.Once,
+                    entry.ParsedFilters,
+                    entry.NormalizedRefire);
+            }
+
+            return compiled;
+        }
+
+        private static string[] EntryRoots(
+            GraphControlFlowDocument document,
+            GraphKind graphKind,
+            List<TriggerGraphEntryConfig> validatedEntries)
+        {
+            if (graphKind != GraphKind.TriggerGraph)
+            {
+                return string.IsNullOrWhiteSpace(document.Entry)
+                    ? Array.Empty<string>()
+                    : new[] { document.Entry };
+            }
+
+            var roots = new string[validatedEntries.Count];
+            for (int i = 0; i < validatedEntries.Count; i++)
+            {
+                roots[i] = validatedEntries[i].Start;
+            }
+
+            return roots;
         }
 
         private static GraphKind ParseControlFlowKind(
@@ -339,10 +396,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"{GraphKindLabel(graphKind)} document requires a non-empty id."));
             }
 
-            if (string.IsNullOrWhiteSpace(document.Entry))
+            if (graphKind == GraphKind.TriggerGraph)
             {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
-                    $"{GraphKindLabel(graphKind)} document requires an entry node id."));
+                if (!string.IsNullOrWhiteSpace(document.Entry))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.ForbiddenEntryTable,
+                        $"TriggerGraph graph '{graphId}' must not declare a single 'entry' start node; author the 'entries' table instead.",
+                        document.Entry));
+                }
+
+                if (document.Entries == null || document.Entries.Count == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"TriggerGraph graph '{graphId}' requires a non-empty 'entries' table."));
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(document.Entry))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"{GraphKindLabel(graphKind)} document requires an entry node id."));
+                }
+
+                if (document.Entries != null && document.Entries.Count > 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.ForbiddenEntryTable,
+                        $"Graph '{graphId}' kind '{graphKind}' must not declare 'entries'; the entry table is TriggerGraph-only."));
+                }
             }
 
             if (document.Nodes == null || document.Nodes.Count == 0)
@@ -350,6 +431,170 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.EmptyGraph,
                     $"{GraphKindLabel(graphKind)} document requires at least one node."));
             }
+        }
+
+        private static List<TriggerGraphEntryConfig> ValidateTriggerGraphEntries(
+            GraphControlFlowDocument document,
+            Dictionary<string, int> nodeIndices,
+            GraphKind graphKind,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (graphKind != GraphKind.TriggerGraph)
+            {
+                return new List<TriggerGraphEntryConfig>();
+            }
+
+            List<TriggerGraphEntryConfig> authored = document.Entries ?? new List<TriggerGraphEntryConfig>();
+            var validated = new List<TriggerGraphEntryConfig>(authored.Count);
+            var seenLabels = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < authored.Count; i++)
+            {
+                if (authored[i] == null)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"TriggerGraph graph '{graphId}' entries[{i}] is null."));
+                    continue;
+                }
+
+                string label = (authored[i].Label ?? string.Empty).Trim();
+                string shown = label.Length > 0 ? label : $"entries[{i}]";
+                if (label.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"TriggerGraph graph '{graphId}' entries[{i}] requires a non-empty 'label'."));
+                }
+                else if (!seenLabels.Add(label))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.DuplicateEntryLabel,
+                        $"TriggerGraph graph '{graphId}' has duplicate entry label '{label}'.", label));
+                }
+
+                string eventName = (authored[i].Event ?? string.Empty).Trim();
+                if (eventName.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' requires a non-empty 'event' string."));
+                }
+
+                string start = (authored[i].Start ?? string.Empty).Trim();
+                if (start.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' requires a 'start' node id."));
+                }
+                else if (!nodeIndices.ContainsKey(start))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' start node '{start}' does not exist.", start));
+                }
+
+                validated.Add(new TriggerGraphEntryConfig
+                {
+                    Label = label,
+                    Event = eventName,
+                    Start = start,
+                    Once = authored[i].Once,
+                    NormalizedRefire = NormalizeEntryRefire(authored[i].Refire, graphId, shown, diagnostics),
+                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics)
+                });
+            }
+
+            return validated;
+        }
+
+        private static string NormalizeEntryRefire(
+            string? authored,
+            string graphId,
+            string shown,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(authored))
+            {
+                return TriggerGraphEntry.RefireIgnore;
+            }
+
+            string trimmed = authored.Trim();
+            if (trimmed != TriggerGraphEntry.RefireIgnore && trimmed != TriggerGraphEntry.RefireRestart)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryRefire,
+                    $"TriggerGraph graph '{graphId}' entry '{shown}' field 'refire' must be \"ignore\" or \"restart\".", authored));
+                return TriggerGraphEntry.RefireIgnore;
+            }
+
+            return trimmed;
+        }
+
+        private static TriggerGraphEntryFilters ParseEntryFilters(
+            TriggerGraphEntryFiltersConfig? filters,
+            string graphId,
+            string shown,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (filters == null)
+            {
+                return default;
+            }
+
+            string? region = null;
+            if (filters.Region != null)
+            {
+                region = filters.Region.Trim();
+                if (region.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'region' requires a non-empty string.", filters.Region));
+                }
+            }
+
+            string? tag = null;
+            if (filters.Tag != null)
+            {
+                tag = filters.Tag.Trim();
+                if (tag.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'tag' requires a non-empty string.", filters.Tag));
+                }
+            }
+
+            TriggerGraphEntryFilterDirection? direction = null;
+            if (filters.Direction != null)
+            {
+                string directionText = filters.Direction.Trim();
+                if (string.Equals(directionText, "cross_above", StringComparison.Ordinal))
+                {
+                    direction = TriggerGraphEntryFilterDirection.CrossAbove;
+                }
+                else if (string.Equals(directionText, "cross_below", StringComparison.Ordinal))
+                {
+                    direction = TriggerGraphEntryFilterDirection.CrossBelow;
+                }
+                else
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'direction' must be 'cross_above' or 'cross_below' (got '{directionText}').", filters.Direction));
+                }
+            }
+
+            if (filters.Threshold.HasValue != direction.HasValue)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                    $"TriggerGraph graph '{graphId}' entry '{shown}' filters fields 'threshold' and 'direction' must be declared together."));
+            }
+
+            string? action = null;
+            if (filters.Action != null)
+            {
+                action = filters.Action.Trim();
+                if (action.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'action' must be a non-empty action id.", filters.Action));
+                }
+            }
+
+            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction, action);
         }
 
         private static Dictionary<string, int> BuildNodeIndex(
@@ -392,7 +637,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     if (!IsBranchBoolAuthorable(graphKind))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"{BranchBoolOp} is Script/Effect compile-time sugar only.", node.Id));
+                            $"{BranchBoolOp} is Script/Effect/TriggerGraph compile-time sugar only.", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -403,10 +648,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (string.Equals(node.Op, SwitchIntOp, StringComparison.Ordinal))
                 {
-                    if (graphKind != GraphKind.Script)
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"{SwitchIntOp} is Script compile-time sugar only.", node.Id));
+                            $"{SwitchIntOp} is Script/TriggerGraph compile-time sugar only.", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -417,10 +662,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
                 {
-                    if (graphKind != GraphKind.Script)
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"While is Script-only author sugar (kind='{graphKind}').", node.Id));
+                            $"While is Script/TriggerGraph-only author sugar (kind='{graphKind}').", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -431,10 +676,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (string.Equals(node.Op, UntilOp, StringComparison.Ordinal))
                 {
-                    if (graphKind != GraphKind.Script)
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"Until is Script-only author sugar (kind='{graphKind}').", node.Id));
+                            $"Until is Script/TriggerGraph-only author sugar (kind='{graphKind}').", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -443,13 +688,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                // Wait is author alias for Yield — Script CF only; never a second waiter opcode.
-                if (string.Equals(node.Op, WaitOp, StringComparison.Ordinal))
+                if (string.Equals(node.Op, GraphAuthoringSugar.Break, StringComparison.Ordinal))
                 {
-                    if (graphKind != GraphKind.Script)
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"Wait is Script-only author alias for Yield (kind='{graphKind}').", node.Id));
+                            $"{GraphAuthoringSugar.Break} is Script/TriggerGraph compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    // Break is an author-facing name for an unconditional jump to an
+                    // explicitly authored exit. There is no implicit loop-scope lookup;
+                    // the target edge keeps control flow visible and rejects dangling breaks.
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.Jump);
+                    continue;
+                }
+
+                // Wait is author alias for Yield — Script/TriggerGraph CF only; never a second waiter opcode.
+                if (string.Equals(node.Op, WaitOp, StringComparison.Ordinal))
+                {
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"Wait is Script/TriggerGraph-only author alias for Yield (kind='{graphKind}').", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -458,7 +720,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                if (!GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp) ||
+                bool parsedNodeOp = GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp);
+                if (!parsedNodeOp ||
                     !IsControlFlowAuthorable(graphKind, nodeOp))
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
@@ -472,7 +735,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         private static bool IsBranchBoolAuthorable(GraphKind graphKind)
-            => graphKind is GraphKind.Script or GraphKind.Effect;
+            => graphKind is GraphKind.Script or GraphKind.Effect or GraphKind.TriggerGraph;
 
         private static bool IsControlFlowAuthorable(GraphKind graphKind, GraphNodeOp op)
         {
@@ -649,10 +912,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 or GraphNodeOp.InvokeScript;
 
         private static bool UsesLinearDescriptorEmit(GraphKind graphKind, AuthoredOp op)
-            => graphKind == GraphKind.Script &&
+            => graphKind is GraphKind.Script or GraphKind.TriggerGraph &&
                op.Kind == AuthoredOpKind.GraphNodeOp &&
                !IsScriptNativeDialectOp(op.NodeOp) &&
-               GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, op.NodeOp);
+               GraphOpDescriptorTable.IsAuthorable(graphKind, op.NodeOp);
 
         private static bool NeedsDroppedOutput(GraphNodeOp op)
             => IsSpatialCapacityQuery(op) || IsRelationshipCapacityQuery(op);
@@ -995,17 +1258,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         private static void DetectUnreachable(
-            string entry,
+            string[] entryRoots,
             List<GraphControlFlowNode> nodes,
             List<GraphControlFlowEdge>? controlEdges,
             string graphId,
             List<GraphDiagnostic> diagnostics)
         {
-            if (string.IsNullOrWhiteSpace(entry))
-            {
-                return;
-            }
-
             var adjacency = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             List<GraphControlFlowEdge> edges = controlEdges ?? new List<GraphControlFlowEdge>();
             for (int i = 0; i < edges.Count; i++)
@@ -1027,12 +1285,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             var reachable = new HashSet<string>(StringComparer.Ordinal);
             var stack = new Stack<string>();
-            if (!reachable.Add(entry))
+            for (int i = 0; i < entryRoots.Length; i++)
             {
-                return;
+                if (string.IsNullOrWhiteSpace(entryRoots[i]))
+                {
+                    continue;
+                }
+
+                if (reachable.Add(entryRoots[i]))
+                {
+                    stack.Push(entryRoots[i]);
+                }
             }
 
-            stack.Push(entry);
             while (stack.Count > 0)
             {
                 string current = stack.Pop();

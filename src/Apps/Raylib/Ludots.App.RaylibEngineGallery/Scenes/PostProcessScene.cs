@@ -8,8 +8,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// <summary>后处理调色：RaylibPostProcessRenderer 世界帧 RT，曝光/对比/饱和/暗角随时间正弦调制。</summary>
     public sealed class PostProcessScene : IEngineScene
     {
+        private readonly GalleryLitProps _litProps = new();
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibPostProcessRenderer _postProcess = new();
         private RaylibPostProcessConfig _baseConfig = RaylibPostProcessConfig.CreateDefault();
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "postprocess";
@@ -18,7 +21,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
             _baseConfig = RaylibPostProcessConfig.CreateDefault();
+            _shadowMap = new RaylibDirectionalShadowMap();
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
@@ -35,22 +40,18 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 VignetteStrength = 0.05f + (0.38f * (0.5f + (0.5f * MathF.Sin(t * 1.1f + 0.6f)))),
             };
 
-            _postProcess.BeginWorldFrame(Rl.GetScreenWidth(), Rl.GetScreenHeight(), new Color(16, 20, 30, 255), config);
+            _litProps.Lighting.SetDayPhase(_litProps.DayPhase01);
+            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, Vector3.Zero, 30f);
+            DrawScenePropShadows(t);
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_litProps.Lighting, sizeMeters: 1000f);
+            _postProcess.BeginWorldFrame(Rl.GetScreenWidth(), Rl.GetScreenHeight(), skyConfig.Skybox.ClearColor, config);
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.06f);
 
             Rl.BeginMode3D(camera);
-            Rl.DrawGrid(24, 3f);
-            for (int i = 0; i < 8; i++)
-            {
-                float angle = (i * MathF.Tau / 8f) + (t * 0.3f);
-                var position = new Vector3(MathF.Cos(angle) * 12f, 1.6f + (i * 0.22f), MathF.Sin(angle) * 12f);
-                byte r = (byte)(90 + (i * 20));
-                byte g = (byte)(140 - (i * 12));
-                byte b = (byte)(200 - (i * 18));
-                Rl.DrawCube(position, 2.6f, 2.6f + (i * 0.2f), 2.6f, new Color(r, g, b, 255));
-                Rl.DrawSphere(position + new Vector3(0f, 3.2f, 0f), 0.8f, new Color(240, 210, 120, 255));
-            }
-
-            Rl.DrawCube(new Vector3(0f, 0.4f, 0f), 5f, 0.8f, 5f, new Color(70, 76, 92, 255));
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+            DrawSceneProps(t);
             Rl.EndMode3D();
 
             _postProcess.EndWorldFrame(totalTimeSeconds, config);
@@ -62,6 +63,42 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 GalleryColors.RayWhite);
         }
 
+        private void DrawSceneProps(float t)
+        {
+            _litProps.DrawCube(new Vector3(0f, -0.08f, 0f), new Vector3(42f, 0.16f, 42f), GalleryColors.ShadowReceiverGray, roughness: 0.9f);
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = (i * MathF.Tau / 8f) + (t * 0.3f);
+                var position = new Vector3(MathF.Cos(angle) * 12f, 1.6f + (i * 0.22f), MathF.Sin(angle) * 12f);
+                byte r = (byte)(90 + (i * 20));
+                byte g = (byte)(140 - (i * 12));
+                byte b = (byte)(200 - (i * 18));
+                _litProps.DrawCube(
+                    position,
+                    new Vector3(2.6f, 2.6f + (i * 0.2f), 2.6f),
+                    new Vector4(r / 255f, g / 255f, b / 255f, 1f));
+                _litProps.DrawSphere(
+                    position + new Vector3(0f, 3.2f, 0f),
+                    0.8f,
+                    new Vector4(0.94f, 0.82f, 0.47f, 1f));
+            }
+
+            _litProps.DrawCube(new Vector3(0f, 0.4f, 0f), new Vector3(5f, 0.8f, 5f), new Vector4(0.27f, 0.30f, 0.36f, 1f));
+        }
+
+        private void DrawScenePropShadows(float t)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = (i * MathF.Tau / 8f) + (t * 0.3f);
+                var position = new Vector3(MathF.Cos(angle) * 12f, 1.6f + (i * 0.22f), MathF.Sin(angle) * 12f);
+                _litProps.DrawCubeShadow(_shadowMap, position, new Vector3(2.6f, 2.6f + (i * 0.2f), 2.6f));
+                _litProps.DrawSphereShadow(_shadowMap, position + new Vector3(0f, 3.2f, 0f), 0.8f);
+            }
+
+            _litProps.DrawCubeShadow(_shadowMap, new Vector3(0f, 0.4f, 0f), new Vector3(5f, 0.8f, 5f));
+        }
+
         public void Dispose()
         {
             if (_disposed)
@@ -70,7 +107,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _postProcess?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
+            _litProps.Dispose();
             _postProcess = null!;
+            _shadowMap = null!;
             _disposed = true;
         }
     }

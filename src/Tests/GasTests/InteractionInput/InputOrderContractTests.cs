@@ -355,7 +355,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     },
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1);
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1, "seat.0");
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("TestMobaMappingMod", root);
@@ -1660,10 +1660,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 });
             system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
             {
-                int sharedOrderId = nextOrderId++;
                 for (int i = 0; i < batch.Length; i++)
                 {
-                    batch[i].OrderId = sharedOrderId;
+                    batch[i].OrderId = nextOrderId++;
                     submitted.Add(batch[i]);
                 }
 
@@ -1676,7 +1675,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 Assert.That(submitted.Count, Is.EqualTo(selectionCount));
                 Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
-                Assert.That(system.LastActivationResult.OrderId, Is.GreaterThan(0));
+                Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(submitted[0].OrderId));
+                Assert.That(submitted.Select(static order => order.OrderId), Is.Unique);
             }
             else
             {
@@ -3280,7 +3280,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
         private static string FindRepoRoot()
         {
-            string dir = TestContext.CurrentContext.TestDirectory;
+            string? dir = TestContext.CurrentContext.TestDirectory;
             while (!string.IsNullOrWhiteSpace(dir))
             {
                 if (File.Exists(Path.Combine(dir, "src", "Core", "Ludots.Core.csproj")))

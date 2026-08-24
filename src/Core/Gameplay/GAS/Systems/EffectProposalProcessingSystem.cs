@@ -64,21 +64,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public const string InputRequestTagMissingError = "GAS.RESPONSE_CHAIN.ERR.InputRequestTagMissing";
         public const string OrderRequestQueueFullError = "GAS.RESPONSE_CHAIN.ERR.OrderRequestQueueFull";
 
-        private readonly EffectRequestQueue _queue;
-        private readonly GasBudget _budget;
-        private readonly EffectTemplateRegistry _templates;
-        private readonly InputRequestQueue _inputRequests;
-        private readonly OrderQueue _chainOrders;
-        private readonly ResponseChainTelemetryBuffer _telemetry;
-        private readonly OrderRequestQueue _orderRequests;
+        private readonly EffectRequestQueue _queue = null!;
+        private readonly GasBudget? _budget;
+        private readonly EffectTemplateRegistry? _templates;
+        private readonly InputRequestQueue? _inputRequests;
+        private readonly OrderQueue? _chainOrders;
+        private readonly ResponseChainTelemetryBuffer? _telemetry;
+        private readonly OrderRequestQueue? _orderRequests;
         private readonly ResponseChainOrderTypes _responseChainOrderTypes;
-        private readonly GasPresentationEventBuffer _presentationEvents;
-        private readonly TagOps _tagOps;
+        private readonly GasPresentationEventBuffer? _presentationEvents;
+        private readonly TagOps? _tagOps;
 
         // Phase Graph execution (optional)
-        private readonly EffectPhaseExecutor _phaseExecutor;
-        private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
-        private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
+        private readonly EffectPhaseExecutor? _phaseExecutor;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi? _graphApi;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? _graphApiHost;
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new();
         private readonly EffectPhaseSideEffectTransaction _instantPhaseTransaction;
         private readonly RootBudgetTable _fanOutBudget;
@@ -317,15 +317,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null)
             : base(world)
         {
-            _queue = queue;
+            _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
             _ownsFanOutBudget = fanOutBudget == null;
             _instantFanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
-            _queue?.TrackResponseChainListenerLifecycle(world);
+            _queue.TrackResponseChainListenerLifecycle(world);
             _budget = budget;
             _templates = templates;
             _inputRequests = inputRequests;
@@ -347,7 +347,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 spawnRequests,
                 presentationEvents,
                 Math.Max(1, fanOutCommandCapacity),
-                _fanOutBudget);
+                _fanOutBudget,
+                poseAuthorityArbiter);
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _instantFanOutCommands;
@@ -361,6 +362,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
             _builtinRuntime.TagOps = _tagOps;
             _builtinRuntime.OrderIntake = orderIntake;
+            _builtinRuntime.PoseAuthorityArbiter = poseAuthorityArbiter;
             _builtinOrderTypeRegistry = orderTypeRegistry;
             _builtinOrderRuleRegistry = orderRuleRegistry;
             _builtinStepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectProposalProcessingSystem));
@@ -466,6 +468,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         TargetContext = req.TargetContext,
                         TemplateId = req.TemplateId,
                         TagId = rootTpl.TagId,
+                        ClockId = req.ClockId,
+                        HasClockId = req.HasClockId,
                         ParticipatesInResponse = rootTpl.ParticipatesInResponse,
                         Cancelled = false,
                         Modifiers = rootModifiers,
@@ -476,7 +480,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         ThrowWindowDepthExceeded(req.RootId, req.TemplateId, "Root");
                     }
- 
+
                     if (_telemetry != null && _emitTelemetry)
                     {
                         _telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -631,7 +635,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
                         }
 
-                        int playerId = 0;
                         var src = _window[0].Source;
                         OrderRequest orderRequest = default;
                         if (_orderRequests != null)
@@ -642,9 +645,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
                             }
 
-                            if (World.IsAlive(src) && World.Has<PlayerOwner>(src))
+                            if (!World.IsAlive(src) || !World.Has<PlayerOwner>(src))
                             {
-                                playerId = World.Get<PlayerOwner>(src).PlayerId;
+                                throw new InvalidOperationException(
+                                    $"Response-chain order request requires a live source with PlayerOwner: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}.");
+                            }
+
+                            int playerId = World.Get<PlayerOwner>(src).PlayerId;
+                            if (playerId <= 0)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Response-chain order request requires a positive PlayerOwner.PlayerId: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, playerId={playerId}.");
                             }
 
                             orderRequest = new OrderRequest
@@ -1231,12 +1242,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             in Order order,
             OrderSubmitResult result)
         {
+            OrderQueue chainOrders = _chainOrders
+                ?? throw new InvalidOperationException("GAS.RESPONSE_CHAIN.ERR.ChainOrderQueueMissing");
             var outcome = new OrderAdmissionOutcome(
                 order.OrderId,
                 order.OrderTypeId,
                 OrderAdmissionStage.EntityIntake,
                 result);
-            _chainOrders.AdmissionResults.Commit(in reservation, in outcome);
+            chainOrders.AdmissionResults.Commit(in reservation, in outcome);
         }
 
         private void CompleteConsumedResponseChainOrder(
@@ -1345,23 +1358,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     int eventTagId = listener.EventTagIds[i];
                     if (eventTagId != 0 && effectTagId != eventTagId) continue;
 
-                                var responseType = (ResponseType)listener.ResponseTypes[i];
-                                if (!_responseQueue.TryEnqueue(new ProposalResponseItem
+                    var responseType = (ResponseType)listener.ResponseTypes[i];
+                    if (!_responseQueue.TryEnqueue(new ProposalResponseItem
                     {
                         ProposalIndex = proposalIndex,
                         ResponseEntity = listenerEntity,
-                                    Type = responseType,
+                        Type = responseType,
                         Priority = listener.Priorities[i],
                         StableSequence = i,
-                                    EffectTemplateId = responseType == ResponseType.Chain || responseType == ResponseType.PromptInput ? listener.EffectTemplateIds[i] : 0,
+                        EffectTemplateId = responseType == ResponseType.Chain || responseType == ResponseType.PromptInput ? listener.EffectTemplateIds[i] : 0,
                         ModifyValue = listener.ModifyValues[i],
                         ModifyOp = (ModifierOp)listener.ModifyOps[i]
-                                }))
-                                {
-                                    if (_budget != null) _budget.ResponseQueueOverflowDropped++;
-                                    throw new InvalidOperationException(
-                                        $"{ResponseQueueOverflowError}: proposalIndex={proposalIndex}, effectTagId={effectTagId}, responseType={responseType}, capacity={GasConstants.MAX_RESPONSES_PER_WINDOW}.");
-                                }
+                    }))
+                    {
+                        if (_budget != null) _budget.ResponseQueueOverflowDropped++;
+                        throw new InvalidOperationException(
+                            $"{ResponseQueueOverflowError}: proposalIndex={proposalIndex}, effectTagId={effectTagId}, responseType={responseType}, capacity={GasConstants.MAX_RESPONSES_PER_WINDOW}.");
+                    }
                 }
             }
         }
@@ -1387,23 +1400,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 case EffectPresetType.None:
                     return;
                 case EffectPresetType.ApplyForce2D:
-                {
-                    // Read force values from CallerParams (if present) or template ConfigParams.
-                    float fx = 0f, fy = 0f;
-                    if (req.HasCallerParams)
                     {
-                        req.CallerParams.TryGetFloat(EffectParamKeys.ForceXAttribute, out fx);
-                        req.CallerParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out fy);
+                        EffectConfigParams mergedParams = ConfigParamsMerger.BuildMergedConfig(in tpl.ConfigParams, in req);
+                        mergedParams.TryGetFloat(EffectParamKeys.ForceXAttribute, out float fx);
+                        mergedParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out float fy);
+                        modifiers.Add(tpl.PresetAttribute0, ModifierOp.Add, fx);
+                        modifiers.Add(tpl.PresetAttribute1, ModifierOp.Add, fy);
+                        return;
                     }
-                    else
-                    {
-                        tpl.ConfigParams.TryGetFloat(EffectParamKeys.ForceXAttribute, out fx);
-                        tpl.ConfigParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out fy);
-                    }
-                    modifiers.Add(tpl.PresetAttribute0, ModifierOp.Add, fx);
-                    modifiers.Add(tpl.PresetAttribute1, ModifierOp.Add, fy);
-                    return;
-                }
             }
         }
 
@@ -1473,6 +1477,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
+                EffectPhaseExecutor phaseExecutor = _phaseExecutor
+                    ?? throw new InvalidOperationException(
+                        $"GAS.INSTANT.ERR.MissingPhaseRuntime: templateId={proposal.TemplateId}, preset={tpl.PresetType}.");
+                Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi = _graphApi
+                    ?? throw new InvalidOperationException(
+                        $"GAS.INSTANT.ERR.MissingGraphRuntime: templateId={proposal.TemplateId}, preset={tpl.PresetType}.");
                 var context = new EffectContext
                 {
                     RootId = proposal.RootId,
@@ -1481,16 +1491,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     TargetContext = proposal.TargetContext,
                 };
                 IntVector2 targetPosCm = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
-                _phaseExecutor!.ExecutePhase(
-                    World, _graphApi!, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                phaseExecutor.ExecutePhase(
+                    World, graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
                     EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
                     tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnResolve), proposal.RootId);
-                _phaseExecutor.ExecutePhase(
-                    World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                phaseExecutor.ExecutePhase(
+                    World, graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
                     EffectPhaseId.OnHit, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
                     tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnHit), proposal.RootId);
-                _phaseExecutor.ExecutePhase(
-                    World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                phaseExecutor.ExecutePhase(
+                    World, graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
                     EffectPhaseId.OnApply, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
                     tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnApply), proposal.RootId);
 
@@ -1570,7 +1580,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             float before = primaryAttributeId >= 0
                 ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
                 : 0f;
-            AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, _tagOps);
+            TagOps tagOps = _tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
+            AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, tagOps);
             float after = primaryAttributeId >= 0
                 ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
                 : 0f;
@@ -1624,6 +1635,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void CreateEntityEffect(in EffectProposal proposal, in EffectTemplateData tpl)
         {
+            EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
+            int durationTicks = ConfigParamsMerger.ResolveDurationTicks(in tpl, in mergedConfig);
+            int periodTicks = ConfigParamsMerger.ResolvePeriodTicks(in tpl, in mergedConfig);
+
             // Stack merge: if template has stack policy and an existing effect exists on target, merge.
             if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant
                 && World.IsAlive(proposal.Target) && World.Has<ActiveEffectContainer>(proposal.Target))
@@ -1642,14 +1657,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         switch (tpl.StackPolicy)
                         {
                             case StackPolicy.RefreshDuration:
-                                effectAfter.RemainingTicks = tpl.DurationTicks;
+                                effectAfter.TotalTicks = durationTicks;
+                                effectAfter.RemainingTicks = durationTicks;
                                 effectAfter.ExpiresAtTick = 0; // Will be recomputed next tick
                                 break;
                             case StackPolicy.AddDuration:
-                                effectAfter.RemainingTicks += tpl.DurationTicks;
-                                effectAfter.ExpiresAtTick = 0;
+                                effectAfter.TotalTicks += durationTicks;
+                                effectAfter.RemainingTicks += durationTicks;
+                                if (effectAfter.ExpiresAtTick > 0)
+                                {
+                                    effectAfter.ExpiresAtTick += durationTicks;
+                                }
+                                else
+                                {
+                                    effectAfter.ExpiresAtTick = 0;
+                                }
                                 break;
-                            // KeepDuration: do nothing
+                                // KeepDuration: do nothing
                         }
 
                         World.Get<EffectStack>(existing) = stackAfter;
@@ -1661,14 +1685,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             if (World.Has<EffectGrantedTags>(existing))
                             {
                                 EffectGrantedTags grantedTags = World.Get<EffectGrantedTags>(existing);
+                                TagOps tagOps = _tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
                                 EffectTagContributionHelper.UpdateOnEntity(
                                     World,
                                     proposal.Target,
                                     in grantedTags,
                                     stackBefore.Count,
                                     stackAfter.Count,
-                                    _tagOps,
-                                    _budget);
+                                    tagOps,
+                                    _budget!);
                             }
                         }
                         catch
@@ -1685,7 +1710,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            var newEffect = GameplayEffectFactory.CreateEffect(World, proposal.RootId, proposal.Source, proposal.Target, tpl.DurationTicks, tpl.LifetimeKind, tpl.PeriodTicks, proposal.TargetContext, tpl.ClockId, tpl.ExpireCondition);
+            GasClockId clockId = proposal.HasClockId ? proposal.ClockId : tpl.ClockId;
+            var newEffect = GameplayEffectFactory.CreateEffect(World, proposal.RootId, proposal.Source, proposal.Target, durationTicks, tpl.LifetimeKind, periodTicks, proposal.TargetContext, clockId, tpl.ExpireCondition);
             World.Get<EffectModifiers>(newEffect) = proposal.Modifiers;
 
             ref var effectState = ref World.Get<GameplayEffect>(newEffect);
@@ -1699,15 +1725,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             // Pre-merge CallerParams with template ConfigParams at creation time,
             // storing the merged EffectConfigParams directly on the entity.
-            if (proposal.HasCallerParams)
+            if (mergedConfig.Count > 0)
             {
-                var merged = tpl.ConfigParams;
-                merged.MergeFrom(in proposal.CallerParams);
-                World.Add(newEffect, merged);
-            }
-            else if (tpl.ConfigParams.Count > 0)
-            {
-                World.Add(newEffect, tpl.ConfigParams);
+                World.Add(newEffect, mergedConfig);
             }
 
             // Attach EffectGrantedTags if template declares tag contributions

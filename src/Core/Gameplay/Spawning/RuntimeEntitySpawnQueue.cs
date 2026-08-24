@@ -42,6 +42,8 @@ namespace Ludots.Core.Gameplay.Spawning
         public byte CopySourcePlayerOwner;
         public Entity Parent;
         public byte LinkSourceAsParent;
+        public Ludots.Core.Components.AttachedLocalPose AttachedLocalPose;
+        public byte HasAttachedLocalPose;
         public ProjectileState Projectile;
         public byte HasProjectileState;
         public int ReceiptChannelId;

@@ -1,7 +1,5 @@
 using System;
 using Arch.Core;
-using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
 using Ludots.Core.UI.PanelProjection;
@@ -15,62 +13,80 @@ namespace Ludots.Tests.GasTests.UI
         private const string AggregateTemplateJson = """
         {
           "id": "tests.panel.resource_bar",
-          "variables": [
-            { "name": "ore.total", "kind": "Float",
-              "source": { "sourceKind": "AggregateProjection", "graphOutputKey": "tests.panel.ore.total" } },
-            { "name": "gas.total", "kind": "Float",
-              "source": { "sourceKind": "AggregateProjection", "graphOutputKey": "tests.panel.gas.total" } }
-          ],
-          "binds": [
-            { "control": "lbl.ore", "variable": "ore.total" },
-            { "control": "lbl.gas", "variable": "gas.total" }
+          "graph": "tests.graph.resource_bar",
+          "pins": [
+            { "name": "ore.total", "key": "tests.panel.ore.total", "mode": "realtime", "default": 0 },
+            { "name": "gas.total", "key": "tests.panel.gas.total", "mode": "snapshot", "default": -1 }
           ]
         }
         """;
 
         [Test]
-        public void Load_ValidTemplate_CarriesVariablesAndBinds()
+        public void Load_ValidTemplate_CarriesGraphAndPins()
         {
             PanelTemplate template = PanelTemplateLoader.Load(AggregateTemplateJson);
 
             Assert.That(template.Id, Is.EqualTo("tests.panel.resource_bar"));
-            Assert.That(template.Variables, Has.Count.EqualTo(2));
-            Assert.That(template.Binds, Has.Count.EqualTo(2));
-            Assert.That(template.ResolveBinding("ore.total").GraphOutputKey, Is.EqualTo("tests.panel.ore.total"));
+            Assert.That(template.Graph, Is.EqualTo("tests.graph.resource_bar"));
+            Assert.That(template.Pins.Count, Is.EqualTo(2));
+            Assert.That(template.Pins[0].Key, Is.EqualTo("tests.panel.ore.total"));
+            Assert.That(template.Pins[0].Realtime, Is.True);
+            Assert.That(template.Pins[1].Realtime, Is.False);
+            Assert.That(template.Pins[1].Default, Is.EqualTo(-1f));
         }
 
         [Test]
-        public void Load_MissingGraphOutputKey_FailsNamingVariable()
+        public void Load_MissingGraph_FailsNamingTemplate()
+        {
+            const string json = """
+            { "id": "tests.panel.nograph", "pins": [ { "name": "hp", "key": "k", "default": 0 } ] }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.Exception.With.Message.Contains("graph"));
+        }
+
+        [Test]
+        public void Load_EmptyPins_Fails()
+        {
+            const string json = """
+            { "id": "tests.panel.nopins", "graph": "g", "pins": [] }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("pins"));
+        }
+
+        [Test]
+        public void Load_UnknownPinMode_FailsNamingMode()
         {
             const string json = """
             {
-              "id": "tests.panel.bad",
-              "variables": [
-                { "name": "ore", "kind": "Float", "source": { "sourceKind": "AggregateProjection" } }
-              ]
+              "id": "tests.panel.badmode", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k", "mode": "sometimes" } ]
             }
             """;
 
             Assert.That(
                 () => PanelTemplateLoader.Load(json),
-                Throws.Exception.With.Message.Contains("ore"));
+                Throws.InvalidOperationException.With.Message.Contains("sometimes"));
         }
 
         [Test]
-        public void Load_UnknownSourceKind_FailsNamingKind()
+        public void Load_DuplicatePin_FailsNamingPin()
         {
             const string json = """
             {
-              "id": "tests.panel.bad",
-              "variables": [
-                { "name": "ore", "kind": "Float", "source": { "sourceKind": "Magic" } }
-              ]
+              "id": "tests.panel.dup", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k1" }, { "name": "hp", "key": "k2" } ]
             }
             """;
 
             Assert.That(
                 () => PanelTemplateLoader.Load(json),
-                Throws.InvalidOperationException.With.Message.Contains("Magic"));
+                Throws.Exception.With.Message.Contains("hp"));
         }
 
         [Test]
@@ -78,39 +94,19 @@ namespace Ludots.Tests.GasTests.UI
         {
             const string json = """
             {
-              "id": "tests.panel.bad",
-              "frobnicate": true,
-              "variables": [
-                { "name": "ore", "kind": "Float", "source": { "sourceKind": "SingleAttribute", "attributeId": "a" } }
-              ]
+              "id": "tests.panel.unknown", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k" } ],
+              "variables": []
             }
             """;
 
             Assert.That(
                 () => PanelTemplateLoader.Load(json),
-                Throws.InvalidOperationException.With.Message.Contains("frobnicate"));
+                Throws.InvalidOperationException.With.Message.Contains("variables"));
         }
 
         [Test]
-        public void Load_BindToUndeclaredVariable_FailsNamingBind()
-        {
-            const string json = """
-            {
-              "id": "tests.panel.bad",
-              "variables": [
-                { "name": "ore", "kind": "Float", "source": { "sourceKind": "AggregateProjection", "graphOutputKey": "k" } }
-              ],
-              "binds": [ { "control": "lbl.x", "variable": "ghost" } ]
-            }
-            """;
-
-            Assert.That(
-                () => PanelTemplateLoader.Load(json),
-                Throws.ArgumentException.With.Message.Contains("ghost"));
-        }
-
-        [Test]
-        public void Evaluate_AggregateProjection_EqualsGraphOutput()
+        public void Evaluate_PinsReadGraphOutputs()
         {
             PanelTemplate template = PanelTemplateLoader.Load(AggregateTemplateJson);
             using World world = World.Create();
@@ -129,7 +125,7 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void Evaluate_MissingGraphOutput_FailsNoSilentZero()
+        public void Evaluate_MissingGraphOutput_ShowsDeclaredDefault()
         {
             PanelTemplate template = PanelTemplateLoader.Load(AggregateTemplateJson);
             using World world = World.Create();
@@ -139,10 +135,10 @@ namespace Ludots.Tests.GasTests.UI
             var outputs = new GraphOutputValueStore(keys, initialCapacity: 8);
 
             var reader = new PanelProjectionReader(world, outputs);
+            PanelVariableSet result = new PanelInstance(template, owner).Evaluate(reader);
 
-            Assert.That(
-                () => new PanelInstance(template, owner).Evaluate(reader),
-                Throws.InvalidOperationException.With.Message.Contains("tests.panel.ore.total"));
+            Assert.That(result.Get("ore.total"), Is.EqualTo(0f), "missing output shows pin default, no error");
+            Assert.That(result.Get("gas.total"), Is.EqualTo(-1f));
         }
 
         [Test]
@@ -166,39 +162,6 @@ namespace Ludots.Tests.GasTests.UI
 
             Assert.That(setA.Get("ore.total"), Is.EqualTo(100f));
             Assert.That(setB.Get("ore.total"), Is.EqualTo(900f));
-        }
-
-        [Test]
-        public void Evaluate_SingleAttribute_ReadsOwnerBuffer()
-        {
-            AttributeRegistry.Clear();
-            int attrId = AttributeRegistry.Register("tests.panel.queue");
-            try
-            {
-                const string json = """
-                {
-                  "id": "tests.panel.queue_card",
-                  "variables": [
-                    { "name": "queue.length", "kind": "Float",
-                      "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.panel.queue" } }
-                  ]
-                }
-                """;
-                PanelTemplate template = PanelTemplateLoader.Load(json);
-                using World world = World.Create();
-                Entity owner = world.Create();
-                world.Add(owner, new AttributeBuffer());
-                world.Get<AttributeBuffer>(owner).SetBase(attrId, 3f);
-
-                var reader = new PanelProjectionReader(world);
-                PanelVariableSet result = new PanelInstance(template, owner).Evaluate(reader);
-
-                Assert.That(result.Get("queue.length"), Is.EqualTo(3f));
-            }
-            finally
-            {
-                AttributeRegistry.Clear();
-            }
         }
     }
 }

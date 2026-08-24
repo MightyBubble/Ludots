@@ -1,0 +1,6 @@
+[
+  {
+    "id": "NightRaid.KillTool.Used",
+    "description": "Fired by the hardcoded kill tool each time it zeroes an entity; graphs count tool usage."
+  }
+]

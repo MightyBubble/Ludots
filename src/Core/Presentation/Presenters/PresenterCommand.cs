@@ -43,5 +43,8 @@ namespace Ludots.Core.Presentation.Presenters
         public PresenterCommandValueSource VectorWSource;
         public int ParamGraphProgramId;
         public int TargetBehaviorSlot;
+        public int TimerNameId;
+        public float TimerDurationSeconds;
+        public float TimerDurationRangeSeconds;
     }
 }

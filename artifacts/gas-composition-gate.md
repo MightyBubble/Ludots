@@ -1,54 +1,68 @@
-# GAS Composition Gate — Self Review
+## GAS Composition Gate — Self Review
 
-- **Task / Issue**: Epic #990 family 9 — 黑板与配置 13 op 零字幕重设计（BlackboardNodeDriver / AttrNodeDriver C 档演后果）
-- **Date**: 2026-08-17
-- **Agent / Author**: pi (epic/990-zero-caption-gallery)
+- **Task / Issue**: Graph editor and live TriggerGraph debug stream (issue #1030, item 7 follow-up)
+- **Date**: 2026-08-24
+- **Agent / Author**: Codex
 
-## 1. Core judgment
+### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A — 已有 graph op 的连线/参数组合 + 驱动器可见化
+新变体主要交付物是（A/B/C/D）: **A**
 
-结论: PASS
+结论: **PASS**
 
-一句话理由: 本家族没有新增任何 graph 节点或 profile 开关；全部行为变化都是「图 JSON 里把已有 op 连成尾巴」（cfgF→neg→hit / src→readF→neg→hit / cfgFx→explicit→applyDyn / beginTx→materialize），driver 只做断言升级与可见化。
+一句话理由: 本次交付是对现有 GraphControlFlowDocument、Graph op 描述表和 TriggerGraph 执行的编辑/观测组合，不新增 profile enum、preset 开关或第二套 VM。
 
-## 2. Layer assignment
+### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| LoadConfigFloat 真结算 | Layer 2 | 图尾 `cfgF→neg→explicit→hit`（NegFloat+ModifyAttributeAdd 组合） |
-| ReadBlackboardFloat 真结算 | Layer 2 | 图尾 `src→readF→neg→explicit→hit` |
-| LoadConfigEffectId 悬空输出修复 | Layer 2 | 图重写 `cfgFx→explicit→applyDyn`（ApplyEffectDynamic 端口照抄 ApplyEffectDynamic.json） |
-| BeginLifecycleTransaction 造身 | Layer 1+2 | 图加 `materialize`（InvokeBuiltin MaterializeTemplate，复用 Effect.GraphOps.Lifecycle 的 targetEntityTemplate） |
-| InvokeBuiltin 正式演员 | Layer 2 | LastMaterializedTarget 经 GraphOpsStageVisuals.BindMapEntity 绑正式演员 |
-| 记事板/配置册/情境信封/台账 可见化 | Layer 3 | BlackboardNodeDriver.DrawOverlay 用共享视觉原语 P1-P11 |
+| Graph 作者数据读取、编译诊断、保存 | 2 | 现有 `GraphProgramAuthoringFrontDoor` 与 `Ludots.Editor.Bridge` |
+| 节点布局 sidecar | 2 | 编辑器工具侧独立 sidecar JSON |
+| TriggerGraph 节点/寄存器变化 trace | 0/1 观测旁路 | 固定容量 `GraphDebugTrace`，不参与 gameplay 语义 |
+| AgentBridge 增量 drain | 2 | 现有 `AgentToolRegistry` 与游戏线程 pump |
 
-## 3. Reuse list
+### 3. Reuse list
 
-- Handlers: `InvokeBuiltin`(MaterializeTemplate / ClearActiveEffects)、`ApplyEffectDynamic`、`ModifyAttributeAdd`、`NegFloat`、`LoadExplicitTarget`、`LoadConfig*`、`Read/WriteBlackboard*`（全部已有 op）
-- Queues / Systems: `EffectRequestQueue`（ApplyEffectDynamic 真结算）、runtime `SettlePendingEffectRequests`
-- Resolvers / Registries: `ConfigKeyRegistry`、`EffectTemplateIdRegistry`、`EffectTemplateRegistry`、`BuiltinHandlerRegistry`、`GraphOpsNodeActorBinding`
-- Existing presets / graphs: `Effect.GraphOps.Config`（power=40/tier=2/chainEffect=Strike）、`Effect.GraphOps.Lifecycle`（targetEntityTemplate=GraphOps.Ally）、`Effect.GraphOps.Strike`（-18）、ApplyEffectDynamic.json 端口模式、MulFloat.json graphSettled 图尾模式
+- Handlers: 现有 `GasGraphOpHandlerTable`，不新增 op handler。
+- Queues / Systems: 现有 AgentBridge game-thread pump、TriggerGraph slice/resume 管线。
+- Resolvers / Registries: `GraphProgramRegistry` source map、`MapSession.Triggers`、`GraphOpDescriptorTable`。
+- Existing presets / graphs: `GraphControlFlowDocument`、真实 `graphs.json`。
 
-## 4. New Layer 0 ops (if any)
+### 4. New Layer 0 ops (if any)
 
-N/A
+N/A — trace 不是执行 op，不改变 Graph program。
 
-## 5. Transaction boundary
+### 5. Transaction boundary
 
-BeginLifecycleTransaction 的真实回滚由 lifecycle 执行器承担；演出只画真实发生的三拍（Begin 执行拍 / 记账拍 / 关账拍），不为演出伪造失败事务。
+无 gameplay 事务变化；trace 记录失败时只报告 ring overflow/dropped count，不影响执行结果。
 
-## 6. Config SSOT
+### 6. Config SSOT
 
-行为配置落在: effect template（Effect.GraphOps.Config / Effect.GraphOps.Lifecycle）+ graph 连线。未新增 JSON schema。
+行为配置落在: 现有 graph JSON；编辑器布局落在独立 sidecar。是否新增 JSON schema: **NO**。
 
-## 7. Red flag scan
+### 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
 - [x] 未添加「说不清的」默认 fallback
 
-## 8. Next variant test
+### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线（换 config 值 / 换 effect 票即换伤数与效果）
+「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
+
+## Issues #714-#719 AI/GAS Order Boundary — Pre-Implementation Gate — 2026-07-31
+
+- **Task / Issue**: Implement issues #714-#719 after PR #713, keeping ability lockout as duration Effect data, keeping Utility AI out of GAS ability eligibility, and converging AI output on typed Order contracts and read-only scoring.
+- **Date**: 2026-07-31
+- **Agent / Author**: Codex
+- **Baseline**: `origin/main` cached at `74513182ab420dc950844d26882000ec54e030a7` (`Merge pull request #713 from MightyBubble/codex/gas-graph-effect-ssot`). Network fetch retried but GitHub reset the connection; the cached remote head already includes the confirmed merged PR #713.
+- **Status**: PRE-IMPLEMENTATION PASS.
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A.
+
+结论: PASS.
+
+一句话理由: Temporary ability lockout is authored as duration Effects that grant tags; abilities read `blockTags`, AI submits typed Orders, and scoring stays read-only.

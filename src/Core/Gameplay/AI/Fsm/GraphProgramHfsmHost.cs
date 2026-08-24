@@ -13,6 +13,9 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
     private readonly IGraphRuntimeApi? _api;
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
     private readonly byte[] _bools = new byte[GraphVmLimits.MaxBoolRegisters];
+    private readonly float[] _floats = new float[GraphVmLimits.MaxFloatRegisters];
+    private readonly Entity[] _entities = new Entity[GraphVmLimits.MaxEntityRegisters];
+    private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
     private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
     private readonly int[] _cachedGraphIds = new int[ScriptCacheCapacity];
     private readonly int[] _cachedVersions = new int[ScriptCacheCapacity];
@@ -55,14 +58,13 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
 
         Array.Clear(_ints, 0, _ints.Length);
         Array.Clear(_bools, 0, _bools.Length);
+        Array.Clear(_floats, 0, _floats.Length);
+        Array.Clear(_entities, 0, _entities.Length);
+        Array.Clear(_targets, 0, _targets.Length);
         Array.Clear(_callStack, 0, _callStack.Length);
         var cursor = new GraphExecutionCursor();
         GraphSliceResult result = GraphExecutor.ExecuteResolvedRegisteredScriptSlice(
-            _programs,
-            program,
-            _ints,
-            _bools,
-            _callStack,
+            _programs, program, _floats, _ints, _bools, _entities, _targets, _callStack,
             ref cursor,
             budgetSteps: 64,
             _world,

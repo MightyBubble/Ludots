@@ -1704,7 +1704,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "Champion command source",
                 summary: "Test-owned command-source collection.");
             collections.Replace(owner, in descriptor, entities, owner);
-            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
         }
 
         private static string[] ReadViewedSelectionNames(GameEngine engine)

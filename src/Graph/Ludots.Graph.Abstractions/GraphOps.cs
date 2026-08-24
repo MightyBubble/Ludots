@@ -170,6 +170,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         TableReadInt = 437,
         /// <summary>F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle).</summary>
         TableReadFloat = 438,
+
+        // ── Panel visibility control (#1014, contract five) ──
+        /// <summary>Request the named panel type to become visible. Imm = panel type symbol.</summary>
+        ShowPanel = 439,
+        /// <summary>Request the named panel type to become hidden. Imm = panel type symbol.</summary>
+        HidePanel = 440,
+
+        // ── Panel instance lifecycle ──
+        /// <summary>Instantiate a panel. Imm = packed template|anchor key ids (symbol pair pre-patch); E[A] = scope entity (A=0xFF → caster).</summary>
+        CreatePanel = 441,
+        /// <summary>Dispose panel instances of a template. Imm = template key id (symbol pre-patch); E[A] = scope entity (A=0xFF → any scope).</summary>
+        DestroyPanel = 442,
+
+        // ── Map-scoped variables (443-446) ──
+        /// <summary>I[Dst] = map variable (Imm=varName keyId) read from the map owning E[A] (A=0xFF → caster).</summary>
+        ReadMapVarInt = 443,
+        /// <summary>F[Dst] = map variable (Imm=varName keyId) read from the map owning E[A] (A=0xFF → caster).</summary>
+        ReadMapVarFloat = 444,
+        /// <summary>Map variable (Imm=varName keyId) of the map owning E[B] (B=0xFF → caster) := I[A].</summary>
+        WriteMapVarInt = 445,
+        /// <summary>Map variable (Imm=varName keyId) of the map owning E[B] (B=0xFF → caster) := F[A].</summary>
+        WriteMapVarFloat = 446,
+
+        // ── Runtime entity spawning ──
+        /// <summary>Enqueue a template entity spawn. Imm = entity template symbol; E[A] = spawn source map anchor (A=0xFF → caster); F[B]/F[C] = optional explicit xCm/yCm (Flags bit 0 = position wired).</summary>
+        SpawnTemplate = 447,
+
+        /// <summary>Set an entity's world position. E[A] = target (A=0xFF → caster); I[B] = xCm; I[C] = yCm (int centimeters, matches LoadTargetPosX/Y).</summary>
+        SetWorldPosition = 448,
+
+        /// <summary>Pick an integer outcome from a named deterministic distribution. Imm = distribution symbol; I[A] = stream salt.</summary>
+        WeightedPick = 449,
     }
 
     public static class GraphNodeOpParser

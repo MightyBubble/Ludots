@@ -1,6 +1,6 @@
 # RFC-0066 Agent Debug Bridge（Ludots Harness for AI Agents）
 
-Status: Draft (implementation in progress on branch `feat/agent-debug-bridge`)
+Status: Implemented（已合入 main，PR #1001；2026-08-17 验收通过，见 §8）
 
 ## 1 背景与目标
 
@@ -58,10 +58,10 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 | UI 表面所有权 | `UiSurfaceHost`（lease/segment 模型，`RFC-0055`）；Browser surface 经 `IBrowserRuntime` 枚举，`UiNode.CanvasContent` 标记浏览器嵌入点 |
 | 时间控制 | `IPacemaker` / `TurnBasedPacemaker` / `engine.Pacemaker`（`DiagnosticsOverlaySystem` 的 F8 模式） |
 | 输入注入 | `PlayerInputHandler.InjectAction` / `InjectButtonPress` / `InjectButtonRelease`（已存在）；UI 键盘注入 `RaylibSyntheticKeyboardInput` |
-| 订单下发 | `OrderSubmitter.Submit` + `OrderTypeRegistry`（正式订单准入管线，含规则校验与 terminal result） |
+| 订单下发 | `OrderQueue.Submit`（`CoreServiceKeys.OrderQueue`）+ `OrderTypeRegistry`（正式订单准入管线，含规则校验与 terminal result） |
 | GAS 诊断 | `GasDiagnosticEventBuffer`（已注册为 CoreServiceKeys 服务） |
-| 系统挂载 | `SystemFactoryRegistry.Register` + `TryActivate`（`DiagnosticsOverlayMod` 模式） |
-| Mod 扩展 | `IModContext.Extensions`（`ModExtensionHub`）供其他 Mod 注册自定义工具 |
+| 系统挂载 | `SystemFactoryRegistry.RegisterPresentation` + `TryActivate`（`DiagnosticsOverlayMod` 模式；presentation 组保证 pause 下桥仍然泵） |
+| Mod 扩展 | `AgentBridgeModEntry.ToolRegistryKey`（`ServiceKey<AgentToolRegistry>`）：激活时经 `engine.SetService` 挂到 GlobalContext，其他 Mod 取注册表注册自己的 `IAgentTool`，即刻出现在 `/tools` 与 MCP 目录 |
 
 ## 4 组件划分
 
@@ -79,11 +79,11 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 
 自描述端点：
 
-- `GET /health` → `{ ok, pid, tick, uptimeMs }`
+- `GET /health` → `{ ok, pid, port, pendingRequests, pumpCount, lastPumpUtc }`（`pumpCount` 不涨说明游戏主循环停了）
 - `GET /tools` → 工具目录（name / description / inputSchema JSON Schema），供 Agent 发现
 - `GET /` → 人读说明 + 发现文件路径
 
-内置工具（v1）：
+内置工具（24，v1 13 个 + v2 帧捕获与窗口层输入 4 个 + v3 相机/日志/事件 3 个 + v4 空间探针与导航 4 个）：
 
 | 工具 | 说明 |
 |------|------|
@@ -96,14 +96,20 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 | `ludots.gas.entity` | 实体 GAS 状态：tags（名称解析）、attributes（base/current）、active effects、当前/排队订单 |
 | `ludots.gas.diagnostics` | `GasDiagnosticEventBuffer` 转储（系统/指标/容量/计数） |
 | `ludots.orders.inspect` | 指定实体 OrderBuffer 明细 + 全局 OrderAdmission/Terminal 结果缓冲 |
-| `ludots.orders.issue` | 经 `OrderSubmitter.Submit` 下发订单（走正式准入规则，返回 `OrderSubmitResult`） |
+| `ludots.orders.issue` | 经 `OrderQueue.Submit` 下发订单（走正式准入规则，返回 `OrderSubmitResult`） |
 | `ludots.input.state` | 输入上下文栈、动作清单、指针快照、UI 捕获状态、窗口层虚拟设备状态 |
 | `ludots.input.inject` | **语义动作层**：`press` / `release` / `action {value}`（复用 `PlayerInputHandler.Inject*`） |
 | `ludots.input.raw` | **窗口原始层**：`pointerMove/pointerDown/pointerUp/click/scroll/keyDown/keyUp/press/type/releaseAll`（经 `SyntheticInputDevice` 进入宿主轮询点，与物理输入同管线——UI 命中、捕获、绑定全部生效） |
 | `ludots.screenshot` | 经 `IHostFrameCapture` 端口抓下一呈现帧 PNG 到 `artifacts/agent-bridge/shots/`；暂停下可用 |
 | `ludots.recording.start` / `ludots.recording.stop` | 录屏为 PNG 序列（`intervalMs/maxFrames`），stop 写 `manifest.json`；agent 可按需抽帧阅读 |
+| `ludots.camera.control` | 相机读/控：`get` / `set`（部分姿态，经 `CameraManager.ApplyPose` 持久进活动虚拟相机）/ `follow {entityId}`（实体跟随目标）/ `unfollow` |
+| `ludots.logs.tail` | 进程内日志环形缓冲（`AgentLogRingBackend` 经 `Log.AddBackend` 挂入，不动宿主级别配置）；`count/minLevel/channel/contains` 过滤 |
+| `ludots.events.fire` | 经 `TriggerManager.FireEventAsync` 发送任意事件键（与引擎生命周期事件同分发路径），响应带本次 `triggerErrors` |
+| `ludots.entities.pick` | 屏幕坐标 → 实体（复用生产点选解析器 `CommandSourcePointerHitResolver`：selectable 标签 + 知识门控 + 投影包围盒决胜） |
+| `ludots.spatial.query` | 空间探针：radius / aabb / cone / rect / line 五形（直走 `ISpatialQueryService` 生产查询层，与技能/自动索敌同一分区后端） |
+| `ludots.nav.project` / `ludots.nav.findPath` | NavMesh 探针：世界点投影到可行走三角形；A→B 寻路（`NavQueryService` 稳定读 + portal A*，状态 NotReady/NotReachable 显式上报） |
 
-错误协议：JSON-RPC error，`-32602` 参数错，`-32601` 未知工具，`-32000` 域错误并带 `data.code`（如 `entity.not_found`、`service.unavailable:<key>`、`capability.unavailable:<name>`）。
+错误协议：JSON-RPC error，`-32602` 参数错，`-32601` 未知工具，`-32000` 域错误并带 `data.code`（`AgentBridgeErrorCodes`：`invalid.params` / `service.unavailable` / `entity.not_found` / `capability.unavailable` / `tool.failed` / `bridge.timeout`，另有工具自带码如 `ui.node_not_found`、`ui.scene_not_mounted`）。
 
 ### 六边形端口（host 能力）
 
@@ -120,7 +126,7 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 
 ## 6 启用方式
 
-`game.*.json` 的 `ModPaths` 加入 `mods/AgentBridgeMod` 即启用。配置经环境变量/桥接配置节：
+启动配置的 Mod 集合加入 `AgentBridgeMod` 即启用（参考 `src/Apps/Raylib/Ludots.App.Raylib/raylib.agent-demo.launch.graph.json` 的 `orderedModIds`）。桥本体挂 presentation 系统，在 `GameStart` 时经 `SystemFactoryRegistry.TryActivate` 激活（同一 engine 内幂等）。配置经环境变量：
 
 - `LUDOTS_AGENT_BRIDGE=0` 强制关闭（即使 Mod 已加载）
 - `LUDOTS_AGENT_BRIDGE_PORT=<port>` 覆盖端口（默认 47921；占用时自动 +1 重试最多 16 次并写入发现文件）

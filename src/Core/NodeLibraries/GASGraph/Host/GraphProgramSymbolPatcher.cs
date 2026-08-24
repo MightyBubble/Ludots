@@ -54,14 +54,46 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Imm = symbolResolver.ResolveAttribute(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.QueryFilterTemplate:
+                    case GraphNodeOp.SpawnTemplate:
                         ins.Imm = symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ResolveTableRow:
                         ins.Imm = symbolResolver.ResolveGraphLookupTable(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.WeightedPick:
+                        ins.Imm = symbolResolver.ResolveRngDistribution(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.TableReadInt:
                     case GraphNodeOp.TableReadFloat:
                         ins.Imm = symbolResolver.ResolveGraphLookupField(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.ShowPanel:
+                    case GraphNodeOp.HidePanel:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.ReadMapVarInt:
+                    case GraphNodeOp.ReadMapVarFloat:
+                    case GraphNodeOp.WriteMapVarInt:
+                    case GraphNodeOp.WriteMapVarFloat:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.CreatePanel:
+                        ins.Imm = UI.PanelHosting.PanelOpEncoding.Pack(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        bool skinAuthored = (ins.Flags & 1) != 0 && ins.B != byte.MaxValue;
+                        ins.B = skinAuthored
+                            ? UI.PanelHosting.PanelSkinIds.ToId(ResolveSymbol(symbols, ins.B))
+                            : UI.PanelHosting.PanelSkinIds.Unspecified;
+                        ins.Flags = 0;
+                        if (ins.ImmF == 0f)
+                        {
+                            ins.ImmF = 100f;
+                        }
+                        break;
+                    case GraphNodeOp.DestroyPanel:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));

@@ -44,7 +44,7 @@ LoadExplicitTarget → ConstFloat → **ModifyAttributeAdd**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect；Score / Validation / Derived / Query / Script 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect；Score / Validation / Derived / Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：按属性读写与直写、层数叠加引爆、先查对方状态再决定出手。
 ## 怎么进

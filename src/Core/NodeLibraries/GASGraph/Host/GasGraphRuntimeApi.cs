@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
@@ -82,6 +83,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
         public GraphLookupTableRegistry? LookupTables { get; }
+
         public EntitySetQueryRuntime EntityQueries { get; }
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
@@ -103,7 +105,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
         private readonly GraphLookupTableRegistry? _lookupTables;
+        private Gameplay.Rng.RngPickService? _rngPickService;
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
+        private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private LoadedGraphRuntime? _loadedGraphRuntime;
+        private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
+        private Ludots.Core.Scripting.TriggerManager? _triggerManager;
+        private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
+        private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -200,6 +209,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return typed;
         }
 
+        public Ludots.Core.UI.PanelActivation.PanelActivationApi? PanelActivationApi => _panelActivationApi;
+
+        public void BindPanelActivation(Ludots.Core.UI.PanelActivation.PanelActivationApi api)
+        {
+            _panelActivationApi = api ?? throw new ArgumentNullException(nameof(api));
+        }
+
+        public Ludots.Core.UI.PanelHosting.PanelHost? PanelHost => _panelHost;
+
+        public void BindPanelHost(Ludots.Core.UI.PanelHosting.PanelHost host)
+        {
+            _panelHost = host ?? throw new ArgumentNullException(nameof(host));
+        }
+
+        /// <summary>
+        /// Resolves a map id to its live <see cref="Gameplay.MapTriggers.MapVariableStore"/>.
+        /// The engine binds this lazily because map sessions are created after the graph API.
+        /// </summary>
+        public void BindMapVariableStoreResolver(Func<MapId, Gameplay.MapTriggers.MapVariableStore?> resolver)
+        {
+            _mapVariableStoreResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
+        /// Binds the engine TriggerManager so graph programs can fire map-scoped trigger
+        /// events via <see cref="FireEventKey"/>.
+        /// </summary>
+        public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
+        {
+            _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
+        }
+
+        /// <summary>
+        /// Binds the runtime entity spawn queue and template key registry so graph
+        /// programs can enqueue template spawns via <see cref="SpawnTemplate"/>.
+        /// </summary>
+        public void BindRuntimeEntitySpawn(
+            Gameplay.Spawning.RuntimeEntitySpawnQueue queue,
+            Gameplay.Spawning.EntityTemplateKeyRegistry templateKeys)
+        {
+            _runtimeEntitySpawnQueue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _entityTemplateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
+        }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -239,6 +292,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
         }
 
+
+        public void BindRngPickService(Gameplay.Rng.RngPickService rngPickService)
+        {
+            _rngPickService = rngPickService ?? throw new ArgumentNullException(nameof(rngPickService));
+        }
+
+        public int WeightedPick(int distributionKeyId, int modulationPermille)
+        {
+            var picks = _rngPickService
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.RngPickUnavailable");
+            return picks.PickByKeyId(distributionKeyId, Math.Clamp(modulationPermille, -1000, 1000) / 1000f);
+        }
         public int ResolveTableRow(int tableId, int key)
         {
             var tables = _lookupTables
@@ -258,6 +323,196 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var tables = _lookupTables
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
             return tables.ReadFloat(rowHandle, fieldId);
+        }
+
+        public void ShowPanel(int panelTypeId)
+        {
+            RequirePanelActivationApi().ShowPanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void HidePanel(int panelTypeId)
+        {
+            RequirePanelActivationApi().HidePanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
+        {
+            CreatePanel(templateKeyId, anchorKeyId, scope, UI.PanelHosting.PanelSkinIds.Unspecified, 100f);
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            RequirePanelHost().Instantiate(
+                ResolvePanelTypeName(templateKeyId),
+                ResolvePanelTypeName(anchorKeyId),
+                scope,
+                UI.PanelHosting.PanelSkinIds.ToName(skinId),
+                (int)zOrder);
+        }
+
+        public void DestroyPanel(int templateKeyId, Entity scope)
+        {
+            RequirePanelHost().DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
+        }
+
+        private string ResolvePanelTypeName(int panelTypeId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(panelTypeId);
+            return name ?? throw new InvalidOperationException(
+                $"Panel op references unregistered config key id {panelTypeId}.");
+        }
+
+        public int ReadMapVarInt(int varKeyId, MapId mapId)
+            => ResolveMapVariableStore(mapId).ReadInt(ResolveMapVariableName(varKeyId));
+
+        public float ReadMapVarFloat(int varKeyId, MapId mapId)
+            => ResolveMapVariableStore(mapId).ReadFloat(ResolveMapVariableName(varKeyId));
+
+        public void WriteMapVarInt(int varKeyId, MapId mapId, int value)
+            => ResolveMapVariableStore(mapId).WriteInt(ResolveMapVariableName(varKeyId), value);
+
+        public void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
+            => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
+
+        /// <summary>
+        /// Fires a config-key-named trigger event from a graph program: map-scoped when the
+        /// scope resolves to a map, global otherwise.
+        /// </summary>
+        public void FireEventKey(Entity scope, int eventKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(FireEventKey));
+            var triggerManager = _triggerManager
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(eventKeyId);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventKeyNameUnknown: FireEventKey references unregistered config key id {eventKeyId}.");
+            }
+
+            var context = new ScriptContext();
+            MapId mapId = ResolveMapId(scope);
+            if (!string.IsNullOrEmpty(mapId.Value))
+            {
+                context.Set(ContextKeys.MapId, mapId);
+                context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
+                triggerManager.FireMapEvent(mapId, new EventKey(name), context);
+            }
+            else
+            {
+                triggerManager.FireEvent(new EventKey(name), context);
+            }
+        }
+
+        /// <summary>
+        /// Sets an entity's world position. Fail-closed on dead or unmapped targets.
+        /// </summary>
+        public void SetWorldPosition(Entity target, int xCm, int yCm)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetWorldPosition));
+            if (_world == null || !_world.IsAlive(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetWorldPositionTargetDead: target entity {target} is not alive.");
+            }
+
+            var position = new Ludots.Core.Components.WorldPositionCm
+            {
+                Value = Mathematics.FixedPoint.Fix64Vec2.FromInt(xCm, yCm),
+            };
+
+            if (_world.TryGet(target, out Ludots.Core.Components.WorldPositionCm existing))
+            {
+                _world.Set(target, position);
+            }
+            else
+            {
+                _world.Add(target, position);
+            }
+        }
+
+        /// <summary>
+        /// Enqueues a template entity spawn on the runtime spawn queue. Fail-closed on
+        /// unknown template symbols, unmapped spawn anchors, and queue capacity.
+        /// </summary>
+        public void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SpawnTemplate));
+            var queue = _runtimeEntitySpawnQueue
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.SpawnQueueUnavailable");
+            if (_entityTemplateKeys == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.TemplateKeysUnavailable");
+            }
+
+            string templateName = _entityTemplateKeys.GetName(templateKeyId);
+            if (string.IsNullOrWhiteSpace(templateName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.TemplateUnknown: SpawnTemplate references unregistered template key id {templateKeyId}.");
+            }
+
+            MapId mapId = ResolveMapId(source);
+            if (string.IsNullOrEmpty(mapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SpawnSourceUnmapped: SpawnTemplate source must anchor a map (template '{templateName}').");
+            }
+
+            var request = new Gameplay.Spawning.RuntimeEntitySpawnRequest
+            {
+                Kind = Gameplay.Spawning.RuntimeEntitySpawnKind.Template,
+                Source = source,
+                TemplateId = templateName,
+                MapId = mapId,
+                WorldPositionCm = Mathematics.FixedPoint.Fix64Vec2.FromInt((int)xCm, (int)yCm),
+                HasWorldPosition = hasPosition ? (byte)1 : (byte)0,
+            };
+
+            if (!queue.TryEnqueue(in request))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SpawnQueueFull: SpawnTemplate '{templateName}' dropped because the runtime spawn queue is at capacity.");
+            }
+        }
+
+        private MapId ResolveMapId(Entity entity)
+        {
+            if (_world != null &&
+                _world.IsAlive(entity) &&
+                _world.TryGet<Ludots.Core.Components.MapEntity>(entity, out var mapEntity))
+            {
+                return mapEntity.MapId;
+            }
+
+            return new MapId(string.Empty);
+        }
+
+        private Gameplay.MapTriggers.MapVariableStore ResolveMapVariableStore(MapId mapId)
+        {
+            var resolver = _mapVariableStoreResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+            return resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.MapVariableStoreUnavailable: map '{mapId.Value}' has no live variable store.");
+        }
+
+        private string ResolveMapVariableName(int varKeyId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(varKeyId);
+            return name ?? throw new InvalidOperationException(
+                $"GAS.GRAPH.ERR.MapVariableNameUnknown: map variable op references unregistered config key id {varKeyId}.");
+        }
+
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi RequirePanelActivationApi()
+        {
+            return _panelActivationApi ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        private Ludots.Core.UI.PanelHosting.PanelHost RequirePanelHost()
+        {
+            return _panelHost ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)

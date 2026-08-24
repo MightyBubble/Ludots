@@ -4,22 +4,21 @@ using System.Collections.Generic;
 namespace Ludots.Core.UI.PanelActivation
 {
     /// <summary>
-    /// Region-side executor (#1014 MVP): turns activation-store truth into surface
-    /// lease diffs. The host never decides visibility; it only reconciles leases
-    /// with the store snapshot after the orchestration runtime has written it.
+    /// Region-side executor (#1014): turns activation-store truth into surface
+    /// lease diffs. The host never decides visibility; it reconciles leases with
+    /// the snapshot written by ShowPanel/HidePanel ops (or direct API calls).
     /// </summary>
     public sealed class PanelRegionHost
     {
-        private readonly HashSet<string> _leased = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, bool> _leased = new(StringComparer.Ordinal);
 
-        public IReadOnlyCollection<string> Leased => _leased;
+        public IReadOnlyDictionary<string, bool> Leased => _leased;
 
         /// <summary>
-        /// Reconciles current leases with the activation snapshot. Panels that became
-        /// visible are activated; panels no longer visible are deactivated; stale
-        /// leases for panels absent from the store are released.
+        /// Reconciles current leases with the activation snapshot; returns the diff
+        /// (activated, deactivated) so surface adapters can acquire/release.
         /// </summary>
-        public PanelActivationDiff Reconcile(UiPanelActivationStore store)
+        public (IReadOnlyList<string> Activated, IReadOnlyList<string> Deactivated) Reconcile(UiPanelActivationStore store)
         {
             ArgumentNullException.ThrowIfNull(store);
 
@@ -27,32 +26,20 @@ namespace Ludots.Core.UI.PanelActivation
             var deactivated = new List<string>();
             foreach (KeyValuePair<string, bool> entry in store.Snapshot)
             {
-                if (entry.Value && _leased.Add(entry.Key))
+                bool was = _leased.TryGetValue(entry.Key, out bool leased) && leased;
+                if (entry.Value && !was)
                 {
                     activated.Add(entry.Key);
                 }
-                else if (!entry.Value && _leased.Remove(entry.Key))
+                else if (!entry.Value && was)
                 {
                     deactivated.Add(entry.Key);
                 }
+
+                _leased[entry.Key] = entry.Value;
             }
 
-            List<string> stale = new List<string>();
-            foreach (string panelType in _leased)
-            {
-                if (!store.Snapshot.ContainsKey(panelType))
-                {
-                    stale.Add(panelType);
-                }
-            }
-
-            foreach (string panelType in stale)
-            {
-                _leased.Remove(panelType);
-                deactivated.Add(panelType);
-            }
-
-            return new PanelActivationDiff(activated, deactivated);
+            return (activated, deactivated);
         }
     }
 }

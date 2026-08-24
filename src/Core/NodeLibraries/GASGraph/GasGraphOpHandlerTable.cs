@@ -1,11 +1,13 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Platform.Abstractions;
@@ -25,6 +27,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// </summary>
     public sealed class GasGraphOpHandlerTable
     {
+        private static readonly Arch.Core.QueryDescription SoleMapEntityQuery = new Arch.Core.QueryDescription()
+            .WithAll<MapEntity>();
+
         public static readonly GasGraphOpHandlerTable Instance = new();
 
         public GasGraphOpHandler[] Handlers { get; }
@@ -202,6 +207,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.AbsFloat or
                 GraphNodeOp.NegFloat or
                 GraphNodeOp.RandomFloat01 or
+                GraphNodeOp.WeightedPick or
                 GraphNodeOp.AddInt or
                 GraphNodeOp.CompareGtFloat or
                 GraphNodeOp.CompareLtInt or
@@ -284,7 +290,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.MoveInt or
                 GraphNodeOp.ResolveTableRow or
                 GraphNodeOp.TableReadInt or
-                GraphNodeOp.TableReadFloat
+                GraphNodeOp.TableReadFloat or
+                GraphNodeOp.ShowPanel or
+                GraphNodeOp.HidePanel or
+                GraphNodeOp.CreatePanel or
+                GraphNodeOp.DestroyPanel or
+                GraphNodeOp.ReadMapVarInt or
+                GraphNodeOp.ReadMapVarFloat or
+                GraphNodeOp.WriteMapVarInt or
+                GraphNodeOp.WriteMapVarFloat or
+                GraphNodeOp.SpawnTemplate or
+                GraphNodeOp.SetWorldPosition
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -442,6 +458,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 pc++;
                 treeSteps++;
                 stepsThisSlice++;
+                state.CurrentInstructionPc = instructionIndex;
 
                 ushort op = ins.Op;
                 if (op == moveIntOp)
@@ -497,6 +514,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             }
                         }
 
+                        state.DebugTrace?.RecordNode(instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
                         continue;
                     }
                     else
@@ -504,12 +522,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ints[ins.Dst] = ints[ins.A];
                     }
 
+                    state.DebugTrace?.RecordNode(instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
                     continue;
                 }
 
                 if (op == constIntOp)
                 {
                     ints[ins.Dst] = ins.Imm;
+                    state.DebugTrace?.RecordNode(instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
                     continue;
                 }
 
@@ -586,6 +606,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     treeSteps = state.TreeSteps;
                 }
 
+                state.DebugTrace?.RecordNode(instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
+
                 if (state.Status == GraphExecutionStatus.Yielded)
                 {
                     PersistSliceState(
@@ -648,6 +670,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             state.TreeSteps = treeSteps;
             state.Status = status;
             cursor.Pc = pc;
+            cursor.LastInstructionPc = state.CurrentInstructionPc;
             cursor.CallStackCount = callStackCount;
             cursor.ReturnInt = returnInt;
             cursor.Steps = treeSteps;
@@ -728,6 +751,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.HasTag, HandleHasTag, "HasTag graph opcode.");
             Register(GraphNodeOp.CompareEqEntity, HandleCompareEqEntity, "CompareEqEntity graph opcode.");
             Register(GraphNodeOp.RandomFloat01, HandleRandomFloat01, "RandomFloat01 graph opcode.");
+            Register(GraphNodeOp.WeightedPick, HandleWeightedPick, "WeightedPick graph opcode.");
             Register(GraphNodeOp.QueryHexRange, HandleQueryHexRange, "QueryHexRange graph opcode.");
             Register(GraphNodeOp.QueryHexRing, HandleQueryHexRing, "QueryHexRing graph opcode.");
             Register(GraphNodeOp.QueryHexNeighbors, HandleQueryHexNeighbors, "QueryHexNeighbors graph opcode.");
@@ -777,7 +801,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.MoveInt, HandleMoveInt, "MoveInt graph opcode.");
             Register(GraphNodeOp.ResolveTableRow, HandleResolveTableRow, "ResolveTableRow graph opcode.");
             Register(GraphNodeOp.TableReadInt, HandleTableReadInt, "TableReadInt graph opcode.");
+            Register(GraphNodeOp.ShowPanel, HandleShowPanel, "ShowPanel graph opcode.");
+            Register(GraphNodeOp.HidePanel, HandleHidePanel, "HidePanel graph opcode.");
+            Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
+        Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
+        Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
+            Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
+            Register(GraphNodeOp.ReadMapVarInt, HandleReadMapVarInt, "ReadMapVarInt graph opcode.");
+            Register(GraphNodeOp.ReadMapVarFloat, HandleReadMapVarFloat, "ReadMapVarFloat graph opcode.");
+            Register(GraphNodeOp.WriteMapVarInt, HandleWriteMapVarInt, "WriteMapVarInt graph opcode.");
+            Register(GraphNodeOp.WriteMapVarFloat, HandleWriteMapVarFloat, "WriteMapVarFloat graph opcode.");
         }
 
         // ── Value Ops ──
@@ -953,6 +987,136 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             // I[Dst] = TableReadInt(Imm=fieldId, I[A]=rowHandle)
             s.I[ins.Dst] = s.Api.TableReadInt(ins.Imm, s.I[ins.A]);
+        }
+
+        private static void HandleShowPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Panel show request; the UI records the decision without orchestrating (#1014).
+            s.Api.ShowPanel(ins.Imm);
+        }
+
+        private static void HandleHidePanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.HidePanel(ins.Imm);
+        }
+
+        private static void HandleCreatePanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.CreatePanel(
+                UI.PanelHosting.PanelOpEncoding.UnpackTemplate(ins.Imm),
+                UI.PanelHosting.PanelOpEncoding.UnpackAnchor(ins.Imm),
+                scope,
+                ins.B,
+                ins.ImmF);
+        }
+
+        private static void HandleDestroyPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? Entity.Null : s.E[ins.A];
+            s.Api.DestroyPanel(ins.Imm, scope);
+        }
+
+        private static void HandleSetWorldPosition(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.SetWorldPosition(target, s.I[ins.B], s.I[ins.C]);
+        }
+
+        private static void HandleSpawnTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity source = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.SpawnTemplate(
+                ins.Imm,
+                source,
+                s.F[ins.B],
+                s.F[ins.C],
+                ins.Flags == 1);
+        }
+
+        // ── Map-scoped variables ──
+
+        private static void HandleReadMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = map variable (Imm=varName keyId); map resolved from E[A] (0xFF → caster).
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.I[ins.Dst] = s.Api.ReadMapVarInt(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.ReadMapVarInt)));
+        }
+
+        private static void HandleReadMapVarFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.F[ins.Dst] = s.Api.ReadMapVarFloat(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.ReadMapVarFloat)));
+        }
+
+        private static void HandleWriteMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // store.Write(Imm=varName keyId, I[A]); map resolved from E[B] (0xFF → caster).
+            Entity scope = ins.B == byte.MaxValue ? s.Caster : s.E[ins.B];
+            s.Api.WriteMapVarInt(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.WriteMapVarInt)),
+                s.I[ins.A]);
+        }
+
+        private static void HandleWriteMapVarFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.B == byte.MaxValue ? s.Caster : s.E[ins.B];
+            s.Api.WriteMapVarFloat(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.WriteMapVarFloat)),
+                s.F[ins.A]);
+        }
+
+        private static MapId RequireMapVariableScopeMap(ref GraphExecutionState s, Entity scope, string opName)
+        {
+            MapEntity mapEntity = default;
+            if (s.World == null ||
+                !s.World.IsAlive(scope) ||
+                !s.World.TryGet<MapEntity>(scope, out mapEntity))
+            {
+                // Schema v2 panel query graphs evaluate with the panel scope (a gameplay
+                // entity, not a map anchor) as caster; their map variables resolve against
+                // the sole loaded map, mirroring QueryAllMapEntities' world-scoped semantics.
+                // Ambiguous multi-map loads stay fail-closed.
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.MapVariableScopeEntity: {opName} requires a scope entity with a MapEntity component (caster or explicit register).");
+            }
+
+            return mapEntity.MapId;
+        }
+
+        private static bool TryResolveSoleLoadedMap(World? world, out MapId mapId)
+        {
+            mapId = default;
+            if (world == null)
+            {
+                return false;
+            }
+
+            bool found = false;
+            foreach (ref var chunk in world.Query(in SoleMapEntityQuery))
+            {
+                Span<MapEntity> maps = chunk.GetSpan<MapEntity>();
+                for (int i = 0; i < maps.Length; i++)
+                {
+                    if (!found)
+                    {
+                        mapId = maps[i].MapId;
+                        found = true;
+                    }
+                    else if (maps[i].MapId != mapId)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return found;
         }
 
         private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1546,6 +1710,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.F[ins.Dst] = (x & 0x00FFFFFFu) / 16777215f;
         }
 
+        private static void HandleWeightedPick(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.WeightedPick(ins.Imm, s.I[ins.A]);
+        }
+
         // ── Hex Spatial Queries (130-132) ──
 
         private static void HandleQueryHexRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1613,30 +1782,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             // F[dst] = E[A].BB_Float[Imm]
             var entity = s.E[ins.A];
-            if (s.Api.TryReadBlackboardFloat(entity, ins.Imm, out float value))
-                s.F[ins.Dst] = value;
-            else
-                s.F[ins.Dst] = 0f;
+            if (!s.Api.TryReadBlackboardFloat(entity, ins.Imm, out float value))
+                throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardFloat), entity, ins.Imm);
+            s.F[ins.Dst] = value;
+            s.DebugTrace?.RecordBlackboardFloat(s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
+
+        private static InvalidOperationException MissingBlackboardRead(string opName, Entity entity, int keyId)
+            => new($"GAS.GRAPH.ERR.MissingBlackboard: {opName} requires a readable blackboard value; entity={entity.Id}, key={keyId}.");
 
         private static void HandleReadBlackboardInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             // I[dst] = E[A].BB_Int[Imm]
             var entity = s.E[ins.A];
-            if (s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value))
-                s.I[ins.Dst] = value;
-            else
-                s.I[ins.Dst] = 0;
+            if (!s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value))
+                throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardInt), entity, ins.Imm);
+            s.I[ins.Dst] = value;
+            s.DebugTrace?.RecordBlackboardInt(s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
 
         private static void HandleReadBlackboardEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             // E[dst] = E[A].BB_Entity[Imm]
             var entity = s.E[ins.A];
-            if (s.Api.TryReadBlackboardEntity(entity, ins.Imm, out Entity value))
-                s.E[ins.Dst] = value;
-            else
-                s.E[ins.Dst] = default;
+            if (!s.Api.TryReadBlackboardEntity(entity, ins.Imm, out Entity value))
+                throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardEntity), entity, ins.Imm);
+            s.E[ins.Dst] = value;
+            s.DebugTrace?.RecordBlackboardEntity(s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
 
         private static void HandleWriteBlackboardFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1644,6 +1816,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // E[A].BB_Float[Imm] = F[B]   (immediate write)
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardFloat(entity, ins.Imm, s.F[ins.B]);
+            s.DebugTrace?.RecordBlackboardFloat(s.CurrentInstructionPc, ins.Imm, s.F[ins.B], pc, s.TreeSteps);
         }
 
         private static void HandleWriteBlackboardInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1651,6 +1824,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // E[A].BB_Int[Imm] = I[B]
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardInt(entity, ins.Imm, s.I[ins.B]);
+            s.DebugTrace?.RecordBlackboardInt(s.CurrentInstructionPc, ins.Imm, s.I[ins.B], pc, s.TreeSteps);
         }
 
         private static void HandleWriteBlackboardEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1658,6 +1832,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // E[A].BB_Entity[Imm] = E[B]
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardEntity(entity, ins.Imm, s.E[ins.B]);
+            s.DebugTrace?.RecordBlackboardEntity(s.CurrentInstructionPc, ins.Imm, s.E[ins.B], pc, s.TreeSteps);
         }
 
         // ── Config parameter reading (310-312) ──

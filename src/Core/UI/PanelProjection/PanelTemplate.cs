@@ -4,137 +4,154 @@ using System.Collections.Generic;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Author-facing panel contract (#1010): declared variables plus control binds.
-    /// Each variable maps onto a <see cref="PanelVariableBinding"/>; every value flows
-    /// through <see cref="PanelProjectionReader"/> — surfaces never fetch data themselves.
+    /// Author-facing panel contract (#1011 graph-pinned panels): a panel is the
+    /// output-pin set of ONE graph (ShaderGraph analogy). The template declares pins
+    /// plus the graph id; all dataflow — attribute loads, table lookups, aggregation,
+    /// nested func graphs — lives inside the graph VM. Pins carry the data contract:
+    /// structure errors fail closed at load; missing data resolves to the pin's
+    /// declared default (no error, no empty).
     /// </summary>
     public sealed class PanelTemplate
     {
-        public PanelTemplate(string id, IReadOnlyList<PanelTemplateVariable> variables, IReadOnlyList<PanelTemplateBind>? binds = null)
+        public PanelTemplate(
+            string id,
+            string graph,
+            IReadOnlyList<PanelPin> pins,
+            IReadOnlyList<PanelTemplateEvent>? events = null,
+            IReadOnlyList<PanelIntentMapEntry>? intents = null,
+            string? skin = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 throw new ArgumentException("Panel template id is required.", nameof(id));
             }
 
-            if (variables == null || variables.Count == 0)
+            if (string.IsNullOrWhiteSpace(graph))
             {
-                throw new ArgumentException($"Panel template '{id}' must declare at least one variable.", nameof(variables));
+                throw new ArgumentException($"Panel template '{id}' requires a graph id.", nameof(graph));
+            }
+
+            if (pins == null || pins.Count == 0)
+            {
+                throw new ArgumentException($"Panel template '{id}' must declare at least one pin.", nameof(pins));
             }
 
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (PanelTemplateVariable variable in variables)
+            foreach (PanelPin pin in pins)
             {
-                if (variable == null)
+                if (pin == null)
                 {
-                    throw new ArgumentException($"Panel template '{id}' has a null variable entry.", nameof(variables));
+                    throw new ArgumentException($"Panel template '{id}' has a null pin entry.", nameof(pins));
                 }
 
-                if (!seen.Add(variable.Name))
+                if (!seen.Add(pin.Name))
                 {
-                    throw new ArgumentException($"Panel template '{id}' declares duplicate variable '{variable.Name}'.", nameof(variables));
+                    throw new ArgumentException($"Panel template '{id}' declares duplicate pin '{pin.Name}'.", nameof(pins));
                 }
             }
 
-            List<PanelTemplateBind> safeBinds = new List<PanelTemplateBind>(binds ?? Array.Empty<PanelTemplateBind>());
-            foreach (PanelTemplateBind bind in safeBinds)
+            List<PanelTemplateEvent> safeEvents = new List<PanelTemplateEvent>(events ?? Array.Empty<PanelTemplateEvent>());
+            foreach (PanelTemplateEvent declaration in safeEvents)
             {
-                if (bind == null)
+                if (declaration == null)
                 {
-                    throw new ArgumentException($"Panel template '{id}' has a null bind entry.", nameof(binds));
+                    throw new ArgumentException($"Panel template '{id}' has a null event entry.", nameof(events));
+                }
+            }
+
+            var eventIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelTemplateEvent declaration in safeEvents)
+            {
+                if (!eventIds.Add(declaration.EventId))
+                {
+                    throw new ArgumentException($"Panel template '{id}' declares duplicate event '{declaration.EventId}'.", nameof(events));
+                }
+            }
+
+            List<PanelIntentMapEntry> safeIntents = new List<PanelIntentMapEntry>(intents ?? Array.Empty<PanelIntentMapEntry>());
+            foreach (PanelIntentMapEntry entry in safeIntents)
+            {
+                if (entry == null)
+                {
+                    throw new ArgumentException($"Panel template '{id}' has a null intent entry.", nameof(intents));
                 }
 
-                if (!seen.Contains(bind.Variable))
+                if (!eventIds.Contains(entry.EventId))
                 {
                     throw new ArgumentException(
-                        $"Panel template '{id}' bind '{bind.Control}' references undeclared variable '{bind.Variable}'.",
-                        nameof(binds));
+                        $"Panel template '{id}' intent '{entry.Intent}' references undeclared event '{entry.EventId}'.",
+                        nameof(intents));
                 }
             }
 
             Id = id.Trim();
-            Variables = variables;
-            Binds = safeBinds;
+            Graph = graph.Trim();
+            Pins = pins;
+            Events = safeEvents;
+            Intents = safeIntents;
+            Skin = string.IsNullOrWhiteSpace(skin) ? null : skin.Trim();
         }
 
         public string Id { get; }
-        public IReadOnlyList<PanelTemplateVariable> Variables { get; }
-        public IReadOnlyList<PanelTemplateBind> Binds { get; }
 
-        public PanelVariableBinding ResolveBinding(string variableName)
+        /// <summary>The single data source: one graph whose output schema feeds every pin.</summary>
+        public string Graph { get; }
+        public IReadOnlyList<PanelPin> Pins { get; }
+        public IReadOnlyList<PanelTemplateEvent> Events { get; }
+        public IReadOnlyList<PanelIntentMapEntry> Intents { get; }
+
+        /// <summary>Per-template default skin; instance op param wins, then game.json default.</summary>
+        public string? Skin { get; }
+
+        /// <summary>Graph program id, resolved once at load; -1 until the loader binds it.</summary>
+        public int GraphId { get; internal set; } = -1;
+
+        public PanelPin? FindPin(string pinName)
         {
-            foreach (PanelTemplateVariable variable in Variables)
+            foreach (PanelPin pin in Pins)
             {
-                if (string.Equals(variable.Name, variableName, StringComparison.Ordinal))
+                if (string.Equals(pin.Name, pinName, StringComparison.Ordinal))
                 {
-                    return variable.ToBinding();
+                    return pin;
                 }
             }
 
-            throw new InvalidOperationException($"Panel template '{Id}' has no variable '{variableName}'.");
+            return null;
         }
     }
 
-    public sealed class PanelTemplateVariable
+    /// <summary>
+    /// One output pin: name on the panel side, key into the graph's output schema,
+    /// pull mode, and the default shown whenever the graph has not (yet) produced a
+    /// value for the owning scope.
+    /// </summary>
+    public sealed class PanelPin
     {
-        public PanelTemplateVariable(
-            string name,
-            PanelTemplateVariableKind kind,
-            PanelBindingSourceKind sourceKind,
-            string? attributeId = null,
-            string? graphOutputKey = null)
+        public PanelPin(string name, string key, bool realtime, float defaultValue)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                throw new ArgumentException("Variable name is required.", nameof(name));
+                throw new ArgumentException("Pin name is required.", nameof(name));
+            }
+
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentException($"Pin '{name}' requires an output key.", nameof(key));
             }
 
             Name = name.Trim();
-            Kind = kind;
-            SourceKind = sourceKind;
-
-            // Reuse the binding contract's own fail-closed field rules.
-            Binding = new PanelVariableBinding(Name, sourceKind, attributeId, graphOutputKey);
-            AttributeId = Binding.AttributeId;
-            GraphOutputKey = Binding.GraphOutputKey;
+            Key = key.Trim();
+            Realtime = realtime;
+            Default = defaultValue;
         }
 
         public string Name { get; }
-        public PanelTemplateVariableKind Kind { get; }
-        public PanelBindingSourceKind SourceKind { get; }
-        public string? AttributeId { get; }
-        public string? GraphOutputKey { get; }
+        public string Key { get; }
 
-        internal PanelVariableBinding Binding { get; }
+        /// <summary>True = re-evaluated every realtime refresh pass; False = evaluated once at instantiate (snapshot).</summary>
+        public bool Realtime { get; }
 
-        public PanelVariableBinding ToBinding() => Binding;
-    }
-
-    public enum PanelTemplateVariableKind : byte
-    {
-        Float = 0,
-        Int = 1,
-    }
-
-    public sealed class PanelTemplateBind
-    {
-        public PanelTemplateBind(string control, string variable)
-        {
-            if (string.IsNullOrWhiteSpace(control))
-            {
-                throw new ArgumentException("Bind control id is required.", nameof(control));
-            }
-
-            if (string.IsNullOrWhiteSpace(variable))
-            {
-                throw new ArgumentException($"Bind '{control}' requires a variable name.", nameof(variable));
-            }
-
-            Control = control.Trim();
-            Variable = variable.Trim();
-        }
-
-        public string Control { get; }
-        public string Variable { get; }
+        /// <summary>Data contract: graph missing/not yet run/failed → this value. No error, no empty.</summary>
+        public float Default { get; }
     }
 }

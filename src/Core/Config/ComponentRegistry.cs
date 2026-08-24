@@ -29,6 +29,7 @@ using Ludots.Core.Physics;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Config
@@ -73,7 +74,7 @@ namespace Ludots.Core.Config
             Register("ProgressionScopeBinding", SetProgressionScopeBinding);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
             Register<ForceInput2D>("ForceInput2D");
-            Register<GameplayTagContainer>("GameplayTagContainer");
+            Register<GameplayTagContainer>("GameplayTagContainer", SetGameplayTagContainer);
             Register<TagCountContainer>("TagCountContainer");
             Register<DirtyFlags>("DirtyFlags");
             Register<TimedTagBuffer>("TimedTagBuffer");
@@ -83,12 +84,15 @@ namespace Ludots.Core.Config
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
             Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
             Register<CommandSourceDragState>("CommandSourceDragState");
+            Register("VisionEmitterCm", SetVisionEmitterCm, null, Component<VisionEmitterCm>.ComponentType);
+            Register("FogOccupantCm", SetFogOccupantCm, null, Component<FogOccupantCm>.ComponentType);
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);
             Register("SpatialFootprint2D", SetSpatialFootprint2D);
             Register<BlackboardSpatialBuffer>("BlackboardSpatialBuffer");
             Register<BlackboardEntityBuffer>("BlackboardEntityBuffer");
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
+            Register<BlackboardFloatBuffer>("BlackboardFloatBuffer");
             Register("AbilityExecAimSync", SetAbilityExecAimSync);
             Register<VisualTransform>("VisualTransform");
             Register<VisualHeightmapSampleState>("VisualHeightmapSampleState");
@@ -99,6 +103,7 @@ namespace Ludots.Core.Config
             Register("CompoundObstacle2D", SetCompoundObstacle2D);
             Register<RuntimeNavMeshStructuralObstacle>("RuntimeNavMeshStructuralObstacle");
             Register("ManifestationMotion2D", SetManifestationMotion2D);
+            Register("AttachedLocalPose", SetAttachedLocalPose);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
             Register<UtilityAiAgent>("UtilityAiAgent", SetUtilityAiAgent);
             Register<UtilityAiState>("UtilityAiState", SetUtilityAiState);
@@ -547,6 +552,54 @@ namespace Ludots.Core.Config
             entity.Add(new CommandSourceSelectableState { IsEnabled = enabled });
         }
 
+        private static void SetVisionEmitterCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("VisionEmitterCm requires an object payload.");
+            }
+
+            ValidateProperties(
+                obj,
+                "VisionEmitterCm",
+                "scope",
+                "layers",
+                "polarity",
+                "aperture",
+                "altitudeBand",
+                "priority",
+                "detectionStrength",
+                "trueSightStrength");
+
+            entity.Add(new VisionEmitterCm
+            {
+                ScopeKeyId = ResolveVisionScopeKeyId(context, RequireStringProperty(obj, "scope", "VisionEmitterCm")),
+                LayerMask = ResolveFogLayerMask(context, RequireArrayProperty(obj, "layers", "VisionEmitterCm.layers"), "VisionEmitterCm.layers"),
+                Polarity = ParseVisionPolarity(RequireStringProperty(obj, "polarity", "VisionEmitterCm")),
+                Aperture = ParseVisionAperture(RequireObjectProperty(obj, "aperture", "VisionEmitterCm.aperture")),
+                AltitudeBand = ReadOptionalIntProperty(obj, "altitudeBand"),
+                Priority = ReadOptionalIntProperty(obj, "priority"),
+                DetectionStrength = ReadOptionalByteProperty(obj, "detectionStrength", "VisionEmitterCm.detectionStrength"),
+                TrueSightStrength = ReadOptionalByteProperty(obj, "trueSightStrength", "VisionEmitterCm.trueSightStrength"),
+            });
+        }
+
+        private static void SetFogOccupantCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("FogOccupantCm requires an object payload.");
+            }
+
+            ValidateProperties(obj, "FogOccupantCm", "layers", "altitudeBand", "stealthLevel");
+            entity.Add(new FogOccupantCm
+            {
+                ExposeLayerMask = ResolveFogLayerMask(context, RequireArrayProperty(obj, "layers", "FogOccupantCm.layers"), "FogOccupantCm.layers"),
+                AltitudeBand = ReadOptionalIntProperty(obj, "altitudeBand"),
+                StealthLevel = ReadOptionalByteProperty(obj, "stealthLevel", "FogOccupantCm.stealthLevel"),
+            });
+        }
+
         private static void SetSpatialBounds(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
@@ -979,6 +1032,54 @@ namespace Ludots.Core.Config
                 $"{context} references unregistered attribute '{attributeName}'. Declare it in startup GAS attribute config before map loading.");
         }
 
+        private static void SetGameplayTagContainer(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("GameplayTagContainer requires an object payload.");
+            }
+            ValidateProperties(obj, "GameplayTagContainer", "tags");
+
+            var container = new GameplayTagContainer();
+            if (obj.TryGetPropertyValue("tags", out var tagsNode))
+            {
+                if (tagsNode is not JsonArray tags)
+                {
+                    throw new InvalidOperationException("GameplayTagContainer.tags requires an array payload.");
+                }
+
+                foreach (JsonNode? tag in tags)
+                {
+                    if (tag == null)
+                    {
+                        throw new InvalidOperationException("GameplayTagContainer.tags requires non-null string entries.");
+                    }
+
+                    string tagName = ReadStringNode(tag, "GameplayTagContainer.tags");
+                    container.AddTag(ResolveGameplayTagId(tagName, $"GameplayTagContainer.tags.{tagName}"));
+                }
+            }
+
+            entity.Add(container);
+        }
+
+        private static int ResolveGameplayTagId(string tagName, string context)
+        {
+            int tagId = TagRegistry.GetId(tagName);
+            if (tagId != TagRegistry.InvalidId)
+            {
+                return tagId;
+            }
+
+            if (!TagRegistry.IsFrozen)
+            {
+                return TagRegistry.Register(tagName);
+            }
+
+            throw new InvalidOperationException(
+                $"{context} references unregistered tag '{tagName}'. Declare it in startup GAS tag config before loading.");
+        }
+
         private static void SetEntityLocalClock(Entity entity, JsonNode data)
         {
             RequireEmptyObject(data, "EntityLocalClock");
@@ -1320,12 +1421,50 @@ namespace Ludots.Core.Config
             }
             ValidateProperties(obj, "ManifestationMotion2D", "followParentPosition", "facingSource", "sweepDegreesPerSecond", "forwardOffsetCm");
 
+            byte followParentPosition = ParseBooleanByte(RequireProperty(obj, "followParentPosition", "ManifestationMotion2D"), "ManifestationMotion2D.followParentPosition");
+            int forwardOffsetCm = ReadIntProperty(obj, "forwardOffsetCm", "ManifestationMotion2D");
             entity.Add(new ManifestationMotion2D
             {
-                FollowParentPosition = ParseBooleanByte(RequireProperty(obj, "followParentPosition", "ManifestationMotion2D"), "ManifestationMotion2D.followParentPosition"),
+                FollowParentPosition = followParentPosition,
                 FacingSource = ParseManifestationFacingSource(RequireStringProperty(obj, "facingSource", "ManifestationMotion2D")),
                 SweepDegreesPerSecond = ReadFloatProperty(obj, "sweepDegreesPerSecond", "ManifestationMotion2D"),
-                ForwardOffsetCm = ReadIntProperty(obj, "forwardOffsetCm", "ManifestationMotion2D"),
+                ForwardOffsetCm = forwardOffsetCm,
+            });
+
+            // 位置跟随职责已并入通用 AttachmentPositionSyncSystem：跟随父的 manifestation
+            // 在装配期取得 AttachedLocalPose（前向偏移沿自身朝向旋转），朝向仍由
+            // ManifestationMotion2DSystem 计算。既有模板 JSON 无需变更。
+            if (followParentPosition != 0)
+            {
+                entity.Add(new Ludots.Core.Components.AttachedLocalPose
+                {
+                    OffsetCm = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(forwardOffsetCm, 0),
+                    LocalFacingRad = Ludots.Core.Mathematics.FixedPoint.Fix64.Zero,
+                    InheritParentFacing = 0,
+                    OffsetRotation = Ludots.Core.Components.AttachedOffsetRotation.OwnFacing,
+                });
+            }
+        }
+
+        private static void SetAttachedLocalPose(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AttachedLocalPose requires an object payload.");
+            }
+            ValidateProperties(obj, "AttachedLocalPose", "offsetXCm", "offsetYCm", "facingDeg", "inheritParentFacing", "offsetRotation");
+
+            entity.Add(new Ludots.Core.Components.AttachedLocalPose
+            {
+                OffsetCm = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(
+                    ReadIntProperty(obj, "offsetXCm", "AttachedLocalPose"),
+                    ReadIntProperty(obj, "offsetYCm", "AttachedLocalPose")),
+                LocalFacingRad = Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(
+                    ReadIntProperty(obj, "facingDeg", "AttachedLocalPose")) * (Ludots.Core.Mathematics.FixedPoint.Fix64.Pi / Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(180)),
+                InheritParentFacing = ParseBooleanByte(RequireProperty(obj, "inheritParentFacing", "AttachedLocalPose"), "AttachedLocalPose.inheritParentFacing"),
+                OffsetRotation = Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.ParseOffsetRotation(
+                    RequireStringProperty(obj, "offsetRotation", "AttachedLocalPose"),
+                    "AttachedLocalPose"),
             });
         }
 
@@ -1696,6 +1835,71 @@ namespace Ludots.Core.Config
             return requirementId;
         }
 
+        private static int ResolveVisionScopeKeyId(ComponentAuthoringContext context, string scopeKey)
+        {
+            ScopeKeyRegistry scopeKeys = context.Require<ScopeKeyRegistry>(ComponentAuthoringServiceKeys.ScopeKeyRegistry);
+            return scopeKeys.TryGetId(scopeKey, out int scopeKeyId) && scopeKeyId > 0
+                ? scopeKeyId
+                : throw new InvalidOperationException(
+                    $"VisionEmitterCm.scope references unknown progression scope '{scopeKey}'. Declare it in Progression/scopes.json.");
+        }
+
+        private static uint ResolveFogLayerMask(ComponentAuthoringContext context, JsonArray layers, string contextName)
+        {
+            if (layers.Count == 0)
+            {
+                throw new InvalidOperationException($"{contextName} requires at least one fog layer.");
+            }
+
+            FogLayerRegistry registry = context.Require<FogLayerRegistry>(ComponentAuthoringServiceKeys.VisionFogLayerRegistry);
+            uint mask = 0u;
+            for (int i = 0; i < layers.Count; i++)
+            {
+                string layerKey = ReadStringNode(
+                    layers[i] ?? throw new InvalidOperationException($"{contextName}[{i}] requires a non-null fog layer key."),
+                    $"{contextName}[{i}]");
+                FogLayerId layerId = registry.GetId(layerKey);
+                if (layerId.Value <= 0)
+                {
+                    throw new InvalidOperationException($"{contextName}[{i}] references unknown fog layer '{layerKey}'.");
+                }
+
+                mask |= registry.ToMask(layerId);
+            }
+
+            return mask;
+        }
+
+        private static VisionPolarity ParseVisionPolarity(string value)
+        {
+            return value switch
+            {
+                "Reveal" => VisionPolarity.Reveal,
+                "Deny" => VisionPolarity.Deny,
+                _ => throw new InvalidOperationException($"Unsupported VisionEmitterCm.polarity '{value}'. Expected Reveal or Deny."),
+            };
+        }
+
+        private static VisionAperture ParseVisionAperture(JsonObject obj)
+        {
+            ValidateProperties(obj, "VisionEmitterCm.aperture", "kind", "rangeCm", "halfAngleDeg", "halfWidthCm", "halfHeightCm", "lengthCm");
+            string kind = RequireStringProperty(obj, "kind", "VisionEmitterCm.aperture");
+            return kind switch
+            {
+                "Disk" => VisionAperture.Disk(ReadIntProperty(obj, "rangeCm", "VisionEmitterCm.aperture")),
+                "Cone" => VisionAperture.Cone(
+                    ReadIntProperty(obj, "rangeCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfAngleDeg", "VisionEmitterCm.aperture")),
+                "Box" => VisionAperture.Box(
+                    ReadIntProperty(obj, "halfWidthCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfHeightCm", "VisionEmitterCm.aperture")),
+                "Line" => VisionAperture.Line(
+                    ReadIntProperty(obj, "lengthCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfWidthCm", "VisionEmitterCm.aperture")),
+                _ => throw new InvalidOperationException($"Unsupported VisionEmitterCm.aperture.kind '{kind}'. Expected Disk, Cone, Box, or Line."),
+            };
+        }
+
         private static string ReadStringNode(JsonNode node, string context)
         {
             if (node == null || node.GetValueKind() == JsonValueKind.Null)
@@ -1811,6 +2015,40 @@ namespace Ludots.Core.Config
             }
 
             return node;
+        }
+
+        private static JsonObject RequireObjectProperty(JsonObject obj, string name, string context)
+        {
+            JsonNode node = RequireProperty(obj, name, context);
+            return node as JsonObject
+                ?? throw new InvalidOperationException($"{context}.{name} requires an object payload.");
+        }
+
+        private static JsonArray RequireArrayProperty(JsonObject obj, string name, string context)
+        {
+            JsonNode node = RequireProperty(obj, name, context);
+            return node as JsonArray
+                ?? throw new InvalidOperationException($"{context} requires an array.");
+        }
+
+        private static int ReadOptionalIntProperty(JsonObject obj, string name)
+        {
+            return TryReadIntProperty(obj, out int value, name) ? value : 0;
+        }
+
+        private static byte ReadOptionalByteProperty(JsonObject obj, string name, string context)
+        {
+            if (!TryReadIntProperty(obj, out int value, name))
+            {
+                return 0;
+            }
+
+            if (value < byte.MinValue || value > byte.MaxValue)
+            {
+                throw new InvalidOperationException($"{context} must be between {byte.MinValue} and {byte.MaxValue}.");
+            }
+
+            return (byte)value;
         }
 
         private static string RequireStringProperty(JsonObject obj, string name, string context)

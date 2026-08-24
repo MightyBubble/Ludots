@@ -34,7 +34,7 @@ namespace Ludots.Core.Input.Systems
         private uint _cachedSchemeRevision;
         private bool _hasBinding;
         private ControlSchemeAxisMoveBinding _binding;
-        private int _cooldownTicks;
+        private int _throttleTicksRemaining;
 
         public AxisMoveOrderSystem(
             World world,
@@ -60,7 +60,7 @@ namespace Ludots.Core.Input.Systems
             {
                 _cachedSchemeRevision = _schemes.Revision;
                 _hasBinding = _schemes.TryGetActiveAxisMove(out _binding);
-                _cooldownTicks = 0;
+                _throttleTicksRemaining = 0;
             }
 
             if (!_hasBinding)
@@ -79,13 +79,13 @@ namespace Ludots.Core.Input.Systems
             Vector2 axis = input.ReadAction<Vector2>(_binding.ActionId);
             if (axis.LengthSquared() <= AxisDeadzoneSquared)
             {
-                _cooldownTicks = 0;
+                _throttleTicksRemaining = 0;
                 return;
             }
 
-            if (_cooldownTicks > 0)
+            if (_throttleTicksRemaining > 0)
             {
-                _cooldownTicks--;
+                _throttleTicksRemaining--;
                 return;
             }
 
@@ -118,7 +118,7 @@ namespace Ludots.Core.Input.Systems
 
             if (_orderQueue.TryEnqueue(in order))
             {
-                _cooldownTicks = _binding.ThrottleTicks - 1;
+                _throttleTicksRemaining = _binding.ThrottleTicks - 1;
             }
         }
     }

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <section class="panel fireball" id="fireball-panel" data-ready="false">
+    <header class="panel-title">FIREBALL STATUS</header>
+    <div class="row">
+      <span class="label hp-label">HP</span>
+      <div class="bar hp-bar"><div class="fill hp-fill" id="hp-fill"></div></div>
+      <span class="value" id="hp-text">-- / --</span>
+    </div>
+    <div class="row">
+      <span class="label mp-label">MP</span>
+      <div class="bar mp-bar"><div class="fill mp-fill" id="mp-fill"></div></div>
+      <span class="value" id="mp-text">-- / --</span>
+    </div>
+    <div class="row atk-row">
+      <span class="label atk-label">ATK</span>
+      <span class="value atk-value" id="atk-text">--</span>
+    </div>
+    <footer class="hint">[Web CEF] Press Q</footer>
+    <footer class="hint link-status" id="link-status">link: booting</footer>
+  </section>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -22,6 +22,9 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         private readonly int[] _scriptResumeGraphIds;
         private readonly int[] _scriptIntRegs;
         private readonly byte[] _scriptBoolRegs;
+        private readonly float[] _scriptFloatRegs;
+        private readonly Entity[] _scriptEntityRegs;
+        private readonly Entity[] _scriptTargetRegs;
         private readonly int[] _scriptCallStacks;
         private int _count;
 
@@ -45,6 +48,9 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             _scriptResumeGraphIds = new int[capacity];
             _scriptIntRegs = new int[capacity * GraphVmLimits.MaxIntRegisters];
             _scriptBoolRegs = new byte[capacity * GraphVmLimits.MaxBoolRegisters];
+            _scriptFloatRegs = new float[capacity * GraphVmLimits.MaxFloatRegisters];
+            _scriptEntityRegs = new Entity[capacity * GraphVmLimits.MaxEntityRegisters];
+            _scriptTargetRegs = new Entity[capacity * GraphVmLimits.MaxTargets];
             _scriptCallStacks = new int[capacity * GraphVmLimits.MaxCallStackDepth];
         }
 
@@ -74,8 +80,14 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             _scriptResumeGraphIds[agent] = 0;
             int intBase = agent * GraphVmLimits.MaxIntRegisters;
             int boolBase = agent * GraphVmLimits.MaxBoolRegisters;
+            int floatBase = agent * GraphVmLimits.MaxFloatRegisters;
+            int entityBase = agent * GraphVmLimits.MaxEntityRegisters;
+            int targetBase = agent * GraphVmLimits.MaxTargets;
             Array.Clear(_scriptIntRegs, intBase, GraphVmLimits.MaxIntRegisters);
             Array.Clear(_scriptBoolRegs, boolBase, GraphVmLimits.MaxBoolRegisters);
+            Array.Clear(_scriptFloatRegs, floatBase, GraphVmLimits.MaxFloatRegisters);
+            Array.Clear(_scriptEntityRegs, entityBase, GraphVmLimits.MaxEntityRegisters);
+            Array.Clear(_scriptTargetRegs, targetBase, GraphVmLimits.MaxTargets);
             Array.Clear(_scriptCallStacks, agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
         }
 
@@ -445,6 +457,9 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     scriptSlices++;
                     Span<int> ints = _scriptIntRegs.AsSpan(agent * GraphVmLimits.MaxIntRegisters, GraphVmLimits.MaxIntRegisters);
                     Span<byte> bools = _scriptBoolRegs.AsSpan(agent * GraphVmLimits.MaxBoolRegisters, GraphVmLimits.MaxBoolRegisters);
+                    Span<float> floats = _scriptFloatRegs.AsSpan(agent * GraphVmLimits.MaxFloatRegisters, GraphVmLimits.MaxFloatRegisters);
+                    Span<Entity> entities = _scriptEntityRegs.AsSpan(agent * GraphVmLimits.MaxEntityRegisters, GraphVmLimits.MaxEntityRegisters);
+                    Span<Entity> targets = _scriptTargetRegs.AsSpan(agent * GraphVmLimits.MaxTargets, GraphVmLimits.MaxTargets);
                     Span<int> callStack = _scriptCallStacks.AsSpan(agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
 
                     ref GraphExecutionCursor cursor = ref _scriptCursors[agent];
@@ -461,11 +476,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     _scriptResumeGraphIds[agent] = node.GraphId;
 
                     GraphSliceResult result = GraphExecutor.ExecuteResolvedRegisteredScriptSlice(
-                        programs,
-                        program,
-                        ints,
-                        bools,
-                        callStack,
+                        programs, program, floats, ints, bools, entities, targets, callStack,
                         ref cursor,
                         scriptBudgetSteps,
                         world,

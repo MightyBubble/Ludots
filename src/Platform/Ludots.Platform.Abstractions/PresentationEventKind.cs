@@ -12,6 +12,7 @@ namespace Ludots.Platform.Abstractions
         // Presenter domain events
         PresenterCreated = 10,
         PresenterDestroyed = 11,
+        TimerExpired = 12,
 
         // GAS presentation events
         EffectApplied = 20,

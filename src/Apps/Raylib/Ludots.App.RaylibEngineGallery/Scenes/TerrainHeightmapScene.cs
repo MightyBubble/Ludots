@@ -1,3 +1,4 @@
+using System.Numerics;
 using Ludots.Raylib.Render;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
@@ -14,7 +15,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             seed: 47);
 
         private RaylibVisualHeightmapRenderer _renderer = new() { VisibleRadiusCm = 90_000f };
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibFrameLighting _lighting = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "terrain_heightmap";
@@ -24,6 +27,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         public void Load()
         {
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.46f);
+            _shadowMap = new RaylibDirectionalShadowMap();
             _renderer.ApplyFrameLighting(_lighting);
             _renderer.AbsoluteColorSeaLevelCm = _heightmap.RenderProfile.SeaLevelCm;
             _renderer.AbsoluteColorPeakSpanCm = _heightmap.RenderProfile.AbsoluteColorPeakSpanCm;
@@ -36,10 +40,15 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             float phase = 0.40f + (0.14f * MathF.Sin((float)totalTimeSeconds * 0.04f));
             _lighting.SetDayPhase(phase);
-            _renderer.ApplyFrameLighting(_lighting);
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(camera.target.X, 12f, camera.target.Z), 360f);
+            _renderer.RenderShadow(_heightmap, camera, _shadowMap);
+            _shadowMap.EndFrame();
+            _renderer.ApplyFrameLighting(_lighting, _shadowMap, shadowTexelWorld: 0.55f);
 
-            Rl.ClearBackground(new Color(70, 108, 140, 255));
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 2200f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
             Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
             _renderer.Render(_heightmap, camera);
             Rl.EndMode3D();
         }
@@ -52,6 +61,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _renderer?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
             _renderer = null!;
             _disposed = true;
         }

@@ -147,6 +147,12 @@
     "AllowEmpty": true
   },
   {
+    "Path": "Panels/panel_templates.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
     "Path": "GAS/func_lib.json",
     "Policy": "ArrayById",
     "IdField": "name"
@@ -344,6 +350,12 @@
     "Path": "Items/layouts.json",
     "Policy": "ArrayById",
     "IdField": "id"
+  },
+  {
+    "Path": "Rng/distributions.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
   },
   {
     "Path": "Items/definitions.json",

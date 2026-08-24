@@ -3,7 +3,8 @@ using System;
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
     /// <summary>
-    /// Script-only ControlFlow authoring sugar SSOT.
+    /// ControlFlow authoring sugar SSOT. Kind gates live in <see cref="GraphControlFlowCompiler"/>
+    /// (Wait/While/SwitchInt/Until/Break are Script/TriggerGraph; BranchBool also allows Effect).
     /// These names are compile-time sugar (not <see cref="GraphNodeOp"/> values);
     /// they lower in <see cref="GraphControlFlowCompiler"/> to Jump / Yield / compares.
     /// </summary>
@@ -14,6 +15,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string Wait = "Wait";
         public const string While = "While";
         public const string Until = "Until";
+        public const string Break = "Break";
 
         public static bool IsScriptOnlySugar(string? opName)
         {
@@ -26,10 +28,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                    string.Equals(opName, SwitchInt, StringComparison.Ordinal) ||
                    string.Equals(opName, Wait, StringComparison.Ordinal) ||
                    string.Equals(opName, While, StringComparison.Ordinal) ||
-                   string.Equals(opName, Until, StringComparison.Ordinal);
+                   string.Equals(opName, Until, StringComparison.Ordinal) ||
+                   string.Equals(opName, Break, StringComparison.Ordinal);
         }
 
         public static string DescribeScriptOnlySugar()
-            => $"{BranchBool}, {SwitchInt}, {Wait}, {While}, {Until}";
+            => $"{BranchBool}, {SwitchInt}, {Wait}, {While}, {Until}, {Break}";
     }
 }

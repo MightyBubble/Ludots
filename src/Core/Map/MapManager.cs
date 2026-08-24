@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -112,6 +113,14 @@ namespace Ludots.Core.Map
                     {
                         var jsonStr = fragments[fi].ToJsonString();
                         RejectLegacyWorldExtentKeys(fragments[fi], jsonPath);
+                        RejectLegacyTriggerGraphMountKey(fragments[fi], jsonPath);
+                        ValidateHeartbeatIntervalTicks(fragments[fi], jsonPath);
+                        _ = MapVariableDeclarations.Parse(
+                            fragments[fi] is JsonObject fragmentRoot &&
+                            TryGetPropertyCaseInsensitive(fragmentRoot, "Variables", out JsonNode variablesNode)
+                                ? variablesNode
+                                : null,
+                            mapId.Value);
                         var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
                         if (config != null) configs.Add(config);
                     }
@@ -301,8 +310,105 @@ namespace Ludots.Core.Map
                 }
             }
 
+            // Merge TriggerGraphs (append mount objects)
+            if (source.TriggerGraphs != null)
+            {
+                if (target.TriggerGraphs is JsonArray targetArray && source.TriggerGraphs is JsonArray sourceArray)
+                {
+                    for (int i = 0; i < sourceArray.Count; i++)
+                    {
+                        targetArray.Add(sourceArray[i]?.DeepClone());
+                    }
+                }
+                else
+                {
+                    target.TriggerGraphs = source.TriggerGraphs.DeepClone();
+                }
+            }
+
+            // Merge Regions (append region objects)
+            if (source.Regions != null)
+            {
+                if (target.Regions is JsonArray targetRegionArray && source.Regions is JsonArray sourceRegionArray)
+                {
+                    for (int i = 0; i < sourceRegionArray.Count; i++)
+                    {
+                        targetRegionArray.Add(sourceRegionArray[i]?.DeepClone());
+                    }
+                }
+                else
+                {
+                    target.Regions = source.Regions.DeepClone();
+                }
+            }
+
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
+
+            // Merge DeathRule (source wins)
+            if (source.DeathRule != null)
+            {
+                target.DeathRule = source.DeathRule;
+            }
+
+            // Merge HeartbeatIntervalTicks (source wins)
+            if (source.HeartbeatIntervalTicks.HasValue)
+            {
+                target.HeartbeatIntervalTicks = source.HeartbeatIntervalTicks;
+            }
+
+            // Merge Variables (later fragment / child map replaces same-name declaration)
+            if (source.Variables != null && source.Variables.Count > 0)
+            {
+                foreach (var sourceVariable in source.Variables)
+                {
+                    string name = (sourceVariable.Name ?? string.Empty).Trim();
+                    int existing = target.Variables.FindIndex(v =>
+                        string.Equals((v.Name ?? string.Empty).Trim(), name, StringComparison.Ordinal));
+                    if (existing >= 0)
+                    {
+                        target.Variables[existing] = sourceVariable;
+                    }
+                    else
+                    {
+                        target.Variables.Add(sourceVariable);
+                    }
+                }
+            }
+        }
+
+        private static void RejectLegacyTriggerGraphMountKey(JsonNode fragment, string jsonPath)
+        {
+            if (fragment is not JsonObject root)
+            {
+                return;
+            }
+
+            foreach (var kvp in root)
+            {
+                if (string.Equals(kvp.Key, "MapTriggerGraphs", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Map config '{jsonPath}' uses legacy key '{kvp.Key}'. The mount field was renamed with the dialect (MapTrigger → TriggerGraph); use 'TriggerGraphs' instead.");
+                }
+            }
+        }
+
+        private static void ValidateHeartbeatIntervalTicks(JsonNode fragment, string jsonPath)
+        {
+            if (fragment is not JsonObject root ||
+                !TryGetPropertyCaseInsensitive(root, "HeartbeatIntervalTicks", out JsonNode node))
+            {
+                return;
+            }
+
+            if (node is not JsonValue value ||
+                !value.TryGetValue<int>(out int intervalTicks) ||
+                intervalTicks < 1)
+            {
+                throw new InvalidOperationException(
+                    $"Map config '{jsonPath}' field 'HeartbeatIntervalTicks' requires an integer >= 1.");
+            }
         }
 
         private static void RejectLegacyWorldExtentKeys(JsonNode fragment, string jsonPath)

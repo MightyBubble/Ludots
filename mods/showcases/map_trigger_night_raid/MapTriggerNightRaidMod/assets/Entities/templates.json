@@ -1,0 +1,195 @@
+[
+  {
+    "id": "night_raid_hero",
+    "components": {
+      "Name": {
+        "Value": "NightRaidHero"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": -600,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      },
+      "OrderBuffer": {}
+    }
+  },
+  {
+    "id": "night_raid_raider",
+    "components": {
+      "Name": {
+        "Value": "NightRaidRaider"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 600,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 60
+        }
+      }
+    }
+  },
+  {
+    "id": "night_raid_raider_elite",
+    "components": {
+      "Name": {
+        "Value": "NightRaidRaiderElite"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 760,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 90
+        }
+      }
+    }
+  },
+  {
+    "id": "night_raid_boss",
+    "components": {
+      "Name": {
+        "Value": "NightRaidBoss"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 1000,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300
+        }
+      }
+    }
+  },
+  {
+    "id": "night_raid_gate",
+    "components": {
+      "Name": {
+        "Value": "NightRaidGate"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 350,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "night_raid_boss_camp",
+    "components": {
+      "Name": {
+        "Value": "NightRaidBossCamp"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 1000,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      }
+    }
+  },
+  {
+    "id": "night_raid_wave1_anchor",
+    "components": {
+      "Name": {
+        "Value": "NightRaidWave1Anchor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 420,
+          "Y": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "night_raid_wave2_anchor",
+    "components": {
+      "Name": {
+        "Value": "NightRaidWave2Anchor"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 760,
+          "Y": 0
+        }
+      }
+    }
+  }
+]

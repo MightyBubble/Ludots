@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Components
@@ -65,6 +66,24 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 }
             }
             value = 0;
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetRawValue(int keyId, out ConfigParamType type, out int rawValue)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                if (Keys[i] == keyId)
+                {
+                    type = (ConfigParamType)Types[i];
+                    rawValue = Values[i];
+                    return true;
+                }
+            }
+
+            type = default;
+            rawValue = 0;
             return false;
         }
 
@@ -209,14 +228,22 @@ namespace Ludots.Core.Gameplay.GAS.Components
                     }
                 }
 
-                // Not found → append if capacity allows
-                if (!found && Count < MAX_PARAMS)
+                if (found)
                 {
-                    Keys[Count] = callerKey;
-                    Types[Count] = caller.Types[ci];
-                    Values[Count] = caller.Values[ci];
-                    Count++;
+                    continue;
                 }
+
+                if (Count >= MAX_PARAMS)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.CONFIG_PARAMS.ERR.MergeCapacityExceeded: keyId={callerKey}, capacity={MAX_PARAMS}.");
+                }
+
+                // Not found: append to the fixed-capacity parameter table.
+                Keys[Count] = callerKey;
+                Types[Count] = caller.Types[ci];
+                Values[Count] = caller.Values[ci];
+                Count++;
             }
         }
     }

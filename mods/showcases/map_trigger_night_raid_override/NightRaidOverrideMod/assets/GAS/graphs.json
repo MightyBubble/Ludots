@@ -1,0 +1,179 @@
+[
+  {
+    "id": "Graph.NightRaid.Override",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "override_loaded",
+        "event": "MapLoaded",
+        "start": "ov_scope",
+        "once": true
+      },
+      {
+        "label": "override_kill_tool",
+        "event": "NightRaid.KillTool.Used",
+        "start": "ov_kt_scope",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ov_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "ov_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "ov_write_active",
+        "op": "WriteMapVarInt",
+        "var": "override_active"
+      },
+      {
+        "id": "ov_done_const",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "ov_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "ov_kt_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "ov_kt_read",
+        "op": "ReadMapVarInt",
+        "var": "override_seen"
+      },
+      {
+        "id": "ov_kt_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "ov_kt_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "ov_kt_write",
+        "op": "WriteMapVarInt",
+        "var": "override_seen"
+      },
+      {
+        "id": "ov_kt_const",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "ov_kt_done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "ov_scope",
+        "fromPort": "next",
+        "to": "ov_one"
+      },
+      {
+        "from": "ov_one",
+        "fromPort": "next",
+        "to": "ov_write_active"
+      },
+      {
+        "from": "ov_write_active",
+        "fromPort": "next",
+        "to": "ov_done_const"
+      },
+      {
+        "from": "ov_done_const",
+        "fromPort": "next",
+        "to": "ov_done"
+      },
+      {
+        "from": "ov_kt_scope",
+        "fromPort": "next",
+        "to": "ov_kt_read"
+      },
+      {
+        "from": "ov_kt_read",
+        "fromPort": "next",
+        "to": "ov_kt_one"
+      },
+      {
+        "from": "ov_kt_one",
+        "fromPort": "next",
+        "to": "ov_kt_add"
+      },
+      {
+        "from": "ov_kt_add",
+        "fromPort": "next",
+        "to": "ov_kt_write"
+      },
+      {
+        "from": "ov_kt_write",
+        "fromPort": "next",
+        "to": "ov_kt_const"
+      },
+      {
+        "from": "ov_kt_const",
+        "fromPort": "next",
+        "to": "ov_kt_done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "ov_scope",
+        "fromPort": "value",
+        "to": "ov_write_active",
+        "toPort": "source"
+      },
+      {
+        "from": "ov_one",
+        "fromPort": "value",
+        "to": "ov_write_active",
+        "toPort": "value"
+      },
+      {
+        "from": "ov_done_const",
+        "fromPort": "value",
+        "to": "ov_done",
+        "toPort": "value"
+      },
+      {
+        "from": "ov_kt_scope",
+        "fromPort": "value",
+        "to": "ov_kt_write",
+        "toPort": "source"
+      },
+      {
+        "from": "ov_kt_read",
+        "fromPort": "value",
+        "to": "ov_kt_add",
+        "toPort": "a"
+      },
+      {
+        "from": "ov_kt_one",
+        "fromPort": "value",
+        "to": "ov_kt_add",
+        "toPort": "b"
+      },
+      {
+        "from": "ov_kt_add",
+        "fromPort": "value",
+        "to": "ov_kt_write",
+        "toPort": "value"
+      },
+      {
+        "from": "ov_kt_const",
+        "fromPort": "value",
+        "to": "ov_kt_done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

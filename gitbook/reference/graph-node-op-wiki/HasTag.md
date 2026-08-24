@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 六种全可用（Effect / Score / Validation / Derived / Query / Script） |
+| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | Bool → 布尔槽 |
 | 输入端口（值边 toPort） | `source`（来源实体） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |
@@ -43,7 +43,7 @@ LoadExplicitTarget → **HasTag**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：六种图全都能用，不必为它挑图种。
+- 图种边界：七种图全都能用，不必为它挑图种。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：多节点串成完整小玩法的组合示范，可整段抄走改。
 ## 怎么进

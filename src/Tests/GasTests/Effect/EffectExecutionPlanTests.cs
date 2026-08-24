@@ -130,7 +130,8 @@ public sealed class EffectExecutionPlanTests
             Is.EqualTo(EffectExecutionPlanKind.GasTransactional));
     }
 
-    [TestCase(RelationOperation.RemoveParent, "ApplyRelation.RemoveParent")]
+    // RemoveParent 不在本用例：#1064 事务对称化后它是已认证的 GasTransactional
+    // 原子 op（StageRemoveParent），uncertified fail-closed 合同只覆盖仍无事务路径的操作。
     [TestCase(RelationOperation.EnsureLink, "ApplyRelation.EnsureLink")]
     public void Finalize_UncertifiedRelationOperation_FailsClosed(
         RelationOperation operation,

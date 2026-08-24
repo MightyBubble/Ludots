@@ -176,7 +176,7 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
-        public void ActionLib十一名是唯一清单()
+        public void ActionLib十名是唯一清单()
         {
             _ = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
             var names = new HashSet<string>(actions.Names, StringComparer.Ordinal);
@@ -191,7 +191,6 @@ namespace Ludots.Tests.Gas.AI
                 "hfsm.combat.onEnter",
                 "hfsm.combat.onTick",
                 "hfsm.combat.onExit",
-                "level.phaseAdvance",
                 "script.drinkUntilFull"
             }));
         }
@@ -218,6 +217,14 @@ namespace Ludots.Tests.Gas.AI
 
         private sealed class AttributeReadApi : IGraphRuntimeApi
         {
+            public void SpawnTemplate(int templateKeyId, Arch.Core.Entity source, float xCm, float yCm, bool hasPosition)
+            {
+            }
+            public void SetWorldPosition(Arch.Core.Entity target, int xCm, int yCm)
+            {
+            }
+
+
             private readonly World _world;
 
             public AttributeReadApi(World world) => _world = world;

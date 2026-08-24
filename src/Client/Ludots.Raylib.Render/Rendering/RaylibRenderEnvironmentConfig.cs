@@ -8,7 +8,8 @@ namespace Ludots.Raylib.Render
         RaylibLightingConfig Lighting,
         RaylibSkyboxConfig Skybox,
         RaylibWaterRenderConfig Water,
-        RaylibPostProcessConfig PostProcess)
+        RaylibPostProcessConfig PostProcess,
+        RaylibShadowConfig Shadow)
     {
         public static RaylibRenderEnvironmentConfig CreateDefault()
         {
@@ -16,7 +17,8 @@ namespace Ludots.Raylib.Render
                 RaylibLightingConfig.CreateDefault(),
                 RaylibSkyboxConfig.CreateDefault(),
                 RaylibWaterRenderConfig.CreateDefault(),
-                RaylibPostProcessConfig.CreateDefault()).NormalizeAndValidate();
+                RaylibPostProcessConfig.CreateDefault(),
+                RaylibShadowConfig.CreateDefault()).NormalizeAndValidate();
         }
 
         public RaylibRenderEnvironmentConfig NormalizeAndValidate()
@@ -26,7 +28,8 @@ namespace Ludots.Raylib.Render
                 Lighting = Lighting.NormalizeAndValidate(),
                 Skybox = Skybox.Validate(),
                 Water = Water.Validate(),
-                PostProcess = PostProcess.Validate()
+                PostProcess = PostProcess.Validate(),
+                Shadow = Shadow.Validate()
             };
         }
 
@@ -136,7 +139,11 @@ namespace Ludots.Raylib.Render
         Vector3 HorizonColor,
         Vector3 GroundHazeColor,
         Color ClearColor,
-        Color DeepClearColor)
+        Color DeepClearColor,
+        float SunDiskSharpness,
+        float SunDiskIntensity,
+        float SunGlowSharpness,
+        float SunGlowIntensity)
     {
         public static RaylibSkyboxConfig CreateDefault()
         {
@@ -147,7 +154,11 @@ namespace Ludots.Raylib.Render
                 HorizonColor: new Vector3(0.72f, 0.84f, 0.92f),
                 GroundHazeColor: new Vector3(0.52f, 0.64f, 0.66f),
                 ClearColor: new Color(84, 125, 158, 255),
-                DeepClearColor: new Color(6, 10, 16, 255));
+                DeepClearColor: new Color(6, 10, 16, 255),
+                SunDiskSharpness: 720f,
+                SunDiskIntensity: 2.4f,
+                SunGlowSharpness: 22f,
+                SunGlowIntensity: 0.34f);
         }
 
         public RaylibSkyboxConfig Validate()
@@ -156,6 +167,10 @@ namespace Ludots.Raylib.Render
             RaylibRenderEnvironmentConfig.RequireColor(ZenithColor, nameof(ZenithColor));
             RaylibRenderEnvironmentConfig.RequireColor(HorizonColor, nameof(HorizonColor));
             RaylibRenderEnvironmentConfig.RequireColor(GroundHazeColor, nameof(GroundHazeColor));
+            RaylibRenderEnvironmentConfig.RequirePositive(SunDiskSharpness, nameof(SunDiskSharpness));
+            RaylibRenderEnvironmentConfig.RequirePositive(SunDiskIntensity, nameof(SunDiskIntensity));
+            RaylibRenderEnvironmentConfig.RequirePositive(SunGlowSharpness, nameof(SunGlowSharpness));
+            RaylibRenderEnvironmentConfig.RequirePositive(SunGlowIntensity, nameof(SunGlowIntensity));
             return this;
         }
     }
@@ -214,6 +229,28 @@ namespace Ludots.Raylib.Render
             RaylibRenderEnvironmentConfig.RequireRange(Contrast, 0.05f, 8f, nameof(Contrast));
             RaylibRenderEnvironmentConfig.RequireRange(Saturation, 0f, 8f, nameof(Saturation));
             RaylibRenderEnvironmentConfig.RequireRange(VignetteStrength, 0f, 1f, nameof(VignetteStrength));
+            return this;
+        }
+    }
+
+    public readonly record struct RaylibShadowConfig(int MapSize, float ReceiverBiasWorld)
+    {
+        public static RaylibShadowConfig CreateDefault()
+        {
+            return new RaylibShadowConfig(
+                RaylibDirectionalShadowMap.DefaultMapSize,
+                RaylibDirectionalShadowMap.DefaultReceiverBiasWorld);
+        }
+
+        public RaylibShadowConfig Validate()
+        {
+            if (MapSize < 256 || MapSize > 8192 || (MapSize & (MapSize - 1)) != 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(MapSize), MapSize, "MapSize must be a power of two in [256, 8192].");
+            }
+
+            RaylibRenderEnvironmentConfig.RequirePositive(ReceiverBiasWorld, nameof(ReceiverBiasWorld));
+            RaylibRenderEnvironmentConfig.RequireRange(ReceiverBiasWorld, 0f, 1f, nameof(ReceiverBiasWorld));
             return this;
         }
     }

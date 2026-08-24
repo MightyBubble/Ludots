@@ -260,6 +260,7 @@ namespace Ludots.Core.Config
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
                 Span<BlackboardIntBuffer> blackboardInts = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardIntBuffer>() : default;
+                Span<BlackboardFloatBuffer> blackboardFloats = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardFloatBuffer>() : default;
                 Span<BlackboardSpatialBuffer> blackboardSpatial = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardSpatialBuffer>() : default;
                 Span<BlackboardEntityBuffer> blackboardEntities = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardEntityBuffer>() : default;
                 Span<CommandSourceSelectableState> commandSourceStates = descriptor.HasCommandSourceSelectableState ? chunk.GetSpan<CommandSourceSelectableState>() : default;
@@ -328,6 +329,7 @@ namespace Ludots.Core.Config
                     {
                         orderBuffers[componentIndex] = OrderBuffer.CreateEmpty();
                         blackboardInts[componentIndex] = default;
+                        blackboardFloats[componentIndex] = default;
                         blackboardSpatial[componentIndex] = default;
                         blackboardEntities[componentIndex] = default;
                     }
@@ -643,6 +645,12 @@ namespace Ludots.Core.Config
                     throw new InvalidOperationException($"Entity template '{templateId}' requires an explicit components object.");
                 }
 
+                // children 预置组合需要逐子挂接与局部姿落位，只能走单实体 spawn lane。
+                if (template.Children is { Count: > 0 })
+                {
+                    return Incompatible(onSpawnEffectTemplateId);
+                }
+
                 if (!IsBatchCandidate(template.Components))
                 {
                     return Incompatible(onSpawnEffectTemplateId);
@@ -815,6 +823,7 @@ namespace Ludots.Core.Config
                 {
                     signature += Component<OrderBuffer>.Signature;
                     signature += Component<BlackboardIntBuffer>.Signature;
+                    signature += Component<BlackboardFloatBuffer>.Signature;
                     signature += Component<BlackboardSpatialBuffer>.Signature;
                     signature += Component<BlackboardEntityBuffer>.Signature;
                     signature += Component<OrderContinuationBuffer>.Signature;

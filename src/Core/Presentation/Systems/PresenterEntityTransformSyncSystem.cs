@@ -24,9 +24,15 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterTransformSource, PresenterEmitCache, PerfTransformSyncTick>()
             .WithNone<PresenterBootstrapPending, PerfStaticStableVisual, PerfOwnerPayloadTransformSync>();
 
+        private static readonly QueryDescription DebugSyncPathQuery = new QueryDescription()
+            .WithAll<PresenterState, PresenterTransformSource, PresenterWorldPosition, PerfTransformSyncTick>()
+            .WithNone<PresenterBootstrapPending, PerfStaticStableVisual>();
+
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PresenterEntityRuntime _runtime;
         private readonly PresenterDefinitionRegistry? _definitions;
+
+        public bool DebugSyncPathAssertionsEnabled { get; set; }
 
         public PresenterEntityTransformSyncSystem(
             World world,
@@ -99,10 +105,63 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
+            RunDebugSyncPathAssertions();
+
             if (_timingDiagnostics != null)
             {
                 _timingDiagnostics.ObservePresenterEntityTransformSync(
                     (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000d / System.Diagnostics.Stopwatch.Frequency);
+            }
+        }
+
+        [System.Diagnostics.Conditional("DEBUG")]
+        private void RunDebugSyncPathAssertions()
+        {
+            if (!DebugSyncPathAssertionsEnabled)
+            {
+                return;
+            }
+
+            foreach (ref var chunk in World.Query(in DebugSyncPathQuery))
+            {
+                Span<PresenterState> states = chunk.GetSpan<PresenterState>();
+                Span<PresenterTransformSource> sources = chunk.GetSpan<PresenterTransformSource>();
+                Span<PresenterWorldPosition> positions = chunk.GetSpan<PresenterWorldPosition>();
+                ref Entity entityFirst = ref chunk.Entity(0);
+                foreach (int index in chunk)
+                {
+                    ref readonly PresenterState state = ref states[index];
+                    if (state.AnchorKind != PresentationAnchorKind.Entity ||
+                        sources[index].Value != TransformSource.EntityTransform ||
+                        !World.IsAlive(state.OwnerEntity))
+                    {
+                        continue;
+                    }
+
+                    Entity presenter = Unsafe.Add(ref entityFirst, index);
+                    bool ownerNamesPresenterAsSingleRoot = World.TryGet(
+                        state.OwnerEntity,
+                        out PresentationOwnerHasPresenterPayload payload) &&
+                        payload.RootCount == 1 &&
+                        payload.SingleRootPresenter == presenter &&
+                        payload.SingleRootTransformSync != 0;
+                    System.Diagnostics.Debug.Assert(
+                        World.Has<PerfOwnerPayloadTransformSync>(presenter) == ownerNamesPresenterAsSingleRoot,
+                        $"Presenter {presenter.Id} fast-path marker disagrees with owner {state.OwnerEntity.Id} payload; the owner payload write is the single sync-path decision point.");
+
+                    if (!World.Has<VisualTransform>(state.OwnerEntity))
+                    {
+                        continue;
+                    }
+
+                    Vector3 ownerPosition = World.Get<VisualTransform>(state.OwnerEntity).Position;
+                    Vector3 presenterPosition = positions[index].Value;
+                    System.Diagnostics.Debug.Assert(
+                        Math.Abs(presenterPosition.X - ownerPosition.X) <= 0.001f &&
+                        Math.Abs(presenterPosition.Y - ownerPosition.Y) <= 0.001f &&
+                        Math.Abs(presenterPosition.Z - ownerPosition.Z) <= 0.001f,
+                        $"Presenter {presenter.Id} at {presenterPosition} did not catch up to owner {state.OwnerEntity.Id} VisualTransform {ownerPosition}; neither the single-root fast path nor the per-presenter anchored path covered it.");
+                }
             }
         }
 

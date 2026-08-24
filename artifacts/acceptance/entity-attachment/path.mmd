@@ -1,0 +1,13 @@
+﻿flowchart TD
+    A[地图装载: 模板 children 预置组合] --> D[sink: 父∘局部 深度序恒重算]
+    D --> D2[静态父: 重派生幂等 位置不变]
+    D --> E[底盘 Nav 写权独立移动]
+    E --> F[炮塔零偏移锚定 + 独立朝向]
+    F --> G[炮管随炮塔朝向前伸 孙层]
+    G --> H[AttachOp: 骑乘上车 Nav→Attached]
+    H --> I{事务失败?}
+    I -- 是 --> J[回滚: 挂接/位姿/写权恢复]
+    I -- 否 --> K[随车保持局部偏移]
+    K --> L[DetachOp: 周界散布 Attached→Nav]
+    L --> M[验收通过]
+    J --> M

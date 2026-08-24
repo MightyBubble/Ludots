@@ -1,5 +1,23 @@
 [
   {
+    "id": "Status.CanColonize"
+  },
+  {
+    "id": "State.4X.Blockaded"
+  },
+  {
+    "id": "State.4X.Razed"
+  },
+  {
+    "id": "State.4X.Relationship.Trusted"
+  },
+  {
+    "id": "State.4X.Relationship.TradePact"
+  },
+  {
+    "id": "State.4X.Relationship.AtWar"
+  },
+  {
     "id": "Status.Colonizing",
     "attached": ["Status.Working"],
     "removeIfAny": ["Status.Blocked"]
@@ -9,4 +27,3 @@
     "removed": ["Status.Colonizing"]
   }
 ]
-

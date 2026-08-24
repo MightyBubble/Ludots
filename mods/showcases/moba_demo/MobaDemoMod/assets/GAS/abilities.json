@@ -4,8 +4,8 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 15, "tag": "Cooldown.GCD" },
-        { "kind": "TagClip", "tick": 0, "duration": 180, "tag": "Cooldown.Skill.Q" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.GCD", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.Skill.Q", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Damage.Q" },
         { "kind": "End", "tick": 0 }
       ]
@@ -19,8 +19,8 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 15, "tag": "Cooldown.GCD" },
-        { "kind": "TagClip", "tick": 0, "duration": 300, "tag": "Cooldown.Skill.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.GCD", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.Skill.W", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Heal.W" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.HOT.Regen" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Buff.SpeedBoost" },
@@ -36,8 +36,8 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 15, "tag": "Cooldown.GCD" },
-        { "kind": "TagClip", "tick": 0, "duration": 240, "tag": "Cooldown.Skill.E" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.GCD", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.Skill.E", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Damage.E" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Projectile.Arrow" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Force.E" },
@@ -53,8 +53,8 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 15, "tag": "Cooldown.GCD" },
-        { "kind": "TagClip", "tick": 0, "duration": 600, "tag": "Cooldown.Skill.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.GCD", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.Skill.R", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Search.BlizzardZone" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.DOT.Burn" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Summon.Skeleton" },

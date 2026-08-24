@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 42,
+    "runnable": 44,
     "testOnly": 0,
-    "total": 42
+    "total": 44
   },
   "runnable": [
     {
@@ -124,6 +124,14 @@
       "hasScreenshotEvidence": true
     },
     {
+      "id": "engine_raylib_crowd_anim",
+      "preset": "engine_raylib_crowd_anim",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_crowd_anim",
+      "hasScreenshotEvidence": true
+    },
+    {
       "id": "engine_raylib_debug_draw",
       "preset": "engine_raylib_debug_draw",
       "binding": "engine_gallery",
@@ -161,6 +169,14 @@
       "binding": "engine_gallery",
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_instancing",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_lighting",
+      "preset": "engine_raylib_lighting",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_lighting",
       "hasScreenshotEvidence": true
     },
     {

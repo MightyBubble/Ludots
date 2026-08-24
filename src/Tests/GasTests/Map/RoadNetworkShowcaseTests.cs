@@ -2364,7 +2364,7 @@ namespace Ludots.Tests.GAS
                 title: "Road network command source",
                 summary: "Test-owned command-source collection.");
             Assert.That(collections.Replace(owner, in descriptor, entities, owner).IsValid, Is.True);
-            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
         }
 
         private static bool TryGetCommandSourcePrimary(GameEngine engine, Entity owner, out Entity primary)

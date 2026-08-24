@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphQuery;
 using Ludots.Core.Spatial;
@@ -61,6 +62,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
         }
 
+        int WeightedPick(int distributionKeyId, int modulationPermille)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RngPickUnavailable");
+        }
+
         int TableReadInt(int fieldId, int rowHandle)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
@@ -69,6 +75,59 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         float TableReadFloat(int fieldId, int rowHandle)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        void ShowPanel(int panelTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        void HidePanel(int panelTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        /// <summary>Sets an entity's world position in centimeters (int, matches LoadTargetPosX/Y).</summary>
+        void SetWorldPosition(Entity target, int xCm, int yCm);
+
+        /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
+        void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
+
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        void DestroyPanel(int templateKeyId, Entity scope)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        // ── Map-scoped variables ──
+
+        int ReadMapVarInt(int varKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        float ReadMapVarFloat(int varKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        void WriteMapVarInt(int varKeyId, MapId mapId, int value)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
         }
         int CollectMapEntities(Span<Entity> buffer)
         {
@@ -318,6 +377,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
 
+        // ── TriggerManager bridge (map-scoped event firing) ──
+
+        /// <summary>
+        /// Fires a TriggerManager event resolved from a config-key id. Resolves the
+        /// scope entity's map and fires map-scoped when one is present; otherwise falls
+        /// back to the global event bus. Optional bridge — requires a bound TriggerManager.
+        /// </summary>
+        void FireEventKey(Entity scope, int eventKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
         // ── Entity lifecycle graph composition ──
         void BeginLifecycleTransaction()
         {
@@ -373,6 +444,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveRngDistribution(string name)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RngDistributionUnavailable");
+        }
+
         int ResolveGraphLookupTable(string name)
         {
             throw new InvalidOperationException(

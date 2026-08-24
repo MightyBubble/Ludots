@@ -174,7 +174,7 @@ namespace MobaDemoMod.Systems
             });
             
             // Order submit handler
-            // Visual feedback (markers, cooldown text) is handled by Core PresenterRuleSystem
+            // Visual feedback (markers, lockout text) is handled by Core PresenterRuleSystem
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
@@ -271,16 +271,12 @@ namespace MobaDemoMod.Systems
                 return default;
             }
 
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out var localPlayer))
-                return default;
-            if (!_world.IsAlive(localPlayer)) return default;
-
             if (TryGetCollectionPrimary(EntityCollectionKeys.CommandSource, out var commandSourcePrimary))
             {
                 if (_world.TryGet(commandSourcePrimary, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == playerId)
                     return commandSourcePrimary;
             }
-            return localPlayer;
+            return default;
         }
 
         private bool TryGetCollectionPrimary(string collectionKey, out Entity target)

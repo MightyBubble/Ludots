@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Presenters;
@@ -48,6 +49,37 @@ namespace Ludots.Core.Config
         /// Trigger type names declared by this map (JSON data-first path).
         /// </summary>
         public List<string> TriggerTypes { get; set; } = new List<string>();
+
+        /// <summary>
+        /// TriggerGraph mounts declared by this map. Raw authoring nodes;
+        /// strict parsing happens at mount time (Ludots.Core.Gameplay.MapTriggers).
+        /// </summary>
+        public JsonNode TriggerGraphs { get; set; }
+
+        /// <summary>
+        /// Fixed ticks per think wave for this map (integer &gt;= 1).
+        /// Null means the engine default interval applies.
+        /// </summary>
+        public int? HeartbeatIntervalTicks { get; set; }
+
+        /// <summary>
+        /// Data-declared trigger regions for this map. Raw authoring nodes;
+        /// strict parsing happens at region-mount time (Ludots.Core.Gameplay.MapTriggers).
+        /// </summary>
+        public JsonNode Regions { get; set; }
+
+        /// <summary>
+        /// Map-scoped variable declarations. The JSON field is strict-parsed at map-config
+        /// load (MapManager); the per-session store is built by MapSession (Ludots.Core.Gameplay.MapTriggers).
+        /// </summary>
+        public List<MapVariableDeclaration> Variables { get; set; } = new List<MapVariableDeclaration>();
+
+        /// <summary>
+        /// Data-declared death rule: when the declared attribute's current value reaches
+        /// zero, map entities go through the destroy pipeline, feeding EntityDied /
+        /// EntityAliveCountChanged for TriggerGraphs. Null = no death policy.
+        /// </summary>
+        public Ludots.Core.Gameplay.MapTriggers.MapDeathRule DeathRule { get; set; }
 
         /// <summary>
         /// Default camera state when this map is loaded.

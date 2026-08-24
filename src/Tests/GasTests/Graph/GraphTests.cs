@@ -62,6 +62,106 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Compile_CreatePanel_WithExplicitSource_EncodesScopeRegister()
+        {
+            var cfg = new GraphControlFlowDocument
+            {
+                Id = "Test.CreatePanel.Scope",
+                Kind = "Script",
+                Entry = "scope",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new GraphControlFlowNode { Id = "scope", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode
+                    {
+                        Id = "panel",
+                        Op = "CreatePanel",
+                        PanelType = "tests.panel.host",
+                        PanelAnchor = "screen.topRight",
+                    },
+                    new GraphControlFlowNode { Id = "ok", Op = "ConstInt", IntValue = 1 },
+                    new GraphControlFlowNode { Id = "halt", Op = "HaltReturnInt" },
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("scope", GraphControlFlowPorts.Next, "panel"),
+                    new("panel", GraphControlFlowPorts.Next, "ok"),
+                    new("ok", GraphControlFlowPorts.Next, "halt"),
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("scope", GraphControlFlowPorts.Value, "panel", GraphControlFlowPorts.Source),
+                    new("ok", GraphControlFlowPorts.Value, "halt", GraphControlFlowPorts.Value),
+                },
+            };
+
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+
+            That(pkg.HasValue, Is.True);
+            for (int i = 0; i < diags.Count; i++)
+            {
+                That(diags[i].Severity, Is.Not.EqualTo(GraphDiagnosticSeverity.Error), diags[i].Message);
+            }
+
+            GraphInstruction createPanel = default;
+            bool found = false;
+            GraphInstruction[] program = pkg!.Value.Program;
+            for (int i = 0; i < program.Length; i++)
+            {
+                if ((GraphNodeOp)program[i].Op == GraphNodeOp.CreatePanel)
+                {
+                    createPanel = program[i];
+                    found = true;
+                    break;
+                }
+            }
+
+            That(found, Is.True);
+            That(createPanel.A, Is.Not.EqualTo(byte.MaxValue));
+            That(pkg.Value.Symbols, Does.Contain("tests.panel.host"));
+            That(pkg.Value.Symbols, Does.Contain("screen.topRight"));
+        }
+
+        [Test]
+        public void Compile_CreatePanel_WithUnsupportedAnchor_FailsClosed()
+        {
+            var cfg = new GraphControlFlowDocument
+            {
+                Id = "Test.CreatePanel.BadAnchor",
+                Kind = "Script",
+                Entry = "panel",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new GraphControlFlowNode
+                    {
+                        Id = "panel",
+                        Op = "CreatePanel",
+                        PanelType = "tests.panel.host",
+                        PanelAnchor = "screen.middle",
+                    },
+                    new GraphControlFlowNode { Id = "halt", Op = "HaltReturnInt" },
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("panel", GraphControlFlowPorts.Next, "halt"),
+                },
+            };
+
+            var (_, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+
+            bool hasAnchorError = false;
+            for (int i = 0; i < diags.Count; i++)
+            {
+                if (diags[i].Code == GraphDiagnosticCodes.InvalidPanelAnchor)
+                {
+                    hasAnchorError = true;
+                }
+            }
+
+            That(hasAnchorError, Is.True);
+        }
+
+        [Test]
         public void Execute_NullHandlerTable_ThrowsArgumentNullException()
         {
             Throws<System.ArgumentNullException>(ExecuteWithNullHandlerTable);

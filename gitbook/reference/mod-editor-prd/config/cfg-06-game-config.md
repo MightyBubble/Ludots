@@ -24,7 +24,7 @@
 
 | 分组 | 字段 | 这样配会产生什么效果 |
 |---|---|---|
-| 启动 | `defaultCoreMod` / `startupMapId` / `startupLocalPlayerId` / `startupInputContexts` | 默认核心 mod、启动地图、本地玩家、启动即激活的输入上下文 |
+| 启动 | `defaultCoreMod` / `startupMapId` / `startupLocalSeats` / `startupInputContexts` | 默认核心 mod、启动地图、本地座位绑定、启动即激活的输入上下文 |
 | 窗口 | `windowWidth` / `windowHeight` / `windowResizable` / `windowStartMaximized` / `windowTitle` | 窗口形态，默认 1280×720 |
 | 帧率 | `targetFps` | 目标帧率，默认 60 |
 | 仿真 | `simulationBudgetMsPerFrame` / `simulationMaxSlicesPerLogicFrame` | 每帧仿真预算（毫秒）与最大切片数，默认 4 / 120 |

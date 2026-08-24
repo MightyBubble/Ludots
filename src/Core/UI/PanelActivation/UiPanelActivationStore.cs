@@ -4,21 +4,10 @@ using System.Collections.Generic;
 namespace Ludots.Core.UI.PanelActivation
 {
     /// <summary>
-    /// Compile-time single-writer credential for <see cref="UiPanelActivationStore"/>.
-    /// The internal constructor means only the Core orchestration runtime can mint one;
-    /// panels, surfaces, and mods cannot construct it.
-    /// </summary>
-    public readonly struct PanelActivationWriteToken
-    {
-        internal PanelActivationWriteToken(byte _)
-        {
-        }
-    }
-
-    /// <summary>
     /// Activation truth for panel types (#1014 / constitution contract five).
-    /// Written exclusively by <see cref="PanelOrchestrationRuntime"/> via the write token;
-    /// everyone else reads. Full-set applies return the lease diff for region hosts.
+    /// Written exclusively by <see cref="PanelActivationApi"/> via the write token;
+    /// everyone else reads. Show/hide requests come from ShowPanel/HidePanel graph ops
+    /// or direct system API calls — the store never decides, it records.
     /// </summary>
     public sealed class UiPanelActivationStore
     {
@@ -31,55 +20,14 @@ namespace Ludots.Core.UI.PanelActivation
 
         public IReadOnlyDictionary<string, bool> Snapshot => _visible;
 
-        public PanelActivationDiff Apply(PanelActivationWriteToken _, IReadOnlyDictionary<string, bool> desired)
+        internal void SetVisible(string panelType, bool visible)
         {
-            ArgumentNullException.ThrowIfNull(desired);
-
-            var activated = new List<string>();
-            var deactivated = new List<string>();
-            foreach (KeyValuePair<string, bool> entry in desired)
+            if (string.IsNullOrWhiteSpace(panelType))
             {
-                if (string.IsNullOrWhiteSpace(entry.Key))
-                {
-                    throw new InvalidOperationException("Activation entry panelType must be non-empty.");
-                }
-
-                bool was = _visible.TryGetValue(entry.Key, out bool previous) && previous;
-                bool now = entry.Value;
-                if (now && !was)
-                {
-                    activated.Add(entry.Key);
-                }
-                else if (!now && was)
-                {
-                    deactivated.Add(entry.Key);
-                }
-
-                _visible[entry.Key] = now;
+                throw new ArgumentException("Panel type must be non-empty.", nameof(panelType));
             }
 
-            List<string> stale = new List<string>();
-            foreach (string panelType in _visible.Keys)
-            {
-                if (!desired.ContainsKey(panelType))
-                {
-                    stale.Add(panelType);
-                }
-            }
-
-            foreach (string panelType in stale)
-            {
-                if (_visible[panelType])
-                {
-                    deactivated.Add(panelType);
-                }
-
-                _visible.Remove(panelType);
-            }
-
-            return new PanelActivationDiff(activated, deactivated);
+            _visible[panelType.Trim()] = visible;
         }
     }
-
-    public sealed record PanelActivationDiff(IReadOnlyList<string> Activated, IReadOnlyList<string> Deactivated);
 }

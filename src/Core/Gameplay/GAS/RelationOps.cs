@@ -7,6 +7,7 @@ namespace Ludots.Core.Gameplay.GAS
     public static class RelationOps
     {
         public const string ChildrenCapacityExceededError = "GAS.RELATION.ERR.ChildrenCapacityExceeded";
+        public const string CycleDetectedError = "GAS.RELATION.ERR.CycleDetected";
 
         public static void SetParent(World world, Entity child, Entity parent)
         {
@@ -14,6 +15,12 @@ namespace Ludots.Core.Gameplay.GAS
             if (child == parent)
             {
                 throw new InvalidOperationException("GAS.RELATION.ERR.SelfParent");
+            }
+
+            if (WouldCreateCycle(world, child, parent))
+            {
+                throw new InvalidOperationException(
+                    $"{CycleDetectedError}: child={child.Id}, parent={parent.Id}.");
             }
 
             if (world.Has<ChildOf>(child))
@@ -46,6 +53,33 @@ namespace Ludots.Core.Gameplay.GAS
                     $"{ChildrenCapacityExceededError}: parent={parent.Id}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
             }
             world.Add(child, new ChildOf { Parent = parent });
+        }
+
+        /// <summary>
+        /// 环检测：从候选 parent 沿 ChildOf 向上走，途中遇到 child 即成环。
+        /// 挂接图自本检测起保持无环，向上遍历必然终止；步数上限是对既有病态数据的防御性 fail-fast。
+        /// </summary>
+        public static bool WouldCreateCycle(World world, Entity child, Entity parent)
+        {
+            Entity current = parent;
+            int steps = 0;
+            while (world.IsAlive(current) && world.Has<ChildOf>(current))
+            {
+                if (current == child)
+                {
+                    return true;
+                }
+
+                current = world.Get<ChildOf>(current).Parent;
+                steps++;
+                if (steps > 1024)
+                {
+                    throw new InvalidOperationException(
+                        $"{CycleDetectedError}: walk exceeded 1024 ancestors without reaching a root.");
+                }
+            }
+
+            return current == child;
         }
 
         public static void RemoveParent(World world, Entity child)

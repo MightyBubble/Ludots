@@ -459,10 +459,12 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_level_blueprint_trial_raylib",
-      "name": "Capability Standard Level Blueprint Trial Raylib",
+      "id": "map_trigger_night_raid_raylib",
+      "name": "Map Trigger Night Raid Raylib",
       "selectors": [
-        "$capability_standard_level_blueprint_trial"
+        "$map_trigger_night_raid",
+        "$night_raid_showcase",
+        "$agent_bridge"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -1962,6 +1964,15 @@
       ]
     },
     {
+      "id": "capability_standard_level_blueprint_trial_raylib",
+      "name": "Capability Standard Level Blueprint Trial Raylib",
+      "selectors": [
+        "$capability_standard_level_blueprint_trial"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "navmesh_debug_raylib",
       "name": "NavMesh Debug Raylib",
       "selectors": [
@@ -1996,6 +2007,243 @@
       "name": "NavGate Runtime Update Raylib",
       "selectors": [
         "$nav_gate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "engine_raylib_lighting",
+      "name": "引擎画廊·光照全效",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "lighting",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_lighting/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_lighting/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_crowd_anim",
+      "name": "引擎画廊·大量动画实例合批",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "crowd_anim",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_crowd_anim/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_crowd_anim/stats.json"
+      ]
+    },
+    {
+      "id": "capability_standard_graph_op_HidePanel_raylib",
+      "name": "Graph Op HidePanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_HidePanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ShowPanel_raylib",
+      "name": "Graph Op ShowPanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ShowPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CreatePanel_raylib",
+      "name": "Graph Op CreatePanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CreatePanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DestroyPanel_raylib",
+      "name": "Graph Op DestroyPanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DestroyPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_markup_raylib",
+      "name": "Panel Markup Skin Raylib",
+      "selectors": [
+        "$panel_skin_markup"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_compose_raylib",
+      "name": "Panel Compose Skin Raylib",
+      "selectors": [
+        "$panel_skin_compose"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_reactive_raylib",
+      "name": "Panel Reactive Skin Raylib",
+      "selectors": [
+        "$panel_skin_reactive"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_web_raylib",
+      "name": "Panel Web Skin Raylib",
+      "selectors": [
+        "$panel_skin_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadMapVarFloat_raylib",
+      "name": "Graph Op ReadMapVarFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadMapVarFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadMapVarInt_raylib",
+      "name": "Graph Op ReadMapVarInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadMapVarInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteMapVarFloat_raylib",
+      "name": "Graph Op WriteMapVarFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteMapVarFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteMapVarInt_raylib",
+      "name": "Graph Op WriteMapVarInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteMapVarInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "map_trigger_night_raid_override_raylib",
+      "name": "Map Trigger Night Raid Override Raylib",
+      "selectors": [
+        "$map_trigger_night_raid",
+        "$night_raid_showcase",
+        "$night_raid_override",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_ink_raylib",
+      "name": "Panel Theme Ink-wash Raylib",
+      "selectors": [
+        "$panel_theme_ink"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_ink_web_raylib",
+      "name": "Panel Theme Ink-wash Web Raylib",
+      "selectors": [
+        "$panel_theme_ink_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_fantasy_raylib",
+      "name": "Panel Theme Fantasy Raylib",
+      "selectors": [
+        "$panel_theme_fantasy"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_fantasy_web_raylib",
+      "name": "Panel Theme Fantasy Web Raylib",
+      "selectors": [
+        "$panel_theme_fantasy_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_minimal_raylib",
+      "name": "Panel Theme Minimal Raylib",
+      "selectors": [
+        "$panel_theme_minimal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_minimal_web_raylib",
+      "name": "Panel Theme Minimal Web Raylib",
+      "selectors": [
+        "$panel_theme_minimal_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SpawnTemplate_raylib",
+      "name": "Graph Op SpawnTemplate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SpawnTemplate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetWorldPosition_raylib",
+      "name": "Graph Op SetWorldPosition Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetWorldPosition"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WeightedPick_raylib",
+      "name": "Graph Op WeightedPick Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WeightedPick"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

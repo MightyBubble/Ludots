@@ -219,12 +219,12 @@ namespace Ludots.Tests.GAS.Production
             InvokeState(state, "SwitchMode", "UxPrototype.Mode.Play");
             Assert.That(ReadProperty<string>(BuildSnapshot(state, engine), "ActiveModeId"), Is.EqualTo("UxPrototype.Mode.Play"));
 
-            AssertSkillCooldownCycle(state, engine, backend, frameTimesMs, "Mage A", "fireball", "Fireball");
-            AssertSkillCooldownCycle(state, engine, backend, frameTimesMs, "Archer A", "volley", "Volley");
-            AssertSkillCooldownCycle(state, engine, backend, frameTimesMs, "Medic A", "heal", "Heal");
-            AssertSkillCooldownCycle(state, engine, backend, frameTimesMs, "Soldier A", "leap_slash", "Leap Slash");
-            AssertSkillCooldownCycle(state, engine, backend, frameTimesMs, "Heavy Cavalry A", "charge", "Charge");
-            AssertSkillCooldownCycle(state, engine, backend, frameTimesMs, "Catapult A", "siege_shot", "Siege Shot");
+            AssertSkillActionLockCycle(state, engine, backend, frameTimesMs, "Mage A", "fireball", "Fireball");
+            AssertSkillActionLockCycle(state, engine, backend, frameTimesMs, "Archer A", "volley", "Volley");
+            AssertSkillActionLockCycle(state, engine, backend, frameTimesMs, "Medic A", "heal", "Heal");
+            AssertSkillActionLockCycle(state, engine, backend, frameTimesMs, "Soldier A", "leap_slash", "Leap Slash");
+            AssertSkillActionLockCycle(state, engine, backend, frameTimesMs, "Heavy Cavalry A", "charge", "Charge");
+            AssertSkillActionLockCycle(state, engine, backend, frameTimesMs, "Catapult A", "siege_shot", "Siege Shot");
 
             ClickEntityByName(engine, backend, "Blue Barracks");
             InvokeState(state, "TriggerAction", engine, "train:ux_mage");
@@ -524,7 +524,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(labels, Is.EqualTo(expectedLabels));
         }
 
-        private static void AssertSkillCooldownCycle(object state, GameEngine engine, TestInputBackend backend, List<double> frameTimesMs, string entityName, string actionId, string expectedLabel)
+        private static void AssertSkillActionLockCycle(object state, GameEngine engine, TestInputBackend backend, List<double> frameTimesMs, string entityName, string actionId, string expectedLabel)
         {
             ClickEntityByName(engine, backend, entityName);
             object readySnapshot = BuildSnapshot(state, engine);
@@ -544,11 +544,11 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 360, frameTimesMs);
             ClickEntityByName(engine, backend, entityName);
 
-            object cooledSnapshot = BuildSnapshot(state, engine);
-            object cooledSkill = ReadObjectList(cooledSnapshot, "SelectedSkills").Single(skill => ReadProperty<string>(skill, "Label") == expectedLabel);
-            Assert.That(ReadProperty<bool>(cooledSkill, "Enabled"), Is.True);
-            Assert.That(ReadProperty<bool>(cooledSkill, "Active"), Is.False);
-            Assert.That(ReadProperty<string>(cooledSkill, "CountText"), Is.EqualTo("Ready"));
+            object readyAgainSnapshot = BuildSnapshot(state, engine);
+            object readyAgainSkill = ReadObjectList(readyAgainSnapshot, "SelectedSkills").Single(skill => ReadProperty<string>(skill, "Label") == expectedLabel);
+            Assert.That(ReadProperty<bool>(readyAgainSkill, "Enabled"), Is.True);
+            Assert.That(ReadProperty<bool>(readyAgainSkill, "Active"), Is.False);
+            Assert.That(ReadProperty<string>(readyAgainSkill, "CountText"), Is.EqualTo("Ready"));
         }
 
         private static Entity FindEntityByName(World world, string entityName)
