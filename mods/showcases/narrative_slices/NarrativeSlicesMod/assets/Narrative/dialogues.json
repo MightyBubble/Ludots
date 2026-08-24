@@ -201,14 +201,14 @@
   },
   {
     "id": "Dialogue.Slice.MapTrigger",
-    "displayName": "Map Variable Trigger",
+    "displayName": "The Valley Counter",
     "startNodeId": "map_trigger_root",
     "nodes": [
       {
         "id": "map_trigger_root",
         "speakerAlias": "keeper",
         "speakerName": "Gallery Keeper",
-        "text": "The ledger taps the valley's counter. Watch it move.",
+        "text": "The valley's counter starts at one. The ledger taps it once — watch it move.",
         "autoAdvanceSeconds": 0.1,
         "onEnter": [
           {

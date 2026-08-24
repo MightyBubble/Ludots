@@ -1,8 +1,8 @@
 [
   {
     "id": "Slice.Execute",
-    "display_name": "Execute Condition Slice",
-    "summary": "Option executability contract: opt_go runs unrestricted; opt_wait is the baseline.",
+    "display_name": "The Rules Check",
+    "summary": "Try the keeper's rules check: one line opens a new page, the other lets the book rest.",
     "source_key": "task.state_changed",
     "dispatch_policy": "forced",
     "options": [

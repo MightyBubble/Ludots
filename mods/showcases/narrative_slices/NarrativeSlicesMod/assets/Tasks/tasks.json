@@ -41,14 +41,14 @@
         "kind": "signal",
         "title": "Hear the first bell",
         "signal_key": "rules.first",
-        "hint": ""
+        "hint": "No action needed — just listen for the bells."
       },
       {
         "id": "second",
         "kind": "signal",
         "title": "Hear the second bell",
         "signal_key": "rules.second",
-        "hint": ""
+        "hint": "No action needed — just listen for the bells."
       }
     ]
   },
@@ -71,7 +71,7 @@
   {
     "id": "Slice.Chain.Two",
     "display_name": "Second Errand",
-    "summary": "The second errand wakes on its own — see it through.",
+    "summary": "The second errand wakes on its own — watch it close.",
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
