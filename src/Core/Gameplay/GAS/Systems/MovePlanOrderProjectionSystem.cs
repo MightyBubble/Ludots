@@ -75,10 +75,10 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
                 }
 
                 if (intent.Mode != MovePlanExecutionMode.CommandGroup ||
-                    intent.CommandGroupToken != order.OrderId)
+                    intent.CommandGroupToken != order.CommandCorrelationId)
                 {
                     intent = default;
-                    intent.CommandGroupToken = order.OrderId;
+                    intent.CommandGroupToken = order.CommandCorrelationId;
                 }
 
                 intent.TargetWorldCm = new System.Numerics.Vector2(

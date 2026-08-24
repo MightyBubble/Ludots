@@ -341,22 +341,7 @@ namespace CoreInputMod.Systems
 
         private bool TryGetCommandSourceOwner(out Entity owner)
         {
-            owner = Entity.Null;
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out object? stackObj) &&
-                stackObj is InteractionContextStack stack &&
-                stack.TryPeek(out InteractionContextFrame frame) &&
-                HasEntityValue(frame.ContextEntity))
-            {
-                if (!_world.IsAlive(frame.ContextEntity))
-                {
-                    return false;
-                }
-
-                owner = frame.ContextEntity;
-                return true;
-            }
-
-            return false;
+            return _context.TryGetCommandSourceOwner(out owner);
         }
 
         private bool TryResolveCommandIntentTargetFacts(InputOrderMapping mapping, out CommandIntentTargetFacts facts)
