@@ -187,7 +187,7 @@
       "forbiddenRoles": [],
       "stableEntityMotion": {
         "template": "rts.frontline.infantry.body",
-        "minimumObservedMoveCm": 1000
+        "minimumObservedMoveCm": 500
       },
       "distinctEntityLayout": {
         "template": "rts.frontline.infantry.body",
