@@ -60,7 +60,7 @@ narrative_slices   能力切片集          mods/showcases/narrative_slices
 | `Activities/activities.json`（snake_case） | 活动抉择 | `id` / `display_name` / `source_key` / `dispatch_policy`(forced/automatic) / `options[]{id, title, body, is_baseline, effects[]}`；effect 目前可用 `task.create`（参数 `task_id`） |
 | `Maps/<map>.json` | 地图与地图变量 | 顶层 PascalCase；`Variables` 数组小写字段 `[{"name","type":"int","initial"}]`（严格解析） |
 | `Input/default_input.json` | 按键 | `actions[]` + `contexts[].bindings[]`（actionId → 设备路径） |
-| `assets/config_catalog.json` | 配置目录 | **必须放 mod 的 `assets/` 根级**（子目录不生效），条目 `{ "Path": "Narrative/dialogues.json", "Policy": "ArrayById", "IdField": "id" }` |
+| `assets/config_catalog.json` | 配置目录 | **必须放 mod 的 `assets/` 根级**（子目录不生效），条目 `{ "Path": "Narrative/dialogues.json", "Policy": "ArrayById", "IdField": "id" }`。`ArrayById` = 该文件是数组、按 `IdField` 合并同名条目（同 ID 冲突会进冲突报告；不要跨 mod 复用 ID） |
 
 ### 4.2 事件与订阅（跨域效果唯一通路）
 
@@ -80,13 +80,15 @@ context.OnEvent(TaskEventKeys.Signal, ctx =>
 });
 ```
 
-载荷键是**类型化 ServiceKey**（如 `TaskServiceKeys.SignalId` 是 `ServiceKey<string>`），`ctx.Get(键)` 直接返回对应类型的值；可用键见 `TaskServiceKeys` / `NarrativeServiceKeys`（对话/演出载荷如 `NarrativeServiceKeys.BodyText`、`CinematicStepId`）。信号是会话内的即时计数，不持久化、无需清理。
+载荷键是**类型化 ServiceKey**（如 `TaskServiceKeys.SignalId` 是 `ServiceKey<string>`），`ctx.Get(键)` 直接返回对应类型的值；可用键见 `TaskServiceKeys` / `NarrativeServiceKeys`（对话/演出载荷如 `NarrativeServiceKeys.BodyText`、`CinematicStepId`）。信号的语义：每 `EmitSignal` 一次，该键的会话内计数 +1 并刷新所有活动任务的目标；计数不写存档、重开局清零。**信号的 `signalId` 与任务目标的 `signal_key` 必须逐字符一致**——不一致不会报错，但目标永远不完成（排错先查拼写）。
 
 **规矩**：写地图变量、开活动、发相机冲动（`CameraImpulseRuntime.Emit`）都只能在订阅方做；叙事域动作集只有十种（设/加变量、开任务/对话/演出、发信号、完成任务、失败任务、相机开/清）。
 
 ### 4.3 最小改动手册：给 narrative_chain 加一段新对话 + 新任务
 
-先说因果链：**动作**是对话节点里声明的（作者写 JSON）→ `EmitSignal` 动作发出信号 → 信号同时做两件事（推进匹配 `signal_key` 的任务目标、广播引擎事件）→ **订阅方代码**（§4.2 的 `OnEvent`）对事件做跨域反应。作者侧只写前两步，后一步是已有模板。
+职责边界先说清：**纯内容追加（新对话/新任务/新链）不需要写任何 C#**——声明式接线（`next_task_id` / `on_enter_dialogue_id` / 活动 `task.create`）全部在 JSON 里生效。只有当你要做**新的跨域反应**（如信号触发写地图变量、开相机冲动）才写订阅代码，写法就是 §4.2 的 `OnEvent` 示例，放进你 mod 的 ModEntry `OnLoad` 里（narrative_chain 现有的订阅代码在它的 `NarrativeChainShowcaseModEntry.cs`，可对照）。
+
+因果链：**动作**是对话节点里声明的（作者写 JSON）→ `EmitSignal` 动作发出信号 → 信号同时做两件事（推进匹配 `signal_key` 的任务目标、广播引擎事件）→ 订阅方代码对事件做跨域反应。
 
 涉及两个文件（相对 mod 根 `mods/showcases/narrative_chain/NarrativeChainShowcaseMod/assets/`）：
 - `Narrative/dialogues.json`（对话，字段 camelCase）
@@ -126,7 +128,7 @@ context.OnEvent(TaskEventKeys.Signal, ctx =>
 3. 触发时机：`start_policy: "automatic"` 的任务在被创建的那一刻就是 Active（不等待玩家）；创建它的途径有三——某任务完成经 `next_task_id` 自动接续、活动选项 `task.create` 效果、或订阅方代码调 `OfferOrStart`。想声明式开对话：给任务加 `"on_enter_dialogue_id": "Dialogue.Chain.NewTalk"`（任务转 Active 时引擎自动开）。
 4. **按键**：对话推进/选项用引擎既有的输入动作（`NarrativeAdvance`、`NarrativeChoice1/2`，已随 showcase 的 `Input/default_input.json` 绑好 Enter/1/2）；只有新增独立交互（如面板确认键）才需要改输入文件加 action 与 binding。
 5. **命令式接线**（不想用声明式时）：照 §4.2 的 `OnEvent` 代码示例在 ModEntry 里订阅 `TaskEventKeys.Signal`，命中你的信号键后调 `engine.GetService(CoreServiceKeys.NarrativeDirector).StartDialogue(...)`。
-6. `autoAdvanceSeconds` 是无选项节点自动翻页的等待秒数（0.1 ≈ 立即翻页；不写则等待玩家按推进键）。
+6. `autoAdvanceSeconds` 是**无选项节点**自动翻页的等待秒数（0.1 ≈ 立即翻页；不写则等待玩家按推进键）。带 `choices[]` 的节点该字段无效，永远等待选择。
 7. 玩家文案直接写进 `text` / `title` / `hint`——**不要出现引擎词**（provider/trigger/signal/contract/GAS…），双通道审计会打回。
 5. 跑 `dotnet test src/Tests/GasTests/GasTests.csproj --filter FullyQualifiedName~NarrativeChainAcceptanceTests`，证据自动落到 `artifacts/acceptance/narrative-chain/`。
 
@@ -139,7 +141,7 @@ context.OnEvent(TaskEventKeys.Signal, ctx =>
 - 活动 `source_key` 必须是已注册的 `domain.snake_case` 源（当前内容侧可用 `task.state_changed`）。
 - `effect_key` / `condition_key` 在**引擎初始化加载期**校验，未注册即加载失败（fail-fast，无回退）。
 - 内容 JSON camelCase；地图顶层 PascalCase 但 `Variables` 例外。
-- 任务可按"scope 宿主实体"分组（活动选项创建的任务会挂在活动实体上）。`CaptureViews()` 返回**全部**任务实例视图，跨 scope 查询一律用它；`TryGetState(id)` 只查无宿主的默认 scope，查活动建的任务会漏。
+- 任务带一个归属分组（scope）：`next_task_id` 接续、`OfferOrStart(taskId)` 不带宿主 → 默认组；活动 `task.create` 建的任务 → 挂在活动实体组。`CaptureViews()` 返回**全部**实例视图（任何场景都安全）；`TryGetState(id)` 只查默认组，会漏活动建的任务。判断法：任务可能被活动创建就用 `CaptureViews()`。
 
 ## 5. 验收纪律
 
@@ -149,5 +151,8 @@ context.OnEvent(TaskEventKeys.Signal, ctx =>
 
 ## 6. 已知缺口（不要假装能用）
 
-- **condition provider 无内容侧注册途径**：`execute_condition` 引用自定义条件键会在加载期 `unknown_provider_key` 失败（`activity_execute_condition` 切片已如实暴露）。在引擎补注册途径之前，内容不要声明条件执行。
+两类"条件"要分清：
+
+- **对话选项的 `conditions[]`**（`kind: "Variable"` 等叙事条件）——**可用**，§4.3 的示例就是它。条件引用的变量需先在 `Narrative/variables.json` 声明。
+- **活动选项的 `execute_condition`**（引用 condition provider 键）——**当前不可用**：内容侧没有任何 condition provider 注册途径，加载期即 `unknown_provider_key` 失败（`activity_execute_condition` 切片已如实暴露）。引擎补上注册途径之前，活动选项不要写 `execute_condition`，用 `is_baseline` 保证兜底可点。
 - battle-report 的 Open issues 段是给开发者的引擎缺口说明，不是玩家文案。
