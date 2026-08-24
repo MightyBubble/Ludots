@@ -3217,6 +3217,11 @@ namespace Ludots.Core.Engine
 
         private void ClearNavServices()
         {
+            if (TryGetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, out RuntimeIncrementalNavMeshRebuildQueue rebuildQueue))
+            {
+                rebuildQueue.Dispose();
+            }
+
             RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);

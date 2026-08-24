@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using Ludots.Core.Config;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -313,7 +314,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(0));
             Assert.That(queue.PendingTileCount, Is.EqualTo(2));
 
-            RuntimeNavMeshRebuildBatch first = queue.ProcessBudget(1);
+            RuntimeNavMeshRebuildBatch first = PumpUntilNPublished(queue, submitBudget: 1, expectedPublished: 1);
             Assert.That(first.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(first.FailedEntryCount, Is.EqualTo(0));
             Assert.That(first.PendingTileCount, Is.EqualTo(1));
@@ -323,7 +324,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile firstTile), Is.True);
             Assert.That(firstTile.TileVersion, Is.EqualTo(context.TileVersion + 1u));
 
-            RuntimeNavMeshRebuildBatch second = queue.ProcessBudget(1);
+            RuntimeNavMeshRebuildBatch second = PumpUntilNPublished(queue, submitBudget: 1, expectedPublished: 1);
             Assert.That(second.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(second.FailedEntryCount, Is.EqualTo(0));
             Assert.That(second.PendingTileCount, Is.EqualTo(0));
@@ -331,6 +332,33 @@ namespace Ludots.Tests.Architecture
             Assert.That(second.PublishedTiles[0].Target, Is.EqualTo(new NavBakeTileCoord(1, 0)));
             Assert.That(store.Revision, Is.EqualTo(2u));
             Assert.That(store.TryGet(new NavTileId(1, 0, 0), out _), Is.True);
+        }
+
+        /// <summary>
+        /// 泵到累计发布 expectedPublished 个瓦片为止：首轮提交 submitBudget 个，后续轮次只发布不提交。
+        /// 返回累计发布清单构成的批次视图（PublishedTiles 为累计，其余字段取最后一次泵）。
+        /// </summary>
+        private static RuntimeNavMeshRebuildBatch PumpUntilNPublished(
+            RuntimeIncrementalNavMeshRebuildQueue queue,
+            int submitBudget,
+            int expectedPublished)
+        {
+            var published = new List<RuntimeNavMeshRebuildPublishedTile>();
+            var failures = new List<NavBakeResultEntry>();
+            RuntimeNavMeshRebuildBatch last = queue.ProcessBudget(submitBudget);
+            published.AddRange(last.PublishedTiles);
+            failures.AddRange(last.FailedEntries);
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            while (published.Count + failures.Count < expectedPublished && stopwatch.ElapsedMilliseconds < 10000)
+            {
+                Thread.Sleep(1);
+                last = queue.ProcessBudget(0);
+                published.AddRange(last.PublishedTiles);
+                failures.AddRange(last.FailedEntries);
+            }
+
+            Assert.That(published.Count + failures.Count, Is.EqualTo(expectedPublished), "Runtime rebake did not publish expected tiles in time.");
+            return new RuntimeNavMeshRebuildBatch(last.RequestedTileBudget, last.RebuiltTileCount, failures.Count, last.PendingTileCount, published, failures);
         }
 
         [Test]
@@ -353,7 +381,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(-500, -500, 20, 20), includeNeighbors: true), Is.EqualTo(0));
             Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(405, 405, 10, 10), includeNeighbors: true), Is.EqualTo(4));
 
-            RuntimeNavMeshRebuildBatch batch = queue.ProcessBudget(4);
+            RuntimeNavMeshRebuildBatch batch = PumpUntilNPublished(queue, submitBudget: 4, expectedPublished: 4);
             Assert.That(batch.FailedEntryCount, Is.EqualTo(0));
             Assert.That(batch.PendingTileCount, Is.EqualTo(0));
             Assert.That(batch.PublishedTiles.Count, Is.EqualTo(4));
@@ -389,7 +417,7 @@ namespace Ludots.Tests.Architecture
                 navProfiles);
 
             Assert.That(queue.EnqueueDirtyTile(new NavBakeTileCoord(0, 0)), Is.True);
-            RuntimeNavMeshRebuildBatch failed = queue.ProcessBudget(1);
+            RuntimeNavMeshRebuildBatch failed = PumpUntilNPublished(queue, submitBudget: 1, expectedPublished: 1);
 
             Assert.That(failed.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(failed.FailedEntryCount, Is.EqualTo(1));

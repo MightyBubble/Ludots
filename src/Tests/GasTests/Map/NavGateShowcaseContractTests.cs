@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Spawning;
@@ -81,10 +82,7 @@ namespace Ludots.Tests.Gas
 
             Assert.That(gateDroppedTick, Is.GreaterThanOrEqualTo(0), "时间线必须在行军途中落下城门（结构障碍 @ 3600,3600）");
 
-            for (int i = 0; i < 90; i++)
-            {
-                engine.Tick(1f / 60f);
-            }
+            TickUntilRevisionAdvances(engine, store, revisionBefore, timeoutMs: 20000);
 
             Assert.That(store.Revision, Is.GreaterThan(revisionBefore), "落门必须推进增量重烤（store revision 增长）");
 
@@ -169,12 +167,23 @@ namespace Ludots.Tests.Gas
                 "冻结消融：旧 navmesh 的 A→B 路径必须仍穿过城门位置——这正是'没有 runtime 更新'的代价，也是可读对比的一半");
 
             queue.ProcessingEnabled = true;
-            for (int i = 0; i < 60; i++)
-            {
-                engine.Tick(1f / 60f);
-            }
+            TickUntilRevisionAdvances(engine, store, revisionBefore, timeoutMs: 20000);
 
             Assert.That(store.Revision, Is.GreaterThan(revisionBefore), "解冻后待重烤瓦片必须被消费并推进 revision");
+        }
+
+        /// <summary>
+        /// 增量重烤在后台线程执行（单瓦片 Recast 可达秒级），发布依赖后续 tick 泵送；
+        /// 用小间隔 tick 按墙钟等待 revision 推进，固定帧数窗口会在烘焙完成前耗尽。
+        /// </summary>
+        private static void TickUntilRevisionAdvances(GameEngine engine, NavTileStore store, uint revisionBefore, double timeoutMs)
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            while (store.Revision <= revisionBefore && stopwatch.Elapsed.TotalMilliseconds < timeoutMs)
+            {
+                engine.Tick(1f / 60f);
+                Thread.Sleep(20);
+            }
         }
 
         private static bool HasStructuralObstacleNear(GameEngine engine, int xCm, int yCm, int radiusCm)

@@ -652,6 +652,7 @@ namespace GasTests
             var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
             bridge.Update(0f);
             dirtySystem.Update(0f);
+            PumpRuntimeNavQueueUntilIdle(dirtySystem, queue);
 
             Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
             Assert.That(queue.PendingTileCount, Is.EqualTo(0));
@@ -670,6 +671,7 @@ namespace GasTests
             world.Add(obstacleEntity, new ManifestationObstacleBridge2DDirty());
             bridge.Update(0f);
             dirtySystem.Update(0f);
+            PumpRuntimeNavQueueUntilIdle(dirtySystem, queue);
 
             Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
             Assert.That(store.Revision, Is.EqualTo(2u));
@@ -717,6 +719,7 @@ namespace GasTests
             Assert.That(obstacles.Obstacles, Has.Count.EqualTo(2));
             Assert.That(obstacles.Obstacles.Exists(obstacle => obstacle.Id == "authored-wall"), Is.True);
             Assert.That(obstacles.Obstacles.Exists(obstacle => obstacle.Id == $"runtime-obstacle-{runtimeEntity.Id}"), Is.True);
+            PumpRuntimeNavQueueUntilIdle(dirtySystem, queue);
             Assert.That(queue.PendingTileCount, Is.EqualTo(0));
             Assert.That(store.Revision, Is.EqualTo(1u));
         }
@@ -741,6 +744,7 @@ namespace GasTests
             var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
             bridge.Update(0f);
             dirtySystem.Update(0f);
+            PumpRuntimeNavQueueUntilIdle(dirtySystem, queue);
 
             Assert.That(queue.PendingTileCount, Is.EqualTo(0));
             Assert.That(store.Revision, Is.EqualTo(1u));
@@ -751,9 +755,24 @@ namespace GasTests
             world.Destroy(obstacleEntity);
             engine.SetService(CoreServiceKeys.NavMeshBakeConfig, CreateRuntimeNavBakeConfig());
             dirtySystem.Update(0f);
+            PumpRuntimeNavQueueUntilIdle(dirtySystem, queue);
 
             Assert.That(queue.PendingTileCount, Is.EqualTo(0));
             Assert.That(store.Revision, Is.EqualTo(1u));
+        }
+
+        /// <summary>后台增量重烤按墙钟完成、发布依赖后续泵送；泵到队列空闲再断言发布态。</summary>
+        private static void PumpRuntimeNavQueueUntilIdle(RuntimeNavMeshObstacleDirtySystem dirtySystem, RuntimeIncrementalNavMeshRebuildQueue queue)
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            while (queue.PendingTileCount > 0 && stopwatch.ElapsedMilliseconds < 10000)
+            {
+                dirtySystem.Update(0f);
+                if (queue.PendingTileCount > 0)
+                {
+                    System.Threading.Thread.Sleep(1);
+                }
+            }
         }
 
         private static NavMeshBakeConfig CreateRuntimeNavBakeConfig()
