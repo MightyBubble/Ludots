@@ -8,16 +8,16 @@
         "id": "open_root",
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
-        "text": "The valley relay woke up overnight. Pick how you want to hear it, {player}.",
+        "text": "You keep the lamps on this ridge, {player}. Last night the relay — the wire of lanterns that carries the valley's word — woke on its own. Something out there wants reading. How do you take the watch?",
         "choices": [
           {
             "id": "open_listen",
-            "text": "Tell me what the relay heard.",
+            "text": "Read me the night's wire first.",
             "nextNodeId": "open_end"
           },
           {
             "id": "open_hurry",
-            "text": "Skip to the showing.",
+            "text": "Skip the words — show me the lamps.",
             "nextNodeId": "open_end"
           }
         ]
@@ -26,10 +26,13 @@
         "id": "open_end",
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
-        "text": "Then watch the lamps. The relay will speak for itself.",
+        "text": "Then keep your eyes on the line. Three lamps will speak, and the third one is the one that matters.",
         "autoAdvanceSeconds": 0.1,
         "onEnter": [
-          { "kind": "EmitSignal", "signalId": "chain.opened" }
+          {
+            "kind": "EmitSignal",
+            "signalId": "chain.opened"
+          }
         ]
       }
     ]
@@ -43,16 +46,16 @@
         "id": "verdict_root",
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
-        "text": "The survey is logged. Now decide what the valley keeps.",
+        "text": "The crew is back. The third lamp read only one word, and where that word goes is yours to choose.",
         "choices": [
           {
             "id": "verdict_seal",
-            "text": "Seal the alarm ledger.",
+            "text": "Seal the reading — keep it ours.",
             "nextNodeId": "verdict_seal_node"
           },
           {
             "id": "verdict_herald",
-            "text": "Let the herald cry it aloud.",
+            "text": "Let the herald cry it — every lamp hears.",
             "nextNodeId": "verdict_herald_node"
           }
         ]
@@ -61,23 +64,40 @@
         "id": "verdict_seal_node",
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
-        "text": "Sealed. The ledger turns one page quieter.",
+        "text": "Sealed. The alarm ledger takes the page quietly — the ridge will sleep through the night.",
         "autoAdvanceSeconds": 0.1,
         "onEnter": [
-          { "kind": "AddVariable", "variableId": "chain.lore", "valueKind": "Int", "intValue": 1 },
-          { "kind": "EmitSignal", "signalId": "chain.cmd.set_alarm" },
-          { "kind": "EmitSignal", "signalId": "chain.finished" }
+          {
+            "kind": "AddVariable",
+            "variableId": "chain.lore",
+            "valueKind": "Int",
+            "intValue": 1
+          },
+          {
+            "kind": "EmitSignal",
+            "signalId": "chain.cmd.set_alarm"
+          },
+          {
+            "kind": "EmitSignal",
+            "signalId": "chain.finished"
+          }
         ]
       },
       {
         "id": "verdict_herald_node",
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
-        "text": "Then let every lamp on the ridge hear it.",
+        "text": "The herald takes the word to every lamp on the ridge. The valley will talk of nothing else tomorrow.",
         "autoAdvanceSeconds": 0.1,
         "onEnter": [
-          { "kind": "EmitSignal", "signalId": "chain.event.herald" },
-          { "kind": "EmitSignal", "signalId": "chain.finished" }
+          {
+            "kind": "EmitSignal",
+            "signalId": "chain.event.herald"
+          },
+          {
+            "kind": "EmitSignal",
+            "signalId": "chain.finished"
+          }
         ]
       }
     ]

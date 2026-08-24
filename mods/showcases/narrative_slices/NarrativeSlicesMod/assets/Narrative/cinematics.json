@@ -7,7 +7,7 @@
         "id": "chain_intro_1",
         "speakerAlias": "keeper",
         "speakerName": "Gallery Keeper",
-        "text": "CHAIN-INTRO: the second link wakes and the chain holds.",
+        "text": "The first errand is done. Watch the ledger turn its own page — the second errand wakes by itself.",
         "durationSeconds": 0.3
       }
     ]
@@ -20,21 +20,21 @@
         "id": "subtitle_1",
         "speakerAlias": "keeper",
         "speakerName": "Gallery Keeper",
-        "text": "SUBTITLE-FIRST: the relay opens its ledger.",
+        "text": "Page one — the ledger opens its cover.",
         "durationSeconds": 0.3
       },
       {
         "id": "subtitle_2",
         "speakerAlias": "keeper",
         "speakerName": "Gallery Keeper",
-        "text": "SUBTITLE-SECOND: the middle line replaces the first.",
+        "text": "Page two — the middle line takes the first line's place.",
         "durationSeconds": 0.3
       },
       {
         "id": "subtitle_3",
         "speakerAlias": "keeper",
         "speakerName": "Gallery Keeper",
-        "text": "SUBTITLE-THIRD: the last line closes the relay.",
+        "text": "Page three — the ledger closes itself.",
         "durationSeconds": 0.3
       }
     ]
@@ -47,14 +47,14 @@
         "id": "track_1",
         "speakerAlias": "keeper",
         "speakerName": "Gallery Keeper",
-        "text": "TRACK-FIRST: the tactical lens holds.",
+        "text": "The keeper holds up his far glass and the ridge goes wide.",
         "durationSeconds": 0.3
       },
       {
         "id": "track_2",
         "speakerAlias": "keeper",
         "speakerName": "Gallery Keeper",
-        "text": "TRACK-SECOND: the inspect lens locks on.",
+        "text": "Now the close glass locks onto a single lamp.",
         "durationSeconds": 0.3,
         "cameraId": "Camera.Profile.Inspect"
       },
@@ -62,7 +62,7 @@
         "id": "track_3",
         "speakerAlias": "keeper",
         "speakerName": "Gallery Keeper",
-        "text": "TRACK-THIRD: the track ends where it began.",
+        "text": "The glasses come down; the far view returns.",
         "durationSeconds": 0.3
       }
     ]

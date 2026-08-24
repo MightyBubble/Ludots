@@ -9,15 +9,20 @@
       {
         "id": "opt_go",
         "title": "Open the rules check",
-        "body": "Dispatch the any-rule task.",
+        "body": "Runs the bell check — the second bell rings on its own and the page closes.",
         "effects": [
-          { "effect_key": "task.create", "parameters": { "task_id": "Slice.Rules.AnyCheck" } }
+          {
+            "effect_key": "task.create",
+            "parameters": {
+              "task_id": "Slice.Rules.AnyCheck"
+            }
+          }
         ]
       },
       {
         "id": "opt_wait",
         "title": "Hold position",
-        "body": "Do nothing this beat.",
+        "body": "Wait for now. Nothing moves this turn.",
         "is_baseline": true,
         "effects": []
       }

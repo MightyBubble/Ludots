@@ -3,4 +3,5 @@
 {"seq":3,"scenario":"task_chain","at":"[T\u002B003] [task] chain.one.done completed One; next_task_id auto-started Two"}
 {"seq":4,"scenario":"task_chain","at":"[T\u002B004] [cinematic] on_enter_cinematic_id started Cinematic.Slice.ChainIntro when Two activated"}
 {"seq":5,"scenario":"task_chain","at":"[T\u002B005] [cinematic] ChainIntro finished"}
-{"seq":6,"scenario":"task_chain","at":"[T\u002B006] [chain] task chain \u002B declared cinematic link traced; slice_counter=1"}
+{"seq":6,"scenario":"task_chain","at":"[T\u002B006] [chain] the second errand is seen through; the page closes"}
+{"seq":7,"scenario":"task_chain","at":"[T\u002B007] [chain] task chain \u002B declared cinematic link traced; slice_counter=1"}

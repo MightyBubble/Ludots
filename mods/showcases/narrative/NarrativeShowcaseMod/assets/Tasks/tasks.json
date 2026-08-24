@@ -30,7 +30,7 @@
         "kind": "signal",
         "title": "Wake The Shrine — inspect the Ember Shrine and defeat the Ashen Beast once it answers.",
         "signal_key": "showcase.beast_defeated",
-        "hint": "Press E near the shrine, then use Arcweaver's combat kit."
+        "hint": "Press E near the shrine, then press Q to strike the beast until it falls."
       }
     ],
     "next_task_id": "Task.Narrative.AshenOath.Return"
@@ -48,7 +48,7 @@
         "kind": "signal",
         "title": "Deliver Your Verdict — return to Warden Mirelle and choose how the valley should remember the trial.",
         "signal_key": "showcase.verdict_delivered",
-        "hint": "Elder dialogue outcome applies a GAS blessing via trigger callback."
+        "hint": "Return to Warden Mirelle — she will bless your road home."
       }
     ]
   }

@@ -2,22 +2,27 @@
   {
     "id": "activity.chain.decide",
     "display_name": "Relay Decision",
-    "summary": "The showing ended. Dispatch the survey crew, or hold the line?",
+    "summary": "Three lamps spoke; the third is missing its reading. Send the crew, or hold the watch?",
     "source_key": "task.state_changed",
     "dispatch_policy": "forced",
     "options": [
       {
         "id": "confirm",
-        "title": "Dispatch the survey crew",
-        "body": "Open the relay survey task.",
+        "title": "Dispatch the survey crew [F]",
+        "body": "They will walk to the shrine road and bring back the reading.",
         "effects": [
-          { "effect_key": "task.create", "parameters": { "task_id": "Task.Chain.Survey" } }
+          {
+            "effect_key": "task.create",
+            "parameters": {
+              "task_id": "Task.Chain.Survey"
+            }
+          }
         ]
       },
       {
         "id": "decline",
-        "title": "Hold the line",
-        "body": "No survey tonight. The chain waits.",
+        "title": "Hold the watch [G]",
+        "body": "No crew tonight. The ridge stays as it is, and the missing reading stays missing.",
         "is_baseline": true,
         "effects": []
       }

@@ -98,13 +98,13 @@
         "id": "return_duty_outro",
         "speakerAlias": "elder",
         "speakerName": "Warden Mirelle",
-        "text": "Then the valley keeps its ward, and you leave it stronger than you found it. Ending: {ending}."
+        "text": "Then the valley keeps its ward, and you leave it stronger than you found it. The oath is settled: {ending}."
       },
       {
         "id": "return_mercy_outro",
         "speakerAlias": "elder",
         "speakerName": "Warden Mirelle",
-        "text": "Then the valley keeps a memory instead of a scar. Ending: {ending}."
+        "text": "Then the valley keeps a memory instead of a scar. The oath is settled: {ending}."
       }
     ]
   }

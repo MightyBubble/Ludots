@@ -64,7 +64,7 @@ namespace Ludots.Tests.GAS.Production
             _timeline.Clear();
             LoadMap(engine);
             Assert.That(ActiveCameraId(engine), Is.EqualTo(NarrativeChainIds.HubDefaultCameraId));
-            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "relay woke up"), 30);
+            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "woke on its own"), 30);
             Record("dialogue", "opening dialogue visible with choice list");
 
             PressButton(engine, backend, "<Keyboard>/1");
@@ -96,7 +96,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () =>
                 FindActiveActivity(engine, NarrativeChainIds.DecideActivityId) != null &&
                 UiContains(uiRoot, "Dispatch the survey crew") &&
-                UiContains(uiRoot, "Hold the line"), 60);
+                UiContains(uiRoot, "Hold the watch"), 60);
             Record("activity", "forced decision activity offered; HUD activity modal shows both options");
 
             PressButton(engine, backend, "<Keyboard>/f");
@@ -110,7 +110,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.DebriefTaskId) == TaskInstanceState.Active, 30);
             Record("task", "next_task_id auto-advanced the chain into the debrief task");
 
-            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "survey is logged"), 60);
+            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "crew is back"), 60);
             Assert.That(director.TryGetActiveDialogueView(out NarrativeDialogueView verdictView), Is.True);
             Assert.That(verdictView.DialogueId, Is.EqualTo(NarrativeChainIds.VerdictDialogueId));
             Record("dialogue", "debrief on_enter_dialogue_id opened the verdict dialogue");
@@ -152,9 +152,14 @@ namespace Ludots.Tests.GAS.Production
                 UiContains(uiRoot, "Dispatch the survey crew"), 60);
             Record("activity", "forced decision activity offered on the HUD modal");
             PressButton(engine, backend, "<Keyboard>/f");
+            Record("activity", "confirmed dispatch via [F]");
+            TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.SurveyTaskId) == TaskInstanceState.Active, 30);
+            Record("task", "survey task created by the confirmed option");
             TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.SurveyTaskId) == TaskInstanceState.Completed, 120);
+            Record("task", "survey completed; crew returned with the third lamp's reading");
             TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.DebriefTaskId) == TaskInstanceState.Active, 30);
-            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "survey is logged"), 60);
+            Record("task", "debrief task auto-started by the task chain");
+            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "crew is back"), 60);
 
             PressButton(engine, backend, "<Keyboard>/2");
             TickUntil(engine, () => !director.HasActiveDialogue, 30);
@@ -189,7 +194,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () => !director.HasActiveCinematic, 300);
             TickUntil(engine, () =>
                 FindActiveActivity(engine, NarrativeChainIds.DecideActivityId) != null &&
-                UiContains(uiRoot, "Hold the line"), 60);
+                UiContains(uiRoot, "Hold the watch"), 60);
             Record("activity", "forced decision activity offered on the HUD modal");
 
             PressButton(engine, backend, "<Keyboard>/g");

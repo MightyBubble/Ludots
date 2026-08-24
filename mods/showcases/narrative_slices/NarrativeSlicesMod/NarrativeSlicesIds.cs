@@ -22,6 +22,7 @@ namespace NarrativeSlicesMod
         public const string GalleryAlphaTaskId = "Slice.Gallery.Alpha";
         public const string GalleryBetaTaskId = "Slice.Gallery.Beta";
         public const string RulesAnyCheckTaskId = "Slice.Rules.AnyCheck";
+        public const string RulesIntroDialogueId = "Dialogue.Slice.RulesIntro";
         public const string ChainOneTaskId = "Slice.Chain.One";
         public const string ChainTwoTaskId = "Slice.Chain.Two";
         public const string ChainIntroCinematicId = "Cinematic.Slice.ChainIntro";

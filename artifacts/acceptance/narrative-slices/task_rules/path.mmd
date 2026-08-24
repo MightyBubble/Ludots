@@ -1,6 +1,6 @@
 flowchart TD
     start([StartSlice task_rules]) --> active[Slice.Rules.AnyCheck Active: completion_rule any]
     active --> emit[EmitSignal rules.second]
-    emit --> done[one arm satisfied: task Completed]
-    unused[rules.first arm never emitted] -.-> done
+    emit --> done[one bell is enough: task Completed]
+    unused[the first bell never rings] -.-> done
     done --> finish([slice finished: AnyCheck=Completed, counter=1])

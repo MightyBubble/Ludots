@@ -4,7 +4,7 @@
 - build: headless GameEngine + trigger pipeline
 - map: narrative_slices_hub (seed: fixed content, no rng)
 - clock: fixed 0.0167s per tick
-- executed: 2026-08-25 00:47:46
+- executed: 2026-08-25 01:21:46
 
 ## Timeline
 
@@ -13,7 +13,8 @@
 - [T+003] [task] chain.one.done completed One; next_task_id auto-started Two
 - [T+004] [cinematic] on_enter_cinematic_id started Cinematic.Slice.ChainIntro when Two activated
 - [T+005] [cinematic] ChainIntro finished
-- [T+006] [chain] task chain + declared cinematic link traced; slice_counter=1
+- [T+006] [chain] the second errand is seen through; the page closes
+- [T+007] [chain] task chain + declared cinematic link traced; slice_counter=1
 
 ## Outcome
 

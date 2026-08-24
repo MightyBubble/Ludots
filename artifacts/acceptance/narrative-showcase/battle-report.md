@@ -3,7 +3,7 @@
 ## Header
 - scenario: `narrative-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-08-24T11:50:24.7729418+00:00`
+- execution_timestamp_utc: `2026-08-24T17:21:35.9490185+00:00`
 - map: `narrative_showcase_hub`
 - clock: `fixed 1/60s`
 
@@ -60,12 +60,12 @@
 - success: yes
 - final task: `Ashen Oath: Completed - Deliver Your Verdict — return to Warden Mirelle and choose how the valley should remember the trial. | Ashen Oath: Completed - Wake The Shrine — inspect the Ember Shrine and defeat the Ashen Beast once it answers. | Ashen Oath: Completed - Hear The Warden — speak with Warden Mirelle beside the lantern dais.`
 - final variables: `trust=4 | lore=1 | ending=Mercy`
-- final dialogue card: `Warden Mirelle: Then the valley keeps a memory instead of a scar. Ending: Mercy.`
+- final dialogue card: `Warden Mirelle: Then the valley keeps a memory instead of a scar. The oath is settled: Mercy.`
 - reason: the showcase stayed on `ConfigPipeline`, `NarrativeDirector`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.
 
 ## Summary Stats
 - total_actions: `8`
 - snapshots captured: `8`
-- median headless tick: `0.308ms`
-- max headless tick: `18.532ms`
-- final_ui_excerpt: `Task Tracker | Ashen Oath | Awaiting task | Task, objective, and hint all come from NarrativeDirector state plus showcase config.`
+- median headless tick: `1.535ms`
+- max headless tick: `287.353ms`
+- final_ui_excerpt: `Task Tracker | Ashen Oath | Awaiting task | The oath page turns as you walk it.`

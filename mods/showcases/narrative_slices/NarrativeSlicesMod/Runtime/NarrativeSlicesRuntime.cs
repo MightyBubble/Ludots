@@ -132,7 +132,7 @@ namespace NarrativeSlicesMod.Runtime
                     director.StartDialogue(NarrativeSlicesIds.GalleryDialogueId);
                     break;
                 case NarrativeSlicesIds.SliceTaskRules:
-                    director.StartTask(NarrativeSlicesIds.RulesAnyCheckTaskId);
+                    director.StartDialogue(NarrativeSlicesIds.RulesIntroDialogueId);
                     break;
                 case NarrativeSlicesIds.SliceTaskChain:
                     director.StartTask(NarrativeSlicesIds.ChainOneTaskId);

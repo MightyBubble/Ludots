@@ -1,54 +1,86 @@
 [
   {
     "id": "Slice.Gallery.Alpha",
-    "display_name": "Gallery Alpha",
-    "summary": "Gallery slice objective track: started then completed by narrative actions.",
+    "display_name": "Alpha Errand",
+    "summary": "A small errand with a sure end.",
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
-      { "id": "alpha", "kind": "signal", "title": "Alpha track done", "signal_key": "gallery.alpha.done" }
+      {
+        "id": "alpha",
+        "kind": "signal",
+        "title": "See the Alpha errand stamped done",
+        "signal_key": "gallery.alpha.done"
+      }
     ]
   },
   {
     "id": "Slice.Gallery.Beta",
-    "display_name": "Gallery Beta",
-    "summary": "Gallery slice objective track: started then failed by narrative actions.",
+    "display_name": "Beta Errand",
+    "summary": "An errand the keeper means to lose.",
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
-      { "id": "beta", "kind": "signal", "title": "Beta track done", "signal_key": "gallery.beta.done" }
+      {
+        "id": "beta",
+        "kind": "signal",
+        "title": "See the Beta errand kept as failed",
+        "signal_key": "gallery.beta.done"
+      }
     ]
   },
   {
     "id": "Slice.Rules.AnyCheck",
-    "display_name": "Rules Any Check",
-    "summary": "Completion-rule slice: a single objective signal satisfies the any rule.",
+    "display_name": "Any Bell Counts",
+    "summary": "Either bell is enough to close this page.",
     "start_policy": "automatic",
     "completion_rule": "any",
     "objectives": [
-      { "id": "first", "kind": "signal", "title": "First rule arm", "signal_key": "rules.first" },
-      { "id": "second", "kind": "signal", "title": "Second rule arm", "signal_key": "rules.second" }
+      {
+        "id": "first",
+        "kind": "signal",
+        "title": "Hear the first bell",
+        "signal_key": "rules.first",
+        "hint": ""
+      },
+      {
+        "id": "second",
+        "kind": "signal",
+        "title": "Hear the second bell",
+        "signal_key": "rules.second",
+        "hint": ""
+      }
     ]
   },
   {
     "id": "Slice.Chain.One",
-    "display_name": "Chain One",
-    "summary": "Chain slice first link: completes into Slice.Chain.Two.",
+    "display_name": "First Errand",
+    "summary": "Finish the keeper's first errand.",
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
-      { "id": "one", "kind": "signal", "title": "Chain one done", "signal_key": "chain.one.done" }
+      {
+        "id": "one",
+        "kind": "signal",
+        "title": "Complete the first errand",
+        "signal_key": "chain.one.done"
+      }
     ],
     "next_task_id": "Slice.Chain.Two"
   },
   {
     "id": "Slice.Chain.Two",
-    "display_name": "Chain Two",
-    "summary": "Chain slice second link: activation starts the declared ChainIntro cinematic.",
+    "display_name": "Second Errand",
+    "summary": "The second errand wakes on its own — see it through.",
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
-      { "id": "two", "kind": "signal", "title": "Chain two done", "signal_key": "chain.two.done" }
+      {
+        "id": "two",
+        "kind": "signal",
+        "title": "Complete the second errand",
+        "signal_key": "chain.two.done"
+      }
     ],
     "on_enter_cinematic_id": "Cinematic.Slice.ChainIntro"
   }

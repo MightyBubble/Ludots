@@ -87,7 +87,7 @@ namespace Ludots.Tests.GAS.Production
             Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
 
             StartSlice(engine, NarrativeSlicesIds.SliceDialogueGate);
-            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "gallery ledger"), 30);
+            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "Welcome to the gallery"), 30);
             Record("dialogue", "gate dialogue visible on the presenter chain");
 
             var choiceIds = CurrentChoiceIds(director);
@@ -100,7 +100,7 @@ namespace Ludots.Tests.GAS.Production
             Record("dialogue", "grant node committed: gallery_lore=1, signal slice.gate.granted emitted");
 
             StartSlice(engine, NarrativeSlicesIds.SliceDialogueGate);
-            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "sealed margin"), 30);
+            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "sealed line"), 30);
             choiceIds = CurrentChoiceIds(director);
             Assert.That(choiceIds, Is.EquivalentTo(new[]
             {
@@ -142,7 +142,7 @@ namespace Ludots.Tests.GAS.Production
             Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
 
             StartSlice(engine, NarrativeSlicesIds.SliceActionGallery);
-            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "Set the counter"), 30);
+            TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "sets the counter"), 30);
             Record("dialogue", "gallery dialogue started; nine action nodes chained by auto-advance");
 
             TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.GalleryInspectCameraId, 120);
@@ -247,7 +247,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () => TaskStateOf(engine, NarrativeSlicesIds.ChainTwoTaskId) == TaskInstanceState.Active, 30);
             Record("task", "chain.one.done completed One; next_task_id auto-started Two");
 
-            TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, "CHAIN-INTRO"), 30);
+            TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, "second errand wakes"), 30);
             Record("cinematic", "on_enter_cinematic_id started Cinematic.Slice.ChainIntro when Two activated");
 
             TickUntil(engine, () => !director.HasActiveCinematic, 30);
@@ -272,6 +272,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(cinematicTrace.Any(t => t.StartsWith(
                 $"step_entered:{NarrativeSlicesIds.ChainIntroCinematicId}/", StringComparison.Ordinal)), Is.True);
             Assert.That(cinematicTrace, Does.Contain($"completed:{NarrativeSlicesIds.ChainIntroCinematicId}"));
+            director.EmitSignal("chain.two.done");
+            TickUntil(engine, () => TaskStateOf(engine, NarrativeSlicesIds.ChainTwoTaskId) == TaskInstanceState.Completed, 30);
+            Record("chain", "the second errand is seen through; the page closes");
+
             Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(1));
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             Record("chain", "task chain + declared cinematic link traced; slice_counter=1");
@@ -353,7 +357,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () => ActiveCameraId(engine) == NarrativeSlicesIds.MapDefaultCameraId, 30);
             Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
 
-            string[] stepTexts = { "SUBTITLE-FIRST", "SUBTITLE-SECOND", "SUBTITLE-THIRD" };
+            string[] stepTexts = { "Page one", "Page two", "Page three" };
             StartSlice(engine, NarrativeSlicesIds.SliceSubtitlePresenter);
             TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, stepTexts[0]), 30);
             Record("subtitle", "step 1 text visible on the presenter chain");
@@ -401,15 +405,15 @@ namespace Ludots.Tests.GAS.Production
 
             var runtime = GetSlicesRuntime(engine);
             StartSlice(engine, NarrativeSlicesIds.SlicePresenterTrack);
-            TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, "TRACK-FIRST"), 30);
+            TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, "far glass and the ridge goes wide"), 30);
             Assert.That(runtime.TrackImpulseCount, Is.EqualTo(1));
             Record("track", "step 1 boundary: one presenter impulse emitted");
 
-            TickUntil(engine, () => UiContains(uiRoot, "TRACK-SECOND"), 30);
+            TickUntil(engine, () => UiContains(uiRoot, "close glass locks onto a single lamp"), 30);
             Assert.That(runtime.TrackImpulseCount, Is.EqualTo(2));
             Record("track", "step 2 boundary: impulse count incremented to 2");
 
-            TickUntil(engine, () => UiContains(uiRoot, "TRACK-THIRD"), 30);
+            TickUntil(engine, () => UiContains(uiRoot, "The glasses come down"), 30);
             Assert.That(runtime.TrackImpulseCount, Is.EqualTo(3));
             Record("track", "step 3 boundary: impulse count incremented to 3");
 
@@ -449,9 +453,9 @@ namespace Ludots.Tests.GAS.Production
             Record("map", $"hub loaded; default camera '{NarrativeSlicesIds.MapDefaultCameraId}' active");
 
             StartSlice(engine, NarrativeSlicesIds.SliceMapVariableWrite);
-            TickUntil(engine, () => UiContains(uiRoot, "MAP-EVEN"), 30);
+            TickUntil(engine, () => UiContains(uiRoot, "lands on two"), 30);
             Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(2));
-            Assert.That(UiContains(uiRoot, "MAP-ODD"), Is.False);
+            Assert.That(UiContains(uiRoot, "tips to three"), Is.False);
             Record("map", "trigger dialogue emitted slice.map.write; counter 1+1=2 (even) opened Dialogue.Slice.MapEven");
 
             var runtime = GetSlicesRuntime(engine);
@@ -466,9 +470,9 @@ namespace Ludots.Tests.GAS.Production
             Record("dialogue", "MapEven closed by advance");
 
             director.EmitSignal(NarrativeSlicesIds.SignalMapWrite);
-            TickUntil(engine, () => UiContains(uiRoot, "MAP-ODD"), 30);
+            TickUntil(engine, () => UiContains(uiRoot, "tips to three"), 30);
             Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeSlicesIds.MapVariableSliceCounter), Is.EqualTo(3));
-            Assert.That(UiContains(uiRoot, "MAP-EVEN"), Is.False);
+            Assert.That(UiContains(uiRoot, "lands on two"), Is.False);
             Record("map", "second signal: counter 2+1=3 (odd) opened Dialogue.Slice.MapOdd; parity flipped");
 
             var mapTrace = runtime.Events
@@ -739,8 +743,8 @@ namespace Ludots.Tests.GAS.Production
             flowchart TD
                 start([StartSlice task_rules]) --> active[Slice.Rules.AnyCheck Active: completion_rule any]
                 active --> emit[EmitSignal rules.second]
-                emit --> done[one arm satisfied: task Completed]
-                unused[rules.first arm never emitted] -.-> done
+                emit --> done[one bell is enough: task Completed]
+                unused[the first bell never rings] -.-> done
                 done --> finish([slice finished: AnyCheck=Completed, counter=1])
             """;
 

@@ -8,14 +8,14 @@
         "id": "reveal_1",
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
-        "text": "First lamp: the relay counts what the valley forgets.",
+        "text": "First lamp — the border post. It counted two strangers crossing before midnight.",
         "durationSeconds": 0.5
       },
       {
         "id": "reveal_2",
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
-        "text": "Second lamp: every oath sworn here leaves a mark on the wire.",
+        "text": "Second lamp — the mill house. The miller's oath came through twice, and the second reading was wrong.",
         "durationSeconds": 0.5,
         "cameraId": "Camera.Profile.Tactical"
       },
@@ -23,7 +23,7 @@
         "id": "reveal_3",
         "speakerAlias": "warden",
         "speakerName": "Relay Warden",
-        "text": "Third lamp: the relay only asks one thing of its witness.",
+        "text": "Third lamp — the shrine road. Its reading is still missing. Someone must walk out and take it.",
         "durationSeconds": 0.5
       }
     ]
