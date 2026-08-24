@@ -404,22 +404,9 @@ namespace CoreInputMod.Systems
 
         private bool TryGetCommandSourceOwner(out Entity owner)
         {
-            owner = Entity.Null;
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out object? stackObj) &&
-                stackObj is InteractionContextStack stack &&
-                stack.TryPeek(out InteractionContextFrame frame) &&
-                HasEntityValue(frame.ContextEntity))
-            {
-                if (!_world.IsAlive(frame.ContextEntity))
-                {
-                    return false;
-                }
-
-                owner = frame.ContextEntity;
-                return true;
-            }
-
-            return false;
+            // Delegate to the accessor: the default interaction frame carries no ContextEntity, so
+            // the sole possessed local seat rep is the command-source owner fallback.
+            return _context.TryGetCommandSourceOwner(out owner);
         }
 
         private bool TryResolveCommandIntentTargetFacts(InputOrderMapping mapping, out CommandIntentTargetFacts facts)
@@ -510,11 +497,6 @@ namespace CoreInputMod.Systems
 
             worldCm = position.ToWorldCmInt2();
             return true;
-        }
-
-        private static bool HasEntityValue(Entity entity)
-        {
-            return entity.Id != 0 || entity.WorldId != 0 || entity.Version != 0;
         }
 
         private bool TryCreateContextScoredResolver(out ContextScoredOrderResolver resolver)
