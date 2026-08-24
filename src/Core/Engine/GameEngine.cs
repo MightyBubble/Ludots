@@ -652,9 +652,115 @@ namespace Ludots.Core.Engine
                 }
             }
 
+            if (GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry loadedNarrativeDefinitions)
+            {
+                ValidateTaskNarrativeReferences(loadedNarrativeDefinitions);
+            }
+
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
+        }
+
+        private void ValidateTaskNarrativeReferences(NarrativeDefinitionRegistry narrativeDefinitions)
+        {
+            if (GetService(CoreServiceKeys.TaskDefinitionRegistry) is not TaskDefinitionRegistry taskDefinitions)
+            {
+                throw new InvalidOperationException("Task definition registry is required before validating narrative references.");
+            }
+
+            foreach (TaskDefinition task in taskDefinitions.Definitions)
+            {
+                if (!string.IsNullOrWhiteSpace(task.NextTaskId) && !taskDefinitions.TryGet(task.NextTaskId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Task '{task.Id}' references missing next task '{task.NextTaskId}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(task.OnEnterDialogueId) &&
+                    !narrativeDefinitions.TryGetDialogue(task.OnEnterDialogueId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Task '{task.Id}' references missing narrative dialogue '{task.OnEnterDialogueId}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(task.OnEnterCinematicId) &&
+                    !narrativeDefinitions.TryGetCinematic(task.OnEnterCinematicId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Task '{task.Id}' references missing narrative cinematic '{task.OnEnterCinematicId}'.");
+                }
+            }
+
+            foreach (NarrativeDialogueDefinition dialogue in narrativeDefinitions.Dialogues)
+            {
+                foreach (NarrativeDialogueNodeDefinition node in dialogue.Nodes)
+                {
+                    ValidateNarrativeActions(dialogue.Id, node.OnEnter, taskDefinitions, narrativeDefinitions);
+                    foreach (NarrativeDialogueChoiceDefinition choice in node.Choices)
+                    {
+                        ValidateNarrativeConditions(dialogue.Id, choice.Conditions, taskDefinitions);
+                        ValidateNarrativeActions(dialogue.Id, choice.Actions, taskDefinitions, narrativeDefinitions);
+                    }
+                }
+            }
+
+            foreach (NarrativeCinematicDefinition cinematic in narrativeDefinitions.Cinematics)
+            {
+                foreach (NarrativeCinematicStepDefinition step in cinematic.Steps)
+                {
+                    ValidateNarrativeActions(cinematic.Id, step.OnEnter, taskDefinitions, narrativeDefinitions);
+                }
+            }
+        }
+
+        private static void ValidateNarrativeConditions(
+            string ownerId,
+            IReadOnlyList<NarrativeConditionDefinition> conditions,
+            TaskDefinitionRegistry taskDefinitions)
+        {
+            foreach (NarrativeConditionDefinition condition in conditions)
+            {
+                if (condition.Kind == NarrativeConditionKind.TaskState &&
+                    !taskDefinitions.TryGet(condition.TaskId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative '{ownerId}' references missing task '{condition.TaskId}' in a condition.");
+                }
+            }
+        }
+
+        private static void ValidateNarrativeActions(
+            string ownerId,
+            IReadOnlyList<NarrativeActionDefinition> actions,
+            TaskDefinitionRegistry taskDefinitions,
+            NarrativeDefinitionRegistry narrativeDefinitions)
+        {
+            foreach (NarrativeActionDefinition action in actions)
+            {
+                if (action.Kind is NarrativeActionKind.StartTask or NarrativeActionKind.CompleteTask or NarrativeActionKind.FailTask)
+                {
+                    if (!taskDefinitions.TryGet(action.TaskId, out _))
+                    {
+                        throw new InvalidOperationException(
+                            $"Narrative '{ownerId}' references missing task '{action.TaskId}' in an action.");
+                    }
+                }
+
+                if (action.Kind == NarrativeActionKind.StartDialogue &&
+                    !narrativeDefinitions.TryGetDialogue(action.DialogueId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative '{ownerId}' references missing dialogue '{action.DialogueId}' in an action.");
+                }
+
+                if (action.Kind == NarrativeActionKind.StartCinematic &&
+                    !narrativeDefinitions.TryGetCinematic(action.CinematicId, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative '{ownerId}' references missing cinematic '{action.CinematicId}' in an action.");
+                }
+            }
         }
 
         private void InitializeWorld(int widthInMacroTiles, int heightInMacroTiles)
@@ -1768,6 +1874,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            ValidateTaskNarrativeReferences(narrativeDefinitions);
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, taskRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);

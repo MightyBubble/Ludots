@@ -185,6 +185,78 @@ namespace Ludots.Tests.GAS.Integration
         }
 
         [Test]
+        public void Fail_FromTerminalState_Throws()
+        {
+            using World world = World.Create();
+            var services = CreateServices();
+            var definitions = new TaskDefinitionRegistry();
+            definitions.Register("task.terminal", new TaskDefinition
+            {
+                Id = "task.terminal",
+                StartPolicy = TaskStartPolicy.Automatic,
+                CompletionRule = TaskCompletionRule.Any,
+                Objectives =
+                {
+                    new TaskObjectiveDefinition
+                    {
+                        Id = "one",
+                        Kind = TaskObjectiveKind.Signal,
+                        SignalKey = "signal.one",
+                    },
+                },
+            });
+
+            var runtime = new TaskRuntimeService(world, definitions, services, new TaskPresentationBuffer());
+            Entity task = runtime.OfferOrStart("task.terminal");
+            runtime.EmitSignal("signal.one");
+
+            Assert.Throws<InvalidOperationException>(() => runtime.Fail(task, "late"));
+        }
+
+        [Test]
+        public void DuplicateActiveInstances_FailIndexRebuild()
+        {
+            using World world = World.Create();
+            var services = CreateServices();
+            var definitions = new TaskDefinitionRegistry();
+            definitions.Register("task.duplicate", new TaskDefinition
+            {
+                Id = "task.duplicate",
+                StartPolicy = TaskStartPolicy.Automatic,
+                Objectives =
+                {
+                    new TaskObjectiveDefinition
+                    {
+                        Id = "one",
+                        Kind = TaskObjectiveKind.Signal,
+                        SignalKey = "signal.one",
+                    },
+                },
+            });
+
+            int definitionId = definitions.GetId("task.duplicate");
+            world.Create(new TaskInstanceCm
+            {
+                DefinitionId = definitionId,
+                InstanceId = 1,
+                State = TaskInstanceState.Active,
+                ScopeHost = Entity.Null,
+                Revision = 1,
+            });
+            world.Create(new TaskInstanceCm
+            {
+                DefinitionId = definitionId,
+                InstanceId = 2,
+                State = TaskInstanceState.Active,
+                ScopeHost = Entity.Null,
+                Revision = 1,
+            });
+
+            Assert.Throws<InvalidOperationException>(() =>
+                new TaskRuntimeService(world, definitions, services, new TaskPresentationBuffer()));
+        }
+
+        [Test]
         public void TaskCreateEffect_CreatesInstance_ThroughBridgeProvider()
         {
             using World world = World.Create();

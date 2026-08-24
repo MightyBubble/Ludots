@@ -146,7 +146,14 @@ namespace Ludots.Core.Gameplay.Tasks
                     return;
                 }
 
-                _index[(task.DefinitionId, ScopeKey(task.ScopeHost))] = entity;
+                var key = (task.DefinitionId, ScopeKey(task.ScopeHost));
+                if (_index.ContainsKey(key))
+                {
+                    throw new InvalidOperationException(
+                        $"Duplicate active task instance for definition id {task.DefinitionId} and scope {ScopeKey(task.ScopeHost)}.");
+                }
+
+                _index.Add(key, entity);
             });
         }
 
@@ -268,6 +275,12 @@ namespace Ludots.Core.Gameplay.Tasks
         public void Fail(Entity taskEntity, string reason)
         {
             ref TaskInstanceCm task = ref Require(taskEntity);
+            if (task.State is not (TaskInstanceState.Offered or TaskInstanceState.Active))
+            {
+                throw new InvalidOperationException(
+                    $"Task instance {task.InstanceId} cannot fail from state {task.State}.");
+            }
+
             if (!_definitions.TryGet(task.DefinitionId, out TaskDefinition definition))
             {
                 throw new InvalidOperationException($"Missing task definition '{task.DefinitionId}'.");
