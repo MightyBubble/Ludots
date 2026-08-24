@@ -296,10 +296,13 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
 
     internal void MarkOpeningViewReady(int visibilityRevision)
     {
-        if (!_hasOpeningFocusTarget || visibilityRevision <= _openingFocusCapturedVisibilityRevision)
+        // The caller proves the culling pipeline processed the focused target before invoking this;
+        // the visibility revision is recorded as evidence only — a born-visible static scene is not
+        // required to advance it.
+        if (!_hasOpeningFocusTarget)
         {
             throw new InvalidOperationException(
-                "RTS Frontline opening view cannot become ready before culling advances at the focused target.");
+                "RTS Frontline opening view cannot become ready before a focus target is captured.");
         }
 
         _openingViewReady = true;

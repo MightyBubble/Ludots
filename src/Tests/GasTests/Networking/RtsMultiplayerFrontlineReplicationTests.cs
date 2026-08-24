@@ -479,14 +479,10 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         culling.CameraTargetCm = authoredFocusTarget;
         culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision;
         presentation.Update(1f / 60f);
-        Assert.That(runtime.OpeningView.IsReady, Is.False,
-            "Applying the camera target must not become ready before a new culling revision.");
-
-        culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision + 1;
-        presentation.Update(1f / 60f);
         Assert.Multiple(() =>
         {
-            Assert.That(runtime.OpeningView.IsReady, Is.True);
+            Assert.That(runtime.OpeningView.IsReady, Is.True,
+                "Camera and culling both sit on the focus target; readiness must not wait for a visibility-revision delta that a born-visible static scene never produces.");
             Assert.That(runtime.OpeningView.ReadyVisibilityRevision, Is.EqualTo(culling.VisibilityRevision));
         });
 

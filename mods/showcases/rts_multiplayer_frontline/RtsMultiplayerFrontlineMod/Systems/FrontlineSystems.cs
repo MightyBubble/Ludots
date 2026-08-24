@@ -902,9 +902,12 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         }
 
         Vector2 focusTargetCm = openingView.FocusTargetCm;
+        // Readiness rests on direct evidence that culling processed the focused view (culling
+        // target matches the focus target this frame), not on a visibility-revision delta: mirror
+        // entities are born visible at their final LOD, so a static opening scene may never advance
+        // the revision and the delta would deadlock the gate.
         if (!TargetsMatch(ClientLocalSeatAccess.RequireSolePresentCamera(_engine).State.TargetCm, focusTargetCm) ||
             !TargetsMatch(culling.CameraTargetCm, focusTargetCm) ||
-            culling.VisibilityRevision <= openingView.CapturedVisibilityRevision ||
             culling.VisibleEntityCount <= 0 ||
             !_world.TryGet(ownedCore, out CullState coreCull) ||
             !coreCull.IsVisible ||
