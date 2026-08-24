@@ -512,9 +512,13 @@ namespace Ludots.Tests.Presentation
                         Kind = BehaviorKind.AssetBinding,
                         ActiveByDefault = true,
                         AssetBinding = CreateMeshAssetBinding(assetId: 2, new Vector3(5f, 5f, 5f)),
+                        Style = new BehaviorStyleConfig
+                        {
+                            HasColor = true,
+                            Color = new Vector4(0.3f, 0.7f, 1f, 0.5f),
+                        },
                     }
                 },
-                DefaultColor = new Vector4(0.3f, 0.7f, 1f, 0.5f),
             });
 
             var owner = CreatePresentableEntity(new Vector3(5f, 0f, 5f));
@@ -691,10 +695,14 @@ namespace Ludots.Tests.Presentation
                         Kind = BehaviorKind.AssetBinding,
                         ActiveByDefault = true,
                         AssetBinding = CreateWorldHudAssetBinding(width, height, WellKnownPresenterParamKeys.BarFillRatio),
+                        Style = new BehaviorStyleConfig
+                        {
+                            HasColor = true,
+                            Color = color,
+                        },
                     }
                 },
                 VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
-                DefaultColor = color,
                 PositionOffset = positionOffset,
                 Rules = rules,
             };

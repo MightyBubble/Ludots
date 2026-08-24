@@ -1,7 +1,6 @@
 [
   {
     "id": "moba_unit_marker",
-    "maxVisibilityDistanceCm": 8000,
     "visibility": {
       "inline": "OwnerCullVisible"
     },

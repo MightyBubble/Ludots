@@ -1,0 +1,256 @@
+adapter=raylib
+pid=54984
+bootstrap=C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\launcher.runtime.json
+rootMods=PresenterBlacksmithShowcaseMod
+orderedMods=LudotsCoreMod, CoreInputMod, PresenterBlacksmithShowcaseMod
+startup:
+  defaultCoreMod=LudotsCoreMod @ assets/game.json
+  startupMapId=presenter_blacksmith_showcase @ mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> entry
+    * mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod/assets/game.json -> presenter_blacksmith_showcase
+  startupInputContexts=[Default_Gameplay] @ mods/LudotsCoreMod/assets/game.json
+  browserRuntime=(unset) @ (unset)
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=bcfc042dbbdd9ffc19649fe767ccc0f61333475489235c46bfff9feb2fdb8079, schema=1, mods=3
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\LudotsCoreMod\bin\net8.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\CoreInputMod\bin\net8.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Loading DLL for PresenterBlacksmithShowcaseMod at C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\bin\net8.0\PresenterBlacksmithShowcaseMod.dll
+[INF][ModLoader] Scanning 31 types in assembly...
+[INF][ModLoader] Instantiated entry for PresenterBlacksmithShowcaseMod. Calling OnLoad...
+[INF][Mod.PresenterBlacksmithShowcaseMod] [PresenterBlacksmithShowcaseMod] Loaded
+[INF][ModLoader] PresenterBlacksmithShowcaseMod OnLoad completed.
+[INF][ModLoader] Loaded PresenterBlacksmithShowcaseMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=presenter_blacksmith_showcase, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Entities/templates.json
+[INF][Config] Loaded 10 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Quests/quests.json
+[INF][Config] Merged fragment from: Core:Narrative/variables.json
+[INF][Config] Merged fragment from: Core:Narrative/dialogues.json
+[INF][Config] Merged fragment from: Core:Narrative/cinematics.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/host_assets.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 1920 x 1080
+INFO:     > Screen size:  1280 x 720
+INFO:     > Render size:  1280 x 720
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 25.30.33.05.260603
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+[INF][Presentation] GPU Accelerated: False (raster UI compositor)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)
+[INF][Presentation] Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+[INF][Engine] Loading Map: presenter_blacksmith_showcase
+[INF][Map] Loading Map: presenter_blacksmith_showcase
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Maps/presenter_blacksmith_showcase.json
+[INF][Map] Map 'presenter_blacksmith_showcase' loaded.
+[INF][Map] Creating GridBoard 'default' (1x1 macroTiles, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'presenter_blacksmith_showcase'
+[INF][Map] Map 'presenter_blacksmith_showcase' pushed to focus (stack depth=1).
+[INF][Engine] Created flat grid LogicTerrainField 256x256 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'presenter_blacksmith_showcase': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=180 pitch=45 dist=5000cm fov=60
+[INF][Engine] Firing MapLoaded event for presenter_blacksmith_showcase...
+INFO: TEXTURE: [ID 4] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\postprocess.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Fragment shader compiled successfully
+INFO: SHADER: [ID 5] Program shader loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 6] Fragment shader compiled successfully
+INFO: SHADER: [ID 7] Program shader loaded successfully
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 3] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 4] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 5] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 6] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\vfx_unlit_tint.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\vfx_unlit_tint.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 6] Fragment shader compiled successfully
+INFO: SHADER: [ID 8] Program shader loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 6] Fragment shader compiled successfully
+INFO: SHADER: [ID 9] Program shader loaded successfully
+INFO: TEXTURE: [ID 5] Texture loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 6] Cubemap texture loaded successfully (64x64)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_blacksmith_blue.gltf] File loaded successfully
+INFO: MODEL: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_blacksmith_blue.gltf] Model basic data (glTF) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 1 (+1 default)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_blacksmith_blue.bin] File loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models/hexagons_medieval.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 7] Texture loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 7] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_blacksmith_red.gltf] File loaded successfully
+INFO: MODEL: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_blacksmith_red.gltf] Model basic data (glTF) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 1 (+1 default)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_blacksmith_red.bin] File loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models/hexagons_medieval.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 8] Texture loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 8] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_mine_blue.gltf] File loaded successfully
+INFO: MODEL: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_mine_blue.gltf] Model basic data (glTF) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 1 (+1 default)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_mine_blue.bin] File loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models/hexagons_medieval.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 9] Mesh uploaded successfully to VRAM (GPU)
+[INF][Presentation] GPU Accelerated: True (Raylib Skia direct framebuffer overlay)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0/blacksmith.png] File saved successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0/blacksmith.png] Image exported successfully
+INFO: SYSTEM: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0/blacksmith.png] Screenshot taken successfully
+[INF][Engine] Captured runtime screenshot: C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\artifacts\evidence\presenter-1092\blacksmith.png
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_scaffolding.gltf] File loaded successfully
+INFO: MODEL: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_scaffolding.gltf] Model basic data (glTF) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 1 (+1 default)
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models\building_scaffolding.bin] File loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\tmp\wt-issue1092-deepseek\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\assets\Models/hexagons_medieval.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 28] Texture loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 11] Mesh uploaded successfully to VRAM (GPU)
+[INF][Presentation] GPU Accelerated: True (Raylib Skia direct framebuffer overlay)

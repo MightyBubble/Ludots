@@ -30,6 +30,28 @@ namespace Ludots.Core.Presentation.Presenters
         public BehaviorMotionConfig Motion;
         public SurfaceAuthoringBlock? SurfaceSource;
         public InstancedBatchConfig InstancedBatch;
+
+        public static AssetBindingConfig BuildWorldTextAssetBinding(in WorldTextConfig worldText)
+        {
+            return new AssetBindingConfig
+            {
+                AssetKind = AssetKind.WorldText,
+                AssetId = worldText.TextTokenId,
+                RenderPath = VisualRenderPath.None,
+                Mobility = VisualMobility.Movable,
+                LocalOffset = Vector3.Zero,
+                LocalRotation = Quaternion.Identity,
+                LocalScale = Vector3.One,
+                ScaleParamKey = worldText.ValueParamKey,
+                MaterialParamKey = worldText.SecondaryValueParamKey,
+                AssetIdParamKey = PresenterParamKeyRegistry.UnsetParamKey,
+                AssetSwapParamKey = PresenterParamKeyRegistry.UnsetParamKey,
+                AssetSwapTable = Array.Empty<AssetSwapEntry>(),
+                VisibilityParamKey = PresenterParamKeyRegistry.UnsetParamKey,
+                SurfaceLayerKey = string.Empty,
+                MaterialCustomData = MaterialCustomDataBinding.Empty,
+            };
+        }
     }
 
     public enum BehaviorKind : byte

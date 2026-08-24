@@ -459,13 +459,15 @@
       {
         "definitionId": "ref_skinned_mesh",
         "scopeTag": "character",
-        "paramOverrides": [
-          {
-            "paramKey": "presenter_schema_reference.asset.scale",
-            "lane": "Float",
-            "floatValue": 2
-          }
-        ]
+        "overrides": {
+          "params": [
+            {
+              "paramKey": "presenter_schema_reference.asset.scale",
+              "lane": "Float",
+              "floatValue": 2
+            }
+          ]
+        }
       }
     ],
     "rules": [

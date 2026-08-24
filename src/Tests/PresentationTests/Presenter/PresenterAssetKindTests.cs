@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
@@ -479,9 +480,13 @@ namespace Ludots.Tests.Presentation
                             AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
                         },
+                        Style = new BehaviorStyleConfig
+                        {
+                            HasColor = true,
+                            Color = new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                        },
                     },
                 ],
-                DefaultColor = new Vector4(0.2f, 0.8f, 0.2f, 1f),
             });
 
             instances.BindDefinitions(definitions);
@@ -540,25 +545,23 @@ namespace Ludots.Tests.Presentation
                     new BehaviorSlot
                     {
                         SlotIndex = 0,
-                        Kind = BehaviorKind.AssetBinding,
+                        Kind = BehaviorKind.WorldText,
                         ActiveByDefault = true,
-                        AssetBinding = new AssetBindingConfig
+                        WorldText = new WorldTextConfig
                         {
-                            AssetKind = AssetKind.WorldText,
-                            AssetId = 4001,
-                            Mobility = VisualMobility.Movable,
-                            RenderPath = VisualRenderPath.None,
-                            LocalScale = Vector3.One,
-                            ScaleParamKey = 61,
-                            MaterialParamKey = 62,
-                            AssetIdParamKey = -1,
-                            AssetSwapParamKey = -1,
+                            TextTokenId = 4001,
+                            Mode = WorldHudValueMode.AttributeCurrentOverBase,
+                            FontSize = 18,
+                            ValueParamKey = 61,
+                            SecondaryValueParamKey = 62,
+                        },
+                        Style = new BehaviorStyleConfig
+                        {
+                            HasColor = true,
+                            Color = new Vector4(1f, 0.3f, 0.2f, 1f),
                         },
                     },
                 ],
-                DefaultColor = new Vector4(1f, 0.3f, 0.2f, 1f),
-                DefaultFontSize = 18,
-                WorldTextMode = WorldHudValueMode.AttributeCurrentOverBase,
             });
 
             instances.BindDefinitions(definitions);
@@ -592,6 +595,108 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void TwoIndependentOutputSlots_EmitPerSlotStyleAndMotion()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 9471 },
+                VisualTransform.Default,
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+
+            int defId = definitions.Register("asset.dual_mesh", new PresenterDefinition
+            {
+                DefaultLifetime = 2f,
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            MaterialId = 0,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                        Style = new BehaviorStyleConfig
+                        {
+                            HasColor = true,
+                            Color = new Vector4(1f, 0.2f, 0.1f, 1f),
+                        },
+                        Motion = new BehaviorMotionConfig { YDriftPerSecond = 0.5f },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 2,
+                            MaterialId = 0,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                        Style = new BehaviorStyleConfig
+                        {
+                            HasColor = true,
+                            Color = new Vector4(0.1f, 0.9f, 0.3f, 1f),
+                            AlphaPolicy = BehaviorAlphaPolicy.FadeOverLifetime,
+                        },
+                        Motion = new BehaviorMotionConfig { YDriftPerSecond = 2f },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(10f, 11f, 12f), 9471, Entity.Null, default);
+            ref var state = ref world.Get<PresenterState>(presenter);
+            state.BehaviorActiveMask = 0b11u;
+            ref var rot = ref world.Get<PresenterWorldRotation>(presenter);
+            rot.Value = Quaternion.Identity;
+            ref var scale = ref world.Get<PresenterWorldScale>(presenter);
+            scale.Value = Vector3.One;
+
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!);
+
+            system.Update(1f);
+
+            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
+            Assert.That(span.Length, Is.EqualTo(2));
+            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
+            Assert.That(span[0].VisualProxy.MeshAssetId, Is.EqualTo(1));
+            Assert.That(span[0].VisualProxy.Position.Y, Is.EqualTo(11.5f).Within(0.001f));
+            Assert.That(span[0].VisualProxy.Color.X, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(span[0].VisualProxy.Color.W, Is.EqualTo(1f).Within(0.001f));
+
+            Assert.That(span[1].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
+            Assert.That(span[1].VisualProxy.MeshAssetId, Is.EqualTo(2));
+            Assert.That(span[1].VisualProxy.Position.Y, Is.EqualTo(13f).Within(0.001f));
+            Assert.That(span[1].VisualProxy.Color.X, Is.EqualTo(0.1f).Within(0.001f));
+            Assert.That(span[1].VisualProxy.Color.W, Is.EqualTo(0.5f).Within(0.001f));
+        }
+
+        [Test]
         public void AssetBinding_GroundOverlay_EmitsGroundOverlayRequest()
         {
             using var world = World.Create();
@@ -619,9 +724,13 @@ namespace Ludots.Tests.Presentation
                             AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
                         },
+                        Style = new BehaviorStyleConfig
+                        {
+                            HasColor = true,
+                            Color = new Vector4(0.2f, 0.6f, 1f, 0.4f),
+                        },
                     },
                 ],
-                DefaultColor = new Vector4(0.2f, 0.6f, 1f, 0.4f),
             });
 
             instances.BindDefinitions(definitions);
@@ -932,12 +1041,21 @@ namespace Ludots.Tests.Presentation
 
             var surfaceDefinition = new PresenterDefinition
             {
-                Surface = new SurfaceAuthoringBlock
-                {
-                    Kind = PresenterSurfaceKind.SplineRibbon,
-                    LodProfileId = "default_surface_lod",
-                    MaterialSet = new PresenterSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
-                },
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 12,
+                        Kind = BehaviorKind.SurfaceSource,
+                        ActiveByDefault = true,
+                        SurfaceSource = new SurfaceAuthoringBlock
+                        {
+                            Kind = PresenterSurfaceKind.SplineRibbon,
+                            LodProfileId = "default_surface_lod",
+                            MaterialSet = new PresenterSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
+                        },
+                    },
+                ],
             };
             int defId = definitions.Register("surface.runtime_destroy", surfaceDefinition);
             Entity presenter = instances.Create(defId, owner, scopeId, PresentationAnchorKind.Entity, Vector3.Zero, 9702, Entity.Null, definitions.Get(defId));
@@ -1262,12 +1380,6 @@ namespace Ludots.Tests.Presentation
 
             int defId = definitions.Register("surface.with.attribute.binding", new PresenterDefinition
             {
-                Surface = new SurfaceAuthoringBlock
-                {
-                    Kind = PresenterSurfaceKind.SplineRibbon,
-                    LodProfileId = "default_surface_lod",
-                    MaterialSet = new PresenterSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
-                },
                 Behaviors =
                 [
                     new BehaviorSlot
@@ -1280,6 +1392,18 @@ namespace Ludots.Tests.Presentation
                             AttributeId = attributeId,
                             TargetParamKey = paramKey,
                             Mode = ValueSourceKind.AttributeRatio,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.SurfaceSource,
+                        ActiveByDefault = true,
+                        SurfaceSource = new SurfaceAuthoringBlock
+                        {
+                            Kind = PresenterSurfaceKind.SplineRibbon,
+                            LodProfileId = "default_surface_lod",
+                            MaterialSet = new PresenterSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
                         },
                     },
                 ],
@@ -1662,12 +1786,21 @@ namespace Ludots.Tests.Presentation
 
             var surfaceDefinition = new PresenterDefinition
             {
-                Surface = new SurfaceAuthoringBlock
-                {
-                    Kind = PresenterSurfaceKind.SplineRibbon,
-                    LodProfileId = "default_surface_lod",
-                    MaterialSet = new PresenterSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
-                },
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 12,
+                        Kind = BehaviorKind.SurfaceSource,
+                        ActiveByDefault = true,
+                        SurfaceSource = new SurfaceAuthoringBlock
+                        {
+                            Kind = PresenterSurfaceKind.SplineRibbon,
+                            LodProfileId = "default_surface_lod",
+                            MaterialSet = new PresenterSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
+                        },
+                    },
+                ],
             };
             int defId = definitions.Register("surface.retained", surfaceDefinition);
 
@@ -1748,9 +1881,14 @@ namespace Ludots.Tests.Presentation
                     confidencePermille: 1000,
                     revision: 1));
 
+            var seats = new ClientLocalSeatRegistry();
+            seats.Add(new ClientLocalSeat("test"));
+            seats.SetPossession("test", 1, viewer);
+
             return new Dictionary<string, object>
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(projectionStore),
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = seats,
             };
         }
 

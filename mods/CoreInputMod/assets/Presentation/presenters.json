@@ -2,7 +2,6 @@
   {
     "_comment": "Shared placement/build ghost: broad low cube footprint for RTS/MMO ability previews.",
     "id": "core_input_preview_build_site",
-    "maxVisibilityDistanceCm": 30000,
     "behaviors": [
       {
         "slot": "body",
@@ -43,7 +42,6 @@
   {
     "_comment": "Warp-in ghost: rounded sphere that reads as an energy silhouette.",
     "id": "core_input_preview_warp_site",
-    "maxVisibilityDistanceCm": 30000,
     "behaviors": [
       {
         "slot": "body",
@@ -84,7 +82,6 @@
   {
     "_comment": "Morph ghost: dense organic sphere for transformation-style abilities.",
     "id": "core_input_preview_morph_site",
-    "maxVisibilityDistanceCm": 30000,
     "behaviors": [
       {
         "slot": "body",
@@ -124,7 +121,6 @@
   },
   {
     "id": "core_input.ability_aim.overlay_base",
-    "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
         "paramKey": "groundOverlay.radius",
@@ -446,7 +442,6 @@
   },
   {
     "id": "core_input.ability_aim.preview",
-    "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
         "paramKey": "core_input.ability_aim.scale",
@@ -505,7 +500,6 @@
   },
   {
     "id": "core_input.ability_aim.affected_target",
-    "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
         "paramKey": "marker3d.scale",
@@ -570,7 +564,6 @@
   },
   {
     "id": "core_input.move_path.line",
-    "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
         "paramKey": "groundOverlay.length",
@@ -672,7 +665,6 @@
   },
   {
     "id": "core_input.move_path.waypoint",
-    "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
         "paramKey": "groundOverlay.radius",

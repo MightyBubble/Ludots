@@ -1,6 +1,4 @@
 using System.Numerics;
-using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Instancing;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Presenters
@@ -95,25 +93,13 @@ namespace Ludots.Core.Presentation.Presenters
         public string Extends = string.Empty;
         public ChildPresenterRef[] Children = System.Array.Empty<ChildPresenterRef>();
         public BehaviorSlot[] Behaviors = System.Array.Empty<BehaviorSlot>();
-        public InstancedBatchBinding[] InstancedBatches = System.Array.Empty<InstancedBatchBinding>();
         public PresenterRule[] Rules = System.Array.Empty<PresenterRule>();
         public ConditionRef VisibilityCondition;
         public PresenterParamBinding[] Bindings = System.Array.Empty<PresenterParamBinding>();
         public ParamDefault[] ParamDefaults = System.Array.Empty<ParamDefault>();
-        public SurfaceAuthoringBlock? Surface;
         public Vector3 PositionOffset;
-        public float PositionYDriftPerSecond;
-        public bool AlphaFadeOverLifetime;
-        public Vector4 DefaultColor = new(1f, 1f, 1f, 1f);
         public float DefaultLifetime;
-        public int DefaultFontSize = 16;
         public int[] RequiredAttributeIds = System.Array.Empty<int>();
-
-        /// <summary>
-        /// Transitional format hint for adapters that still consume Id1/Value0/Value1.
-        /// The adapter-neutral runtime contract lives in <see cref="PresentationTextPacket"/>.
-        /// </summary>
-        public WorldHudValueMode WorldTextMode = WorldHudValueMode.None;
 
         internal int[] BindingIndex = System.Array.Empty<int>();
         internal uint AssetBindingSlotMask;
@@ -125,6 +111,7 @@ namespace Ludots.Core.Presentation.Presenters
         internal bool HasMinimapMarkerBehavior;
         internal bool HasExtensionBehavior;
         internal bool HasSurfaceAuthoring;
+        internal bool HasOutputMotionOrFade;
         internal int SurfaceSourceBehaviorIndex;
         internal bool RequiresBootstrapProcessing;
         internal bool UsesStableVisualCache;
@@ -324,14 +311,15 @@ namespace Ludots.Core.Presentation.Presenters
             AssetBindingSlotMask = 0u;
             AnimatorSlotMask = 0u;
             HasAssetBindingBehavior = false;
-            HasInstancedBatchBindings = InstancedBatches != null && InstancedBatches.Length != 0;
+            HasInstancedBatchBindings = false;
             HasAnimatorBehavior = false;
             HasSoundBehavior = false;
             HasMinimapMarkerBehavior = false;
             HasExtensionBehavior = false;
-            HasSurfaceAuthoring = Surface != null;
+            HasSurfaceAuthoring = false;
+            HasOutputMotionOrFade = false;
             SurfaceSourceBehaviorIndex = -1;
-            RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring || HasInstancedBatchBindings;
+            RequiresBootstrapProcessing = Bindings != null && Bindings.Length > 0;
             UsesStableVisualCache = false;
             UsesEventDrivenStaticEmit = false;
             UsesRetainedPresentationRequest = false;
@@ -413,7 +401,6 @@ namespace Ludots.Core.Presentation.Presenters
                 UsesRetainedPresentationRequest =
                     HasSurfaceAuthoring &&
                     DefaultLifetime <= 0f &&
-                    PositionYDriftPerSecond == 0f &&
                     VisibilityCondition.GraphProgramId <= 0;
                 NeedsRetainedPresentationRequestLifecycleTick = UsesRetainedPresentationRequest;
                 return;
@@ -428,17 +415,34 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasStaticOnlyVisuals = true;
             for (int i = 0; i < Behaviors.Length; i++)
             {
-                ref readonly BehaviorSlot slot = ref Behaviors[i];
+                ref BehaviorSlot slot = ref Behaviors[i];
                 if (slot.SlotIndex is < 0 or >= 32)
                 {
                     throw new System.InvalidOperationException(
                         $"{InvalidBehaviorSlotIndexError}: presenter='{Key}', behaviorIndex={i}, slotIndex={slot.SlotIndex}, validRange=0..31.");
                 }
 
+                if (slot.Kind == BehaviorKind.WorldText)
+                {
+                    if (slot.AssetBinding.AssetKind != default(AssetKind))
+                    {
+                        throw new System.InvalidOperationException(
+                            $"Presenter '{Key}' WorldText behavior slot {slot.SlotIndex} must keep output configuration in worldText; assetBinding is a compiled view and cannot be authored.");
+                    }
+
+                    slot.AssetBinding = BehaviorSlot.BuildWorldTextAssetBinding(in slot.WorldText);
+                }
+
                 uint bit = 1u << slot.SlotIndex;
                 BehaviorPresenceMask |= bit;
                 int kindId = slot.KindId != 0 ? slot.KindId : (byte)slot.Kind;
                 ValidateBehaviorSlotKind(in slot, kindId);
+                if (slot.Motion.YDriftPerSecond != 0f ||
+                    slot.Style.AlphaPolicy == BehaviorAlphaPolicy.FadeOverLifetime)
+                {
+                    HasOutputMotionOrFade = true;
+                }
+
                 switch (slot.Kind)
                 {
                     case BehaviorKind.AssetBinding:
@@ -500,6 +504,12 @@ namespace Ludots.Core.Presentation.Presenters
                         break;
 
                     case BehaviorKind.SurfaceSource:
+                        if (SurfaceSourceBehaviorIndex >= 0)
+                        {
+                            throw new System.InvalidOperationException(
+                                $"Presenter '{Key}' declares multiple SurfaceSource behaviors; a presenter instance may own only one surface source.");
+                        }
+
                         HasSurfaceAuthoring = true;
                         SurfaceSourceBehaviorIndex = i;
                         RequiresBootstrapProcessing = true;
@@ -679,17 +689,17 @@ namespace Ludots.Core.Presentation.Presenters
                 UsesStableVisualCache &&
                 hasStaticOnlyVisuals &&
                 DefaultLifetime <= 0f &&
-                PositionYDriftPerSecond == 0f &&
+                !HasOutputMotionOrFade &&
                 VisibilityCondition.Inline == InlineConditionKind.None &&
                 VisibilityCondition.GraphProgramId <= 0;
             SupportsSingleRequestReplay =
                 AssetBehaviorIndices.Length == 1 &&
                 SupportsReplayableSingleRequest(Behaviors[AssetBehaviorIndices[0]].AssetBinding.AssetKind) &&
-                !RequestOutputDependsOnElapsed();
+                !BehaviorOutputDependsOnElapsed(Behaviors[AssetBehaviorIndices[0]], DefaultLifetime);
             UsesRetainedPresentationRequest =
                 (SupportsSingleRequestReplay || HasSurfaceAuthoring) &&
                 DefaultLifetime <= 0f &&
-                PositionYDriftPerSecond == 0f &&
+                !HasOutputMotionOrFade &&
                 VisibilityCondition.GraphProgramId <= 0;
             NeedsRetainedPresentationRequestLifecycleTick = UsesRetainedPresentationRequest;
             SupportsSingleVisualProxyFastEmit =
@@ -714,10 +724,10 @@ namespace Ludots.Core.Presentation.Presenters
             FastParentAttachmentBehaviorIndex = fastParentAttachmentBehaviorIndex;
         }
 
-        private bool RequestOutputDependsOnElapsed()
+        private static bool BehaviorOutputDependsOnElapsed(in BehaviorSlot slot, float defaultLifetime)
         {
-            return PositionYDriftPerSecond != 0f ||
-                   (AlphaFadeOverLifetime && DefaultLifetime > 0f);
+            return slot.Motion.YDriftPerSecond != 0f ||
+                   (slot.Style.AlphaPolicy == BehaviorAlphaPolicy.FadeOverLifetime && defaultLifetime > 0f);
         }
 
         private static int FindBehaviorIndexForSlot(BehaviorSlot[] behaviors, int slotIndex, BehaviorKind kind)

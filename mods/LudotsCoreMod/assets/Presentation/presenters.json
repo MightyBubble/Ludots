@@ -4,7 +4,6 @@
     "visibility": {
       "inline": "OwnerCullVisible"
     },
-    "maxVisibilityDistanceCm": 5000,
     "bindings": [
       {
         "paramKey": "worldBar.width",
@@ -86,7 +85,6 @@
     "visibility": {
       "inline": "OwnerCullVisible"
     },
-    "maxVisibilityDistanceCm": 3000,
     "bindings": [
       {
         "paramKey": "worldText.tokenId",

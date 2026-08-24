@@ -16,7 +16,7 @@
 
 ## 3. 运行行为
 
-表现实体生命周期系统按档案生成与回收 Presenter；visibility 决定剔除策略，maxVisibilityDistanceCm 决定距离剔除；behaviors 按 slot 挂载资产行为，事件键驱动激活。
+表现实体生命周期系统按档案生成与回收 Presenter；visibility 决定表现器是否跟随拥有者可见；behaviors 按 slot 挂载资产行为，事件键驱动激活。距离裁剪由全局 `presentation.cameraCulling` 负责，不在 presenter 档案内重复声明。
 
 ## 4. 异常承诺
 

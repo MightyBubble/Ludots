@@ -775,8 +775,8 @@ namespace Ludots.Core.Presentation.Systems
             ref readonly BehaviorSlot slot = ref definition.Behaviors[definition.AssetBehaviorIndices[0]];
             int stableId = slot.AssetBinding.AssetKind switch
             {
-                AssetKind.WorldHud => HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Bar, state.DefId),
-                AssetKind.WorldText => HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Text, state.DefId),
+                AssetKind.WorldHud => HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Bar, state.DefId, slot.SlotIndex),
+                AssetKind.WorldText => HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, state.DefId, slot.SlotIndex),
                 AssetKind.Spline => PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
                 AssetKind.GroundOverlay => PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
                 _ => 0,

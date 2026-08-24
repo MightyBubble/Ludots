@@ -2,7 +2,6 @@
   {
     "_comment": "RTS actor ground ring: always-on entity-scoped overlay so units/buildings remain readable on the grid.",
     "id": "rts_actor_ring",
-    "maxVisibilityDistanceCm": 30000,
     "visibility": {
       "inline": "OwnerCullVisible"
     },
@@ -104,7 +103,6 @@
   {
     "_comment": "RTS actor marker: simple readable body proxy for RtsDemoMod when no showcase-only presenter pack is loaded.",
     "id": "rts_actor_marker",
-    "maxVisibilityDistanceCm": 30000,
     "visibility": {
       "inline": "OwnerCullVisible"
     },
@@ -361,7 +359,6 @@
   {
     "_comment": "RTS command-source actor primary ring. The system only publishes a semantic world fact; this presenter owns the visual.",
     "id": "rts.command_source.primary_ring",
-    "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
         "paramKey": "groundOverlay.radius",
@@ -508,7 +505,6 @@
   {
     "_comment": "RTS command-source actor execution/progress bar.",
     "id": "rts.command_source.progress_bar",
-    "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
         "paramKey": "worldBar.fillRatio",
