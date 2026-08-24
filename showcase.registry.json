@@ -3885,6 +3885,29 @@
       "notes": "Mod command kind registered via IModContext.Extensions.Presentation.RegisterPerformerCommand with explicit route strategy."
     },
     {
+      "id": "capability_standard_presenter_command_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterCommandShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterCommandShowcaseMod.csproj",
+      "title": "标准能力·Presenter 指令全息",
+      "summary": "一张地图四个站点，用数据规则驱动全部内建 presenter 指令：Timer 受击闪烁、param sink 灯柱、烟囱行为开关、传送与 scoped 清场。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "presenter",
+        "capability-standard",
+        "presenter-command"
+      ],
+      "binding": "capability_standard_presenter_command_showcase",
+      "preset": "capability_standard_presenter_command_showcase_raylib",
+      "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/presenter-command-showcase.md",
+      "readmePath": null,
+      "acceptanceTest": "CapabilityStandardPresenterCommandShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_presenter_command_showcase",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Exercises builtin presenter commands from data rules: SetParam/TimerSet/TimerExpired/TimerKill, SinkParamToAsset scoped refresh, ActivateBehavior/DeactivateBehavior, CreatePresenter/DestroyPresenter/DestroyScopedPresenter/DestroyPresenterScope/InitializeTransform."
+    },
+    {
       "id": "capability_standard_physics2d",
       "path": "mods/showcases/capability_standard/CapabilityStandardPhysics2DMod",
       "projectPath": "CapabilityStandardPhysics2DMod.csproj",

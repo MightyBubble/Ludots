@@ -1,0 +1,14 @@
+{
+  "name": "CapabilityStandardPresenterCommandShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard showcase exercising every builtin presenter command across four stations: timer flash, param sink, behavior switch, and scoped transport/cleanup.",
+  "main": "bin/net8.0/CapabilityStandardPresenterCommandShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "capability-standard", "presenter-command", "presentation"]
+}

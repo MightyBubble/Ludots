@@ -1,0 +1,23 @@
+[
+  {
+    "id": "pcmd.ground.pad",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [3.4, 0.2, 3.4]
+        },
+        "style": {
+          "color": [0.16, 0.18, 0.22, 1]
+        }
+      }
+    ]
+  }
+]
