@@ -1,0 +1,67 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260824T_kimi_final4\\screens\\client-a\\frontline_003_engaging.png",
+    "width":  1280,
+    "height":  720,
+    "passed":  true,
+    "requirements":  [
+                         {
+                             "role":  "battleInfantryBodies",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  2,
+                             "passingRegions":  3,
+                             "matchingPixels":  923,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "51:17673833",
+                                                 "x":  160,
+                                                 "y":  245,
+                                                 "width":  41,
+                                                 "height":  32,
+                                                 "matchingPixels":  180,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:48195193",
+                                                 "x":  552,
+                                                 "y":  306,
+                                                 "width":  29,
+                                                 "height":  33,
+                                                 "matchingPixels":  345,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:54682904",
+                                                 "x":  599,
+                                                 "y":  309,
+                                                 "width":  27,
+                                                 "height":  34,
+                                                 "matchingPixels":  398,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "damagedCommandCore",
+                             "presentationTemplate":  "rts.frontline.core.base",
+                             "minimumPixelsPerRegion":  8,
+                             "minimumPassingRegions":  1,
+                             "passingRegions":  1,
+                             "matchingPixels":  659,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "42:51247320",
+                                                 "x":  549,
+                                                 "y":  321,
+                                                 "width":  81,
+                                                 "height":  66,
+                                                 "matchingPixels":  659,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         }
+                     ]
+}
