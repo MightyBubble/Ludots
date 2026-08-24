@@ -51,5 +51,12 @@ namespace Ludots.Core.Scripting
         }
 
         public bool Contains(string key) => _services.Contains(key);
+
+        /// <summary>
+        /// Local string-keyed entries, payload contract validation use
+        /// (EventSchemaRegistry.ValidateFirePayload); parent scopes are not included.
+        /// </summary>
+        public IEnumerable<KeyValuePair<string, object>> EnumerateStringEntries()
+            => _services.EnumerateLocal();
     }
 }

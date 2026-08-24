@@ -1,0 +1,19 @@
+[
+  {
+    "id": "NightRaidOverride.ToolProbe.Used",
+    "description": "Schema SSOT fixture: a custom event declaring typed, mod-namespaced params so engine-level registry loading stays covered.",
+    "scope": "map",
+    "params": [
+      {
+        "name": "toolUser",
+        "type": "entity",
+        "key": "NightRaidOverride.ToolUser"
+      },
+      {
+        "name": "probeTag",
+        "type": "int",
+        "key": "NightRaidOverride.ProbeTag"
+      }
+    ]
+  }
+]
