@@ -80,6 +80,8 @@ Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标�
 
 字符串花括号自动引脚、字符串寄存器、组合文本与 `Concat` 仍未完成。当前运行时没有正式的 text value、固定容量/零分配传递、符号 patch 和 presentation sink 合同，因此编辑器不会展示可保存但运行时不可执行的假节点。它们必须作为独立基建切片先补齐合同，再进入 descriptor 名册。
 
+作者面还开着的债，不要当成新发现再审：事件入口要自己露出这次发生了什么 https://github.com/MightyBubble/Ludots/issues/1106 ；执行线没下一步就该结束，但先改“必须显式停下”的合同 https://github.com/MightyBubble/Ludots/issues/1107 ；蓝图变量面板的增删改、默认值、拖到画布选获取/赋值 https://github.com/MightyBubble/Ludots/issues/1109 ；数组/映射要等地图变量合同收下再开放可保存的下拉 https://github.com/MightyBubble/Ludots/issues/1108 。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
+
 **分层：架子有了，墙没有。**  
 工程里多了两份薄的契约，核心工程还是一大坨。展厅大多还能一把抓住整台引擎。把空间、输入、画面、结算真正拆开，以及不许再抓整台引擎，这两步没做。要做就单独开活，对照 `docs/audits/s14_layering_physicalization_design.md`，别和修演示、修构建捆在一起。没拆完之前，总规矩继续写「修复中」。
 

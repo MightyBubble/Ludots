@@ -31,6 +31,24 @@
     }
   },
   {
+    "id": "night_raid_raid_circle",
+    "components": {
+      "Name": {
+        "Value": "NightRaidRaidCircle"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
     "id": "night_raid_raider",
     "components": {
       "Name": {
