@@ -1847,18 +1847,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ConditionProviderRegistry, providerServices.Conditions);
             SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
             SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
-            var activityDefinitions = new ActivityDefinitionRegistry();
-            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
-                .Load(ConfigCatalog, ConfigConflictReport);
-            var activityPresentation = new ActivityPresentationBuffer();
-            var activityRuntime = new ActivityRuntimeService(
-                World,
-                activityDefinitions,
-                providerServices,
-                activityPresentation);
-            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
-            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
-            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
             var taskDefinitions = new TaskDefinitionRegistry();
             new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
                 .Load(ConfigCatalog, ConfigConflictReport);
@@ -1872,6 +1860,18 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
+            var activityDefinitions = new ActivityDefinitionRegistry();
+            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var activityPresentation = new ActivityPresentationBuffer();
+            var activityRuntime = new ActivityRuntimeService(
+                World,
+                activityDefinitions,
+                providerServices,
+                activityPresentation);
+            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
+            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
+            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             ValidateTaskNarrativeReferences(narrativeDefinitions);
