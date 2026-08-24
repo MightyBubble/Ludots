@@ -28,7 +28,7 @@
     "meetingOffsetCm": 300,
     "siegeBeyondFarResourceCm": 1500,
     "arrivalToleranceCm": 300,
-    "minimumObservedMoveCm": 1000,
+    "minimumObservedMoveCm": 500,
     "winnerHoldAtMeetingSeconds": 2,
     "completionCameraToleranceCm": 25,
     "completionWitnessRadiusCm": 2200,
