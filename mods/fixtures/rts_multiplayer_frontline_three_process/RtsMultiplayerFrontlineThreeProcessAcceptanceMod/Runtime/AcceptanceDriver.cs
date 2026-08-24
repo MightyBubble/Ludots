@@ -830,6 +830,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             !AreSelectedActorsVisibleWithPresenterPayload() ||
             !AreMovedActorsOnscreenInPresentationReceipts())
         {
+            ProbeAdvancingWait();
             return;
         }
         if (_progress.Stage == AcceptanceProgressStage.Training)
@@ -2361,6 +2362,41 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 $"Observed {reachedCount} opposing infantry at the meeting point; expected {expectedCount}.");
         }
         return reachedCount == expectedCount;
+    }
+
+    private long _probeAdvancingNextTimestamp;
+
+    private void ProbeAdvancingWait()
+    {
+        long now = Stopwatch.GetTimestamp();
+        if (now < _probeAdvancingNextTimestamp)
+        {
+            return;
+        }
+        _probeAdvancingNextTimestamp = now + (Stopwatch.Frequency * 2);
+        try
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var start in _evidence.Gameplay.MoveStartPositions)
+            {
+                if (TryResolveHandle(start.Handle, out Entity entity) && _world.IsAlive(entity))
+                {
+                    WorldCmInt2 current = GetWorldPosition(entity);
+                    long dx = current.X - (long)start.XCm;
+                    long dy = current.Y - (long)start.YCm;
+                    sb.Append($" {start.Handle}@({current.X},{current.Y}) moved={(long)Math.Sqrt(dx * dx + dy * dy)} vis={_world.TryGet(entity, out CullState c) && c.IsVisible}");
+                }
+                else
+                {
+                    sb.Append($" {start.Handle}=gone");
+                }
+            }
+            Console.WriteLine($"[PROBE] advancing wait:{sb} moved={HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm)} near={AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm)} visPayload={AreSelectedActorsVisibleWithPresenterPayload()} onscreen={AreMovedActorsOnscreenInPresentationReceipts()}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[PROBE] advancing probe error: " + ex.GetType().Name + ": " + ex.Message);
+        }
     }
 
     private bool AreSelectedActorsNear(WorldCmInt2 destination, int toleranceCm)
