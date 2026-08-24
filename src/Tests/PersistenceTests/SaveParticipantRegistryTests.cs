@@ -88,8 +88,8 @@ public sealed class SaveParticipantRegistryTests
             "mapSessions",
             "narrative",
             "relationships",
-            "tasks",
             "rng",
+            "tasks",
             "teams",
             "timeFlow"
         }));
