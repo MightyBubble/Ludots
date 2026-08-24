@@ -323,9 +323,10 @@ namespace CoreInputMod.Systems
 
         public Entity GetControlledActor()
         {
-            return TryGetSolePossessedPlayerId(out int playerId)
-                ? _context.GetControlledActor(playerId)
-                : default;
+            bool hasPlayer = TryGetSolePossessedPlayerId(out int playerId);
+            Entity actor = hasPlayer ? _context.GetControlledActor(playerId) : default;
+            System.Console.WriteLine($"[DIAG5] GetControlledActor hasPlayer={hasPlayer} playerId={playerId} actor={actor.Id}");
+            return actor;
         }
 
         private T RequireService<T>(string key) where T : class

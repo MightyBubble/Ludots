@@ -273,6 +273,48 @@ namespace Ludots.Tests.Presentation
 
             DriveRightClickCommandFrame(engine, hudProjection, backend, commandScreenPoint);
 
+            int activeOrdersAfterClick = CountActiveMoveOrders(engine, commandActors);
+            TestContext.Out.WriteLine($"[DIAG] activeOrders before={activeOrdersBefore} after={activeOrdersAfterClick} commandActors={commandActors.Length} commandCountFrame={simulation.CommandCountFrame}");
+            for (int i = 0, shown = 0; i < commandActors.Length && shown < 3; i++)
+            {
+                Entity diagEntity = commandActors[i];
+                if (!engine.World.IsAlive(diagEntity))
+                {
+                    continue;
+                }
+
+                string orderInfo = engine.World.TryGet(diagEntity, out OrderBuffer diagBuffer) && diagBuffer.HasActive
+                    ? $"orderType={diagBuffer.ActiveOrder.Order.OrderTypeId} orderId={diagBuffer.ActiveOrder.Order.OrderId} spatialKind={diagBuffer.ActiveOrder.Order.Args.Spatial.Kind} spatialMode={diagBuffer.ActiveOrder.Order.Args.Spatial.Mode} submitMode={diagBuffer.ActiveOrder.Order.SubmitMode}"
+                    : "noActiveOrder";
+                string intentInfo = engine.World.TryGet(diagEntity, out Ludots.Core.MovePlanning.MovePlanExecutionIntent diagIntent)
+                    ? $"intentMode={diagIntent.Mode} token={diagIntent.CommandGroupToken} hasTarget={diagIntent.HasTarget}"
+                    : "noIntent";
+                TestContext.Out.WriteLine($"[DIAG] actor={diagEntity.Id} {orderInfo} {intentInfo}");
+                shown++;
+            }
+
+            engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? lastOrderDebug);
+            TestContext.Out.WriteLine($"[DIAG] lastOrderDebug={lastOrderDebug ?? "none"}");
+            Ludots.Core.Input.Orders.InputOrderMappingSystem? diagMapping = engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
+            if (diagMapping != null)
+            {
+                var lastResult = diagMapping.LastActivationResult;
+                TestContext.Out.WriteLine($"[DIAG] lastActivationState={lastResult.State} actor={lastResult.Actor.Id} orderId={lastResult.OrderId} rejection={lastResult.Rejection}");
+            }
+            else
+            {
+                TestContext.Out.WriteLine("[DIAG] ActiveInputOrderMapping service missing");
+            }
+
+            Ludots.Core.Gameplay.GAS.Orders.OrderQueue? diagQueue = engine.GetService(CoreServiceKeys.OrderQueue);
+            TestContext.Out.WriteLine($"[DIAG] orderQueue={diagQueue?.GetType().Name ?? "null"} pending={diagQueue?.Count.ToString() ?? "?"}");
+            for (int extraTick = 0; extraTick < 8; extraTick++)
+            {
+                TickProjectionFrames(engine, hudProjection, 1);
+            }
+
+            TestContext.Out.WriteLine($"[DIAG] after 8 extra ticks: activeOrders={CountActiveMoveOrders(engine, commandActors)} commandCountFrame={simulation.CommandCountFrame}");
+
             Assert.That(simulation.CommandCountFrame, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
             Assert.That(simulation.LastOrderMemberCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
             Assert.That(CountActiveMoveOrders(engine, commandActors), Is.GreaterThan(activeOrdersBefore), commandSourceDiagnostics.ToString());
