@@ -1315,19 +1315,31 @@ namespace Ludots.Core.Presentation.Config
                 return true;
             }
 
-            if (obj["paramKey"] == null &&
-                obj["paramLane"] == null &&
-                obj["valueSource"] == null &&
-                obj["paramValue"] == null &&
-                obj["intValue"] == null &&
-                obj["vectorValue"] == null &&
-                obj["paramGraphProgramId"] == null &&
-                obj["vectorXSource"] == null &&
-                obj["vectorYSource"] == null &&
-                obj["vectorZSource"] == null &&
-                obj["vectorWSource"] == null)
+            bool hasSelector = obj["paramKey"] != null || obj["paramLane"] != null;
+            bool hasValueFields = obj["valueSource"] != null ||
+                obj["paramValue"] != null ||
+                obj["intValue"] != null ||
+                obj["vectorValue"] != null ||
+                obj["paramGraphProgramId"] != null ||
+                obj["vectorXSource"] != null ||
+                obj["vectorYSource"] != null ||
+                obj["vectorZSource"] != null ||
+                obj["vectorWSource"] != null;
+
+            if (!hasSelector && !hasValueFields)
             {
                 return false;
+            }
+
+            if (commandKind == PresenterCommandKind.SinkParamToAsset)
+            {
+                if (hasValueFields)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(PresenterCommand)} SinkParamToAsset accepts only paramKey/paramLane as refresh selectors; param value fields belong to SetParam.");
+                }
+
+                return true;
             }
 
             if (commandKind != PresenterCommandKind.CreatePresenter)
@@ -1336,6 +1348,12 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return true;
+        }
+
+        private static bool CommandWritesParamValue(JsonObject obj, PresenterCommandKind commandKind)
+        {
+            return commandKind == PresenterCommandKind.SetParam ||
+                (commandKind != PresenterCommandKind.SinkParamToAsset && HasCommandParamPayload(obj, commandKind));
         }
 
         private static PresenterCommandEntitySource ParseCommandOwnerSource(
@@ -1419,6 +1437,11 @@ namespace Ludots.Core.Presentation.Config
             string context)
         {
             JsonNode? node = obj["valueSource"];
+            if (commandKind == PresenterCommandKind.SinkParamToAsset)
+            {
+                return PresenterCommandValueSource.Fixed;
+            }
+
             if (commandKind == PresenterCommandKind.SetParam || HasCommandParamPayload(obj, commandKind))
             {
                 return ParseRequiredEnum<PresenterCommandValueSource>(node, $"{context}.valueSource");
@@ -1469,7 +1492,7 @@ namespace Ludots.Core.Presentation.Config
             JsonNode? node = obj["paramValue"];
             if (node == null)
             {
-                if ((commandKind == PresenterCommandKind.SetParam || HasCommandParamPayload(obj, commandKind)) &&
+                if (CommandWritesParamValue(obj, commandKind) &&
                     valueSource == PresenterCommandValueSource.Fixed &&
                     lane == ParamLane.Float &&
                     paramGraphProgramId == 0)
@@ -1494,7 +1517,7 @@ namespace Ludots.Core.Presentation.Config
             JsonNode? node = obj["intValue"];
             if (node == null)
             {
-                if ((commandKind == PresenterCommandKind.SetParam || HasCommandParamPayload(obj, commandKind)) &&
+                if (CommandWritesParamValue(obj, commandKind) &&
                     valueSource == PresenterCommandValueSource.Fixed &&
                     lane == ParamLane.Int &&
                     paramGraphProgramId == 0)
@@ -1520,7 +1543,7 @@ namespace Ludots.Core.Presentation.Config
             JsonNode? node = obj["vectorValue"];
             if (node == null)
             {
-                if ((commandKind == PresenterCommandKind.SetParam || HasCommandParamPayload(obj, commandKind)) &&
+                if (CommandWritesParamValue(obj, commandKind) &&
                     lane == ParamLane.Vector &&
                     paramGraphProgramId == 0 &&
                     !hasVectorSources)
@@ -1589,13 +1612,13 @@ namespace Ludots.Core.Presentation.Config
 
             if (node != null)
             {
-                if (commandKind == PresenterCommandKind.SetParam)
+                if (commandKind is PresenterCommandKind.SetParam or PresenterCommandKind.SinkParamToAsset)
                 {
                     return ResolveRequiredPresenterDefinitionId(node, $"{context}.definitionId");
                 }
 
                 throw new InvalidOperationException(
-                    $"{context}.definitionId is only valid for CreatePresenter, SetParam, and DestroyScopedPresenter commands.");
+                    $"{context}.definitionId is only valid for CreatePresenter, SetParam, SinkParamToAsset, and DestroyScopedPresenter commands.");
             }
 
             return 0;
