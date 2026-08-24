@@ -51,13 +51,13 @@ narrative_slices   能力切片集          mods/showcases/narrative_slices
 
 三个 showcase 用同一套配置文件格式，只是各自一份。**每个内容文件都是 JSON 数组**（如 dialogues.json 是 `[{对话1}, {对话2}]`），新增内容就是在数组里追加一条；`config_catalog.json` 登记的是整个文件路径，已有条目覆盖追加后的整个文件——**向已有文件追加内容不需要改 catalog**，只有新增文件才要登记。ID 全库唯一，重复即加载冲突。
 
-| 文件 | 管什么 | 关键字段（camelCase） |
+| 文件 | 管什么 | 关键字段 |
 |---|---|---|
-| `Narrative/variables.json` | 叙事变量 | `id` / `kind`(Int/Float/Bool/String) / `defaultInt` 等 |
-| `Narrative/dialogues.json` | 对话树 | `id` / `startNodeId` / `nodes[]{id, speakerName, text, choices[], onEnter[], autoAdvanceSeconds}`；选项含 `conditions[]`（条件门控）与 `actions[]` |
-| `Narrative/cinematics.json` | 演出步进 | `id` / `steps[]{id, speakerName, text, durationSeconds, cameraId, requiresAdvance}` |
-| `Tasks/tasks.json` | 任务 | `id` / `start_policy`(automatic/player_accept) / `completion_rule`(all/any) / `objectives[]{kind:"signal", signal_key}` / `next_task_id` / `on_enter_dialogue_id` / `on_enter_cinematic_id` |
-| `Activities/activities.json` | 活动抉择 | `id` / `source_key` / `dispatch_policy`(forced/automatic) / `options[]{id, title, body, is_baseline, effects[]}`；effect 目前可用 `task.create`（参数 `task_id`） |
+| `Narrative/variables.json`（camelCase） | 叙事变量 | `id` / `kind`(Int/Float/Bool/String) / `defaultInt` 等 |
+| `Narrative/dialogues.json`（camelCase） | 对话树 | `id` / `startNodeId` / `nodes[]{id, speakerName, text, choices[], onEnter[], autoAdvanceSeconds}`；选项含 `conditions[]`（条件门控）与 `actions[]` |
+| `Narrative/cinematics.json`（camelCase） | 演出步进 | `id` / `steps[]{id, speakerName, text, durationSeconds, cameraId, requiresAdvance}` |
+| `Tasks/tasks.json`（snake_case） | 任务 | `id` / `display_name` / `start_policy`(automatic/player_accept) / `completion_rule`(all/any) / `objectives[]{id, kind:"signal", title, signal_key}` / `next_task_id` / `on_enter_dialogue_id` / `on_enter_cinematic_id` |
+| `Activities/activities.json`（snake_case） | 活动抉择 | `id` / `display_name` / `source_key` / `dispatch_policy`(forced/automatic) / `options[]{id, title, body, is_baseline, effects[]}`；effect 目前可用 `task.create`（参数 `task_id`） |
 | `Maps/<map>.json` | 地图与地图变量 | 顶层 PascalCase；`Variables` 数组小写字段 `[{"name","type":"int","initial"}]`（严格解析） |
 | `Input/default_input.json` | 按键 | `actions[]` + `contexts[].bindings[]`（actionId → 设备路径） |
 | `assets/config_catalog.json` | 配置目录 | **必须放 mod 的 `assets/` 根级**（子目录不生效），条目 `{ "Path": "Narrative/dialogues.json", "Policy": "ArrayById", "IdField": "id" }` |
@@ -86,11 +86,46 @@ context.OnEvent(TaskEventKeys.Signal, ctx =>
 
 ### 4.3 最小改动手册：给 narrative_chain 加一段新对话 + 新任务
 
-1. `Tasks/tasks.json` 加一条任务：`{"id": "Task.Chain.NewErrand", "display_name": "…", "start_policy": "automatic", "completion_rule": "all", "objectives": [{"id": "done", "kind": "signal", "title": "…", "signal_key": "chain.new.done"}]}`
-2. `Narrative/dialogues.json` 加一棵对话：`{"id": "Dialogue.Chain.NewTalk", "startNodeId": "root", "nodes": [{"id": "root", "speakerName": "Relay Warden", "text": "…", "autoAdvanceSeconds": 0.1, "onEnter": [{"kind": "EmitSignal", "signalId": "chain.new.done"}]}]}`
-3. 想让它在链路里被声明式触发：给某个任务加 `"on_enter_dialogue_id": "Dialogue.Chain.NewTalk"`（任务激活自动开对话），或在触发器订阅方 `HandleTaskSignalAsync` 里对 `chain.new.done` 反应。
+先说因果链：**动作**是对话节点里声明的（作者写 JSON）→ `EmitSignal` 动作发出信号 → 信号同时做两件事（推进匹配 `signal_key` 的任务目标、广播引擎事件）→ **订阅方代码**（§4.2 的 `OnEvent`）对事件做跨域反应。作者侧只写前两步，后一步是已有模板。
+
+涉及两个文件（相对 mod 根 `mods/showcases/narrative_chain/NarrativeChainShowcaseMod/assets/`）：
+- `Narrative/dialogues.json`（对话，字段 camelCase）
+- `Tasks/tasks.json`（任务，字段 snake_case）
+
+注意大小写规则：**dialogues / cinematics / variables 用 camelCase；tasks / activities 用 snake_case**（如上两文件示例所示，§4.1 表格按各自惯例）。
+
+1. `Tasks/tasks.json` 追加一条任务：`{"id": "Task.Chain.NewErrand", "display_name": "…", "start_policy": "automatic", "completion_rule": "all", "objectives": [{"id": "done", "kind": "signal", "title": "…", "signal_key": "chain.new.done"}]}`
+2. `Narrative/dialogues.json` 追加一棵对话。单节点收口版：
+
+```json
+{ "id": "Dialogue.Chain.NewTalk", "displayName": "New Talk", "startNodeId": "root",
+  "nodes": [
+    { "id": "root", "speakerName": "Relay Warden", "text": "…", "autoAdvanceSeconds": 0.1,
+      "onEnter": [ { "kind": "EmitSignal", "signalId": "chain.new.done" } ] }
+  ] }
+```
+
+多节点带选项与条件门控的完整格式（选项可带 `conditions[]`，不满足则玩家看不到该选项；可带 `actions[]` 在选定瞬间执行）：
+
+```json
+{ "id": "Dialogue.Chain.NewTalk", "displayName": "New Talk", "startNodeId": "root",
+  "nodes": [
+    { "id": "root", "speakerName": "Relay Warden", "text": "Two ways to hear it.",
+      "choices": [
+        { "id": "ask", "text": "Tell me more.", "nextNodeId": "answer",
+          "actions": [ { "kind": "AddVariable", "variableId": "chain.lore", "valueKind": "Int", "intValue": 1 } ] },
+        { "id": "sealed", "text": "The sealed line.", "nextNodeId": "answer",
+          "conditions": [ { "kind": "Variable", "variableId": "chain.lore", "operator": "GreaterOrEqual", "intValue": 1 } ] }
+      ] },
+    { "id": "answer", "speakerName": "Relay Warden", "text": "…", "autoAdvanceSeconds": 0.1,
+      "onEnter": [ { "kind": "EmitSignal", "signalId": "chain.new.done" } ] }
+  ] }
+```
+
+多目标任务：`"objectives"` 数组放多条，配合 `"completion_rule": "any"`（任一达成即完成）或 `"all"`（全部达成）。
+3. 触发时机：`start_policy: "automatic"` 的任务在被创建的那一刻就是 Active（不等待玩家）；创建它的途径有三——某任务完成经 `next_task_id` 自动接续、活动选项 `task.create` 效果、或订阅方代码调 `OfferOrStart`。想声明式开对话：给任务加 `"on_enter_dialogue_id": "Dialogue.Chain.NewTalk"`（任务转 Active 时引擎自动开）。
 4. **按键**：对话推进/选项用引擎既有的输入动作（`NarrativeAdvance`、`NarrativeChoice1/2`，已随 showcase 的 `Input/default_input.json` 绑好 Enter/1/2）；只有新增独立交互（如面板确认键）才需要改输入文件加 action 与 binding。
-5. **命令式接线**（不想用声明式时）：照 §4.2 的代码示例在 ModEntry 里订阅 `TaskEventKeys.Signal`，命中你的信号键后调 `engine.GetService(CoreServiceKeys.NarrativeDirector).StartDialogue(...)`。
+5. **命令式接线**（不想用声明式时）：照 §4.2 的 `OnEvent` 代码示例在 ModEntry 里订阅 `TaskEventKeys.Signal`，命中你的信号键后调 `engine.GetService(CoreServiceKeys.NarrativeDirector).StartDialogue(...)`。
 6. `autoAdvanceSeconds` 是无选项节点自动翻页的等待秒数（0.1 ≈ 立即翻页；不写则等待玩家按推进键）。
 7. 玩家文案直接写进 `text` / `title` / `hint`——**不要出现引擎词**（provider/trigger/signal/contract/GAS…），双通道审计会打回。
 5. 跑 `dotnet test src/Tests/GasTests/GasTests.csproj --filter FullyQualifiedName~NarrativeChainAcceptanceTests`，证据自动落到 `artifacts/acceptance/narrative-chain/`。
