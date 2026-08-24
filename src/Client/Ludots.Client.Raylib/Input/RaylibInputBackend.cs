@@ -19,7 +19,33 @@ namespace Ludots.Client.Raylib.Input
         public RaylibInputBackend(SyntheticInputDevice? synthetic = null)
         {
             _synthetic = synthetic;
+            DisableImeForGameWindow();
         }
+
+        /// <summary>
+        /// A game window has no text input; on Windows the active IME would otherwise swallow
+        /// letter keys (WASD arrives as composition, never as WM_KEYDOWN) while SPACE passes
+        /// through — exactly the asymmetric loss reproduced by Chinese-IME players. Disassociate
+        /// the IME context from the raylib window so raw keys always reach the game.
+        /// </summary>
+        private static void DisableImeForGameWindow()
+        {
+            try
+            {
+                IntPtr handle = Raylib_cs.Raylib.GetWindowHandle();
+                if (handle != IntPtr.Zero)
+                {
+                    ImmAssociateContext(handle, IntPtr.Zero);
+                }
+            }
+            catch (DllNotFoundException)
+            {
+                // Non-Windows platforms have no IMM32; raw keys are not IME-filtered there.
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("imm32.dll")]
+        private static extern IntPtr ImmAssociateContext(IntPtr hWnd, IntPtr hIme);
 
         public float GetAxis(string devicePath)
         {

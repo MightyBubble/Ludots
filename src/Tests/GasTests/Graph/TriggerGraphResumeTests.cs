@@ -480,6 +480,7 @@ namespace Ludots.Tests.Gas.Graph
                         Path.Combine(Root, ModId),
                     },
                     Path.Combine(repoRoot, "assets"));
+                engine.GetService(CoreServiceKeys.CustomEventNameRegistry)?.Register(EntryEventName);
                 return engine;
             }
 

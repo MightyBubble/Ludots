@@ -317,7 +317,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null)
             : base(world)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
@@ -347,7 +347,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 spawnRequests,
                 presentationEvents,
                 Math.Max(1, fanOutCommandCapacity),
-                _fanOutBudget);
+                _fanOutBudget,
+                poseAuthorityArbiter);
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _instantFanOutCommands;
@@ -361,6 +362,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
             _builtinRuntime.TagOps = _tagOps;
             _builtinRuntime.OrderIntake = orderIntake;
+            _builtinRuntime.PoseAuthorityArbiter = poseAuthorityArbiter;
             _builtinOrderTypeRegistry = orderTypeRegistry;
             _builtinOrderRuleRegistry = orderRuleRegistry;
             _builtinStepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectProposalProcessingSystem));

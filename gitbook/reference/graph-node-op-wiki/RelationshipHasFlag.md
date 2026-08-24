@@ -44,7 +44,7 @@ LoadCaster → LoadExplicitTarget → ConstBool → RelationshipEnsureLink → R
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived / Query；Script 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Query；Script / TriggerGraph 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：多节点串成完整小玩法的组合示范，可整段抄走改。
 ## 怎么进

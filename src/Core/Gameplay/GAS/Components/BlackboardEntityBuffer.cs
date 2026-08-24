@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 
@@ -10,6 +11,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     public unsafe struct BlackboardEntityBuffer
     {
         public const int MAX_ENTRIES = 16;
+        public const string CapacityExceededError = "GAS.BLACKBOARD.ERR.CapacityExceeded";
         
         public int Count;
         public fixed int Keys[MAX_ENTRIES];
@@ -61,7 +63,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 }
 
                 // Add new entry
-                if (Count >= MAX_ENTRIES) return;
+                if (Count >= MAX_ENTRIES)
+                {
+                    throw new InvalidOperationException(
+                        $"{CapacityExceededError}: buffer={nameof(BlackboardEntityBuffer)}, key={key}, capacity={MAX_ENTRIES}.");
+                }
                 keys[Count] = key;
                 entityIds[Count] = value.Id;
                 worldIds[Count] = value.WorldId;

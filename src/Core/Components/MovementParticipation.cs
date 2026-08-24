@@ -49,6 +49,10 @@ namespace Ludots.Core.Components
 
         /// <summary>Physics2D 积分产出位姿结果。</summary>
         Physics = 3,
+
+        /// <summary>Attachment 绑定持有位姿（attach 授予 / detach 归还，无窗口时限）。
+        /// 子实体位姿由 AttachmentPositionSyncSystem 从父位姿派生。</summary>
+        Attached = 4,
     }
 
     /// <summary>

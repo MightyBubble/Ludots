@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Client;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Scripting;
 
@@ -15,6 +16,7 @@ namespace Ludots.Core.Input.Systems
     {
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
+        private readonly HashSet<string> _deadRepWarned = new(StringComparer.Ordinal);
 
         public SeatPossessionSyncSystem(World world, Dictionary<string, object> globals)
         {
@@ -48,16 +50,33 @@ namespace Ludots.Core.Input.Systems
                     continue;
                 }
 
-                if (!lookup.TryGet(seat.PossessedPlayerId, out Entity rep) || !_world.IsAlive(rep))
+                if (!lookup.TryGet(seat.PossessedPlayerId, out Entity rep))
                 {
                     throw new System.InvalidOperationException(
-                        $"Client local seat '{seat.SeatId}' possesses playerId {seat.PossessedPlayerId} but no live participant rep is bound.");
+                        $"Client local seat '{seat.SeatId}' possesses playerId {seat.PossessedPlayerId} but no participant rep is bound.");
+                }
+
+                if (!_world.IsAlive(rep))
+                {
+                    // A dead player rep is a legal gameplay state, not a binding contract
+                    // violation: keep possession and wait for respawn/rebind instead of
+                    // taking the whole game down.
+                    if (_deadRepWarned.Add(seat.SeatId))
+                    {
+                        Log.Warn(
+                            in LogChannels.Input,
+                            $"Client local seat '{seat.SeatId}' player {seat.PossessedPlayerId} rep is dead; possession sync paused until rebind.");
+                    }
+
+                    continue;
                 }
 
                 if (seat.PossessedRep != rep)
                 {
                     seats.SetPossession(seat.SeatId, seat.PossessedPlayerId, rep);
                 }
+
+                _deadRepWarned.Remove(seat.SeatId);
             }
         }
 

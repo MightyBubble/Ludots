@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 六种全可用（Effect / Score / Validation / Derived / Query / Script） |
+| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | Entity → 实体寄存器 |
 | 输入端口（值边 toPort） | `list`（目标名单） |
 | 特殊写法 | 结果写入 dst 寄存器 |
@@ -37,7 +37,7 @@ ConstInt → ConstInt → QueryCone → LoadCaster → QueryFilterNotEntity → 
 
 ## 边界与更多用法
 
-- 图种边界：六种图全都能用，不必为它挑图种。
+- 图种边界：七种图全都能用，不必为它挑图种。
 - 同类用法：范围技能圈人、六角战棋邻域/环带、扇形与矩形范围判定。
 ## 怎么进
 

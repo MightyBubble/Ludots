@@ -43,7 +43,7 @@ LoadCaster → **RelationshipQueryIncoming**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
 - 同类用法：好感与敌友判定、关系数值的聚合与排序、信任旗/失和旗这类关系玩法。
 ## 怎么进
 

@@ -583,7 +583,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"TriggerGraph graph '{graphId}' entry '{shown}' filters fields 'threshold' and 'direction' must be declared together."));
             }
 
-            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction);
+            string? action = null;
+            if (filters.Action != null)
+            {
+                action = filters.Action.Trim();
+                if (action.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'action' must be a non-empty action id.", filters.Action));
+                }
+            }
+
+            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction, action);
         }
 
         private static Dictionary<string, int> BuildNodeIndex(
@@ -674,6 +685,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     }
 
                     ops[i] = new AuthoredOp(AuthoredOpKind.Until, GraphNodeOp.None);
+                    continue;
+                }
+
+                if (string.Equals(node.Op, GraphAuthoringSugar.Break, StringComparison.Ordinal))
+                {
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"{GraphAuthoringSugar.Break} is Script/TriggerGraph compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    // Break is an author-facing name for an unconditional jump to an
+                    // explicitly authored exit. There is no implicit loop-scope lookup;
+                    // the target edge keeps control flow visible and rejects dangling breaks.
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.Jump);
                     continue;
                 }
 

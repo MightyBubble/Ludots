@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 
 namespace Ludots.Core.Map
 {
     public sealed record MapSessionEntrySnapshot(
         string MapId,
         MapSessionState State,
-        MapLaunchContext? LaunchContext = null);
+        MapLaunchContext? LaunchContext = null,
+        MapVariableStoreSnapshot? Variables = null);
 
     public sealed record MapSessionManagerSnapshot(
         IReadOnlyList<MapSessionEntrySnapshot> Sessions,
@@ -145,7 +147,10 @@ namespace Ludots.Core.Map
             var sessions = new List<MapSessionEntrySnapshot>(_sessions.Count);
             foreach (var pair in _sessions)
             {
-                sessions.Add(new MapSessionEntrySnapshot(pair.Key.Value, pair.Value.State, pair.Value.LaunchContext));
+                MapVariableStore variables = pair.Value.Variables ??
+                    throw new InvalidOperationException(
+                        $"Map session '{pair.Key.Value}' has no variable store to capture; the session is not alive.");
+                sessions.Add(new MapSessionEntrySnapshot(pair.Key.Value, pair.Value.State, pair.Value.LaunchContext, variables.CaptureSnapshot()));
             }
 
             var focusTopFirst = _focusStack.ToArray();
@@ -175,6 +180,14 @@ namespace Ludots.Core.Map
 
                 session.State = sessionSnapshot.State;
                 session.LaunchContext = sessionSnapshot.LaunchContext;
+
+                MapVariableStoreSnapshot variables = sessionSnapshot.Variables ??
+                    throw new InvalidOperationException(
+                        $"Map session '{sessionSnapshot.MapId}' save entry carries no variables.");
+                MapVariableStore store = session.Variables ??
+                    throw new InvalidOperationException(
+                        $"Cannot restore variables for map session '{sessionSnapshot.MapId}' because its variable store is gone.");
+                store.RestoreSnapshot(variables);
             }
 
             for (int i = 0; i < snapshot.FocusStack.Count; i++)

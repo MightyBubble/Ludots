@@ -44,7 +44,7 @@ LoadCaster → LoadExplicitTarget → ReadBlackboardInt → **ApplyEffectDynamic
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect；Score / Validation / Derived / Query / Script 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect；Score / Validation / Derived / Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
 - 同类用法：多节点串成完整小玩法的组合示范，可整段抄走改。
 ## 怎么进
 

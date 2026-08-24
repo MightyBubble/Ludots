@@ -20,6 +20,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 world.Add(entity, new BlackboardIntBuffer());
             }
+            if (!world.Has<BlackboardFloatBuffer>(entity))
+            {
+                world.Add(entity, new BlackboardFloatBuffer());
+            }
             if (!world.Has<BlackboardSpatialBuffer>(entity))
             {
                 world.Add(entity, new BlackboardSpatialBuffer());
@@ -39,16 +43,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             bool hasInts = world.Has<BlackboardIntBuffer>(entity);
+            bool hasFloats = world.Has<BlackboardFloatBuffer>(entity);
             bool hasSpatial = world.Has<BlackboardSpatialBuffer>(entity);
             bool hasEntities = world.Has<BlackboardEntityBuffer>(entity);
-            if (hasInts && hasSpatial && hasEntities)
+            if (hasInts && hasFloats && hasSpatial && hasEntities)
             {
                 return;
             }
 
             throw new InvalidOperationException(
                 $"{MissingStateError}: entity={entity.Id}, " +
-                $"BlackboardIntBuffer={hasInts}, BlackboardSpatialBuffer={hasSpatial}, BlackboardEntityBuffer={hasEntities}.");
+                $"BlackboardIntBuffer={hasInts}, BlackboardFloatBuffer={hasFloats}, BlackboardSpatialBuffer={hasSpatial}, BlackboardEntityBuffer={hasEntities}.");
         }
     }
 }

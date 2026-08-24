@@ -32,6 +32,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public bool Phase { get; set; }
     }
 
+    /// <summary>One variable in a save snapshot; only the field matching <see cref="Type"/> carries a live value.</summary>
+    public sealed record MapVariableValueSnapshot(string Name, MapVariableType Type, int IntValue, float FloatValue);
+
+    /// <summary>
+    /// Save payload for a <see cref="MapVariableStore"/>. Revisions are not persisted: restore
+    /// writes values directly onto the freshly declared slots (revisions stay at zero) and does
+    /// not dispatch PhaseChanged, so the first post-restore write diffs against the restored value.
+    /// </summary>
+    public sealed record MapVariableStoreSnapshot(IReadOnlyList<MapVariableValueSnapshot> Variables);
+
     public static class MapVariableDeclarations
     {
         private const string AllowedFields = "name, type, initial, phase";
@@ -304,6 +314,74 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         public uint GetRevision(string name) => RequireSlot(name).Revision;
+
+        public MapVariableStoreSnapshot CaptureSnapshot()
+        {
+            var entries = new List<MapVariableValueSnapshot>(_slots.Count);
+            foreach (KeyValuePair<string, Slot> pair in _slots)
+            {
+                Slot slot = pair.Value;
+                entries.Add(new MapVariableValueSnapshot(pair.Key, slot.Type, slot.IntValue, slot.FloatValue));
+            }
+
+            entries.Sort(static (a, b) => string.CompareOrdinal(a.Name, b.Name));
+            return new MapVariableStoreSnapshot(entries);
+        }
+
+        public void RestoreSnapshot(MapVariableStoreSnapshot snapshot)
+        {
+            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+
+            var pending = new List<(Slot Slot, MapVariableValueSnapshot Entry)>(snapshot.Variables.Count);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < snapshot.Variables.Count; i++)
+            {
+                MapVariableValueSnapshot entry = snapshot.Variables[i];
+                if (entry == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{MapId.Value}' save variable entry at index {i} is null.");
+                }
+
+                if (!seen.Add(entry.Name))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{MapId.Value}' save contains variable '{entry.Name}' more than once.");
+                }
+
+                if (!_slots.TryGetValue(entry.Name, out Slot? slot))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{MapId.Value}' save contains variable '{entry.Name}' that the map does not declare.");
+                }
+
+                if (slot.Type != entry.Type)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{MapId.Value}' variable '{entry.Name}' is declared as {slot.Type} but the save stores {entry.Type}.");
+                }
+
+                pending.Add((slot, entry));
+            }
+
+            if (pending.Count != _slots.Count)
+            {
+                foreach (string declared in _slots.Keys)
+                {
+                    if (!seen.Contains(declared))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{MapId.Value}' save is missing declared variable '{declared}'.");
+                    }
+                }
+            }
+
+            for (int i = 0; i < pending.Count; i++)
+            {
+                pending[i].Slot.IntValue = pending[i].Entry.IntValue;
+                pending[i].Slot.FloatValue = pending[i].Entry.FloatValue;
+            }
+        }
 
         public void WriteInt(string name, int value)
         {

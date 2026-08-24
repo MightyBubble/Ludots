@@ -14,6 +14,7 @@ namespace Ludots.Core.GraphRuntime
         public GraphExecutionCursor(int startPc)
         {
             Pc = startPc;
+            LastInstructionPc = -1;
             Steps = 0;
             CallStackCount = 0;
             ReturnInt = 0;
@@ -22,6 +23,7 @@ namespace Ludots.Core.GraphRuntime
         }
 
         public int Pc;
+        public int LastInstructionPc;
         public int Steps;
         public int CallStackCount;
         public int ReturnInt;
@@ -34,6 +36,7 @@ namespace Ludots.Core.GraphRuntime
         public void Reset()
         {
             Pc = 0;
+            LastInstructionPc = -1;
             Steps = 0;
             CallStackCount = 0;
             ReturnInt = 0;

@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Relationships;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships.Config;
 
 namespace Ludots.Core.Gameplay.Relationships
 {
@@ -20,6 +21,7 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipChangeBuffer _changes;
         private readonly RelationshipReverseIndex _reverseIndex;
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
+        private RelationshipTypeTemplate?[] _typeTemplates = Array.Empty<RelationshipTypeTemplate?>();
 
         public RelationshipRuntime(
             World world,
@@ -46,6 +48,30 @@ namespace Ludots.Core.Gameplay.Relationships
 
         /// <summary>Reverse adjacency index backing incoming-edge queries.</summary>
         public RelationshipReverseIndex ReverseIndex => _reverseIndex;
+
+        /// <summary>
+        /// Bakes per-type birth templates into precompiled patches. Must run after the catalog's types
+        /// are registered; materialization applies each patch once, on first entity creation only.
+        /// </summary>
+        public void InstallTypeTemplates(RelationshipCatalogConfig catalog)
+        {
+            ArgumentNullException.ThrowIfNull(catalog);
+
+            var templates = new RelationshipTypeTemplate?[_types.Count];
+            for (int i = 0; i < catalog.Types.Count; i++)
+            {
+                RelationshipTypeConfig type = catalog.Types[i];
+                if (type.Template == null)
+                {
+                    continue;
+                }
+
+                int typeId = _types.GetId(type.Id);
+                templates[typeId] = RelationshipTypeTemplate.Bake(_world, type.Id, type.Template, authoringContext: null);
+            }
+
+            _typeTemplates = templates;
+        }
 
         public void RebuildEntityIndexFromWorld()
         {
@@ -131,6 +157,11 @@ namespace Ludots.Core.Gameplay.Relationships
                 new TagCountContainer(),
                 new DirtyFlags(),
                 new ActiveEffectContainer());
+            if ((uint)validatedTypeId < (uint)_typeTemplates.Length)
+            {
+                _typeTemplates[validatedTypeId]?.Apply(_world, relationshipEntity);
+            }
+
             _entityIndex[key] = relationshipEntity;
             return relationshipEntity;
         }

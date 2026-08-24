@@ -8,6 +8,7 @@ using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Relationships;
@@ -389,7 +390,8 @@ namespace Ludots.Core.Persistence
                     var sessionObject = new JsonObject
                     {
                         ["mapId"] = session.MapId,
-                        ["state"] = session.State.ToString()
+                        ["state"] = session.State.ToString(),
+                        ["variables"] = WriteMapVariables(session.Variables)
                     };
                     JsonObject? launchContext = WriteLaunchContext(session.LaunchContext);
                     if (launchContext != null)
@@ -434,7 +436,8 @@ namespace Ludots.Core.Persistence
                     sessions.Add(new MapSessionEntrySnapshot(
                         RequireString(session, "mapId"),
                         sessionState,
-                        ReadLaunchContext(session["launchContext"])));
+                        ReadLaunchContext(session["launchContext"]),
+                        ReadMapVariables(RequireObject(session["variables"], $"sessions[{i}].variables"), $"sessions[{i}].variables")));
                 }
 
                 JsonArray focusStackArray = RequireArray(root, "focusStack");
@@ -444,7 +447,14 @@ namespace Ludots.Core.Persistence
                     focusStack[i] = RequireStringValue(focusStackArray[i], $"focusStack[{i}]");
                 }
 
-                _manager.RestoreSnapshot(new MapSessionManagerSnapshot(sessions, focusStack));
+                try
+                {
+                    _manager.RestoreSnapshot(new MapSessionManagerSnapshot(sessions, focusStack));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new SaveContextException($"Map sessions save state is invalid: {ex.Message}");
+                }
             }
         }
 
@@ -880,6 +890,85 @@ namespace Ludots.Core.Persistence
             }
 
             return node.GetValue<string>();
+        }
+
+        private static JsonObject WriteMapVariables(MapVariableStoreSnapshot? snapshot)
+        {
+            if (snapshot == null)
+            {
+                throw new SaveContextException("Map session snapshot carries no variable store state.");
+            }
+
+            var variables = new JsonObject();
+            for (int i = 0; i < snapshot.Variables.Count; i++)
+            {
+                MapVariableValueSnapshot entry = snapshot.Variables[i];
+                var slotValue = new JsonObject
+                {
+                    ["type"] = entry.Type.ToString()
+                };
+                slotValue["value"] = entry.Type == MapVariableType.Int
+                    ? JsonValue.Create(entry.IntValue)!
+                    : JsonValue.Create(entry.FloatValue)!;
+                variables[entry.Name] = slotValue;
+            }
+
+            return variables;
+        }
+
+        private static MapVariableStoreSnapshot ReadMapVariables(JsonObject variables, string field)
+        {
+            var entries = new List<MapVariableValueSnapshot>(variables.Count);
+            foreach (KeyValuePair<string, JsonNode?> pair in variables)
+            {
+                JsonObject entry = RequireObject(pair.Value, $"{field}.{pair.Key}");
+                string typeText = RequireString(entry, "type");
+                if (!Enum.TryParse(typeText, ignoreCase: false, out MapVariableType type) ||
+                    !string.Equals(type.ToString(), typeText, StringComparison.Ordinal))
+                {
+                    throw new SaveContextException($"Map variable '{pair.Key}' type '{typeText}' at {field} is invalid.");
+                }
+
+                double raw = RequireDouble(entry, "value", $"{field}.{pair.Key}.value");
+                int intValue = 0;
+                float floatValue = 0f;
+                if (type == MapVariableType.Int)
+                {
+                    if (Math.Floor(raw) != raw || raw > int.MaxValue || raw < int.MinValue)
+                    {
+                        throw new SaveContextException($"Map variable '{pair.Key}' int value {raw} at {field} is invalid.");
+                    }
+
+                    intValue = (int)raw;
+                }
+                else
+                {
+                    floatValue = (float)raw;
+                }
+
+                entries.Add(new MapVariableValueSnapshot(pair.Key, type, intValue, floatValue));
+            }
+
+            return new MapVariableStoreSnapshot(entries);
+        }
+
+        private static double RequireDouble(JsonObject root, string field, string label)
+        {
+            JsonNode? node = root[field];
+            if (node == null)
+            {
+                throw new SaveContextException($"Save domain field '{label}' is missing.");
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int integer)) return integer;
+                if (value.TryGetValue<long>(out long longInteger)) return longInteger;
+                if (value.TryGetValue<float>(out float single)) return single;
+                if (value.TryGetValue<double>(out double number)) return number;
+            }
+
+            throw new SaveContextException($"Save domain field '{label}' must be a number.");
         }
 
         private static JsonObject? WriteLaunchContext(MapLaunchContext? launchContext)

@@ -123,6 +123,45 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Compile_CreatePanel_WithUnsupportedAnchor_FailsClosed()
+        {
+            var cfg = new GraphControlFlowDocument
+            {
+                Id = "Test.CreatePanel.BadAnchor",
+                Kind = "Script",
+                Entry = "panel",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new GraphControlFlowNode
+                    {
+                        Id = "panel",
+                        Op = "CreatePanel",
+                        PanelType = "tests.panel.host",
+                        PanelAnchor = "screen.middle",
+                    },
+                    new GraphControlFlowNode { Id = "halt", Op = "HaltReturnInt" },
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("panel", GraphControlFlowPorts.Next, "halt"),
+                },
+            };
+
+            var (_, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+
+            bool hasAnchorError = false;
+            for (int i = 0; i < diags.Count; i++)
+            {
+                if (diags[i].Code == GraphDiagnosticCodes.InvalidPanelAnchor)
+                {
+                    hasAnchorError = true;
+                }
+            }
+
+            That(hasAnchorError, Is.True);
+        }
+
+        [Test]
         public void Execute_NullHandlerTable_ThrowsArgumentNullException()
         {
             Throws<System.ArgumentNullException>(ExecuteWithNullHandlerTable);

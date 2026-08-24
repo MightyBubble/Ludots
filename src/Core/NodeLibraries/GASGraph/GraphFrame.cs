@@ -65,6 +65,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public GraphTargetList TargetList;
         public Span<int> CallStack;
         public GraphExecutionCursor Cursor;
+        public GraphDebugTrace? DebugTrace;
 
         public static GraphFrame Bind(
             GraphKind kind,
@@ -83,7 +84,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<int> callStack,
             GraphExecutionCursor cursor = default,
             uint randomSeed = 0,
-            GraphEventPayload eventPayload = default)
+            GraphEventPayload eventPayload = default,
+            GraphDebugTrace? debugTrace = null)
         {
             if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
             {
@@ -142,7 +144,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
                 CallStack = callStack,
-                Cursor = cursor
+                Cursor = cursor,
+                DebugTrace = debugTrace
             };
         }
 
@@ -170,7 +173,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 CallStackCount = Cursor.CallStackCount,
                 ReturnInt = Cursor.ReturnInt,
                 InvokeDepth = Cursor.InvokeDepth,
-                Status = GraphExecutionStatus.Running
+                Status = GraphExecutionStatus.Running,
+                DebugTrace = DebugTrace
             };
         }
     }

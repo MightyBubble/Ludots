@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 六种全可用（Effect / Score / Validation / Derived / Query / Script） |
+| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `value`（数值） |
 | 特殊写法 | — |
@@ -43,7 +43,7 @@ ConstInt → **HaltReturnInt**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：六种图全都能用，不必为它挑图种。
+- 图种边界：七种图全都能用，不必为它挑图种。
 - 同类用法：跨帧等待（读条、喝药回满）、子图复用、循环收口。
 ## 怎么进
 

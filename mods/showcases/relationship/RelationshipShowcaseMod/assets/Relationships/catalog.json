@@ -2,7 +2,17 @@
   "types": [
     { "id": "RelationshipShowcase.Participant", "isSymmetric": false },
     { "id": "SocialBond", "isSymmetric": false },
-    { "id": "Hostility", "isSymmetric": false }
+    { "id": "Hostility", "isSymmetric": false },
+    {
+      "id": "Kinship.FatherSon",
+      "isSymmetric": false,
+      "template": {
+        "components": {
+          "AttributeBuffer": { "base": { "Kinship.FatherBond": 80, "Kinship.Duty": 40 } },
+          "GameplayTagContainer": { "tags": ["Kinship.Blood", "Kinship.Patriarch"] }
+        }
+      }
+    }
   ],
   "metrics": [
     { "id": "Loyalty", "minValue": -100, "maxValue": 100, "defaultValue": 0 },

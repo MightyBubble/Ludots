@@ -1,0 +1,16 @@
+{
+  "Id": "night_raid",
+  "Variables": [
+    {
+      "name": "kill_threshold",
+      "type": "int",
+      "initial": 2
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.NightRaid.Override",
+      "scopeInstanceId": "night_raid_hero"
+    }
+  ]
+}

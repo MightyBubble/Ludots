@@ -1,11 +1,10 @@
 {
   "name": "MapTriggerNightRaidMod",
   "version": "1.0.0",
-  "description": "Night raid three waves: region entry springs the raid, alive-count waves advance it, boss death flips the phase and opens victory - all in map + MapTriggerGraph data",
+  "description": "纯数据两段式关卡：进圈开怪 → 击杀达 kill_threshold 阈值 → SpawnTemplate 图 op（op 447）图内生成 boss → 杀 boss → 胜利面板；关卡流全部在地图 JSON + TriggerGraph 数据里，零 showcase 代码",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
     "CoreInputMod": "^1.0.0"
-  },
-  "main": "bin/net8.0/MapTriggerNightRaidMod.dll"
+  }
 }
