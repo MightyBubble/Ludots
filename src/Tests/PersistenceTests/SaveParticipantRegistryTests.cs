@@ -81,6 +81,7 @@ public sealed class SaveParticipantRegistryTests
 
         Assert.That(domains, Is.EqualTo(new[]
         {
+            "activities",
             "clock",
             "gameSession",
             "inventory",
@@ -88,6 +89,7 @@ public sealed class SaveParticipantRegistryTests
             "narrative",
             "quests",
             "relationships",
+            "tasks",
             "rng",
             "teams",
             "timeFlow"

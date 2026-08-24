@@ -396,6 +396,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             string kindStr = RequireNonEmptyString(itemObj["kind"], $"exec.items[{idx}].kind", id, path);
             var kind = ParseItemKind(kindStr);
+            GasOperatorWhitelist.ValidateExecItemKind(kindStr, id);
             if (itemObj["tick"] is not JsonNode tickNode)
             {
                 throw new InvalidOperationException(

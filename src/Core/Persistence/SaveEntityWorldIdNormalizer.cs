@@ -5,7 +5,9 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Tasks;
 
 namespace Ludots.Core.Persistence
 {
@@ -21,6 +23,8 @@ namespace Ludots.Core.Persistence
             NormalizeAbilityStateBuffer(world);
             NormalizeTeamEntityRef(world);
             NormalizeQuestInstances(world);
+            NormalizeActivityInstances(world);
+            NormalizeTaskInstances(world);
             NormalizeRelationshipInstances(world);
             NormalizeRelationshipKeys<RelationshipEdgeSet>(world);
             NormalizeRelationshipKeys<InRelationship>(world);
@@ -124,6 +128,46 @@ namespace Ludots.Core.Persistence
                 }
 
                 quest.ScopeHost = Entity.Null;
+            });
+        }
+
+        private static void NormalizeActivityInstances(World world)
+        {
+            int worldId = world.Id;
+            var query = new QueryDescription().WithAll<ActivityInstanceCm>();
+            world.Query(in query, (ref ActivityInstanceCm activity) =>
+            {
+                Entity scopeHost = NormalizeOptionalEntity(activity.ScopeHost);
+                if (scopeHost != Entity.Null)
+                {
+                    activity.ScopeHost = EntityUtil.Reconstruct(
+                        scopeHost.Id,
+                        worldId,
+                        scopeHost.Version);
+                    return;
+                }
+
+                activity.ScopeHost = Entity.Null;
+            });
+        }
+
+        private static void NormalizeTaskInstances(World world)
+        {
+            int worldId = world.Id;
+            var query = new QueryDescription().WithAll<TaskInstanceCm>();
+            world.Query(in query, (ref TaskInstanceCm task) =>
+            {
+                Entity scopeHost = NormalizeOptionalEntity(task.ScopeHost);
+                if (scopeHost != Entity.Null)
+                {
+                    task.ScopeHost = EntityUtil.Reconstruct(
+                        scopeHost.Id,
+                        worldId,
+                        scopeHost.Version);
+                    return;
+                }
+
+                task.ScopeHost = Entity.Null;
             });
         }
 

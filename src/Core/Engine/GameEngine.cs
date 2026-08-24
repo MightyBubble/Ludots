@@ -20,7 +20,10 @@ using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -617,6 +620,33 @@ namespace Ludots.Core.Engine
             bool reloadQuests = string.IsNullOrWhiteSpace(group)
                              || string.Equals(group, "Quests", StringComparison.OrdinalIgnoreCase)
                              || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Quests/", StringComparison.OrdinalIgnoreCase));
+
+            bool reloadActivities = string.IsNullOrWhiteSpace(group)
+                                 || string.Equals(group, "Activities", StringComparison.OrdinalIgnoreCase)
+                                 || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Activities/", StringComparison.OrdinalIgnoreCase));
+            bool reloadTasks = string.IsNullOrWhiteSpace(group)
+                            || string.Equals(group, "Tasks", StringComparison.OrdinalIgnoreCase)
+                            || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Tasks/", StringComparison.OrdinalIgnoreCase));
+
+            if (reloadActivities &&
+                GetService(CoreServiceKeys.ActivityDefinitionRegistry) is ActivityDefinitionRegistry activityDefinitions &&
+                GetService(CoreServiceKeys.ProviderServices) is ProviderServices activityProviderServices &&
+                GetService(CoreServiceKeys.ActivityRuntimeService) is ActivityRuntimeService activityRuntime)
+            {
+                new ActivityConfigLoader(ConfigPipeline, activityDefinitions, activityProviderServices.Validator)
+                    .Load(ConfigCatalog, ConfigConflictReport);
+                activityRuntime.ResetState();
+            }
+
+            if (reloadTasks &&
+                GetService(CoreServiceKeys.TaskDefinitionRegistry) is TaskDefinitionRegistry taskDefinitions &&
+                GetService(CoreServiceKeys.ProviderServices) is ProviderServices taskProviderServices &&
+                GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService taskRuntime)
+            {
+                new TaskConfigLoader(ConfigPipeline, taskDefinitions, taskProviderServices.Validator)
+                    .Load(ConfigCatalog, ConfigConflictReport);
+                taskRuntime.ResetState();
+            }
 
             if (reloadQuests &&
                 GetService(CoreServiceKeys.QuestDefinitionRegistry) is QuestDefinitionRegistry questDefinitions &&
@@ -1721,6 +1751,39 @@ namespace Ludots.Core.Engine
             var questRuntime = new QuestRuntimeService(World, questDefinitions);
             SetService(CoreServiceKeys.QuestDefinitionRegistry, questDefinitions);
             SetService(CoreServiceKeys.QuestRuntimeService, questRuntime);
+            var providerServices = new ProviderServices();
+            SetService(CoreServiceKeys.ProviderServices, providerServices);
+            SetService(CoreServiceKeys.ProviderGapCatalog, providerServices.Gaps);
+            SetService(CoreServiceKeys.SourceProviderRegistry, providerServices.Sources);
+            SetService(CoreServiceKeys.SelectorProviderRegistry, providerServices.Selectors);
+            SetService(CoreServiceKeys.ConditionProviderRegistry, providerServices.Conditions);
+            SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
+            SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
+            var activityDefinitions = new ActivityDefinitionRegistry();
+            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var activityPresentation = new ActivityPresentationBuffer();
+            var activityRuntime = new ActivityRuntimeService(
+                World,
+                activityDefinitions,
+                providerServices,
+                activityPresentation);
+            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
+            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
+            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
+            var taskDefinitions = new TaskDefinitionRegistry();
+            new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var taskPresentation = new TaskPresentationBuffer();
+            var taskRuntime = new TaskRuntimeService(
+                World,
+                taskDefinitions,
+                providerServices,
+                taskPresentation);
+            TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
+            SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
+            SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
+            SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
