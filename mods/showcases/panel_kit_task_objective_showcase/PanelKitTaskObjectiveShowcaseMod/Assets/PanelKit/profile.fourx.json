@@ -3,7 +3,7 @@
   "genre": "fourx",
   "coachLine": "Unlock Colony Charter; the blocked reason tells you what is missing.",
   "objective": {
-    "questId": "quest.fourx.unlock-next-node",
+    "taskId": "task.fourx.unlock-next-node",
     "titleTokenId": "token.objective.fourx.next.title",
     "detailTokenId": "token.objective.fourx.next.detail",
     "blockedReasonTokenId": "token.objective.fourx.next.blocked",

@@ -47,7 +47,8 @@
         "text": "Go to the shrine. Wake what sleeps beneath it, and return when you can name what should survive.",
         "onEnter": [
           { "kind": "AddVariable", "variableId": "trust", "valueKind": "Int", "intValue": 1 },
-          { "kind": "AdvanceQuestStage", "questId": "Quest.Narrative.AshenOath" }
+          { "kind": "EmitSignal", "signalId": "showcase.briefing_accepted" },
+          { "kind": "CompleteTask", "taskId": "Task.Narrative.AshenOath.Briefing" }
         ]
       }
     ]
@@ -71,7 +72,8 @@
               { "kind": "SetVariable", "variableId": "ending", "valueKind": "String", "stringValue": "Duty" },
               { "kind": "AddVariable", "variableId": "trust", "valueKind": "Int", "intValue": 1 },
               { "kind": "EmitSignal", "signalId": "showcase.reward_apply" },
-              { "kind": "CompleteQuest", "questId": "Quest.Narrative.AshenOath" }
+              { "kind": "EmitSignal", "signalId": "showcase.verdict_delivered" },
+              { "kind": "CompleteTask", "taskId": "Task.Narrative.AshenOath.Return" }
             ],
             "nextNodeId": "return_duty_outro"
           },
@@ -85,7 +87,8 @@
               { "kind": "SetVariable", "variableId": "ending", "valueKind": "String", "stringValue": "Mercy" },
               { "kind": "AddVariable", "variableId": "trust", "valueKind": "Int", "intValue": 2 },
               { "kind": "EmitSignal", "signalId": "showcase.reward_apply" },
-              { "kind": "CompleteQuest", "questId": "Quest.Narrative.AshenOath" }
+              { "kind": "EmitSignal", "signalId": "showcase.verdict_delivered" },
+              { "kind": "CompleteTask", "taskId": "Task.Narrative.AshenOath.Return" }
             ],
             "nextNodeId": "return_mercy_outro"
           }

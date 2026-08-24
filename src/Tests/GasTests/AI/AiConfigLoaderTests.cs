@@ -135,7 +135,7 @@ namespace Ludots.Tests.GAS
         public void AiConfigLoader_RejectsGoapBareOrderArgBinding()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [ { \"Op\": \"IntToOrderArg0\", \"SourceKey\": 1 } ] } ]");
+            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 1 }, \"Bindings\": [ { \"Op\": \"IntToOrderArg0\", \"SourceKey\": 1 } ] } ]");
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
 
@@ -147,7 +147,7 @@ namespace Ludots.Tests.GAS
         public void AiConfigLoader_RejectsGoapTargetEntityOrderWithoutTargetBinding()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [] } ]");
+            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 1 }, \"Bindings\": [] } ]");
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
 
@@ -158,7 +158,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void AiConfigLoader_RejectsMissingGoapOrderPlayerId()
         {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0 }");
+            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0 }");
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
 
@@ -170,7 +170,7 @@ namespace Ludots.Tests.GAS
         [TestCase(-1)]
         public void AiConfigLoader_RejectsNonPositiveGoapOrderPlayerId(int playerId)
         {
-            using var fixture = AiConfigFixture.Create(orderJson: $"{{ \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": {playerId} }}");
+            using var fixture = AiConfigFixture.Create(orderJson: $"{{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": {playerId} }}");
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
 

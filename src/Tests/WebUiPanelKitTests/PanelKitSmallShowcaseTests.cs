@@ -15,7 +15,7 @@ public sealed class PanelKitSmallShowcaseTests
 		("panel_kit_resource_showcase", "PanelKitResourceShowcaseMod", "resource-bar"),
 		("panel_kit_command_deck_showcase", "PanelKitCommandDeckShowcaseMod", "command-deck"),
 		("panel_kit_production_worker_showcase", "PanelKitProductionWorkerShowcaseMod", "production-overview"),
-		("panel_kit_quest_objective_showcase", "PanelKitQuestObjectiveShowcaseMod", "objective"),
+		("panel_kit_task_objective_showcase", "PanelKitTaskObjectiveShowcaseMod", "objective"),
 		("panel_kit_notification_showcase", "PanelKitNotificationShowcaseMod", "notification"),
 		("panel_kit_tooltip_showcase", "PanelKitTooltipShowcaseMod", "tooltip"),
 		("panel_kit_techtree_progression_showcase", "PanelKitTechTreeProgressionShowcaseMod", "techtree")

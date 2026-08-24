@@ -16,7 +16,6 @@ using Ludots.Core.Gameplay.GAS.Benchmarks;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
-using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
@@ -184,7 +183,7 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
+        public void TaskPublicProtocol_MustNotLiveUnderNarrativeKeys()
         {
             var repoRoot = FindRepoRoot();
             string[] directories =
@@ -196,11 +195,11 @@ namespace Ludots.Tests.Architecture.Governance
             };
             string[] forbidden =
             {
-                "Narrative.Quest",
+                "Narrative.Task",
                 "Narrative.Signal",
-                "NarrativeEventKeys.Quest",
+                "NarrativeEventKeys.Task",
                 "NarrativeEventKeys.Signal",
-                "NarrativeServiceKeys.Quest",
+                "NarrativeServiceKeys.Task",
                 "NarrativeServiceKeys.Signal"
             };
 
@@ -224,7 +223,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Quest public protocol must use QuestEventKeys / QuestServiceKeys, not Narrative keys:\n" +
+                    "Task public protocol must use TaskEventKeys / TaskServiceKeys, not Narrative keys:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -1243,7 +1242,6 @@ namespace Ludots.Tests.Architecture.Governance
                 typeof(GasGraphRuntimeApi),
                 typeof(Ludots.Core.Config.ComponentRegistry),
                 typeof(TemplateEntityBatchSpawner),
-                typeof(QuestDefinitionRegistry),
                 typeof(ForceInput2DSink),
                 typeof(CameraBehaviorInputSink),
                 typeof(GasBenchmark),

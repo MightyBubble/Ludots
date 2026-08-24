@@ -1,13 +1,14 @@
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Relationships;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Persistence;
@@ -87,10 +88,9 @@ public sealed class SaveParticipantRegistryTests
             "inventory",
             "mapSessions",
             "narrative",
-            "quests",
             "relationships",
-            "tasks",
             "rng",
+            "tasks",
             "teams",
             "timeFlow"
         }));
@@ -284,6 +284,50 @@ public sealed class SaveParticipantRegistryTests
     }
 
     [Test]
+    public void MapSessionParticipant_RoundTripsLaunchContextLocalSeatsAndMetadata()
+    {
+        var source = new MapSessionManager();
+        MapSession sourceSession = source.CreateSession(new MapId("seats"), new Ludots.Core.Config.MapConfig());
+        sourceSession.LaunchContext = MapLaunchContext.Create(
+            new[]
+            {
+                new LocalSeatLaunchBinding("seat.0", 1, "scheme.wasd"),
+                new LocalSeatLaunchBinding("seat.1", 2, null),
+            },
+            new Dictionary<string, object> { ["difficulty"] = "hard" });
+        source.PushFocused(new MapId("seats"));
+
+        var target = new MapSessionManager();
+        target.CreateSession(new MapId("seats"), new Ludots.Core.Config.MapConfig());
+
+        ISaveParticipant participant = CoreSaveParticipants.CreateMapSessionsParticipant(source);
+        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateMapSessionsParticipant(target);
+
+        JsonNode captured = participant.CaptureState();
+        JsonNode? seatZero = captured["sessions"]![0]!["launchContext"]!["localSeats"]![0];
+        JsonNode? seatOne = captured["sessions"]![0]!["launchContext"]!["localSeats"]![1];
+        Assert.That(seatZero!["controlSchemeId"]!.GetValue<string>(), Is.EqualTo("scheme.wasd"));
+        Assert.That(seatZero["seatId"]!.GetValue<string>(), Is.EqualTo("seat.0"));
+        Assert.That(seatZero["playerId"]!.GetValue<int>(), Is.EqualTo(1));
+        Assert.That(seatOne is JsonObject { Count: > 0 } seatOneObject && seatOneObject.ContainsKey("controlSchemeId"), Is.False,
+            "an undeclared controlSchemeId is omitted instead of serialized as an empty default.");
+
+        targetParticipant.RestoreState(captured);
+
+        MapLaunchContext? restored = target.GetSession(new MapId("seats"))!.LaunchContext;
+        Assert.That(restored, Is.Not.Null);
+        Assert.That(restored!.LocalSeats.Count, Is.EqualTo(2));
+        Assert.That(restored.LocalSeats[0].SeatId, Is.EqualTo("seat.0"));
+        Assert.That(restored.LocalSeats[0].PlayerId, Is.EqualTo(1));
+        Assert.That(restored.LocalSeats[0].ControlSchemeId, Is.EqualTo("scheme.wasd"));
+        Assert.That(restored.LocalSeats[1].SeatId, Is.EqualTo("seat.1"));
+        Assert.That(restored.LocalSeats[1].PlayerId, Is.EqualTo(2));
+        Assert.That(restored.LocalSeats[1].ControlSchemeId, Is.Null);
+        Assert.That(restored.Metadata!, Is.Not.Null);
+        Assert.That(restored.Metadata!["difficulty"], Is.EqualTo("hard"));
+    }
+
+    [Test]
     public void MapSessionParticipant_RejectsLegacyLaunchContextLocalPlayerId()
     {
         var target = new MapSessionManager();
@@ -346,12 +390,12 @@ public sealed class SaveParticipantRegistryTests
             }
         });
 
-        QuestRuntimeService questRuntime = engine.GetService(CoreServiceKeys.QuestRuntimeService);
-        var source = new NarrativeDirector(engine, definitions, questRuntime);
+        TaskRuntimeService taskRuntime = engine.GetService(CoreServiceKeys.TaskRuntimeService);
+        var source = new NarrativeDirector(engine, definitions, taskRuntime);
         source.StartDialogue("briefing");
         source.Update(1.25f);
 
-        var target = new NarrativeDirector(engine, definitions, questRuntime);
+        var target = new NarrativeDirector(engine, definitions, taskRuntime);
         ISaveParticipant participant = CoreSaveParticipants.CreateNarrativeParticipant(source);
         ISaveParticipant targetParticipant = CoreSaveParticipants.CreateNarrativeParticipant(target);
 
@@ -365,49 +409,40 @@ public sealed class SaveParticipantRegistryTests
     }
 
     [Test]
-    public void QuestParticipantRestoresSignalsAndRebuildsIndexFromWorld()
+    public void RetiredQuestSaveDomain_IsRejectedWithReadableError()
     {
-        var definitions = new QuestDefinitionRegistry();
-        definitions.Register("trial", new QuestDefinition
+        var registry = new SaveParticipantRegistry();
+        registry.Register(new SaveParticipantStub("tasks"));
+
+        var domains = new JsonObject
         {
-            DisplayName = "Trial",
-            Stages =
+            ["tasks"] = new JsonObject(),
+            ["quests"] = new JsonObject
             {
-                new QuestStageDefinition { Id = "start", Title = "Start" },
-                new QuestStageDefinition
-                {
-                    Id = "done",
-                    Title = "Done",
-                    RequiredSignals = { "closed" }
-                }
+                ["signals"] = new JsonObject()
             }
-        });
+        };
 
-        using World sourceWorld = World.Create();
-        var sourceRuntime = new QuestRuntimeService(sourceWorld, definitions);
-        sourceRuntime.StartQuest("trial");
-        sourceRuntime.EmitSignal("opened");
+        SaveContextException error = Assert.Throws<SaveContextException>(() => registry.RestoreDomains(domains));
+        Assert.That(error.Message, Does.Contain("quests"));
+        Assert.That(error.Message, Does.Contain("retired"));
+    }
 
-        using World targetWorld = World.Create();
-        var targetRuntime = new QuestRuntimeService(targetWorld, definitions);
-        targetWorld.Create(new QuestInstanceCm
+    private sealed class SaveParticipantStub : ISaveParticipant
+    {
+        public SaveParticipantStub(string domainKey)
         {
-            DefinitionId = definitions.GetId("trial"),
-            State = QuestState.Active,
-            StageIndex = 1,
-            Revision = 3
-        });
+            DomainKey = domainKey;
+        }
 
-        ISaveParticipant participant = CoreSaveParticipants.CreateQuestParticipant(sourceRuntime);
-        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateQuestParticipant(targetRuntime);
+        public string DomainKey { get; }
 
-        targetParticipant.RestoreState(participant.CaptureState());
+        public JsonNode CaptureState() => new JsonObject();
 
-        Assert.That(targetRuntime.Signals.TryGetValue("opened", out int count), Is.True);
-        Assert.That(count, Is.EqualTo(1));
-        Assert.That(targetRuntime.TryGetQuestState("trial", out QuestState state, out string stageId), Is.True);
-        Assert.That(state, Is.EqualTo(QuestState.Active));
-        Assert.That(stageId, Is.EqualTo("done"));
+        public void RestoreState(JsonNode state)
+        {
+            if (state == null) throw new ArgumentNullException(nameof(state));
+        }
     }
 
     [Test]

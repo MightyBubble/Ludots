@@ -1,5 +1,5 @@
 using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using NarrativeShowcaseMod.Runtime;
@@ -17,12 +17,12 @@ namespace NarrativeShowcaseMod
             context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);
-            context.OnEvent(QuestEventKeys.StageChanged, runtime.HandleQuestStageChangedAsync);
-            context.OnEvent(QuestEventKeys.Completed, runtime.HandleQuestCompletedAsync);
+            context.OnEvent(TaskEventKeys.Activated, runtime.HandleTaskActivatedAsync);
+            context.OnEvent(TaskEventKeys.Completed, runtime.HandleTaskCompletedAsync);
             context.OnEvent(NarrativeEventKeys.DialogueNodeEntered, runtime.HandleDialogueNodeEnteredAsync);
             context.OnEvent(NarrativeEventKeys.DialogueChoiceCommitted, runtime.HandleDialogueChoiceCommittedAsync);
             context.OnEvent(NarrativeEventKeys.CinematicStepEntered, runtime.HandleCinematicStepEnteredAsync);
-            context.OnEvent(QuestEventKeys.Signal, runtime.HandleQuestSignalAsync);
+            context.OnEvent(TaskEventKeys.Signal, runtime.HandleTaskSignalAsync);
             context.OnEvent(NarrativeEventKeys.CinematicCompleted, runtime.HandleCinematicCompletedAsync);
         }
 
