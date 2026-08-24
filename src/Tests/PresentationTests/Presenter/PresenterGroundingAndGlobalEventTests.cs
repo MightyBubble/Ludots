@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Map.Hex;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -324,6 +325,97 @@ namespace Ludots.Tests.Presentation
             Vector3 up = Vector3.Transform(Vector3.UnitY, rotations[0]);
             Assert.That(positions[0].Y, Is.EqualTo(1.2f).Within(0.001f));
             Assert.That(Vector3.Dot(Vector3.Normalize(up), surfaceNormal), Is.GreaterThan(0.999f));
+        }
+
+        [Test]
+        public void VertexMapHeightSource_SamplesNearestVertexHeightInCm_UsingNavHeightScale()
+        {
+            var map = new VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            map.SetHeight(5, 2, 3);
+            map.SetHeight(8, 3, 7);
+            var heightmap = new VertexMapVisualHeightmap(() => map);
+
+            float evenRowVertexXCm = HexCoordinates.HexWidth * 5f * WorldUnits.CmPerMeter;
+            float evenRowVertexZCm = HexCoordinates.RowSpacing * 2f * WorldUnits.CmPerMeter;
+            Assert.That(
+                heightmap.TrySampleHeightCm(evenRowVertexXCm, evenRowVertexZCm, out float evenHeightCm),
+                Is.True);
+            Assert.That(evenHeightCm, Is.EqualTo(3 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter).Within(0.001f));
+
+            // 奇数行顶点右移半列；偏移采样必须仍落回同一顶点
+            float oddRowVertexXCm = HexCoordinates.HexWidth * (8f + 0.5f) * WorldUnits.CmPerMeter;
+            float oddRowVertexZCm = HexCoordinates.RowSpacing * 3f * WorldUnits.CmPerMeter;
+            Assert.That(
+                heightmap.TrySampleHeightCm(oddRowVertexXCm + 40f, oddRowVertexZCm - 25f, out float oddHeightCm),
+                Is.True);
+            Assert.That(oddHeightCm, Is.EqualTo(7 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter).Within(0.001f));
+        }
+
+        [Test]
+        public void VertexMapHeightSource_RejectsOutOfLatticeAndNonZeroLayer()
+        {
+            var map = new VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            map.SetHeight(0, 0, 4);
+            var heightmap = new VertexMapVisualHeightmap(() => map);
+
+            float latticeMaxXCm = HexCoordinates.HexWidth * (63f + 0.5f) * WorldUnits.CmPerMeter;
+            Assert.That(
+                heightmap.TrySampleHeightCm(latticeMaxXCm + HexCoordinates.HexWidth * WorldUnits.CmPerMeter, 0f, out _),
+                Is.False,
+                "Samples past the last vertex column must fail instead of clamping.");
+            Assert.That(
+                heightmap.TrySampleHeightCm(0f, HexCoordinates.RowSpacing * 64f * WorldUnits.CmPerMeter, out _),
+                Is.False,
+                "Samples past the last vertex row must fail instead of clamping.");
+            Assert.That(
+                heightmap.TrySampleHeightCm(0f, 0f, out _, layerIndex: 1),
+                Is.False,
+                "VertexMap exposes a single implicit layer; only -1 and 0 resolve.");
+        }
+
+        [Test]
+        public void VertexMapHeightSource_GroundsSnapToGroundOntoVertexPlateau()
+        {
+            var map = new VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            map.SetHeight(10, 4, 5);
+            var heightmap = new VertexMapVisualHeightmap(() => map);
+
+            float vertexXCm = HexCoordinates.HexWidth * 10f * WorldUnits.CmPerMeter;
+            float vertexZCm = HexCoordinates.RowSpacing * 4f * WorldUnits.CmPerMeter;
+            Vector3[] positions = [new Vector3(vertexXCm * 0.01f, 42f, vertexZCm * 0.01f)];
+            GroundingMode[] modes = [GroundingMode.SnapToGround];
+            float[] offsets = [0.75f];
+
+            PresenterGroundingUtility.ResolveBatch(positions, modes, offsets, heightmap);
+
+            Assert.That(positions[0].X, Is.EqualTo(vertexXCm * 0.01f).Within(0.001f));
+            Assert.That(positions[0].Z, Is.EqualTo(vertexZCm * 0.01f).Within(0.001f));
+            Assert.That(positions[0].Y, Is.EqualTo((5 * VertexMapVisualHeightmap.DefaultHeightScaleMeters) + 0.75f).Within(0.001f));
+        }
+
+        [Test]
+        public void VertexMapHeightSource_VerticalRaycastHitsVertexPlateauHeight()
+        {
+            var map = new VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            map.SetHeight(6, 6, 4);
+            var heightmap = new VertexMapVisualHeightmap(() => map);
+
+            float vertexXCm = HexCoordinates.HexWidth * 6f * WorldUnits.CmPerMeter;
+            float vertexZCm = HexCoordinates.RowSpacing * 6f * WorldUnits.CmPerMeter;
+            float expectedHeightCm = 4 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter;
+            var ray = new ScreenRay(
+                new Vector3(vertexXCm * 0.01f, 500f, vertexZCm * 0.01f),
+                new Vector3(0f, -1f, 0f));
+
+            Assert.That(heightmap.TryRaycastGround(in ray, out VisualGroundHit hit), Is.True);
+            Assert.That(hit.HeightCm, Is.EqualTo(expectedHeightCm).Within(0.001f));
+            Assert.That(hit.WorldXCm, Is.EqualTo(vertexXCm).Within(0.001f));
+            Assert.That(hit.WorldYCm, Is.EqualTo(vertexZCm).Within(0.001f));
+            Assert.That(hit.DistanceMeters, Is.EqualTo(500f - (expectedHeightCm * 0.01f)).Within(0.001f));
         }
 
         [Test]

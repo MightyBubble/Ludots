@@ -13,6 +13,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Map.Hex;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -369,6 +370,74 @@ namespace Ludots.Tests.Presentation
                     0f,
                     new Vector2(2f, 2f),
                     46))!;
+            Assert.That(ex.Message, Does.Contain("does not overlap"));
+        }
+
+        [Test]
+        public void ReceiverMeshProjectorContract_VertexMapTerrainRendererIsABindableLane()
+        {
+            using var terrainRenderer = new RaylibTerrainRenderer();
+            Assert.That(terrainRenderer, Is.InstanceOf<IRaylibReceiverMeshProjector>());
+        }
+
+        [Test]
+        public void VertexMapProjector_FitWithoutSampleSourceThrows()
+        {
+            using var projector = new RaylibTerrainRenderer();
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => projector.FitYawedStampProjectorCenter(
+                    new Vector3(1f, 9f, 2f),
+                    0f,
+                    new Vector2(3.8f, 3.8f),
+                    47))!;
+            Assert.That(ex.Message, Does.Contain(nameof(RaylibTerrainRenderer.BindStampHeightSampleSource)));
+        }
+
+        [Test]
+        public void VertexMapProjector_FitCentersOnVertexMapPlateauHeights()
+        {
+            var map = new Ludots.Core.Map.Hex.VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            for (int r = 0; r < 64; r++)
+            {
+                for (int c = 0; c < 64; c++)
+                {
+                    map.SetHeight(c, r, c <= 31 ? (byte)2 : (byte)4);
+                }
+            }
+
+            using var projector = new RaylibTerrainRenderer();
+            projector.BindStampHeightSampleSource(new VertexMapVisualHeightmap(() => map));
+
+            // 贴花横跨 31/32 列高度阶地边界：左侧 level2(4m)、右侧 level4(8m)，中心应落在两阶中点
+            float boundaryX = HexCoordinates.HexWidth * 31.5f;
+            float rowZ = HexCoordinates.RowSpacing * 4f;
+            Vector3 center = projector.FitYawedStampProjectorCenter(
+                new Vector3(boundaryX, 99f, rowZ),
+                0f,
+                new Vector2(3.8f, 4.2f),
+                48);
+
+            Assert.That(center.X, Is.EqualTo(boundaryX).Within(1e-4f));
+            Assert.That(center.Z, Is.EqualTo(rowZ).Within(1e-4f));
+            Assert.That(center.Y, Is.EqualTo(((2f + 4f) * VertexMapVisualHeightmap.DefaultHeightScaleMeters) * 0.5f).Within(0.02f));
+        }
+
+        [Test]
+        public void VertexMapProjector_FitMissingOverlapThrowsInsteadOfSkipping()
+        {
+            var map = new Ludots.Core.Map.Hex.VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            using var projector = new RaylibTerrainRenderer();
+            projector.BindStampHeightSampleSource(new VertexMapVisualHeightmap(() => map));
+
+            float outOfLatticeXCm = HexCoordinates.HexWidth * 64f * WorldUnits.CmPerMeter;
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => projector.FitYawedStampProjectorCenter(
+                    new Vector3(outOfLatticeXCm * 0.01f, 0f, 0f),
+                    0f,
+                    new Vector2(2f, 2f),
+                    49))!;
             Assert.That(ex.Message, Does.Contain("does not overlap"));
         }
 
