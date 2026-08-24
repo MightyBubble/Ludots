@@ -88,7 +88,8 @@ internal static class ActionLoopComponentAuthoring
             "EffectTemplate",
             "TargetRelation",
             "RangeCm",
-            "CooldownTicks");
+            "CooldownTicks",
+            "EngagementStandoffRadiusCm");
         int attackOrderTypeId = ReadPositiveInt(obj, "AttackOrderTypeId", context);
         int moveOrderTypeId = ReadPositiveInt(obj, "MoveOrderTypeId", context);
         ValidateOrderTypeId(attackOrderTypeId, "AttackOrderTypeId", context);
@@ -101,14 +102,24 @@ internal static class ActionLoopComponentAuthoring
                 $"{context}.EffectTemplate references unknown effect '{effectTemplate}'.");
         }
 
+        int rangeCm = ReadPositiveInt(obj, "RangeCm", context);
+        int standoffRadiusCm = ReadInt(obj, "EngagementStandoffRadiusCm", context);
+        int maximumStandoffRadiusCm = Math.Max(0, rangeCm - DirectAttackProfile.PursuitArrivalSlackCm);
+        if ((uint)standoffRadiusCm > (uint)maximumStandoffRadiusCm)
+        {
+            throw new InvalidOperationException(
+                $"{context}.EngagementStandoffRadiusCm must be between 0 and {maximumStandoffRadiusCm} for RangeCm {rangeCm}.");
+        }
+
         entity.Add(new DirectAttackProfile
         {
             AttackOrderTypeId = attackOrderTypeId,
             MoveOrderTypeId = moveOrderTypeId,
             EffectTemplateId = effectTemplateId,
             TargetRelation = RelationshipFilterUtil.Parse(ReadRequiredString(obj, "TargetRelation", context)),
-            RangeCm = ReadPositiveInt(obj, "RangeCm", context),
+            RangeCm = rangeCm,
             CooldownTicks = ReadPositiveInt(obj, "CooldownTicks", context),
+            EngagementStandoffRadiusCm = standoffRadiusCm,
         });
     }
 

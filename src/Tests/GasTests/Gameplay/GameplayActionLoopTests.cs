@@ -435,7 +435,8 @@ public sealed class GameplayActionLoopTests
                   "EffectTemplate": "Effect.ActionLoop.Authoring.Damage",
                   "TargetRelation": "Hostile",
                   "RangeCm": 650,
-                  "CooldownTicks": 30
+                  "CooldownTicks": 30,
+                  "EngagementStandoffRadiusCm": 520
                 }
                 """)!);
 
@@ -451,8 +452,181 @@ public sealed class GameplayActionLoopTests
             Assert.That(resourceSink.DockOffsetYCm, Is.EqualTo(-200));
             Assert.That(attack.EffectTemplateId, Is.EqualTo(effectTemplateId));
             Assert.That(attack.TargetRelation, Is.EqualTo(RelationshipFilter.Hostile));
+            Assert.That(attack.EngagementStandoffRadiusCm, Is.EqualTo(520));
         });
     }
+
+    [Test]
+    public void DirectAttack_StandoffSeeksRingSlotInsteadOfEngagingInPlace()
+    {
+        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
+        try
+        {
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using World world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orders = new OrderQueue(64, admissionResults);
+            var effects = new EffectRequestQueue();
+            var system = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
+
+            Entity target = world.Create(
+                new Team { Id = 2 },
+                new AttributeBuffer(),
+                WorldPositionCm.FromCm(2_000, 0));
+            Entity actor = world.Create(
+                StandoffProfile(),
+                new DirectAttackState(),
+                ActiveOrder(orderId: 8, orderTypeId: 102, target),
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                WorldPositionCm.FromCm(1_650, 0));
+
+            system.Update(1f / 30f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(orders.TryDequeue(out Order pursuit), Is.True);
+                Assert.That(pursuit.Args.Spatial.WorldCm.X, Is.EqualTo(1_480f));
+                Assert.That(pursuit.Args.Spatial.WorldCm.Z, Is.EqualTo(0f));
+                Assert.That(effects.Count, Is.Zero);
+                Assert.That(world.Get<DirectAttackState>(actor).Phase, Is.EqualTo(DirectAttackPhase.Pursuing));
+            });
+        }
+        finally
+        {
+            TeamManager.RestoreSnapshot(relationships);
+        }
+    }
+
+    [Test]
+    public void DirectAttack_StandoffRoutesGroupLayoutPointsOntoDistinctRingSlots()
+    {
+        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
+        try
+        {
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using World world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orders = new OrderQueue(64, admissionResults);
+            var effects = new EffectRequestQueue();
+            var system = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
+
+            Entity target = world.Create(
+                new Team { Id = 2 },
+                new AttributeBuffer(),
+                WorldPositionCm.FromCm(2_000, 0));
+            Entity actorA = world.Create(
+                StandoffProfile(),
+                new DirectAttackState(),
+                ActiveOrder(orderId: 90, orderTypeId: 102, target, OrderArgs.CreateSingleWorldCm(new Vector3(2_070f, 0f, -71f))),
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                WorldPositionCm.FromCm(1_650, -120));
+            Entity actorB = world.Create(
+                StandoffProfile(),
+                new DirectAttackState(),
+                ActiveOrder(orderId: 91, orderTypeId: 102, target, OrderArgs.CreateSingleWorldCm(new Vector3(2_070f, 0f, 71f))),
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                WorldPositionCm.FromCm(1_650, 120));
+
+            system.Update(1f / 30f);
+
+            Assert.That(orders.TryDequeue(out Order pursuitA), Is.True);
+            Assert.That(orders.TryDequeue(out Order pursuitB), Is.True);
+            double slotARadiusCm = Math.Sqrt(
+                Math.Pow(pursuitA.Args.Spatial.WorldCm.X - 2_000f, 2) +
+                Math.Pow(pursuitA.Args.Spatial.WorldCm.Z, 2));
+            double slotBRadiusCm = Math.Sqrt(
+                Math.Pow(pursuitB.Args.Spatial.WorldCm.X - 2_000f, 2) +
+                Math.Pow(pursuitB.Args.Spatial.WorldCm.Z, 2));
+            double slotSeparationCm = Math.Sqrt(
+                Math.Pow(pursuitA.Args.Spatial.WorldCm.X - pursuitB.Args.Spatial.WorldCm.X, 2) +
+                Math.Pow(pursuitA.Args.Spatial.WorldCm.Z - pursuitB.Args.Spatial.WorldCm.Z, 2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(slotARadiusCm, Is.InRange(500d, 540d));
+                Assert.That(slotBRadiusCm, Is.InRange(500d, 540d));
+                Assert.That(slotSeparationCm, Is.GreaterThanOrEqualTo(140d));
+                Assert.That(pursuitA.Args.Spatial.WorldCm, Is.Not.EqualTo(pursuitB.Args.Spatial.WorldCm));
+                Assert.That(effects.Count, Is.Zero);
+            });
+        }
+        finally
+        {
+            TeamManager.RestoreSnapshot(relationships);
+        }
+    }
+
+    [Test]
+    public void DirectAttack_StandoffPursuitCompletesOnSlotArrivalNotRangeEntry()
+    {
+        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
+        try
+        {
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using World world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orders = new OrderQueue(64, admissionResults);
+            var effects = new EffectRequestQueue();
+            var system = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
+
+            Entity target = world.Create(
+                new Team { Id = 2 },
+                new AttributeBuffer(),
+                WorldPositionCm.FromCm(2_000, 0));
+            Entity actor = world.Create(
+                StandoffProfile(),
+                new DirectAttackState
+                {
+                    Phase = DirectAttackPhase.Pursuing,
+                    Target = target,
+                    ExpectedMoveOrderId = 9,
+                    ExpectedMoveObserved = 1,
+                },
+                ActiveOrder(orderId: 9, orderTypeId: 101, target),
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                WorldPositionCm.FromCm(1_560, 0));
+
+            system.Update(1f / 30f);
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
+                Assert.That(world.Get<DirectAttackState>(actor).Phase, Is.EqualTo(DirectAttackPhase.Pursuing));
+                Assert.That(effects.Count, Is.Zero);
+            });
+
+            world.Set(actor, new OrderBuffer { ActiveIndex = -1 });
+            world.Set(actor, WorldPositionCm.FromCm(1_480, 0));
+            system.Update(1f / 30f);
+            Assert.That(world.Get<DirectAttackState>(actor).Phase, Is.EqualTo(DirectAttackPhase.Engaging));
+
+            system.Update(1f / 30f);
+            Assert.That(effects.Count, Is.EqualTo(1));
+        }
+        finally
+        {
+            TeamManager.RestoreSnapshot(relationships);
+        }
+    }
+
+    private static DirectAttackProfile StandoffProfile() => new()
+    {
+        AttackOrderTypeId = 102,
+        MoveOrderTypeId = 101,
+        EffectTemplateId = 77,
+        TargetRelation = RelationshipFilter.Hostile,
+        RangeCm = 650,
+        CooldownTicks = 30,
+        EngagementStandoffRadiusCm = 520,
+    };
 
     [TestCase("{ \"ResourceAttribute\": \"ActionLoop.Authoring.RequiredDock\", \"DockOffsetYCm\": 0 }")]
     [TestCase("{ \"ResourceAttribute\": \"ActionLoop.Authoring.RequiredDock\", \"DockOffsetXCm\": 0 }")]

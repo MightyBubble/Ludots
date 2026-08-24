@@ -366,7 +366,8 @@
         "EffectTemplate": "Effect.Rts.Frontline.InfantryDamage",
         "TargetRelation": "Hostile",
         "RangeCm": 650,
-        "CooldownTicks": 30
+        "CooldownTicks": 30,
+        "EngagementStandoffRadiusCm": 520
       },
       "DirectAttackState": {},
       "FrontlineDeathState": {},

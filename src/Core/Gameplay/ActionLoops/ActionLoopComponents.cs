@@ -50,12 +50,24 @@ public struct ResourceTransportState
 
 public struct DirectAttackProfile
 {
+    public const int PursuitArrivalSlackCm = 50;
+
     public int AttackOrderTypeId;
     public int MoveOrderTypeId;
     public int EffectTemplateId;
     public RelationshipFilter TargetRelation;
     public int RangeCm;
     public int CooldownTicks;
+
+    /// <summary>
+    /// Radius from the attack target at which attackers hold while engaging. Zero engages from
+    /// wherever the attacker entered range. A positive radius routes every attacker to a per-actor
+    /// standoff slot on that ring before engaging: slot direction follows the attack order's
+    /// explicit engagement point (the group layout offset), falling back to the attacker's own
+    /// bearing from the target. Must stay at most <see cref="RangeCm"/> minus
+    /// <see cref="PursuitArrivalSlackCm"/> so a slot arrival is always inside attack range.
+    /// </summary>
+    public int EngagementStandoffRadiusCm;
 }
 
 public enum DirectAttackPhase : byte

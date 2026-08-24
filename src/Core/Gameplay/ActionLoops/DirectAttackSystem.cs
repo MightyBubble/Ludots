@@ -75,12 +75,20 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
                     state.CooldownTicks = 0;
                     CaptureExplicitEngagementPoint(in attackOrder, ref state);
                     OrderSubmitter.NotifyOrderComplete(World, actor, _orderTypes);
-                    RouteOrEngage(
-                        actor,
-                        owners[index].PlayerId,
-                        in positions[index],
-                        in profile,
-                        ref state);
+                    if (profile.EngagementStandoffRadiusCm > 0)
+                    {
+                        RoutePursuit(actor, owners[index].PlayerId, in positions[index], in profile, ref state);
+                    }
+                    else
+                    {
+                        RouteOrEngage(
+                            actor,
+                            owners[index].PlayerId,
+                            in positions[index],
+                            in profile,
+                            ref state);
+                    }
+
                     continue;
                 }
 
@@ -101,7 +109,11 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
                     if (buffer.ActiveOrder.Order.OrderId == state.ExpectedMoveOrderId)
                     {
                         state.ExpectedMoveObserved = 1;
-                        if (IsWithinRange(in positions[index], state.Target, profile.RangeCm))
+                        // With an authored standoff the pursuit move targets the per-actor ring slot
+                        // inside attack range, so the move system's own arrival completes the order;
+                        // forcing completion on range entry would strand attackers short of their slot.
+                        if (profile.EngagementStandoffRadiusCm <= 0 &&
+                            IsWithinRange(in positions[index], state.Target, profile.RangeCm))
                         {
                             if (!OrderSubmitter.NotifyOrderComplete(World, actor, _orderTypes))
                             {
@@ -181,7 +193,17 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
             return;
         }
 
-        WorldCmInt2 targetPosition = ResolvePursuitTarget(in state);
+        RoutePursuit(actor, playerId, in actorPosition, in profile, ref state);
+    }
+
+    private void RoutePursuit(
+        Entity actor,
+        int playerId,
+        in WorldPositionCm actorPosition,
+        in DirectAttackProfile profile,
+        ref DirectAttackState state)
+    {
+        WorldCmInt2 targetPosition = ResolvePursuitTarget(in actorPosition, in state, in profile);
         var move = new Order
         {
             OrderTypeId = profile.MoveOrderTypeId,
@@ -204,14 +226,68 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
     private bool CanBeginEngaging(in WorldPositionCm actorPosition, Entity target, int rangeCm) =>
         IsWithinRange(in actorPosition, target, rangeCm);
 
-    private WorldCmInt2 ResolvePursuitTarget(in DirectAttackState state)
+    private WorldCmInt2 ResolvePursuitTarget(
+        in WorldPositionCm actorPosition,
+        in DirectAttackState state,
+        in DirectAttackProfile profile)
     {
+        if (profile.EngagementStandoffRadiusCm > 0)
+        {
+            return ResolveStandoffEngagementSlot(in actorPosition, in state, profile.EngagementStandoffRadiusCm);
+        }
+
         if (state.HasExplicitEngagementPoint != 0)
         {
             return new WorldCmInt2(state.EngagementPointXCm, state.EngagementPointYCm);
         }
 
         return World.Get<WorldPositionCm>(state.Target).ToWorldCmInt2();
+    }
+
+    private WorldCmInt2 ResolveStandoffEngagementSlot(
+        in WorldPositionCm actorPosition,
+        in DirectAttackState state,
+        int standoffRadiusCm)
+    {
+        WorldCmInt2 target = World.Get<WorldPositionCm>(state.Target).ToWorldCmInt2();
+        double directionX = 0;
+        double directionY = 0;
+        if (state.HasExplicitEngagementPoint != 0)
+        {
+            directionX = state.EngagementPointXCm - (double)target.X;
+            directionY = state.EngagementPointYCm - (double)target.Y;
+        }
+
+        if (directionX == 0 && directionY == 0)
+        {
+            WorldCmInt2 actorCm = actorPosition.ToWorldCmInt2();
+            directionX = actorCm.X - (double)target.X;
+            directionY = actorCm.Y - (double)target.Y;
+        }
+
+        double length = Math.Sqrt((directionX * directionX) + (directionY * directionY));
+        if (length <= 0)
+        {
+            directionX = 1;
+            length = 1;
+        }
+
+        double scale = standoffRadiusCm / length;
+        return new WorldCmInt2(
+            RoundStandoffSlotCm(target.X + (directionX * scale)),
+            RoundStandoffSlotCm(target.Y + (directionY * scale)));
+    }
+
+    private static int RoundStandoffSlotCm(double value)
+    {
+        double rounded = Math.Round(value, MidpointRounding.AwayFromZero);
+        if (rounded < int.MinValue || rounded > int.MaxValue)
+        {
+            throw new InvalidOperationException(
+                "Direct attack standoff slot exceeds the supported world-centimeter range.");
+        }
+
+        return (int)rounded;
     }
 
     private static void BeginEngaging(ref DirectAttackState state)
@@ -305,6 +381,12 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
             (uint)profile.TargetRelation > (uint)RelationshipFilter.NotHostile ||
             profile.RangeCm <= 0 ||
             profile.CooldownTicks <= 0)
+        {
+            throw new InvalidOperationException("Direct attack profile contains invalid authored values.");
+        }
+
+        int maximumStandoffRadiusCm = Math.Max(0, profile.RangeCm - DirectAttackProfile.PursuitArrivalSlackCm);
+        if ((uint)profile.EngagementStandoffRadiusCm > (uint)maximumStandoffRadiusCm)
         {
             throw new InvalidOperationException("Direct attack profile contains invalid authored values.");
         }
