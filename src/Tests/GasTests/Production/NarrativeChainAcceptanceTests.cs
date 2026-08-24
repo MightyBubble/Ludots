@@ -6,8 +6,10 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Input.Config;
@@ -24,10 +26,11 @@ namespace Ludots.Tests.GAS.Production
 {
     /// <summary>
     /// Headless end-to-end acceptance for the narrative chain showcase:
-    /// dialogue -> cinematic (subtitle track + presenter impulse commands) -> trigger ->
-    /// forced activity -> task.create -> task completion -> verdict dialogue branches
-    /// (map-variable write vs event broadcast), with every cross-domain effect routed
-    /// through the trigger pipeline.
+    /// dialogue -> cinematic (subtitle track + presenter impulse commands + camera step with
+    /// clear-on-complete) -> trigger -> forced activity on the UiRegions HUD modal (F/G keys) ->
+    /// task.create -> task completion -> next_task_id auto-advance -> debrief on_enter dialogue
+    /// -> verdict branches (map-variable write vs event broadcast), with every cross-domain
+    /// effect routed through the trigger pipeline or declarative task wiring.
     /// </summary>
     [NonParallelizable]
     [TestFixture]
@@ -44,6 +47,7 @@ namespace Ludots.Tests.GAS.Production
             "CoreInputMod",
             "CameraProfilesMod",
             "NarrativeFrontendMod",
+            "UiRegionsMod",
             "NarrativeChainShowcaseMod",
         };
 
@@ -59,6 +63,7 @@ namespace Ludots.Tests.GAS.Production
 
             _timeline.Clear();
             LoadMap(engine);
+            Assert.That(ActiveCameraId(engine), Is.EqualTo(NarrativeChainIds.HubDefaultCameraId));
             TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "relay woke up"), 30);
             Record("dialogue", "opening dialogue visible with choice list");
 
@@ -69,6 +74,11 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () => director.HasActiveCinematic && UiContains(uiRoot, "First lamp"), 30);
             Record("cinematic", "cinematic started; first subtitle on the presenter chain");
 
+            TickUntil(engine, () => UiContains(uiRoot, "Second lamp"), 60);
+            TickUntil(engine, () => string.Equals(ActiveCameraId(engine), NarrativeChainIds.RevealStepCameraId, StringComparison.Ordinal), 30);
+            Assert.That(GetClientCamera(engine).IsVirtualCameraActive(NarrativeChainIds.RevealStepCameraId), Is.True);
+            Record("cinematic", "reveal_2 camera step switched the active virtual camera to Tactical");
+
             TickUntil(engine, () => !director.HasActiveCinematic, 300);
             var presenterEvents = GetChainRuntime(engine).Events
                 .Where(e => e.EventName == "presenter_command").ToList();
@@ -78,18 +88,32 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(presenterEvents[2].Detail, Does.Contain("Third lamp"));
             Record("cinematic", "all three subtitle steps presented with presenter commands");
 
-            TickUntil(engine, () => FindActiveActivity(engine, NarrativeChainIds.DecideActivityId) != null, 30);
-            Record("activity", "forced decision activity offered after cinematic completed");
+            TickUntil(engine, () =>
+                !GetClientCamera(engine).IsVirtualCameraActive(NarrativeChainIds.RevealStepCameraId) &&
+                string.Equals(ActiveCameraId(engine), NarrativeChainIds.HubDefaultCameraId, StringComparison.Ordinal), 30);
+            Record("cinematic", "clearCameraOnComplete cleared the cinematic camera; hub default camera restored");
 
-            ResolveActivity(engine, NarrativeChainIds.DecideActivityId, "confirm");
+            TickUntil(engine, () =>
+                FindActiveActivity(engine, NarrativeChainIds.DecideActivityId) != null &&
+                UiContains(uiRoot, "Dispatch the survey crew") &&
+                UiContains(uiRoot, "Hold the line"), 60);
+            Record("activity", "forced decision activity offered; HUD activity modal shows both options");
+
+            PressButton(engine, backend, "<Keyboard>/f");
             TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.SurveyTaskId) == TaskInstanceState.Active, 30);
-            Record("task", "task.create effect from the confirmed option activated the survey task");
+            TickUntil(engine, () => UiContains(uiRoot, "Relay Survey"), 30);
+            Record("task", "F-key confirm resolved the activity; task.create activated the survey task on the HUD list");
 
             TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.SurveyTaskId) == TaskInstanceState.Completed, 120);
             Record("task", "objective signal completed the survey task");
 
+            TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.DebriefTaskId) == TaskInstanceState.Active, 30);
+            Record("task", "next_task_id auto-advanced the chain into the debrief task");
+
             TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "survey is logged"), 60);
-            Record("dialogue", "task completion trigger opened the verdict dialogue");
+            Assert.That(director.TryGetActiveDialogueView(out NarrativeDialogueView verdictView), Is.True);
+            Assert.That(verdictView.DialogueId, Is.EqualTo(NarrativeChainIds.VerdictDialogueId));
+            Record("dialogue", "debrief on_enter_dialogue_id opened the verdict dialogue");
 
             PressButton(engine, backend, "<Keyboard>/1");
             TickUntil(engine, () => !director.HasActiveDialogue, 30);
@@ -123,10 +147,13 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () => director.HasActiveCinematic, 30);
             Record("cinematic", $"presenter commands={GetChainRuntime(engine).PresenterCommandCount}");
             TickUntil(engine, () => !director.HasActiveCinematic, 300);
-            TickUntil(engine, () => FindActiveActivity(engine, NarrativeChainIds.DecideActivityId) != null, 30);
-            Record("activity", "forced decision activity offered");
-            ResolveActivity(engine, NarrativeChainIds.DecideActivityId, "confirm");
+            TickUntil(engine, () =>
+                FindActiveActivity(engine, NarrativeChainIds.DecideActivityId) != null &&
+                UiContains(uiRoot, "Dispatch the survey crew"), 60);
+            Record("activity", "forced decision activity offered on the HUD modal");
+            PressButton(engine, backend, "<Keyboard>/f");
             TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.SurveyTaskId) == TaskInstanceState.Completed, 120);
+            TickUntil(engine, () => TaskStateOf(engine, NarrativeChainIds.DebriefTaskId) == TaskInstanceState.Active, 30);
             TickUntil(engine, () => director.HasActiveDialogue && UiContains(uiRoot, "survey is logged"), 60);
 
             PressButton(engine, backend, "<Keyboard>/2");
@@ -149,6 +176,7 @@ namespace Ludots.Tests.GAS.Production
             using GameEngine engine = CreateEngine();
             var backend = GetInputBackend(engine);
             NarrativeDirector director = GetDirector(engine);
+            UIRoot uiRoot = GetUiRoot(engine);
 
             _timeline.Clear();
             LoadMap(engine);
@@ -159,18 +187,21 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () => director.HasActiveCinematic, 30);
             Record("cinematic", $"presenter commands={GetChainRuntime(engine).PresenterCommandCount}");
             TickUntil(engine, () => !director.HasActiveCinematic, 300);
-            TickUntil(engine, () => FindActiveActivity(engine, NarrativeChainIds.DecideActivityId) != null, 30);
-            Record("activity", "forced decision activity offered");
+            TickUntil(engine, () =>
+                FindActiveActivity(engine, NarrativeChainIds.DecideActivityId) != null &&
+                UiContains(uiRoot, "Hold the line"), 60);
+            Record("activity", "forced decision activity offered on the HUD modal");
 
-            ResolveActivity(engine, NarrativeChainIds.DecideActivityId, "decline");
+            PressButton(engine, backend, "<Keyboard>/g");
             Tick(engine, 60);
 
             Assert.That(TaskStateOf(engine, NarrativeChainIds.SurveyTaskId), Is.Null);
+            Assert.That(TaskStateOf(engine, NarrativeChainIds.DebriefTaskId), Is.Null);
             Assert.That(director.HasActiveDialogue, Is.False);
             Assert.That(engine.CurrentMapSession?.Variables?.ReadInt(NarrativeChainIds.MapVariableAlarms), Is.EqualTo(0));
             Assert.That(GetChainRuntime(engine).ChainFinished, Is.False);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
-            Record("guard", "decline baseline option: no task, no verdict dialogue, chain stays idle");
+            Record("guard", "decline baseline option: no task, no debrief, no verdict dialogue, chain stays idle");
 
             WriteArtifacts("guard_decline");
         }
@@ -226,17 +257,20 @@ namespace Ludots.Tests.GAS.Production
             return null;
         }
 
-        private static void ResolveActivity(GameEngine engine, string activityId, string optionId)
+        private static CameraManager GetClientCamera(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.ActivityRuntimeService) is not ActivityRuntimeService activities)
+            var views = engine.GetService(CoreServiceKeys.LogicViewRegistry) as LogicViewRegistry
+                ?? throw new InvalidOperationException("LogicViewRegistry was not installed.");
+            if (!views.TryGetClientPresentCamera(out CameraManager camera))
             {
-                throw new InvalidOperationException("ActivityRuntimeService was not installed.");
+                throw new InvalidOperationException("Client present camera was not registered.");
             }
 
-            ActivityView? view = FindActiveActivity(engine, activityId)
-                ?? throw new InvalidOperationException($"Activity '{activityId}' is not active.");
-            activities.ResolveOption(view.Value.Entity, optionId);
+            return camera;
         }
+
+        private static string ActiveCameraId(GameEngine engine) =>
+            GetClientCamera(engine).VirtualCameraBrain?.ActiveCameraId ?? string.Empty;
 
         private static void AssertUiContains(UIRoot uiRoot, string needle) =>
             Assert.That(UiContains(uiRoot, needle), Is.True, $"UI text should contain '{needle}'.");
@@ -376,16 +410,20 @@ namespace Ludots.Tests.GAS.Production
 
         private const string PathMermaid = """
             flowchart TD
-                start([map loaded]) --> dlg[opening dialogue with choices]
+                start([map loaded, hub camera Inspect]) --> dlg[opening dialogue with choices]
                 dlg -->|choice 1/2| openEnd[open_end node: EmitSignal chain.opened]
                 openEnd -->|dialogue closed, advance system| cine[Cinematic.Chain.Reveal]
                 cine -->|per step: CinematicStepEntered| impulse[presenter command: camera impulse + subtitle]
                 impulse --> cine
-                cine -->|CinematicCompleted| act{{forced activity: activity.chain.decide}}
-                act -->|option confirm: task.create effect| task[Task.Chain.Survey active]
-                act -->|option decline baseline| idle[chain idle: no task, no verdict]
+                cine -->|reveal_2 camera step| tactical[active camera -> Camera.Profile.Tactical]
+                tactical --> cine
+                cine -->|CinematicCompleted + clearCameraOnComplete| camClear[cinematic camera cleared, hub camera restored]
+                camClear --> act{{forced activity: activity.chain.decide on HUD modal}}
+                act -->|F key: option confirm, task.create effect| task[Task.Chain.Survey active]
+                act -->|G key: option decline baseline| idle[chain idle: no task, no verdict]
                 task -->|delayed objective signal| taskDone[task completed]
-                taskDone -->|Task.Completed trigger| verdict[verdict dialogue]
+                taskDone -->|next_task_id auto-advance| debrief[Task.Chain.Debrief active]
+                debrief -->|on_enter_dialogue_id| verdict[verdict dialogue]
                 verdict -->|choice 1 seal: AddVariable + EmitSignal cmd| mapVar[map variable chain_alarms +1 via trigger]
                 verdict -->|choice 2 herald: EmitSignal event| event[herald event broadcast -> camera impulse]
                 mapVar --> done([chain.finished])

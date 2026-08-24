@@ -1,4 +1,4 @@
 {"seq":1,"scenario":"herald_branch","at":"[T\u002B001] [dialogue] opening dialogue visible"}
 {"seq":2,"scenario":"herald_branch","at":"[T\u002B002] [cinematic] presenter commands=1"}
-{"seq":3,"scenario":"herald_branch","at":"[T\u002B003] [activity] forced decision activity offered"}
+{"seq":3,"scenario":"herald_branch","at":"[T\u002B003] [activity] forced decision activity offered on the HUD modal"}
 {"seq":4,"scenario":"herald_branch","at":"[T\u002B004] [verdict] herald branch: event broadcast consumed by presenter impulse; no map write"}

@@ -5,8 +5,20 @@
     "summary": "Walk the relay line and confirm the third lamp's reading.",
     "start_policy": "automatic",
     "completion_rule": "all",
+    "next_task_id": "Task.Chain.Debrief",
     "objectives": [
       { "id": "survey", "kind": "signal", "title": "Confirm the third lamp's reading", "signal_key": "chain.objective.done" }
+    ]
+  },
+  {
+    "id": "Task.Chain.Debrief",
+    "display_name": "Relay Debrief",
+    "summary": "Report the survey result and pick what the valley keeps.",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "on_enter_dialogue_id": "Dialogue.Chain.Verdict",
+    "objectives": [
+      { "id": "debrief", "kind": "signal", "title": "Deliver the debrief verdict", "signal_key": "chain.debrief.done" }
     ]
   }
 ]
