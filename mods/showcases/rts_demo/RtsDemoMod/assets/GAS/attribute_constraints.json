@@ -1,0 +1,6 @@
+{
+  "Shield": {
+    "clampToBase": true,
+    "min": 0
+  }
+}

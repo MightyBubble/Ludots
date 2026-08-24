@@ -6,5 +6,28 @@
     "Showcase",
     "SkiaHotpath"
   ],
-  "Entities": []
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "InstanceId": "visual-benchmark-player",
+      "Overrides": {
+        "Name": {
+          "Value": "Benchmark Observer"
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "visual-benchmark-player"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "visual-benchmark-player"
+    }
+  ]
 }

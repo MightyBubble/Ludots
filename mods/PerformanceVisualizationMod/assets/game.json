@@ -5,5 +5,11 @@
     "gasPresentationEventCapacity": 65536,
     "screenHudCapacity": 262144,
     "worldHudCapacity": 262144
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

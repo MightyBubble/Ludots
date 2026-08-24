@@ -253,6 +253,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private void EnsurePrimaryPlayerControl(GameEngine engine)
         {
+            RepairLocalSeatsFromSession(engine);
             Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!engine.World.IsAlive(owner))
             {
@@ -277,6 +278,34 @@ namespace RoadNetworkShowcaseMod.Runtime
                         "Primary road-network actor.");
                     collections.Replace(owner, descriptor, initialCommandSource, owner);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Re-publish seats cleared mid-session from the map session's authoritative resolved
+        /// possessions; invents nothing (no seat rows exist means the map never declared any).
+        /// </summary>
+        private static void RepairLocalSeatsFromSession(GameEngine engine)
+        {
+            var registry = ClientLocalSeatAccess.RequireRegistry(engine);
+            if (registry.Count > 0)
+            {
+                return;
+            }
+
+            var session = engine.CurrentMapSession;
+            if (session?.LocalSeats == null || session.LocalSeats.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var possession in session.LocalSeats)
+            {
+                registry.Add(new ClientLocalSeat(possession.SeatId, possession.ControlSchemeId)
+                {
+                    PossessedPlayerId = possession.PlayerId,
+                    PossessedRep = possession.RepEntity,
+                });
             }
         }
 

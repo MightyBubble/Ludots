@@ -38,7 +38,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ReadBoolProperty(runtime, "IsActive"), Is.True);
 
             Assert.That(InvokeBool(runtime, "TryRunScenario", engine, "small"), Is.True);
-            Tick(engine, 8);
+            TickUntilSpawnSettles(engine, runtime);
 
             int smallCount = CountScenarioEntities(engine);
             var worldHud = RequireWorldHud(engine);
@@ -49,7 +49,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(worldHud.DroppedSinceClear, Is.EqualTo(0), "2K showcase lane should stay inside the world HUD budget.");
 
             Assert.That(InvokeBool(runtime, "TryRunScenario", engine, "medium"), Is.True);
-            Tick(engine, 8);
+            TickUntilSpawnSettles(engine, runtime);
 
             int mediumCount = CountScenarioEntities(engine);
             int mediumBars = CountWorldHudItems(worldHud, WorldHudItemKind.Bar);
@@ -59,7 +59,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(worldHud.DroppedSinceClear, Is.EqualTo(0), "8K showcase lane should remain cull-gated enough to avoid HUD overflow.");
 
             Assert.That(InvokeBool(runtime, "TryClearScenario", engine), Is.True);
-            Tick(engine, 8);
+            TickUntilSpawnSettles(engine, runtime);
             Assert.That(CountScenarioEntities(engine), Is.EqualTo(0), "Clear should destroy all benchmark entities scoped to the current map.");
         }
 
@@ -169,6 +169,19 @@ namespace Ludots.Tests.GAS.Production
         {
             engine.LoadMap(mapId);
             Tick(engine, frames);
+        }
+
+        private static void TickUntilSpawnSettles(GameEngine engine, object runtime, int maxFrames = 128)
+        {
+            int lastCount = -1;
+            int stableFrames = 0;
+            for (int i = 0; i < maxFrames && stableFrames < 3; i++)
+            {
+                Tick(engine, 1);
+                int count = CountScenarioEntities(engine);
+                stableFrames = count == lastCount ? stableFrames + 1 : 0;
+                lastCount = count;
+            }
         }
 
         private static void Tick(GameEngine engine, int frames)

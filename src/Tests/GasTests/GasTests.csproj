@@ -51,6 +51,7 @@
     <ProjectReference Include="..\..\..\mods\fixtures\missing_dep\MissingDepMod\MissingDepMod.csproj" />
     <ProjectReference Include="..\..\..\mods\PerformanceMod\PerformanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_fireball_shared\FireballSharedMod\FireballSharedMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\reactive_test\ReactiveTestMod\ReactiveTestMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\UiTestMod\UiTestMod.csproj" />

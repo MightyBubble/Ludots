@@ -40,6 +40,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = value },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = bbKeyId, B = 0 },
+                            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
         }
 
@@ -57,6 +58,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = delta },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = bbKeyId, B = 3 },
+                            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
         }
 
@@ -261,7 +263,8 @@ namespace Ludots.Tests.GAS
                     ? GraphKind.Validation
                     : GraphKind.Effect;
                 GraphInstruction[] program = allPhases[i] == EffectPhaseId.OnPropose
-                    ? [new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 }]
+                    ? [new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                       new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }]
                     : MakeBbWriteProgram(bbKey, (float)(i + 1));
                 programs.Register(graphId, program, kind);
                 behavior.TryAddStep(allPhases[i], PhaseSlot.Pre, graphId);

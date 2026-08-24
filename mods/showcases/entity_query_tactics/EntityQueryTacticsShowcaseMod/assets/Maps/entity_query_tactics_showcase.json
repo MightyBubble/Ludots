@@ -1,6 +1,9 @@
 {
   "Id": "entity_query_tactics_showcase",
-  "Tags": ["entityquery.showcase", "selection.collection.graph"],
+  "Tags": [
+    "entityquery.showcase",
+    "selection.collection.graph"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "EntityQueryTactics.Camera.Showcase",
     "TargetXCm": 1650,
@@ -14,27 +17,49 @@
       "Template": "entityquery_tactics_player_commander",
       "InstanceId": "entityquery-tactics-player-commander",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1040, "Y": 920 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1040,
+            "Y": 920
+          }
+        }
       }
     },
     {
       "Template": "entityquery_tactics_enemy_commander_owner",
       "InstanceId": "entityquery-tactics-enemy-commander",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 2420, "Y": 920 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2420,
+            "Y": 920
+          }
+        }
       }
     },
     {
       "Template": "entityquery_tactics_ally_squad",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1250, "Y": 700 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1250,
+            "Y": 700
+          }
+        }
       }
     },
     {
       "Template": "entityquery_tactics_ally_squad",
       "Overrides": {
-        "Name": { "Value": "Spear One" },
-        "WorldPositionCm": { "Value": { "X": 1450, "Y": 640 } },
+        "Name": {
+          "Value": "Spear One"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1450,
+            "Y": 640
+          }
+        },
         "AttributeBuffer": {
           "base": {
             "Health": 150,
@@ -43,15 +68,31 @@
             "ThreatValue": 0
           }
         },
-        "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 75, "localCenterZCm": 0 },
-        "SpatialBox3D": { "halfSizeXCm": 45, "halfSizeYCm": 80, "halfSizeZCm": 45 }
+        "SpatialBounds": {
+          "kind": "Box3D",
+          "localCenterXCm": 0,
+          "localCenterYCm": 75,
+          "localCenterZCm": 0
+        },
+        "SpatialBox3D": {
+          "halfSizeXCm": 45,
+          "halfSizeYCm": 80,
+          "halfSizeZCm": 45
+        }
       }
     },
     {
       "Template": "entityquery_tactics_ally_squad",
       "Overrides": {
-        "Name": { "Value": "Spear Two" },
-        "WorldPositionCm": { "Value": { "X": 1450, "Y": 1180 } },
+        "Name": {
+          "Value": "Spear Two"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1450,
+            "Y": 1180
+          }
+        },
         "AttributeBuffer": {
           "base": {
             "Health": 150,
@@ -60,15 +101,31 @@
             "ThreatValue": 0
           }
         },
-        "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 75, "localCenterZCm": 0 },
-        "SpatialBox3D": { "halfSizeXCm": 45, "halfSizeYCm": 80, "halfSizeZCm": 45 }
+        "SpatialBounds": {
+          "kind": "Box3D",
+          "localCenterXCm": 0,
+          "localCenterYCm": 75,
+          "localCenterZCm": 0
+        },
+        "SpatialBox3D": {
+          "halfSizeXCm": 45,
+          "halfSizeYCm": 80,
+          "halfSizeZCm": 45
+        }
       }
     },
     {
       "Template": "entityquery_tactics_ally_squad",
       "Overrides": {
-        "Name": { "Value": "Field Medic" },
-        "WorldPositionCm": { "Value": { "X": 1250, "Y": 1160 } },
+        "Name": {
+          "Value": "Field Medic"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1250,
+            "Y": 1160
+          }
+        },
         "AttributeBuffer": {
           "base": {
             "Health": 130,
@@ -77,21 +134,42 @@
             "ThreatValue": 0
           }
         },
-        "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 75, "localCenterZCm": 0 },
-        "SpatialBox3D": { "halfSizeXCm": 45, "halfSizeYCm": 80, "halfSizeZCm": 45 }
+        "SpatialBounds": {
+          "kind": "Box3D",
+          "localCenterXCm": 0,
+          "localCenterYCm": 75,
+          "localCenterZCm": 0
+        },
+        "SpatialBox3D": {
+          "halfSizeXCm": 45,
+          "halfSizeYCm": 80,
+          "halfSizeZCm": 45
+        }
       }
     },
     {
       "Template": "entityquery_tactics_ally_routed",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1070, "Y": 1280 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1070,
+            "Y": 1280
+          }
+        }
       }
     },
     {
       "Template": "entityquery_tactics_enemy_siege",
       "Overrides": {
-        "Name": { "Value": "Crimson Captain" },
-        "WorldPositionCm": { "Value": { "X": 2030, "Y": 730 } },
+        "Name": {
+          "Value": "Crimson Captain"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2030,
+            "Y": 730
+          }
+        },
         "AttributeBuffer": {
           "base": {
             "Health": 190,
@@ -100,15 +178,31 @@
             "ThreatValue": 82
           }
         },
-        "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 85, "localCenterZCm": 0 },
-        "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 90, "halfSizeZCm": 50 }
+        "SpatialBounds": {
+          "kind": "Box3D",
+          "localCenterXCm": 0,
+          "localCenterYCm": 85,
+          "localCenterZCm": 0
+        },
+        "SpatialBox3D": {
+          "halfSizeXCm": 50,
+          "halfSizeYCm": 90,
+          "halfSizeZCm": 50
+        }
       }
     },
     {
       "Template": "entityquery_tactics_enemy_siege",
       "Overrides": {
-        "Name": { "Value": "Raid Alpha" },
-        "WorldPositionCm": { "Value": { "X": 2140, "Y": 930 } },
+        "Name": {
+          "Value": "Raid Alpha"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2140,
+            "Y": 930
+          }
+        },
         "AttributeBuffer": {
           "base": {
             "Health": 135,
@@ -117,15 +211,31 @@
             "ThreatValue": 64
           }
         },
-        "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 75, "localCenterZCm": 0 },
-        "SpatialBox3D": { "halfSizeXCm": 45, "halfSizeYCm": 80, "halfSizeZCm": 45 }
+        "SpatialBounds": {
+          "kind": "Box3D",
+          "localCenterXCm": 0,
+          "localCenterYCm": 75,
+          "localCenterZCm": 0
+        },
+        "SpatialBox3D": {
+          "halfSizeXCm": 45,
+          "halfSizeYCm": 80,
+          "halfSizeZCm": 45
+        }
       }
     },
     {
       "Template": "entityquery_tactics_enemy_raider",
       "Overrides": {
-        "Name": { "Value": "Raid Beta" },
-        "WorldPositionCm": { "Value": { "X": 2260, "Y": 1160 } },
+        "Name": {
+          "Value": "Raid Beta"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2260,
+            "Y": 1160
+          }
+        },
         "AttributeBuffer": {
           "base": {
             "Health": 130,
@@ -139,27 +249,68 @@
     {
       "Template": "entityquery_tactics_enemy_siege",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1950, "Y": 1120 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1950,
+            "Y": 1120
+          }
+        }
       }
     },
     {
       "Template": "entityquery_tactics_supply_beacon",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1660, "Y": 920 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1660,
+            "Y": 920
+          }
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "entityquery-tactics-player-commander" },
-    { "TeamId": 2, "RepresentativeInstanceId": "entityquery-tactics-enemy-commander" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "entityquery-tactics-player-commander"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "entityquery-tactics-enemy-commander"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "EntityQueryTactics.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "EntityQueryTactics.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "EntityQueryTactics.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "EntityQueryTactics.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "EntityQueryTactics.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "EntityQueryTactics.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [],
     "PlayerTeams": []
-  }
+  },
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "entityquery-tactics-player-commander"
+    }
+  ]
 }

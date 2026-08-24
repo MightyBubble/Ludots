@@ -9,7 +9,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
     /// <summary>Merged root of <c>UI/ability_aggregation_profiles.json</c> (RFC-0065 PNL-1/2, DEC-10).</summary>
     public sealed class AbilityAggregationProfilesConfig
     {
-        public List<AbilityAggregationProfileDefinition> Profiles { get; set; }
+        public List<AbilityAggregationProfileDefinition> Profiles { get; set; } = new();
     }
 
     /// <summary>

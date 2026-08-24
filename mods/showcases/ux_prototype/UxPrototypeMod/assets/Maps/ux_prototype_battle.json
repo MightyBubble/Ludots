@@ -1,50 +1,427 @@
 {
   "Id": "ux_prototype_battle",
-  "Tags": ["ux.prototype", "rts", "prototype", "Raylib.Background:Deep", "Raylib.DebugGuides:Off"],
+  "Tags": [
+    "ux.prototype",
+    "rts",
+    "prototype",
+    "Raylib.Background:Deep",
+    "Raylib.DebugGuides:Off"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.UxPrototypeTactical",
     "TargetXCm": 3840,
     "TargetYCm": 2640
   },
   "Entities": [
-    { "Template": "ux_city", "InstanceId": "ux-blue-city", "Overrides": { "Name": { "Value": "Blue City" }, "WorldPositionCm": { "Value": { "X": 2400, "Y": 2400 } } } },
-    { "Template": "ux_barracks", "Overrides": { "Name": { "Value": "Blue Barracks" }, "WorldPositionCm": { "Value": { "X": 3150, "Y": 2220 } } } },
-    { "Template": "ux_stable", "Overrides": { "Name": { "Value": "Blue Stable" }, "WorldPositionCm": { "Value": { "X": 3150, "Y": 2720 } } } },
-    { "Template": "ux_workshop", "Overrides": { "Name": { "Value": "Blue Workshop" }, "WorldPositionCm": { "Value": { "X": 3680, "Y": 2480 } } } },
-    { "Template": "ux_farm", "Overrides": { "Name": { "Value": "North Farm" }, "WorldPositionCm": { "Value": { "X": 1760, "Y": 1820 } } } },
-    { "Template": "ux_farm", "Overrides": { "Name": { "Value": "South Farm" }, "WorldPositionCm": { "Value": { "X": 1860, "Y": 3120 } } } },
-    { "Template": "ux_mine", "Overrides": { "Name": { "Value": "Central Mine" }, "WorldPositionCm": { "Value": { "X": 1600, "Y": 2520 } } } },
-    { "Template": "ux_tower", "Overrides": { "Name": { "Value": "East Tower" }, "WorldPositionCm": { "Value": { "X": 4380, "Y": 2140 } } } },
-    { "Template": "ux_watchtower", "Overrides": { "Name": { "Value": "North Watchtower" }, "WorldPositionCm": { "Value": { "X": 4100, "Y": 1660 } } } },
-    { "Template": "ux_fort", "Overrides": { "Name": { "Value": "Eastern Fort" }, "WorldPositionCm": { "Value": { "X": 4740, "Y": 2560 } } } },
-    { "Template": "ux_worker", "Overrides": { "Name": { "Value": "Worker A" }, "WorldPositionCm": { "Value": { "X": 2520, "Y": 2660 } } } },
-    { "Template": "ux_worker", "Overrides": { "Name": { "Value": "Worker B" }, "WorldPositionCm": { "Value": { "X": 2620, "Y": 2300 } } } },
-    { "Template": "ux_soldier", "Overrides": { "Name": { "Value": "Soldier A" }, "WorldPositionCm": { "Value": { "X": 4010, "Y": 2860 } } } },
-    { "Template": "ux_soldier", "Overrides": { "Name": { "Value": "Soldier B" }, "WorldPositionCm": { "Value": { "X": 4140, "Y": 3020 } } } },
-    { "Template": "ux_archer", "Overrides": { "Name": { "Value": "Archer A" }, "WorldPositionCm": { "Value": { "X": 3920, "Y": 3160 } } } },
-    { "Template": "ux_mage", "Overrides": { "Name": { "Value": "Mage A" }, "WorldPositionCm": { "Value": { "X": 3840, "Y": 3320 } } } },
-    { "Template": "ux_medic", "Overrides": { "Name": { "Value": "Medic A" }, "WorldPositionCm": { "Value": { "X": 4250, "Y": 3320 } } } },
-    { "Template": "ux_heavy_cavalry", "Overrides": { "Name": { "Value": "Heavy Cavalry A" }, "WorldPositionCm": { "Value": { "X": 3600, "Y": 3540 } } } },
-    { "Template": "ux_horse_archer", "Overrides": { "Name": { "Value": "Horse Archer A" }, "WorldPositionCm": { "Value": { "X": 3780, "Y": 3620 } } } },
-    { "Template": "ux_ram", "Overrides": { "Name": { "Value": "Ram A" }, "WorldPositionCm": { "Value": { "X": 4460, "Y": 3450 } } } },
-    { "Template": "ux_catapult", "Overrides": { "Name": { "Value": "Catapult A" }, "WorldPositionCm": { "Value": { "X": 4620, "Y": 3540 } } } },
-    { "Template": "ux_well_column", "Overrides": { "Name": { "Value": "Well Column A" }, "WorldPositionCm": { "Value": { "X": 4800, "Y": 3620 } } } },
-    { "Template": "ux_gold_deposit", "Overrides": { "Name": { "Value": "Gold Deposit North" }, "WorldPositionCm": { "Value": { "X": 1440, "Y": 1740 } } } },
-    { "Template": "ux_gold_deposit", "Overrides": { "Name": { "Value": "Gold Deposit South" }, "WorldPositionCm": { "Value": { "X": 1500, "Y": 3200 } } } },
-    { "Template": "ux_enemy_raider", "InstanceId": "ux-enemy-raider-a", "Overrides": { "Name": { "Value": "Enemy Raider A" }, "WorldPositionCm": { "Value": { "X": 6100, "Y": 2480 } } } },
-    { "Template": "ux_enemy_raider", "Overrides": { "Name": { "Value": "Enemy Raider B" }, "WorldPositionCm": { "Value": { "X": 6240, "Y": 2740 } } } }
+    {
+      "Template": "ux_city",
+      "InstanceId": "ux-blue-city",
+      "Overrides": {
+        "Name": {
+          "Value": "Blue City"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 2400
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_barracks",
+      "Overrides": {
+        "Name": {
+          "Value": "Blue Barracks"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3150,
+            "Y": 2220
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_stable",
+      "Overrides": {
+        "Name": {
+          "Value": "Blue Stable"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3150,
+            "Y": 2720
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_workshop",
+      "Overrides": {
+        "Name": {
+          "Value": "Blue Workshop"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3680,
+            "Y": 2480
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_farm",
+      "Overrides": {
+        "Name": {
+          "Value": "North Farm"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1760,
+            "Y": 1820
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_farm",
+      "Overrides": {
+        "Name": {
+          "Value": "South Farm"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1860,
+            "Y": 3120
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_mine",
+      "Overrides": {
+        "Name": {
+          "Value": "Central Mine"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1600,
+            "Y": 2520
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_tower",
+      "Overrides": {
+        "Name": {
+          "Value": "East Tower"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4380,
+            "Y": 2140
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_watchtower",
+      "Overrides": {
+        "Name": {
+          "Value": "North Watchtower"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4100,
+            "Y": 1660
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_fort",
+      "Overrides": {
+        "Name": {
+          "Value": "Eastern Fort"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4740,
+            "Y": 2560
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_worker",
+      "Overrides": {
+        "Name": {
+          "Value": "Worker A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2520,
+            "Y": 2660
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_worker",
+      "Overrides": {
+        "Name": {
+          "Value": "Worker B"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2620,
+            "Y": 2300
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "Soldier A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4010,
+            "Y": 2860
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_soldier",
+      "Overrides": {
+        "Name": {
+          "Value": "Soldier B"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4140,
+            "Y": 3020
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_archer",
+      "Overrides": {
+        "Name": {
+          "Value": "Archer A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3920,
+            "Y": 3160
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_mage",
+      "Overrides": {
+        "Name": {
+          "Value": "Mage A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3840,
+            "Y": 3320
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_medic",
+      "Overrides": {
+        "Name": {
+          "Value": "Medic A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4250,
+            "Y": 3320
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_heavy_cavalry",
+      "Overrides": {
+        "Name": {
+          "Value": "Heavy Cavalry A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3600,
+            "Y": 3540
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_horse_archer",
+      "Overrides": {
+        "Name": {
+          "Value": "Horse Archer A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3780,
+            "Y": 3620
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_ram",
+      "Overrides": {
+        "Name": {
+          "Value": "Ram A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4460,
+            "Y": 3450
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_catapult",
+      "Overrides": {
+        "Name": {
+          "Value": "Catapult A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4620,
+            "Y": 3540
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_well_column",
+      "Overrides": {
+        "Name": {
+          "Value": "Well Column A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4800,
+            "Y": 3620
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_gold_deposit",
+      "Overrides": {
+        "Name": {
+          "Value": "Gold Deposit North"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1440,
+            "Y": 1740
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_gold_deposit",
+      "Overrides": {
+        "Name": {
+          "Value": "Gold Deposit South"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1500,
+            "Y": 3200
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_enemy_raider",
+      "InstanceId": "ux-enemy-raider-a",
+      "Overrides": {
+        "Name": {
+          "Value": "Enemy Raider A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6100,
+            "Y": 2480
+          }
+        }
+      }
+    },
+    {
+      "Template": "ux_enemy_raider",
+      "Overrides": {
+        "Name": {
+          "Value": "Enemy Raider B"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6240,
+            "Y": 2740
+          }
+        }
+      }
+    }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "ux-blue-city" },
-    { "TeamId": 2, "RepresentativeInstanceId": "ux-enemy-raider-a" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "ux-blue-city"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "ux-enemy-raider-a"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "UxPrototype.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "UxPrototype.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "UxPrototype.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "UxPrototype.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "UxPrototype.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "UxPrototype.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [],
     "PlayerTeams": []
-  }
+  },
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "ux-blue-city"
+    }
+  ]
 }

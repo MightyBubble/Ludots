@@ -37,6 +37,7 @@ namespace PerformanceVisualizationMod.Runtime
                 new PresentationLodEntry(maxDistanceCm: 90000f, minScreenCoverage01: 0.0025f));
 
         private const int SpawnBatchSize = 2048;
+        private const int AttributeAttachSpawnBatchSize = 128;
         private const int DestroyBatchSize = 2048;
         private const int LiveKnowledgeConfidencePermille = 1000;
 
@@ -178,7 +179,8 @@ namespace PerformanceVisualizationMod.Runtime
             {
                 if (GetScenarioEntityCount(engine) > 0)
                 {
-                    int marked = MarkScenarioEntitiesForDestroy(engine, DestroyBatchSize);
+                    int destroyBatch = _scenario.AttachHealthAttributes ? AttributeAttachSpawnBatchSize : DestroyBatchSize;
+                    int marked = MarkScenarioEntitiesForDestroy(engine, destroyBatch);
                     _pipelinePhase = BenchmarkPipelinePhase.Clearing;
                     _status = $"Clearing benchmark actors in batches ({marked:N0} this frame).";
                     return;
@@ -196,7 +198,8 @@ namespace PerformanceVisualizationMod.Runtime
             {
                 if (GetScenarioEntityCount(engine) > 0)
                 {
-                    int marked = MarkScenarioEntitiesForDestroy(engine, DestroyBatchSize);
+                    int destroyBatch = _scenario.AttachHealthAttributes ? AttributeAttachSpawnBatchSize : DestroyBatchSize;
+                    int marked = MarkScenarioEntitiesForDestroy(engine, destroyBatch);
                     _status = $"Clearing previous scenario for {_requestedScenario.Label} ({marked:N0} queued this frame).";
                     return;
                 }
@@ -222,7 +225,8 @@ namespace PerformanceVisualizationMod.Runtime
 
             if (_pipelinePhase == BenchmarkPipelinePhase.Spawning && _spawnCursor < _requestedScenario.EntityCount)
             {
-                int spawned = SpawnScenarioBatch(engine, _requestedScenario, _spawnCursor, SpawnBatchSize);
+                int batch = _requestedScenario.AttachHealthAttributes ? AttributeAttachSpawnBatchSize : SpawnBatchSize;
+                int spawned = SpawnScenarioBatch(engine, _requestedScenario, _spawnCursor, batch);
                 _spawnCursor += spawned;
                 _scenario = _requestedScenario;
                 _status = $"Spawning {_requestedScenario.Label}: {_spawnCursor:N0}/{_requestedScenario.EntityCount:N0}.";

@@ -412,8 +412,8 @@ namespace Ludots.Tests.GAS
             TagRegistry.Register(StimFamilyTag);
             TagRegistry.Register(ChargeFamilyTag);
 
-            var profileIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var registry = new AbilityAggregationProfileRegistry(profileIds);
+            var registry = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
+                ?? throw new InvalidOperationException("AbilityAggregationProfileRegistry missing.");
             registry.Install(new AbilityAggregationProfilesConfig
             {
                 Profiles =
@@ -424,16 +424,9 @@ namespace Ludots.Tests.GAS
                         GroupBy = "catalog.castFamily",
                         Overflow = "nextPanelSlot",
                     },
-                    new AbilityAggregationProfileDefinition
-                    {
-                        Id = ByTemplateProfileId,
-                        GroupBy = "template.id",
-                        Overflow = "nextPanelSlot",
-                    },
                 }
             });
 
-            engine.SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, registry);
         }
 
         private static void RegisterAbility(GameEngine engine, int abilityId, string label, string detail, string? catalogTag)
