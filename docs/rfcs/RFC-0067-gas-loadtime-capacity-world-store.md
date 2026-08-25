@@ -1,7 +1,7 @@
 # RFC-0067 GAS 装载期定容世界级存储
 
 > 状态：提案（未接受，不能当实现依据）  
-> 对应 Epic 粘贴稿：`RFC-0067-epic-issue-body-draft.md`  
+> Epic：https://github.com/MightyBubble/Ludots/issues/1196  
 > 编号：RFC-0067  
 > 范围：`AttributeBuffer` / `GameplayTagContainer` 及所有 64/256 位图合同副本
 

@@ -8,7 +8,7 @@
 ## 设计 SSOT
 
 - RFC 正本：`docs/rfcs/RFC-0067-gas-loadtime-capacity-world-store.md`
-- 本粘贴稿：issue 建立后改链到 issue，本稿即可删或改成「已开 #xxxx」
+- Epic 已开：https://github.com/MightyBubble/Ludots/issues/1196
 - **编号：** 这是 RFC-0067。`RFC-0066` 是 Agent 调试桥。旧 PR `#907` 误用过 0066，那条枝作废，不要复活。
 - **不是：** 对局中自动扩容；**不是** 只改 `MaxAttributes=128`；**不是** 扩展属性 10001 旁路
 

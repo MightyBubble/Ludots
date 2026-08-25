@@ -37,9 +37,9 @@
 [Epic] GAS 装载期定容：属性/标签跟本局内容定容，对局里仍定长（RFC-0067）
 ```
 
-正文整篇粘贴：`docs/rfcs/RFC-0067-epic-issue-body-draft.md`（从「一句话」起，不要带 HTML 注释标题行）。
+**已开：** https://github.com/MightyBubble/Ludots/issues/1196
 
-建好后把 issue 号回写到 RFC 首页和本稿。
+正文当时整篇粘贴自 `docs/rfcs/RFC-0067-epic-issue-body-draft.md`。
 
 ## 新建小票：星港同稿展示未入库
 
