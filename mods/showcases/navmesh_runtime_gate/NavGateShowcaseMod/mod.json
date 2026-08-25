@@ -1,0 +1,19 @@
+{
+  "name": "NavGateShowcaseMod",
+  "version": "1.0.0",
+  "description": "Navmesh runtime update showcase: a squad reroutes the instant a gate seals the valley pass.",
+  "priority": 10,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "navmesh",
+    "runtime-update",
+    "vhtm"
+  ],
+  "main": "bin/net8.0/NavGateShowcaseMod.dll"
+}

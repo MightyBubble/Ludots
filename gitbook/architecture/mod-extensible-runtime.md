@@ -1,10 +1,10 @@
 # Mod Extensible Runtime
 
-This page is the SSOT for the current user-extensible runtime surface: split config files, GAS extension points, graph ops, and Performer extension points.
+This page is the SSOT for the current user-extensible runtime surface: split config files, GAS extension points, graph ops, and Presenter extension points.
 
 ## Overview
 
-Ludots keeps Core behavior stable and lets Mods add variants by registering semantic keys during startup, then composing those keys through existing config assets. A Mod should add graph wiring, effect steps, performer rules, or shard files. It should not require a new Core enum for every variant.
+Ludots keeps Core behavior stable and lets Mods add variants by registering semantic keys during startup, then composing those keys through existing config assets. A Mod should add graph wiring, effect steps, presenter rules, or shard files. It should not require a new Core enum for every variant.
 
 The runtime has three hard rules:
 
@@ -20,8 +20,8 @@ The runtime has three hard rules:
 | Effect handler code | `IModContext.Extensions.Gas.RegisterBuiltinHandler` | `BuiltinHandlerRegistry` |
 | Graph op code | `IModContext.Extensions.Gas.RegisterGraphOp` | `GasGraphOpRegistry` and `GasGraphOpHandlerTable` |
 | Effect composition | `GAS/effects.json`, `GAS/preset_types.json`, `GAS/graphs.json` | GAS loaders and graph compiler |
-| Performer commands | `IModContext.Extensions.Presentation.RegisterPerformerCommand` | `PerformerCommandKindRegistry` |
-| Performer behaviors | `IModContext.Extensions.Presentation.RegisterPerformerBehavior` | `PerformerBehaviorKindRegistry` |
+| Presenter commands | `IModContext.Extensions.Presentation.RegisterPresenterCommand` | `PresenterCommandKindRegistry` |
+| Presenter behaviors | `IModContext.Extensions.Presentation.RegisterPresenterBehavior` | `PresenterBehaviorKindRegistry` |
 
 Mods receive only `IModExtensionRegistration`. The mutable `ModExtensionHub` stays internal to the engine startup path.
 After the hub freezes, every Mod-facing registration method rejects new keys. Re-registering the same Mod key is also an error; Mods must treat semantic keys as single-owner declarations, not as idempotent runtime writes.
@@ -32,8 +32,8 @@ Each feature has a player-facing authoring showcase. Use these pages when onboar
 
 - [Config Shards](mod-extensible-runtime-showcases/config-shards.md)
 - [Effect Preset Type Code](mod-extensible-runtime-showcases/effect-preset-type-code.md)
-- [Performer Behavior Extension](mod-extensible-runtime-showcases/performer-behavior-extension.md)
-- [Performer Command Extension](mod-extensible-runtime-showcases/performer-command-extension.md)
+- [Presenter Behavior Extension](mod-extensible-runtime-showcases/presenter-behavior-extension.md)
+- [Presenter Command Extension](mod-extensible-runtime-showcases/presenter-command-extension.md)
 
 ## Details
 
@@ -74,23 +74,23 @@ Preset type definitions remain data IR in `GAS/preset_types.json`. A Mod "codes 
 C# phase handler or graph op it needs, then declaring a preset key that composes those handlers or graphs. This keeps
 user variants out of Core enum space and keeps effect execution in the existing GAS phase pipeline.
 
-### Performer extension keys
+### Presenter extension keys
 
-Performer commands and behaviors use the same startup registration model:
+Presenter commands and behaviors use the same startup registration model:
 
 ```csharp
-context.Extensions.Presentation.RegisterPerformerCommand(
+context.Extensions.Presentation.RegisterPresenterCommand(
     "MyMod.SpawnRibbon",
-    new PerformerCommandExtensionDescriptor(PerformerCommandRouteStrategy.SingleRuntime, SpawnRibbon));
+    new PresenterCommandExtensionDescriptor(PresenterCommandRouteStrategy.SingleRuntime, SpawnRibbon));
 
-context.Extensions.Presentation.RegisterPerformerBehavior(
+context.Extensions.Presentation.RegisterPresenterBehavior(
     "MyMod.RibbonTick",
-    new PerformerBehaviorExtensionDescriptor(PerformerBehaviorExecutionLane.ContinuousTick, TickRibbon));
+    new PresenterBehaviorExtensionDescriptor(PresenterBehaviorExecutionLane.ContinuousTick, TickRibbon));
 ```
 
 Config and programmatic definitions must mark extension entries explicitly:
 
-- command: `PerformerCommandKind.Extension`, extension `CommandKindId`, explicit `RouteStrategy`
+- command: `PresenterCommandKind.Extension`, extension `CommandKindId`, explicit `RouteStrategy`
 - behavior: `BehaviorKind.Extension`, extension `KindId`, explicit `ExtensionLane`
 
 Builtin commands and behaviors cannot carry mod ids or extension lane metadata.
@@ -105,9 +105,9 @@ A mod may add a shard like `mods/showcases/capability_standard/CapabilityStandar
 
 `ProviderMod` registers `ProviderMod.QueryThreat`. `ConsumerMod` writes a graph node using `"op": "ProviderMod.QueryThreat"`. This is valid because registration ownership and config consumption are separate.
 
-### Add a performer behavior
+### Add a presenter behavior
 
-`WeatherMod` registers `WeatherMod.CloudDrift` as a continuous tick behavior. Its performer definition uses `BehaviorKind.Extension` and the resolved `KindId`. The behavior executes through the Performer behavior system, not a parallel presentation pipeline.
+`WeatherMod` registers `WeatherMod.CloudDrift` as a continuous tick behavior. Its presenter definition uses `BehaviorKind.Extension` and the resolved `KindId`. The behavior executes through the Presenter behavior system, not a parallel presentation pipeline.
 
 ## Boundaries
 
@@ -139,9 +139,9 @@ Feature: Split config and mod runtime extensions
     When it tries to register "ProviderMod.OtherOp"
     Then startup fails with a namespace ownership error
 
-  Scenario: A performer extension omits its route
-    Given a performer rule uses an extension command
+  Scenario: A presenter extension omits its route
+    Given a presenter rule uses an extension command
     And the command does not declare a route strategy
-    When performer definitions compile
+    When presenter definitions compile
     Then startup fails before gameplay begins
 ```

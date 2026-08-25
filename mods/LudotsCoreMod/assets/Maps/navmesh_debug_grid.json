@@ -1,0 +1,41 @@
+{
+  "Id": "navmesh_debug_grid",
+  "Tags": [
+    "showcase",
+    "navmesh",
+    "grid",
+    "Feature.NavMesh:On",
+    "Raylib.DebugGuides:Off"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 4,
+      "HeightInMacroTiles": 4,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 256,
+      "DataFile": "navmesh_debug_openworld.bin",
+      "NavigationEnabled": true
+    }
+  ],
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "NavDebug.OpenWorld",
+    "TargetXCm": 51200,
+    "TargetYCm": 51200,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 65000,
+    "FovYDeg": 60
+  },
+  "visualHeightmap": {
+    "asset": "assets/terrain/navmesh_debug_grid.vhtm",
+    "renderProfile": {
+      "absoluteColorPeakSpanCm": 1500,
+      "colorContrast": 2.5
+    }
+  }
+}

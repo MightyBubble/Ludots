@@ -142,7 +142,7 @@ namespace Ludots.Tests.Presentation
             {
                 CommandKind = PresenterCommandKind.DeactivateBehavior,
                 CommandKindId = (byte)PresenterCommandKind.DeactivateBehavior,
-                RouteStrategy = PerformerCommandRouteStrategy.ExistingInstances,
+                RouteStrategy = PresenterCommandRouteStrategy.ExistingInstances,
                 PresenterEntity = presenter,
                 TargetBehaviorSlot = 0,
             });
@@ -194,7 +194,7 @@ namespace Ludots.Tests.Presentation
             {
                 CommandKind = PresenterCommandKind.CreatePresenter,
                 CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
-                RouteStrategy = PerformerCommandRouteStrategy.CreatePerformer,
+                RouteStrategy = PresenterCommandRouteStrategy.CreatePresenter,
                 PresenterDefinitionId = defId,
                 ScopeTag = 900,
                 AnchorKind = PresentationAnchorKind.Entity,
@@ -340,7 +340,7 @@ namespace Ludots.Tests.Presentation
                 {
                     CommandKind = PresenterCommandKind.CreatePresenter,
                     CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
-                    RouteStrategy = PerformerCommandRouteStrategy.CreatePerformer,
+                    RouteStrategy = PresenterCommandRouteStrategy.CreatePresenter,
                     PresenterDefinitionId = defId,
                     ScopeTag = 700,
                     AnchorKind = PresentationAnchorKind.Entity,
@@ -395,7 +395,7 @@ namespace Ludots.Tests.Presentation
                 {
                     CommandKind = PresenterCommandKind.SetParam,
                     CommandKindId = (byte)PresenterCommandKind.SetParam,
-                    RouteStrategy = PerformerCommandRouteStrategy.ExistingInstances,
+                    RouteStrategy = PresenterCommandRouteStrategy.ExistingInstances,
                     PresenterEntity = presenter,
                     ParamKey = ScaleKey,
                     ParamLane = lane,
@@ -411,7 +411,7 @@ namespace Ludots.Tests.Presentation
                 {
                     CommandKind = PresenterCommandKind.SinkParamToAsset,
                     CommandKindId = (byte)PresenterCommandKind.SinkParamToAsset,
-                    RouteStrategy = PerformerCommandRouteStrategy.SingleRuntime,
+                    RouteStrategy = PresenterCommandRouteStrategy.SingleRuntime,
                     PresenterEntity = presenter,
                     ParamKey = paramKey ?? ScaleKey,
                     ParamLane = lane,
