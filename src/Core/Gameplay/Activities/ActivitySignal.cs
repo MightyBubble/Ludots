@@ -10,6 +10,7 @@ namespace Ludots.Core.Gameplay.Activities
         public const string Malformed = "signal.malformed";
         public const string NoSubscription = "signal.no_subscription";
         public const string MatchConditionFailed = "subscription.match_condition_failed";
+        public const string LifecycleKeyNotSource = "lifecycle_key_not_source";
     }
 
     public sealed class ActivitySignal

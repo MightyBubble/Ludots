@@ -50,6 +50,7 @@ namespace Ludots.Core.Gameplay.Activities
         private readonly ActivityDefinitionRegistry _definitions;
         private readonly ProviderServices _providers;
         private readonly ActivityPresentationBuffer _presentation;
+        private readonly ActivityLifecycleBuffer _lifecycle;
         private readonly IClock? _clock;
         private readonly RngPickService? _rngPickService;
         private readonly Dictionary<(int DefinitionId, int ScopeKey), Entity> _index = new();
@@ -71,12 +72,14 @@ namespace Ludots.Core.Gameplay.Activities
             ProviderServices providers,
             ActivityPresentationBuffer presentation,
             IClock? clock = null,
-            RngPickService? rngPickService = null)
+            RngPickService? rngPickService = null,
+            ActivityLifecycleBuffer? lifecycle = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _providers = providers ?? throw new ArgumentNullException(nameof(providers));
             _presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
+            _lifecycle = lifecycle ?? new ActivityLifecycleBuffer();
             _clock = clock;
             _rngPickService = rngPickService;
             _resolvedInstanceCollector = CollectResolvedInstance;
@@ -86,6 +89,8 @@ namespace Ludots.Core.Gameplay.Activities
         }
 
         public ActivityPresentationBuffer Presentation => _presentation;
+
+        public ActivityLifecycleBuffer Lifecycle => _lifecycle;
 
         public ActivityRuntimeSnapshot CaptureSnapshot()
         {
@@ -123,6 +128,7 @@ namespace Ludots.Core.Gameplay.Activities
 
             _index.Clear();
             _presentation.Clear();
+            _lifecycle.Clear();
             _nextInstanceId = 1;
         }
 
@@ -239,6 +245,8 @@ namespace Ludots.Core.Gameplay.Activities
             }
 
             Entity entity = _world.Create(component);
+
+            EmitLifecycle(ActivityLifecycleKeys.Started, definition, component, string.Empty);
 
             if (TracksPendingInstance(definition.RepeatPolicy))
             {
@@ -452,6 +460,9 @@ namespace Ludots.Core.Gameplay.Activities
                 instance.InstanceId,
                 option.Id,
                 string.Empty));
+            EmitLifecycle(ActivityLifecycleKeys.OptionSelected, definition, instance, option.Id);
+            EmitLifecycle(ActivityLifecycleKeys.Settled, definition, instance, option.Id);
+            EmitLifecycle(ActivityLifecycleKeys.Archived, definition, instance, option.Id);
         }
 
         public bool TryGetState(Entity activityEntity, out ActivityInstanceState state, out string activityId)
@@ -555,6 +566,7 @@ namespace Ludots.Core.Gameplay.Activities
                 instance.InstanceId,
                 string.Empty,
                 string.Empty));
+            EmitLifecycle(ActivityLifecycleKeys.Presented, definition, instance, string.Empty);
         }
 
         private void ResolveAutomatic(
@@ -573,6 +585,22 @@ namespace Ludots.Core.Gameplay.Activities
                 instance.InstanceId,
                 string.Empty,
                 string.Empty));
+            EmitLifecycle(ActivityLifecycleKeys.Settled, definition, instance, string.Empty);
+            EmitLifecycle(ActivityLifecycleKeys.Archived, definition, instance, string.Empty);
+        }
+
+        private void EmitLifecycle(
+            string key,
+            ActivityDefinition definition,
+            in ActivityInstanceCm instance,
+            string optionId)
+        {
+            _lifecycle.Add(new ActivityLifecycleEvent(
+                key,
+                definition.Id,
+                instance.InstanceId,
+                optionId,
+                ScopeKey(instance.ScopeHost)));
         }
 
         private void ExecuteEffects(List<ActivityEffectRef> effects, ProviderExecutionContext context)

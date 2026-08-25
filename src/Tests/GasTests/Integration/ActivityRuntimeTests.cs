@@ -112,6 +112,120 @@ namespace Ludots.Tests.GAS.Integration
         }
 
         [Test]
+        public void LifecycleEvents_PlayerPath_IsOrderedAndCarriesOption()
+        {
+            using World world = World.Create();
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.lifecycle", new ActivityDefinition
+            {
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                Options = { new ActivityOptionDefinition { Id = "hold", IsBaseline = true } },
+            });
+            var lifecycle = new ActivityLifecycleBuffer();
+            var runtime = new ActivityRuntimeService(
+                world,
+                definitions,
+                CreateServices(),
+                new ActivityPresentationBuffer(),
+                lifecycle: lifecycle);
+
+            Entity activity = runtime.OfferOrActivate("activity.lifecycle", world.Create());
+            runtime.ResolveOption(activity, "hold");
+
+            Assert.That(lifecycle.Events, Has.Count.EqualTo(5));
+            Assert.That(lifecycle.Events.Select(e => e.Key), Is.EqualTo(new[]
+            {
+                ActivityLifecycleKeys.Started,
+                ActivityLifecycleKeys.Presented,
+                ActivityLifecycleKeys.OptionSelected,
+                ActivityLifecycleKeys.Settled,
+                ActivityLifecycleKeys.Archived,
+            }));
+            Assert.That(lifecycle.Events.All(e => e.ActivityId == "activity.lifecycle" && e.InstanceId > 0), Is.True);
+            Assert.That(lifecycle.Events[2].OptionId, Is.EqualTo("hold"));
+        }
+
+        [Test]
+        public void LifecycleEvents_AutomaticPath_ExcludesPresentationAndSelection()
+        {
+            using World world = World.Create();
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.auto_lifecycle", new ActivityDefinition
+            {
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Automatic,
+                AutomaticEffects = { new ActivityEffectRef { EffectKey = "fixture.noop" } },
+            });
+            var lifecycle = new ActivityLifecycleBuffer();
+            var runtime = new ActivityRuntimeService(
+                world,
+                definitions,
+                CreateServices(),
+                new ActivityPresentationBuffer(),
+                lifecycle: lifecycle);
+
+            runtime.OfferOrActivate("activity.auto_lifecycle", world.Create());
+
+            Assert.That(lifecycle.Events.Select(e => e.Key), Is.EqualTo(new[]
+            {
+                ActivityLifecycleKeys.Started,
+                ActivityLifecycleKeys.Settled,
+                ActivityLifecycleKeys.Archived,
+            }));
+        }
+
+        [Test]
+        public void Projection_RehydratesFromInstance_WhenLifecycleBufferIsEmpty()
+        {
+            using World world = World.Create();
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.projection", new ActivityDefinition
+            {
+                SourceKey = "fixture.signal_ping",
+                DisplayName = "Projection fixture",
+                Summary = "Reads the active instance as truth.",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                Options = { new ActivityOptionDefinition { Id = "hold", IsBaseline = true } },
+            });
+            var lifecycle = new ActivityLifecycleBuffer();
+            var runtime = new ActivityRuntimeService(
+                world,
+                definitions,
+                CreateServices(),
+                new ActivityPresentationBuffer(),
+                lifecycle: lifecycle);
+
+            Entity activity = runtime.OfferOrActivate("activity.projection", world.Create());
+            lifecycle.Clear();
+
+            List<ActivityView> views = runtime.CaptureViews();
+            Assert.That(views, Has.Count.EqualTo(1));
+            Assert.That(views[0].Entity, Is.EqualTo(activity));
+            Assert.That(views[0].State, Is.EqualTo(ActivityInstanceState.Active));
+            Assert.That(views[0].ActivityId, Is.EqualTo("activity.projection"));
+            Assert.That(views[0].DisplayName, Is.EqualTo("Projection fixture"));
+        }
+
+        [Test]
+        public void LifecycleKeyCannotBeUsedAsSignalSubscription()
+        {
+            var definitions = new ActivityDefinitionRegistry();
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                definitions.Register("activity.invalid_source", new ActivityDefinition
+                {
+                    SourceKey = ActivityLifecycleKeys.Presented,
+                    SourceSubscription = new ActivitySourceSubscription
+                    {
+                        SourceKey = ActivityLifecycleKeys.Presented,
+                    },
+                    Options = { new ActivityOptionDefinition { Id = "ok", IsBaseline = true } },
+                }));
+
+            Assert.That(error.Message, Does.Contain("lifecycle_key_not_source"));
+        }
+
+        [Test]
         public void HiddenOption_DoesNotAppear_BlockedOptionKeepsReason()
         {
             using World world = World.Create();

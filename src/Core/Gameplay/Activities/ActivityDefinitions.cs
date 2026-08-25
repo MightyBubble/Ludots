@@ -212,6 +212,12 @@ namespace Ludots.Core.Gameplay.Activities
                         $"Activity '{definition.Id}' source_subscription requires source_key.");
                 }
 
+                if (ActivityLifecycleKeys.IsLifecycleKey(definition.SourceSubscription.SourceKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' source_subscription.source_key '{definition.SourceSubscription.SourceKey}' is an activity lifecycle key, not a fact source ({ActivitySignalFailures.LifecycleKeyNotSource}).");
+                }
+
                 if (!string.Equals(
                     definition.SourceKey,
                     definition.SourceSubscription.SourceKey,
