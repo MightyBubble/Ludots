@@ -2612,7 +2612,7 @@ namespace Ludots.Core.Presentation.Config
                     cyclePath.AddRange(path);
                     cyclePath.Add(childDefinition.Key);
                     throw new InvalidOperationException(
-                        $"{PresenterCreatePlanCompiler.CircularChildReferenceError}: root='{ownerKey}', childSource='{entryContext}' Circular child reference detected on expansion path: {string.Join("->", cyclePath)}");
+                        $"{PresenterCreatePlanCompiler.CircularChildReferenceError}: root='{ownerKey}', childSource='{entryContext}', expansionPath='{string.Join("->", cyclePath)}'.");
                 }
 
                 pathIds.Add(childDefinitionId);
