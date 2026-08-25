@@ -119,7 +119,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>
         /// Set a queued order at a specific index.
         /// </summary>
-        private void SetQueued(int index, in QueuedOrder order)
+        internal void SetQueued(int index, in QueuedOrder order)
         {
             if ((uint)index >= MAX_QUEUED_ORDERS) return;
             _queuedOrders[index] = order;
