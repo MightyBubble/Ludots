@@ -38,7 +38,7 @@ namespace Ludots.Core.Presentation.Instancing
         public InstancedBatchAddress Address;
         public InstancedBatchTransform[] Transforms;
         public InstancedBatchInstanceSource Source;
-        public InstancedBatchFactorizedSource FactorizedSource;
+        public InstancedBatchFactorizedSource? FactorizedSource;
 
         public int InstanceCount => Source.IsValid
             ? Source.InstanceCount
