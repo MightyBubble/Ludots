@@ -1327,7 +1327,9 @@ namespace Ludots.Core.Engine
                 stableDrawCache,
                 presenterVisualStableIds,
                 presenterCommandKinds,
-                presenterTimerTable);
+                presenterTimerTable,
+                GlobalContext,
+                soundRequestBuffer);
             var presenterBehaviorSystem = new PresenterBehaviorSystem(
                 World,
                 presenterRuntime,
