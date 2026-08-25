@@ -538,7 +538,9 @@ namespace Ludots.Tests.Gas.Graph
                         ],
                         "nodes": [
                           { "id": "w_spawn_begin", "op": "LoadExplicitTarget" },
+                          { "id": "w_spawn_read", "op": "ReadMapVarInt", "var": "watcher_spawned" },
                           { "id": "w_spawn_one", "op": "ConstInt", "intValue": 1 },
+                          { "id": "w_spawn_add", "op": "AddInt" },
                           { "id": "w_spawn_write", "op": "WriteMapVarInt", "var": "watcher_spawned" },
                           { "id": "w_spawn_done", "op": "HaltReturnInt" },
 
@@ -548,8 +550,10 @@ namespace Ludots.Tests.Gas.Graph
                           { "id": "w_death_done", "op": "HaltReturnInt" }
                         ],
                         "controlEdges": [
-                          { "from": "w_spawn_begin", "fromPort": "next", "to": "w_spawn_one" },
-                          { "from": "w_spawn_one", "fromPort": "next", "to": "w_spawn_write" },
+                          { "from": "w_spawn_begin", "fromPort": "next", "to": "w_spawn_read" },
+                          { "from": "w_spawn_read", "fromPort": "next", "to": "w_spawn_one" },
+                          { "from": "w_spawn_one", "fromPort": "next", "to": "w_spawn_add" },
+                          { "from": "w_spawn_add", "fromPort": "next", "to": "w_spawn_write" },
                           { "from": "w_spawn_write", "fromPort": "next", "to": "w_spawn_done" },
                           { "from": "w_death_begin", "fromPort": "next", "to": "w_death_one" },
                           { "from": "w_death_one", "fromPort": "next", "to": "w_death_write" },
@@ -557,8 +561,10 @@ namespace Ludots.Tests.Gas.Graph
                         ],
                         "valueEdges": [
                           { "from": "w_spawn_begin", "fromPort": "value", "to": "w_spawn_write", "toPort": "source" },
-                          { "from": "w_spawn_one", "fromPort": "value", "to": "w_spawn_write", "toPort": "value" },
-                          { "from": "w_spawn_one", "fromPort": "value", "to": "w_spawn_done", "toPort": "value" },
+                          { "from": "w_spawn_read", "fromPort": "value", "to": "w_spawn_add", "toPort": "a" },
+                          { "from": "w_spawn_one", "fromPort": "value", "to": "w_spawn_add", "toPort": "b" },
+                          { "from": "w_spawn_add", "fromPort": "value", "to": "w_spawn_write", "toPort": "value" },
+                          { "from": "w_spawn_add", "fromPort": "value", "to": "w_spawn_done", "toPort": "value" },
                           { "from": "w_death_begin", "fromPort": "value", "to": "w_death_write", "toPort": "source" },
                           { "from": "w_death_one", "fromPort": "value", "to": "w_death_write", "toPort": "value" },
                           { "from": "w_death_one", "fromPort": "value", "to": "w_death_done", "toPort": "value" }
