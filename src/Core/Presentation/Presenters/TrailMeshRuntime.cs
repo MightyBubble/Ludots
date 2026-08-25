@@ -75,7 +75,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         public int ActiveCount => _samplers.Count;
 
-        public void Sample(Entity entity, int stableId, in TrailMeshConfig config, in Vector3 baseWorld, in Vector3 tipWorld, float now)
+        public void Sample(World world, Entity entity, int stableId, in TrailMeshConfig config, in Vector3 baseWorld, in Vector3 tipWorld, float now)
         {
             if (stableId <= 0)
             {
@@ -93,7 +93,7 @@ namespace Ludots.Core.Presentation.Presenters
                         $"TrailMeshRuntime sampler capacity exhausted while activating presenter entity {entity.Id} (capacity={_samplerPool.Length}).");
                 }
 
-                ClaimStableId(stableId, entity);
+                ClaimStableId(world, stableId, entity);
                 int samplerIndex = _freeSamplerIndices[_samplers.Count];
                 sampler = _samplerPool[samplerIndex];
                 sampler.Reset(entity, stableId);
@@ -107,10 +107,16 @@ namespace Ludots.Core.Presentation.Presenters
                 if (_samplersByStableId.TryGetValue(stableId, out TrailSampler? existing) &&
                     !ReferenceEquals(existing, sampler))
                 {
-                    throw new InvalidOperationException(
-                        $"TrailMesh stableId {stableId} is already claimed by another active sampler " +
-                        $"(owner entity {existing.Entity.Id}); presenter entity {entity.Id} would silently " +
-                        "overwrite the same TrailMeshBuffer slot. Presenter stableIds must be unique among live presenters.");
+                    if (world.IsAlive(existing.Entity))
+                    {
+                        throw new InvalidOperationException(
+                            $"TrailMesh stableId {stableId} is already claimed by another active sampler " +
+                            $"(owner entity {existing.Entity.Id}); presenter entity {entity.Id} would silently " +
+                            "overwrite the same TrailMeshBuffer slot. Presenter stableIds must be unique among live presenters.");
+                    }
+
+                    // 旧属主同帧内已死亡、尚未被 Advance 清扫：法律上的 stableId 复用，释放旧声明。
+                    _samplersByStableId.Remove(stableId);
                 }
 
                 int previousStableId = sampler.StableId;
@@ -193,15 +199,22 @@ namespace Ludots.Core.Presentation.Presenters
         /// <summary>
         /// buffer 槽位以 stableId 为身份；两个存活采样器撞同一 stableId 会在
         /// Upsert 时静默覆盖彼此——在此确定性 fail-fast，而不是等 buffer 层面掩盖。
+        /// 例外：旧属主同帧内已死亡（死亡与声明发生在同一次 Advance 清扫之前）属于
+        /// 合法的 stableId 回收，释放旧声明后允许新属主接管，不误报。
         /// </summary>
-        private void ClaimStableId(int stableId, Entity entity)
+        private void ClaimStableId(World world, int stableId, Entity entity)
         {
             if (_samplersByStableId.TryGetValue(stableId, out TrailSampler? existing))
             {
-                throw new InvalidOperationException(
-                    $"TrailMesh stableId {stableId} is already claimed by another active sampler " +
-                    $"(owner entity {existing.Entity.Id}); presenter entity {entity.Id} would silently " +
-                    "overwrite the same TrailMeshBuffer slot. Presenter stableIds must be unique among live presenters.");
+                if (world.IsAlive(existing.Entity))
+                {
+                    throw new InvalidOperationException(
+                        $"TrailMesh stableId {stableId} is already claimed by another active sampler " +
+                        $"(owner entity {existing.Entity.Id}); presenter entity {entity.Id} would silently " +
+                        "overwrite the same TrailMeshBuffer slot. Presenter stableIds must be unique among live presenters.");
+                }
+
+                _samplersByStableId.Remove(stableId);
             }
         }
 

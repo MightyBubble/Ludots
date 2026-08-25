@@ -32,7 +32,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private static readonly Vector4 TailColor = new(0.22f, 0.42f, 1.00f, 0.00f);
 
         private readonly TrailMeshBuffer _trails = new(capacity: 8);
-        private readonly TrailSampleHistory _history = new(MaxTrailSamples);
+        // 注意：TrailSampleHistory 是含可变状态的 struct，字段必须可写；readonly 字段会让
+        // PushHead/EvictOlderThan/AgeTo 落在防御性副本上，Count 永远为 0，画廊什么都画不出来。
+        private TrailSampleHistory _history = new(MaxTrailSamples);
         private readonly GalleryLitProps _litProps = new();
         private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibDirectionalShadowMap _shadowMap = null!;
@@ -51,7 +53,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
         {
             GalleryCamera.EnforceDistance(ref camera, 9f);
-            _time += 1f / 60f;
             _litProps.Lighting.SetDayPhase(_litProps.DayPhase01);
 
             _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, Vector3.Zero, 8f);
@@ -67,28 +68,41 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _litProps.DrawCube(new Vector3(0f, -0.08f, 0f), new Vector3(12f, 0.16f, 12f), GalleryColors.ShadowReceiverGray, roughness: 0.9f);
             _litProps.DrawCube(new Vector3(0f, 0.55f, 0f), new Vector3(0.5f, 1.1f, 0.5f), new Vector4(0.30f, 0.32f, 0.38f, 1f), roughness: 0.6f);
 
+            SimulateTrailFrame(out Vector3 bladeBase, out Vector3 bladeTip);
+            Rl.DrawLine3D(bladeBase, bladeTip, new Color(235, 245, 255, 255));
+
+            RaylibTrailMeshRenderer.DrawTrailMeshes(_trails);
+
+            Rl.EndMode3D();
+        }
+
+        /// <summary>
+        /// 推进一帧刀光模拟（纯数据，无任何渲染调用）：固定 1/60 步进计算挥砍相位与刀刃
+        /// 世界坐标，挥砍窗口内头插样本、超寿命尾部淘汰、age01 折算并 upsert 进
+        /// TrailMeshBuffer。画廊 Draw 每帧调用；headless 回归测试直接驱动本方法验证
+        /// 采样语义（PushHead 必须真的改变 Count，且一帧结束缓冲里必须有条带）。
+        /// </summary>
+        internal void SimulateTrailFrame(out Vector3 bladeBase, out Vector3 bladeTip)
+        {
+            _time += 1f / 60f;
             float phase = _time % SwingPeriodSeconds;
             float swingT = Math.Clamp(phase / SwingDurationSeconds, 0f, 1f);
             float angle = StartAngleRad + ((EndAngleRad - StartAngleRad) * EaseOutCubic(swingT));
             Vector3 direction = new(MathF.Cos(angle), 0f, MathF.Sin(angle));
-            Vector3 bladeBase = Pivot + (direction * BladeBaseRadius);
-            Vector3 bladeTip = Pivot + (direction * BladeTipRadius);
+            bladeBase = Pivot + (direction * BladeBaseRadius);
+            bladeTip = Pivot + (direction * BladeTipRadius);
 
-            Rl.DrawLine3D(bladeBase, bladeTip, new Color(235, 245, 255, 255));
-
-            bool emitting = phase < SwingDurationSeconds;
-            if (emitting)
+            if (phase < SwingDurationSeconds)
             {
                 _history.PushHead(bladeBase, bladeTip, _time, MaxTrailSamples);
             }
 
             _history.EvictOlderThan(_time, TrailLifetimeSeconds);
             EmitTrailBuffer();
-
-            RaylibTrailMeshRenderer.DrawTrailMeshes(_trails);
-
-            Rl.EndMode3D();
         }
+
+        /// <summary>画廊的 TrailMeshBuffer 快照出口；headless 回归测试用于断言帧末条带。</summary>
+        internal TrailMeshBuffer TrailBuffer => _trails;
 
         private void EmitTrailBuffer()
         {

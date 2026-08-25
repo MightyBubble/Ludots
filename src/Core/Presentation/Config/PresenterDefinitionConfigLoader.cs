@@ -2743,37 +2743,37 @@ namespace Ludots.Core.Presentation.Config
                 switch (kind)
                 {
                     case BehaviorKind.AssetBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.AssetBinding = ParseAssetBinding(obj["assetBinding"], $"{behaviorPath}.assetBinding");
                         slot.Style = ParseBehaviorStyle(obj["style"], $"{behaviorPath}.style");
                         slot.Motion = ParseBehaviorMotion(obj["motion"], $"{behaviorPath}.motion");
                         break;
                     case BehaviorKind.AttributeBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.AttributeBinding = ParseAttributeBinding(obj["attributeBinding"], $"{behaviorPath}.attributeBinding");
                         break;
                     case BehaviorKind.TagBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.TagBinding = ParseTagBinding(obj["tagBinding"], $"{behaviorPath}.tagBinding");
                         break;
                     case BehaviorKind.Animator:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Animator = ParseAnimator(obj["animator"], $"{behaviorPath}.animator");
                         break;
                     case BehaviorKind.Attachment:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Attachment = ParseAttachment(obj["attachment"], $"{behaviorPath}.attachment");
                         break;
                     case BehaviorKind.Sound:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Sound = ParseSound(obj["sound"], $"{behaviorPath}.sound");
                         break;
                     case BehaviorKind.Material:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Material = ParseMaterial(obj["material"], $"{behaviorPath}.material");
                         break;
                     case BehaviorKind.Spline:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Spline = ParseSpline(obj["spline"], $"{behaviorPath}.spline");
                         break;
                     case BehaviorKind.TrailMesh:
@@ -2781,25 +2781,25 @@ namespace Ludots.Core.Presentation.Config
                         slot.TrailMesh = ParseTrailMesh(obj["trailMesh"], $"{behaviorPath}.trailMesh");
                         break;
                     case BehaviorKind.Grounding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Grounding = ParseGrounding(obj["grounding"], $"{behaviorPath}.grounding");
                         break;
                     case BehaviorKind.MinimapMarker:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.MinimapMarker = ParseMinimapMarker(obj["minimapMarker"], $"{behaviorPath}.minimapMarker");
                         break;
                     case BehaviorKind.WorldText:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.WorldText = ParseWorldText(obj["worldText"], $"{behaviorPath}.worldText");
                         slot.Style = ParseBehaviorStyle(obj["style"], $"{behaviorPath}.style");
                         slot.Motion = ParseBehaviorMotion(obj["motion"], $"{behaviorPath}.motion");
                         break;
                     case BehaviorKind.SurfaceSource:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch", "trailMesh");
                         slot.SurfaceSource = ParseSurface(obj["surfaceSource"], ownerKey, $"{behaviorPath}.surfaceSource");
                         break;
                     case BehaviorKind.InstancedBatch:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource", "trailMesh");
                         slot.InstancedBatch = ParseInstancedBatchBehavior(obj["instancedBatch"], ownerKey, $"{behaviorPath}.instancedBatch");
                         break;
                     case BehaviorKind.Extension:
