@@ -229,11 +229,23 @@ namespace Ludots.Core.Gameplay.Narrative
 
         public void CompleteTask(string taskId)
         {
+            if (_taskRuntime.TryGetState(taskId, out TaskInstanceState state) &&
+                state == TaskInstanceState.Completed)
+            {
+                return;
+            }
+
             _taskRuntime.Complete(taskId);
         }
 
         public void FailTask(string taskId)
         {
+            if (_taskRuntime.TryGetState(taskId, out TaskInstanceState state) &&
+                state == TaskInstanceState.Failed)
+            {
+                return;
+            }
+
             _taskRuntime.Fail(taskId, Entity.Null, string.Empty);
         }
 
