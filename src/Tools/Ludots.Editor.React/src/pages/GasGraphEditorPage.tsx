@@ -24,12 +24,14 @@ import {
   GraphVariablePanel,
   collectionTypeError,
   decodeMapVarDrag,
+  decodePlacedVarDrag,
   emptyVariableDraft,
+  type GraphPlacedInstance,
   type GraphVariableRow,
   type MapVariableDraft,
   type MapVariableScalarType,
 } from './gas-graph-editor/GraphVariablePanel';
-import { GasNode, isPureValueOp } from './gas-graph-editor/GasNode';
+import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor/GasNode';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
 import { EventEntryInspector } from './gas-graph-editor/EventEntryInspector';
@@ -92,6 +94,12 @@ type GraphNodeConfig = {
   panelSkin?: string | null;
   panelZOrder?: number | null;
   var?: string | null;
+  payloadKey?: string | null;
+  instanceId?: string | null;
+  entryLabel?: string | null;
+  event?: string | null;
+  scope?: string | null;
+  argKey?: string | null;
   pinRegister?: number;
 };
 
@@ -99,6 +107,7 @@ type GasNodeData = GraphNodeConfig & {
   label: string;
   role?: 'op' | 'event-entry';
   entry?: GraphEntryConfig;
+  schema?: EventSchemaView | null;
   descriptor?: GraphDescriptor;
   sugar?: GraphSugarDescriptor;
   controlOutputPorts?: string[];
@@ -284,12 +293,33 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     panelSkin: n.panelSkin ?? undefined,
     panelZOrder: n.panelZOrder,
     var: n.var ?? undefined,
+    payloadKey: n.payloadKey ?? undefined,
+    instanceId: n.instanceId ?? undefined,
+    entryLabel: n.entryLabel ?? undefined,
+    event: n.event ?? undefined,
+    scope: n.scope ?? undefined,
+    argKey: n.argKey ?? undefined,
     pinRegister: n.pinRegister,
   });
 }
 
 function isControlFlowGraph(graph: GraphConfig): boolean {
   return Array.isArray(graph.controlEdges) || Array.isArray(graph.valueEdges);
+}
+
+// #1115: DispatchMapEvent payload ports are dynamic — one per non-String schema
+// parameter, named after the parameter (mirrors the event-entry String filter).
+function dispatchParamPorts(
+  op: string,
+  event: string | null | undefined,
+  schemaFor: (event: string) => EventSchemaView | null,
+): { op: string; controlOutputPorts: string[]; valueInputPorts: string[]; outputType: string; lowersTo: string } | null {
+  if (op !== 'DispatchMapEvent' || !event) return null;
+  const schema = schemaFor(event);
+  const ports = schema
+    ? schema.parameters.filter((param) => param.type !== 'String').map((param) => param.name)
+    : [];
+  return { op, controlOutputPorts: ['next'], valueInputPorts: ports, outputType: 'Void', lowersTo: 'DispatchMapEvent' };
 }
 
 function resolveControlOutputPorts(op: string, descriptor?: GraphDescriptor, sugar?: GraphSugarDescriptor): string[] {
@@ -304,11 +334,27 @@ function edgeLabel(edge: Edge<GasEdgeData>): string {
   return `${String(edge.sourceHandle ?? '')} -> ${String(edge.targetHandle ?? '')}`;
 }
 
+function opForEventPin(handle: string, schema?: EventSchemaView | null): { op: string; payloadKey?: string } | null {
+  if (handle === 'owner') return { op: 'LoadExplicitTarget' };
+  if (handle === 'caster') return { op: 'LoadCaster' };
+  if (handle.startsWith('payload:')) {
+    const key = handle.slice('payload:'.length);
+    const param = schema?.parameters.find((candidate) => candidate.key === key);
+    if (!param) return null;
+    if (param.type === 'Entity') return { op: 'LoadEntryPayloadEntity', payloadKey: key };
+    if (param.type === 'Int') return { op: 'LoadEntryPayloadInt', payloadKey: key };
+    if (param.type === 'Float') return { op: 'LoadEntryPayloadFloat', payloadKey: key };
+    return null;
+  }
+  return null;
+}
+
 function graphToFlow(
   graph: GraphConfig,
   descriptors: Record<string, GraphDescriptor> = {},
   sugars: Record<string, GraphSugarDescriptor> = {},
   layout: EditorLayout = {},
+  schemaFor: (event: string) => EventSchemaView | null = () => null,
 ): { nodes: Node<GasNodeData>[]; edges: Edge<GasEdgeData>[] } {
   const switchPorts = new Map<string, string[]>();
   for (const edge of graph.controlEdges ?? []) {
@@ -317,7 +363,9 @@ function graphToFlow(
     if (!ports.includes(edge.fromPort)) ports.push(edge.fromPort);
     switchPorts.set(edge.from, ports);
   }
-  const nodes: Node<GasNodeData>[] = graph.nodes.map((n, index) => ({
+  const nodes: Node<GasNodeData>[] = graph.nodes.map((n, index) => {
+    const dispatchSugar = dispatchParamPorts(n.op, n.event, schemaFor);
+    return {
     id: n.id,
     type: 'gas',
     position: layout.nodes?.[n.id] ?? { x: 40 + index * 220, y: 80 + (index % 2) * 40 },
@@ -326,10 +374,13 @@ function graphToFlow(
       role: 'op',
       label: n.id,
       descriptor: descriptors[n.op],
-      sugar: sugars[n.op],
-      controlOutputPorts: [...resolveControlOutputPorts(n.op, descriptors[n.op], sugars[n.op]), ...(switchPorts.get(n.id) ?? [])],
+      sugar: dispatchSugar ?? sugars[n.op],
+      controlOutputPorts: dispatchSugar
+        ? dispatchSugar.controlOutputPorts
+        : [...resolveControlOutputPorts(n.op, descriptors[n.op], sugars[n.op]), ...(switchPorts.get(n.id) ?? [])],
     },
-  }));
+  };
+  });
 
   const startIndex = new Map<string, number>();
   for (const entry of graph.entries ?? []) {
@@ -348,6 +399,7 @@ function graphToFlow(
         op: 'Event',
         role: 'event-entry',
         entry,
+        schema: schemaFor(entry.event),
         label: entry.event,
         controlOutputPorts: ['exec'],
       },
@@ -490,6 +542,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
       delete created.sugar;
       delete created.role;
       delete created.entry;
+      delete created.schema;
       return toWireNode({ ...created, id: flowNode.id, op: edited.op });
     }
     const rest = { ...edited };
@@ -499,6 +552,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
     delete rest.controlOutputPorts;
     delete rest.role;
     delete rest.entry;
+    delete rest.schema;
     return toWireNode({
       ...n,
       ...rest,
@@ -564,6 +618,9 @@ export const GasGraphEditorPage: React.FC = () => {
   const [descriptors, setDescriptors] = React.useState<Record<string, GraphDescriptor>>({});
   const [sugars, setSugars] = React.useState<Record<string, GraphSugarDescriptor>>({});
   const [panelAnchors, setPanelAnchors] = React.useState<string[]>([]);
+  const [payloadKeys, setPayloadKeys] = React.useState<string[]>([]);
+  const [eventSchemas, setEventSchemas] = React.useState<EventSchemaView[]>([]);
+  const [mapInstances, setMapInstances] = React.useState<GraphPlacedInstance[]>([]);
   const [nodeSearch, setNodeSearch] = React.useState('');
   const [layout, setLayout] = React.useState<EditorLayout>({});
   const [nodes, setNodes] = React.useState<Node<GasNodeData>[]>([]);
@@ -597,6 +654,7 @@ export const GasGraphEditorPage: React.FC = () => {
     flowY: number;
     name: string;
     type: MapVariableScalarType;
+    placed: boolean;
   } | null>(null);
   const debugPollInFlight = React.useRef(false);
   const reactFlowRef = React.useRef<ReactFlowInstance | null>(null);
@@ -620,7 +678,7 @@ export const GasGraphEditorPage: React.FC = () => {
     }
     const hosts = payload.maps as Array<{
       mapId: string;
-      variables: Array<{ name: string; type: string; initial: number; phase: boolean }>;
+      variables: Array<{ name: string; type: string; initial: number }>;
     }>;
     if (hosts.length === 0) {
       setDeclaredVariables([]);
@@ -646,7 +704,6 @@ export const GasGraphEditorPage: React.FC = () => {
         name: variable.name,
         type: variable.type,
         initial: variable.initial,
-        phase: variable.phase,
         declared: true,
         reads: 0,
         writes: 0,
@@ -662,13 +719,91 @@ export const GasGraphEditorPage: React.FC = () => {
           elementType: 'int',
           keyType: 'int',
           initial: String(rows[0].initial),
-          phase: rows[0].phase,
         }
       : emptyVariableDraft());
     setVariableStatus(hosts.length > 1
       ? `Shared variables from ${hosts.map((item) => item.mapId).join(', ')}.`
       : `Loaded ${rows.length} variables from ${host.mapId}.`);
   }, [modId]);
+
+  const schemaFor = React.useCallback(
+    (event: string): EventSchemaView | null => eventSchemas.find((schema) => schema.name === event) ?? null,
+    [eventSchemas],
+  );
+
+  // Graph fetch must not re-run when schemas arrive after the first load; the
+  // [schemaFor] effect below patches already-placed event nodes instead.
+  const schemaForRef = React.useRef(schemaFor);
+  React.useEffect(() => {
+    schemaForRef.current = schemaFor;
+  }, [schemaFor]);
+
+  const loadEventSchemas = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/graph/event-schemas/${encodeURIComponent(modId)}`);
+      const payload = await res.json();
+      if (!res.ok || !payload.ok || !Array.isArray(payload.schemas)) {
+        throw new Error(payload.error ?? `Event schema load failed (${res.status})`);
+      }
+      setEventSchemas(payload.schemas as EventSchemaView[]);
+    } catch (err) {
+      setEventSchemas([]);
+      setStatus(`Event schemas unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [modId]);
+
+  React.useEffect(() => {
+    void loadEventSchemas();
+  }, [loadEventSchemas]);
+
+  React.useEffect(() => {
+    setNodes((previous) => previous.map((node) => {
+      if (node.data.role === 'event-entry') {
+        return { ...node, data: { ...node.data, schema: schemaFor(node.data.entry?.event ?? '') } };
+      }
+
+      if (node.data.op === 'DispatchMapEvent') {
+        const dispatchSugar = dispatchParamPorts(node.data.op, node.data.event, schemaFor);
+        if (!dispatchSugar) return node;
+        return {
+          ...node,
+          data: { ...node.data, sugar: dispatchSugar, controlOutputPorts: dispatchSugar.controlOutputPorts },
+        };
+      }
+
+      return node;
+    }));
+  }, [schemaFor]);
+
+  React.useEffect(() => {
+    if (!variableMapId) {
+      setMapInstances([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/maps/${encodeURIComponent(variableMapId)}/instances`);
+        const payload = await res.json();
+        if (cancelled) return;
+        if (!res.ok || !payload.ok || !Array.isArray(payload.instances)) {
+          throw new Error(payload.error ?? `Instance list load failed (${res.status})`);
+        }
+        // Keep the full row (instanceId + template); template feeds the panel tooltip and
+        // the ordinal keeps the Placed section in the endpoint's authored order (#1108).
+        setMapInstances((payload.instances as Array<{ instanceId: string; template?: string }>).map((instance, ordinal) => ({
+          instanceId: instance.instanceId,
+          template: instance.template ?? '',
+          ordinal,
+        })));
+      } catch {
+        if (!cancelled) setMapInstances([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [modId, variableMapId]);
 
   const loadGraph = React.useCallback(async () => {
     setBusy(true);
@@ -714,8 +849,9 @@ export const GasGraphEditorPage: React.FC = () => {
       setDescriptors(nextDescriptors);
       setSugars(nextSugars);
       setPanelAnchors(nextAnchors);
+      setPayloadKeys(Array.isArray(descriptorPayload.payloadKeys) ? descriptorPayload.payloadKeys as string[] : []);
       setGraph(loaded);
-      const flow = graphToFlow(loaded, nextDescriptors, nextSugars, nextLayout);
+      const flow = graphToFlow(loaded, nextDescriptors, nextSugars, nextLayout, schemaForRef.current);
       const hasSavedPositions = Object.keys(nextLayout.nodes ?? {}).length > 0;
       if (!hasSavedPositions) {
         const positions = computeAutoLayout(flow.nodes, flow.edges);
@@ -812,7 +948,7 @@ export const GasGraphEditorPage: React.FC = () => {
         data.next = String(value).trim() === '' ? null : String(value).trim();
       } else if (field === 'boolValue') {
         data.boolValue = Boolean(value);
-      } else if (field === 'intValue' || field === 'teamId') {
+      } else if (field === 'intValue' || field === 'teamId' || field === 'graphId') {
         const parsed = Number.parseInt(String(value), 10);
         data[field] = Number.isInteger(parsed) ? parsed : 0;
       } else if (field === 'floatValue' || field === 'panelZOrder') {
@@ -891,6 +1027,54 @@ export const GasGraphEditorPage: React.FC = () => {
       return;
     }
     if (sourceNode?.data.role === 'event-entry') {
+      if (connection.sourceHandle !== 'exec') {
+        const pin = opForEventPin(connection.sourceHandle, sourceNode.data.schema);
+        if (!pin) {
+          setStatus('This pin has no runtime op yet (string payloads wait on the text value contract).');
+          return;
+        }
+        const targetNode = nodes.find((node) => node.id === connection.target);
+        const position = {
+          x: (targetNode?.position.x ?? 300) - 230,
+          y: (targetNode?.position.y ?? 200) + 48,
+        };
+        const base = pin.op.replace(/[^A-Za-z0-9_]/g, '_').toLocaleLowerCase();
+        let nodeId = base;
+        let suffix = 1;
+        const used = new Set(nodes.map((node) => node.id));
+        while (used.has(nodeId)) {
+          suffix += 1;
+          nodeId = `${base}_${suffix}`;
+        }
+        setNodes((previous) => [...previous, {
+          id: nodeId,
+          type: 'gas',
+          position,
+          data: {
+            id: nodeId,
+            op: pin.op,
+            role: 'op',
+            label: nodeId,
+            payloadKey: pin.payloadKey ?? null,
+            descriptor: descriptors[pin.op],
+            sugar: sugars[pin.op],
+            controlOutputPorts: resolveControlOutputPorts(pin.op, descriptors[pin.op], sugars[pin.op]),
+          },
+        }]);
+        setEdges((prev) => addEdge({
+          id: `value:${nodeId}:value:${connection.target}:${connection.targetHandle}`,
+          source: nodeId,
+          sourceHandle: 'value',
+          target: connection.target,
+          targetHandle: connection.targetHandle,
+          markerEnd: { type: MarkerType.ArrowClosed },
+          style: { stroke: '#a78bfa', strokeWidth: 2 },
+          data: { kind: 'value' },
+        }, prev));
+        setSelectedNodeId(nodeId);
+        setStatus(`Placed ${pin.op}${pin.payloadKey ? ` for ${pin.payloadKey}` : ''}.`);
+        return;
+      }
       if (kind !== 'control') return;
       setEdges((prev) => addEdge({
         id: eventThenEdgeId(connection.source!, connection.target!),
@@ -916,7 +1100,7 @@ export const GasGraphEditorPage: React.FC = () => {
       style: { stroke: kind === 'control' ? '#38bdf8' : '#a78bfa', strokeWidth: 2 },
       data: { kind },
     }, prev));
-  }, [nodes]);
+  }, [nodes, descriptors, sugars]);
 
   const applyAutoLayout = React.useCallback(() => {
     const positions = computeAutoLayout(nodes, edges);
@@ -978,14 +1162,14 @@ export const GasGraphEditorPage: React.FC = () => {
       .sort((a, b) => a.op.localeCompare(b.op));
   }, [descriptors, nodeSearch, sugars]);
 
-  const addAuthoringNode = React.useCallback((op: string, position?: { x: number; y: number }, extras?: { var?: string }) => {
+  const addAuthoringNode = React.useCallback((op: string, position?: { x: number; y: number }, extras?: { var?: string; instanceId?: string }) => {
     if (!graph) return;
     if (!descriptors[op] && !sugars[op]) {
       setStatus(`Cannot add '${op}': this graph kind has no runtime descriptor for it.`);
       return;
     }
-    const idBase = extras?.var
-      ? `${op.startsWith('Write') ? 'set' : 'get'}_${extras.var}`.replace(/[^A-Za-z0-9_]/g, '_').toLocaleLowerCase()
+    const idBase = extras?.var ?? extras?.instanceId
+      ? `${op.startsWith('Write') ? 'set' : 'get'}_${extras.var ?? extras.instanceId}`.replace(/[^A-Za-z0-9_]/g, '_').toLocaleLowerCase()
       : op.replace(/[^A-Za-z0-9_]/g, '_').toLocaleLowerCase();
     const used = new Set(nodes.map((node) => node.id));
     let suffix = 1;
@@ -1001,6 +1185,7 @@ export const GasGraphEditorPage: React.FC = () => {
         role: 'op',
         label: id,
         var: extras?.var ?? null,
+        instanceId: extras?.instanceId ?? null,
         descriptor: descriptors[op],
         sugar: sugars[op],
         controlOutputPorts: resolveControlOutputPorts(op, descriptors[op], sugars[op]),
@@ -1011,7 +1196,7 @@ export const GasGraphEditorPage: React.FC = () => {
     setSelectedEdgeId(null);
     setPaletteMenu(null);
     setVarDropMenu(null);
-    setStatus(extras?.var ? `Added ${op} for ${extras.var}.` : `Added ${op}; wire its pins before validation.`);
+    setStatus(extras?.var ?? extras?.instanceId ? `Added ${op} for ${extras.var ?? extras.instanceId}.` : `Added ${op}; wire its pins before validation.`);
   }, [descriptors, graph, nodes, sugars]);
 
   const addEventEntry = React.useCallback((position?: { x: number; y: number }) => {
@@ -1070,6 +1255,7 @@ export const GasGraphEditorPage: React.FC = () => {
           id: nextId,
           label: nextLabel,
           entry: { ...nextEntry, label: nextLabel, start: nextStart },
+          schema: schemaFor(nextEntry.event),
         },
       };
     }));
@@ -1320,7 +1506,6 @@ export const GasGraphEditorPage: React.FC = () => {
         name,
         type: node.data.op.includes('Float') ? 'float' : 'int',
         initial: 0,
-        phase: false,
         declared: false,
         reads: 0,
         writes: 0,
@@ -1342,7 +1527,6 @@ export const GasGraphEditorPage: React.FC = () => {
         elementType: 'int',
         keyType: 'int',
         initial: String(declared.initial),
-        phase: declared.phase,
       });
     }
     const target = nodes.find((node) => node.data.var === name);
@@ -1373,7 +1557,6 @@ export const GasGraphEditorPage: React.FC = () => {
           name: variable.name,
           type: variable.type,
           initial: variable.initial,
-          ...(variable.phase ? { phase: true } : {}),
         })),
       }),
     });
@@ -1399,7 +1582,6 @@ export const GasGraphEditorPage: React.FC = () => {
         name,
         type: variableDraft.kind === 'float' ? 'float' : 'int',
         initial: parseDraftInitial(variableDraft),
-        phase: variableDraft.kind === 'int' && variableDraft.phase,
         declared: true,
         reads: 0,
         writes: 0,
@@ -1441,7 +1623,6 @@ export const GasGraphEditorPage: React.FC = () => {
               name,
               type: (variableDraft.kind === 'float' ? 'float' : 'int') as MapVariableScalarType,
               initial: parseDraftInitial(variableDraft),
-              phase: variableDraft.kind === 'int' && variableDraft.phase,
             }
           : variable
       ));
@@ -1485,15 +1666,18 @@ export const GasGraphEditorPage: React.FC = () => {
   };
 
   const onVariableDragOver = (event: React.DragEvent) => {
-    const payload = decodeMapVarDrag(event.dataTransfer.getData('text/plain'));
+    const raw = event.dataTransfer.getData('text/plain');
+    const payload = decodeMapVarDrag(raw) ?? decodePlacedVarDrag(raw);
     if (!payload && !event.dataTransfer.types.includes('text/plain')) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
   };
 
   const onVariableDrop = (event: React.DragEvent) => {
-    const payload = decodeMapVarDrag(event.dataTransfer.getData('text/plain'));
-    if (!payload) return;
+    const raw = event.dataTransfer.getData('text/plain');
+    const placed = decodePlacedVarDrag(raw);
+    const mapVar = decodeMapVarDrag(raw);
+    if (!placed && !mapVar) return;
     event.preventDefault();
     const flow = reactFlowRef.current?.screenToFlowPosition({ x: event.clientX, y: event.clientY }) ?? {
       x: 80,
@@ -1505,9 +1689,14 @@ export const GasGraphEditorPage: React.FC = () => {
       clientY: event.clientY,
       flowX: flow.x,
       flowY: flow.y,
-      name: payload.name,
-      type: payload.type,
+      name: placed ? placed.instanceId : mapVar!.name,
+      type: placed ? 'int' : mapVar!.type,
+      placed: placed != null,
     });
+  };
+
+  const placePlacedEntityAccess = (position: { x: number; y: number }, instanceId: string) => {
+    addAuthoringNode('LoadPlacedEntity', position, { instanceId });
   };
 
   return (
@@ -1610,6 +1799,7 @@ export const GasGraphEditorPage: React.FC = () => {
           </div>
           <GraphVariablePanel
             variables={mapVariables}
+            placedInstances={mapInstances}
             selectedName={selectedVariable}
             mapId={variableMapId}
             status={variableStatus}
@@ -1744,26 +1934,39 @@ export const GasGraphEditorPage: React.FC = () => {
                   <div className="mb-2 px-1 text-[11px] text-amber-100">
                     Place <span className="font-mono">{varDropMenu.name}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => placeVariableAccess('get', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
-                    className="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
-                  >
-                    <span>Get</span>
-                    <span className="font-mono text-[10px] text-slate-500">
-                      {varDropMenu.type === 'float' ? 'ReadMapVarFloat' : 'ReadMapVarInt'}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => placeVariableAccess('set', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
-                    className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
-                  >
-                    <span>Set</span>
-                    <span className="font-mono text-[10px] text-slate-500">
-                      {varDropMenu.type === 'float' ? 'WriteMapVarFloat' : 'WriteMapVarInt'}
-                    </span>
-                  </button>
+                  {varDropMenu.placed ? (
+                    <button
+                      type="button"
+                      onClick={() => placePlacedEntityAccess({ x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name)}
+                      className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                    >
+                      <span>Get</span>
+                      <span className="font-mono text-[10px] text-slate-500">LoadPlacedEntity</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => placeVariableAccess('get', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
+                        className="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                      >
+                        <span>Get</span>
+                        <span className="font-mono text-[10px] text-slate-500">
+                          {varDropMenu.type === 'float' ? 'ReadMapVarFloat' : 'ReadMapVarInt'}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => placeVariableAccess('set', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
+                        className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                      >
+                        <span>Set</span>
+                        <span className="font-mono text-[10px] text-slate-500">
+                          {varDropMenu.type === 'float' ? 'WriteMapVarFloat' : 'WriteMapVarInt'}
+                        </span>
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : null}
             </div>
@@ -1785,6 +1988,8 @@ export const GasGraphEditorPage: React.FC = () => {
                   <EventEntryInspector
                     entry={selectedData.entry}
                     startOptions={nodes.filter((node) => node.data.role !== 'event-entry').map((node) => node.id)}
+                    instanceOptions={mapInstances.map((instance) => instance.instanceId)}
+                    variableOptions={declaredVariables.map((variable) => variable.name)}
                     onChange={updateSelectedEntry}
                     onAdd={() => addEventEntry()}
                   />
@@ -1812,27 +2017,70 @@ export const GasGraphEditorPage: React.FC = () => {
                       </label>
                     );
                   }
-                  if (field.kind === 'anchor' && panelAnchors.length > 0) {
-                    const current = raw == null ? '' : String(raw);
-                    const options = current && !panelAnchors.includes(current)
-                      ? [...panelAnchors, current]
-                      : panelAnchors;
-                    return (
-                      <label key={field.key} className="block">
-                        <div className="mb-1 text-slate-500">{field.label}</div>
-                        <select
-                          value={current}
-                          onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
-                        >
-                          <option value="">Select anchor</option>
-                          {options.map((anchor) => (
-                            <option key={anchor} value={anchor}>{anchor}</option>
-                          ))}
-                        </select>
-                      </label>
-                    );
-                  }
+                      if (field.kind === 'anchor' && panelAnchors.length > 0) {
+                        const current = raw == null ? '' : String(raw);
+                        const options = current && !panelAnchors.includes(current)
+                          ? [...panelAnchors, current]
+                          : panelAnchors;
+                        return (
+                          <label key={field.key} className="block">
+                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <select
+                              value={current}
+                              onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            >
+                              <option value="">Select anchor</option>
+                              {options.map((anchor) => (
+                                <option key={anchor} value={anchor}>{anchor}</option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      }
+                      if (field.kind === 'payloadKey' && payloadKeys.length > 0) {
+                        const current = raw == null ? '' : String(raw);
+                        const options = current && !payloadKeys.includes(current)
+                          ? [...payloadKeys, current]
+                          : payloadKeys;
+                        return (
+                          <label key={field.key} className="block">
+                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <select
+                              value={current}
+                              onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            >
+                              <option value="">Select payload key</option>
+                              {options.map((key) => (
+                                <option key={key} value={key}>{key}</option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      }
+                      if (field.kind === 'instanceId' && mapInstances.length > 0) {
+                        const current = raw == null ? '' : String(raw);
+                        const instanceIds = mapInstances.map((instance) => instance.instanceId);
+                        const options = current && !instanceIds.includes(current)
+                          ? [...instanceIds, current]
+                          : instanceIds;
+                        return (
+                          <label key={field.key} className="block">
+                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <select
+                              value={current}
+                              onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            >
+                              <option value="">Select placed instance</option>
+                              {options.map((id) => (
+                                <option key={id} value={id}>{id}</option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      }
                   return (
                     <label key={field.key} className="block">
                       <div className="mb-1 text-slate-500">{field.label}</div>

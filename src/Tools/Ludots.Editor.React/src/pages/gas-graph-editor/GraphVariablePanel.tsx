@@ -2,6 +2,7 @@ import React from 'react';
 
 export const MAP_VAR_DRAG_MIME = 'text/plain';
 export const MAP_VAR_DRAG_PREFIX = 'ludots-map-var';
+export const PLACED_VAR_DRAG_PREFIX = 'ludots-placed-var';
 
 export type MapVariableKind = 'int' | 'float' | 'array' | 'map';
 export type MapVariableScalarType = 'int' | 'float';
@@ -10,10 +11,15 @@ export type GraphVariableRow = {
   name: string;
   type: MapVariableScalarType;
   initial: number;
-  phase: boolean;
   declared: boolean;
   reads: number;
   writes: number;
+};
+
+export type GraphPlacedInstance = {
+  instanceId: string;
+  template: string;
+  ordinal: number;
 };
 
 export type MapVariableDraft = {
@@ -22,7 +28,6 @@ export type MapVariableDraft = {
   elementType: MapVariableScalarType;
   keyType: MapVariableScalarType;
   initial: string;
-  phase: boolean;
 };
 
 export const emptyVariableDraft = (): MapVariableDraft => ({
@@ -31,7 +36,6 @@ export const emptyVariableDraft = (): MapVariableDraft => ({
   elementType: 'int',
   keyType: 'int',
   initial: '0',
-  phase: false,
 });
 
 export function encodeMapVarDrag(name: string, type: MapVariableScalarType): string {
@@ -47,15 +51,27 @@ export function decodeMapVarDrag(raw: string): { name: string; type: MapVariable
   return { name: parts[1], type };
 }
 
+export function encodePlacedVarDrag(instanceId: string): string {
+  return `${PLACED_VAR_DRAG_PREFIX}\t${instanceId}`;
+}
+
+export function decodePlacedVarDrag(raw: string): { instanceId: string } | null {
+  const parts = raw.split('\t');
+  if (parts.length !== 2 || parts[0] !== PLACED_VAR_DRAG_PREFIX) return null;
+  if (!parts[1]) return null;
+  return { instanceId: parts[1] };
+}
+
 export function collectionTypeError(kind: MapVariableKind): string | null {
   if (kind === 'array' || kind === 'map') {
-    return 'Map variables only store Integer or Float today. Array and Map stay in the type list so the choice is visible, but they cannot be saved until the map store accepts them.';
+    return 'Map variables only store Integer or Float today. Array and Map stay in the type list so the choice is visible; collection variables wait for the #1108 follow-up slice.';
   }
   return null;
 }
 
 export function GraphVariablePanel({
   variables,
+  placedInstances,
   selectedName,
   mapId,
   status,
@@ -68,6 +84,7 @@ export function GraphVariablePanel({
   onDelete,
 }: {
   variables: GraphVariableRow[];
+  placedInstances: GraphPlacedInstance[];
   selectedName: string | null;
   mapId: string | null;
   status: string;
@@ -81,6 +98,7 @@ export function GraphVariablePanel({
 }) {
   const collectionError = collectionTypeError(draft.kind);
   const selected = selectedName != null && variables.some((variable) => variable.name === selectedName);
+  const placedSorted = [...placedInstances].sort((a, b) => a.ordinal - b.ordinal);
 
   return (
     <div className="flex min-h-[240px] flex-col border-t border-slate-800 bg-slate-950/90">
@@ -91,14 +109,38 @@ export function GraphVariablePanel({
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
-        {variables.length === 0 ? (
+        {variables.length === 0 && placedSorted.length === 0 ? (
           <div className="px-1 text-[11px] text-slate-500">
             {mapId
               ? 'This map has no variables yet. Add one below, then drag it onto the canvas.'
               : 'Map variables live on the map that mounts this graph.'}
           </div>
-        ) : (
-          variables.map((variable) => {
+        ) : null}
+        {placedSorted.length > 0 ? (
+          <div className="mb-2">
+            <div className="px-1 pb-1 text-[9px] font-semibold uppercase tracking-wide text-violet-300">
+              Placed instances
+            </div>
+            {placedSorted.map((instance) => (
+              <div
+                key={instance.instanceId}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.setData(MAP_VAR_DRAG_MIME, encodePlacedVarDrag(instance.instanceId));
+                  event.dataTransfer.effectAllowed = 'copy';
+                }}
+                className="mb-1 flex w-full cursor-grab items-center gap-2 rounded border border-violet-950 bg-violet-950/40 px-2 py-1.5 text-left active:cursor-grabbing"
+                title={instance.template ? `Template ${instance.template}` : undefined}
+              >
+                <span className="w-8 shrink-0 font-mono text-[9px] uppercase text-violet-300">ent</span>
+                <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-violet-100">{instance.instanceId}</span>
+                <span className="shrink-0 text-[9px] text-violet-400/80">#{instance.ordinal}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {variables.length > 0
+          ? variables.map((variable) => {
             const active = variable.name === selectedName;
             return (
               <div
@@ -129,7 +171,6 @@ export function GraphVariablePanel({
                 <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{variable.name}</span>
                 <span className="shrink-0 text-[9px] text-slate-500">
                   {variable.declared ? `${variable.initial}` : 'undeclared'}
-                  {variable.phase ? ' · phase' : ''}
                 </span>
                 <span className="shrink-0 text-[9px] text-slate-500">
                   {variable.reads} get · {variable.writes} set
@@ -137,7 +178,7 @@ export function GraphVariablePanel({
               </div>
             );
           })
-        )}
+          : null}
       </div>
       <div className="space-y-2 border-t border-slate-800 px-3 py-2">
         <label className="block">
@@ -213,17 +254,6 @@ export function GraphVariablePanel({
             </label>
           )}
         </div>
-        {draft.kind === 'int' ? (
-          <label className="flex items-center gap-2 text-[11px] text-slate-300">
-            <input
-              type="checkbox"
-              checked={draft.phase}
-              disabled={busy || !mapId}
-              onChange={(event) => onDraftChange({ ...draft, phase: event.target.checked })}
-            />
-            Fire phase change when this integer changes
-          </label>
-        ) : null}
         {collectionError ? <div className="text-[10px] text-amber-300">{collectionError}</div> : null}
         <div className="flex gap-1">
           <button

@@ -33,9 +33,13 @@ export function sanitizeEventFilters(filters?: EventEntryFilters | null): EventE
   const tag = filters.tag?.trim();
   const action = filters.action?.trim();
   const direction = filters.direction?.trim();
+  const instanceId = filters.instanceId?.trim();
+  const varName = filters.varName?.trim();
   if (region) next.region = region;
   if (tag) next.tag = tag;
   if (action) next.action = action;
+  if (instanceId) next.instanceId = instanceId;
+  if (varName) next.varName = varName;
   if (filters.team != null && Number.isInteger(filters.team)) next.team = filters.team;
   if (filters.threshold != null && Number.isFinite(filters.threshold)) next.threshold = filters.threshold;
   if (direction) next.direction = direction;
