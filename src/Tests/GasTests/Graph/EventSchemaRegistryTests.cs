@@ -102,7 +102,10 @@ namespace Ludots.Tests.Gas.Graph
         public void Parse_WithoutParams_YieldsParameterlessSchema()
         {
             JsonObject node = (JsonObject)JsonNode.Parse(@"{ ""id"": ""ModA.Bare"", ""description"": ""bare"" }")!;
-            Assert.That(CustomEventSchemaParser.TryParse(node, "ModA.Bare", "test"), Is.Null);
+            EventSchema? schema = CustomEventSchemaParser.TryParse(node, "ModA.Bare", "test");
+            Assert.That(schema, Is.Not.Null, "parameterless entries still produce a schema (#1123)");
+            Assert.That(schema!.Scope, Is.EqualTo(EventScope.Map), "the default scope is Map");
+            Assert.That(schema.Params, Is.Empty);
         }
 
         [Test]
@@ -260,6 +263,83 @@ namespace Ludots.Tests.Gas.Graph
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 manager.FireMapEvent(mapId, GameEvents.EntityDied, missingTeam));
             Assert.That(ex.Message, Does.Contain("sourceTeamId"));
+        }
+
+        [Test]
+        public void BuiltinSchemas_CoverMapVariableChangedContract()
+        {
+            var registry = new EventSchemaRegistry();
+
+            Assert.That(registry.TryGet(GameEvents.MapVariableChanged.Value, out EventSchema schema), Is.True);
+            Assert.That(schema.Scope, Is.EqualTo(EventScope.Map));
+            Assert.That(schema.Params.Count, Is.EqualTo(5));
+            Assert.That(schema.Params[0].Name, Is.EqualTo("varName"));
+            Assert.That(schema.Params[0].PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.VarName));
+            Assert.That(schema.Params[0].Optional, Is.False);
+            Assert.That(schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.VarValueInt), Is.True);
+            Assert.That(schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.VarValueFloat), Is.True);
+            Assert.That(schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.OldValueInt), Is.True);
+            Assert.That(schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.OldValueFloat), Is.True);
+
+            var complete = new ScriptContext();
+            complete.Set(MapTriggerEventPayloadKeys.VarName, "stage");
+            complete.Set(MapTriggerEventPayloadKeys.VarValueInt, 2);
+            complete.Set(MapTriggerEventPayloadKeys.OldValueInt, 1);
+            Assert.DoesNotThrow(() => registry.ValidateFirePayload(GameEvents.MapVariableChanged, complete));
+
+            var missingName = new ScriptContext();
+            missingName.Set(MapTriggerEventPayloadKeys.VarValueInt, 2);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                registry.ValidateFirePayload(GameEvents.MapVariableChanged, missingName));
+            Assert.That(ex.Message, Does.Contain("varName"));
+        }
+
+        [Test]
+        public void CatalogLoad_FailsClosed_WhenSchemaExceedsEntryPayloadCapacity()
+        {
+            string root = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                "Ludots_EventSchemaCapacity",
+                Guid.NewGuid().ToString("N"));
+            string core = System.IO.Path.Combine(root, "Core");
+            string eventsDir = System.IO.Path.Combine(core, "Events");
+            System.IO.Directory.CreateDirectory(eventsDir);
+            try
+            {
+                var parameters = new System.Text.StringBuilder();
+                for (int i = 0; i < 17; i++)
+                {
+                    if (i > 0)
+                    {
+                        parameters.Append(',');
+                    }
+
+                    parameters.Append($"{{\"name\":\"p{i}\",\"type\":\"int\",\"key\":\"Capacity.Probe{i}\"}}");
+                }
+
+                System.IO.File.WriteAllText(
+                    System.IO.Path.Combine(eventsDir, "custom_events.json"),
+                    $"[{{\"id\":\"Capacity.TooMany\",\"scope\":\"map\",\"params\":[{parameters}]}}]");
+
+                var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+                vfs.Mount("Core", core);
+                var pipeline = new Ludots.Core.Config.ConfigPipeline(
+                    vfs,
+                    new Ludots.Core.Modding.ModLoader(vfs, new Ludots.Core.Scripting.FunctionRegistry(), new TriggerManager()));
+                var catalog = new Ludots.Core.Config.ConfigCatalog();
+                catalog.Add(new Ludots.Core.Config.ConfigCatalogEntry(
+                    CustomEventNameRegistry.ConfigPath,
+                    Ludots.Core.Config.ConfigMergePolicy.ArrayById,
+                    allowEmpty: true));
+
+                var loader = new CustomEventCatalogLoader(pipeline);
+                InvalidOperationException overflow = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+                Assert.That(overflow.Message, Does.Contain("at most 16"));
+            }
+            finally
+            {
+                System.IO.Directory.Delete(root, recursive: true);
+            }
         }
     }
 }

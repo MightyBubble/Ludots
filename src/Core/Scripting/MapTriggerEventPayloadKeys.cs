@@ -15,7 +15,8 @@ namespace Ludots.Core.Scripting
         public const string VarName = "MapTrigger.VarName";                // string
         public const string VarValueFloat = "MapTrigger.VarValueFloat";    // float
         public const string VarValueInt = "MapTrigger.VarValueInt";        // int
-        public const string Phase = "MapTrigger.Phase";                    // int
+        public const string OldValueFloat = "MapTrigger.OldValueFloat";    // float
+        public const string OldValueInt = "MapTrigger.OldValueInt";        // int
         public const string HeartbeatIndex = "MapTrigger.HeartbeatIndex";            // int
         public const string TargetEntity = "MapTrigger.TargetEntity";      // Entity
         public const string TagId = "MapTrigger.TagId";                    // int
@@ -26,5 +27,29 @@ namespace Ludots.Core.Scripting
         public const string InputAction = "MapTrigger.InputAction";              // string
         public const string GroundXCm = "MapTrigger.GroundXCm";                  // float
         public const string GroundYCm = "MapTrigger.GroundYCm";                  // float
+        public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
+
+        /// <summary>
+        /// Whether a string is one of the constants above (reflection-built once); the
+        /// compile-side gate for LoadEntryPayload* payloadKey fields.
+        /// </summary>
+        public static bool IsKnownKey(string key) => KnownKeys.Contains(key);
+
+        private static readonly System.Collections.Generic.HashSet<string> KnownKeys = BuildKnownKeys();
+
+        private static System.Collections.Generic.HashSet<string> BuildKnownKeys()
+        {
+            var keys = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
+            foreach (System.Reflection.FieldInfo field in typeof(MapTriggerEventPayloadKeys)
+                         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+            {
+                if (field.GetRawConstantValue() is string constant)
+                {
+                    keys.Add(constant);
+                }
+            }
+
+            return keys;
+        }
     }
 }
