@@ -1338,7 +1338,7 @@ namespace Ludots.Core.Engine
                 presentationOwnerChanges,
                 soundRequestBuffer,
                 () => GetService(CoreServiceKeys.VisualHeightmap),
-                boneTransformProvider: null,
+                boneTransformProvider: () => GetService(CoreServiceKeys.BoneTransformProvider),
                 timingDiagnostics: presentationTimingDiagnostics,
                 extensionBehaviors: presenterBehaviorKinds,
                 graphPrograms: graphProgramRegistry,

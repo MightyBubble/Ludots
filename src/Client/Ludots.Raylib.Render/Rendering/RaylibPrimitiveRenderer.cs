@@ -116,6 +116,9 @@ namespace Ludots.Raylib.Render
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
+        /// <summary>GPU 蒙皮模型/动画缓存；宿主骨骼挂点 provider 与绘制路径共用同一实例（同一动画数据源）。</summary>
+        public RaylibGpuSkinnedModelCache GpuSkinnedModelCache => _gpuSkinnedModelCache;
+
         /// <summary>单件静态网格（StaticMesh 车道）的 Decal 接收面；宿主把它与地形接收面组合绑定。</summary>
         public IRaylibReceiverMeshProjector StaticMeshReceiverProjector => _staticMeshReceiverProjector;
 

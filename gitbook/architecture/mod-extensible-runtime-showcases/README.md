@@ -10,8 +10,8 @@
 |------|----------|--------------|
 | 配置拆分 | `CapabilityStandardConfigShardsShowcaseMod` | 点击按钮后，面板显示来自独立 ability/effect shard 的技能被加载并触发 |
 | Effect preset type 代码扩展 | `CapabilityStandardEffectPresetTypeCodeShowcaseMod` | 点击按钮后，Heat Mark 被正式执行，面板显示调用次数 |
-| Presenter behavior 扩展 | `CapabilityStandardPerformerBehaviorExtensionShowcaseMod` | 进入地图后 CloudDrift 持续 tick，点击按钮时面板显示行为仍在运行 |
-| Presenter command 扩展 | `CapabilityStandardPerformerCommandExtensionShowcaseMod` | 点击按钮发送信号，面板显示信号被处理的次数 |
+| Presenter behavior 扩展 | `CapabilityStandardPresenterBehaviorExtensionShowcaseMod` | 进入地图后 CloudDrift 持续 tick，点击按钮时面板显示行为仍在运行 |
+| Presenter command 扩展 | `CapabilityStandardPresenterCommandExtensionShowcaseMod` | 点击按钮发送信号，面板显示信号被处理的次数 |
 
 > Graph op 扩展（`RegisterGraphOp` + JSON 图引用 mod 算子）尚未迁移到 L1 control-flow 编译 SSOT（issue #861 之后的作者形态），
 > 对应 showcase 暂缓合入；hub 级注册 API 与执行侧 handler table 支持已在 Core 中保留。
@@ -24,8 +24,8 @@ mods/showcases/capability_standard/
   CapabilityStandardConfigShardsShowcaseMod/
   CapabilityStandardEffectPresetTypeCodeShowcaseMod/
   CapabilityStandardGraphOpProviderMod/
-  CapabilityStandardPerformerBehaviorExtensionShowcaseMod/
-  CapabilityStandardPerformerCommandExtensionShowcaseMod/
+  CapabilityStandardPresenterBehaviorExtensionShowcaseMod/
+  CapabilityStandardPresenterCommandExtensionShowcaseMod/
 ```
 
 每个 root mod 都有自己的 `mod.json`、game.json、Maps 目录和独立配置 shard。共享项目只承载可视化面板、debug draw、按钮流程，不拥有任何业务扩展 key，也不替 root mod 注册能力。
@@ -45,8 +45,8 @@ mods/showcases/capability_standard/
 ```powershell
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_config_shards_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_effect_preset_type_code_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_performer_behavior_extension_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_performer_command_extension_showcase_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_behavior_extension_showcase_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_command_extension_showcase_raylib'
 ```
 
 ## 场景

@@ -1,0 +1,14 @@
+{
+  "name": "CapabilityStandardPresenterBehaviorExtensionShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard showcase proving a Mod can define and run its own presenter behavior kind.",
+  "main": "bin/net8.0/CapabilityStandardPresenterBehaviorExtensionShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "capability-standard", "presenter-behavior", "presentation"]
+}

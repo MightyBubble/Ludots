@@ -1,6 +1,6 @@
 {
-  "Id": "capability_standard_performer_behavior_extension_showcase",
-  "Tags": ["showcase", "capability-standard", "performer-behavior-extension"],
+  "Id": "capability_standard_presenter_behavior_extension_showcase",
+  "Tags": ["showcase", "capability-standard", "presenter-behavior-extension"],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 850,

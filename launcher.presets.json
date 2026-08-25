@@ -288,19 +288,19 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_performer_behavior_extension_showcase_raylib",
-      "name": "Capability Standard Performer Behavior Extension Raylib",
+      "id": "capability_standard_presenter_behavior_extension_showcase_raylib",
+      "name": "Capability Standard Presenter Behavior Extension Raylib",
       "selectors": [
-        "$capability_standard_performer_behavior_extension_showcase"
+        "$capability_standard_presenter_behavior_extension_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_performer_command_extension_showcase_raylib",
-      "name": "Capability Standard Performer Command Extension Raylib",
+      "id": "capability_standard_presenter_command_extension_showcase_raylib",
+      "name": "Capability Standard Presenter Command Extension Raylib",
       "selectors": [
-        "$capability_standard_performer_command_extension_showcase"
+        "$capability_standard_presenter_command_extension_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

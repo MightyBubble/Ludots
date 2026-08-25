@@ -59,6 +59,9 @@
     <Compile Include="..\TestCommon\ClientLocalSeatTestBindings.cs" Link="ClientLocalSeatTestBindings.cs" />
     <Compile Include="..\TestCommon\AuthorityCameraAccess.cs" Link="AuthorityCameraAccess.cs" />
     <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- RaylibBoneTransformProviderTests 需要 native raylib（LoadModelAnimations 纯 CPU，无 GL 上下文） -->
+    <None Include="..\..\Platforms\Desktop\raylib.dll" Link="raylib.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Platforms\Desktop\raylib.dll')" />
+    <None Include="..\..\Platforms\Desktop\libraylib.so" Link="libraylib.so" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Platforms\Desktop\libraylib.so')" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(SkiaNativeRid)' != ''">

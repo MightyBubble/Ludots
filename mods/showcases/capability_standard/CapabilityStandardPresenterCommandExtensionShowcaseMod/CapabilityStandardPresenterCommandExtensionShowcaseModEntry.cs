@@ -11,14 +11,14 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
-namespace CapabilityStandardPerformerCommandExtensionShowcaseMod;
+namespace CapabilityStandardPresenterCommandExtensionShowcaseMod;
 
-public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry : IMod
+public sealed class CapabilityStandardPresenterCommandExtensionShowcaseModEntry : IMod
 {
-    public const string CommandKey = "CapabilityStandardPerformerCommandExtensionShowcaseMod.EmitSignalPing";
-    public const string PresenterDefinitionKey = "capability_standard.performer_command_extension.signal_rules";
-    public const string EventKey = "CapabilityStandard.PerformerCommandExtension.Signal";
-    private const string MapId = "capability_standard_performer_command_extension_showcase";
+    public const string CommandKey = "CapabilityStandardPresenterCommandExtensionShowcaseMod.EmitSignalPing";
+    public const string PresenterDefinitionKey = "capability_standard.presenter_command_extension.signal_rules";
+    public const string EventKey = "CapabilityStandard.PresenterCommandExtension.Signal";
+    private const string MapId = "capability_standard_presenter_command_extension_showcase";
     private int _registeredCommandId;
     private int _signalEventId;
     private int _commandCallCount;
@@ -39,9 +39,9 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
         var runtime = new ExtensibleRuntimeShowcaseRuntime(new ExtensibleRuntimeShowcaseScenario
         {
             MapId = MapId,
-            PanelElementId = "capability-standard-performer-command-extension-panel",
-            PrimaryButtonElementId = "capability-standard-performer-command-extension-signal",
-            SurfaceOwnerId = "Showcase.CapabilityStandardPerformerCommandExtension.Panel",
+            PanelElementId = "capability-standard-presenter-command-extension-panel",
+            PrimaryButtonElementId = "capability-standard-presenter-command-extension-signal",
+            SurfaceOwnerId = "Showcase.CapabilityStandardPresenterCommandExtension.Panel",
             Title = "Presenter Command Extension",
             FeatureLabel = "Command kind",
             PrimaryButtonLabel = "Send Signal Ping",
@@ -58,7 +58,7 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
             OnPrimaryAction = PublishSignal
         });
 
-        ExtensibleRuntimeShowcaseBootstrap.Install(context, runtime, nameof(CapabilityStandardPerformerCommandExtensionShowcaseMod));
+        ExtensibleRuntimeShowcaseBootstrap.Install(context, runtime, nameof(CapabilityStandardPresenterCommandExtensionShowcaseMod));
     }
 
     public void OnUnload()

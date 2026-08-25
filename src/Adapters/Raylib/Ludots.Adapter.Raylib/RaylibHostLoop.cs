@@ -307,6 +307,16 @@ namespace Ludots.Adapter.Raylib
                 primitiveRenderer.BindReceiverMeshProjector(
                     new MapLaneReceiverMeshProjector(engine, visualHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
                 primitiveRenderer.BindInstancedBatchLaneSource(setup.InstancedBatchLaneStore);
+                engine.SetService(
+                    CoreServiceKeys.BoneTransformProvider,
+                    (Core.Presentation.Presenters.IBoneTransformProvider)new RaylibBoneTransformProvider(
+                        engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer)
+                            ?? throw new InvalidOperationException("Raylib host requires the Core PresentationSkinnedVisualBatchBuffer service."),
+                        engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                            ?? throw new InvalidOperationException("Raylib host requires the Core PresenterDefinitionRegistry service."),
+                        engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+                            ?? throw new InvalidOperationException("Raylib host requires the Core PresentationMeshAssetRegistry service."),
+                        (meshAssetId, descriptor) => primitiveRenderer.GpuSkinnedModelCache.GetOrLoad(meshAssetId, in descriptor)));
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS);
                 skyEnvironment.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
                     engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibSkyEnvironment.DefaultRelativePath));

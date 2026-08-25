@@ -297,19 +297,19 @@
       }
     },
     {
-      "name": "capability_standard_performer_behavior_extension_showcase",
+      "name": "capability_standard_presenter_behavior_extension_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerBehaviorExtensionShowcaseMod",
-        "projectPath": "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardPresenterBehaviorExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardPresenterBehaviorExtensionShowcaseMod.csproj"
       }
     },
     {
-      "name": "capability_standard_performer_command_extension_showcase",
+      "name": "capability_standard_presenter_command_extension_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod",
-        "projectPath": "CapabilityStandardPerformerCommandExtensionShowcaseMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardPresenterCommandExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardPresenterCommandExtensionShowcaseMod.csproj"
       }
     },
     {
