@@ -76,12 +76,36 @@ else
     Console.Error.WriteLine($"warning: ModSdk ref dir missing (run a launcher build once to export): {modSdkRefDir}");
 }
 
-// 依赖 mod 的输出 bin（依赖闭包由调用方保证已编译）
-if (manifest.TryGetProperty("dependencies", out var deps) && deps.ValueKind == JsonValueKind.Object)
+// 依赖 mod 的输出 bin（依赖闭包由调用方保证已编译）。
+// 依赖按 mod.json 的 name 引用，目录深度不定（mods/ 根与 mods/showcases/**/ 嵌套并存），
+// 因此用全仓 mod.json 名字→目录映射解析，而不是假定兄弟目录。
+if (manifest.TryGetProperty("dependencies", out var deps) && deps.ValueKind == JsonValueKind.Object && repoRoot != null)
 {
+    var modsRoot = Path.Combine(repoRoot, "mods");
+    var modDirByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var candidateManifest in Directory.EnumerateFiles(modsRoot, "mod.json", SearchOption.AllDirectories))
+    {
+        var normalized = candidateManifest.Replace('\\', '/');
+        if (normalized.Contains("/fixtures/") || normalized.Contains("/bin/") || normalized.Contains("/obj/"))
+        {
+            continue;
+        }
+
+        using var depDoc = JsonDocument.Parse(File.ReadAllText(candidateManifest));
+        if (depDoc.RootElement.TryGetProperty("name", out var nameProp) && nameProp.GetString() is { Length: > 0 } depName)
+        {
+            modDirByName[depName] = Path.GetDirectoryName(candidateManifest)!;
+        }
+    }
+
     foreach (var dep in deps.EnumerateObject())
     {
-        var depDir = Path.Combine(Path.GetDirectoryName(modDir)!, dep.Name);
+        if (!modDirByName.TryGetValue(dep.Name, out var depDir))
+        {
+            Console.Error.WriteLine($"warning: dependency mod not found in repo: {dep.Name}");
+            continue;
+        }
+
         var depBin = Path.Combine(depDir, "bin", tfm);
         if (Directory.Exists(depBin))
         {
