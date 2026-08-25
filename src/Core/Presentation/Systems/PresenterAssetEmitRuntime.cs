@@ -49,6 +49,7 @@ namespace Ludots.Core.Presentation.Systems
             in BehaviorSlot slot,
             in AssetBindingConfig asset,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -58,10 +59,11 @@ namespace Ludots.Core.Presentation.Systems
             PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
             Vector3 position = ResolvePosition(in state, presenterWorldPosition, slot.Motion.YDriftPerSecond);
             float alpha = ResolveAlpha(in state, in definition, slot.Style.AlphaPolicy);
-            if (lod == LODLevel.Culled || !IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
+            if (!ownerCullVisible || !IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
             {
                 EmitHiddenSnapshotIfVisual(entity, in state, in definition, in slot, in asset, lod, position, presenterWorldRotation, presenterWorldScale, alpha);
                 RemoveHiddenWorldHudIfNeeded(state.DefId, in state, in slot, in asset);
+                RemoveHiddenLaneEntriesIfNeeded(in state, slot.SlotIndex, in asset);
                 return;
             }
 
@@ -105,6 +107,7 @@ namespace Ludots.Core.Presentation.Systems
             in PresenterState state,
             in PresenterDefinition definition,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -135,48 +138,46 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                if (lod != LODLevel.Culled &&
-                    (!IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset)))
+                if (!ownerCullVisible ||
+                    !IsWithinMaxLod(lod, in asset) ||
+                    !ResolveAssetVisibility(entity, in asset))
                 {
-                    if (TryGetVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId, out int removedStableId))
+                    if (TryGetVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId, out int existingStableId))
                     {
-                        stableDrawCache.Remove(removedStableId);
+                        // Viewport bit flipped off while the static visual is retained: keep the contract
+                        // slot (adapter-facing snapshot still reports it) but mark it hidden so the render
+                        // working set drops the instance. Re-visible upserts flip the marker back.
+                        stableDrawCache.Upsert(BuildStaticStableVisualProxy(
+                            entity,
+                            in state,
+                            in definition,
+                            in slot,
+                            in asset,
+                            lod,
+                            presenterWorldPosition,
+                            presenterWorldRotation,
+                            presenterWorldScale,
+                            existingStableId,
+                            VisualVisibility.Hidden));
+                        emitted = true;
                     }
                     continue;
                 }
 
                 PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
-                Vector3 position = ResolvePosition(in state, presenterWorldPosition, slot.Motion.YDriftPerSecond);
-                VisualRenderPath renderPath = ResolveRenderPath(in asset);
-                Quaternion rotation = ResolveRotation(in asset, presenterWorldRotation);
-                Vector3 scale = ResolveScale(entity, in asset, presenterWorldScale);
-                Vector3 assetPosition = ResolveAssetPosition(position, presenterWorldRotation, presenterWorldScale, in asset);
-                Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, ResolveAuthoredColor(in slot)), ResolveAlpha(in state, in definition, slot.Style.AlphaPolicy));
                 int stableId = GetOrAllocateVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId);
-                PresentationVisualProxy proxy = new PresentationVisualProxy
-                {
-                    ProxyKind = PresentationVisualProxyKind.Presenter,
-                    MeshAssetId = ResolveAssetId(entity, in asset),
-                    Position = assetPosition,
-                    Rotation = rotation,
-                    Scale = scale,
-                    Color = color,
-                    StableId = stableId,
-                    MaterialId = ResolveMaterialId(entity, in asset),
-                    TemplateId = state.DefId,
-                    AnimationProfileId = definition.AnimationProfileId,
-                    RenderPath = renderPath,
-                    AssetKind = asset.AssetKind,
-                    SurfaceLayerKey = asset.SurfaceLayerKey,
-                    SortId = asset.SortId,
-                    MaterialCustomData = PresenterMaterialCustomDataResolver.Resolve(_runtime, entity, in asset.MaterialCustomData),
-                    Mobility = asset.Mobility,
-                    Flags = VisualRuntimeFlags.Visible,
-                    Animator = ResolveAnimator(entity, renderPath),
-                    AnimationOverlay = default,
-                    Visibility = lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
-                    LOD = lod,
-                };
+                PresentationVisualProxy proxy = BuildStaticStableVisualProxy(
+                    entity,
+                    in state,
+                    in definition,
+                    in slot,
+                    in asset,
+                    lod,
+                    presenterWorldPosition,
+                    presenterWorldRotation,
+                    presenterWorldScale,
+                    stableId,
+                    VisualVisibility.Visible);
                 if (addOnly)
                 {
                     stableDrawCache.AddNew(proxy);
@@ -189,6 +190,47 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return emitted;
+        }
+
+        private PresentationVisualProxy BuildStaticStableVisualProxy(
+            Entity entity,
+            in PresenterState state,
+            in PresenterDefinition definition,
+            in BehaviorSlot slot,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 presenterWorldPosition,
+            Quaternion presenterWorldRotation,
+            Vector3 presenterWorldScale,
+            int stableId,
+            VisualVisibility visibility)
+        {
+            Vector3 position = ResolvePosition(in state, presenterWorldPosition, slot.Motion.YDriftPerSecond);
+            VisualRenderPath renderPath = ResolveRenderPath(in asset);
+            return new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Presenter,
+                MeshAssetId = ResolveAssetId(entity, in asset),
+                Position = ResolveAssetPosition(position, presenterWorldRotation, presenterWorldScale, in asset),
+                Rotation = ResolveRotation(in asset, presenterWorldRotation),
+                Scale = ResolveScale(entity, in asset, presenterWorldScale),
+                Color = ApplyAlpha(ResolveColor(entity, in asset, ResolveAuthoredColor(in slot)), ResolveAlpha(in state, in definition, slot.Style.AlphaPolicy)),
+                StableId = stableId,
+                MaterialId = ResolveMaterialId(entity, in asset),
+                TemplateId = state.DefId,
+                AnimationProfileId = definition.AnimationProfileId,
+                RenderPath = renderPath,
+                AssetKind = asset.AssetKind,
+                SurfaceLayerKey = asset.SurfaceLayerKey,
+                SortId = asset.SortId,
+                MaterialCustomData = PresenterMaterialCustomDataResolver.Resolve(_runtime, entity, in asset.MaterialCustomData),
+                Mobility = asset.Mobility,
+                Flags = VisualRuntimeFlags.Visible,
+                Animator = ResolveAnimator(entity, renderPath),
+                AnimationOverlay = default,
+                Visibility = visibility,
+                LOD = lod,
+            };
         }
 
         public void RemoveStaticStableVisuals(
@@ -333,7 +375,7 @@ namespace Ludots.Core.Presentation.Systems
                     presenterWorldRotation,
                     presenterWorldScale,
                     alpha,
-                    lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible)));
+                    VisualVisibility.Visible)));
         }
 
         private void EmitHiddenSnapshotIfVisual(
@@ -366,7 +408,28 @@ namespace Ludots.Core.Presentation.Systems
                     presenterWorldRotation,
                     presenterWorldScale,
                     alpha,
-                    lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Hidden)));
+                    VisualVisibility.Hidden)));
+        }
+
+        private void RemoveHiddenLaneEntriesIfNeeded(
+            in PresenterState state,
+            int slotIndex,
+            in AssetBindingConfig asset)
+        {
+            switch (asset.AssetKind)
+            {
+                case AssetKind.Spline:
+                    _requests.Add(PresentationRequest.RemoveSplineRibbon(
+                        state.OwnerEntity,
+                        PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId)));
+                    break;
+
+                case AssetKind.GroundOverlay:
+                    _requests.Add(PresentationRequest.RemoveGroundOverlay(
+                        state.OwnerEntity,
+                        PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId)));
+                    break;
+            }
         }
 
         private void RemoveHiddenWorldHudIfNeeded(
@@ -833,7 +896,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
         {
-            return lod != LODLevel.Culled && (!asset.HasMaxLod || lod <= asset.MaxLod);
+            return !asset.HasMaxLod || lod <= asset.MaxLod;
         }
 
         private PresentationVisualProxy BuildVisualProxy(

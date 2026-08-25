@@ -211,9 +211,7 @@ namespace Ludots.Core.Presentation.Presenters
                              (input.AllowVisibleTransientWorldText && input.IsVisible);
             bool isCulled = !revealHidden && input.IsCulled;
             bool isVisible = revealHidden || (input.IsVisible && hasVision && !isCulled);
-            LODLevel lod = revealHidden && input.LOD == LODLevel.Culled
-                ? LODLevel.High
-                : input.LOD;
+            LODLevel lod = input.LOD;
 
             bool isFriendly = input.IsOwnedByAudience
                 || (input.HasTeamRelationship && input.TeamRelationship == TeamRelationship.Friendly);

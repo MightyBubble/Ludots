@@ -360,6 +360,7 @@ namespace Ludots.Core.Presentation.Systems
                 in slot,
                 in slot.AssetBinding,
                 cull.LOD,
+                cull.OwnerCullVisible,
                 position.Value,
                 rotation.Value,
                 in facing,

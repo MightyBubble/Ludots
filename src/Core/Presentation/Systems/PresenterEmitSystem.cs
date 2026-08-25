@@ -692,7 +692,7 @@ namespace Ludots.Core.Presentation.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
         {
-            return lod != LODLevel.Culled && (!asset.HasMaxLod || lod <= asset.MaxLod);
+            return !asset.HasMaxLod || lod <= asset.MaxLod;
         }
 
         private void ProcessDirtyStaticEmitEntities()
@@ -970,6 +970,7 @@ namespace Ludots.Core.Presentation.Systems
                             in state,
                             in definition,
                             cull.LOD,
+                            ownerCullVisible,
                             position.Value,
                             rotation.Value,
                             in facing,
@@ -991,6 +992,7 @@ namespace Ludots.Core.Presentation.Systems
                             in state,
                             definition,
                             cull.LOD,
+                            ownerCullVisible,
                             position.Value,
                             rotation.Value,
                             in facing,
@@ -1256,6 +1258,7 @@ namespace Ludots.Core.Presentation.Systems
                 in state,
                 in definition,
                 cull.LOD,
+                ownerCullVisible,
                 position.Value,
                 rotation.Value,
                 in facing,
@@ -1319,6 +1322,7 @@ namespace Ludots.Core.Presentation.Systems
             in PresenterState state,
             PresenterDefinition definition,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -1351,6 +1355,7 @@ namespace Ludots.Core.Presentation.Systems
                         in slot,
                         in asset,
                         lod,
+                        ownerCullVisible,
                         presenterWorldPosition,
                         presenterWorldRotation,
                         in presenterWorldFacing,
@@ -1368,6 +1373,7 @@ namespace Ludots.Core.Presentation.Systems
                     in slot,
                     in asset,
                     lod,
+                    ownerCullVisible,
                     presenterWorldPosition,
                     presenterWorldRotation,
                     in presenterWorldFacing,
@@ -1413,7 +1419,7 @@ namespace Ludots.Core.Presentation.Systems
                     in state,
                     presenterWorldPosition,
                     slot.Motion.YDriftPerSecond);
-                VisualVisibility visibility = lod == LODLevel.Culled || (asset.HasMaxLod && lod > asset.MaxLod)
+                VisualVisibility visibility = asset.HasMaxLod && lod > asset.MaxLod
                     ? VisualVisibility.Culled
                     : VisualVisibility.Visible;
                 if (visibility == VisualVisibility.Visible &&
@@ -1424,6 +1430,7 @@ namespace Ludots.Core.Presentation.Systems
                         in slot,
                         in asset,
                         lod,
+                        true,
                         resolvedPosition,
                         presenterWorldRotation,
                         in presenterWorldFacing,
@@ -1461,6 +1468,7 @@ namespace Ludots.Core.Presentation.Systems
             in BehaviorSlot slot,
             in AssetBindingConfig asset,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 resolvedPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -1469,7 +1477,7 @@ namespace Ludots.Core.Presentation.Systems
         {
             if (_skinnedVisualBatchBuffer == null ||
                 asset.AssetKind != AssetKind.SkinnedMesh ||
-                lod == LODLevel.Culled ||
+                !ownerCullVisible ||
                 (asset.HasMaxLod && lod > asset.MaxLod) ||
                 !ResolveAssetVisibility(entity, in asset))
             {
