@@ -7198,6 +7198,27 @@
       "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     },
     {
+      "id": "engine_raylib_slash_trail",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·刀光轨迹",
+      "summary": "TrailMeshBuffer 武器弧形 mesh 拖尾 + 顶点色渐隐——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_slash_trail",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_slash_trail",
+      "screenshot": "artifacts/acceptance/engine_raylib_slash_trail/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
       "id": "capability_standard_graph_op_HidePanel",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHidePanelEntryMod",
       "projectPath": "CapabilityStandardGraphOpHidePanelEntryMod.csproj",

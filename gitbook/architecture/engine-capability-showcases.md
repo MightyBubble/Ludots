@@ -6,13 +6,13 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 
 | 层 | 载体 | 依赖边界 | 覆盖内容 |
 |---|---|---|---|
-| **engine 引擎能力** | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery`（独立可执行画廊，`--scene <id>` 一能力一场景） | 仅 `Ludots.Raylib.Render` + `Ludots.Platform.Abstractions` + Raylib-cs/SkiaSharp，**零 Ludots.Core** | 下表 20 项引擎渲染能力 |
+| **engine 引擎能力** | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery`（独立可执行画廊，`--scene <id>` 一能力一场景） | 仅 `Ludots.Raylib.Render` + `Ludots.Platform.Abstractions` + Raylib-cs/SkiaSharp，**零 Ludots.Core** | 下表 21 项引擎渲染能力 |
 | **platform-benchmark 平台基准** | `raylib_client_parity` / `raylib_ism_benchmark`（宿主内纯数据驱动 mod） | Ludots.Core + `IRaylibBenchmarkRenderer` 直驱，绕过 Presenter/实体管线 | 宿主装配下的平台渲染开销（ISM 吞吐、蒙皮人群基线） |
 | **presentation 系统展示** | `raylib_visual_atmosphere` / `vfx_forge_raylib` / `presenter_blacksmith` 全家等 | 完整 Presentation 请求链路（Presenter → 请求通道 → Raylib 消费） | 表现系统合同、资产驱动、HUD/Presenter 行为 |
 
 明确排除在引擎画廊外的（属 Ludots Presentation 系统能力）：field overlay 战争迷野、HUD/Presenter 链路、minimap。
 
-## 20 项引擎渲染能力目录（画廊场景清单）
+## 21 项引擎渲染能力目录（画廊场景清单）
 
 逐场景的演示讲解（验收截图 + 作者写法 + 怎么跑）见 [引擎画廊 Wiki](../reference/engine-gallery-wiki/README.md)；下表是能力矩阵与承接渲染器。
 
@@ -38,8 +38,9 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 | 18 | primitives | 图元/群体渲染与群体动画 | RaylibPrimitiveRenderer |
 | 19 | lighting | 光照全效（GGX 梯度/split-sum 天空 IBL/深度阴影） | RaylibLitModel + RaylibSkyIbl + RaylibDirectionalShadowMap |
 | 20 | crowd_anim | 大量动画实例合批 | skinning_instanced 真骨骼 GPU 蒙皮 × 4k 实例 |
+| 21 | slash_trail | 刀光轨迹（TrailMeshBuffer 弧形拖尾） | RaylibTrailMeshRenderer + TrailMeshGeometry |
 
-画廊实拍选粹（全 20 场景截图见 Wiki 各场景页与 `artifacts/acceptance/engine_gallery_all/`）：
+画廊实拍选粹（全 21 场景截图见 Wiki 各场景页与 `artifacts/acceptance/engine_gallery_all/`）：
 
 <img src="artifacts/acceptance/engine_gallery_all/instancing.png" alt="GPU 实例化合批验收截图" width="560"> <img src="artifacts/acceptance/engine_gallery_all/terrain_heightmap.png" alt="视觉高度图验收截图" width="560"> <img src="artifacts/acceptance/engine_gallery_all/sky_daynight.png" alt="昼夜天空验收截图" width="560">
 
