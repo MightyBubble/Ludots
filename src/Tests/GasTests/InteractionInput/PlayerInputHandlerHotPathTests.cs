@@ -207,6 +207,51 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void PlayerInputHandler_UnfocusedSentinelPosition_ResetsPointerWithoutDeltaSpike()
+        {
+            var backend = new StubInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
+                    new() { Id = "PointerDelta", Type = InputActionType.Axis2D },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Camera",
+                        Priority = 10,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos" },
+                            new() { ActionId = "PointerDelta", Path = "<Mouse>/Delta" },
+                        }
+                    }
+                }
+            };
+
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Camera");
+
+            backend.MousePosition = new Vector2(320f, 240f);
+            handler.Update();
+
+            backend.MousePosition = new Vector2(-1f, -1f);
+            handler.Update();
+
+            Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(-1f, -1f)));
+            Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(Vector2.Zero));
+
+            backend.MousePosition = new Vector2(680f, 420f);
+            handler.Update();
+
+            Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(680f, 420f)));
+            Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(Vector2.Zero));
+        }
+
+        [Test]
         public void PlayerInputHandler_DuplicateBindingAcrossActiveContexts_ContributesOnce()
         {
             var backend = new StubInputBackend();

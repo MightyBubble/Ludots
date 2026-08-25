@@ -468,7 +468,7 @@ namespace Ludots.Core.Input.Runtime
         private void RefreshPointerState()
         {
             var currentMousePosition = _backend.GetMousePosition();
-            if (!float.IsFinite(currentMousePosition.X) || !float.IsFinite(currentMousePosition.Y))
+            if (!IsAvailablePointerPosition(currentMousePosition))
             {
                 _mouseDelta = Vector2.Zero;
                 _mousePosition = new Vector2(-1f, -1f);
@@ -481,6 +481,14 @@ namespace Ludots.Core.Input.Runtime
                 : Vector2.Zero;
             _mousePosition = currentMousePosition;
             _hasMousePosition = true;
+        }
+
+        private static bool IsAvailablePointerPosition(Vector2 position)
+        {
+            return float.IsFinite(position.X) &&
+                   float.IsFinite(position.Y) &&
+                   position.X >= 0f &&
+                   position.Y >= 0f;
         }
 
         private float ReadCompositeScalar(CompiledBinding[] parts, int index)

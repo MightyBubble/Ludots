@@ -8,6 +8,7 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
         private readonly float _marginPx;
         private readonly float _speedCmPerSec;
         private readonly bool _requirePointerInsideViewport;
+        private bool _interiorArmed;
 
         public EdgePanBehavior(float marginPx, float speedCmPerSec, bool requirePointerInsideViewport)
         {
@@ -24,14 +25,20 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
         public void Update(CameraState state, CameraBehaviorContext ctx, float dt)
         {
             if (state.IsFollowing || dt <= 0f) return;
-            if (!ctx.BehaviorInput.PointerActive) return;
+            if (!ctx.BehaviorInput.PointerActive)
+            {
+                _interiorArmed = false;
+                return;
+            }
 
             Vector2 mousePos = ctx.BehaviorInput.PointerPosition;
             Vector2 res = ctx.Viewport.Resolution;
             if (res.X < 1f || res.Y < 1f) return;
-            if (_requirePointerInsideViewport &&
-                (mousePos.X < 0f || mousePos.Y < 0f || mousePos.X > res.X || mousePos.Y > res.Y))
+
+            bool insideViewport = mousePos.X >= 0f && mousePos.Y >= 0f && mousePos.X <= res.X && mousePos.Y <= res.Y;
+            if (_requirePointerInsideViewport && !insideViewport)
             {
+                _interiorArmed = false;
                 return;
             }
 
@@ -43,6 +50,21 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 
             if (mousePos.Y < _marginPx) edgeY = 1f;
             else if (mousePos.Y > res.Y - _marginPx) edgeY = -1f;
+
+            // Window focus and cursor-enter always land on the rim first. That is not
+            // an edge-pan command until the pointer has been in the playfield once.
+            if (_requirePointerInsideViewport)
+            {
+                bool onEdge = MathF.Abs(edgeX) >= 0.001f || MathF.Abs(edgeY) >= 0.001f;
+                if (!onEdge && insideViewport)
+                {
+                    _interiorArmed = true;
+                }
+                else if (!_interiorArmed)
+                {
+                    return;
+                }
+            }
 
             if (MathF.Abs(edgeX) < 0.001f && MathF.Abs(edgeY) < 0.001f) return;
 
