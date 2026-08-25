@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-08-25T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "CameraProfilesMod",
+    "NarrativeFrontendMod",
+    "UiRegionsMod",
+    "NarrativeChainShowcaseMod"
+  ],
+  "plannedMods": [
+    { "id": "LudotsCoreMod", "rootPath": "../../../../../../../mods/LudotsCoreMod" },
+    { "id": "CoreInputMod", "rootPath": "../../../../../../../mods/CoreInputMod" },
+    { "id": "CameraProfilesMod", "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod" },
+    { "id": "NarrativeFrontendMod", "rootPath": "../../../../../../../mods/capabilities/narrativefrontend/NarrativeFrontendMod" },
+    { "id": "UiRegionsMod", "rootPath": "../../../../../../../mods/capabilities/ui_regions/UiRegionsMod" },
+    { "id": "NarrativeChainShowcaseMod", "rootPath": "../../../../../../../mods/showcases/narrative_chain/NarrativeChainShowcaseMod" }
+  ]
+}

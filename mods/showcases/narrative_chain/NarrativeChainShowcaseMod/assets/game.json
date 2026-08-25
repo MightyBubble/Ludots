@@ -1,0 +1,4 @@
+{
+  "startupMapId": "narrative_chain_hub",
+  "startupInputContexts": ["NarrativeChain.Controls"]
+}
