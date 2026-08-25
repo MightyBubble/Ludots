@@ -42,8 +42,12 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
             return;
         }
 
-        Entity actor = _helper.GetControlledActor();
-        if (_helper.TryBindSoleSeatActor(_mapping, actor))
+        // Sole-seat input attribution binds the possessed seat rep itself: this showcase
+        // has no single player-owned avatar, so CommandSource-primary resolution can
+        // never supply an actor here.
+        if (Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity seatRep) &&
+            _world.IsAlive(seatRep) &&
+            _helper.TryBindSoleSeatActor(_mapping, seatRep))
         {
             _mapping.Update(dt);
         }

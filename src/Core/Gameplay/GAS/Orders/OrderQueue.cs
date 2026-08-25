@@ -24,6 +24,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public int AdmissionBatchId;
         public ushort AdmissionBatchSize;
         public ushort AdmissionBatchIndex;
+
+        /// <summary>
+        /// Identity shared by every order of one submitted command: atomic fan-outs
+        /// correlate through their admission batch; standalone orders correlate by
+        /// their own order id.
+        /// </summary>
+        public readonly int CommandCorrelationId => AdmissionBatchId > 0 ? AdmissionBatchId : OrderId;
     }
 
     public sealed class OrderQueue
