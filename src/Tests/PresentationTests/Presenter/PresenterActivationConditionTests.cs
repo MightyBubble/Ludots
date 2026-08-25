@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using Arch.Core;
+using Arch.System;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
@@ -143,6 +146,77 @@ namespace Ludots.Tests.Presentation
                 "创建 presenter B 后，presenter A 的 BehaviorActiveMask 必须保持不变："
                 + "编译的 PresenterCreated 规则只路由到刚创建的实例（PresenterRuleSystem 对 PresenterCreated 事件 "
                 + "解析事件携带的 presenter 实体），不得扇出到同一 definition 的姐妹实例。");
+        }
+
+        [Test]
+        public void ConditionFlip_TrueThenFalse_KeepsSiblingActive()
+        {
+            using var fixture = CreateConfigFixture(ConditionedDefinitionJson);
+            int defId = fixture.Definitions.GetId("accept.activation.beacon");
+
+            Entity ownerA = fixture.World.Create(new VisualTransform { Position = new System.Numerics.Vector3(5f, 0f, 5f) });
+            var (presenterA, commandsA, soundsA) = fixture.CreateAndDecide(defId, ownerA, scopeTag: 20);
+            Assert.That(commandsA.Count, Is.EqualTo(2));
+            Assert.That(commandsA[0].CommandKind, Is.EqualTo(PresenterCommandKind.DeactivateBehavior));
+            Assert.That(commandsA[1].CommandKind, Is.EqualTo(PresenterCommandKind.ActivateBehavior));
+            Assert.That(fixture.World.Get<PresenterState>(presenterA).BehaviorActiveMask & (1u << ConditionedSlot), Is.Not.EqualTo(0u));
+            Assert.That(CountPlayRequests(soundsA), Is.EqualTo(1));
+            uint maskA = fixture.World.Get<PresenterState>(presenterA).BehaviorActiveMask;
+
+            Entity ownerB = fixture.World.Create(); // 无 VisualTransform → 条件 false
+            var (presenterB, commandsB, soundsB) = fixture.CreateAndDecide(defId, ownerB, scopeTag: 21);
+            Assert.That(commandsB.Count, Is.EqualTo(1));
+            Assert.That(commandsB[0].CommandKind, Is.EqualTo(PresenterCommandKind.DeactivateBehavior));
+            Assert.That(fixture.World.Get<PresenterState>(presenterB).BehaviorActiveMask & (1u << ConditionedSlot), Is.EqualTo(0u));
+            Assert.That(CountPlayRequests(soundsB), Is.EqualTo(CountPlayRequests(soundsA)),
+                "B 条件 false 不得新增任何输出：缓冲里唯一的声音请求仍是 A 的常驻 loop 声（数量与 A 创建后一致）。");
+
+            Assert.That(
+                fixture.World.Get<PresenterState>(presenterA).BehaviorActiveMask,
+                Is.EqualTo(maskA),
+                "创建条件 false 的 presenter B 后，条件 true 的 presenter A 必须保持激活："
+                + "编译的 PresenterCreated 规则只路由到事件携带的 presenter 实体（PresenterRuleSystem 对 PresenterCreated "
+                + "解析事件携带的 presenter 实体），不得扇出到同一 definition 的姐妹实例。");
+        }
+
+        [Test]
+        public void EngineSchedule_RulesBeforeRuntimeBeforeBehavior_PreventsOneFrameActivationOutput()
+        {
+            // 生产注册序（GameEngine.InitializeWithConfigPipelineInternal）：
+            //   presenterRuleSystem → presenterRuntimeSystem → … → presenterBehaviorSystem
+            // 同一帧内：规则产出命令 → 运行时按序应用到 mask（无条件 Deactivate 先于条件 Activate，
+            // PresenterRuntimeSystem.Update 在同一遍历中按序消费整批命令）→ 行为系统才读 mask 输出。
+            // 创建帧的 mask 由 BuildDefaultBehaviorMask 决定，而 loader 对带 activationCondition 的槽强制
+            // ActiveByDefault=false，因此条件首次求值（下一帧规则序）之前不可能出现一帧激活输出。
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine("LudotsCoreMod");
+
+            FieldInfo field = typeof(GameEngine).GetField("_presentationSystems", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine._presentationSystems field missing.");
+            var systems = field.GetValue(engine) as List<ISystem<float>>
+                ?? throw new InvalidOperationException("GameEngine presentation systems missing.");
+
+            int rulesIndex = FindSystemIndex<PresenterRuleSystem>(systems);
+            int runtimeIndex = FindSystemIndex<PresenterRuntimeSystem>(systems);
+            int behaviorIndex = FindSystemIndex<PresenterBehaviorSystem>(systems);
+
+            Assert.That(rulesIndex, Is.GreaterThanOrEqualTo(0), "PresenterRuleSystem 必须注册。");
+            Assert.That(runtimeIndex, Is.GreaterThan(rulesIndex),
+                "PresenterRuleSystem 必须先于 PresenterRuntimeSystem：activationCondition 编译出的命令必须在同一帧内应用到 mask。");
+            Assert.That(behaviorIndex, Is.GreaterThan(runtimeIndex),
+                "PresenterRuntimeSystem 必须先于 PresenterBehaviorSystem：行为输出前 mask 必须是最终条件结果，否则条件槽会出现一帧激活输出。");
+        }
+
+        private static int FindSystemIndex<T>(List<ISystem<float>> systems)
+        {
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (systems[i] is T)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         [Test]
@@ -427,8 +501,8 @@ namespace Ludots.Tests.Presentation
             report.AppendLine("- reason codes: condition_false_inactive, condition_true_active, flip_emits_deactivate_then_activate, mask_matches_condition");
             report.AppendLine();
             report.AppendLine("## Summary Stats");
-            report.AppendLine(FormattableString.Invariant($"- DeactivateBehavior commands: {commandLog.Count(c => c.Kind == PresenterCommandKind.DeactivateBehavior)} (unit A false + unit B reset)"));
-            report.AppendLine(FormattableString.Invariant($"- ActivateBehavior commands: {commandLog.Count(c => c.Kind == PresenterCommandKind.ActivateBehavior)} (unit B true only)"));
+            report.AppendLine(FormattableString.Invariant($"- DeactivateBehavior commands: {CountCommands(commandLog, PresenterCommandKind.DeactivateBehavior)} (unit A false + unit B reset)"));
+            report.AppendLine(FormattableString.Invariant($"- ActivateBehavior commands: {CountCommands(commandLog, PresenterCommandKind.ActivateBehavior)} (unit B true only)"));
             report.AppendLine("- slot under test: sound (index 6)");
             string reportText = report.ToString();
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), reportText);
@@ -457,6 +531,12 @@ namespace Ludots.Tests.Presentation
                 """);
             int defId = fixture.Definitions.GetId("accept.activation.default");
 
+            // loader 对带 activationCondition 的槽强制 ActiveByDefault=false（条件为唯一权威）：
+            // 真实引擎里创建帧的 mask 由 BuildDefaultBehaviorMask 决定且 BehaviorSystem 在 RuntimeSystem
+            // 之后运行，若保持 activeByDefault=true 会产生条件首次求值前的一帧激活输出窗口。
+            Assert.That(fixture.Definitions.Get(defId).Behaviors[0].ActiveByDefault, Is.False,
+                "activationCondition 存在时 loader 必须强制 ActiveByDefault=false");
+
             Entity owner = fixture.World.Create(); // 无 VisualTransform → 条件 false
             var (presenter, commands, sounds) = fixture.CreateAndDecide(defId, owner, scopeTag: 1);
 
@@ -472,6 +552,22 @@ namespace Ludots.Tests.Presentation
             for (int i = 0; i < sounds.Count; i++)
             {
                 if (sounds[i].Kind == SoundRequestKind.PlayOrUpdate)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountCommands(
+            IReadOnlyList<(int Step, PresenterCommandKind Kind, string Unit, int Slot)> commandLog,
+            PresenterCommandKind kind)
+        {
+            int count = 0;
+            for (int i = 0; i < commandLog.Count; i++)
+            {
+                if (commandLog[i].Kind == kind)
                 {
                     count++;
                 }
