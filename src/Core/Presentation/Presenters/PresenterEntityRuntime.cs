@@ -1452,6 +1452,11 @@ namespace Ludots.Core.Presentation.Presenters
                 !_world.Has<PresenterState>(entity))
             {
                 RemoveTickBehaviorMarkers(entity);
+                if (behaviors == null && definition.HasGraphParamBindingWork)
+                {
+                    SyncTickBehaviorMarker<PerfHasGraphParamBinding>(entity, true);
+                }
+
                 return;
             }
 
@@ -1463,6 +1468,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasGrounding = false;
             bool hasAnimator = false;
             bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
+            bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
             bool hasMinimapMarker = false;
             bool hasExtensionBehavior = false;
 
@@ -1545,6 +1551,7 @@ namespace Ludots.Core.Presentation.Presenters
             SyncTickBehaviorMarker<PerfHasAttachmentTick>(entity, hasAttachmentTick);
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
+            SyncTickBehaviorMarker<PerfHasGraphParamBinding>(entity, hasGraphParamBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
             SyncTickBehaviorMarker<PerfHasExtensionBehavior>(entity, hasExtensionBehavior);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
@@ -1713,6 +1720,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PerfHasOwnerFacingBinding>(entity))
             {
                 RemoveMarker<PerfHasOwnerFacingBinding>(entity);
+            }
+
+            if (_world.Has<PerfHasGraphParamBinding>(entity))
+            {
+                RemoveMarker<PerfHasGraphParamBinding>(entity);
             }
 
             if (_world.Has<PerfHasMinimapMarker>(entity))
@@ -2743,6 +2755,7 @@ namespace Ludots.Core.Presentation.Presenters
                 bool hasGrounding = false;
                 bool hasAnimator = false;
                 bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
+                bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
                 bool hasMinimapMarker = false;
                 bool hasExtensionBehavior = false;
                 for (int i = 0; i < behaviors.Length; i++)
@@ -2789,6 +2802,7 @@ namespace Ludots.Core.Presentation.Presenters
                 if (hasAttachmentTick) signature += Component<PerfHasAttachmentTick>.Signature;
                 if (hasGrounding) signature += Component<PerfHasGrounding>.Signature;
                 if (hasOwnerFacingBinding) signature += Component<PerfHasOwnerFacingBinding>.Signature;
+                if (hasGraphParamBinding) signature += Component<PerfHasGraphParamBinding>.Signature;
                 if (hasMinimapMarker) signature += Component<PerfHasMinimapMarker>.Signature;
                 if (hasExtensionBehavior) signature += Component<PerfHasExtensionBehavior>.Signature;
                 if ((definition.HasSurfaceAuthoring || definition.HasAssetBindingBehavior) &&
