@@ -42,6 +42,7 @@ namespace Ludots.App.RaylibEngineGallery
             new("primitives", "图元群体渲染", "RaylibPrimitiveRenderer 纯数据图元阵 + 原型动效", static () => new Scenes.PrimitivesScene()),
             new("lighting", "光照全效", "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空环境近似 + 深度阴影", static () => new Scenes.LightingScene()),
             new("crowd_anim", "大量动画实例合批", "4k mannequin 环形行军——GpuSkinnedInstance 真 GPU 蒙皮合批", static () => new Scenes.CrowdAnimScene()),
+            new("slash_trail", "刀光轨迹", "TrailMeshBuffer 武器弧形 mesh 拖尾 + 顶点色渐隐", static () => new Scenes.SlashTrailScene()),
         };
 
         public static IReadOnlyList<string> Ids { get; } = Entries.Select(e => e.Id).ToArray();

@@ -75,6 +75,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly HashSet<long> _warnedGraphBindings = new();
         private readonly PresentPhaseResolver _phaseResolver = new();
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
+        private readonly TrailMeshRuntime? _trailMesh;
+        private float _trailElapsedSeconds;
         private Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
         private Dictionary<int, OwnerTagWorkTarget[]> _ownerTagWorkIndex;
         private int _definitionVersion = -1;
@@ -83,7 +85,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasExtensionBehavior>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasExtensionBehavior, PerfHasTrailMesh>()
             .WithNone<PresenterBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PresenterState, PerfMaterialDirty>()
@@ -127,9 +129,10 @@ namespace Ludots.Core.Presentation.Systems
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            TrailMeshBuffer? trailMeshBuffer = null)
             : this(world, runtime, definitions, events, ownerChanges, soundRequests,
-                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi)
+                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi, trailMeshBuffer)
         {
         }
 
@@ -145,7 +148,8 @@ namespace Ludots.Core.Presentation.Systems
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            TrailMeshBuffer? trailMeshBuffer = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -158,6 +162,7 @@ namespace Ludots.Core.Presentation.Systems
             _extensionBehaviors = extensionBehaviors;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _trailMesh = trailMeshBuffer != null ? new TrailMeshRuntime(trailMeshBuffer) : null;
             _extensionBehaviorOps = new PresenterBehaviorOps(_runtime);
             RefreshDefinitionIndexes();
             _timingDiagnostics = timingDiagnostics;
@@ -170,6 +175,7 @@ namespace Ludots.Core.Presentation.Systems
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             int ownerChanges;
             int tickDrivenCount;
+            _trailElapsedSeconds += dt;
             _runtime.BeginDeferredStructuralChanges(_commandBuffer);
             try
             {
@@ -187,6 +193,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             PlaybackStructuralChanges();
+            _trailMesh?.Advance(World, _trailElapsedSeconds);
             int destroyEventScanCount = StopDestroyedSounds();
             _ownerChanges.Clear();
 
@@ -831,6 +838,9 @@ namespace Ludots.Core.Presentation.Systems
                         case BehaviorKind.Spline:
                             ApplySpline(entity, ref state, slot.Spline, tickDt);
                             break;
+                        case BehaviorKind.TrailMesh:
+                            ApplyTrailMesh(entity, in state, in slot.TrailMesh);
+                            break;
                     }
                 }
             }
@@ -893,6 +903,9 @@ namespace Ludots.Core.Presentation.Systems
                                 break;
                             case BehaviorKind.Spline:
                                 ApplySpline(entity, ref state, slot.Spline, tickDt);
+                                break;
+                            case BehaviorKind.TrailMesh:
+                                ApplyTrailMesh(entity, in state, in slot.TrailMesh);
                                 break;
                         }
                     }
@@ -1722,6 +1735,25 @@ namespace Ludots.Core.Presentation.Systems
                 facing.AngleRad = 0f;
                 facing.HasValue = 1;
             }
+        }
+
+        private void ApplyTrailMesh(Entity entity, in PresenterState state, in TrailMeshConfig config)
+        {
+            if (_trailMesh == null)
+            {
+                throw new InvalidOperationException(
+                    "TrailMesh behavior is active but no TrailMeshBuffer is wired into PresenterBehaviorSystem.");
+            }
+
+            Vector3 position = World.Has<PresenterWorldPosition>(entity)
+                ? World.Get<PresenterWorldPosition>(entity).Value
+                : Vector3.Zero;
+            Quaternion rotation = World.Has<PresenterWorldRotation>(entity)
+                ? World.Get<PresenterWorldRotation>(entity).Value
+                : Quaternion.Identity;
+            Vector3 baseWorld = position + Vector3.Transform(config.BaseOffset, rotation);
+            Vector3 tipWorld = position + Vector3.Transform(config.TipOffset, rotation);
+            _trailMesh.Sample(entity, state.StableId, in config, baseWorld, tipWorld, _trailElapsedSeconds);
         }
 
         private void ApplyAttachment(Entity entity, in AttachmentConfig config)
