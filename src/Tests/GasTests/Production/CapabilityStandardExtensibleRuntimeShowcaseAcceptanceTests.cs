@@ -5,8 +5,8 @@ using System.Text.Json;
 using Arch.Core;
 using CapabilityStandardEffectPresetTypeCodeShowcaseMod;
 using CapabilityStandardModExtensibleRuntimeShowcaseShared;
-using CapabilityStandardPerformerBehaviorExtensionShowcaseMod;
-using CapabilityStandardPerformerCommandExtensionShowcaseMod;
+using CapabilityStandardPresenterBehaviorExtensionShowcaseMod;
+using CapabilityStandardPresenterCommandExtensionShowcaseMod;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -122,14 +122,14 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
     [Test]
     public void PresenterBehaviorExtension_PlayerSeesCloudDriftTickFromModBehavior()
     {
-        const string modId = "CapabilityStandardPerformerBehaviorExtensionShowcaseMod";
-        const string mapId = "capability_standard_performer_behavior_extension_showcase";
-        const string bindingName = "capability_standard_performer_behavior_extension_showcase";
-        const string presetId = "capability_standard_performer_behavior_extension_showcase_raylib";
+        const string modId = "CapabilityStandardPresenterBehaviorExtensionShowcaseMod";
+        const string mapId = "capability_standard_presenter_behavior_extension_showcase";
+        const string bindingName = "capability_standard_presenter_behavior_extension_showcase";
+        const string presetId = "capability_standard_presenter_behavior_extension_showcase_raylib";
         string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
 
         AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
-            "assets/Presentation/presenters/capability_standard.performer_behavior_extension.cloud_banner.json");
+            "assets/Presentation/presenters/capability_standard.presenter_behavior_extension.cloud_banner.json");
 
         using var engine = CreateEngine(repoRoot, modId);
         engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
@@ -137,9 +137,9 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
         ExtensibleRuntimeShowcaseRuntime runtime = RequireRuntime(engine);
         TickUntil(engine, () => ReadPlainInt(runtime.CapturePanelState(engine).MetricBValue) > 0, 30);
 
-        AssertPanelAndButton(uiRoot, "capability-standard-performer-behavior-extension-panel", "capability-standard-performer-behavior-extension-focus");
+        AssertPanelAndButton(uiRoot, "capability-standard-presenter-behavior-extension-panel", "capability-standard-presenter-behavior-extension-focus");
         var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)!;
-        int definitionId = definitions.GetId(CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry.PresenterDefinitionKey);
+        int definitionId = definitions.GetId(CapabilityStandardPresenterBehaviorExtensionShowcaseModEntry.PresenterDefinitionKey);
         Assert.That(definitions.TryGet(definitionId, out PresenterDefinition definition), Is.True);
         Assert.Multiple(() =>
         {
@@ -148,7 +148,7 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
             Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.Extension));
         });
 
-        ClickElement(uiRoot, "capability-standard-performer-behavior-extension-focus");
+        ClickElement(uiRoot, "capability-standard-presenter-behavior-extension-focus");
         TickFrames(engine, 1);
         ExtensibleRuntimeShowcasePanelState state = runtime.CapturePanelState(engine);
         Assert.Multiple(() =>
@@ -162,14 +162,14 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
     [Test]
     public void PresenterCommandExtension_PlayerSignalRoutesToModCommandOnExistingPresenter()
     {
-        const string modId = "CapabilityStandardPerformerCommandExtensionShowcaseMod";
-        const string mapId = "capability_standard_performer_command_extension_showcase";
-        const string bindingName = "capability_standard_performer_command_extension_showcase";
-        const string presetId = "capability_standard_performer_command_extension_showcase_raylib";
+        const string modId = "CapabilityStandardPresenterCommandExtensionShowcaseMod";
+        const string mapId = "capability_standard_presenter_command_extension_showcase";
+        const string bindingName = "capability_standard_presenter_command_extension_showcase";
+        const string presetId = "capability_standard_presenter_command_extension_showcase_raylib";
         string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
 
         AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
-            "assets/Presentation/presenters/capability_standard.performer_command_extension.signal_rules.json");
+            "assets/Presentation/presenters/capability_standard.presenter_command_extension.signal_rules.json");
 
         using var engine = CreateEngine(repoRoot, modId);
         engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
@@ -177,9 +177,9 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
         ExtensibleRuntimeShowcaseRuntime runtime = RequireRuntime(engine);
         TickFrames(engine, 2);
 
-        AssertPanelAndButton(uiRoot, "capability-standard-performer-command-extension-panel", "capability-standard-performer-command-extension-signal");
+        AssertPanelAndButton(uiRoot, "capability-standard-presenter-command-extension-panel", "capability-standard-presenter-command-extension-signal");
         var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)!;
-        int definitionId = definitions.GetId(CapabilityStandardPerformerCommandExtensionShowcaseModEntry.PresenterDefinitionKey);
+        int definitionId = definitions.GetId(CapabilityStandardPresenterCommandExtensionShowcaseModEntry.PresenterDefinitionKey);
         Assert.That(definitions.TryGet(definitionId, out PresenterDefinition definition), Is.True);
         Assert.Multiple(() =>
         {
@@ -189,7 +189,7 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
             Assert.That(definition.Rules[0].Command.RouteStrategy, Is.EqualTo(PresenterCommandRouteStrategy.ExistingInstances));
         });
 
-        ClickElement(uiRoot, "capability-standard-performer-command-extension-signal");
+        ClickElement(uiRoot, "capability-standard-presenter-command-extension-signal");
         TickUntil(engine, () => ReadPlainInt(runtime.CapturePanelState(engine).MetricBValue) > 0, 30);
         ExtensibleRuntimeShowcasePanelState state = runtime.CapturePanelState(engine);
         Assert.Multiple(() =>

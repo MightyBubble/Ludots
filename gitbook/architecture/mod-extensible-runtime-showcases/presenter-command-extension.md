@@ -9,16 +9,16 @@
 ## 结构
 
 ```text
-CapabilityStandardPerformerCommandExtensionShowcaseMod/
-  CapabilityStandardPerformerCommandExtensionShowcaseModEntry.cs
+CapabilityStandardPresenterCommandExtensionShowcaseMod/
+  CapabilityStandardPresenterCommandExtensionShowcaseModEntry.cs
   assets/
     game.json
     Maps/
-      capability_standard_performer_command_extension_showcase.json
+      capability_standard_presenter_command_extension_showcase.json
     Configs/
       Presentation/
         presenters/
-          capability_standard.performer_command_extension.signal_rules.json
+          capability_standard.presenter_command_extension.signal_rules.json
 ```
 
 ## 详情
@@ -27,7 +27,7 @@ Mod 启动时注册 command key，并声明 route：
 
 ```csharp
 context.Extensions.Presentation.RegisterPresenterCommand(
-    "CapabilityStandardPerformerCommandExtensionShowcaseMod.EmitSignalPing",
+    "CapabilityStandardPresenterCommandExtensionShowcaseMod.EmitSignalPing",
     new PresenterCommandExtensionDescriptor(
         PresenterCommandRouteStrategy.ExistingInstances,
         EmitSignalPing));
@@ -62,7 +62,7 @@ presenter rule 通过 key 发出 extension command。loader 会把它编译为 `
 Feature: 玩家点击信号按钮后看到信号被处理
 
   Scenario: Signal Ping 点击后处理计数增加
-    Given 我启动 `capability_standard_performer_command_extension_showcase_raylib`
+    Given 我启动 `capability_standard_presenter_command_extension_showcase_raylib`
     And 地图显示 Presenter Command Extension 面板
     When 我点击 `Send Signal Ping`
     Then 面板显示信号已被处理
