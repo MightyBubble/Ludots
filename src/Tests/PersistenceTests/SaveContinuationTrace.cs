@@ -13,6 +13,8 @@ namespace Ludots.Tests.Persistence;
 
 internal static class SaveContinuationTrace
 {
+    private const int CanonicalWorldId = 0;
+
     public static string[] RunFixedSteps(GameEngine engine, int count, float deltaTime)
     {
         var trace = new string[count];
@@ -22,13 +24,26 @@ internal static class SaveContinuationTrace
         {
             pacemaker.Step();
             engine.Tick(deltaTime);
-            trace[i] = $"tick={engine.GameSession.CurrentTick};fixedFrame={clock.Now(ClockDomainId.FixedFrame)};worldHash={ComputeWorldStateHash(engine.World)}";
+            trace[i] = $"tick={engine.GameSession.CurrentTick};fixedFrame={clock.Now(ClockDomainId.FixedFrame)};worldHash={ComputeWorldStateHash(engine)}";
         }
 
         return trace;
     }
 
-    private static string ComputeWorldStateHash(World world)
+    // Hash lens: pass state through the save serializer into a throwaway world, then rewrite all
+    // entity references to a canonical WorldId. Arch assigns world ids from a process-global
+    // counter, so two engines in one process can never be compared on raw component bytes — the
+    // persisted identity of an entity reference is (Id, Version), not WorldId.
+    private static string ComputeWorldStateHash(GameEngine engine)
+    {
+        LudotsBinaryWorldSerializer serializer = LudotsPersistenceSerializerFactory.Create(engine);
+        byte[] worldBytes = serializer.Serialize(engine.World);
+        using World canonical = serializer.Deserialize(worldBytes);
+        SaveEntityWorldIdNormalizer.Normalize(canonical, CanonicalWorldId);
+        return HashWorld(canonical);
+    }
+
+    private static string HashWorld(World world)
     {
         MessagePackSerializerOptions options = CreateComponentSerializerOptions();
         var rows = new List<string>();
@@ -58,7 +73,7 @@ internal static class SaveContinuationTrace
         return Convert.ToHexString(SHA256.HashData(bytes));
     }
 
-    private static MessagePackSerializerOptions CreateComponentSerializerOptions()
+    internal static MessagePackSerializerOptions CreateComponentSerializerOptions()
     {
         return MessagePackSerializerOptions.Standard.WithResolver(
             CompositeResolver.Create(

@@ -181,6 +181,15 @@ jobs:
             exit $LASTEXITCODE
           }
 
+      # Full persistence suite gates save/restore fidelity and determinism.
+      - name: Test persistence suite
+        shell: pwsh
+        run: |
+          dotnet test src/Tests/PersistenceTests/PersistenceTests.csproj -c Debug --no-build -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       - name: Run Raylib field rendering tests
         shell: pwsh
         run: |
