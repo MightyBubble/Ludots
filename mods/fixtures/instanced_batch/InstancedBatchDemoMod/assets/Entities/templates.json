@@ -1,0 +1,22 @@
+[
+  {
+    "id": "instanced_batch_demo_anchor",
+    "components": {
+      "Name": {
+        "Value": "Instanced Batch Demo Anchor"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  }
+]

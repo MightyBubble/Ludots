@@ -351,6 +351,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "instanced_batch_demo_raylib",
+      "name": "Instanced Batch Demo Raylib",
+      "selectors": [
+        "$instanced_batch_demo"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "fog_of_war_raylib",
       "name": "Fog Of War Raylib",
       "selectors": [

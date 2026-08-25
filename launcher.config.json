@@ -360,6 +360,14 @@
       }
     },
     {
+      "name": "instanced_batch_demo",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/instanced_batch/InstancedBatchDemoMod",
+        "projectPath": "InstancedBatchDemoMod.csproj"
+      }
+    },
+    {
       "name": "fog_vision_decay",
       "target": {
         "type": "path",

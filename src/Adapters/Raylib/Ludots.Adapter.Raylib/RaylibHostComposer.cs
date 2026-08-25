@@ -117,10 +117,25 @@ namespace Ludots.Adapter.Raylib
 
         internal static PresentationVisualCapabilities ComposePresentationVisualCapabilities()
         {
+            // InstancedStaticMeshBatch is flat-only on purpose: raylib has no hierarchical ISM,
+            // so HierarchicalInstancedStaticMeshBatch stays undeclared and fail-loud at the
+            // tick-tail validator rather than silently degrading to a flat draw.
             return PresentationVisualCapabilities.Decal |
                    PresentationVisualCapabilities.Vfx |
                    PresentationVisualCapabilities.Surface |
-                   PresentationVisualCapabilities.NavMeshTileGeometry;
+                   PresentationVisualCapabilities.NavMeshTileGeometry |
+                   PresentationVisualCapabilities.InstancedStaticMeshBatch;
+        }
+
+        internal static void EnsureInstancedBatchLaneSourceBound(
+            PresentationVisualCapabilities visuals,
+            bool laneSourceBound)
+        {
+            if (visuals.HasFlag(PresentationVisualCapabilities.InstancedStaticMeshBatch) && !laneSourceBound)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib host declared {nameof(PresentationVisualCapabilities.InstancedStaticMeshBatch)} without binding an instanced batch lane source; bind {nameof(RaylibInstancedBatchLaneStore)} in the same compose step or drop the capability bit.");
+            }
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
@@ -130,6 +145,12 @@ namespace Ludots.Adapter.Raylib
             ValidateKey(engine, CoreServiceKeys.UISystem);
             ValidateKey(engine, CoreServiceKeys.InputHandler);
             ValidateKey(engine, CoreServiceKeys.InputBackend);
+            PresentationVisualCapabilities visuals = engine
+                .GetService(CoreServiceKeys.PresentationAdapterCapabilities)
+                .Visuals;
+            EnsureInstancedBatchLaneSourceBound(
+                visuals,
+                engine.TryGetService(RaylibInstancedBatchLaneStore.LaneStoreServiceKey, out _));
         }
 
         private static void ValidateKey<T>(GameEngine engine, ServiceKey<T> key)
