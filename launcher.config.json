@@ -1454,6 +1454,41 @@
       }
     },
     {
+      "name": "navmesh_debug",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_debug/NavMeshDebugLaunchMod"
+      }
+    },
+    {
+      "name": "navmesh_debug_hex_launch",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_debug_hex/NavMeshDebugHexLaunchMod"
+      }
+    },
+    {
+      "name": "navmesh_debug_grid_launch",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_debug_grid/NavMeshDebugGridLaunchMod"
+      }
+    },
+    {
+      "name": "navmesh_debug_vhtm_launch",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod"
+      }
+    },
+    {
+      "name": "nav_gate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_runtime_gate/NavGateShowcaseMod"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_HidePanel",
       "target": {
         "type": "path",

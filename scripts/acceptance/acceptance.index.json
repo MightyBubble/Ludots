@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 44,
+    "runnable": 45,
     "testOnly": 0,
-    "total": 44
+    "total": 45
   },
   "runnable": [
     {
@@ -328,6 +328,14 @@
       "preset": "item_system_raylib",
       "binding": "item_system",
       "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "navmesh_runtime_gate_showcase",
+      "preset": "nav_gate_raylib",
+      "binding": "nav_gate",
+      "testFilter": "NavGateShowcaseContractTests",
       "artifactDir": null,
       "hasScreenshotEvidence": false
     },

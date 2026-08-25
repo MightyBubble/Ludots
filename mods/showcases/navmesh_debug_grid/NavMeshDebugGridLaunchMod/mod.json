@@ -1,0 +1,17 @@
+{
+  "name": "NavMeshDebugGridLaunchMod",
+  "version": "1.0.0",
+  "description": "Launch overlay selecting the grid DataFile variant (navmesh_debug_grid) of the baked 4x4 navmesh debug map. Codeless map selector; overlay capability comes from NavMeshDebugLaunchMod.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "NavMeshDebugLaunchMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "navmesh",
+    "debug",
+    "grid"
+  ]
+}

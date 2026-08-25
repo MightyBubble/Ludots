@@ -16,7 +16,7 @@ namespace CapabilityStandardPerformerCommandExtensionShowcaseMod;
 public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry : IMod
 {
     public const string CommandKey = "CapabilityStandardPerformerCommandExtensionShowcaseMod.EmitSignalPing";
-    public const string PerformerDefinitionKey = "capability_standard.performer_command_extension.signal_rules";
+    public const string PresenterDefinitionKey = "capability_standard.performer_command_extension.signal_rules";
     public const string EventKey = "CapabilityStandard.PerformerCommandExtension.Signal";
     private const string MapId = "capability_standard_performer_command_extension_showcase";
     private int _registeredCommandId;
@@ -24,15 +24,15 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
     private int _commandCallCount;
     private int _lastPayload;
     private int _lastScopeTag;
-    private bool _lastHadRoutedPerformer;
+    private bool _lastHadRoutedPresenter;
     private Entity _ownerEntity = Entity.Null;
 
     public void OnLoad(IModContext context)
     {
-        _registeredCommandId = context.Extensions.Presentation.RegisterPerformerCommand(
+        _registeredCommandId = context.Extensions.Presentation.RegisterPresenterCommand(
             CommandKey,
-            new PerformerCommandExtensionDescriptor(
-                PerformerCommandRouteStrategy.ExistingInstances,
+            new PresenterCommandExtensionDescriptor(
+                PresenterCommandRouteStrategy.ExistingInstances,
                 EmitSignalPing));
         _signalEventId = TagRegistry.Register(EventKey);
 
@@ -42,16 +42,16 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
             PanelElementId = "capability-standard-performer-command-extension-panel",
             PrimaryButtonElementId = "capability-standard-performer-command-extension-signal",
             SurfaceOwnerId = "Showcase.CapabilityStandardPerformerCommandExtension.Panel",
-            Title = "Performer Command Extension",
+            Title = "Presenter Command Extension",
             FeatureLabel = "Command kind",
             PrimaryButtonLabel = "Send Signal Ping",
             AccentColor = "#F2C94C",
-            ReadyText = "Signal Ping is routed to the existing performer.",
+            ReadyText = "Signal Ping is routed to the existing presenter.",
             ProofLines =
             [
                 $"Command key: {CommandKey}",
                 $"Gameplay event: {EventKey}",
-                "The button publishes an event; performer rules produce the extension command."
+                "The button publishes an event; presenter rules produce the extension command."
             ],
             OnActivated = ActivateShowcase,
             OnUpdate = UpdateMetrics,
@@ -70,14 +70,14 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
         _commandCallCount = 0;
         _lastPayload = 0;
         _lastScopeTag = 0;
-        _lastHadRoutedPerformer = false;
+        _lastHadRoutedPresenter = false;
         _ownerEntity = CreateOwnerEntity(engine);
         int definitionId = VerifyDefinitionLoaded(engine);
-        EnqueuePerformerCreate(engine, definitionId);
+        EnqueuePresenterCreate(engine, definitionId);
 
         runtime.SetMetricA("Command", _registeredCommandId > 0 ? $"id {_registeredCommandId}" : "missing");
         runtime.SetMetricB("Handled", "0");
-        runtime.SetLastEvent("A performer is ready; press the signal button to ping it.");
+        runtime.SetLastEvent("A presenter is ready; press the signal button to ping it.");
     }
 
     private void UpdateMetrics(ExtensibleRuntimeShowcaseRuntime runtime, GameEngine engine)
@@ -86,7 +86,7 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
         runtime.SetMetricB("Handled", _commandCallCount.ToString());
         if (_commandCallCount > 0)
         {
-            string route = _lastHadRoutedPerformer ? "existing performer" : "unknown performer";
+            string route = _lastHadRoutedPresenter ? "existing presenter" : "unknown presenter";
             runtime.SetLastEvent($"Signal #{_lastPayload} was handled by the {route}.");
         }
     }
@@ -95,7 +95,7 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
     {
         if (engine.GetService(CoreServiceKeys.PresentationEventStream) is not PresentationEventStream events)
         {
-            throw new InvalidOperationException("Performer command extension showcase requires PresentationEventStream.");
+            throw new InvalidOperationException("Presenter command extension showcase requires PresentationEventStream.");
         }
 
         int payload = runtime.PrimaryActionCount;
@@ -122,11 +122,11 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
     private int VerifyDefinitionLoaded(GameEngine engine)
     {
         var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
-            ?? throw new InvalidOperationException("Performer command extension showcase requires PresenterDefinitionRegistry.");
-        int definitionId = definitions.GetId(PerformerDefinitionKey);
+            ?? throw new InvalidOperationException("Presenter command extension showcase requires PresenterDefinitionRegistry.");
+        int definitionId = definitions.GetId(PresenterDefinitionKey);
         if (definitionId <= 0 || !definitions.TryGet(definitionId, out PresenterDefinition definition))
         {
-            throw new InvalidOperationException($"Performer definition '{PerformerDefinitionKey}' is not registered.");
+            throw new InvalidOperationException($"Presenter definition '{PresenterDefinitionKey}' is not registered.");
         }
 
         if (definition.Rules.Length != 1 ||
@@ -134,9 +134,9 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
             definition.Rules[0].Event.KeyId != _signalEventId ||
             definition.Rules[0].Command.CommandKind != PresenterCommandKind.Extension ||
             definition.Rules[0].Command.CommandKindId != _registeredCommandId ||
-            definition.Rules[0].Command.RouteStrategy != PerformerCommandRouteStrategy.ExistingInstances)
+            definition.Rules[0].Command.RouteStrategy != PresenterCommandRouteStrategy.ExistingInstances)
         {
-            throw new InvalidOperationException($"Performer definition '{PerformerDefinitionKey}' did not compile to the registered command extension.");
+            throw new InvalidOperationException($"Presenter definition '{PresenterDefinitionKey}' did not compile to the registered command extension.");
         }
 
         return definitionId;
@@ -154,18 +154,18 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
             new PresentationStableId { Value = 50201 });
     }
 
-    private void EnqueuePerformerCreate(GameEngine engine, int definitionId)
+    private void EnqueuePresenterCreate(GameEngine engine, int definitionId)
     {
         if (engine.GetService(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
         {
-            throw new InvalidOperationException("Performer command extension showcase requires PresenterCommandBuffer.");
+            throw new InvalidOperationException("Presenter command extension showcase requires PresenterCommandBuffer.");
         }
 
         if (!commands.TryAdd(new PresenterCommand
         {
             CommandKind = PresenterCommandKind.CreatePresenter,
             CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
-            RouteStrategy = PerformerCommandRouteStrategy.CreatePerformer,
+            RouteStrategy = PresenterCommandRouteStrategy.CreatePresenter,
             PresenterDefinitionId = definitionId,
             ScopeTag = 50201,
             ScopeSource = PresenterCommandScopeSource.Fixed,
@@ -173,21 +173,21 @@ public sealed class CapabilityStandardPerformerCommandExtensionShowcaseModEntry 
             Source = _ownerEntity
         }))
         {
-            throw new InvalidOperationException("PresenterCommandBuffer overflowed while creating the command extension showcase performer.");
+            throw new InvalidOperationException("PresenterCommandBuffer overflowed while creating the command extension showcase presenter.");
         }
     }
 
-    private void EmitSignalPing(in PerformerCommandExecutionContext context)
+    private void EmitSignalPing(in PresenterCommandExecutionContext context)
     {
-        if (!context.Ops.HasRoutedPerformer)
+        if (!context.Ops.HasRoutedPresenter)
         {
-            throw new InvalidOperationException("EmitSignalPing requires an ExistingInstances-routed performer.");
+            throw new InvalidOperationException("EmitSignalPing requires an ExistingInstances-routed presenter.");
         }
 
         _commandCallCount++;
         _lastPayload = context.Command.IntValue;
         _lastScopeTag = context.Command.ScopeTag;
-        _lastHadRoutedPerformer = true;
+        _lastHadRoutedPresenter = true;
         context.Ops.SetParam(
             context.Command.ParamKey,
             context.Command.ParamLane,

@@ -1,6 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Platform.Abstractions;
 
@@ -64,14 +68,31 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public IReadOnlyList<NavBakeResultEntry> FailedEntries { get; }
     }
 
-    public sealed class RuntimeIncrementalNavMeshRebuildQueue
+    /// <summary>
+    /// 运行时增量重烤队列：脏瓦片在专用后台线程上烘焙，游戏线程的 <see cref="ProcessBudget"/>
+    /// 只负责提交（附障碍快照）与发布（写 store、推进 Revision），单瓦片 Recast/CDT 烘焙不再阻塞 fixed tick。
+    /// 线程契约：Enqueue*/ProcessBudget/PendingTilesSnapshot/Dispose 仅限游戏线程调用；
+    /// 基上下文的 Terrain/Config/AgentProfiles 在队列存活期间必须不可变（运行时增量的脏源只有障碍，
+    /// 障碍集合每 tick 由游戏线程重建，提交时快照隔离）；烘焙期异常延迟到发布泵在游戏线程重抛。
+    /// </summary>
+    public sealed class RuntimeIncrementalNavMeshRebuildQueue : IDisposable
     {
+        // 后台管线在途上限：限制障碍快照随提交累积的内存占用；管线满时游戏线程本轮少提交
+        private const int MaxOutstandingBakeRequests = 128;
+        private static readonly TimeSpan DisposeJoinTimeout = TimeSpan.FromSeconds(10);
+
         private readonly NavBakeService _bakeService;
         private readonly NavBakeContext _baseContext;
         private readonly NavQueryServiceRegistry _queryServices;
         private readonly NavMeshProfileRegistry _profiles;
         private readonly Queue<NavBakeTileCoord> _fifo = new Queue<NavBakeTileCoord>();
         private readonly HashSet<NavBakeTileCoord> _queued = new HashSet<NavBakeTileCoord>();
+        private readonly List<NavBakeTileCoord> _inFlightTargets = new List<NavBakeTileCoord>();
+        private readonly BlockingCollection<BakeRequest> _bakeRequests;
+        private readonly Queue<CompletedBake> _completedBakes = new Queue<CompletedBake>();
+        private readonly object _completedGate = new object();
+        private readonly Thread _workerThread;
+        private bool _disposed;
 
         public RuntimeIncrementalNavMeshRebuildQueue(
             NavBakeService bakeService,
@@ -90,13 +111,47 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException("RuntimeIncrementalNavMeshRebuildQueue requires NavBakeContext.mode 'runtime-incremental'.");
             }
 
-            if (_baseContext.Algorithm != NavBakeAlgorithmKind.Cdt)
+            if (_baseContext.Algorithm != NavBakeAlgorithmKind.Cdt &&
+                _baseContext.Algorithm != NavBakeAlgorithmKind.Recast)
             {
-                throw new InvalidOperationException("RuntimeIncrementalNavMeshRebuildQueue requires NavBakeContext.algorithm 'cdt'.");
+                throw new InvalidOperationException("RuntimeIncrementalNavMeshRebuildQueue requires NavBakeContext.algorithm 'cdt' or 'recast'.");
             }
+
+            _bakeRequests = new BlockingCollection<BakeRequest>(MaxOutstandingBakeRequests);
+            _workerThread = new Thread(BakeWorkerLoop)
+            {
+                IsBackground = true,
+                Name = "ludots-navmesh-runtime-rebake",
+            };
+            _workerThread.Start();
         }
 
-        public int PendingTileCount => _fifo.Count;
+        /// <summary>待处理瓦片数：未提交 FIFO + 已提交未发布（在途与已完成待发布）。</summary>
+        public int PendingTileCount => _fifo.Count + _inFlightTargets.Count;
+
+        /// <summary>False 时泵送循环既不提交也不发布——供"冻结增量重烤"的消融演示与诊断使用。</summary>
+        public bool ProcessingEnabled { get; set; } = true;
+
+        /// <summary>最近一次发布的单瓦片烘焙自挂钟耗时（ms）；从未执行过为 0。</summary>
+        public double LastBatchElapsedMs { get; private set; }
+
+        /// <summary>待重烤瓦片坐标快照（按提交顺序，含在途瓦片），供脏瓦片可视化与诊断读取。</summary>
+        public NavBakeTileCoord[] PendingTilesSnapshot()
+        {
+            var tiles = new NavBakeTileCoord[_fifo.Count + _inFlightTargets.Count];
+            int index = 0;
+            foreach (NavBakeTileCoord target in _fifo)
+            {
+                tiles[index++] = target;
+            }
+
+            for (int i = 0; i < _inFlightTargets.Count; i++)
+            {
+                tiles[index++] = _inFlightTargets[i];
+            }
+
+            return tiles;
+        }
 
         public bool EnqueueDirtyTile(NavBakeTileCoord target)
         {
@@ -118,8 +173,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             LogicTerrainField terrain = _baseContext.Terrain;
-            int tileWidthCm = checked(terrain.ChunkSizeCells * terrain.HorizontalStepCm);
-            int tileHeightCm = checked(terrain.ChunkSizeCells * terrain.VerticalStepCm);
+            int tileWidthCm = terrain.ChunkWidthCm;
+            int tileHeightCm = terrain.ChunkHeightCm;
             if (tileWidthCm <= 0 || tileHeightCm <= 0)
             {
                 throw new InvalidOperationException("LogicTerrainField chunk world size must be > 0.");
@@ -171,27 +226,75 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return added;
         }
 
+        /// <summary>
+        /// 游戏线程泵：提交至多 maxTiles 个待处理瓦片到后台烘焙（后台管线满则本轮少提交），
+        /// 随后发布全部已完成结果；maxTiles = 0 表示只发布不提交。
+        /// </summary>
         public RuntimeNavMeshRebuildBatch ProcessBudget(int maxTiles)
         {
-            if (maxTiles <= 0)
+            if (maxTiles < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(maxTiles), "Runtime navmesh rebuild budget must be > 0.");
+                throw new ArgumentOutOfRangeException(nameof(maxTiles), "Runtime navmesh rebuild budget must be >= 0.");
             }
 
+            if (!ProcessingEnabled)
+            {
+                return new RuntimeNavMeshRebuildBatch(0, 0, 0, PendingTileCount, Array.Empty<RuntimeNavMeshRebuildPublishedTile>(), Array.Empty<NavBakeResultEntry>());
+            }
+
+            if (maxTiles > 0 && _fifo.Count > 0)
+            {
+                NavObstacleSet obstacleSnapshot = SnapshotObstacles(_baseContext.Obstacles);
+                int submitted = 0;
+                while (submitted < maxTiles && _fifo.Count > 0)
+                {
+                    NavBakeTileCoord target = _fifo.Peek();
+                    if (!_bakeRequests.TryAdd(new BakeRequest(target, CreateSingleTargetContext(target, obstacleSnapshot))))
+                    {
+                        break;
+                    }
+
+                    _fifo.Dequeue();
+                    _queued.Remove(target);
+                    _inFlightTargets.Add(target);
+                    submitted++;
+                }
+            }
+
+            return PublishCompletedBakes(maxTiles);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _bakeRequests.CompleteAdding();
+            _workerThread.Join(DisposeJoinTimeout);
+            _bakeRequests.Dispose();
+        }
+
+        private RuntimeNavMeshRebuildBatch PublishCompletedBakes(int requestedBudget)
+        {
             var published = new List<RuntimeNavMeshRebuildPublishedTile>();
             var failures = new List<NavBakeResultEntry>();
-            int processedTiles = 0;
+            int rebuiltTiles = 0;
 
-            while (processedTiles < maxTiles && _fifo.Count > 0)
+            while (TryDequeueCompleted(out CompletedBake done))
             {
-                NavBakeTileCoord target = _fifo.Dequeue();
-                _queued.Remove(target);
-
-                NavBakeContext frameContext = CreateSingleTargetContext(target);
-                NavBakeResult result = _bakeService.Bake(frameContext);
-                for (int i = 0; i < result.Entries.Count; i++)
+                _inFlightTargets.Remove(done.Target);
+                if (done.Error != null)
                 {
-                    NavBakeResultEntry entry = result.Entries[i];
+                    throw done.Error;
+                }
+
+                LastBatchElapsedMs = done.ElapsedMs;
+                for (int i = 0; i < done.Result.Entries.Count; i++)
+                {
+                    NavBakeResultEntry entry = done.Result.Entries[i];
                     if (!entry.Success)
                     {
                         failures.Add(entry);
@@ -219,19 +322,62 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         revision));
                 }
 
-                processedTiles++;
+                rebuiltTiles++;
             }
 
             return new RuntimeNavMeshRebuildBatch(
-                maxTiles,
-                processedTiles,
+                requestedBudget,
+                rebuiltTiles,
                 failures.Count,
-                _fifo.Count,
+                PendingTileCount,
                 published,
                 failures);
         }
 
-        private NavBakeContext CreateSingleTargetContext(NavBakeTileCoord target)
+        private void BakeWorkerLoop()
+        {
+            while (!_bakeRequests.IsCompleted)
+            {
+                if (!_bakeRequests.TryTake(out BakeRequest request, Timeout.Infinite))
+                {
+                    continue;
+                }
+
+                long startTimestamp = Stopwatch.GetTimestamp();
+                CompletedBake done;
+                try
+                {
+                    NavBakeResult result = _bakeService.Bake(request.Context);
+                    done = new CompletedBake(request.Target, result, null, ElapsedMs(startTimestamp));
+                }
+                catch (Exception ex)
+                {
+                    done = new CompletedBake(request.Target, null, ex, ElapsedMs(startTimestamp));
+                }
+
+                lock (_completedGate)
+                {
+                    _completedBakes.Enqueue(done);
+                }
+            }
+        }
+
+        private bool TryDequeueCompleted(out CompletedBake done)
+        {
+            lock (_completedGate)
+            {
+                if (_completedBakes.Count == 0)
+                {
+                    done = null;
+                    return false;
+                }
+
+                done = _completedBakes.Dequeue();
+                return true;
+            }
+        }
+
+        private NavBakeContext CreateSingleTargetContext(NavBakeTileCoord target, NavObstacleSet obstacles)
         {
             return new NavBakeContext
             {
@@ -239,16 +385,30 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 ModId = _baseContext.ModId,
                 SourceUri = _baseContext.SourceUri,
                 Terrain = _baseContext.Terrain,
-                Obstacles = _baseContext.Obstacles,
+                Obstacles = obstacles,
                 Config = _baseContext.Config,
                 AgentProfiles = _baseContext.AgentProfiles,
                 Targets = new[] { target },
                 BuildConfig = _baseContext.BuildConfig,
                 TileVersion = _baseContext.TileVersion + 1u,
                 Mode = NavBakeMode.RuntimeIncremental,
-                Algorithm = NavBakeAlgorithmKind.Cdt,
+                Algorithm = _baseContext.Algorithm,
                 Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
             };
+        }
+
+        private static NavObstacleSet SnapshotObstacles(NavObstacleSet source)
+        {
+            return new NavObstacleSet
+            {
+                Version = source.Version,
+                Obstacles = new List<NavObstacle>(source.Obstacles),
+            };
+        }
+
+        private static double ElapsedMs(long startTimestamp)
+        {
+            return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
         }
 
         private void RequireTargetInRange(NavBakeTileCoord target, string argumentName)
@@ -261,6 +421,38 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             {
                 throw new ArgumentOutOfRangeException(argumentName, $"Dirty nav tile is out of terrain range: {target}.");
             }
+        }
+
+        private sealed class BakeRequest
+        {
+            public BakeRequest(NavBakeTileCoord target, NavBakeContext context)
+            {
+                Target = target;
+                Context = context;
+            }
+
+            public NavBakeTileCoord Target { get; }
+
+            public NavBakeContext Context { get; }
+        }
+
+        private sealed class CompletedBake
+        {
+            public CompletedBake(NavBakeTileCoord target, NavBakeResult result, Exception error, double elapsedMs)
+            {
+                Target = target;
+                Result = result;
+                Error = error;
+                ElapsedMs = elapsedMs;
+            }
+
+            public NavBakeTileCoord Target { get; }
+
+            public NavBakeResult Result { get; }
+
+            public Exception Error { get; }
+
+            public double ElapsedMs { get; }
         }
     }
 }

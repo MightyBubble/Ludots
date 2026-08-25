@@ -99,6 +99,10 @@ namespace Ludots.Core.Navigation.Terrain
 
         public abstract int VerticalStepCm { get; }
 
+        public abstract int ChunkWidthCm { get; }
+
+        public abstract int ChunkHeightCm { get; }
+
         public bool IsInBounds(int col, int row)
             => (uint)col < (uint)WidthCells && (uint)row < (uint)HeightCells;
 
@@ -127,6 +131,13 @@ namespace Ludots.Core.Navigation.Terrain
         public override int HorizontalStepCm => HexCoordinates.EdgeLengthCm;
 
         public override int VerticalStepCm => HexCoordinates.EdgeLengthCm;
+
+        // Hex 列距/行距是 HexWidth/RowSpacing 而非 EdgeLength，chunk 世界尺寸不能由 step×数量推出
+        public override int ChunkWidthCm
+            => (int)MathF.Round(HexCoordinates.HexWidth * ChunkSizeCells * SpatialScaleDefaults.CellCm);
+
+        public override int ChunkHeightCm
+            => (int)MathF.Round(HexCoordinates.RowSpacing * ChunkSizeCells * SpatialScaleDefaults.CellCm);
 
         public override LogicTerrainCell GetCell(int col, int row)
         {
@@ -202,6 +213,10 @@ namespace Ludots.Core.Navigation.Terrain
 
         public override int VerticalStepCm => CellSizeCm;
 
+        public override int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
+
+        public override int ChunkHeightCm => checked(CellSizeCm * ChunkSizeCells);
+
         public override LogicTerrainCell GetCell(int col, int row)
             => IsInBounds(col, row) ? _cell : default;
 
@@ -236,6 +251,10 @@ namespace Ludots.Core.Navigation.Terrain
         public override int HorizontalStepCm => CellSizeCm;
 
         public override int VerticalStepCm => CellSizeCm;
+
+        public override int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
+
+        public override int ChunkHeightCm => checked(CellSizeCm * ChunkSizeCells);
 
         public void SetCell(int col, int row, LogicTerrainCell cell)
         {
@@ -285,6 +304,10 @@ namespace Ludots.Core.Navigation.Terrain
         public override int HorizontalStepCm => CellSizeCm;
 
         public override int VerticalStepCm => CellSizeCm;
+
+        public override int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
+
+        public override int ChunkHeightCm => checked(CellSizeCm * ChunkSizeCells);
 
         public void SetCell(int col, int row, LogicTerrainCell cell)
         {

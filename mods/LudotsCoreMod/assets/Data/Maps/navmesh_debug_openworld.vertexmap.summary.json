@@ -1,0 +1,26 @@
+{
+  "InputPath": "mods/LudotsCoreMod/assets/Data/Maps/navmesh_debug_openworld.bin",
+  "OutputPath": "mods/LudotsCoreMod/assets/Data/Maps\\navmesh_debug_openworld.vertexmap.bin",
+  "WidthChunks": 4,
+  "HeightChunks": 4,
+  "ChunkSize": 64,
+  "CellsPerChunk": 4096,
+  "InputBytes": 262153,
+  "OutputBytes": 327704,
+  "StrideOrVersion": 4,
+  "MinHeight": 0,
+  "MaxHeight": 9,
+  "MinWater": 0,
+  "MaxWater": 0,
+  "BiomeCounts": {
+    "0": 65536
+  },
+  "AreaCounts": {
+    "0": 54208,
+    "2": 3584,
+    "1": 7744
+  },
+  "VegetationCounts": {
+    "0": 65536
+  }
+}

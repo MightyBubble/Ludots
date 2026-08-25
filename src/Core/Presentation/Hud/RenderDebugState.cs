@@ -14,6 +14,7 @@ namespace Ludots.Core.Presentation.Hud
         public bool DrawWorldHudBars { get; set; } = true;
         public bool DrawWorldHudText { get; set; } = true;
         public bool DrawCombatText { get; set; } = true;
+        public bool DrawNavMesh { get; set; }
         public float AcceptanceScaleMultiplier { get; set; } = 1f;
     }
 }

@@ -95,7 +95,7 @@ namespace Ludots.Tests.Presentation
             {
                 CommandKind = PresenterCommandKind.CreatePresenter,
                 CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
-                RouteStrategy = PerformerCommandRouteStrategy.CreatePerformer,
+                RouteStrategy = PresenterCommandRouteStrategy.CreatePresenter,
                 PresenterDefinitionId = definitionId,
                 ParentEntity = Entity.Null,
                 ScopeTag = scopeTag,
