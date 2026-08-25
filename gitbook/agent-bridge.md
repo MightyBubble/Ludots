@@ -1,6 +1,6 @@
 # Agent Bridge
 
-> 面向 AI coding agent 的 Ludots 运行时操控与取证通道：环回 HTTP JSON-RPC，24 个自描述工具，零多模态依赖——看画面、点 UI、放技能、查状态、抓证据，全部用结构化 JSON 完成，取代 screenshot + computer-use 的脆弱路径。
+> 面向 AI coding agent 的 Ludots 运行时操控与取证通道：环回 HTTP JSON-RPC，24 个自描述工具，零多模态依赖——看画面、点 UI、放技能、查状态、抓证据，全部用结构化 JSON 完成，取代 screenshot + computer-use 的脆弱路径。引擎侧资产验收工具（拖入商店模型验 PBR/OBJ 转换）见[教程：Raylib 资产验收台](raylib-asset-acceptance.md)。
 >
 > 设计 SSOT：[RFC-0066](https://github.com/mightyBubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md)；工具域参考手册：[架构页 · Agent 调试桥](architecture/agent-debug-bridge.md)。**本页是任务视角的实操指南**，所有请求/响应示例来自真实验证会话（`raylib.agent-demo` · ChampionSkillSandbox）。
 

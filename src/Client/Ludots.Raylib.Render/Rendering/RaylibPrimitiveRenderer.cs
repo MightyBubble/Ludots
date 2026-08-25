@@ -175,6 +175,9 @@ namespace Ludots.Raylib.Render
             _receiverMeshProjector = projector ?? throw new ArgumentNullException(nameof(projector));
         }
 
+        /// <summary>Surface 线框是调试可视化；宿主每帧用 RenderDebugState.DrawDebugDraw 与 cleanPerformanceMode 覆写。</summary>
+        public bool DrawSurfaceWireBoxes { get; set; } = true;
+
         internal static IRaylibReceiverMeshProjector RequireBoundReceiverMeshProjector(
             IRaylibReceiverMeshProjector? projector,
             int stableId)
@@ -573,11 +576,15 @@ namespace Ludots.Raylib.Render
                     item.MaterialId,
                     instancedPrimitives: false,
                     countAsMesh: false);
-                DrawWireBox(
-                    item.Position,
-                    item.Scale * scaleMul,
-                    VisualMath.NormalizeOrIdentity(item.Rotation),
-                    MultiplyColor(item.Color, 1.18f, 1.08f, 0.86f, 0.96f));
+                if (DrawSurfaceWireBoxes)
+                {
+                    DrawWireBox(
+                        item.Position,
+                        item.Scale * scaleMul,
+                        VisualMath.NormalizeOrIdentity(item.Rotation),
+                        MultiplyColor(item.Color, 1.18f, 1.08f, 0.86f, 0.96f));
+                }
+
                 return true;
             }
 
@@ -1528,7 +1535,19 @@ namespace Ludots.Raylib.Render
                 if (!_vfs.TryResolveFullPath(uri, out string fullPath)) continue;
                 if (!File.Exists(fullPath)) continue;
 
-                var model = Rl.LoadModel(fullPath);
+                // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
+                // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
+                Model model;
+                try
+                {
+                    model = RaylibModelFileLoader.LoadModel(fullPath);
+                }
+                catch (Exception ex)
+                {
+                    RenderDiagnostics.Warn($"RaylibPrimitiveRenderer meshAssetId={meshAssetId} 模型装载失败（'{fullPath}'）：{ex.Message}");
+                    continue;
+                }
+
                 if (model.meshCount > 0)
                 {
                     cached = new CachedModel { Model = model, Loaded = true };
