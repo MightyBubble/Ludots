@@ -17,7 +17,8 @@ namespace Ludots.Core.Scripting
     {
         /// <summary>
         /// Payload keys stuffed by dynamic-name bridge families (Gas.Event.* tag bridge,
-        /// ability/effect moment bridge); per-name schemas are not enumerable at build time.
+        /// ability/effect moment bridge) and by the cross-map transport itself; per-name
+        /// schemas are not enumerable at build time.
         /// </summary>
         private static readonly string[] DynamicBridgePayloadKeys =
         {
@@ -28,20 +29,31 @@ namespace Ludots.Core.Scripting
             MapTriggerEventPayloadKeys.AbilityId,
             MapTriggerEventPayloadKeys.EffectId,
             MapTriggerEventPayloadKeys.Moment,
+            MapTriggerEventPayloadKeys.SourceMapId,
         };
 
         /// <summary>
-        /// Keys whose owning event is not yet schema-bound; each entry names the slice
-        /// that will claim it. Shrinks to zero as PhaseChanged (#1113) and the float
-        /// phase contract land.
+        /// Transport metadata stamped by the dispatch machinery itself (FireCrossMapEvent,
+        /// global DispatchMapEvent) rather than authored event parameters: legal on any
+        /// fire regardless of what the schema declares.
         /// </summary>
-        private static readonly (string Key, string Owner)[] PendingPayloadKeys =
+        private static readonly string[] TransportMetadataPayloadKeys =
         {
-            (MapTriggerEventPayloadKeys.VarName, "PhaseChanged (#1113)"),
-            (MapTriggerEventPayloadKeys.Phase, "PhaseChanged (#1113)"),
-            (MapTriggerEventPayloadKeys.VarValueInt, "PhaseChanged (#1113)"),
-            (MapTriggerEventPayloadKeys.VarValueFloat, "float phase slice of the map variable contract"),
+            MapTriggerEventPayloadKeys.SourceMapId,
         };
+
+        internal static bool IsTransportMetadataPayloadKey(string payloadKey)
+        {
+            for (int i = 0; i < TransportMetadataPayloadKeys.Length; i++)
+            {
+                if (string.Equals(TransportMetadataPayloadKeys[i], payloadKey, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         private static readonly EventSchema[] BuiltinSchemas =
         {
@@ -82,6 +94,14 @@ namespace Ludots.Core.Scripting
                 new("groundXCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundXCm),
                 new("groundYCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundYCm),
                 new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity, Optional: true),
+            }),
+            new(GameEvents.MapVariableChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("varName", EventParamType.String, MapTriggerEventPayloadKeys.VarName),
+                new("newValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt, Optional: true),
+                new("newValueFloat", EventParamType.Float, MapTriggerEventPayloadKeys.VarValueFloat, Optional: true),
+                new("oldValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt, Optional: true),
+                new("oldValueFloat", EventParamType.Float, MapTriggerEventPayloadKeys.OldValueFloat, Optional: true),
             }),
         };
 
@@ -197,7 +217,9 @@ namespace Ludots.Core.Scripting
 
             foreach (KeyValuePair<string, object> entry in context.EnumerateStringEntries())
             {
-                if (IsReservedPayloadKey(entry.Key) && !schema.DeclaresPayloadKey(entry.Key))
+                if (IsReservedPayloadKey(entry.Key) &&
+                    !IsTransportMetadataPayloadKey(entry.Key) &&
+                    !schema.DeclaresPayloadKey(entry.Key))
                 {
                     throw new InvalidOperationException(
                         $"EVENT.SCHEMA.UndeclaredPayloadKey: firing '{schema.EventName}' carries payload key " +
@@ -258,11 +280,6 @@ namespace Ludots.Core.Scripting
                 accounted.Add(key);
             }
 
-            foreach ((string key, string owner) in PendingPayloadKeys)
-            {
-                accounted.Add(key);
-            }
-
             foreach (FieldInfo field in typeof(MapTriggerEventPayloadKeys).GetFields(BindingFlags.Public | BindingFlags.Static))
             {
                 if (field.GetRawConstantValue() is not string constant)
@@ -274,21 +291,8 @@ namespace Ludots.Core.Scripting
                 {
                     throw new InvalidOperationException(
                         $"EVENT.SCHEMA.OrphanPayloadKey: '{constant}' ({field.Name}) is declared in " +
-                        $"{nameof(MapTriggerEventPayloadKeys)} but no built-in schema references it, no dynamic bridge " +
-                        "family carries it, and no pending entry claims it.");
-                }
-            }
-
-            foreach ((string key, string owner) in PendingPayloadKeys)
-            {
-                for (int i = 0; i < BuiltinSchemas.Length; i++)
-                {
-                    if (BuiltinSchemas[i].DeclaresPayloadKey(key))
-                    {
-                        throw new InvalidOperationException(
-                            $"EVENT.SCHEMA.StalePendingKey: '{key}' is claimed pending for '{owner}' but built-in " +
-                            $"schema '{BuiltinSchemas[i].EventName}' already declares it; drop the pending entry.");
-                    }
+                        $"{nameof(MapTriggerEventPayloadKeys)} but no built-in schema references it and no dynamic " +
+                        "bridge family carries it.");
                 }
             }
         }
