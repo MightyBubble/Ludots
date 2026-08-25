@@ -944,7 +944,7 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (versionClean && !positionClean && ownerCullClean && lodClean)
                 {
-                    UpdateStableVisualPositions(in state, in definition, position.Value);
+                    UpdateStableVisualPositions(in state, in definition, position.Value, rotation.Value, scale.Value);
                     UpdateEmitCache(ref emitCache, state.Version, position.Value, ownerCullVisible, cull.LOD, stableVisualPresent: 1, emitCache.RetainedRequestPresent);
                     ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
                     return;
@@ -1256,7 +1256,7 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (versionClean && !positionClean && ownerCullClean && lodClean)
                 {
-                    UpdateStableVisualPositions(in state, in definition, position.Value);
+                    UpdateStableVisualPositions(in state, in definition, position.Value, rotation.Value, scale.Value);
                     UpdateEmitCache(ref emitCache, state.Version, position.Value, ownerCullVisible, cull.LOD, stableVisualPresent: 1, emitCache.RetainedRequestPresent);
                     _runtime.ClearStaticDirty(entity);
                     return;
@@ -1321,7 +1321,7 @@ namespace Ludots.Core.Presentation.Systems
                 ScopeId = state.ScopeId,
                 SurfaceKind = surface.Kind,
                 Authoring = surface,
-                AnchorPosition = worldPos + definition.PositionOffset,
+                AnchorPosition = worldPos,
                 LodSeed = lod,
             }, lod));
         }
@@ -1345,6 +1345,7 @@ namespace Ludots.Core.Presentation.Systems
 
             bool emittedStableVisual = false;
             BehaviorSlot[] behaviors = definition.Behaviors;
+            uint localOffsetConsumedMask = 0u;
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
@@ -1354,6 +1355,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+                PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
                 if (TryEmitSkinnedVisualBatchFast(
                         entity,
                         in state,
@@ -1361,7 +1363,7 @@ namespace Ludots.Core.Presentation.Systems
                         in slot,
                         in asset,
                         lod,
-                        presenterWorldPosition + definition.PositionOffset,
+                        presenterWorldPosition,
                         presenterWorldRotation,
                         in presenterWorldFacing,
                         presenterWorldScale,
@@ -1381,7 +1383,8 @@ namespace Ludots.Core.Presentation.Systems
                     presenterWorldPosition,
                     presenterWorldRotation,
                     in presenterWorldFacing,
-                    presenterWorldScale);
+                    presenterWorldScale,
+                    ref localOffsetConsumedMask);
                 emittedStableVisual |= IsCacheableVisualKind(asset.AssetKind);
             }
 
@@ -1407,6 +1410,7 @@ namespace Ludots.Core.Presentation.Systems
 
             bool emittedStableVisual = false;
             BehaviorSlot[] behaviors = definition.Behaviors;
+            uint localOffsetConsumedMask = 0u;
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
@@ -1416,9 +1420,9 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+                PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
                 Vector3 resolvedPosition = PresenterAssetEmitRuntime.ResolvePosition(
                     in state,
-                    in definition,
                     presenterWorldPosition,
                     slot.Motion.YDriftPerSecond);
                 VisualVisibility visibility = lod == LODLevel.Culled || (asset.HasMaxLod && lod > asset.MaxLod)
@@ -1752,7 +1756,7 @@ namespace Ludots.Core.Presentation.Systems
             emitCache.RetainedRequestPresent = 0;
         }
 
-        private void UpdateStableVisualPositions(in PresenterState state, in PresenterDefinition definition, Vector3 presenterWorldPosition)
+        private void UpdateStableVisualPositions(in PresenterState state, in PresenterDefinition definition, Vector3 presenterWorldPosition, Quaternion presenterWorldRotation, Vector3 presenterWorldScale)
         {
             if (_stableDrawCache == null)
             {
@@ -1761,6 +1765,7 @@ namespace Ludots.Core.Presentation.Systems
 
             BehaviorSlot[] behaviors = definition.Behaviors;
             int[] cacheableAssetBehaviorIndices = definition.CacheableAssetBehaviorIndices;
+            uint localOffsetConsumedMask = 0u;
             for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
@@ -1771,8 +1776,10 @@ namespace Ludots.Core.Presentation.Systems
                     state.DefId,
                     out int stableId))
                 {
-                    Vector3 position = PresenterAssetEmitRuntime.ResolvePosition(in state, in definition, presenterWorldPosition, slot.Motion.YDriftPerSecond);
-                    _stableDrawCache.UpdatePosition(stableId, position);
+                    PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in slot.AssetBinding, state.DefId, ref localOffsetConsumedMask);
+                    Vector3 position = PresenterAssetEmitRuntime.ResolvePosition(in state, presenterWorldPosition, slot.Motion.YDriftPerSecond);
+                    Vector3 assetPosition = ResolveAssetPosition(position, presenterWorldRotation, presenterWorldScale, in slot.AssetBinding);
+                    _stableDrawCache.UpdatePosition(stableId, assetPosition);
                 }
             }
         }

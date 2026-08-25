@@ -28,7 +28,7 @@
         }
       }
     ],
-    "anchor": { "offset": [0, 2.35, 0] }
+    "anchor": { "offset": [0, 0, 0] }
   },
   {
     "id": "graphops.hud.health_text",

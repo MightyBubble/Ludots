@@ -103,7 +103,11 @@ namespace Ludots.Adapter.Raylib
             engine.SetService(CoreServiceKeys.HostFrameCapture, (IHostFrameCapture)new Services.RaylibFrameCaptureService());
 
             engine.RegisterPresentationAdapterCapabilities(
-                new PresentationAdapterCapabilities(PresentationVisualCapabilities.NavMeshTileGeometry));
+                new PresentationAdapterCapabilities(
+                    PresentationVisualCapabilities.Decal |
+                    PresentationVisualCapabilities.Vfx |
+                    PresentationVisualCapabilities.Surface |
+                    PresentationVisualCapabilities.NavMeshTileGeometry));
 
             ValidateRequiredContextBeforeStart(engine);
 

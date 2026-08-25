@@ -130,6 +130,7 @@ namespace Ludots.Core.Presentation.Config
                 PresenterDefinition definition = validByKey[key];
                 ValidateRuleReferences(key, definition, validByKey);
                 ValidateChildGraph(key, validByKey, new HashSet<int>(), new List<string>());
+                ValidateChildRootTransformSources(key, definition, validByKey);
                 ValidateChildInstanceBehaviorSlots(key, definition, validByKey);
             }
 
@@ -512,13 +513,15 @@ namespace Ludots.Core.Presentation.Config
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
             ChildPresenterRef[] children = ParseChildren(node["children"]);
             ValidateChildrenCapacity(key, children);
+            Vector3 positionOffset = ParseAnchorOffset(node["anchor"], key);
+            ValidateRootTransformSources(key, positionOffset, behaviors);
 
             var def = new PresenterDefinition
             {
                 Key = key,
                 Extends = ParseOptionalCanonicalString(node["extends"], $"Presenter '{key}' extends"),
                 DefaultLifetime = ParseLifecycle(node["lifecycle"], key),
-                PositionOffset = ParseAnchorOffset(node["anchor"], key),
+                PositionOffset = positionOffset,
                 Rules = ParseRules(node["rules"], key),
                 Bindings = ParseBindings(node["bindings"], key),
                 Children = children,
@@ -628,6 +631,70 @@ namespace Ludots.Core.Presentation.Config
 
             throw new InvalidOperationException(
                 $"Presenter '{key}' declares {children.Length} direct children; capacity={PresenterChildren.MAX_CHILDREN}.");
+        }
+
+        private static void ValidateRootTransformSources(string key, Vector3 positionOffset, BehaviorSlot[] behaviors)
+        {
+            if (positionOffset == Vector3.Zero)
+            {
+                return;
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                if (behaviors[i].Kind == BehaviorKind.Attachment)
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{key}' declares both anchor.offset and an Attachment behavior; the root transform accepts exactly one offset source. Remove one of them.");
+                }
+            }
+        }
+
+        private static void ValidateChildRootTransformSources(
+            string key,
+            PresenterDefinition definition,
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey)
+        {
+            ChildPresenterRef[] children = definition.Children;
+            if (children == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                if (!children[i].TransformOverride.HasOverride)
+                {
+                    continue;
+                }
+
+                if (!TryFindDefinitionById(parsedByKey, children[i].DefinitionId, out PresenterDefinition childDefinition) ||
+                    childDefinition.PositionOffset == Vector3.Zero)
+                {
+                    continue;
+                }
+
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' children[{i}] declares overrides.transform.localPosition while child definition '{childDefinition.Key}' declares anchor.offset; a child root accepts exactly one local position source. Remove one of them.");
+            }
+        }
+
+        private static bool TryFindDefinitionById(
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey,
+            int definitionId,
+            out PresenterDefinition definition)
+        {
+            foreach ((string _, PresenterDefinition parsedDefinition) in parsedByKey)
+            {
+                if (parsedDefinition.Id == definitionId)
+                {
+                    definition = parsedDefinition;
+                    return true;
+                }
+            }
+
+            definition = null!;
+            return false;
         }
 
         private static void RejectRemovedFields(JsonNode node, string key)

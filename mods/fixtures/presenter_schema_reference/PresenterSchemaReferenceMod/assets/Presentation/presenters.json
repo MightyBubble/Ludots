@@ -237,13 +237,6 @@
     ],
     "lifecycle": {
       "durationSeconds": 5
-    },
-    "anchor": {
-      "offset": [
-        0,
-        1.5,
-        0
-      ]
     }
   },
   {
@@ -533,5 +526,34 @@
         "floatValue": 0
       }
     ]
+  }
+,
+  {
+    "id": "ref_anchor_offset_definition",
+    "visibility": {
+      "inline": "None"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "ref_mesh_cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 0, 0],
+          "localRotation": [0, 0, 0, 1],
+          "localScale": [1, 1, 1]
+        }
+      }
+    ],
+    "lifecycle": {
+      "durationSeconds": 5
+    },
+    "anchor": {
+      "offset": [0, 1.5, 0]
+    }
   }
 ]

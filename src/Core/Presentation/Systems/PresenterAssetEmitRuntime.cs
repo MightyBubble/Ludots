@@ -52,9 +52,11 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
-            Vector3 presenterWorldScale)
+            Vector3 presenterWorldScale,
+            ref uint localOffsetConsumedMask)
         {
-            Vector3 position = ResolvePosition(in state, in definition, presenterWorldPosition, slot.Motion.YDriftPerSecond);
+            PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
+            Vector3 position = ResolvePosition(in state, presenterWorldPosition, slot.Motion.YDriftPerSecond);
             float alpha = ResolveAlpha(in state, in definition, slot.Style.AlphaPolicy);
             if (lod == LODLevel.Culled || !IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
             {
@@ -123,6 +125,7 @@ namespace Ludots.Core.Presentation.Systems
 
             bool emitted = false;
             BehaviorSlot[] behaviors = definition.Behaviors;
+            uint localOffsetConsumedMask = 0u;
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
@@ -142,7 +145,8 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                Vector3 position = ResolvePosition(in state, in definition, presenterWorldPosition, slot.Motion.YDriftPerSecond);
+                PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
+                Vector3 position = ResolvePosition(in state, presenterWorldPosition, slot.Motion.YDriftPerSecond);
                 VisualRenderPath renderPath = ResolveRenderPath(in asset);
                 Quaternion rotation = ResolveRotation(in asset, presenterWorldRotation);
                 Vector3 scale = ResolveScale(entity, in asset, presenterWorldScale);
@@ -906,9 +910,9 @@ namespace Ludots.Core.Presentation.Systems
             return radians * (180f / MathF.PI);
         }
 
-        internal static Vector3 ResolvePosition(in PresenterState state, in PresenterDefinition definition, Vector3 presenterWorldPosition, float yDriftPerSecond)
+        internal static Vector3 ResolvePosition(in PresenterState state, Vector3 resolvedRootPosition, float yDriftPerSecond)
         {
-            Vector3 position = presenterWorldPosition + definition.PositionOffset;
+            Vector3 position = resolvedRootPosition;
             position.Y += yDriftPerSecond * state.Elapsed;
             return position;
         }

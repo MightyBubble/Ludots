@@ -89,6 +89,15 @@ artifacts/evidence/capability_standard_graph_op_*/*
 artifacts/evidence/engine_raylib_*/*
 !artifacts/evidence/engine_raylib_*/play.mp4
 !artifacts/evidence/engine_raylib_*/poster.png
+# Raylib asset acceptance tool recordings (tutorial media on the Agent Bridge tab).
+!artifacts/evidence/raylib_asset_acceptance_*/
+artifacts/evidence/raylib_asset_acceptance_*/*
+!artifacts/evidence/raylib_asset_acceptance_*/play.mp4
+!artifacts/evidence/raylib_asset_acceptance_*/poster.png
+!artifacts/evidence/raylib_asset_acceptance_*/blocker_rock.png
+!artifacts/evidence/raylib_asset_acceptance_*/error-panel.png
+!artifacts/evidence/raylib_asset_acceptance_*/textured-cube.png
+!artifacts/evidence/raylib_asset_acceptance_*/manifest.json
 # acceptance evidence already force-tracked historically; keep pattern open
 !artifacts/acceptance/
 !artifacts/acceptance/**

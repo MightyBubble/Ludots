@@ -23,6 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
@@ -48,6 +52,8 @@
     <None Include="..\..\Platforms\Desktop\postprocess.fs"><Link>postprocess.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\model_lit.vs"><Link>model_lit.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\model_lit.fs"><Link>model_lit.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\model_file_lit.vs"><Link>model_file_lit.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\model_file_lit.fs"><Link>model_file_lit.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_sampling.glsl.inc"><Link>shadow_sampling.glsl.inc</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\sun_disk.glsl.inc"><Link>sun_disk.glsl.inc</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth.vs"><Link>shadow_depth.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>

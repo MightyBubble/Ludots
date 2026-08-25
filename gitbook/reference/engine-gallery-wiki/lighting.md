@@ -16,7 +16,7 @@
 | 承接渲染器 | `RaylibLitModel` + `RaylibSkyIbl` + `RaylibDirectionalShadowMap`（`src/Client/Ludots.Raylib.Render`） |
 | 注册表条目 | `engine_raylib_lighting`（`showcase.registry.json`，tier T1） |
 
-这条车道就是宿主里道具与少量模型用的单物体通道：构造 `RaylibLitModel`，每帧 `BeginFrame(lighting, camera.position, shadowMap)`，然后 `DrawMesh`/`AttachToModel`。mod 作者不写代码——材质面全走 `Presentation/materials.json`（标量 roughness/metalness 或贴图），光照/阴影/IBL 由宿主按帧喂。合同细节见[渲染光照栈指南](../../architecture/render-lighting-guide.md)。
+这条车道就是宿主里道具与少量模型用的单物体通道：构造 `RaylibLitModel`，每帧 `BeginFrame(lighting, camera.position, shadowMap)`，然后 `DrawMesh`/`AttachToModel`。mod 作者不写代码——材质面全走 `Presentation/material_assets.json`（标量 roughness/metalness 或贴图），光照/阴影/IBL 由宿主按帧喂。合同细节见[渲染光照栈指南](../../architecture/render-lighting-guide.md)。
 
 ## 这场演的是什么
 

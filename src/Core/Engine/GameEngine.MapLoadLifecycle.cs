@@ -8,8 +8,10 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Persistence;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.StructureCollision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Engine
 {
@@ -20,6 +22,7 @@ namespace Ludots.Core.Engine
         private readonly Dictionary<MapId, PendingMapLoadState> _pendingMapLoads = new();
         private readonly Dictionary<MapId, PendingMapResumeState> _pendingMapResumes = new();
         private readonly Dictionary<MapId, MapLoadStatus> _mapLoadStatuses = new();
+        private VertexMapVisualHeightmap? _vertexMapVisualHeightmap;
 
         private sealed class PendingMapLoadState
         {
@@ -124,9 +127,10 @@ namespace Ludots.Core.Engine
             {
                 RemoveService(CoreServiceKeys.MapLaunchContext);
             }
-            if (session.VisualHeightmap != null)
+            IVisualHeightmap? visualHeightmap = ResolveSessionVisualHeightmap(session);
+            if (visualHeightmap != null)
             {
-                SetService(CoreServiceKeys.VisualHeightmap, session.VisualHeightmap);
+                SetService(CoreServiceKeys.VisualHeightmap, visualHeightmap);
             }
             else
             {
@@ -136,7 +140,7 @@ namespace Ludots.Core.Engine
             {
                 session.StructureCollisionRuntimeState ??= new StructureCollisionRuntimeState(session.StructureCollisionAsset);
                 session.GroundSurfaceSampler ??= new GroundSurfaceSampler(
-                    session.VisualHeightmap,
+                    visualHeightmap,
                     session.StructureCollisionAsset,
                     session.StructureCollisionRuntimeState);
                 SetService(CoreServiceKeys.StructureCollisionAsset, session.StructureCollisionAsset);
@@ -147,9 +151,9 @@ namespace Ludots.Core.Engine
             {
                 RemoveService(CoreServiceKeys.StructureCollisionAsset);
                 RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
-                if (session.VisualHeightmap != null)
+                if (visualHeightmap != null)
                 {
-                    session.GroundSurfaceSampler ??= new GroundSurfaceSampler(session.VisualHeightmap, null, null);
+                    session.GroundSurfaceSampler ??= new GroundSurfaceSampler(visualHeightmap, null, null);
                     SetService(CoreServiceKeys.GroundSurfaceSampler, session.GroundSurfaceSampler);
                 }
                 else
@@ -164,6 +168,24 @@ namespace Ludots.Core.Engine
         internal void SetCurrentMapSessionForTests(MapSession session)
         {
             SetCurrentMapSession(session);
+        }
+
+        private IVisualHeightmap? ResolveSessionVisualHeightmap(MapSession session)
+        {
+            if (session.VisualHeightmap != null)
+            {
+                return session.VisualHeightmap;
+            }
+
+            // .vhtm 是唯一权威视觉高度源；仅当会话未声明 vhtm 且引擎已持有 VertexMap 时用逻辑格点补高度服务。
+            // 适配器按需读取当前 VertexMap，地图热切换不会绑定到上一张图。
+            if (VertexMap != null)
+            {
+                _vertexMapVisualHeightmap ??= new VertexMapVisualHeightmap(() => VertexMap);
+                return _vertexMapVisualHeightmap;
+            }
+
+            return null;
         }
 
         private MapLoadStatus GetMapLoadStatus(MapId mapId)
