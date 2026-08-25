@@ -7215,7 +7215,6 @@
       "preset": "engine_raylib_slash_trail",
       "acceptanceTest": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_slash_trail",
-      "screenshot": "artifacts/acceptance/engine_raylib_slash_trail/screen.png",
       "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     },
     {

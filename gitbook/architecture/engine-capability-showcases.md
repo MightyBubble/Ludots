@@ -40,7 +40,7 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 | 20 | crowd_anim | 大量动画实例合批 | skinning_instanced 真骨骼 GPU 蒙皮 × 4k 实例 |
 | 21 | slash_trail | 刀光轨迹（TrailMeshBuffer 弧形拖尾） | RaylibTrailMeshRenderer + TrailMeshGeometry |
 
-画廊实拍选粹（全 21 场景截图见 Wiki 各场景页与 `artifacts/acceptance/engine_gallery_all/`）：
+画廊实拍选粹（既有 20 场景截图见 Wiki 各场景页与 `artifacts/acceptance/engine_gallery_all/`；新增 `slash_trail` 的视觉证据待真实运行采样后补齐，见 [slash_trail Wiki 页](../reference/engine-gallery-wiki/slash_trail.md)）：
 
 <img src="artifacts/acceptance/engine_gallery_all/instancing.png" alt="GPU 实例化合批验收截图" width="560"> <img src="artifacts/acceptance/engine_gallery_all/terrain_heightmap.png" alt="视觉高度图验收截图" width="560"> <img src="artifacts/acceptance/engine_gallery_all/sky_daynight.png" alt="昼夜天空验收截图" width="560">
 

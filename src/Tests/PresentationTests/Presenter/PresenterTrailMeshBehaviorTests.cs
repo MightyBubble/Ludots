@@ -274,6 +274,39 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void TrailMesh_DefinitionWithNullBehaviors_DoesNotFailAtSetup()
+        {
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int defId = definitions.Register("trail.no.behaviors", new PresenterDefinition
+            {
+                Behaviors = null!,
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = Vector3.Zero,
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            runtime.CreateHierarchy(
+                definitions, defId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                worldPosition: Vector3.Zero, stableId: 7103, parent: Entity.Null,
+                definitions.Get(defId));
+
+            // 定义没有 TrailMesh 行为：即使没有接线 TrailMeshBuffer，setup 也必须正常完成，
+            // 只有“存在 TrailMesh 行为且 buffer 缺失”才 fail-fast。
+            Assert.DoesNotThrow(
+                () => new PresenterBehaviorSystem(
+                    world, runtime, definitions, new PresentationEventStream(64),
+                    new PresentationOwnerChangeBuffer(8), new SoundRequestBuffer()));
+        }
+
+        [Test]
         public void TrailMesh_DefinitionWithoutWiredBuffer_FailsAtSetup()
         {
             using var world = World.Create();

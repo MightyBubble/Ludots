@@ -19,6 +19,10 @@
     <None Include="mat_emissive.fs" Link="mat_emissive.fs" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ludots.Adapter.Raylib.Tests" />
+  </ItemGroup>
+
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <None Include="..\..\..\Platforms\Desktop\raylib.dll">
       <Link>raylib.dll</Link>

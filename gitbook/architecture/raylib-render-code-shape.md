@@ -44,7 +44,7 @@ Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服�
 
 ## 渲染器清单（Ludots.Raylib.Render/Rendering/）
 
-40 个文件的职责分组：
+46 个文件的职责分组：
 
 | 分组 | 文件 | 车道 |
 |---|---|---|

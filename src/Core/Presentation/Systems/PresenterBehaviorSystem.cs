@@ -248,7 +248,12 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                BehaviorSlot[] behaviors = definition.Behaviors;
+                BehaviorSlot[]? behaviors = definition.Behaviors;
+                if (behaviors == null)
+                {
+                    continue;
+                }
+
                 for (int slot = 0; slot < behaviors.Length; slot++)
                 {
                     if (behaviors[slot].Kind == BehaviorKind.TrailMesh)
@@ -1783,7 +1788,7 @@ namespace Ludots.Core.Presentation.Systems
                 : Quaternion.Identity;
             Vector3 baseWorld = position + Vector3.Transform(config.BaseOffset, rotation);
             Vector3 tipWorld = position + Vector3.Transform(config.TipOffset, rotation);
-            _trailMesh.Sample(entity, state.StableId, in config, baseWorld, tipWorld, _trailElapsedSeconds);
+            _trailMesh.Sample(World, entity, state.StableId, in config, baseWorld, tipWorld, _trailElapsedSeconds);
         }
 
         private void ApplyAttachment(Entity entity, in AttachmentConfig config)
