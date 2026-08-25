@@ -945,6 +945,9 @@ namespace Ludots.Core.Engine
             var visionFogCellMap = new FogCellMap();
             new VisionFogLayerConfigLoader(ConfigPipeline, visionFogLayerRegistry)
                 .Load(ConfigCatalog, ConfigConflictReport);
+            var fieldLayerRegistry = new Ludots.Core.Fields.FieldLayerRegistry();
+            new Ludots.Core.Fields.Config.FieldLayerConfigLoader(ConfigPipeline, fieldLayerRegistry)
+                .Load(ConfigCatalog, ConfigConflictReport);
             var fogKnowledgeProjector = new FogKnowledgeProjector(knowledgeProjectionStore, visionFogCellMap);
             var visionResolver = new VisionResolver(
                 visionFogLayerRegistry,
@@ -1712,6 +1715,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.VisionFogFieldStore, visionFogFieldStore);
             SetService(CoreServiceKeys.VisionFogSnapshotStore, visionFogSnapshotStore);
             SetService(CoreServiceKeys.VisionFogCellMap, visionFogCellMap);
+            SetService(CoreServiceKeys.FieldLayerRegistry, fieldLayerRegistry);
             SetService(CoreServiceKeys.VisionResolver, visionResolver);
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.KnowledgeAreaRevealRuntime, knowledgeAreaRevealRuntime);
@@ -2413,6 +2417,7 @@ namespace Ludots.Core.Engine
                 session.VisualHeightmap = visualHeightmap;
                 BindStructureCollisionSession(session, visualHeightmap, structureCollision);
                 CreateBoardsForSession(session, mapConfig);
+                CreateFieldsForSession(session, mapConfig);
                 if (previousFocused != null)
                 {
                     CancelPendingMapResume(previousFocused.MapId, $"Map resume canceled because '{mid.Value}' became focused.", markFailed: true);
@@ -2587,6 +2592,7 @@ namespace Ludots.Core.Engine
             }
 
             CreateBoardsForSession(session, mapConfig);
+            CreateFieldsForSession(session, mapConfig);
             if (outerSession != null)
             {
                 CancelPendingMapResume(outerSession.MapId, $"Map resume canceled because '{inner.Value}' was pushed on top.", markFailed: true);
@@ -2876,6 +2882,16 @@ namespace Ludots.Core.Engine
                 session.AddBoard(board);
                 Diagnostics.Log.Info(in LogChannels.Engine, $"Created Board '{boardCfg.Name}' (type={boardCfg.SpatialType}) for map '{session.MapId}'");
             }
+        }
+
+        private void CreateFieldsForSession(MapSession session, MapConfig mapConfig)
+        {
+            var registry = GetService(CoreServiceKeys.FieldLayerRegistry);
+            if (registry == null) return;
+
+            var cellsLoader = new Ludots.Core.Fields.Config.FieldCellsConfigLoader(ConfigPipeline);
+            session.Fields = Ludots.Core.Fields.FieldSessionStore.Create(
+                registry, mapConfig?.Fields?.Layers, cellsLoader);
         }
 
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)

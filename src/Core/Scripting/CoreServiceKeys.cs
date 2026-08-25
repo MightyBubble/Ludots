@@ -111,6 +111,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Ludots.Core.Engine.Randomization.IRngStreamService> RngStreamService = new("RngStreamService");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
+        public static readonly ServiceKey<Ludots.Core.Fields.FieldLayerRegistry> FieldLayerRegistry = new("FieldLayerRegistry");
         public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem> AttachmentPositionSync = new("AttachmentPositionSync");
 

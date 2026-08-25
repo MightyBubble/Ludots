@@ -87,6 +87,22 @@ namespace Ludots.Core.Config
         /// Editor reads/writes this to ensure camera consistency across tools.
         /// </summary>
         public CameraConfig DefaultCamera { get; set; }
+
+        /// <summary>
+        /// Field layers enabled on this map. Layer ids reference Fields/layers.json;
+        /// the per-session store is created at map load (Ludots.Core.Fields).
+        /// Null = this map hosts no field layers.
+        /// </summary>
+        public MapFieldsConfig Fields { get; set; }
+    }
+
+    /// <summary>
+    /// Map-side enablement of field layers: which declared layers exist on this map.
+    /// Later config fragments replace the list as a whole.
+    /// </summary>
+    public class MapFieldsConfig
+    {
+        public List<string> Layers { get; set; } = new List<string>();
     }
 
     /// <summary>

@@ -345,6 +345,9 @@ namespace Ludots.Core.Map
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
 
+            // Merge Fields (source wins; the enabled-layer list replaces as a whole)
+            if (source.Fields != null) target.Fields = source.Fields;
+
             // Merge DeathRule (source wins)
             if (source.DeathRule != null)
             {
