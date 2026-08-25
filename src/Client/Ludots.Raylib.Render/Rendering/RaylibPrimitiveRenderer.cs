@@ -176,12 +176,10 @@ namespace Ludots.Raylib.Render
 
             _skyIbl ??= new RaylibSkyIbl();
             _skyIbl.Ensure(lighting);
-            Vector3 zenith = lighting.SkyZenithColor;
-            Vector3 ground = lighting.SkyGroundColor;
             foreach (RaylibLaneShader lane in _shaderCatalog.InstancingShaders)
             {
                 lane.ApplyFrameLighting(lighting, viewPos);
-                lane.ApplySkyUniforms(zenith, ground, envSpecular: 1f);
+                lane.ApplySkyUniforms(lighting, envSpecular: 1f);
             }
 
             Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);

@@ -23,6 +23,8 @@ namespace Ludots.Raylib.Render
         private Material _terrainMaterial;
         private RaylibFrameLightingLocations _terrainLightingLocs;
         private RaylibShadowSamplingLocations _terrainShadowLocs;
+        private int _locSkyZenith = -1;
+        private int _locSkyGround = -1;
 
         private Shader _waterShader;
         private Material _waterMaterial;
@@ -65,7 +67,7 @@ namespace Ludots.Raylib.Render
             _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
-                lighting.Apply(_terrainShader, in _terrainLightingLocs);
+                ApplySkyIrradianceUniforms();
                 ApplyTerrainShadow();
             }
         }
@@ -363,6 +365,8 @@ namespace Ludots.Raylib.Render
             int locTerrainVertexPosition = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexPosition", "terrain");
             int locTerrainVertexNormal = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexNormal", "terrain");
             int locTerrainVertexColor = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexColor", "terrain");
+            _locSkyZenith = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uSkyZenith", "terrain");
+            _locSkyGround = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uSkyGround", "terrain");
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locTerrainVertexPosition;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locTerrainVertexNormal;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locTerrainVertexColor;
@@ -417,7 +421,7 @@ namespace Ludots.Raylib.Render
             ApplyTerrainShadow();
             if (_frameLighting != null)
             {
-                _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+                ApplySkyIrradianceUniforms();
             }
         }
 
@@ -429,10 +433,9 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibTerrainRenderer)} requires {nameof(ApplyFrameLighting)} before Render.");
             }
 
-            RaylibFrameLighting lighting = _frameLighting;
-            lighting.Apply(_terrainShader, in _terrainLightingLocs);
+            ApplySkyIrradianceUniforms();
             Vector3 viewPos = camera.position;
-            lighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, viewPos);
+            _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, viewPos);
             ApplyTerrainShadow();
 
             Vector3 lightPos = lighting.FarLightPosition();
@@ -480,6 +483,12 @@ namespace Ludots.Raylib.Render
             ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000.0 / Stopwatch.Frequency;
             _chunks[key] = gpu;
             return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
+        }
+
+        private void ApplySkyIrradianceUniforms()
+        {
+            _frameLighting!.Apply(_terrainShader, in _terrainLightingLocs);
+            _frameLighting.ApplySkyIrradiance(_terrainShader, _locSkyZenith, _locSkyGround);
         }
 
         private void ApplyTerrainShadow()
