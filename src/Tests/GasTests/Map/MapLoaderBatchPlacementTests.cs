@@ -9,6 +9,7 @@ using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
@@ -460,6 +461,66 @@ namespace GasTests
 
             InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
             That(ex.Message, Does.Contain("FacingDirection.AngleRad requires a numeric value"));
+        }
+
+        [Test]
+        public void LoadTemplates_RejectsChildrenBeyondBufferCapacity()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_MapLoaderChildrenCapacity", Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Entities"));
+                File.WriteAllText(
+                    Path.Combine(root, "config_catalog.json"),
+                    @"[{ ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+                var children = new JsonArray();
+                for (int i = 0; i <= GasConstants.MAX_CHILDREN_BUFFER_CAPACITY; i++)
+                {
+                    children.Add(new JsonObject
+                    {
+                        ["template"] = "leaf",
+                        ["localPose"] = new JsonObject
+                        {
+                            ["offsetXCm"] = i,
+                            ["offsetYCm"] = 0,
+                            ["facingDeg"] = 0,
+                            ["inheritParentFacing"] = false,
+                            ["offsetRotation"] = "None",
+                        },
+                    });
+                }
+
+                var templates = new JsonArray(
+                    new JsonObject
+                    {
+                        ["id"] = "root",
+                        ["components"] = new JsonObject(),
+                        ["children"] = children,
+                    },
+                    new JsonObject
+                    {
+                        ["id"] = "leaf",
+                        ["components"] = new JsonObject(),
+                    });
+                File.WriteAllText(Path.Combine(root, "Entities", "templates.json"), templates.ToJsonString());
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var pipeline = new ConfigPipeline(vfs, new ModLoader(vfs, new FunctionRegistry(), new TriggerManager()));
+                using var world = World.Create();
+                var loader = new MapLoader(world, new WorldMap(), pipeline);
+
+                InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                    loader.LoadTemplates(ConfigCatalogLoader.Load(pipeline)))!;
+
+                That(error.Message, Does.Contain(GasConstants.MAX_CHILDREN_BUFFER_CAPACITY.ToString()));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+            }
         }
 
         private static MapLoader CreateLoader(World world, bool includeDynamicHeightSampling = false)

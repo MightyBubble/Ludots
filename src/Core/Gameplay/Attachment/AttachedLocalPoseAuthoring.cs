@@ -22,6 +22,18 @@ namespace Ludots.Core.Gameplay.Attachment
             };
         }
 
+        public static void ValidateFacingSources(
+            bool inheritParentFacing,
+            AttachedOffsetRotation offsetRotation,
+            string context)
+        {
+            if (inheritParentFacing && offsetRotation == AttachedOffsetRotation.OwnFacing)
+            {
+                throw new InvalidOperationException(
+                    $"{context}: localPose.inheritParentFacing=true 与 offsetRotation=OwnFacing 互斥（朝向同时随父又随子无定义）。");
+            }
+        }
+
         public static int RequireInt(int? value, string context, string field)
         {
             if (value == null)
@@ -54,11 +66,7 @@ namespace Ludots.Core.Gameplay.Attachment
             int facingDeg = RequireInt(cfg.FacingDeg, context, "localPose.facingDeg");
             bool inheritParentFacing = RequireBool(cfg.InheritParentFacing, context, "localPose.inheritParentFacing");
             AttachedOffsetRotation offsetRotation = ParseOffsetRotation(cfg.OffsetRotation, context);
-            if (inheritParentFacing && offsetRotation == AttachedOffsetRotation.OwnFacing)
-            {
-                throw new InvalidOperationException(
-                    $"{context}: localPose.inheritParentFacing=true 与 offsetRotation=OwnFacing 互斥（朝向同时随父又随子无定义）。");
-            }
+            ValidateFacingSources(inheritParentFacing, offsetRotation, context);
 
             return new AttachedLocalPose
             {

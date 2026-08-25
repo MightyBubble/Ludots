@@ -1455,6 +1455,18 @@ namespace Ludots.Core.Config
             }
             ValidateProperties(obj, "AttachedLocalPose", "offsetXCm", "offsetYCm", "facingDeg", "inheritParentFacing", "offsetRotation");
 
+            byte inheritParentFacing = ParseBooleanByte(
+                RequireProperty(obj, "inheritParentFacing", "AttachedLocalPose"),
+                "AttachedLocalPose.inheritParentFacing");
+            Ludots.Core.Components.AttachedOffsetRotation offsetRotation = Ludots.Core.Gameplay.Attachment
+                .AttachedLocalPoseAuthoring.ParseOffsetRotation(
+                    RequireStringProperty(obj, "offsetRotation", "AttachedLocalPose"),
+                    "AttachedLocalPose");
+            Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.ValidateFacingSources(
+                inheritParentFacing != 0,
+                offsetRotation,
+                "AttachedLocalPose");
+
             entity.Add(new Ludots.Core.Components.AttachedLocalPose
             {
                 OffsetCm = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(
@@ -1462,10 +1474,8 @@ namespace Ludots.Core.Config
                     ReadIntProperty(obj, "offsetYCm", "AttachedLocalPose")),
                 LocalFacingRad = Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(
                     ReadIntProperty(obj, "facingDeg", "AttachedLocalPose")) * (Ludots.Core.Mathematics.FixedPoint.Fix64.Pi / Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(180)),
-                InheritParentFacing = ParseBooleanByte(RequireProperty(obj, "inheritParentFacing", "AttachedLocalPose"), "AttachedLocalPose.inheritParentFacing"),
-                OffsetRotation = Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.ParseOffsetRotation(
-                    RequireStringProperty(obj, "offsetRotation", "AttachedLocalPose"),
-                    "AttachedLocalPose"),
+                InheritParentFacing = inheritParentFacing,
+                OffsetRotation = offsetRotation,
             });
         }
 

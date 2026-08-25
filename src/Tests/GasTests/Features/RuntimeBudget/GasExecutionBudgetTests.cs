@@ -136,6 +136,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveAttachmentSyncScratchCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.AttachmentSyncScratchCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("attachmentSyncScratchCapacity"));
+        }
+
+        [Test]
         public void GasRuntimeCapacity_RequiresPositiveResponseChainOrderQueueCapacity()
         {
             var config = CreateValidRuntimeCapacity();
@@ -1071,6 +1081,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
                 CommandIntentScratchCapacity = 64,
+                AttachmentSyncScratchCapacity = 64,
             };
         }
 

@@ -128,7 +128,9 @@ public sealed class MassNavigationRuntime
                 ? simulation
                 : null));
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, config), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine), SystemGroup.PostMovement);
+        engine.InsertSystemBeforeRequired<Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem>(
+            new MassNavigationSimulationStepSystem(engine),
+            SystemGroup.PostMovement);
         engine.RegisterSystem(
             new MassNavigationAuthoredAgentBindingSystem(engine, config),
             SystemGroup.RuntimeEntityBinding);

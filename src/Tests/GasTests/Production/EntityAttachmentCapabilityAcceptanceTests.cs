@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -37,7 +38,11 @@ namespace Ludots.Tests.GAS.Production
         private void Log(string line)
         {
             _battleLog.Add(line);
-            _trace.Add($"{line}");
+            _trace.Add(JsonSerializer.Serialize(new
+            {
+                sequence = _trace.Count + 1,
+                message = line,
+            }));
             TestContext.Out.WriteLine(line);
         }
 

@@ -1996,6 +1996,153 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_TemplateTreeQueueOverflow_FailsBeforeCreatingRoot()
+        {
+            static JsonObject LocalPose() => new()
+            {
+                ["offsetXCm"] = 0,
+                ["offsetYCm"] = 0,
+                ["facingDeg"] = 0,
+                ["inheritParentFacing"] = false,
+                ["offsetRotation"] = "None",
+            };
+
+            static JsonObject Child(string templateId) => new()
+            {
+                ["template"] = templateId,
+                ["localPose"] = LocalPose(),
+            };
+
+            static JsonObject Template(string id, string name, JsonArray? children = null) => new()
+            {
+                ["id"] = id,
+                ["components"] = new JsonObject
+                {
+                    ["Name"] = new JsonObject { ["Value"] = name },
+                    ["WorldPositionCm"] = new JsonObject
+                    {
+                        ["Value"] = new JsonObject { ["X"] = 0, ["Y"] = 0 },
+                    },
+                },
+                ["children"] = children,
+            };
+
+            var rootChildren = new JsonArray();
+            var branchChildren = new JsonArray();
+            for (int i = 0; i < GasConstants.MAX_CHILDREN_BUFFER_CAPACITY; i++)
+            {
+                rootChildren.Add(Child("branch"));
+                branchChildren.Add(Child("leaf"));
+            }
+
+            string templateJson = new JsonArray(
+                Template("root", "Template:Root", rootChildren),
+                Template("branch", "Template:Branch", branchChildren),
+                Template("leaf", "Template:Leaf"))
+                .ToJsonString();
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: GasConstants.MAX_CHILDREN_BUFFER_CAPACITY);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator());
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "root",
+                WorldPositionCm = Fix64Vec2.Zero,
+                HasWorldPosition = 1,
+            }), Is.True);
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            That(error.Message, Does.Contain("TemplateChildrenQueueFull"));
+            int spawnedCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity _, ref Name __) => spawnedCount++);
+            That(spawnedCount, Is.Zero, "整棵模板树必须在首个实体创建前完成队列容量预演");
+            That(requests.Count, Is.EqualTo(1), "失败不得消费根请求");
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_TemplateChildrenCapacity_FailsBeforeCreatingRoot()
+        {
+            var children = new JsonArray();
+            for (int i = 0; i <= GasConstants.MAX_CHILDREN_BUFFER_CAPACITY; i++)
+            {
+                children.Add(new JsonObject
+                {
+                    ["template"] = "leaf",
+                    ["localPose"] = new JsonObject
+                    {
+                        ["offsetXCm"] = i,
+                        ["offsetYCm"] = 0,
+                        ["facingDeg"] = 0,
+                        ["inheritParentFacing"] = false,
+                        ["offsetRotation"] = "None",
+                    },
+                });
+            }
+
+            string templateJson = new JsonArray(
+                new JsonObject
+                {
+                    ["id"] = "root",
+                    ["components"] = new JsonObject
+                    {
+                        ["WorldPositionCm"] = new JsonObject
+                        {
+                            ["Value"] = new JsonObject { ["X"] = 0, ["Y"] = 0 },
+                        },
+                    },
+                    ["children"] = children,
+                },
+                new JsonObject
+                {
+                    ["id"] = "leaf",
+                    ["components"] = new JsonObject
+                    {
+                        ["WorldPositionCm"] = new JsonObject
+                        {
+                            ["Value"] = new JsonObject { ["X"] = 0, ["Y"] = 0 },
+                        },
+                    },
+                }).ToJsonString();
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(32);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator());
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "root",
+                WorldPositionCm = Fix64Vec2.Zero,
+                HasWorldPosition = 1,
+            }), Is.True);
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            That(error.Message, Does.Contain("TemplateChildrenCapacityExceeded"));
+            That(requests.Count, Is.EqualTo(1));
+            QueryDescription childQuery = new QueryDescription().WithAll<ChildOf>();
+            That(world.CountEntities(in childQuery), Is.Zero);
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_BatchTemplate_StaticTransformMatchesComponentRegistryMarkers()
         {
             string templateJson = @"[
@@ -2185,6 +2332,38 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             That(tpl.Relation.Subject, Is.EqualTo(RelationEntitySlot.Source));
             That(tpl.Relation.Parent, Is.EqualTo(RelationEntitySlot.TargetContext));
             That(tpl.Relation.SnapSubjectToParentPosition, Is.True);
+        }
+
+        [Test]
+        public void Relation_Loader_RejectsConflictingAttachmentFacingSources()
+        {
+            var conditions = new GasConditionRegistry();
+            var templates = new EffectTemplateRegistry();
+            var pipeline = CreateMinimalPipeline(
+                @"{
+                    ""id"": ""test_invalid_attach"",
+                    ""presetType"": ""Relation"",
+                    ""lifetime"": ""Instant"",
+                    ""participatesInResponse"": true,
+                    ""relation"": {
+                        ""operation"": ""Attach"",
+                        ""subject"": ""Source"",
+                        ""parent"": ""TargetContext"",
+                        ""localPose"": {
+                            ""offsetXCm"": 0,
+                            ""offsetYCm"": 0,
+                            ""facingDeg"": 0,
+                            ""inheritParentFacing"": true,
+                            ""offsetRotation"": ""OwnFacing""
+                        }
+                    }
+                }");
+
+            var loader = new EffectTemplateLoader(pipeline, templates, conditions);
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json"))!;
+
+            That(error.Message, Does.Contain("inheritParentFacing=true"));
         }
 
         // ════════════════════════════════════════════════════════════════════

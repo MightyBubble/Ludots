@@ -472,6 +472,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageDetach(Entity subject, Ludots.Core.Gameplay.Attachment.DetachPlacement placement, int perimeterRadiusCm)
     {
         RequireActive();
+        Ludots.Core.Gameplay.Attachment.AttachmentOps.ValidateDetachPlacement(placement);
         if (!_world.IsAlive(subject))
         {
             throw new InvalidOperationException(
@@ -656,7 +657,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private void ThrowIfStagedRelationCycle(Entity child, Entity parent)
     {
         Entity current = parent;
-        int steps = 0;
+        Entity slow = parent;
+        Entity fast = parent;
         while (current != Entity.Null)
         {
             if (current == child)
@@ -666,17 +668,23 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             }
 
             current = FindStagedChildParent(current);
-            steps++;
-            if (steps > 1024)
+            slow = FindStagedChildParent(slow);
+            fast = FindStagedChildParent(FindStagedChildParent(fast));
+            if (slow != Entity.Null && slow == fast)
             {
                 throw new InvalidOperationException(
-                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.CycleError}: staged walk exceeded 1024 ancestors without reaching a root.");
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.CycleError}: existing staged ChildOf graph contains a cycle.");
             }
         }
     }
 
     private Entity FindStagedChildParent(Entity entity)
     {
+        if (entity == Entity.Null)
+        {
+            return Entity.Null;
+        }
+
         int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
         if (index >= 0)
         {

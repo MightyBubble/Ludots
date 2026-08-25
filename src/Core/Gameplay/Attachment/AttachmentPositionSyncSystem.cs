@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
@@ -22,7 +23,6 @@ namespace Ludots.Core.Gameplay.Attachment
     /// </summary>
     public sealed class AttachmentPositionSyncSystem : BaseSystem<World, float>
     {
-        public const int ScratchCapacity = 8192;
         public const string CapacityExceededError = "GAS.ATTACH.SYNC.ERR.CapacityExceeded";
         public const string ParentPositionMissingError = "GAS.ATTACH.SYNC.ERR.ParentPositionMissing";
         public const string PoseAuthorityConflictError = "GAS.ATTACH.SYNC.ERR.PoseAuthorityConflict";
@@ -30,14 +30,41 @@ namespace Ludots.Core.Gameplay.Attachment
         private static readonly QueryDescription AttachedQuery = new QueryDescription()
             .WithAll<ChildOf, AttachedLocalPose>();
 
-        private readonly Entity[] _entities = new Entity[ScratchCapacity];
-        private readonly ChildOf[] _childOf = new ChildOf[ScratchCapacity];
-        private readonly AttachedLocalPose[] _localPose = new AttachedLocalPose[ScratchCapacity];
-        private readonly int[] _depth = new int[ScratchCapacity];
+        private readonly int _scratchCapacity;
+        private readonly Entity[] _entities;
+        private readonly ChildOf[] _childOf;
+        private readonly AttachedLocalPose[] _localPose;
+        private readonly int[] _depth;
+        private readonly byte[] _visitState;
+        private readonly int[] _visitStack;
+        private readonly int[] _depthCounts;
+        private readonly int[] _depthOffsets;
+        private readonly int[] _orderedIndices;
+        private readonly Dictionary<Entity, int> _entityIndices;
         private readonly PoseAuthorityArbiter? _poseAuthorityArbiter;
 
-        public AttachmentPositionSyncSystem(World world, PoseAuthorityArbiter? poseAuthorityArbiter = null) : base(world)
+        public AttachmentPositionSyncSystem(
+            World world,
+            int scratchCapacity,
+            PoseAuthorityArbiter? poseAuthorityArbiter = null)
+            : base(world)
         {
+            if (scratchCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(scratchCapacity));
+            }
+
+            _scratchCapacity = scratchCapacity;
+            _entities = new Entity[scratchCapacity];
+            _childOf = new ChildOf[scratchCapacity];
+            _localPose = new AttachedLocalPose[scratchCapacity];
+            _depth = new int[scratchCapacity];
+            _visitState = new byte[scratchCapacity];
+            _visitStack = new int[scratchCapacity];
+            _depthCounts = new int[scratchCapacity];
+            _depthOffsets = new int[scratchCapacity];
+            _orderedIndices = new int[scratchCapacity];
+            _entityIndices = new Dictionary<Entity, int>(scratchCapacity);
             _poseAuthorityArbiter = poseAuthorityArbiter;
         }
 
@@ -57,7 +84,7 @@ namespace Ludots.Core.Gameplay.Attachment
             LastMaxDepth = 0;
 
             int count = 0;
-            int maxDepth = 0;
+            _entityIndices.Clear();
             foreach (ref var chunk in World.Query(in AttachedQuery))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -65,10 +92,10 @@ namespace Ludots.Core.Gameplay.Attachment
                 var localPoseSpan = chunk.GetSpan<AttachedLocalPose>();
                 foreach (var index in chunk)
                 {
-                    if (count >= ScratchCapacity)
+                    if (count >= _scratchCapacity)
                     {
                         throw new InvalidOperationException(
-                            $"{CapacityExceededError}: staged={count + 1}, capacity={ScratchCapacity}.");
+                            $"{CapacityExceededError}: staged={count + 1}, capacity={_scratchCapacity}.");
                     }
 
                     Entity entity = Unsafe.Add(ref entityFirst, index);
@@ -76,31 +103,91 @@ namespace Ludots.Core.Gameplay.Attachment
                     _entities[count] = entity;
                     _childOf[count] = childOf;
                     _localPose[count] = localPoseSpan[index];
-                    int depth = ResolveAttachmentDepth(entity, childOf.Parent);
-                    _depth[count] = depth;
+                    _depth[count] = -1;
+                    _visitState[count] = 0;
+                    _entityIndices.Add(entity, count);
+                    count++;
+                }
+            }
+
+            int maxDepth = ResolveDepths(count);
+            LastMaxDepth = maxDepth;
+            BuildDepthOrder(count, maxDepth);
+            for (int orderIndex = 0; orderIndex < count; orderIndex++)
+            {
+                int i = _orderedIndices[orderIndex];
+                ValidateChildPreconditions(_entities[i], in _childOf[i], in _localPose[i]);
+            }
+
+            for (int orderIndex = 0; orderIndex < count; orderIndex++)
+            {
+                int i = _orderedIndices[orderIndex];
+                ProcessChild(_entities[i], in _childOf[i], in _localPose[i]);
+            }
+        }
+
+        private int ResolveDepths(int count)
+        {
+            int maxDepth = 0;
+            for (int start = 0; start < count; start++)
+            {
+                if (_depth[start] >= 0)
+                {
+                    continue;
+                }
+
+                int stackCount = 0;
+                int current = start;
+                while (current >= 0 && _depth[current] < 0)
+                {
+                    if (_visitState[current] == 1)
+                    {
+                        throw new InvalidOperationException("GAS.ATTACH.SYNC.ERR.CycleDetected");
+                    }
+
+                    _visitState[current] = 1;
+                    _visitStack[stackCount++] = current;
+                    current = _entityIndices.TryGetValue(_childOf[current].Parent, out int parentIndex)
+                        ? parentIndex
+                        : -1;
+                }
+
+                int depth = current >= 0 ? _depth[current] + 1 : 0;
+                while (stackCount > 0)
+                {
+                    int index = _visitStack[--stackCount];
+                    _depth[index] = depth;
+                    _visitState[index] = 2;
                     if (depth > maxDepth)
                     {
                         maxDepth = depth;
                     }
 
-                    count++;
+                    depth++;
                 }
             }
 
-            LastMaxDepth = maxDepth;
+            return maxDepth;
+        }
 
-            // 深度序：同一固定步内父层先落定，子层读到的是本步父位姿。
+        private void BuildDepthOrder(int count, int maxDepth)
+        {
+            Array.Clear(_depthCounts, 0, maxDepth + 1);
+            for (int i = 0; i < count; i++)
+            {
+                _depthCounts[_depth[i]]++;
+            }
+
+            int offset = 0;
             for (int depth = 0; depth <= maxDepth; depth++)
             {
-                for (int i = 0; i < count; i++)
-                {
-                    if (_depth[i] != depth)
-                    {
-                        continue;
-                    }
+                _depthOffsets[depth] = offset;
+                offset += _depthCounts[depth];
+            }
 
-                    ProcessChild(_entities[i], in _childOf[i], in _localPose[i]);
-                }
+            for (int i = 0; i < count; i++)
+            {
+                _orderedIndices[_depthOffsets[_depth[i]]++] = i;
             }
         }
 
@@ -121,19 +208,6 @@ namespace Ludots.Core.Gameplay.Attachment
                 return;
             }
 
-            if (World.Has<PoseAuthority>(child) &&
-                World.Get<PoseAuthority>(child).Value != PoseAuthorityKind.Attached)
-            {
-                throw new InvalidOperationException(
-                    $"{PoseAuthorityConflictError}: child={child.Id}, authority={World.Get<PoseAuthority>(child).Value}.");
-            }
-
-            if (!World.Has<WorldPositionCm>(child))
-            {
-                throw new InvalidOperationException(
-                    $"{ParentPositionMissingError}: child={child.Id}, reason=attached-child-without-world-position.");
-            }
-
             ref readonly WorldPositionCm parentPosition = ref World.Get<WorldPositionCm>(parent);
             float parentFacing = World.Has<FacingDirection>(parent) ? World.Get<FacingDirection>(parent).AngleRad : 0f;
             float ownFacing = AttachedPoseMath.ResolveOwnFacingRad(
@@ -148,13 +222,55 @@ namespace Ludots.Core.Gameplay.Attachment
 
             ref WorldPositionCm current = ref World.Get<WorldPositionCm>(child);
             current.Value = worldPosition;
-            if (World.Has<PreviousWorldPositionCm>(child))
+            World.Get<PreviousWorldPositionCm>(child).Value = worldPosition;
+
+            if (localPose.InheritParentFacing != 0)
             {
-                World.Get<PreviousWorldPositionCm>(child).Value = worldPosition;
+                World.Get<FacingDirection>(child).AngleRad = parentFacing + localPose.LocalFacingRad.ToFloat();
             }
-            else
+
+            LastAppliedCount++;
+        }
+
+        private void ValidateChildPreconditions(Entity child, in ChildOf childOf, in AttachedLocalPose localPose)
+        {
+            Entity parent = childOf.Parent;
+            if (!World.IsAlive(parent) || !World.Has<WorldPositionCm>(parent))
             {
-                World.Add(child, new PreviousWorldPositionCm { Value = worldPosition });
+                if (!World.Has<Ludots.Core.Gameplay.Spawning.DestroyWhenParentExecutionEnds>(child) &&
+                    World.Has<PoseAuthority>(child) &&
+                    World.Get<PoseAuthority>(child).Value == PoseAuthorityKind.Attached &&
+                    _poseAuthorityArbiter == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{PoseAuthorityConflictError}: child={child.Id}, reason=orphan-cleanup-requires-arbiter.");
+                }
+
+                return;
+            }
+
+            AttachedLocalPoseAuthoring.ValidateFacingSources(
+                localPose.InheritParentFacing != 0,
+                localPose.OffsetRotation,
+                "AttachmentPositionSyncSystem");
+
+            if (World.Has<PoseAuthority>(child) &&
+                World.Get<PoseAuthority>(child).Value != PoseAuthorityKind.Attached)
+            {
+                throw new InvalidOperationException(
+                    $"{PoseAuthorityConflictError}: child={child.Id}, authority={World.Get<PoseAuthority>(child).Value}.");
+            }
+
+            if (!World.Has<WorldPositionCm>(child))
+            {
+                throw new InvalidOperationException(
+                    $"{ParentPositionMissingError}: child={child.Id}, reason=attached-child-without-world-position.");
+            }
+
+            if (!World.Has<PreviousWorldPositionCm>(child))
+            {
+                throw new InvalidOperationException(
+                    $"{ParentPositionMissingError}: child={child.Id}, reason=attached-child-without-previous-world-position.");
             }
 
             if (localPose.InheritParentFacing != 0)
@@ -165,20 +281,25 @@ namespace Ludots.Core.Gameplay.Attachment
                         $"{ParentPositionMissingError}: parent={parent.Id}, reason=inherit-facing-without-parent-facing.");
                 }
 
-                if (World.Has<FacingDirection>(child))
+                if (!World.Has<FacingDirection>(child))
                 {
-                    World.Get<FacingDirection>(child).AngleRad = parentFacing + localPose.LocalFacingRad.ToFloat();
-                }
-                else
-                {
-                    World.Add(child, new FacingDirection
-                    {
-                        AngleRad = parentFacing + localPose.LocalFacingRad.ToFloat(),
-                    });
+                    throw new InvalidOperationException(
+                        $"{ParentPositionMissingError}: child={child.Id}, reason=inherit-facing-without-child-facing.");
                 }
             }
 
-            LastAppliedCount++;
+            float parentFacing = World.Has<FacingDirection>(parent)
+                ? World.Get<FacingDirection>(parent).AngleRad
+                : 0f;
+            float ownFacing = AttachedPoseMath.ResolveOwnFacingRad(
+                World.Has<FacingDirection>(child),
+                World.Has<FacingDirection>(child) ? World.Get<FacingDirection>(child).AngleRad : 0f,
+                parentFacing);
+            _ = AttachedPoseMath.ComposeWorldPosition(
+                in World.Get<WorldPositionCm>(parent).Value,
+                parentFacing,
+                ownFacing,
+                in localPose);
         }
 
         /// <summary>
@@ -216,22 +337,5 @@ namespace Ludots.Core.Gameplay.Attachment
             LastOrphanCleanupCount++;
         }
 
-        private int ResolveAttachmentDepth(Entity child, Entity parent)
-        {
-            int depth = 0;
-            Entity current = parent;
-            while (World.IsAlive(current) && World.Has<ChildOf>(current))
-            {
-                depth++;
-                current = World.Get<ChildOf>(current).Parent;
-                if (depth > 1024)
-                {
-                    throw new InvalidOperationException(
-                        "GAS.ATTACH.SYNC.ERR.DepthWalkExceeded: the ChildOf graph invariant is broken.");
-                }
-            }
-
-            return depth;
-        }
     }
 }

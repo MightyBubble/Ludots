@@ -268,6 +268,53 @@ namespace Ludots.Core.Movement
             return removed;
         }
 
+        internal bool HasPendingTransition(Entity entity, PoseAuthorityKind from, PoseAuthorityKind to)
+        {
+            for (int i = 0; i < _pending.Count; i++)
+            {
+                PendingTransition transition = _pending[i];
+                if (transition.Entity == entity && transition.From == from && transition.To == to)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        internal bool RemovePendingTransition(Entity entity, PoseAuthorityKind from, PoseAuthorityKind to)
+        {
+            for (int i = _pending.Count - 1; i >= 0; i--)
+            {
+                PendingTransition transition = _pending[i];
+                if (transition.Entity != entity || transition.From != from || transition.To != to)
+                {
+                    continue;
+                }
+
+                _pending.RemoveAt(i);
+                return true;
+            }
+
+            return false;
+        }
+
+        internal void RestorePendingTransition(Entity entity, PoseAuthorityKind from, PoseAuthorityKind to)
+        {
+            if (HasPendingTransition(entity, from, to))
+            {
+                return;
+            }
+
+            _pending.Add(new PendingTransition
+            {
+                Entity = entity,
+                From = from,
+                To = to,
+                MaxDurationMs = 0,
+            });
+        }
+
         /// <summary>
         /// 取消实体的写权窗口与待结算切换（合法异常终止路径）。
         /// 幂等：既无窗口也无待办时为无操作——取消方（GAS 位移、地图生命周期、结构重建）

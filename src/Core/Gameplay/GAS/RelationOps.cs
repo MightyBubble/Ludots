@@ -57,12 +57,13 @@ namespace Ludots.Core.Gameplay.GAS
 
         /// <summary>
         /// 环检测：从候选 parent 沿 ChildOf 向上走，途中遇到 child 即成环。
-        /// 挂接图自本检测起保持无环，向上遍历必然终止；步数上限是对既有病态数据的防御性 fail-fast。
+        /// Floyd 双指针同时检测既有病态环，不以合法关系深度作为失败条件。
         /// </summary>
         public static bool WouldCreateCycle(World world, Entity child, Entity parent)
         {
             Entity current = parent;
-            int steps = 0;
+            Entity slow = parent;
+            Entity fast = parent;
             while (world.IsAlive(current) && world.Has<ChildOf>(current))
             {
                 if (current == child)
@@ -71,15 +72,23 @@ namespace Ludots.Core.Gameplay.GAS
                 }
 
                 current = world.Get<ChildOf>(current).Parent;
-                steps++;
-                if (steps > 1024)
+                slow = NextParent(world, slow);
+                fast = NextParent(world, NextParent(world, fast));
+                if (slow != Entity.Null && slow == fast)
                 {
                     throw new InvalidOperationException(
-                        $"{CycleDetectedError}: walk exceeded 1024 ancestors without reaching a root.");
+                        $"{CycleDetectedError}: existing ChildOf graph contains a cycle.");
                 }
             }
 
             return current == child;
+        }
+
+        private static Entity NextParent(World world, Entity entity)
+        {
+            return world.IsAlive(entity) && world.Has<ChildOf>(entity)
+                ? world.Get<ChildOf>(entity).Parent
+                : Entity.Null;
         }
 
         public static void RemoveParent(World world, Entity child)

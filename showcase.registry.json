@@ -49,6 +49,31 @@
   ],
   "showcases": [
     {
+      "id": "entity_attachment_capability",
+      "path": "mods/capabilities/attachment/AttachmentCapabilityMod",
+      "projectPath": null,
+      "title": "实体挂接与脱离",
+      "summary": "坦克炮塔与炮管逐层跟随，骑乘单位上车后随载具移动，并在下车时稳定落到载具周边。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": null,
+      "preset": null,
+      "docsPath": "gitbook/architecture/entity-attachment.md",
+      "readmePath": null,
+      "acceptanceTest": "EntityAttachmentCapabilityAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/entity-attachment",
+      "screenshot": null,
+      "video": null,
+      "status": "active",
+      "tags": [
+        "entity-attachment",
+        "gameplay",
+        "gas",
+        "ecs"
+      ],
+      "notes": "Headless gameplay capability acceptance; architecture decisions remain SSOT in GitHub issues #239 and #244."
+    },
+    {
       "id": "persistence_online_replay",
       "path": "mods/showcases/persistence_online_replay/PersistenceOnlineReplayShowcaseMod",
       "projectPath": "PersistenceOnlineReplayShowcaseMod.csproj",

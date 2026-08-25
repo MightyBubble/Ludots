@@ -1,4 +1,37 @@
-# Documentation Governance Report — Raylib 引擎画廊对齐 Graph 节点画廊
+# Documentation Governance Report - Entity Attachment Closeout
+
+Date: 2026-08-26
+Scope: `gitbook/architecture/entity-attachment.md`, `gitbook/SUMMARY.md`, `gitbook/reference/presenter-capability-catalog/behaviors.md`, `showcase.registry.json`, `scripts/acceptance/acceptance.index.json`, `artifacts/acceptance/entity-attachment/`
+Ruleset: `ludots-doc-governance` checklist, `scripts/validate-docs.ps1`, `scripts/validate-registry.py`, `scripts/build-acceptance-index.py --check`, JSONL parse, `git diff --check`
+
+## Summary
+
+- Total findings: 0
+- P0: 0
+- P1: 0
+- P2: 0
+- P3: 0
+- Scoped documentation validation passed.
+- Registry validation passed with 0 errors; 26 pre-existing T1 screenshot warnings are outside this change.
+- Acceptance index matches the registry (`runnable=47`, `test-only=0`).
+- Entity Attachment trace contains 9 valid JSONL records.
+
+## Findings
+
+No unresolved findings in the reviewed Entity Attachment documentation and evidence scope.
+
+## Fix Order
+
+No documentation fixes remain in this scope.
+
+## Residual Risks
+
+- The capability is headless T2 evidence and intentionally has no screenshot or video.
+- Architecture decisions remain in GitHub issues #239 and #244; the GitBook page is a usage and acceptance entry, not a parallel ADR.
+
+---
+
+# Documentation Governance Report — Presenter 文档修复与导航治理（含合并就绪判定）
 
 Date: 2026-08-23（第二轮：对齐最新 main `6daa88a45d` 后按用户四点缺口补全）
 Scope: `gitbook/reference/engine-gallery-wiki/`（21 文件）、`gitbook/architecture/raylib-{render-code-shape,engine-gallery-dev-guide,render-productization,engine-capabilities,render-lighting-guide}.md`、`gitbook/reference/raylib-render-config-structure.md`、`gitbook/SUMMARY.md`、`docs/raylib-engine.html`、`docs/index.html`、`docs/site-assets/site.js`、`scripts/build-site.py`、`scripts/validate-docs.ps1`
@@ -91,4 +124,7 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 - 场景页正文为手写（graph wiki 为生成器产物）：scene id/标题/摘要若在 `SceneCatalog.cs` 或 `showcase.registry.json` 变更，wiki 需人工同步；构建期已防 404（README 条目缺页硬失败、孤儿页告警），但不防内容漂移。
 - 帧统计表摘自当前验收工件（`engine_gallery_all/*.json` 等），证据重跑后数值会变化；页面已标注工件路径供对账。
 - 侧栏 Playwright 自动化点击在粘性滚动容器内偶发超时（人工路径不受影响；哈希路由 `#scene/<id>` 等价可达，实测正常）。
-- 本次操作事故记录：在他人工作树 `.worktrees/audit-raylib-main` 做 stash 验证时，因多工作树共享 stash 栈弹入了他人 stash 造成冲突残留；已 `git reset --hard` 恢复至该分支干净 HEAD（`a4b594a118`），他人 stash（wip-nr）完好保留。教训：不在共享仓库的他人工作树执行 stash/pop。
+- 本次操作事故记录：在他人工作树 `.worktrees/audit-raylib-main` 做 stash 验证时，因多工作树共享 stash 栈弹入了他人 stash 造成冲突残留；已恢复至该分支干净 HEAD，他人 stash 完好保留。教训：不在共享仓库的他人工作树执行 stash/pop。
+
+- P3（既有）：`graph-node-op-wiki/WeightedPick.md` 未被 README 收录（build-site 告警），建议后续补录。
+- 无 P0–P2 发现；本轮新增内容 0 告警。

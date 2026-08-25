@@ -92,6 +92,17 @@ namespace Ludots.Core.Gameplay.Attachment
         public const string MissingChildOfError = "GAS.ATTACH.ERR.MissingChildOf";
         public const string MissingArbiterError = "GAS.ATTACH.ERR.MissingPoseAuthorityArbiter";
         public const string ParentBufferMissingError = "GAS.ATTACH.ERR.ParentChildrenBufferMissing";
+        public const string StablePerimeterSlotRequiredError = "GAS.ATTACH.ERR.StablePerimeterSlotRequired";
+        public const string UnknownDetachPlacementError = "GAS.ATTACH.ERR.UnknownDetachPlacement";
+
+        private enum AuthorityPendingMutation : byte
+        {
+            None = 0,
+            AddedGrant = 1,
+            RemovedGrant = 2,
+            AddedHandback = 3,
+            RemovedHandback = 4,
+        }
 
         public static void Attach(
             World world,
@@ -123,7 +134,7 @@ namespace Ludots.Core.Gameplay.Attachment
             ValidateAttachedAuthority(world, arbiter, child);
             ValidateParentCapacity(world, child, parent);
             AttachmentStateSnapshot snapshot = AttachmentStateSnapshot.Capture(world, child, parent);
-            bool authorityPendingAdded = false;
+            AuthorityPendingMutation authorityMutation = AuthorityPendingMutation.None;
 
             try
             {
@@ -132,17 +143,13 @@ namespace Ludots.Core.Gameplay.Attachment
                 Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Suspend(world, child);
 
                 // 写权授予：持有 PoseAuthority 的子实体必须切到 Attached（无竞争写者化）。
-                authorityPendingAdded = TryGrantAttachedAuthority(world, arbiter, child);
+                authorityMutation = ApplyAttachedGrant(world, arbiter, child);
                 RelationOps.SetParent(world, child, parent);
                 ApplyAttachedPose(world, child, parent, in localPose);
             }
             catch
             {
-                if (authorityPendingAdded)
-                {
-                    arbiter!.RemovePendingTransition(child);
-                }
-
+                RollbackAuthorityMutation(arbiter, child, authorityMutation);
                 snapshot.Restore(world, child);
                 throw;
             }
@@ -179,10 +186,10 @@ namespace Ludots.Core.Gameplay.Attachment
             Fix64Vec2 ringOffset = AttachedPoseMath.PerimeterRingOffsetCm(ringSlot, ringSlotCount, perimeterRadiusCm);
             Fix64Vec2 ringPosition = world.Get<WorldPositionCm>(parent).Value + ringOffset;
             AttachmentStateSnapshot snapshot = AttachmentStateSnapshot.Capture(world, child, parent);
-            bool authorityPendingAdded = false;
+            AuthorityPendingMutation authorityMutation = AuthorityPendingMutation.None;
             try
             {
-                authorityPendingAdded = HandbackAttachedAuthority(world, arbiter, child);
+                authorityMutation = ApplyAttachedHandback(world, arbiter, child);
                 Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
                 Upsert(world, child, new WorldPositionCm { Value = ringPosition });
                 Upsert(world, child, new PreviousWorldPositionCm { Value = ringPosition });
@@ -195,11 +202,7 @@ namespace Ludots.Core.Gameplay.Attachment
             }
             catch
             {
-                if (authorityPendingAdded)
-                {
-                    arbiter!.RemovePendingTransition(child);
-                }
-
+                RollbackAuthorityMutation(arbiter, child, authorityMutation);
                 snapshot.Restore(world, child);
                 throw;
             }
@@ -218,9 +221,14 @@ namespace Ludots.Core.Gameplay.Attachment
                 throw new InvalidOperationException($"{MissingChildOfError}: child={child.Id}.");
             }
 
+            ValidateDetachPlacement(placement);
+            if (placement == DetachPlacement.ParentPerimeterRing)
+            {
+                throw new InvalidOperationException(
+                    $"{StablePerimeterSlotRequiredError}: child={child.Id}, operation=DetachToPerimeter.");
+            }
+
             Entity parent = world.Get<ChildOf>(child).Parent;
-            int ringSlot = 0;
-            int ringSlotCount = 0;
             if (world.IsAlive(parent))
             {
                 if (!world.Has<ChildrenBuffer>(parent))
@@ -230,51 +238,20 @@ namespace Ludots.Core.Gameplay.Attachment
                 }
 
                 ChildrenBuffer children = world.Get<ChildrenBuffer>(parent);
-                ringSlotCount = children.Count;
-                ringSlot = FindChildIndex(in children, in child);
-                if (ringSlot < 0)
+                if (FindChildIndex(in children, in child) < 0)
                 {
                     throw new InvalidOperationException(
                         $"{ParentBufferMissingError}: parent={parent.Id}, child={child.Id}, reason=child-missing.");
                 }
             }
-            else if (placement == DetachPlacement.ParentPerimeterRing)
-            {
-                throw new InvalidOperationException(
-                    $"{TargetInvalidError}: child={child.Id}, parent={parent.Id}, reason=perimeter-requires-live-parent.");
-            }
-
             ValidateAttachedHandback(world, arbiter, child);
 
-            if (placement == DetachPlacement.ParentPerimeterRing)
-            {
-                if (!world.Has<WorldPositionCm>(parent))
-                {
-                    throw new InvalidOperationException(
-                        $"{ParentPositionMissingError}: parent={parent.Id}.");
-                }
-
-            }
-
-            Fix64Vec2 ringPosition = default;
-            if (placement == DetachPlacement.ParentPerimeterRing)
-            {
-                ringPosition = world.Get<WorldPositionCm>(parent).Value +
-                    AttachedPoseMath.PerimeterRingOffsetCm(ringSlot, ringSlotCount, perimeterRadiusCm);
-            }
-
             AttachmentStateSnapshot snapshot = AttachmentStateSnapshot.Capture(world, child, parent);
-            bool authorityPendingAdded = false;
+            AuthorityPendingMutation authorityMutation = AuthorityPendingMutation.None;
             try
             {
-                authorityPendingAdded = HandbackAttachedAuthority(world, arbiter, child);
+                authorityMutation = ApplyAttachedHandback(world, arbiter, child);
                 Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
-                if (placement == DetachPlacement.ParentPerimeterRing)
-                {
-                    Upsert(world, child, new WorldPositionCm { Value = ringPosition });
-                    Upsert(world, child, new PreviousWorldPositionCm { Value = ringPosition });
-                }
-
                 if (world.Has<AttachedLocalPose>(child))
                 {
                     world.Remove<AttachedLocalPose>(child);
@@ -284,22 +261,30 @@ namespace Ludots.Core.Gameplay.Attachment
             }
             catch
             {
-                if (authorityPendingAdded)
-                {
-                    arbiter!.RemovePendingTransition(child);
-                }
-
+                RollbackAuthorityMutation(arbiter, child, authorityMutation);
                 snapshot.Restore(world, child);
                 throw;
             }
         }
 
-        private static bool HandbackAttachedAuthority(World world, PoseAuthorityArbiter? arbiter, Entity child)
+        internal static void ValidateDetachPlacement(DetachPlacement placement)
         {
-            if (!world.Has<PoseAuthority>(child) ||
-                world.Get<PoseAuthority>(child).Value != PoseAuthorityKind.Attached)
+            if (placement != DetachPlacement.KeepWorldPose &&
+                placement != DetachPlacement.ParentPerimeterRing)
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"{UnknownDetachPlacementError}: placement={(byte)placement}.");
+            }
+        }
+
+        private static AuthorityPendingMutation ApplyAttachedHandback(
+            World world,
+            PoseAuthorityArbiter? arbiter,
+            Entity child)
+        {
+            if (!world.Has<PoseAuthority>(child))
+            {
+                return AuthorityPendingMutation.None;
             }
 
             if (arbiter == null)
@@ -308,14 +293,32 @@ namespace Ludots.Core.Gameplay.Attachment
                     $"{MissingArbiterError}: child={child.Id}, operation=AttachedHandback.");
             }
 
+            PoseAuthorityKind current = world.Get<PoseAuthority>(child).Value;
+            if (current == PoseAuthorityKind.Nav)
+            {
+                return arbiter.RemovePendingTransition(child, PoseAuthorityKind.Nav, PoseAuthorityKind.Attached)
+                    ? AuthorityPendingMutation.RemovedGrant
+                    : AuthorityPendingMutation.None;
+            }
+
+            if (current != PoseAuthorityKind.Attached)
+            {
+                throw new InvalidOperationException(
+                    $"{AuthorityConflictError}: child={child.Id}, current={current}.");
+            }
+
+            if (arbiter.HasPendingTransition(child, PoseAuthorityKind.Attached, PoseAuthorityKind.Nav))
+            {
+                return AuthorityPendingMutation.None;
+            }
+
             arbiter.RequestAttachedHandback(world, child);
-            return true;
+            return AuthorityPendingMutation.AddedHandback;
         }
 
         private static void ValidateAttachedHandback(World world, PoseAuthorityArbiter? arbiter, Entity child)
         {
-            if (!world.Has<PoseAuthority>(child) ||
-                world.Get<PoseAuthority>(child).Value != PoseAuthorityKind.Attached)
+            if (!world.Has<PoseAuthority>(child))
             {
                 return;
             }
@@ -341,7 +344,7 @@ namespace Ludots.Core.Gameplay.Attachment
                     $"{AuthorityConflictError}: child={child.Id}, current={current}.");
             }
 
-            if (current == PoseAuthorityKind.Nav && arbiter == null)
+            if (arbiter == null)
             {
                 throw new InvalidOperationException(
                     $"{MissingArbiterError}: child={child.Id}, operation=AttachedGrant.");
@@ -439,11 +442,14 @@ namespace Ludots.Core.Gameplay.Attachment
         /// 返回 false 表示实体无 PoseAuthority（无竞争写者）。持有 Displacement/Physics 写权时
         /// fail-fast；nav 成员身份已在 attach 前挂起，求解器不再是竞争写者。
         /// </summary>
-        private static bool TryGrantAttachedAuthority(World world, PoseAuthorityArbiter? arbiter, Entity child)
+        private static AuthorityPendingMutation ApplyAttachedGrant(
+            World world,
+            PoseAuthorityArbiter? arbiter,
+            Entity child)
         {
             if (!world.Has<PoseAuthority>(child))
             {
-                return false;
+                return AuthorityPendingMutation.None;
             }
 
             PoseAuthorityKind current = world.Get<PoseAuthority>(child).Value;
@@ -459,8 +465,46 @@ namespace Ludots.Core.Gameplay.Attachment
                     $"{MissingArbiterError}: child={child.Id}, operation=AttachedGrant.");
             }
 
+            if (current == PoseAuthorityKind.Attached)
+            {
+                return arbiter.RemovePendingTransition(child, PoseAuthorityKind.Attached, PoseAuthorityKind.Nav)
+                    ? AuthorityPendingMutation.RemovedHandback
+                    : AuthorityPendingMutation.None;
+            }
+
+            if (arbiter.HasPendingTransition(child, PoseAuthorityKind.Nav, PoseAuthorityKind.Attached))
+            {
+                return AuthorityPendingMutation.None;
+            }
+
             arbiter.RequestAttachedAuthority(world, child);
-            return true;
+            return AuthorityPendingMutation.AddedGrant;
+        }
+
+        private static void RollbackAuthorityMutation(
+            PoseAuthorityArbiter? arbiter,
+            Entity child,
+            AuthorityPendingMutation mutation)
+        {
+            switch (mutation)
+            {
+                case AuthorityPendingMutation.None:
+                    return;
+                case AuthorityPendingMutation.AddedGrant:
+                    arbiter!.RemovePendingTransition(child, PoseAuthorityKind.Nav, PoseAuthorityKind.Attached);
+                    return;
+                case AuthorityPendingMutation.RemovedGrant:
+                    arbiter!.RestorePendingTransition(child, PoseAuthorityKind.Nav, PoseAuthorityKind.Attached);
+                    return;
+                case AuthorityPendingMutation.AddedHandback:
+                    arbiter!.RemovePendingTransition(child, PoseAuthorityKind.Attached, PoseAuthorityKind.Nav);
+                    return;
+                case AuthorityPendingMutation.RemovedHandback:
+                    arbiter!.RestorePendingTransition(child, PoseAuthorityKind.Attached, PoseAuthorityKind.Nav);
+                    return;
+                default:
+                    throw new InvalidOperationException($"Unknown authority pending mutation '{mutation}'.");
+            }
         }
 
         internal static int FindChildIndex(in ChildrenBuffer children, in Entity child)

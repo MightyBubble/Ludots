@@ -44,7 +44,7 @@ namespace Ludots.Tests.GAS
             Entity barrel = world.Create(WorldPositionCm.FromCm(0, 0), new PreviousWorldPositionCm { Value = Fix64Vec2.Zero });
             AttachmentOps.Attach(world, null, turret, chassis, Pose(0, 0, inheritFacing: true));
             AttachmentOps.Attach(world, null, barrel, turret, Pose(220, 0, inheritFacing: true, rotation: AttachedOffsetRotation.ParentFacing));
-            using var sink = new AttachmentPositionSyncSystem(world);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192);
 
             // 底盘移动 + 朝向转 90°（炮塔安装位随底盘朝向旋转是炮管链的输入）。
             world.Get<WorldPositionCm>(chassis) = WorldPositionCm.FromCm(1000, 500);
@@ -77,7 +77,7 @@ namespace Ludots.Tests.GAS
             Entity tower = world.Create(WorldPositionCm.FromCm(4650, 5600), new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(4650, 5600) });
             AttachmentOps.Attach(world, null, annex, hall, Pose(700, 0));
             AttachmentOps.Attach(world, null, tower, hall, Pose(-350, 600));
-            using var sink = new AttachmentPositionSyncSystem(world);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192);
 
             sink.Update(1f / 60f);
 
@@ -105,7 +105,7 @@ namespace Ludots.Tests.GAS
                 WorldPositionCm.FromCm(1200, 0),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(1200, 0) });
             AttachmentOps.Attach(world, null, child, parent, Pose(200, 0));
-            using var sink = new AttachmentPositionSyncSystem(world);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192);
 
             // 步 1：sink 派生（父 1000,0 → 子 1200,0）。
             sink.Update(1f / 60f);
@@ -137,7 +137,7 @@ namespace Ludots.Tests.GAS
                 new FacingDirection { AngleRad = 0f });
             Entity child = world.Create(WorldPositionCm.FromCm(1220, 1000), new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(1220, 1000) });
             AttachmentOps.Attach(world, null, child, parent, Pose(220, 0, rotation: AttachedOffsetRotation.ParentFacing));
-            using var sink = new AttachmentPositionSyncSystem(world);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192);
 
             // 原地旋转：位置未动（Current==Previous），朝向依赖偏移仍重算。
             world.Get<FacingDirection>(parent).AngleRad = (float)(Math.PI / 2);
@@ -164,7 +164,7 @@ namespace Ludots.Tests.GAS
                 new PreviousWorldPositionCm { Value = Fix64Vec2.Zero },
                 new FacingDirection { AngleRad = (float)(Math.PI / 4) });
             AttachmentOps.Attach(world, null, turret, chassis, Pose(0, 0, inheritFacing: false));
-            using var sink = new AttachmentPositionSyncSystem(world);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192);
 
             world.Get<WorldPositionCm>(chassis) = WorldPositionCm.FromCm(800, 300);
             world.Get<FacingDirection>(chassis).AngleRad = (float)Math.PI;
@@ -190,7 +190,7 @@ namespace Ludots.Tests.GAS
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(950, 500) },
                 new FacingDirection { AngleRad = (float)(Math.PI / 2) });
             AttachmentOps.Attach(world, null, child, parent, Pose(450, 0, rotation: AttachedOffsetRotation.OwnFacing));
-            using var sink = new AttachmentPositionSyncSystem(world);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192);
 
             sink.Update(1f / 60f);
 
@@ -212,7 +212,7 @@ namespace Ludots.Tests.GAS
                 new PoseAuthority { Value = PoseAuthorityKind.Attached });
             var arbiter = new PoseAuthorityArbiter();
             AttachmentOps.Attach(world, arbiter, child, parent, Pose(0, 0));
-            using var sink = new AttachmentPositionSyncSystem(world, arbiter);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192, arbiter);
 
             world.Destroy(parent);
             sink.Update(1f / 60f);
@@ -240,7 +240,7 @@ namespace Ludots.Tests.GAS
                 new PreviousWorldPositionCm { Value = Fix64Vec2.Zero },
                 new Ludots.Core.Gameplay.Spawning.DestroyWhenParentExecutionEnds());
             AttachmentOps.Attach(world, null, manifestation, parent, Pose(0, 0));
-            using var sink = new AttachmentPositionSyncSystem(world);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192);
 
             world.Destroy(parent);
             sink.Update(1f / 60f);
@@ -265,12 +265,102 @@ namespace Ludots.Tests.GAS
                 new PoseAuthority { Value = PoseAuthorityKind.Nav },
                 new ChildOf { Parent = parent });
             world.Add(child, Pose(0, 0));
-            using var sink = new AttachmentPositionSyncSystem(world);
+            using var sink = new AttachmentPositionSyncSystem(world, 8192);
 
             world.Get<WorldPositionCm>(parent) = WorldPositionCm.FromCm(200, 200);
             InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => sink.Update(1f / 60f))!;
 
             Assert.That(error.Message, Does.StartWith(AttachmentPositionSyncSystem.PoseAuthorityConflictError));
+        }
+
+        [Test]
+        public void ConfiguredScratchCapacity_OverflowFailsFast()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity first = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity second = world.Create(WorldPositionCm.FromCm(0, 0));
+            AttachmentOps.Attach(world, null, first, parent, Pose(0, 0));
+            AttachmentOps.Attach(world, null, second, parent, Pose(100, 0));
+            using var sink = new AttachmentPositionSyncSystem(world, 1);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => sink.Update(1f / 60f))!;
+
+            Assert.That(error.Message, Does.StartWith(AttachmentPositionSyncSystem.CapacityExceededError));
+        }
+
+        [Test]
+        public void MissingPreviousPosition_FailsBeforeWritingCurrentPosition()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(500, 0));
+            Entity child = world.Create(
+                WorldPositionCm.FromCm(100, 0),
+                new ChildOf { Parent = parent },
+                Pose(50, 0));
+            using var sink = new AttachmentPositionSyncSystem(world, 1);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => sink.Update(1f / 60f))!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(error.Message, Does.Contain("attached-child-without-previous-world-position"));
+                Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(100, 0)));
+            });
+        }
+
+        [Test]
+        public void InvalidChild_FailsBeforeWritingAnySiblingPosition()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(500, 0));
+            Entity validChild = world.Create(
+                WorldPositionCm.FromCm(100, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(100, 0) },
+                new FacingDirection { AngleRad = 0f },
+                new ChildOf { Parent = parent },
+                Pose(50, 0));
+            world.Create(
+                WorldPositionCm.FromCm(200, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(200, 0) },
+                new FacingDirection { AngleRad = 0f },
+                new ChildOf { Parent = parent },
+                new AttachedLocalPose
+                {
+                    OffsetCm = Fix64Vec2.FromInt(75, 0),
+                    InheritParentFacing = 1,
+                });
+            using var sink = new AttachmentPositionSyncSystem(world, 2);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => sink.Update(1f / 60f))!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(error.Message, Does.Contain("inherit-facing-without-parent-facing"));
+                Assert.That(world.Get<WorldPositionCm>(validChild).Value, Is.EqualTo(Fix64Vec2.FromInt(100, 0)));
+                Assert.That(world.Get<PreviousWorldPositionCm>(validChild).Value, Is.EqualTo(Fix64Vec2.FromInt(100, 0)));
+                Assert.That(sink.LastAppliedCount, Is.Zero);
+            });
+        }
+
+        [Test]
+        public void Update_AfterWarmup_AllocatesZeroBytes()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(0, 0));
+            for (int i = 0; i < 16; i++)
+            {
+                Entity child = world.Create(WorldPositionCm.FromCm(0, 0));
+                AttachmentOps.Attach(world, null, child, parent, Pose(i * 10, 0));
+            }
+
+            using var sink = new AttachmentPositionSyncSystem(world, 32);
+            sink.Update(1f / 60f);
+            long before = GC.GetAllocatedBytesForCurrentThread();
+
+            sink.Update(1f / 60f);
+
+            Assert.That(GC.GetAllocatedBytesForCurrentThread() - before, Is.Zero);
         }
     }
 }

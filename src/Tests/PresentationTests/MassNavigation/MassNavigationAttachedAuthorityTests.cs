@@ -21,7 +21,7 @@ namespace Ludots.Tests.Presentation
     /// <summary>
     /// 挂接链唯一 mass nav 约定的求解器级合同：nav 成员 attach 时成员身份摘除
     /// （SuspendedNavMembership 快照，绑定系统 rebuild 回收求解器槽位——挂接链上只剩
-    /// 独立移动的根一个 agent），sink 从载具已提交位姿派生乘客（确定性一步滞后）；
+    /// 独立移动的根一个 agent），sink 从载具本步最新位姿派生乘客；
     /// detach 回放成员身份、按已提交位姿重播种，写权 Nav↔Attached 经边界结算切换。
     /// </summary>
     [TestFixture]
@@ -85,7 +85,7 @@ namespace Ludots.Tests.Presentation
                 Arbiter = new PoseAuthorityArbiter();
                 Arbiter.AddListener(new MassNavigationPoseAuthorityBridge(() => Simulation));
                 CommitSystem = new PoseAuthorityCommitSystem(World, Arbiter);
-                Sink = new AttachmentPositionSyncSystem(World, Arbiter);
+                Sink = new AttachmentPositionSyncSystem(World, 64, Arbiter);
 
                 int riderIndex = World.Get<MassNavigationAgentIndex>(Rider).Value;
                 RiderIndex = riderIndex;
@@ -129,17 +129,15 @@ namespace Ludots.Tests.Presentation
 
             public void RunFixedTick(bool withSink)
             {
-                // 引擎真实时序：写权结算 → sink（PostMovement 前段，从已提交位姿派生乘客）
-                // → 求解器（PostMovement 后段，推进载具）。乘客已非 agent，求解器不触碰它；
-                // 乘客镜像的是载具"本 tick 之前已提交"的位姿（确定性一步滞后）。
+                // 引擎真实时序：写权结算 → 求解器推进并同步载具 → attachment sink 派生乘客。
                 CommitSystem.Update(TickDt);
+                Simulation.StepNavigationForTests(World, TickDt, runHardResolve: true);
+                Simulation.MassNavigationFlow.SyncDisplacedAgentPoses(World, Simulation.AgentState);
+                Simulation.MassNavigationFlow.SyncEntities(World, Simulation.AgentState);
                 if (withSink)
                 {
                     Sink.Update(TickDt);
                 }
-                Simulation.StepNavigationForTests(World, TickDt, runHardResolve: true);
-                Simulation.MassNavigationFlow.SyncDisplacedAgentPoses(World, Simulation.AgentState);
-                Simulation.MassNavigationFlow.SyncEntities(World, Simulation.AgentState);
             }
 
             public Vector2 GetPosition(Entity entity)
@@ -193,20 +191,19 @@ namespace Ludots.Tests.Presentation
             harness.RebuildBoundAgents(harness.Carrier);
             Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(1), "求解器槽位回收，仅载具为 agent");
 
-            // 载具向 +X 行军；乘客每 tick 由 sink 从载具"已提交"位姿派生（载具位 + (0,200)），
-            // 求解器在其后推进载具——乘客确定性一步滞后于载具的最新求解位。
+            // 载具向 +X 行军；乘客每 tick 由 sink 从载具本步最新位姿派生（载具位 + (0,200)）。
             int carrierIndex = harness.World.Get<MassNavigationAgentIndex>(harness.Carrier).Value;
             harness.Simulation.SetAgentNavigationTargetWorldCm(carrierIndex, 9000f, 1000f, resetRecovery: true);
             for (int i = 0; i < 20; i++)
             {
-                Vector2 carrierCommitted = harness.GetPosition(harness.Carrier);
                 harness.RunFixedTick(withSink: true);
                 Assert.That(harness.World.Get<PoseAuthority>(harness.Rider).Value, Is.EqualTo(PoseAuthorityKind.Attached),
                     "边界结算后 Attached 持有");
 
                 Vector2 rider = harness.GetPosition(harness.Rider);
-                Assert.That(rider.X, Is.EqualTo(carrierCommitted.X).Within(0.5f), "乘客 X 镜像载具已提交位姿（引擎时序）");
-                Assert.That(rider.Y, Is.EqualTo(carrierCommitted.Y + 200f).Within(0.5f), "乘客保持局部偏移 (0, 200)");
+                Vector2 carrierLatest = harness.GetPosition(harness.Carrier);
+                Assert.That(rider.X, Is.EqualTo(carrierLatest.X).Within(0.5f), "乘客 X 镜像载具本步最新位姿");
+                Assert.That(rider.Y, Is.EqualTo(carrierLatest.Y + 200f).Within(0.5f), "乘客保持局部偏移 (0, 200)");
             }
 
             Vector2 riderBeforeDetach = harness.GetPosition(harness.Rider);

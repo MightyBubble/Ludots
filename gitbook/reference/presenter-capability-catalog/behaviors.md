@@ -115,7 +115,7 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 - **是什么**：子 presenter 挂到父/骨骼位置（武器握点、头顶标记），可继承或不继承父缩放。
 - **怎么写**：`attachment`（`target: "Parent"`/`boneId`/`offset`/`rotationOffset`/`inheritScale`）。
-- **跑/证据**：`artifacts/acceptance/entity-attachment/battle-report.md`；变换/贴合/挂点合同见 [Transform、Grounding 与 Attachment](../../architecture/presenter-transform-and-attachment.md)。
+- **跑/证据**：启动 preset `presenter_blacksmith_showcase_raylib`，观察工具随工人父级移动；生产配置见下方来源，变换/贴合/挂点合同见 [Transform、Grounding 与 Attachment](../../architecture/presenter-transform-and-attachment.md)。
 
 标准生产配置（工具挂到工人父级腰前，不继承父缩放；父定义 blacksmith_dynamic_worker_actor 在 children 里以 scopeTag "structure" 引用它）：
 

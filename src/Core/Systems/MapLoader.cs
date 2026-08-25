@@ -134,6 +134,12 @@ namespace Ludots.Core.Systems
                     continue;
                 }
 
+                if (template.Children.Count > GasConstants.MAX_CHILDREN_BUFFER_CAPACITY)
+                {
+                    throw new InvalidOperationException(
+                        $"Entity template '{template.Id}' declares {template.Children.Count} children, exceeding ChildrenBuffer capacity {GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
+                }
+
                 for (int i = 0; i < template.Children.Count; i++)
                 {
                     EntityTemplateChild child = template.Children[i];

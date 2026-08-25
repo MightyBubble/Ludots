@@ -695,6 +695,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     relativePath,
                     "relation.localPose.inheritParentFacing");
                 attachOffsetRotation = ParseAttachedOffsetRotation(cfg.LocalPose.OffsetRotation, ownerId, relativePath);
+                Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.ValidateFacingSources(
+                    attachInheritParentFacing,
+                    attachOffsetRotation,
+                    $"Effect '{ownerId}' {relativePath}.localPose");
             }
 
             Ludots.Core.Gameplay.Attachment.DetachPlacement detachPlacement =

@@ -42,6 +42,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly EntityBuilder _builder;
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly RuntimeEntitySpawnRequest[] _batchRequests = new RuntimeEntitySpawnRequest[BatchEntityScratchCapacity];
+        private readonly string?[] _templateExpansionScratch;
         private readonly TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[] _templateBatchRequests = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[BatchEntityScratchCapacity];
         private readonly SpawnRelationshipPlan[] _batchRelationshipPlans = new SpawnRelationshipPlan[BatchEntityScratchCapacity];
         private readonly Entity[] _presenterBatchOwners = new Entity[BatchEntityScratchCapacity];
@@ -110,6 +111,7 @@ namespace Ludots.Core.Gameplay.Spawning
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
+            _templateExpansionScratch = new string?[requests.Capacity];
             _receipts = receipts;
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
             _templateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
@@ -141,6 +143,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
         public override void Update(in float dt)
         {
+            PreflightTemplateExpansionQueue();
             while (_requests.TryPeek(out var peek))
             {
                 if (peek.Kind == RuntimeEntitySpawnKind.Template &&
@@ -206,6 +209,77 @@ namespace Ludots.Core.Gameplay.Spawning
                     TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
                 {
                     MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
+                }
+            }
+        }
+
+        private void PreflightTemplateExpansionQueue()
+        {
+            int virtualCount = _requests.Count;
+            if (virtualCount == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < virtualCount; i++)
+            {
+                if (!_requests.TryPeekAt(i, out RuntimeEntitySpawnRequest request))
+                {
+                    throw new InvalidOperationException("SPAWN.RUNTIME.ERR.QueuePreflightChanged");
+                }
+
+                _templateExpansionScratch[i] = request.Kind == RuntimeEntitySpawnKind.Template
+                    ? request.TemplateId
+                    : null;
+            }
+
+            int head = 0;
+            int tail = virtualCount % _templateExpansionScratch.Length;
+            while (virtualCount > 0)
+            {
+                string? templateId = _templateExpansionScratch[head];
+                _templateExpansionScratch[head] = null;
+                head = (head + 1) % _templateExpansionScratch.Length;
+                virtualCount--;
+                if (string.IsNullOrWhiteSpace(templateId))
+                {
+                    continue;
+                }
+
+                EnsureTemplateLoaded(templateId);
+                EntityTemplate template = _cachedTemplates[templateId];
+                if (template.Children is not { Count: > 0 })
+                {
+                    continue;
+                }
+
+                if (template.Children.Count > GasConstants.MAX_CHILDREN_BUFFER_CAPACITY)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.TemplateChildrenCapacityExceeded: template='{templateId}', children={template.Children.Count}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
+                }
+
+                for (int childIndex = 0; childIndex < template.Children.Count; childIndex++)
+                {
+                    EntityTemplateChild child = template.Children[childIndex];
+                    string context = $"Entity template '{templateId}' children[{childIndex}]";
+                    if (child == null || string.IsNullOrWhiteSpace(child.Template))
+                    {
+                        throw new InvalidOperationException(
+                            $"SPAWN.RUNTIME.ERR.TemplateChildInvalid: template='{templateId}', index={childIndex}.");
+                    }
+
+                    EnsureTemplateLoaded(child.Template);
+                    Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context);
+                    if (virtualCount >= _templateExpansionScratch.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{templateId}', child='{child.Template}'.");
+                    }
+
+                    _templateExpansionScratch[tail] = child.Template;
+                    tail = (tail + 1) % _templateExpansionScratch.Length;
+                    virtualCount++;
                 }
             }
         }
@@ -312,73 +386,93 @@ namespace Ludots.Core.Gameplay.Spawning
 
             Fix64Vec2 parentPosition = World.Get<WorldPositionCm>(parent).Value;
             float parentFacing = World.Has<FacingDirection>(parent) ? World.Get<FacingDirection>(parent).AngleRad : 0f;
-            for (int i = 0; i < template.Children.Count; i++)
+            RuntimeEntitySpawnQueue.WriteCheckpoint checkpoint = _requests.CaptureWriteCheckpoint();
+            try
             {
-                EntityTemplateChild child = template.Children[i];
-                if (child == null || string.IsNullOrWhiteSpace(child.Template))
+                for (int i = 0; i < template.Children.Count; i++)
                 {
-                    throw new InvalidOperationException(
-                        $"SPAWN.RUNTIME.ERR.TemplateChildInvalid: template='{request.TemplateId}', index={i}.");
+                    EnqueueTemplateChild(in request, parent, in parentPosition, parentFacing, template, i);
                 }
+            }
+            catch
+            {
+                _requests.RollbackWrites(in checkpoint);
+                throw;
+            }
+        }
 
-                Ludots.Core.Components.AttachedLocalPose localPose = Ludots.Core.Gameplay.Attachment
-                    .AttachedLocalPoseAuthoring.Parse(
-                        child.LocalPose,
-                        $"Entity template '{request.TemplateId}' children[{i}] '{child.Template}'");
-                // 新生子实体尚无 FacingDirection，OwnFacing 偏移走回退链（子→父→0）。
-                Fix64Vec2 childPosition = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.ComposeWorldPosition(
-                    in parentPosition,
-                    parentFacing,
-                    ownFacingRad: parentFacing,
-                    in localPose);
-                float childFacing;
-                byte hasFacing;
-                if (localPose.InheritParentFacing != 0)
-                {
-                    childFacing = parentFacing + localPose.LocalFacingRad.ToFloat();
-                    hasFacing = 1;
-                }
-                else if (localPose.LocalFacingRad != Fix64.Zero)
-                {
-                    childFacing = localPose.LocalFacingRad.ToFloat();
-                    hasFacing = 1;
-                }
-                else
-                {
-                    childFacing = 0f;
-                    hasFacing = 0;
-                }
+        private void EnqueueTemplateChild(
+            in RuntimeEntitySpawnRequest request,
+            Entity parent,
+            in Fix64Vec2 parentPosition,
+            float parentFacing,
+            EntityTemplate template,
+            int i)
+        {
+            EntityTemplateChild child = template.Children![i];
+            if (child == null || string.IsNullOrWhiteSpace(child.Template))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.TemplateChildInvalid: template='{request.TemplateId}', index={i}.");
+            }
 
-                RuntimeEntitySpawnComponentPatch[]? patches = null;
-                if (child.Overrides is { Count: > 0 })
-                {
-                    patches = new RuntimeEntitySpawnComponentPatch[child.Overrides.Count];
-                    int patchIndex = 0;
-                    foreach (var kvp in child.Overrides)
-                    {
-                        patches[patchIndex++] = new RuntimeEntitySpawnComponentPatch(kvp.Key, kvp.Value);
-                    }
-                }
+            Ludots.Core.Components.AttachedLocalPose localPose = Ludots.Core.Gameplay.Attachment
+                .AttachedLocalPoseAuthoring.Parse(
+                    child.LocalPose,
+                    $"Entity template '{request.TemplateId}' children[{i}] '{child.Template}'");
+            // 新生子实体尚无 FacingDirection，OwnFacing 偏移走回退链（子→父→0）。
+            Fix64Vec2 childPosition = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.ComposeWorldPosition(
+                in parentPosition,
+                parentFacing,
+                ownFacingRad: parentFacing,
+                in localPose);
+            float childFacing;
+            byte hasFacing;
+            if (localPose.InheritParentFacing != 0)
+            {
+                childFacing = parentFacing + localPose.LocalFacingRad.ToFloat();
+                hasFacing = 1;
+            }
+            else if (localPose.LocalFacingRad != Fix64.Zero)
+            {
+                childFacing = localPose.LocalFacingRad.ToFloat();
+                hasFacing = 1;
+            }
+            else
+            {
+                childFacing = 0f;
+                hasFacing = 0;
+            }
 
-                var childRequest = new RuntimeEntitySpawnRequest
+            RuntimeEntitySpawnComponentPatch[]? patches = null;
+            if (child.Overrides is { Count: > 0 })
+            {
+                patches = new RuntimeEntitySpawnComponentPatch[child.Overrides.Count];
+                int patchIndex = 0;
+                foreach (var kvp in child.Overrides)
                 {
-                    Kind = RuntimeEntitySpawnKind.Template,
-                    TemplateId = child.Template,
-                    WorldPositionCm = childPosition,
-                    HasWorldPosition = 1,
-                    FacingAngleRad = childFacing,
-                    HasFacing = hasFacing,
-                    MapId = request.MapId,
-                    Parent = parent,
-                    ComponentPatches = patches,
-                    AttachedLocalPose = localPose,
-                    HasAttachedLocalPose = 1,
-                };
-                if (!_requests.TryEnqueue(in childRequest))
-                {
-                    throw new InvalidOperationException(
-                        $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{request.TemplateId}', child='{child.Template}'.");
+                    patches[patchIndex++] = new RuntimeEntitySpawnComponentPatch(kvp.Key, kvp.Value);
                 }
+            }
+
+            var childRequest = new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = child.Template,
+                WorldPositionCm = childPosition,
+                HasWorldPosition = 1,
+                FacingAngleRad = childFacing,
+                HasFacing = hasFacing,
+                MapId = request.MapId,
+                Parent = parent,
+                ComponentPatches = patches,
+                AttachedLocalPose = localPose,
+                HasAttachedLocalPose = 1,
+            };
+            if (!_requests.TryEnqueue(in childRequest))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{request.TemplateId}', child='{child.Template}'.");
             }
         }
 

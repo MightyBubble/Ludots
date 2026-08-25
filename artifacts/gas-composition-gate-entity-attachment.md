@@ -115,3 +115,30 @@ runtime 模板 spawn：children 经 `RuntimeEntitySpawnQueue` enqueue（票面�
 - GasTests attachment 全集 23/23 通过（含 HIGH-1 回归、成员身份合同、事务回滚）。
 - `MassNavigationAttachedAuthorityTests` 1/1 通过（引擎时序 + 成员身份 + 重播种行军）。
 - ArchitectureTests 见票面评论（基线 4 失败与本票无关）。
+
+## 11. Mainline closeout gate（2026-08-26）
+
+- **Task / Issue**: #1064 合入后正确性、原子性、时序与性能收口
+- **Core judgment**: **A / PASS**
+- **Reason**: 只修复现有 Attach/Detach 原子 op、事务回滚、spawn queue 与 PostMovement 排序；不增加 profile、preset、业务枚举或平行物化管线。
+
+### Layer assignment and reuse
+
+| 范围 | Layer | 复用点 |
+|------|-------|--------|
+| 同帧 Nav↔Attached 目标合并与精确回滚 | 0/1 | `PoseAuthorityArbiter` pending transition |
+| 模板树生成容量预演 | 1 | `RuntimeEntitySpawnQueue`、`EntityBuilder`、既有 templates catalog |
+| 位姿同步拓扑序与容量 | ECS sink | `AttachmentPositionSyncSystem`、`GasRuntimeCapacityConfig` |
+| 配置不变量 | authoring | `AttachedLocalPoseAuthoring` |
+
+### Transaction boundary
+
+必须原子处理：直接 Attach/Detach 修改失败时恢复其自身造成的 pending transition；模板树在首个实体创建前完成引用、子数与队列峰值预演。运行时不新增第二套 spawn 执行器。
+
+### Red flag scan
+
+- [x] 未新增 inherit/placement profile 开关
+- [x] 未新建 spawn 平行管线
+- [x] 未新增 fallback 或兼容别名
+- [x] hot path 容量由 `game.json` 明确配置，预热后以分配量测试守护
+- [x] 下一个玩法变体仍通过 effect/graph/模板参数组合，不改 Core enum

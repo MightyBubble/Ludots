@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Attachment;
@@ -252,6 +253,111 @@ namespace Ludots.Tests.GAS
                     "grant and handback pendings cancel out; authority never leaves Nav");
                 Assert.That(arbiter.PendingTransitionCount, Is.Zero);
             });
+        }
+
+        [Test]
+        public void DirectAttachThenDetach_BeforeBoundary_CancelsGrant()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity child = world.Create(
+                WorldPositionCm.FromCm(100, 100),
+                new PoseAuthority { Value = PoseAuthorityKind.Nav });
+            var arbiter = new PoseAuthorityArbiter();
+            using var commitSystem = new PoseAuthorityCommitSystem(world, arbiter);
+
+            AttachmentOps.Attach(world, arbiter, child, parent, OffsetPose(0, 0));
+            AttachmentOps.Detach(world, arbiter, child, DetachPlacement.KeepWorldPose, 0);
+            commitSystem.Update(1f / 60f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Has<ChildOf>(child), Is.False);
+                Assert.That(world.Has<AttachedLocalPose>(child), Is.False);
+                Assert.That(world.Get<PoseAuthority>(child).Value, Is.EqualTo(PoseAuthorityKind.Nav));
+                Assert.That(arbiter.PendingTransitionCount, Is.Zero);
+            });
+        }
+
+        [Test]
+        public void DirectDetachThenAttach_BeforeBoundary_CancelsHandback()
+        {
+            using World world = World.Create();
+            Entity firstParent = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity secondParent = world.Create(WorldPositionCm.FromCm(500, 0));
+            Entity child = world.Create(
+                WorldPositionCm.FromCm(100, 100),
+                new PoseAuthority { Value = PoseAuthorityKind.Attached });
+            var arbiter = new PoseAuthorityArbiter();
+            using var commitSystem = new PoseAuthorityCommitSystem(world, arbiter);
+
+            AttachmentOps.Attach(world, arbiter, child, firstParent, OffsetPose(0, 0));
+            AttachmentOps.Detach(world, arbiter, child, DetachPlacement.KeepWorldPose, 0);
+            AttachmentOps.Attach(world, arbiter, child, secondParent, OffsetPose(25, 0));
+            commitSystem.Update(1f / 60f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<ChildOf>(child).Parent, Is.EqualTo(secondParent));
+                Assert.That(world.Get<PoseAuthority>(child).Value, Is.EqualTo(PoseAuthorityKind.Attached));
+                Assert.That(arbiter.PendingTransitionCount, Is.Zero);
+            });
+        }
+
+        [Test]
+        public void DirectDetach_PerimeterWithoutStableSlot_FailsFast()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity child = world.Create(WorldPositionCm.FromCm(0, 0));
+            AttachmentOps.Attach(world, null, child, parent, OffsetPose(0, 0));
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                AttachmentOps.Detach(world, null, child, DetachPlacement.ParentPerimeterRing, 200))!;
+
+            Assert.That(error.Message, Does.StartWith(AttachmentOps.StablePerimeterSlotRequiredError));
+            Assert.That(world.Get<ChildOf>(child).Parent, Is.EqualTo(parent));
+        }
+
+        [Test]
+        public void DirectDetach_UnknownPlacementFailsWithoutChangingAttachment()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity child = world.Create(WorldPositionCm.FromCm(0, 0));
+            AttachmentOps.Attach(world, null, child, parent, OffsetPose(0, 0));
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                AttachmentOps.Detach(world, null, child, (DetachPlacement)byte.MaxValue, 0))!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(error.Message, Does.StartWith(AttachmentOps.UnknownDetachPlacementError));
+                Assert.That(world.Get<ChildOf>(child).Parent, Is.EqualTo(parent));
+                Assert.That(world.Has<AttachedLocalPose>(child), Is.True);
+            });
+        }
+
+        [Test]
+        public void AttachedLocalPose_ComponentAuthoringRejectsConflictingFacingSources()
+        {
+            using World world = World.Create();
+            Entity entity = world.Create();
+            JsonNode payload = JsonNode.Parse("""
+                {
+                  "offsetXCm": 10,
+                  "offsetYCm": 20,
+                  "facingDeg": 0,
+                  "inheritParentFacing": true,
+                  "offsetRotation": "OwnFacing"
+                }
+                """)!;
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                Ludots.Core.Config.ComponentRegistry.Apply(entity, "AttachedLocalPose", payload))!;
+
+            Assert.That(error.Message, Does.Contain("inheritParentFacing=true"));
+            Assert.That(world.Has<AttachedLocalPose>(entity), Is.False);
         }
 
         [Test]
