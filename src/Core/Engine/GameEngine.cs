@@ -2076,6 +2076,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new Ludots.Core.Gameplay.FieldRegions.FieldRegionMembershipSystem(World, () => MapSessions, entityCollectionStore, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
             var inputTriggerActions = new Ludots.Core.Gameplay.MapTriggers.InputTriggerActionCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -2892,6 +2893,7 @@ namespace Ludots.Core.Engine
             var cellsLoader = new Ludots.Core.Fields.Config.FieldCellsConfigLoader(ConfigPipeline);
             session.Fields = Ludots.Core.Fields.FieldSessionStore.Create(
                 registry, mapConfig?.Fields?.Layers, cellsLoader);
+            session.RegionIndex = Ludots.Core.Gameplay.FieldRegions.FieldRegionMaterializer.Materialize(World, session);
         }
 
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)

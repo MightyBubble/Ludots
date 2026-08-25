@@ -28,6 +28,29 @@ namespace Ludots.Core.Fields
 
         public RegionIdRegistry Regions { get; }
         public ChunkedField2D<int> Field { get; }
+
+        /// <summary>
+        /// Query-time footprint enumeration: fills <paramref name="destination"/> with the
+        /// cells of one region. Returns the number written; a result shorter than the
+        /// region's cell count means the buffer was too small (re-query with a larger span).
+        /// </summary>
+        public int EnumerateRegionCells(int regionId, System.Span<FieldCell2D> destination)
+        {
+            int written = 0;
+            for (int chunkIndex = 0; chunkIndex < Field.ChunkCount && written < destination.Length; chunkIndex++)
+            {
+                FieldChunk2D<int> chunk = Field.GetChunkAt(chunkIndex);
+                for (int local = 0; local < chunk.CellCount && written < destination.Length; local++)
+                {
+                    if (chunk.Get(local) == regionId)
+                    {
+                        destination[written++] = Field.Grid.CellFromChunkLocal(chunk.ChunkX, chunk.ChunkY, local);
+                    }
+                }
+            }
+
+            return written;
+        }
     }
 
     public sealed class Scalar32FieldLayerData : FieldLayerData

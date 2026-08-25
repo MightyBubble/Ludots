@@ -94,5 +94,18 @@ namespace Ludots.Core.Scripting
         /// Payload: SourceEntity, RegionId.
         /// </summary>
         public static readonly EventKey RegionExited = new EventKey("RegionExited");
+
+        /// <summary>
+        /// Map-scoped: fired by the field membership system when a tracked entity's
+        /// discrete-id field ownership changes to a new region. Payload: SourceEntity,
+        /// RegionId, FieldLayer. Independent from the circle/rect trigger line above.
+        /// </summary>
+        public static readonly EventKey FieldRegionEntered = new EventKey("FieldRegionEntered");
+
+        /// <summary>
+        /// Map-scoped: fired by the field membership system when a tracked entity leaves
+        /// its discrete-id field region. Payload: SourceEntity, RegionId, FieldLayer.
+        /// </summary>
+        public static readonly EventKey FieldRegionExited = new EventKey("FieldRegionExited");
     }
 }
