@@ -100,6 +100,8 @@
     - [行为十三种 BehaviorKind](reference/presenter-capability-catalog/behaviors.md)
     - [渲染六车道](reference/presenter-capability-catalog/render-lanes.md)
     - [环境与光照](reference/presenter-capability-catalog/environment.md)
+    - [指令十一加一 PresenterCommandKind](reference/presenter-capability-catalog/commands.md)
+    - [参数 sink 机制](reference/presenter-capability-catalog/param-sink.md)
     - [验收与学习路线](reference/presenter-capability-catalog/acceptance-map.md)
   - [Runtime Incremental Navmesh Rebuild](reference/runtime-incremental-navmesh-rebuild.md)
   - [导航域统一 Epic 汇报](reference/nav-domain-unification-epic-report.md)

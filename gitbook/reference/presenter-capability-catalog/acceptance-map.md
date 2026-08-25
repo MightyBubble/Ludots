@@ -18,7 +18,11 @@
 
 preset `presenter_blacksmith_showcase_raylib` 把"事件 → 规则 → presenter 树 → 行为 → draw buffer → raylib 出画"整条链跑给你看：建筑出生自动展开子树、开工 tag 点烟、日夜切换灯光材质、区域参数换砖、耐久度阈值换 mesh、工人样条巡逻、浮动文字与 HUD。改它 mod 内 presenters.json 的任意一条规则再跑，是最快的学习回路。
 
-## 路线四：性能基线（信得过）
+## 路线四：指令层（命令怎么驱动 presenter）
+
+指令逐条目录见 [commands.md](commands.md)。三步走：先跑 preset `presenter_blacksmith_showcase_raylib` 看指令全链（出生建树、tag 切行为、日夜/区域 SetParam）；再读验收 `artifacts/acceptance/presenter-timer/battle-report.md`（TimerSet/TimerExpired/TimerKill 的受击闪黄时序与打断语义）；最后跑 Extension 黄金模板 preset `capability_standard_performer_command_extension_showcase_raylib`。参数怎么从黑板流到资产属性见 [param-sink.md](param-sink.md)；Timer 可玩 showcase 随配套 PR 提供。
+
+## 路线五：性能基线（信得过）
 
 | 基线 | 规模 | 证据 |
 |---|---|---|
