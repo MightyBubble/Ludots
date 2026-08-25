@@ -69,7 +69,8 @@
 主干已经收进去了。这里是卫生债，不是玩法。
 → https://github.com/MightyBubble/Ludots/issues/918
 
-这三张票都已经进主干；本页只记关单，不再派实现票。
+这三张票都已经进主干；本页只记关单，不再派实现票。  
+关单评语文稿在 [`docs/rfcs/issue-hygiene-2026-08-25.md`](../../docs/rfcs/issue-hygiene-2026-08-25.md)。本环境令牌不能写 GitHub issue，有写权限的人按该页粘贴后关单。
 
 ### 3.3 真正还在做的
 

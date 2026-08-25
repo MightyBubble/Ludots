@@ -18,7 +18,7 @@
 | Markup + CodeBehind | HTML/CSS 原型导入 | FeatureHub `P` |
 
 Appearance Phase 1–6 三套写法共用：选择器、视觉、文本、图像、关键帧、**Grid auto / sticky / 伪元素图标**。  
-另有独立 Showcase：换肤、水墨匣切铺动效、星港同稿布局。
+另有独立 Showcase：换肤、水墨匣切铺动效。星港同稿布局的引擎侧已在主干，**画廊未注册这间房**（旧 PR `#852` 关了；待开小票见 [`docs/rfcs/issue-hygiene-2026-08-25.md`](../../docs/rfcs/issue-hygiene-2026-08-25.md)）。
 
 ## 2. 结构
 
@@ -98,7 +98,7 @@ Appearance Phase 1–6 三套写法共用：选择器、视觉、文本、图像
 - **做卷轴框 / 按钮框**：用位图九宫格；角饰可用 SVG。
 - **做墙纸 / 饰带**：用 `background-repeat`。
 - **做印章呼吸、轻转、位移**：SVG + `@keyframes` 的 opacity / transform。
-- **做和浏览器同稿的暂停菜单**：同一份 HTML/CSS，桌面/平板/手机切换看布局（星港休整舱）。
+- **做和浏览器同稿的暂停菜单**：同一份 HTML/CSS，桌面/平板/手机切换看布局（星港休整舱）。**画廊还没有这间房**，按清单去找会扑空；要补房间或改清单，见卫生粘贴稿，不要另开 Epic。
 - **做响应式间距**：`calc()` + `vw`/`vh`。
 
 ## 5. 边界
@@ -123,10 +123,11 @@ Feature: 作者能诚实选用 UI 能力
     And 朱印同时发生可察觉的旋转或位移
 
   Scenario: 同一份菜单跟着分辨率变
-    Given 星港休整舱 Showcase 打开
-    When 我依次切到桌面、平板、手机预览
+    Given 星港同稿展示已登记进画廊
+    When 我打开它并依次切到桌面、平板、手机预览
     Then 菜单结构不塌
     And 关键文案仍然可读
+    # 当前画廊未注册；本场景在房间入库前不得当成已验收
 
   Scenario: 不支持的矩阵变换不会假装成功
     Given 某节点写了带 matrix 的 keyframes transform
