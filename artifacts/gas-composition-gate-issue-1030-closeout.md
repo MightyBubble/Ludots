@@ -12,13 +12,13 @@
 
 结论: **PASS**
 
-一句话理由: 修复只给 `TriggerGraphMountTrigger.ResolveMapScopeOnce` 增加「scope 缺失（Entity.Null/default）→ 解析为 null」守卫，让地图变量 op 走既有 `RequireMapVariableScopeMap` 的 fail-closed 错误，不新增 profile enum、preset 开关、opcode、执行器或第二套 VM；改动前 scope-less 挂载执行直接以原生 AccessViolation 崩掉测试宿主/进程，违反史诗「缺 scope 时 fail closed」合同。
+一句话理由: 最新 main 已在 `TriggerGraphMountTrigger.ResolveMapScopeOnce` 保留 scope 缺失/死亡实体守卫；本次补齐 #1030 的 scope-less 地图变量 fail-closed 回归证据，不新增 profile enum、preset 开关、opcode、执行器或第二套 VM；守卫前 scope-less 挂载执行会以原生 AccessViolation 崩掉测试宿主/进程，违反史诗「缺 scope 时 fail closed」合同。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| scope-less 挂载的地图作用域解析守卫 | 0（既有 TriggerGraph 执行入口） | `TriggerGraphMountTrigger.ResolveMapScope`：`Entity.Null/default → null`，与 `IsScopeDispatchable`/`ResolveRunCaster` 既有守卫同一模式 |
+| scope-less 挂载的地图作用域解析守卫 | 0（既有 TriggerGraph 执行入口） | `TriggerGraphMountTrigger.ResolveMapScope`：`Entity.Null/default/dead → null`，与 `IsScopeDispatchable`/`ResolveRunCaster` 既有守卫同一模式 |
 | 地图变量 op 缺作用域 fail-closed | 0（既有） | `GasGraphOpHandlerTable.RequireMapVariableScopeMap` → `GAS.GRAPH.ERR.MapVariableScopeEntity`（未改动，修复后真正可达） |
 | UAT 2 回归测试 | 测试 | `TriggerGraphMountTests.ExecuteAsync_ScopeLessMount_WithMapVariableOp_FailsClosedNamingOp` |
 
@@ -48,7 +48,7 @@ N/A — 未新增 opcode；修复在既有 op 的执行入口。
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback——scope 缺失时地图变量 op 明确抛 `GAS.GRAPH.ERR.MapVariableScopeEntity`，非静默失败
+- [x] 未添加「说不清的」默认 fallback——scope 缺失或实体已死时地图变量 op 明确抛 `GAS.GRAPH.ERR.MapVariableScopeEntity`，非静默失败
 
 ### 8. Next variant test
 
