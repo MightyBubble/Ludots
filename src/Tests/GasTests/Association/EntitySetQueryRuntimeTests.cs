@@ -457,6 +457,43 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GraphReturnWriter_MissingOwnerAndCaster_FailsClosedBeforeExecution()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            GetOrRegisterAttribute("Health");
+            GetOrRegisterAttribute("Mana");
+            GetOrRegisterTag("Tests.GraphQuery.Blocked");
+            setup.TemplateKeys.Register("tests.graph.city");
+            setup.TemplateKeys.Register("tests.graph.site");
+            GraphRuntimeSetup graph = CreateGraphRuntime(setup, GraphConfigJson);
+            var api = new GasGraphRuntimeApi(
+                world,
+                tagOps: setup.TagOps,
+                relationshipRuntime: setup.Relationships,
+                typeRegistry: setup.RelationshipTypes,
+                metricRegistry: setup.RelationshipMetrics,
+                flagRegistry: setup.RelationshipFlags,
+                reasonRegistry: setup.RelationshipReasons,
+                targetDispatchPresets: setup.TargetDispatchPresets,
+                entityCollections: graph.Collections,
+                entityQueries: setup.EntityQueries);
+            var writer = new GraphReturnWriter(
+                world,
+                graph.Programs,
+                graph.OutputSchemas,
+                GasGraphOpHandlerTable.Instance,
+                graph.Collections,
+                graph.OutputValues);
+
+            int graphId = GraphIdRegistry.GetId(GraphId);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                writer.ExecuteAndWrite(graphId, Entity.Null, Entity.Null, Entity.Null, Entity.Null, default, randomSeed: 1u, api))!;
+
+            Assert.That(ex.Message, Does.Contain("requires an owner or caster entity"));
+        }
+
+        [Test]
         public void Benchmark_CodeApiFilterSortAggregateZeroAllocAfterWarmup()
         {
             using var world = World.Create();
