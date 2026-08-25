@@ -73,17 +73,6 @@
           "valueSource": "Fixed",
           "paramValue": 1.6
         }
-      },
-      {
-        "event": { "kind": "GameplayEvent", "keyId": "pcmd.lamp.refresh" },
-        "command": {
-          "kind": "SinkParamToAsset",
-          "definitionId": "pcmd.lamp_post",
-          "scopeTag": "pcmd.lamp.pillar.refresh",
-          "targetBehaviorSlot": "body",
-          "paramKey": "pcmd.lamp.color",
-          "paramLane": "Vector"
-        }
       }
     ],
     "behaviors": [

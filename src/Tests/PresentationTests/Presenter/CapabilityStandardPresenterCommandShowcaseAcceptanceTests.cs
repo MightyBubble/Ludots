@@ -220,13 +220,14 @@ namespace Ludots.Tests.Presentation
                 CapabilityStandardPresenterCommandShowcaseModEntry.RefreshPillarOwnerStableId);
             Assert.That(GetStaticDirty(engine, refreshPillar), Is.EqualTo(0), "settle 后对照柱不应带 dirty");
 
+            int colorKey = PresenterParamKeyRegistry.Register("pcmd.lamp.color");
             using var recording = new RecordingLogBackend();
             Log.Initialize(recording);
             ClickElement(uiRoot, "pcmd-btn-refresh");
             TickFrames(engine, 1);
 
             Assert.That(
-                recording.Infos.Any(m => m.Contains("SinkParamToAsset accepted") && m.Contains("pcmd.lamp.color")),
+                recording.Infos.Any(m => m.Contains("SinkParamToAsset accepted") && m.Contains($"paramKey={colorKey}")),
                 Is.True,
                 "SinkParamToAsset 应在指令执行内同步完成槽位资产写入并留下 accepted 审计日志（上游 #1091 语义）");
             Assert.That(
