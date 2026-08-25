@@ -157,7 +157,6 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        [Category("benchmark")]
         public void RealScaleTypedLanes_Reach130kRequestsWithoutSteadyStateAllocation()
         {
             const int visualCount = BlacksmithStaticPresenterPeak;
@@ -199,7 +198,6 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        [Category("benchmark")]
         public void RealScaleConsumePath_Flushes130kRequests_WithoutSteadyStateAllocation()
         {
             const int visualCount = BlacksmithStaticPresenterPeak;

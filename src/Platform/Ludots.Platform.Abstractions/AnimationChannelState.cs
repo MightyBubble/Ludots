@@ -2,7 +2,7 @@ using System;
 
 namespace Ludots.Platform.Abstractions
 {
-    public struct AnimationChannelState : IEquatable<AnimationChannelState>
+    public struct AnimationChannelState
     {
         public int ChannelId;
         public float NormalizedTime01;
@@ -11,25 +11,6 @@ namespace Ludots.Platform.Abstractions
         public float Scalar1;
 
         public readonly bool IsActive => ChannelId > 0 && Weight01 > 0.001f;
-
-        public readonly bool Equals(AnimationChannelState other)
-        {
-            return ChannelId == other.ChannelId
-                && NormalizedTime01 == other.NormalizedTime01
-                && Weight01 == other.Weight01
-                && Scalar0 == other.Scalar0
-                && Scalar1 == other.Scalar1;
-        }
-
-        public override readonly bool Equals(object? obj)
-        {
-            return obj is AnimationChannelState other && Equals(other);
-        }
-
-        public override readonly int GetHashCode()
-        {
-            return HashCode.Combine(ChannelId, NormalizedTime01, Weight01, Scalar0, Scalar1);
-        }
 
         public static AnimationChannelState Create(
             int channelId,
