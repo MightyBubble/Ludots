@@ -11,6 +11,8 @@ namespace Ludots.Core.Presentation.Presenters
     /// （index 0 恒为最新，长度上限 TrailMeshConfig.MaxSamples），每帧把存活样本
     /// 折算成 age01 快照 upsert 进 TrailMeshBuffer。行为停用后停止采样、存量样本
     /// 按 SampleLifetimeSeconds 自然老化（淡出收尾）；presenter 死亡立即整条移除。
+    /// 头插/寿命淘汰/age01 折算全部走共享纯工具 TrailSampleHistory（与引擎画廊
+    /// SlashTrailScene 同实现）。采样器容量与 buffer.Capacity 严格一致。
     /// </summary>
     public sealed class TrailMeshRuntime
     {
@@ -20,16 +22,19 @@ namespace Ludots.Core.Presentation.Presenters
             internal int StableId;
             internal int PoolIndex;
             internal TrailMeshConfig Config;
-            internal readonly TrailMeshSample[] Samples = new TrailMeshSample[TrailMeshBuffer.MaxSamplesPerTrail];
-            internal readonly float[] SampleTimes = new float[TrailMeshBuffer.MaxSamplesPerTrail];
-            internal int Count;
+            internal TrailSampleHistory History;
             internal float LastSampleTime = float.MinValue;
+
+            internal TrailSampler(int historyCapacity)
+            {
+                History = new TrailSampleHistory(historyCapacity);
+            }
 
             internal void Reset(Entity entity, int stableId)
             {
                 Entity = entity;
                 StableId = stableId;
-                Count = 0;
+                History.Reset();
                 LastSampleTime = float.MinValue;
             }
 
@@ -37,29 +42,30 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 Entity = Entity.Null;
                 StableId = 0;
-                Count = 0;
+                History.Reset();
                 LastSampleTime = float.MinValue;
             }
         }
 
         private readonly TrailMeshBuffer _buffer;
         private readonly Dictionary<int, TrailSampler> _samplers;
+        private readonly Dictionary<int, TrailSampler> _samplersByStableId;
         private readonly TrailSampler[] _samplerPool;
         private readonly int[] _freeSamplerIndices;
         private readonly List<int> _deadKeys;
         private readonly HashSet<int> _writtenThisAdvance;
-        private readonly TrailMeshSample[] _emitScratch = new TrailMeshSample[TrailMeshBuffer.MaxSamplesPerTrail];
 
         public TrailMeshRuntime(TrailMeshBuffer buffer)
         {
             _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
-            int samplerCapacity = Math.Max(buffer.Capacity, TrailMeshBuffer.MaxSamplesPerTrail * 2);
+            int samplerCapacity = buffer.Capacity;
             _samplers = new Dictionary<int, TrailSampler>(samplerCapacity);
+            _samplersByStableId = new Dictionary<int, TrailSampler>(samplerCapacity);
             _samplerPool = new TrailSampler[samplerCapacity];
             _freeSamplerIndices = new int[samplerCapacity];
             for (int i = 0; i < samplerCapacity; i++)
             {
-                _samplerPool[i] = new TrailSampler { PoolIndex = i };
+                _samplerPool[i] = new TrailSampler(TrailMeshBuffer.MaxSamplesPerTrail) { PoolIndex = i };
                 _freeSamplerIndices[i] = samplerCapacity - 1 - i;
             }
 
@@ -77,49 +83,50 @@ namespace Ludots.Core.Presentation.Presenters
                     $"TrailMesh behavior requires a positive presenter stableId, got {stableId} for presenterEntityId={entity.Id}.");
             }
 
+            ValidateConfig(config);
+
             if (!_samplers.TryGetValue(entity.Id, out TrailSampler? sampler))
             {
-                if (_samplers.Count >= _freeSamplerIndices.Length)
+                if (_samplers.Count >= _samplerPool.Length)
                 {
                     throw new InvalidOperationException(
-                        $"TrailMeshRuntime sampler capacity exhausted while activating presenter entity {entity.Id} (capacity={_freeSamplerIndices.Length}).");
+                        $"TrailMeshRuntime sampler capacity exhausted while activating presenter entity {entity.Id} (capacity={_samplerPool.Length}).");
                 }
 
+                ClaimStableId(stableId, entity);
                 int samplerIndex = _freeSamplerIndices[_samplers.Count];
                 sampler = _samplerPool[samplerIndex];
                 sampler.Reset(entity, stableId);
                 _samplers.Add(entity.Id, sampler);
+                _samplersByStableId.Add(stableId, sampler);
             }
             else if (sampler.Entity != entity || sampler.StableId != stableId)
             {
                 // Arch may recycle an entity id. A recycled id must start a fresh trail;
-                // retaining the old sampler would leak samples and stable ownership.
+                // the previous stableId claim is released and the new one verified unique.
+                if (_samplersByStableId.TryGetValue(stableId, out TrailSampler? existing) &&
+                    !ReferenceEquals(existing, sampler))
+                {
+                    throw new InvalidOperationException(
+                        $"TrailMesh stableId {stableId} is already claimed by another active sampler " +
+                        $"(owner entity {existing.Entity.Id}); presenter entity {entity.Id} would silently " +
+                        "overwrite the same TrailMeshBuffer slot. Presenter stableIds must be unique among live presenters.");
+                }
+
+                int previousStableId = sampler.StableId;
+                _samplersByStableId.Remove(previousStableId);
                 sampler.Reset(entity, stableId);
+                _samplersByStableId.Add(stableId, sampler);
             }
 
             sampler.Config = config;
-            int maxSamples = Math.Clamp(config.MaxSamples, 2, TrailMeshBuffer.MaxSamplesPerTrail);
-            if (sampler.Count > 0 && now - sampler.LastSampleTime < config.SampleIntervalSeconds)
+            if (sampler.History.Count > 0 && now - sampler.LastSampleTime < config.SampleIntervalSeconds)
             {
-                sampler.Samples[0].Base = baseWorld;
-                sampler.Samples[0].Tip = tipWorld;
+                sampler.History.PinHead(baseWorld, tipWorld);
                 return;
             }
 
-            if (sampler.Count >= maxSamples)
-            {
-                sampler.Count = maxSamples - 1;
-            }
-
-            if (sampler.Count > 0)
-            {
-                Array.Copy(sampler.Samples, 0, sampler.Samples, 1, sampler.Count);
-                Array.Copy(sampler.SampleTimes, 0, sampler.SampleTimes, 1, sampler.Count);
-            }
-
-            sampler.Samples[0] = new TrailMeshSample { Base = baseWorld, Tip = tipWorld, Age01 = 0f };
-            sampler.SampleTimes[0] = now;
-            sampler.Count++;
+            sampler.History.PushHead(baseWorld, tipWorld, now, config.MaxSamples);
             sampler.LastSampleTime = now;
         }
 
@@ -139,26 +146,17 @@ namespace Ludots.Core.Presentation.Presenters
                     }
 
                     float lifetime = sampler.Config.SampleLifetimeSeconds;
-                    while (sampler.Count > 0 && now - sampler.SampleTimes[sampler.Count - 1] > lifetime)
-                    {
-                        sampler.Count--;
-                    }
-
-                    if (sampler.Count == 0)
+                    sampler.History.EvictOlderThan(now, lifetime);
+                    if (sampler.History.Count == 0)
                     {
                         _deadKeys.Add(pair.Key);
                         continue;
                     }
 
-                    for (int i = 0; i < sampler.Count; i++)
-                    {
-                        sampler.Samples[i].Age01 = Math.Clamp((now - sampler.SampleTimes[i]) / lifetime, 0f, 1f);
-                        _emitScratch[i] = sampler.Samples[i];
-                    }
-
+                    sampler.History.AgeTo(now, lifetime);
                     if (!_buffer.Upsert(
                             sampler.StableId,
-                            _emitScratch.AsSpan(0, sampler.Count),
+                            sampler.History.Samples,
                             in sampler.Config.HeadColor,
                             in sampler.Config.TailColor))
                     {
@@ -174,6 +172,7 @@ namespace Ludots.Core.Presentation.Presenters
                     int deadKey = _deadKeys[i];
                     if (_samplers.Remove(deadKey, out TrailSampler? sampler))
                     {
+                        _samplersByStableId.Remove(sampler.StableId);
                         sampler.Reset();
                         _freeSamplerIndices[_samplers.Count] = sampler.PoolIndex;
                     }
@@ -188,6 +187,42 @@ namespace Ludots.Core.Presentation.Presenters
                 {
                     _buffer.Remove(stableId);
                 }
+            }
+        }
+
+        /// <summary>
+        /// buffer 槽位以 stableId 为身份；两个存活采样器撞同一 stableId 会在
+        /// Upsert 时静默覆盖彼此——在此确定性 fail-fast，而不是等 buffer 层面掩盖。
+        /// </summary>
+        private void ClaimStableId(int stableId, Entity entity)
+        {
+            if (_samplersByStableId.TryGetValue(stableId, out TrailSampler? existing))
+            {
+                throw new InvalidOperationException(
+                    $"TrailMesh stableId {stableId} is already claimed by another active sampler " +
+                    $"(owner entity {existing.Entity.Id}); presenter entity {entity.Id} would silently " +
+                    "overwrite the same TrailMeshBuffer slot. Presenter stableIds must be unique among live presenters.");
+            }
+        }
+
+        private static void ValidateConfig(in TrailMeshConfig config)
+        {
+            if (config.MaxSamples < 2 || config.MaxSamples > TrailMeshBuffer.MaxSamplesPerTrail)
+            {
+                throw new InvalidOperationException(
+                    $"TrailMeshConfig.MaxSamples must be in [2, {TrailMeshBuffer.MaxSamplesPerTrail}], got {config.MaxSamples}.");
+            }
+
+            if (!float.IsFinite(config.SampleIntervalSeconds) || config.SampleIntervalSeconds < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"TrailMeshConfig.SampleIntervalSeconds must be a finite value >= 0, got {config.SampleIntervalSeconds}.");
+            }
+
+            if (!float.IsFinite(config.SampleLifetimeSeconds) || config.SampleLifetimeSeconds <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"TrailMeshConfig.SampleLifetimeSeconds must be a finite value > 0, got {config.SampleLifetimeSeconds}.");
             }
         }
     }

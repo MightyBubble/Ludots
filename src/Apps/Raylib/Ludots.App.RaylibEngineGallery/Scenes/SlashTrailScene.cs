@@ -9,7 +9,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>
     /// 刀光轨迹：脚本化水平挥砍驱动 TrailMeshBuffer——挥砍窗口内逐帧记录刀刃
-    /// base/tip 世界坐标，按寿命淘汰并折算 age01，渲染走 Ludots.Raylib.Render 的
+    /// base/tip 世界坐标，按寿命淘汰并折算 age01。头插/寿命淘汰/age01 折算复用
+    /// 共享纯工具 TrailSampleHistory（与 Core 的 TrailMeshRuntime 同一实现），
+    /// 画廊不持有第二套采样语义；渲染走 Ludots.Raylib.Render 的
     /// RaylibTrailMeshRenderer（与宿主同一实现）。场景时间用固定 1/60 步进而非真实
     /// 帧间隔：headless 截图帧（第 120 帧）必须稳定落在挥砍末段，保证验收可复现。
     /// </summary>
@@ -30,12 +32,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private static readonly Vector4 TailColor = new(0.22f, 0.42f, 1.00f, 0.00f);
 
         private readonly TrailMeshBuffer _trails = new(capacity: 8);
+        private readonly TrailSampleHistory _history = new(MaxTrailSamples);
         private readonly GalleryLitProps _litProps = new();
         private readonly RaylibSkyboxRenderer _skybox = new();
-        private readonly TrailMeshSample[] _history = new TrailMeshSample[MaxTrailSamples];
-        private readonly float[] _historyTimes = new float[MaxTrailSamples];
         private RaylibDirectionalShadowMap _shadowMap = null!;
-        private int _historyCount;
         private float _time;
 
         public string Id => "slash_trail";
@@ -77,7 +77,12 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             Rl.DrawLine3D(bladeBase, bladeTip, new Color(235, 245, 255, 255));
 
             bool emitting = phase < SwingDurationSeconds;
-            UpdateTrailHistory(bladeBase, bladeTip, emitting);
+            if (emitting)
+            {
+                _history.PushHead(bladeBase, bladeTip, _time, MaxTrailSamples);
+            }
+
+            _history.EvictOlderThan(_time, TrailLifetimeSeconds);
             EmitTrailBuffer();
 
             RaylibTrailMeshRenderer.DrawTrailMeshes(_trails);
@@ -85,46 +90,16 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             Rl.EndMode3D();
         }
 
-        private void UpdateTrailHistory(in Vector3 bladeBase, in Vector3 bladeTip, bool emitting)
-        {
-            if (emitting)
-            {
-                if (_historyCount >= MaxTrailSamples)
-                {
-                    _historyCount = MaxTrailSamples - 1;
-                }
-
-                if (_historyCount > 0)
-                {
-                    Array.Copy(_history, 0, _history, 1, _historyCount);
-                    Array.Copy(_historyTimes, 0, _historyTimes, 1, _historyCount);
-                }
-
-                _history[0] = new TrailMeshSample { Base = bladeBase, Tip = bladeTip, Age01 = 0f };
-                _historyTimes[0] = _time;
-                _historyCount++;
-            }
-
-            while (_historyCount > 0 && _time - _historyTimes[_historyCount - 1] > TrailLifetimeSeconds)
-            {
-                _historyCount--;
-            }
-        }
-
         private void EmitTrailBuffer()
         {
-            if (_historyCount == 0)
+            if (_history.Count == 0)
             {
                 _trails.Remove(TrailStableId);
                 return;
             }
 
-            for (int i = 0; i < _historyCount; i++)
-            {
-                _history[i].Age01 = Math.Clamp((_time - _historyTimes[i]) / TrailLifetimeSeconds, 0f, 1f);
-            }
-
-            if (!_trails.Upsert(TrailStableId, _history.AsSpan(0, _historyCount), in HeadColor, in TailColor))
+            _history.AgeTo(_time, TrailLifetimeSeconds);
+            if (!_trails.Upsert(TrailStableId, _history.Samples, in HeadColor, in TailColor))
             {
                 throw new InvalidOperationException($"TrailMeshBuffer overflowed in gallery scene '{Id}'.");
             }

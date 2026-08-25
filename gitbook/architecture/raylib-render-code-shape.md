@@ -35,7 +35,7 @@ Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服�
 | 资产 DTO | `MeshAssetDescriptor.cs`、`MaterialAssetDescriptor.cs`（含 `MaterialAssetResolver` 实例链合并） | 材质库 / mesh 注册表 / 各车道 |
 | 粒子 | `ParticleVfxAssetData.cs`、`ParticleSystemRuntime.cs`、`ParticleVfxSpawnMode.cs` | `RaylibVfxRenderer` |
 | 覆盖层 | `GroundOverlayBuffer.cs`、`SplineRibbonBuffer.cs` | `RaylibWorldOverlayRenderer` |
-| 拖尾轨迹 | `TrailMeshBuffer.cs` | `RaylibTrailMeshRenderer` |
+| 拖尾轨迹 | `TrailMeshBuffer.cs`、`TrailSampleHistory.cs`（采样/老化共享纯工具，Core runtime 与画廊场景共用） | `RaylibTrailMeshRenderer` |
 | 调试 | `DebugDrawCommandBuffer.cs` | `RaylibDebugDrawRenderer` |
 | 地形 | `ITerrainChunkMeshSource.cs`、`IVisualHeightmap(RenderSource).cs`、`VisualHeightmapRenderProfile.cs` | 地形/高度图渲染器 |
 | 相机/数学 | `CameraRenderState3D.cs`、`VisualMath.cs`、`LODLevel.cs` | 全部 |

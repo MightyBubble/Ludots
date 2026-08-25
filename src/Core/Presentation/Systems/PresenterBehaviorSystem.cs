@@ -229,7 +229,37 @@ namespace Ludots.Core.Presentation.Systems
         {
             _ownerAttributeWorkIndex = BuildOwnerAttributeWorkIndex(_definitions);
             _ownerTagWorkIndex = BuildOwnerTagWorkIndex(_definitions);
+            EnsureTrailMeshWiring(_definitions);
             _definitionVersion = _definitions.Version;
+        }
+
+        private void EnsureTrailMeshWiring(PresenterDefinitionRegistry definitions)
+        {
+            if (_trailMesh != null)
+            {
+                return;
+            }
+
+            IReadOnlyList<int> registeredIds = definitions.RegisteredIds;
+            for (int i = 0; i < registeredIds.Count; i++)
+            {
+                if (!definitions.TryGet(registeredIds[i], out PresenterDefinition definition))
+                {
+                    continue;
+                }
+
+                BehaviorSlot[] behaviors = definition.Behaviors;
+                for (int slot = 0; slot < behaviors.Length; slot++)
+                {
+                    if (behaviors[slot].Kind == BehaviorKind.TrailMesh)
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter definition '{definition.Key}' contains a TrailMesh behavior, but no TrailMeshBuffer is wired " +
+                            "into PresenterBehaviorSystem. TrailMesh wiring must be explicit at service composition; " +
+                            "a deferred per-tick failure is not allowed.");
+                    }
+                }
+            }
         }
 
         private void ProcessCreatedPresenters(float tickDt)

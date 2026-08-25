@@ -134,6 +134,127 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Sample_TwoLivePresentersWithSameStableId_Throws()
+        {
+            using var world = World.Create();
+            var buffer = new TrailMeshBuffer(capacity: 4);
+            var runtime = new TrailMeshRuntime(buffer);
+            Entity first = world.Create();
+            Entity second = world.Create();
+            TrailMeshConfig config = DefaultConfig;
+
+            runtime.Sample(first, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+
+            Assert.Throws<InvalidOperationException>(
+                () => runtime.Sample(second, stableId: 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0f),
+                "two live samplers sharing a stableId must fail fast instead of silently overwriting one buffer slot");
+        }
+
+        [Test]
+        public void Sample_EntityResamplesWithNewStableId_StartsFreshTrailAndReleasesOldClaim()
+        {
+            using var world = World.Create();
+            var buffer = new TrailMeshBuffer(capacity: 4);
+            var runtime = new TrailMeshRuntime(buffer);
+            Entity entity = world.Create();
+            TrailMeshConfig config = DefaultConfig;
+
+            runtime.Sample(entity, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(entity, stableId: 8, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.1f);
+            runtime.Advance(world, now: 0.1f);
+
+            Assert.That(buffer.Count, Is.EqualTo(1));
+            Assert.That(buffer.GetStableId(0), Is.EqualTo(8));
+            ReadOnlySpan<TrailMeshSample> samples = buffer.GetSamples(0);
+            Assert.That(samples.Length, Is.EqualTo(1));
+            Assert.That(samples[0].Base, Is.EqualTo(Vector3.UnitX));
+        }
+
+        [Test]
+        public void Sample_EntityRecyclingOntoAnotherLivePresentersStableId_Throws()
+        {
+            using var world = World.Create();
+            var buffer = new TrailMeshBuffer(capacity: 4);
+            var runtime = new TrailMeshRuntime(buffer);
+            Entity first = world.Create();
+            Entity second = world.Create();
+            TrailMeshConfig config = DefaultConfig;
+
+            runtime.Sample(first, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(second, stableId: 8, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+
+            Assert.Throws<InvalidOperationException>(
+                () => runtime.Sample(first, stableId: 8, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.1f));
+        }
+
+        [Test]
+        public void Sample_WhenSamplerCapacityMatchesBufferCapacity_ThrowsAtConfiguredBoundary()
+        {
+            using var world = World.Create();
+            // capacity 8 sits below MaxSamplesPerTrail * 2 (64): the old floor would
+            // silently admit 64 samplers; the contract is sampler capacity == buffer.Capacity.
+            var buffer = new TrailMeshBuffer(capacity: 8);
+            var runtime = new TrailMeshRuntime(buffer);
+            TrailMeshConfig config = DefaultConfig;
+            var entities = new Entity[9];
+            for (int i = 0; i < entities.Length; i++)
+            {
+                entities[i] = world.Create();
+            }
+
+            for (int i = 0; i < 8; i++)
+            {
+                runtime.Sample(entities[i], stableId: i + 1, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            }
+
+            Assert.That(runtime.ActiveCount, Is.EqualTo(8));
+            Assert.Throws<InvalidOperationException>(
+                () => runtime.Sample(entities[8], stableId: 9, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+        }
+
+        [Test]
+        public void Sample_ConfigWithOutOfRangeMaxSamples_Throws()
+        {
+            using var world = World.Create();
+            var buffer = new TrailMeshBuffer(capacity: 4);
+            var runtime = new TrailMeshRuntime(buffer);
+            Entity entity = world.Create();
+            TrailMeshConfig config = DefaultConfig;
+            config.MaxSamples = 1;
+
+            Assert.Throws<InvalidOperationException>(
+                () => runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+        }
+
+        [Test]
+        public void Sample_ConfigWithNegativeInterval_Throws()
+        {
+            using var world = World.Create();
+            var buffer = new TrailMeshBuffer(capacity: 4);
+            var runtime = new TrailMeshRuntime(buffer);
+            Entity entity = world.Create();
+            TrailMeshConfig config = DefaultConfig;
+            config.SampleIntervalSeconds = -0.1f;
+
+            Assert.Throws<InvalidOperationException>(
+                () => runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+        }
+
+        [Test]
+        public void Sample_ConfigWithNonPositiveLifetime_Throws()
+        {
+            using var world = World.Create();
+            var buffer = new TrailMeshBuffer(capacity: 4);
+            var runtime = new TrailMeshRuntime(buffer);
+            Entity entity = world.Create();
+            TrailMeshConfig config = DefaultConfig;
+            config.SampleLifetimeSeconds = 0f;
+
+            Assert.Throws<InvalidOperationException>(
+                () => runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+        }
+
+        [Test]
         public void Sample_WithoutPositiveStableId_Throws()
         {
             using var world = World.Create();
@@ -147,17 +268,21 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Advance_WhenBufferOverflows_Throws()
+        public void Advance_WhenForeignEntriesFillBuffer_Throws()
         {
             using var world = World.Create();
-            var buffer = new TrailMeshBuffer(capacity: 1);
+            var buffer = new TrailMeshBuffer(capacity: 2);
             var runtime = new TrailMeshRuntime(buffer);
-            Entity first = world.Create();
-            Entity second = world.Create();
+            Entity entity = world.Create();
             TrailMeshConfig config = DefaultConfig;
+            runtime.Sample(entity, 1, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
 
-            runtime.Sample(first, 1, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
-            runtime.Sample(second, 2, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            // A writer outside this runtime fills every remaining slot after the last
+            // drain; the emit pass must fail at the configured boundary, not admit
+            // an extra strip silently.
+            TrailMeshSample[] foreign = { new() { Base = Vector3.Zero, Tip = Vector3.UnitZ, Age01 = 0f } };
+            Assert.That(buffer.Upsert(90, foreign, Vector4.One, Vector4.Zero), Is.True);
+            Assert.That(buffer.Upsert(91, foreign, Vector4.One, Vector4.Zero), Is.True);
 
             Assert.Throws<InvalidOperationException>(() => runtime.Advance(world, now: 0f));
         }

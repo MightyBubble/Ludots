@@ -150,7 +150,131 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TrailMesh_WithoutWiredBuffer_Throws()
+        public void TrailMesh_SampleIntervalGatesAppends_HeadPinnedWithinInterval()
+        {
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int parentDefId = definitions.Register("trail.parent", new PresenterDefinition());
+            int childDefId = definitions.Register("trail.blade.interval", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(0f, 1.4f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 17,
+                        Kind = BehaviorKind.TrailMesh,
+                        ActiveByDefault = false,
+                        TrailMesh = new TrailMeshConfig
+                        {
+                            BaseOffset = Vector3.Zero,
+                            TipOffset = new Vector3(0f, 0f, 1.2f),
+                            MaxSamples = 8,
+                            SampleIntervalSeconds = 0.27f,
+                            SampleLifetimeSeconds = 1f,
+                            HeadColor = Vector4.One,
+                            TailColor = new Vector4(1f, 1f, 1f, 0f),
+                        },
+                    },
+                ],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            var commands = new PresenterCommandBuffer();
+            var events = new PresentationEventStream(64);
+            var buffer = new TrailMeshBuffer(capacity: 8);
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            Entity parent = runtime.CreateHierarchy(
+                definitions, parentDefId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                worldPosition: Vector3.Zero, stableId: 7200, parent: Entity.Null,
+                definitions.Get(parentDefId));
+            Entity child = runtime.CreateHierarchy(
+                definitions, childDefId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                worldPosition: Vector3.Zero, stableId: 7201, parent,
+                definitions.Get(childDefId));
+
+            using var commandRuntime = new PresenterRuntimeSystem(
+                world, commands, events, new TransientMarkerBuffer(), new PresentationRequestBuffer(),
+                runtime, new PresentationStableIdAllocator(), definitions);
+            using var syncSystem = new PresenterEntityTransformSyncSystem(world, runtime, definitions);
+            using var behaviorSystem = new PresenterBehaviorSystem(
+                world, runtime, definitions, events, new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer(), trailMeshBuffer: buffer);
+
+            syncSystem.Update(Dt);
+            behaviorSystem.Update(Dt);
+
+            var activate = new PresenterCommand
+            {
+                CommandKind = PresenterCommandKind.ActivateBehavior,
+                PresenterEntity = child,
+                TargetBehaviorSlot = 17,
+            };
+            Assert.That(commands.TryAdd(in activate), Is.True);
+            commandRuntime.Update(Dt);
+            behaviorSystem.Update(Dt);
+            behaviorSystem.Update(Dt);
+            Assert.That(buffer.Count, Is.EqualTo(1), "first sample lands one frame after activation re-bootstrap");
+
+            world.Get<VisualTransform>(owner).Rotation =
+                Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2f);
+            syncSystem.Update(Dt);
+            for (int i = 0; i < 16; i++)
+            {
+                behaviorSystem.Update(Dt);
+            }
+
+            ReadOnlySpan<TrailMeshSample> pinned = buffer.GetSamples(0);
+            Assert.That(pinned.Length, Is.EqualTo(1), "sub-interval resamples must pin the head in place");
+            AssertVec3(
+                pinned[0].Tip,
+                new Vector3(11.2f, 1.4f, 20f), 0.01f);
+
+            // Appends every 17 frames (17/60 = 0.2833 >= interval 0.27):
+            // t=20/60 appends, then 15 frames of sub-interval pinning (16/60 = 0.2667 < 0.27),
+            // then t=37/60 appends again.
+            behaviorSystem.Update(Dt);
+            ReadOnlySpan<TrailMeshSample> grown = buffer.GetSamples(0);
+            Assert.That(grown.Length, Is.EqualTo(2), "once the interval elapses a new arc segment appends");
+
+            for (int i = 0; i < 15; i++)
+            {
+                behaviorSystem.Update(Dt);
+            }
+
+            ReadOnlySpan<TrailMeshSample> stillPinned = buffer.GetSamples(0);
+            Assert.That(stillPinned.Length, Is.EqualTo(2), "interval gating holds until the next append boundary");
+            for (int i = 0; i < 2; i++)
+            {
+                behaviorSystem.Update(Dt);
+            }
+
+            Assert.That(buffer.GetSamples(0).Length, Is.EqualTo(3), "past the interval the head appends again");
+        }
+
+        [Test]
+        public void TrailMesh_DefinitionWithoutWiredBuffer_FailsAtSetup()
         {
             using var world = World.Create();
             var definitions = new PresenterDefinitionRegistry();
@@ -192,11 +316,11 @@ namespace Ludots.Tests.Presentation
                 worldPosition: Vector3.Zero, stableId: 7102, parent: Entity.Null,
                 definitions.Get(defId));
 
-            using var behaviorSystem = new PresenterBehaviorSystem(
-                world, runtime, definitions, new PresentationEventStream(64),
-                new PresentationOwnerChangeBuffer(8), new SoundRequestBuffer());
-
-            Assert.Throws<InvalidOperationException>(() => behaviorSystem.Update(Dt));
+            Assert.Throws<InvalidOperationException>(
+                () => new PresenterBehaviorSystem(
+                    world, runtime, definitions, new PresentationEventStream(64),
+                    new PresentationOwnerChangeBuffer(8), new SoundRequestBuffer()),
+                "TrailMesh definitions without a wired buffer must fail at service composition, not on first tick");
         }
 
         private static void AssertVec3(Vector3 actual, Vector3 expected, float tolerance)
