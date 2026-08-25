@@ -16,7 +16,7 @@
 | 承接渲染器 | `RaylibMaterialLibrary`（`src/Client/Ludots.Raylib.Render` 的材质装订库） |
 | 注册表条目 | `engine_raylib_material_binding`（`showcase.registry.json`，tier T1） |
 
-作者面就是 `Presentation/materials.json` 的 `MaterialAssetDescriptor`：`ParentKey` 指父材质，子材质只写差异字段（`MaterialAssetResolver` 沿链合并）；`ShaderKey` 分派自定义着色车道（`RaylibShaderCatalog` 注册表，非实例化车道遇自定义 key fail-loud）；`FloatParams`/`ColorParams` 按键名直推 uniform。场景里 `iron → rusty`（改贴图 + roughness 0.95）与 `emissive → hot`（`uEmissiveStrength` 3.0 + 橙红 `uEmissiveColor`）两条链就是作者写法的活样例。
+作者面就是 `Presentation/material_assets.json` 的 `MaterialAssetDescriptor`：`ParentKey` 指父材质，子材质只写差异字段（`MaterialAssetResolver` 沿链合并）；`ShaderKey` 分派自定义着色车道（`RaylibShaderCatalog` 注册表，非实例化车道遇自定义 key fail-loud）；`FloatParams`/`ColorParams` 按键名直推 uniform。场景里 `iron → rusty`（改贴图 + roughness 0.95）与 `emissive → hot`（`uEmissiveStrength` 3.0 + 橙红 `uEmissiveColor`）两条链就是作者写法的活样例。
 
 ## 这场演的是什么
 

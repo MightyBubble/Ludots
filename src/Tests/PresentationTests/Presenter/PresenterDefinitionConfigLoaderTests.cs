@@ -272,11 +272,11 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
 
-            var commandKinds = new PerformerCommandKindRegistry();
+            var commandKinds = new PresenterCommandKindRegistry();
             int commandKindId = commandKinds.Register(
                 "ExampleMod.MarkCommand",
-                new PerformerCommandExtensionDescriptor(
-                    PerformerCommandRouteStrategy.SingleRuntime,
+                new PresenterCommandExtensionDescriptor(
+                    PresenterCommandRouteStrategy.SingleRuntime,
                     NoOpExtensionCommand));
             var (_, _, pipeline, catalog) = BuildPipeline();
             var registry = new PresenterDefinitionRegistry();
@@ -287,7 +287,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(registry.GetId("extension_actor"), out var definition), Is.True);
             Assert.That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PresenterCommandKind.Extension));
             Assert.That(definition.Rules[0].Command.CommandKindId, Is.EqualTo(commandKindId));
-            Assert.That(definition.Rules[0].Command.RouteStrategy, Is.EqualTo(PerformerCommandRouteStrategy.SingleRuntime));
+            Assert.That(definition.Rules[0].Command.RouteStrategy, Is.EqualTo(PresenterCommandRouteStrategy.SingleRuntime));
             Assert.That(definition.Rules[0].Command.ScopeTag, Is.EqualTo(PresenterScopeTagRegistry.GetId("extensionScope")));
         }
 
@@ -312,11 +312,11 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
 
-            var behaviorKinds = new PerformerBehaviorKindRegistry();
+            var behaviorKinds = new PresenterBehaviorKindRegistry();
             int behaviorKindId = behaviorKinds.Register(
                 "ExampleMod.TickBehavior",
-                new PerformerBehaviorExtensionDescriptor(
-                    PerformerBehaviorExecutionLane.ContinuousTick,
+                new PresenterBehaviorExtensionDescriptor(
+                    PresenterBehaviorExecutionLane.ContinuousTick,
                     NoOpExtensionBehavior));
             var (_, _, pipeline, catalog) = BuildPipeline();
             var registry = new PresenterDefinitionRegistry();
@@ -327,7 +327,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(registry.GetId("extension_actor"), out var definition), Is.True);
             Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.Extension));
             Assert.That(definition.Behaviors[0].KindId, Is.EqualTo(behaviorKindId));
-            Assert.That(definition.Behaviors[0].ExtensionLane, Is.EqualTo(PerformerBehaviorExecutionLane.ContinuousTick));
+            Assert.That(definition.Behaviors[0].ExtensionLane, Is.EqualTo(PresenterBehaviorExecutionLane.ContinuousTick));
             Assert.That(definition.Behaviors[0].ActiveByDefault, Is.True);
         }
 
@@ -3556,193 +3556,409 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("overrides field 'transfrom' is unsupported"));
         }
 
-        private static void NoOpExtensionCommand(in PerformerCommandExecutionContext context)
-        {
-        }
 
         [Test]
-        public void Load_AcceptsLegalNestedPayloadConfig()
+        public void Load_RejectsSnakeCaseChildrenModeOnChildEntry()
         {
             WriteCatalog();
             WritePresenters(
                 """
                 [
-                  { "id": "legal_child" },
+                  { "id": "child_a" },
                   {
-                    "id": "legal_nested",
-                    "_comment": "Exercises every nested payload allowlist.",
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "children_mode": "instance" }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("'children_mode'"));
+            Assert.That(ex.Message, Does.Contain("'childrenMode'"));
+        }
+
+        [Test]
+        public void Load_RejectsSnakeCaseRuntimeBehaviorsOnChildEntry()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "runtime_behaviors": [] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("'runtime_behaviors'"));
+            Assert.That(ex.Message, Does.Contain("'instanceBehaviors'"));
+        }
+
+        [Test]
+        public void Load_RejectsSnakeCaseChildInstanceFieldsAtDefinitionLevel()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root_mode",
+                    "children_mode": "instance",
+                    "children": [ { "definitionId": "child_a" } ]
+                  },
+                  {
+                    "id": "root_runtime",
+                    "runtime_behaviors": [],
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException modeEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(modeEx.Message, Does.Contain("'children_mode'"));
+            Assert.That(modeEx.Message, Does.Contain("children[] entries"));
+
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root_runtime",
+                    "runtime_behaviors": [],
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+            var (_, _, pipeline2, catalog2) = BuildPipeline();
+
+            InvalidOperationException runtimeEx = Assert.Throws<InvalidOperationException>(() =>
+                new PresenterDefinitionConfigLoader(pipeline2, registry).Load(catalog2))!;
+            Assert.That(runtimeEx.Message, Does.Contain("'runtime_behaviors'"));
+            Assert.That(runtimeEx.Message, Does.Contain("children[] entries"));
+        }
+
+        [Test]
+        public void Load_RejectsChildInstanceCanonicalFieldsAtDefinitionLevel()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "childrenMode": "Instance",
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("definition level"));
+            Assert.That(ex.Message, Does.Contain("children[] entries"));
+        }
+
+        [Test]
+        public void Load_ParsesChildInstanceSubtreeOverrideWithoutTouchingSharedDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_b" },
+                  { "id": "leaf_c" },
+                  { "id": "leaf_nested" },
+                  { "id": "child_a", "children": [ { "definitionId": "leaf_b" } ] },
+                  {
+                    "id": "root",
                     "children": [
                       {
-                        "definitionId": "legal_child",
-                        "scopeTag": "structure",
-                        "overrides": {
-                          "transform": { "localPosition": [1, 0, 0], "localScale": [2, 2, 2] },
-                          "params": [ { "paramKey": "legal.override", "lane": "Float", "floatValue": 0.5 } ]
-                        }
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "leaf_c",
+                            "scopeTag": "swapped",
+                            "overrides": { "transform": { "localPosition": [1, 2, 3] } },
+                            "childrenMode": "Instance",
+                            "instanceChildren": [ { "definitionId": "leaf_nested" } ]
+                          }
+                        ]
                       }
-                    ],
-                    "rules": [
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(pipeline, registry).Load(catalog);
+
+            int childAId = registry.GetId("child_a");
+            int leafBId = registry.GetId("leaf_b");
+            int leafCId = registry.GetId("leaf_c");
+            int leafNestedId = registry.GetId("leaf_nested");
+
+            PresenterDefinition childA = registry.Get(childAId);
+            Assert.That(childA.Children.Length, Is.EqualTo(1));
+            Assert.That(childA.Children[0].DefinitionId, Is.EqualTo(leafBId));
+            Assert.That(childA.Children[0].InstanceOverride, Is.Null);
+
+            PresenterDefinition root = registry.Get(registry.GetId("root"));
+            Assert.That(root.Children.Length, Is.EqualTo(1));
+            PresenterChildInstanceOverride overrideData = root.Children[0].InstanceOverride!;
+            Assert.That(overrideData, Is.Not.Null);
+            Assert.That(overrideData.ChildrenMode, Is.EqualTo(PresenterChildrenMode.Instance));
+            Assert.That(overrideData.InstanceChildren.Length, Is.EqualTo(1));
+            Assert.That(overrideData.InstanceChildren[0].DefinitionId, Is.EqualTo(leafCId));
+            Assert.That(overrideData.InstanceChildren[0].ScopeTag, Is.EqualTo(PresenterScopeTagRegistry.GetId("swapped")));
+            Assert.That(overrideData.InstanceChildren[0].TransformOverride.HasOverride, Is.True);
+            PresenterChildInstanceOverride nestedOverride = overrideData.InstanceChildren[0].InstanceOverride!;
+            Assert.That(nestedOverride.ChildrenMode, Is.EqualTo(PresenterChildrenMode.Instance));
+            Assert.That(nestedOverride.InstanceChildren[0].DefinitionId, Is.EqualTo(leafNestedId));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenModeWithoutInstanceChildren()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [ { "definitionId": "child_a", "childrenMode": "Instance" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("childrenMode 'Instance' without 'instanceChildren'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenUnderDefinitionMode()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_c" },
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "childrenMode": "Definition", "instanceChildren": [ { "definitionId": "leaf_c" } ] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("childrenMode is 'Definition'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenWithoutExplicitMode()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_c" },
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "instanceChildren": [ { "definitionId": "leaf_c" } ] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("childrenMode is 'Definition'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenReferencingUnknownDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
                       {
-                        "event": { "kind": "TagEffectiveChanged", "keyId": "Status.Buffed", "gained": true },
-                        "condition": { "inline": "SourceIsAlive" },
-                        "command": { "kind": "CreatePresenter", "definitionId": "legal_nested", "scopeSource": "Fixed" }
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [ { "definitionId": "missing_leaf" } ]
                       }
-                    ],
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("unknown definition 'missing_leaf'"));
+        }
+
+        [Test]
+        public void Load_ParsesChildInstanceBehaviorsWithoutTouchingSharedDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "instanceBehaviors": [
+                          { "slot": "sound", "kind": "Sound", "activeByDefault": true, "sound": { "soundAssetId": "sfx_hit" } }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (kind, key) => string.Equals(key, "sfx_hit", StringComparison.Ordinal) ? 7 : 0).Load(catalog);
+
+            PresenterDefinition childA = registry.Get(registry.GetId("child_a"));
+            Assert.That(childA.Behaviors.Length, Is.EqualTo(0));
+
+            PresenterDefinition root = registry.Get(registry.GetId("root"));
+            PresenterChildInstanceOverride overrideData = root.Children[0].InstanceOverride!;
+            Assert.That(overrideData, Is.Not.Null);
+            Assert.That(overrideData.ChildrenMode, Is.EqualTo(PresenterChildrenMode.Definition));
+            Assert.That(overrideData.InstanceChildren.Length, Is.EqualTo(0));
+            Assert.That(overrideData.InstanceBehaviors.Length, Is.EqualTo(1));
+            Assert.That(overrideData.InstanceBehaviors[0].Kind, Is.EqualTo(BehaviorKind.Sound));
+            Assert.That(overrideData.InstanceBehaviors[0].SlotIndex, Is.EqualTo(6));
+            Assert.That(overrideData.InstanceBehaviors[0].ActiveByDefault, Is.True);
+            Assert.That(overrideData.InstanceBehaviors[0].Sound.SoundAssetId, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void Load_RejectsDefinitionScopedKindOnInstanceBehaviors()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "instanceBehaviors": [
+                          {
+                            "slot": "body",
+                            "kind": "AssetBinding",
+                            "assetBinding": {
+                              "assetKind": "Mesh",
+                              "assetId": "cube",
+                              "materialId": "knight_base",
+                              "renderPath": "StaticMesh",
+                              "mobility": "Static"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveMaterialId: _ => 101,
+                resolveBehaviorAssetId: (kind, key) => 42);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0].instanceBehaviors[0]"));
+            Assert.That(ex.Message, Does.Contain("definition-scoped"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceBehaviorSlotCollisionWithReferencedDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "child_a",
                     "behaviors": [
-                      {
-                        "slot": "body",
-                        "kind": "AssetBinding",
-                        "activeByDefault": true,
-                        "assetBinding": {
-                          "assetKind": "Mesh",
-                          "assetId": "cube",
-                          "materialId": "knight_base",
-                          "renderPath": "StaticMesh",
-                          "mobility": "Static",
-                          "localOffset": [0, 0, 0],
-                          "localRotation": [0, 0, 0, 1],
-                          "localScale": [1, 1, 1],
-                          "scaleParamKey": "legal.scale",
-                          "colorParamKey": "legal.color",
-                          "materialParamKey": "legal.material",
-                          "visibilityParamKey": "legal.visibility",
-                          "maxLod": "Low"
-                        },
-                        "style": { "color": [1, 0, 0, 1], "alphaPolicy": "FadeOverLifetime" },
-                        "motion": { "yDriftPerSecond": 0.5 }
-                      },
-                      {
-                        "slot": "attribute",
-                        "kind": "AttributeBinding",
-                        "attributeBinding": {
-                          "attributeId": "Health",
-                          "targetParamKey": "legal.health",
-                          "mode": "AttributeRatio",
-                          "thresholds": [
-                            { "threshold": 0.5, "outputParamKey": "legal.low", "outputValue": 1.0 }
-                          ]
-                        }
-                      },
-                      {
-                        "slot": "tag",
-                        "kind": "TagBinding",
-                        "tagBinding": { "tagId": "Status.Buffed", "targetParamKey": "legal.buffed", "invertLogic": false }
-                      },
-                      {
-                        "slot": "animator",
-                        "kind": "Animator",
-                        "animator": {
-                          "animatorControllerId": "controller",
-                          "animationProfileId": "profile",
-                          "speedParamKey": "legal.speed",
-                          "stateParamKey": "legal.state"
-                        }
-                      },
-                      {
-                        "slot": "attachment",
-                        "kind": "Attachment",
-                        "attachment": {
-                          "target": "Parent",
-                          "boneId": 3,
-                          "offset": [0, 0, 0],
-                          "rotationOffset": [0, 0, 0, 1],
-                          "inheritScale": true
-                        }
-                      },
-                      {
-                        "slot": "sound",
-                        "kind": "Sound",
-                        "sound": { "soundAssetId": "step", "loop": false, "volume": 0.8, "volumeParamKey": "legal.volume" }
-                      },
-                      {
-                        "slot": "material",
-                        "kind": "Material",
-                        "material": {
-                          "baseMaterialId": "knight_base",
-                          "materialSwapParamKey": "legal.material.state",
-                          "swapTable": [ { "paramValue": 0, "materialId": "knight_armor" } ]
-                        }
-                      },
-                      {
-                        "slot": "spline",
-                        "kind": "Spline",
-                        "spline": {
-                          "splineAssetId": "road",
-                          "usage": "Render",
-                          "widthParamKey": "legal.width",
-                          "colorParamKey": "legal.color",
-                          "speedParamKey": "legal.speed",
-                          "progressParamKey": "legal.progress",
-                          "loop": true,
-                          "pingPong": false,
-                          "waypointEventId": 7
-                        }
-                      },
-                      {
-                        "slot": "grounding",
-                        "kind": "Grounding",
-                        "grounding": { "mode": "SnapToGround", "offset": 0.1, "updatePolicy": "Once" }
-                      },
-                      {
-                        "slot": "minimap",
-                        "kind": "MinimapMarker",
-                        "minimapMarker": {
-                          "shape": "Circle",
-                          "color": [1, 1, 1, 1],
-                          "sizePx": 6.0,
-                          "colorParamKey": "legal.marker.color",
-                          "sizeParamKey": "legal.marker.size",
-                          "visibilityParamKey": "legal.marker.visibility",
-                          "orientationMode": "PresenterForward",
-                          "orientationOffsetRad": 0.1,
-                          "orientationLengthPx": 10.0
-                        }
-                      },
-                      {
-                        "slot": "hud",
-                        "kind": "WorldText",
-                        "worldText": {
-                          "textToken": "hud.combat.delta",
-                          "mode": "AttributeCurrent",
-                          "valueParamKey": "worldText.value0",
-                          "secondaryValueParamKey": "worldText.value1",
-                          "fontSize": 16
-                        }
-                      },
-                      {
-                        "slot": "surface",
-                        "kind": "SurfaceSource",
-                        "surfaceSource": {
-                          "kind": "SplineRibbon",
-                          "profileId": "road_profile",
-                          "geometrySource": {
-                            "controlPointSource": { "kind": "Constant", "id": "road.points" },
-                            "widthSource": { "kind": "Constant", "id": "road.width" },
-                            "segmentationPolicy": "Bezier12"
-                          },
-                          "chunkBake": {
-                            "enabled": true,
-                            "ownership": "PerChunk",
-                            "chunkInfluencePolicy": "ExplicitPayloadChunks",
-                            "rebakePolicy": "DirtyPayload",
-                            "usageHint": "Static"
-                          },
-                          "materialSet": { "primaryMaterialId": "mat.road", "allowInstanceOverride": true },
-                          "lodProfileId": "default_surface_lod",
-                          "grounding": { "mode": "None" },
-                          "boundsPolicy": "Auto"
-                        }
-                      }
+                      { "slot": "sound", "kind": "Sound", "sound": { "soundAssetId": "sfx_def" } }
                     ]
                   },
                   {
-                    "id": "legal_instanced",
-                    "behaviors": [
+                    "id": "root",
+                    "children": [
                       {
-                        "slot": "body",
-                        "kind": "InstancedBatch",
-                        "activeByDefault": true,
-                        "instancedBatch": { "batchAssetId": "forest.tree.cluster" }
+                        "definitionId": "child_a",
+                        "instanceBehaviors": [
+                          { "slot": "sound", "kind": "Sound", "sound": { "soundAssetId": "sfx_inst" } }
+                        ]
                       }
                     ]
                   }
@@ -3754,165 +3970,37 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
-                resolveAttributeName: key => string.Equals(key, "Health", StringComparison.Ordinal) ? 1 : 0,
-                resolveTextTokenId: key => string.Equals(key, "hud.combat.delta", StringComparison.Ordinal) ? 777 : 0,
-                resolveMaterialId: key => key switch
-                {
-                    "knight_base" => 100,
-                    "knight_armor" => 200,
-                    _ => 0,
-                },
-                resolveAnimatorControllerId: key => string.Equals(key, "controller", StringComparison.Ordinal) ? 11 : 0,
-                resolveAnimationProfileId: key => string.Equals(key, "profile", StringComparison.Ordinal) ? 22 : 0,
-                resolveBehaviorAssetId: (kind, key) => (kind, key) switch
-                {
-                    (AssetKind.Mesh, "cube") => 42,
-                    (AssetKind.Sound, "step") => 33,
-                    (AssetKind.Spline, "road") => 44,
-                    _ => 0,
-                },
-                resolveInstancedBatchAssetId: key =>
-                    string.Equals(key, "forest.tree.cluster", StringComparison.Ordinal) ? 55 : 0);
+                resolveBehaviorAssetId: (_, _) => 9);
 
-            loader.Load(catalog);
-
-            Assert.That(registry.TryGet(registry.GetId("legal_nested"), out var definition), Is.True);
-            Assert.That(definition.Rules.Length, Is.EqualTo(1));
-            Assert.That(definition.Rules[0].Condition.Inline, Is.EqualTo(InlineConditionKind.SourceIsAlive));
-            Assert.That(definition.Children.Length, Is.EqualTo(1));
-            Assert.That(definition.Children[0].TransformOverride.HasOverride, Is.True);
-            Assert.That(definition.Children[0].ParamOverrides.Length, Is.EqualTo(1));
-            Assert.That(definition.Behaviors.Length, Is.EqualTo(12));
-            Assert.That(definition.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(42));
-            Assert.That(definition.Behaviors[1].AttributeBinding.AttributeId, Is.EqualTo(1));
-            Assert.That(definition.Behaviors[1].AttributeBinding.Thresholds[0].OutputParamKey, Is.EqualTo(PresenterParamKeyRegistry.Register("legal.low")));
-            Assert.That(definition.Behaviors[6].Material.BaseMaterialId, Is.EqualTo(100));
-            Assert.That(definition.Behaviors[6].Material.SwapTable[0].MaterialId, Is.EqualTo(200));
-            Assert.That(definition.Behaviors[9].MinimapMarker.SizePx, Is.EqualTo(6f));
-            Assert.That(definition.Behaviors[11].SurfaceSource, Is.Not.Null);
-            Assert.That(definition.Behaviors[11].SurfaceSource!.ProfileId, Is.EqualTo("road_profile"));
-            Assert.That(registry.TryGet(registry.GetId("legal_instanced"), out var instanced), Is.True);
-            Assert.That(instanced.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.InstancedBatch));
-            Assert.That(instanced.Behaviors[0].InstancedBatch.BatchAssetId, Is.EqualTo(55));
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0].instanceBehaviors[0]"));
+            Assert.That(ex.Message, Does.Contain("collides with a behavior slot of referenced definition 'child_a'"));
         }
 
-        [TestCase(
-            """
-            { "slot": "hud", "kind": "WorldText", "worldText": { "textToken": "hud.combat.delta", "mode": "AttributeCurrent", "fontSzie": 16 } }
-            """,
-            "worldText",
-            "fontSzie")]
-        [TestCase(
-            """
-            { "slot": "body", "kind": "AssetBinding", "assetBinding": { "assetKind": "WorldHud", "renderPath": "None", "mobility": "Movable" }, "style": { "colr": [1, 1, 1, 1] } }
-            """,
-            "style",
-            "colr")]
-        [TestCase(
-            """
-            { "slot": "body", "kind": "AssetBinding", "assetBinding": { "assetKind": "WorldHud", "renderPath": "None", "mobility": "Movable" }, "motion": { "yDrifPerSecond": 0.5 } }
-            """,
-            "motion",
-            "yDrifPerSecond")]
-        [TestCase(
-            """
-            { "slot": "attachment", "kind": "Attachment", "attachment": { "target": "Parent", "ofset": [0, 0, 0] } }
-            """,
-            "Attachment",
-            "ofset")]
-        [TestCase(
-            """
-            { "slot": "attribute", "kind": "AttributeBinding", "attributeBinding": { "attributeId": "Health", "targetParamKey": "legal.health", "mod": "AttributeRatio" } }
-            """,
-            "AttributeBinding",
-            "mod")]
-        [TestCase(
-            """
-            { "slot": "tag", "kind": "TagBinding", "tagBinding": { "tagId": "Status.Buffed", "targetParamKey": "legal.buffed", "invertLogc": false } }
-            """,
-            "TagBinding",
-            "invertLogc")]
-        [TestCase(
-            """
-            { "slot": "animator", "kind": "Animator", "animator": { "animatorControllerId": "controller", "speeedParamKey": "legal.speed" } }
-            """,
-            "Animator",
-            "speeedParamKey")]
-        [TestCase(
-            """
-            { "slot": "sound", "kind": "Sound", "sound": { "soundAssetId": "step", "volum": 0.8 } }
-            """,
-            "Sound",
-            "volum")]
-        [TestCase(
-            """
-            { "slot": "material", "kind": "Material", "material": { "baseMaterialId": "knight_base", "swpTable": [] } }
-            """,
-            "Material",
-            "swpTable")]
-        [TestCase(
-            """
-            { "slot": "material", "kind": "Material", "material": { "baseMaterialId": "knight_base", "materialSwapParamKey": "legal.material.state", "swapTable": [ { "paramValue": 0, "materialIde": "knight_armor" } ] } }
-            """,
-            "swapTable[0]",
-            "materialIde")]
-        [TestCase(
-            """
-            { "slot": "spline", "kind": "Spline", "spline": { "splineAssetId": "road", "usge": "Render" } }
-            """,
-            "Spline",
-            "usge")]
-        [TestCase(
-            """
-            { "slot": "grounding", "kind": "Grounding", "grounding": { "mode": "SnapToGround", "updatePolicy": "Once", "ofset": 0.1 } }
-            """,
-            "Grounding",
-            "ofset")]
-        [TestCase(
-            """
-            { "slot": "minimap", "kind": "MinimapMarker", "minimapMarker": { "shape": "Circle", "sziePx": 6.0 } }
-            """,
-            "MinimapMarker",
-            "sziePx")]
-        [TestCase(
-            """
-            { "slot": "surface", "kind": "SurfaceSource", "surfaceSource": { "kind": "SplineRibbon", "profilId": "road_profile" } }
-            """,
-            "surfaceSource",
-            "profilId")]
-        [TestCase(
-            """
-            { "slot": "surface", "kind": "SurfaceSource", "surfaceSource": { "kind": "SplineRibbon", "geometrySource": { "controlPointSource": { "kind": "Constant", "id": "road.points" }, "segmentationPolic": "Bezier12" } } }
-            """,
-            "geometrySource",
-            "segmentationPolic")]
-        [TestCase(
-            """
-            { "slot": "body", "kind": "InstancedBatch", "instancedBatch": { "batchAssetId": "forest.tree.cluster", "batchAssettId": "forest.other" } }
-            """,
-            "instancedBatch",
-            "batchAssettId")]
-        [TestCase(
-            """
-            { "slot": "body", "kind": "AssetBinding", "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "renderPath": "StaticMesh", "mobility": "Static", "materialCustomData": [ { "slot": 0, "lane": "Float", "defaultFlooatValue": 1.0 } ] } }
-            """,
-            "materialCustomData[0]",
-            "defaultFlooatValue")]
-        [TestCase(
-            """
-            { "slot": "attribute", "kind": "AttributeBinding", "attributeBinding": { "attributeId": "Health", "targetParamKey": "legal.health", "mode": "AttributeRatio", "thresholds": [ { "threshold": 0.5, "outputParamKey": "legal.low", "outptValue": 1.0 } ] } }
-            """,
-            "thresholds[0]",
-            "outptValue")]
-        public void Load_RejectsUnknownNestedPayloadFields(string behaviorJson, string expectedContext, string expectedField)
+        [Test]
+        public void Load_ParsesInstanceBehaviorsInsideInstanceChildren()
         {
             WriteCatalog();
-            WritePresenters($$"""
+            WritePresenters(
+                """
                 [
+                  { "id": "leaf" },
+                  { "id": "child_a", "children": [ { "definitionId": "leaf" } ] },
                   {
-                    "id": "typo_nested",
-                    "behaviors": [
-                      {{behaviorJson}}
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "leaf",
+                            "instanceBehaviors": [
+                              { "slot": "sound", "kind": "Sound", "sound": { "soundAssetId": "sfx_nested" } }
+                            ]
+                          }
+                        ]
+                      }
                     ]
                   }
                 ]
@@ -3920,34 +4008,27 @@ namespace Ludots.Tests.Presentation
 
             var (_, _, pipeline, catalog) = BuildPipeline();
             var registry = new PresenterDefinitionRegistry();
-            var loader = new PresenterDefinitionConfigLoader(
+            new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
-                resolveAttributeName: key => string.Equals(key, "Health", StringComparison.Ordinal) ? 1 : 0,
-                resolveTextTokenId: key => string.Equals(key, "hud.combat.delta", StringComparison.Ordinal) ? 777 : 0,
-                resolveMaterialId: key => key switch
-                {
-                    "knight_base" => 100,
-                    "knight_armor" => 200,
-                    _ => 0,
-                },
-                resolveAnimatorControllerId: key => string.Equals(key, "controller", StringComparison.Ordinal) ? 11 : 0,
-                resolveBehaviorAssetId: (kind, key) => (kind, key) switch
-                {
-                    (AssetKind.Mesh, "cube") => 42,
-                    (AssetKind.Sound, "step") => 33,
-                    (AssetKind.Spline, "road") => 44,
-                    _ => 0,
-                },
-                resolveInstancedBatchAssetId: key =>
-                    string.Equals(key, "forest.tree.cluster", StringComparison.Ordinal) ? 55 : 0);
+                resolveBehaviorAssetId: (kind, key) => string.Equals(key, "sfx_nested", StringComparison.Ordinal) ? 3 : 0).Load(catalog);
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain(expectedContext));
-            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+            PresenterDefinition leaf = registry.Get(registry.GetId("leaf"));
+            Assert.That(leaf.Behaviors.Length, Is.EqualTo(0));
+
+            PresenterDefinition root = registry.Get(registry.GetId("root"));
+            PresenterChildInstanceOverride overrideData = root.Children[0].InstanceOverride!;
+            Assert.That(overrideData.InstanceChildren[0].InstanceOverride, Is.Not.Null);
+            Assert.That(overrideData.InstanceChildren[0].InstanceOverride!.InstanceBehaviors.Length, Is.EqualTo(1));
+            Assert.That(overrideData.InstanceChildren[0].InstanceOverride!.InstanceBehaviors[0].Sound.SoundAssetId, Is.EqualTo(3));
         }
 
-        private static void NoOpExtensionBehavior(in PerformerBehaviorExecutionContext context)
+
+        private static void NoOpExtensionCommand(in PresenterCommandExecutionContext context)
+        {
+        }
+
+        private static void NoOpExtensionBehavior(in PresenterBehaviorExecutionContext context)
         {
         }
 

@@ -79,7 +79,10 @@
         "command": {
           "kind": "SinkParamToAsset",
           "definitionId": "pcmd.lamp_post",
-          "scopeTag": "pcmd.lamp.pillar.refresh"
+          "scopeTag": "pcmd.lamp.pillar.refresh",
+          "targetBehaviorSlot": "body",
+          "paramKey": "pcmd.lamp.color",
+          "paramLane": "Vector"
         }
       }
     ],

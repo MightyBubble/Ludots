@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ludots://presentation/mesh_assets.schema.json",
+  "title": "Ludots presentation mesh assets",
+  "type": "array",
+  "description": "Mod-side Presentation/mesh_assets.json. Semantic mesh handles only; platform source paths belong in host_assets.json (declaring sourceUris/textures here fails loader validation).",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "type"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "type": { "enum": ["Primitive", "Model", "Billboard"] },
+      "primitiveKind": { "enum": ["Cube", "Sphere"] },
+      "vfx": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["particleVfxId"],
+        "properties": {
+          "particleVfxId": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

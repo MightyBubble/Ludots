@@ -47,7 +47,7 @@ Mod 不应绕过这些入口直接侵入 Core 内部状态。
 
 Code Mods may register runtime extension keys only through `IModContext.Extensions` during `IMod.OnLoad`.
 The engine freezes these registrations before `ConfigPipeline`, `ConfigCatalogLoader`, GAS graph compilation,
-and Performer definition compilation run. A Mod must not retain or receive `ModExtensionHub` or mutable runtime
+and Presenter definition compilation run. A Mod must not retain or receive `ModExtensionHub` or mutable runtime
 registries.
 
 Extension keys are owned by the loading Mod id. For example, `WeatherMod.StormTick` may only be registered while
@@ -58,7 +58,7 @@ Authoring surfaces:
 
 - GAS C# phase handlers: `context.Extensions.Gas.RegisterBuiltinHandler`
 - GAS graph ops: `context.Extensions.Gas.RegisterGraphOp`
-- Performer commands: `context.Extensions.Presentation.RegisterPerformerCommand`
-- Performer behaviors: `context.Extensions.Presentation.RegisterPerformerBehavior`
+- Presenter commands: `context.Extensions.Presentation.RegisterPresenterCommand`
+- Presenter behaviors: `context.Extensions.Presentation.RegisterPresenterBehavior`
 
 The full contract is [Mod Extensible Runtime](mod-extensible-runtime.md).

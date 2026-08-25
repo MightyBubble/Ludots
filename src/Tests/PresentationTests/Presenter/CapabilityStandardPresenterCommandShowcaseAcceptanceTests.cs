@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text.Json;
 using Arch.Core;
 using CapabilityStandardPresenterCommandShowcaseMod;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
@@ -219,17 +220,45 @@ namespace Ludots.Tests.Presentation
                 CapabilityStandardPresenterCommandShowcaseModEntry.RefreshPillarOwnerStableId);
             Assert.That(GetStaticDirty(engine, refreshPillar), Is.EqualTo(0), "settle 后对照柱不应带 dirty");
 
+            using var recording = new RecordingLogBackend();
+            Log.Initialize(recording);
             ClickElement(uiRoot, "pcmd-btn-refresh");
             TickFrames(engine, 1);
-            Assert.That(GetStaticDirty(engine, refreshPillar), Is.EqualTo(0),
-                "整帧后 dirty 被同帧 emit 消费；用分阶段驱动验证中间态");
 
-            DriveRulesAndRuntime(engine, CapabilityStandardPresenterCommandShowcaseModEntry.RefreshPillarOwnerStableId);
-            Assert.That(GetStaticDirty(engine, refreshPillar), Is.EqualTo(1),
-                "SinkParamToAsset 应把对照柱标记为需要重 emit（值未变）");
-            DriveEmitAndFlush(engine);
-            Assert.That(GetStaticDirty(engine, refreshPillar), Is.EqualTo(0),
-                "emit 系统消费 dirty 后完成重 emit");
+            Assert.That(
+                recording.Infos.Any(m => m.Contains("SinkParamToAsset accepted") && m.Contains("pcmd.lamp.color")),
+                Is.True,
+                "SinkParamToAsset 应在指令执行内同步完成槽位资产写入并留下 accepted 审计日志（上游 #1091 语义）");
+            Assert.That(
+                recording.Warnings.Any(m => m.Contains("SinkParamToAsset rejected")),
+                Is.False,
+                "对照柱 paramDefaults 在 Vector lane 上有当前值，不应被拒绝");
+
+            Assert.That(TryGetVectorParam(engine, refreshPillar, colorKey, out Vector4 pillarColor), Is.True);
+            Assert.That(pillarColor, Is.EqualTo(new Vector4(1.0f, 0.76f, 0.28f, 1.0f)),
+                "同步写入读取的是黑板当前值，对照柱保持默认色");
+        }
+
+        private sealed class RecordingLogBackend : ILogBackend, IDisposable
+        {
+            public readonly List<string> Infos = new();
+            public readonly List<string> Warnings = new();
+
+            public void Write(LogLevel level, in LogChannel channel, string message)
+            {
+                if (level == LogLevel.Warning)
+                {
+                    Warnings.Add(message);
+                }
+                else if (level == LogLevel.Info)
+                {
+                    Infos.Add(message);
+                }
+            }
+
+            public void Flush() { }
+
+            public void Dispose() { }
         }
 
         [Test]

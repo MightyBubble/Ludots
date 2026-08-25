@@ -822,8 +822,8 @@ namespace Ludots.Core.Engine
             var builtinHandlers = modExtensions.Gas.BuiltinHandlers;
             var graphOps = modExtensions.Gas.GraphOps;
             var graphHandlers = new GasGraphOpHandlerTable(graphOps);
-            var performerCommandKinds = modExtensions.Presentation.PerformerCommands;
-            var performerBehaviorKinds = modExtensions.Presentation.PerformerBehaviors;
+            var presenterCommandKinds = modExtensions.Presentation.PresenterCommands;
+            var presenterBehaviorKinds = modExtensions.Presentation.PresenterBehaviors;
             SetService(CoreServiceKeys.GasGraphOpHandlerTable, graphHandlers);
 
             // Instantiate GAS Systems
@@ -1326,8 +1326,10 @@ namespace Ludots.Core.Engine
                 presenterAnimatorStates,
                 stableDrawCache,
                 presenterVisualStableIds,
-                performerCommandKinds,
-                presenterTimerTable);
+                presenterCommandKinds,
+                presenterTimerTable,
+                GlobalContext,
+                soundRequestBuffer);
             var presenterBehaviorSystem = new PresenterBehaviorSystem(
                 World,
                 presenterRuntime,
@@ -1338,7 +1340,9 @@ namespace Ludots.Core.Engine
                 () => GetService(CoreServiceKeys.VisualHeightmap),
                 boneTransformProvider: null,
                 timingDiagnostics: presentationTimingDiagnostics,
-                extensionBehaviors: performerBehaviorKinds);
+                extensionBehaviors: presenterBehaviorKinds,
+                graphPrograms: graphProgramRegistry,
+                graphApi: gasGraphApi);
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(
                 World,
                 animatorControllers,
@@ -1405,8 +1409,8 @@ namespace Ludots.Core.Engine
                 },
                 instancedBatchAssets.GetId,
                 entityCollectionKeyRegistry.Register,
-                performerCommandKinds,
-                performerBehaviorKinds).Load(ConfigCatalog, ConfigConflictReport);
+                presenterCommandKinds,
+                presenterBehaviorKinds).Load(ConfigCatalog, ConfigConflictReport);
             presenterDefinitions.RebuildCompiledViews();
 
             int ResolveVfxAssetId(string key)

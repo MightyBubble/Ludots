@@ -11,7 +11,12 @@ namespace Ludots.Core.Presentation.Presenters
         /// <summary>Read owner attribute current value. Valid for AttributeBinding.mode, not PresenterParamBinding.</summary>
         Attribute = 1,
 
-        /// <summary>Execute Graph program <see cref="ValueRef.SourceId"/>, read F[0] as the result.</summary>
+        /// <summary>
+        /// Execute Graph program <see cref="ValueRef.SourceId"/> (Score kind) and write F[0] back to the
+        /// binding's ParamKey on the Float lane. Input context seeded by PresenterBehaviorSystem:
+        /// E[0]=owner, E[1]=presenter, F[k] (k&gt;=1)=current Param Blackboard float lane key k
+        /// (F[0] is reserved as the result register and is never seeded as an input).
+        /// </summary>
         Graph = 2,
 
         /// <summary>

@@ -34,8 +34,8 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
         private readonly Func<string, int> _resolveEntityCollectionKeyId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
-        private readonly PerformerCommandKindRegistry? _commandKinds;
-        private readonly PerformerBehaviorKindRegistry? _behaviorKinds;
+        private readonly PresenterCommandKindRegistry? _commandKinds;
+        private readonly PresenterBehaviorKindRegistry? _behaviorKinds;
 
         public PresenterDefinitionConfigLoader(
             ConfigPipeline configs,
@@ -51,8 +51,8 @@ namespace Ludots.Core.Presentation.Config
             Func<AssetKind, string, int> resolveBehaviorAssetId = null,
             Func<string, int> resolveInstancedBatchAssetId = null,
             Func<string, int> resolveEntityCollectionKeyId = null,
-            PerformerCommandKindRegistry? commandKinds = null,
-            PerformerBehaviorKindRegistry? behaviorKinds = null)
+            PresenterCommandKindRegistry? commandKinds = null,
+            PresenterBehaviorKindRegistry? behaviorKinds = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -130,6 +130,7 @@ namespace Ludots.Core.Presentation.Config
                 PresenterDefinition definition = validByKey[key];
                 ValidateRuleReferences(key, definition, validByKey);
                 ValidateChildGraph(key, validByKey, new HashSet<int>(), new List<string>());
+                ValidateChildInstanceBehaviorSlots(key, definition, validByKey);
             }
 
             for (int i = 0; i < parsedOrder.Count; i++)
@@ -505,6 +506,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             RejectRemovedFields(node, key);
+            RejectChildInstanceAuthoringFields(node, key);
             RejectUnknownFields(definitionObject, $"Presenter '{key}'", DefinitionFields);
 
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
@@ -588,6 +590,27 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
+        private static void RejectChildInstanceAuthoringFields(JsonNode node, string key)
+        {
+            if (node["children_mode"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' uses snake_case field 'children_mode'. Author 'childrenMode' on children[] entries.");
+            }
+
+            if (node["runtime_behaviors"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' uses snake_case field 'runtime_behaviors'. Author 'instanceBehaviors' on children[] entries.");
+            }
+
+            if (node["childrenMode"] != null || node["instanceChildren"] != null || node["instanceBehaviors"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' declares child instance fields at definition level. Author childrenMode/instanceChildren/instanceBehaviors on children[] entries.");
+            }
+        }
+
         private static readonly string[] DefinitionFields =
         {
             "id", "extends", "lifecycle", "anchor", "visibility",
@@ -607,6 +630,7 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] ChildFields =
         {
             "definitionId", "scopeTag", "overrides",
+            "childrenMode", "instanceChildren", "instanceBehaviors",
         };
 
         private static readonly string[] RuleFields =
@@ -1047,7 +1071,7 @@ namespace Ludots.Core.Presentation.Config
             int presenterDefinitionId = ParseCommandDefinitionId(obj, commandKind, context);
             bool hasVectorSources = HasCommandVectorSources(obj);
             bool hasParamPayload = HasCommandParamPayload(obj, commandKind);
-            PerformerCommandRouteStrategy routeStrategy = ResolveBuiltinCommandRoute(commandKind, presenterDefinitionId);
+            PresenterCommandRouteStrategy routeStrategy = ResolveBuiltinCommandRoute(commandKind, presenterDefinitionId);
             return new PresenterCommand
             {
                 CommandKind = commandKind,
@@ -1162,18 +1186,18 @@ namespace Ludots.Core.Presentation.Config
         private PresenterCommand ParseExtensionPresenterCommand(JsonObject obj, string kindText, string context)
         {
             int commandKindId = _commandKinds?.GetId(kindText) ?? 0;
-            if (commandKindId < PerformerCommandKindRegistry.FirstModCommandKindId)
+            if (commandKindId < PresenterCommandKindRegistry.FirstModCommandKindId)
             {
                 throw new InvalidOperationException($"{context}.kind references unregistered presenter command kind '{kindText}'.");
             }
 
-            if (!_commandKinds!.TryGetDescriptor(commandKindId, out PerformerCommandExtensionDescriptor descriptor))
+            if (!_commandKinds!.TryGetDescriptor(commandKindId, out PresenterCommandExtensionDescriptor descriptor))
             {
                 throw new InvalidOperationException($"{context}.kind references presenter command kind '{kindText}' without a registered descriptor.");
             }
 
-            PerformerCommandRouteStrategy routeStrategy =
-                ParseRequiredEnum<PerformerCommandRouteStrategy>(obj["route"], $"{context}.route");
+            PresenterCommandRouteStrategy routeStrategy =
+                ParseRequiredEnum<PresenterCommandRouteStrategy>(obj["route"], $"{context}.route");
             if (routeStrategy != descriptor.RouteStrategy)
             {
                 throw new InvalidOperationException(
@@ -1240,24 +1264,24 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        private static PerformerCommandRouteStrategy ResolveBuiltinCommandRoute(
+        private static PresenterCommandRouteStrategy ResolveBuiltinCommandRoute(
             PresenterCommandKind commandKind,
             int presenterDefinitionId)
         {
             return commandKind switch
             {
-                PresenterCommandKind.CreatePresenter => PerformerCommandRouteStrategy.CreatePerformer,
-                PresenterCommandKind.DestroyPresenterScope => PerformerCommandRouteStrategy.DestroyScope,
-                PresenterCommandKind.DestroyScopedPresenter => PerformerCommandRouteStrategy.ScopedInstance,
-                PresenterCommandKind.SetParam when presenterDefinitionId > 0 => PerformerCommandRouteStrategy.ScopedInstance,
-                PresenterCommandKind.SetParam => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.ActivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.DeactivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.InitializeTransform => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.DestroyPresenter => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.TimerSet => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.TimerKill => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.SinkParamToAsset => PerformerCommandRouteStrategy.SingleRuntime,
+                PresenterCommandKind.CreatePresenter => PresenterCommandRouteStrategy.CreatePresenter,
+                PresenterCommandKind.DestroyPresenterScope => PresenterCommandRouteStrategy.DestroyScope,
+                PresenterCommandKind.DestroyScopedPresenter => PresenterCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam when presenterDefinitionId > 0 => PresenterCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.ActivateBehavior => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DeactivateBehavior => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.InitializeTransform => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DestroyPresenter => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.TimerSet => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.TimerKill => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.SinkParamToAsset => PresenterCommandRouteStrategy.SingleRuntime,
                 _ => throw new InvalidOperationException($"Unsupported presenter command kind '{commandKind}'."),
             };
         }
@@ -1809,6 +1833,11 @@ namespace Ludots.Core.Presentation.Config
 
         private ChildPresenterRef[] ParseChildren(JsonNode? node)
         {
+            return ParseChildren(node, "children");
+        }
+
+        private ChildPresenterRef[] ParseChildren(JsonNode? node, string arrayContext)
+        {
             if (node is not JsonArray arr || arr.Count == 0)
             {
                 return Array.Empty<ChildPresenterRef>();
@@ -1819,36 +1848,127 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (arr[i] is not JsonObject obj)
                 {
-                    throw new InvalidOperationException($"Presenter child[{i}] must be an object.");
+                    throw new InvalidOperationException($"{arrayContext}[{i}] must be an object.");
                 }
 
+                string entryContext = $"{arrayContext}[{i}]";
                 if (obj["paramOverrides"] != null)
                 {
                     throw new InvalidOperationException(
-                        $"children[{i}] uses removed field 'paramOverrides'. Author 'overrides.params'.");
+                        $"{entryContext} uses removed field 'paramOverrides'. Author 'overrides.params'.");
                 }
 
                 if (obj["local_position"] != null || obj["local_rotation"] != null || obj["local_scale"] != null)
                 {
                     throw new InvalidOperationException(
-                        $"children[{i}] uses snake_case transform fields. Author 'overrides.transform.localPosition/localRotation/localScale'.");
+                        $"{entryContext} uses snake_case transform fields. Author 'overrides.transform.localPosition/localRotation/localScale'.");
                 }
 
-                RejectUnknownFields(obj, $"children[{i}]", ChildFields);
+                if (obj["children_mode"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"{entryContext} uses snake_case field 'children_mode'. Author 'childrenMode'.");
+                }
+
+                if (obj["runtime_behaviors"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"{entryContext} uses snake_case field 'runtime_behaviors'. Author 'instanceBehaviors'.");
+                }
+
+                RejectUnknownFields(obj, entryContext, ChildFields);
 
                 children[i] = new ChildPresenterRef
                 {
-                    DefinitionId = ResolveRequiredPresenterDefinitionId(obj["definitionId"], $"children[{i}].definitionId"),
+                    DefinitionId = ResolveRequiredPresenterDefinitionId(obj["definitionId"], $"{entryContext}.definitionId"),
                     ScopeTag = ParseScopeTag(obj["scopeTag"]),
-                    ParamOverrides = ParseChildParamOverrides(obj["overrides"], i),
-                    TransformOverride = ParseChildTransformOverride(obj["overrides"], i),
+                    ParamOverrides = ParseChildParamOverrides(obj["overrides"], entryContext),
+                    TransformOverride = ParseChildTransformOverride(obj["overrides"], entryContext),
+                    InstanceOverride = ParseChildInstanceOverride(obj, entryContext),
                 };
             }
 
             return children;
         }
 
-        private ParamDefault[] ParseChildParamOverrides(JsonNode? overridesNode, int childIndex)
+        private PresenterChildInstanceOverride? ParseChildInstanceOverride(JsonObject obj, string entryContext)
+        {
+            PresenterChildrenMode childrenMode =
+                ParseRequiredEnumOrDefault(obj["childrenMode"], PresenterChildrenMode.Definition, $"{entryContext}.childrenMode");
+            JsonNode? instanceChildrenNode = obj["instanceChildren"];
+            if (childrenMode == PresenterChildrenMode.Definition)
+            {
+                if (instanceChildrenNode != null)
+                {
+                    throw new InvalidOperationException(
+                        $"{entryContext} declares 'instanceChildren', but childrenMode is 'Definition'. Author childrenMode 'Instance'.");
+                }
+
+                if (obj["instanceBehaviors"] == null)
+                {
+                    return null;
+                }
+
+                return new PresenterChildInstanceOverride
+                {
+                    ChildrenMode = PresenterChildrenMode.Definition,
+                    InstanceChildren = Array.Empty<ChildPresenterRef>(),
+                    InstanceBehaviors = ParseChildInstanceBehaviors(obj["instanceBehaviors"], entryContext),
+                };
+            }
+
+            if (instanceChildrenNode == null)
+            {
+                throw new InvalidOperationException(
+                    $"{entryContext} declares childrenMode 'Instance' without 'instanceChildren'. Author the instance-owned child array.");
+            }
+
+            return new PresenterChildInstanceOverride
+            {
+                ChildrenMode = PresenterChildrenMode.Instance,
+                InstanceChildren = ParseChildren(instanceChildrenNode, $"{entryContext}.instanceChildren"),
+                InstanceBehaviors = ParseChildInstanceBehaviors(obj["instanceBehaviors"], entryContext),
+            };
+        }
+
+        private BehaviorSlot[] ParseChildInstanceBehaviors(JsonNode? node, string entryContext)
+        {
+            if (node == null)
+            {
+                return Array.Empty<BehaviorSlot>();
+            }
+
+            BehaviorSlot[] behaviors = ParseBehaviors(node, entryContext);
+            ValidateInstanceBehaviorKinds(behaviors, entryContext);
+            return behaviors;
+        }
+
+        private static void ValidateInstanceBehaviorKinds(BehaviorSlot[] behaviors, string entryContext)
+        {
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                bool supported = slot.Kind switch
+                {
+                    BehaviorKind.Material => true,
+                    BehaviorKind.Attachment => true,
+                    BehaviorKind.Grounding => true,
+                    BehaviorKind.Sound => true,
+                    BehaviorKind.Spline => true,
+                    BehaviorKind.Extension => slot.ExtensionLane is PresenterBehaviorExecutionLane.Bootstrap
+                        or PresenterBehaviorExecutionLane.ContinuousTick,
+                    _ => false,
+                };
+
+                if (!supported)
+                {
+                    throw new InvalidOperationException(
+                        $"{entryContext}.instanceBehaviors[{i}] kind '{slot.Kind}' is definition-scoped and cannot attach to a child instance. Instance behaviors support Material, Attachment, Grounding, Sound, Spline, and Extension behaviors on Bootstrap/ContinuousTick lanes.");
+                }
+            }
+        }
+
+        private ParamDefault[] ParseChildParamOverrides(JsonNode? overridesNode, string entryContext)
         {
             if (overridesNode == null)
             {
@@ -1857,14 +1977,14 @@ namespace Ludots.Core.Presentation.Config
 
             if (overridesNode is not JsonObject obj)
             {
-                throw new InvalidOperationException($"children[{childIndex}].overrides must be an object.");
+                throw new InvalidOperationException($"{entryContext}.overrides must be an object.");
             }
 
-            RejectUnknownOverrideKeys(obj, childIndex);
-            return ParseParamDefaults(obj["params"], $"children[{childIndex}].overrides.params");
+            RejectUnknownOverrideKeys(obj, entryContext);
+            return ParseParamDefaults(obj["params"], $"{entryContext}.overrides.params");
         }
 
-        private static PresenterInstanceTransformOverride ParseChildTransformOverride(JsonNode? overridesNode, int childIndex)
+        private static PresenterInstanceTransformOverride ParseChildTransformOverride(JsonNode? overridesNode, string entryContext)
         {
             if (overridesNode == null)
             {
@@ -1873,10 +1993,10 @@ namespace Ludots.Core.Presentation.Config
 
             if (overridesNode is not JsonObject obj)
             {
-                throw new InvalidOperationException($"children[{childIndex}].overrides must be an object.");
+                throw new InvalidOperationException($"{entryContext}.overrides must be an object.");
             }
 
-            RejectUnknownOverrideKeys(obj, childIndex);
+            RejectUnknownOverrideKeys(obj, entryContext);
             JsonNode? transformNode = obj["transform"];
             if (transformNode == null)
             {
@@ -1885,13 +2005,13 @@ namespace Ludots.Core.Presentation.Config
 
             if (transformNode is not JsonObject transform)
             {
-                throw new InvalidOperationException($"children[{childIndex}].overrides.transform must be an object.");
+                throw new InvalidOperationException($"{entryContext}.overrides.transform must be an object.");
             }
 
             if (transform["local_position"] != null || transform["local_rotation"] != null || transform["local_scale"] != null)
             {
                 throw new InvalidOperationException(
-                    $"children[{childIndex}].overrides.transform uses snake_case. Author localPosition/localRotation/localScale.");
+                    $"{entryContext}.overrides.transform uses snake_case. Author localPosition/localRotation/localScale.");
             }
 
             foreach (var property in transform)
@@ -1899,23 +2019,23 @@ namespace Ludots.Core.Presentation.Config
                 if (property.Key is not ("localPosition" or "localRotation" or "localScale"))
                 {
                     throw new InvalidOperationException(
-                        $"children[{childIndex}].overrides.transform field '{property.Key}' is unsupported. Expected localPosition, localRotation (XYZ degrees), localScale.");
+                        $"{entryContext}.overrides.transform field '{property.Key}' is unsupported. Expected localPosition, localRotation (XYZ degrees), localScale.");
                 }
             }
 
             Vector3 localPosition = ParseRequiredVector3(
                 transform["localPosition"],
-                $"children[{childIndex}].overrides.transform.localPosition",
+                $"{entryContext}.overrides.transform.localPosition",
                 Vector3.Zero,
                 required: false);
             Vector3 eulerDegrees = ParseRequiredVector3(
                 transform["localRotation"],
-                $"children[{childIndex}].overrides.transform.localRotation",
+                $"{entryContext}.overrides.transform.localRotation",
                 Vector3.Zero,
                 required: false);
             Vector3 localScale = ParseRequiredVector3(
                 transform["localScale"],
-                $"children[{childIndex}].overrides.transform.localScale",
+                $"{entryContext}.overrides.transform.localScale",
                 Vector3.One,
                 required: false);
 
@@ -1928,14 +2048,14 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        private static void RejectUnknownOverrideKeys(JsonObject obj, int childIndex)
+        private static void RejectUnknownOverrideKeys(JsonObject obj, string entryContext)
         {
             foreach (var property in obj)
             {
                 if (property.Key is not ("transform" or "params"))
                 {
                     throw new InvalidOperationException(
-                        $"children[{childIndex}].overrides field '{property.Key}' is unsupported. Expected transform and/or params.");
+                        $"{entryContext}.overrides field '{property.Key}' is unsupported. Expected transform and/or params.");
                 }
             }
         }
@@ -2027,6 +2147,81 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
+        private static void ValidateChildInstanceBehaviorSlots(
+            string key,
+            PresenterDefinition definition,
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey)
+        {
+            ChildPresenterRef[] children = definition.Children;
+            if (children == null || children.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                ValidateInstanceBehaviorSlotsForEntry(key, $"children[{i}]", children[i], parsedByKey);
+            }
+        }
+
+        private static void ValidateInstanceBehaviorSlotsForEntry(
+            string key,
+            string entryContext,
+            in ChildPresenterRef child,
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey)
+        {
+            PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+            if (instanceOverride == null)
+            {
+                return;
+            }
+
+            if (!TryGetDefinitionById(parsedByKey, child.DefinitionId, out PresenterDefinition referenced))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' {entryContext} references definition id={child.DefinitionId} that failed to load.");
+            }
+
+            BehaviorSlot[] instanceBehaviors = instanceOverride.InstanceBehaviors;
+            BehaviorSlot[] referencedBehaviors = referenced.Behaviors;
+            for (int i = 0; i < instanceBehaviors.Length; i++)
+            {
+                int slotIndex = instanceBehaviors[i].SlotIndex;
+                for (int j = 0; j < referencedBehaviors.Length; j++)
+                {
+                    if (referencedBehaviors[j].SlotIndex == slotIndex)
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter '{key}' {entryContext}.instanceBehaviors[{i}] slot {slotIndex} collides with a behavior slot of referenced definition '{referenced.Key}'. Choose a slot the referenced definition does not use.");
+                    }
+                }
+            }
+
+            ChildPresenterRef[] instanceChildren = instanceOverride.InstanceChildren;
+            for (int i = 0; i < instanceChildren.Length; i++)
+            {
+                ValidateInstanceBehaviorSlotsForEntry(key, $"{entryContext}.instanceChildren[{i}]", instanceChildren[i], parsedByKey);
+            }
+        }
+
+        private static bool TryGetDefinitionById(
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey,
+            int definitionId,
+            out PresenterDefinition definition)
+        {
+            foreach ((string _, PresenterDefinition parsedDefinition) in parsedByKey)
+            {
+                if (parsedDefinition.Id == definitionId)
+                {
+                    definition = parsedDefinition;
+                    return true;
+                }
+            }
+
+            definition = null!;
+            return false;
+        }
+
         private static void ValidateRuleReferences(
             string key,
             PresenterDefinition definition,
@@ -2109,7 +2304,7 @@ namespace Ludots.Core.Presentation.Config
 
                 bool isBuiltinKind = parsedBuiltinKind;
                 int kindId;
-                PerformerBehaviorExecutionLane extensionLane = PerformerBehaviorExecutionLane.None;
+                PresenterBehaviorExecutionLane extensionLane = PresenterBehaviorExecutionLane.None;
                 int extensionTriggerId = 0;
                 if (isBuiltinKind)
                 {
@@ -2124,13 +2319,13 @@ namespace Ludots.Core.Presentation.Config
                     }
 
                     kindId = _behaviorKinds?.GetId(kindText) ?? 0;
-                    if (kindId < PerformerBehaviorKindRegistry.FirstModBehaviorKindId)
+                    if (kindId < PresenterBehaviorKindRegistry.FirstModBehaviorKindId)
                     {
                         throw new InvalidOperationException(
                             $"Presenter '{ownerKey}' behavior[{i}].kind references unregistered presenter behavior kind '{kindText}'.");
                     }
 
-                    if (!_behaviorKinds!.TryGetDescriptor(kindId, out PerformerBehaviorExtensionDescriptor descriptor))
+                    if (!_behaviorKinds!.TryGetDescriptor(kindId, out PresenterBehaviorExtensionDescriptor descriptor))
                     {
                         throw new InvalidOperationException(
                             $"Presenter '{ownerKey}' behavior[{i}].kind references presenter behavior kind '{kindText}' without a registered descriptor.");
@@ -2242,9 +2437,9 @@ namespace Ludots.Core.Presentation.Config
             return slots;
         }
 
-        private (PerformerBehaviorExecutionLane Lane, int TriggerId) ParseExtensionBehaviorExecution(
+        private (PresenterBehaviorExecutionLane Lane, int TriggerId) ParseExtensionBehaviorExecution(
             JsonObject obj,
-            in PerformerBehaviorExtensionDescriptor descriptor,
+            in PresenterBehaviorExtensionDescriptor descriptor,
             string context)
         {
             if (obj["execution"] is not JsonObject execution)
@@ -2252,8 +2447,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context}.execution is required for extension presenter behavior.");
             }
 
-            PerformerBehaviorExecutionLane lane =
-                ParseRequiredEnum<PerformerBehaviorExecutionLane>(execution["lane"], $"{context}.execution.lane");
+            PresenterBehaviorExecutionLane lane =
+                ParseRequiredEnum<PresenterBehaviorExecutionLane>(execution["lane"], $"{context}.execution.lane");
             if (lane != descriptor.Lane)
             {
                 throw new InvalidOperationException(
@@ -2262,10 +2457,10 @@ namespace Ludots.Core.Presentation.Config
 
             return lane switch
             {
-                PerformerBehaviorExecutionLane.Bootstrap => (lane, 0),
-                PerformerBehaviorExecutionLane.ContinuousTick => (lane, 0),
-                PerformerBehaviorExecutionLane.OwnerAttributeDirty => (lane, ParseExtensionAttributeTrigger(execution, context)),
-                PerformerBehaviorExecutionLane.OwnerTagDirty => (lane, ParseExtensionTagTrigger(execution, context)),
+                PresenterBehaviorExecutionLane.Bootstrap => (lane, 0),
+                PresenterBehaviorExecutionLane.ContinuousTick => (lane, 0),
+                PresenterBehaviorExecutionLane.OwnerAttributeDirty => (lane, ParseExtensionAttributeTrigger(execution, context)),
+                PresenterBehaviorExecutionLane.OwnerTagDirty => (lane, ParseExtensionTagTrigger(execution, context)),
                 _ => throw new InvalidOperationException(
                     $"{context}.execution.lane '{lane}' is not supported by the current presenter runtime."),
             };
