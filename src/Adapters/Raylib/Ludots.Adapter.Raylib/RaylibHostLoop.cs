@@ -504,9 +504,14 @@ namespace Ludots.Adapter.Raylib
                         engine.Tick(dt);
                         // Typed instanced batch requests live from tick end until the next tick's
                         // buffer clear; consuming them here hands resident lanes to this frame's draw.
+                        // Grounding always samples the Core-owned visual heightmap service; the
+                        // adapter never substitutes its own ground height truth.
                         setup.InstancedBatchLaneStore.ApplyRequests(
                             engine.GetService(CoreServiceKeys.InstancedBatchRequestBuffer).GetSpan(),
-                            engine.GetService(CoreServiceKeys.InstancedBatchAssetRegistry));
+                            engine.GetService(CoreServiceKeys.InstancedBatchAssetRegistry),
+                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? coreVisualHeightmap)
+                                ? coreVisualHeightmap
+                                : null);
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
                         {

@@ -151,7 +151,42 @@ namespace Ludots.Tests.RaylibAdapter
         }
 
         [Test]
-        public void ApplyRequests_ThrowsForExternalSourceGroups()
+        public void ApplyRequests_ConsumesFactorizedSourceForExternalGroups()
+        {
+            InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 2));
+            asset.Groups[0].Source = new InstancedBatchInstanceSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 2,
+                groundToVisualHeightmap: false);
+            asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 2,
+                groundToVisualHeightmap: false,
+                positionCm: new[] { new Vector3(200f, 50f, -300f), new Vector3(400f, 0f, 0f) },
+                rotation: new[] { Quaternion.Identity, Quaternion.Identity },
+                scale: new[] { new Vector3(2f, 2f, 2f), Vector3.One });
+            InstancedBatchAssetRegistry registry = new();
+            int batchAssetId = registry.Register("demo.batch", asset);
+            CompileAddresses(registry, batchAssetId, asset);
+
+            InstancedBatchRequestBuffer requests = new();
+            var store = new RaylibInstancedBatchLaneStore();
+            requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 2, finalChunk: true));
+            store.ApplyRequests(requests.GetSpan(), registry);
+
+            Assert.That(store.ResidentLaneCount, Is.EqualTo(1));
+            RaylibInstancedBatchLane lane = store.GetResidentLane(0);
+            Assert.That(lane.Count, Is.EqualTo(2));
+            Matrix4x4 expected = Matrix4x4.CreateScale(2f) * Matrix4x4.CreateTranslation(new Vector3(2f, 0.5f, -3f));
+            AssertMatrixNear(lane.Matrices[0], expected);
+        }
+
+        [Test]
+        public void ApplyRequests_ThrowsForSourceGroupWithoutFactorizedData()
         {
             InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 2));
             asset.Groups[0].Source = new InstancedBatchInstanceSource(
@@ -170,7 +205,72 @@ namespace Ludots.Tests.RaylibAdapter
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
                 () => store.ApplyRequests(requests.GetSpan(), registry))!;
-            Assert.That(ex.Message, Does.Contain("#1152"));
+            Assert.That(ex.Message, Does.Contain("without loaded factorized data"));
+        }
+
+        [Test]
+        public void ApplyRequests_GroundsExternalSourceThroughCoreVisualHeightmap()
+        {
+            InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 1));
+            asset.Groups[0].Source = new InstancedBatchInstanceSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 1,
+                groundToVisualHeightmap: true);
+            asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 1,
+                groundToVisualHeightmap: true,
+                positionCm: new[] { new Vector3(200f, 50f, -300f) },
+                rotation: new[] { Quaternion.Identity },
+                scale: new[] { Vector3.One });
+            InstancedBatchAssetRegistry registry = new();
+            int batchAssetId = registry.Register("demo.batch", asset);
+            CompileAddresses(registry, batchAssetId, asset);
+
+            InstancedBatchRequestBuffer requests = new();
+            var store = new RaylibInstancedBatchLaneStore();
+            requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 1, finalChunk: true));
+            store.ApplyRequests(requests.GetSpan(), registry, new StubVisualHeightmap(123f));
+
+            Matrix4x4 actual = store.GetResidentLane(0).Matrices[0];
+            Matrix4x4 expected = Matrix4x4.CreateTranslation(new Vector3(2f, 1.23f, -3f));
+            AssertMatrixNear(actual, expected);
+        }
+
+        [Test]
+        public void ApplyRequests_ThrowsWhenGroundedSourceHasNoCoreHeightmap()
+        {
+            InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 1));
+            asset.Groups[0].Source = new InstancedBatchInstanceSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 1,
+                groundToVisualHeightmap: true);
+            asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 1,
+                groundToVisualHeightmap: true,
+                positionCm: new[] { Vector3.Zero },
+                rotation: new[] { Quaternion.Identity },
+                scale: new[] { Vector3.One });
+            InstancedBatchAssetRegistry registry = new();
+            int batchAssetId = registry.Register("demo.batch", asset);
+            CompileAddresses(registry, batchAssetId, asset);
+
+            InstancedBatchRequestBuffer requests = new();
+            var store = new RaylibInstancedBatchLaneStore();
+            requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 1, finalChunk: true));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => store.ApplyRequests(requests.GetSpan(), registry))!;
+            Assert.That(ex.Message, Does.Contain("Core visual heightmap service is unavailable"));
         }
 
         [Test]
@@ -345,6 +445,53 @@ namespace Ludots.Tests.RaylibAdapter
             Assert.That(actual.M41, Is.EqualTo(expected.M41).Within(epsilon));
             Assert.That(actual.M42, Is.EqualTo(expected.M42).Within(epsilon));
             Assert.That(actual.M43, Is.EqualTo(expected.M43).Within(epsilon));
+        }
+
+        private sealed class StubVisualHeightmap : IVisualHeightmap
+        {
+            private readonly float _heightCm;
+
+            public StubVisualHeightmap(float heightCm)
+            {
+                _heightCm = heightCm;
+            }
+
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
+            {
+                heightCm = _heightCm;
+                return true;
+            }
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)
+            {
+                throw new NotSupportedException();
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
+            {
+                throw new NotSupportedException();
+            }
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = -1)
+            {
+                throw new NotSupportedException();
+            }
         }
     }
 }
