@@ -50,6 +50,11 @@ namespace Ludots.Core.Presentation.Presenters
         private Entity[] _childBatchCreated = Array.Empty<Entity>();
         private int[] _childBatchScopeIds = Array.Empty<int>();
         private int[] _childBatchStableIds = Array.Empty<int>();
+        private Entity[] _planNodeEntities = Array.Empty<Entity>();
+        private int[] _planNodeScopes = Array.Empty<int>();
+        private PresenterCreateTraceEntry[] _createTrace = new PresenterCreateTraceEntry[CreateTraceCapacity];
+        private int _createTraceHead;
+        private int _createTraceCount;
         private Entity[] _scopeDestroyBuffer = Array.Empty<Entity>();
         private Entity[] _retainedPresentationDirtyBuffer = Array.Empty<Entity>();
         private int _retainedPresentationDirtyBufferCount;
@@ -76,6 +81,40 @@ namespace Ludots.Core.Presentation.Presenters
         public double LastChildBatchComponentFillMs { get; private set; }
         public double LastChildBatchIndexWriteMs { get; private set; }
         public double LastChildBatchStableIdMs { get; private set; }
+
+        public const int CreateTraceCapacity = 8192;
+
+        public int CreateTraceCount => _createTraceCount;
+
+        public PresenterCreateTraceEntry GetCreateTraceAt(int index)
+        {
+            if ((uint)index >= (uint)_createTraceCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            return _createTrace[(_createTraceHead + index) % _createTrace.Length];
+        }
+
+        public PresenterCreateTraceEntry[] FindCreateTraces(int rootStableId)
+        {
+            if (_createTraceCount == 0)
+            {
+                return Array.Empty<PresenterCreateTraceEntry>();
+            }
+
+            var matches = new List<PresenterCreateTraceEntry>(4);
+            for (int i = 0; i < _createTraceCount; i++)
+            {
+                PresenterCreateTraceEntry entry = GetCreateTraceAt(i);
+                if (entry.RootStableId == rootStableId)
+                {
+                    matches.Add(entry);
+                }
+            }
+
+            return matches.ToArray();
+        }
 
         public string BuildActiveDefinitionSummary(int maxEntries)
         {
@@ -395,8 +434,16 @@ namespace Ludots.Core.Presentation.Presenters
                     owners,
                     created.Slice(0, owners.Length),
                     includeOwnerPayloadTransformSync);
-                LastRootBatchOwnerPayloadCount = owners.Length;
                 LastRootBatchOwnerPayloadMs = ElapsedMs(payloadStart);
+                LastRootBatchOwnerPayloadCount = owners.Length;
+            }
+
+            for (int i = 0; i < owners.Length; i++)
+            {
+                ref readonly PresenterState rootState = ref _world.Get<PresenterState>(created[i]);
+                AppendCreateTrace(new PresenterCreateTraceEntry(
+                    rootState.DefId, rootState.StableId, nodeIndex: -1, path: "root",
+                    rootState.DefId, rootState.ScopeId, rootState.StableId, Entity.Null, created[i]));
             }
 
             long postCreateStart = Stopwatch.GetTimestamp();
@@ -429,11 +476,14 @@ namespace Ludots.Core.Presentation.Presenters
 
             if (hasChildren)
             {
-                CreateChildrenRecursiveBatch(
+                CreateChildrenBatch(
                     definitions,
+                    definition,
+                    definitions.GetOrCreateCreatePlan(defId),
                     created.Slice(0, owners.Length),
                     owners,
                     scopeIds,
+                    stableIds,
                     ownerTransforms,
                     ownerCulls,
                     PresentationAnchorKind.Entity,
@@ -457,13 +507,36 @@ namespace Ludots.Core.Presentation.Presenters
             Func<int>? allocateStableId = null)
         {
             definition = ResolveDefinition(defId, definition);
+            if (parent != Entity.Null && (!_world.IsAlive(parent) || !_world.Has<PresenterState>(parent)))
+            {
+                throw new InvalidOperationException(
+                    $"{PresenterCreatePlanCompiler.PlanParentMissingError}: rootDefinitionId={defId}, childPath='root', planNode=-1, parent entity {parent.Id} is not an active presenter.");
+            }
 
-            Entity entity = Create(defId, owner, scopeId, anchorKind, in worldPosition, stableId, parent, definition);
-            ref PresenterState state = ref _world.Get<PresenterState>(entity);
-            state.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
-            SetParamDefault(definition, entity);
-            InitializeTransform(entity, definition);
-            CreateChildrenRecursive(definitions, entity, owner, scopeId, anchorKind, allocateStableId);
+            PresenterCreatePlan plan = definitions.GetOrCreateCreatePlan(defId);
+            Entity entity = Entity.Null;
+            try
+            {
+                entity = Create(defId, owner, scopeId, anchorKind, in worldPosition, stableId, parent, definition);
+                ref PresenterState state = ref _world.Get<PresenterState>(entity);
+                state.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
+                SetParamDefault(definition, entity);
+                InitializeTransform(entity, definition);
+                AppendCreateTrace(new PresenterCreateTraceEntry(
+                    state.DefId, state.StableId, nodeIndex: -1, path: "root",
+                    state.DefId, scopeId, state.StableId, parent, entity));
+                ExecuteCreatePresenterPlan(definitions, plan, entity, owner, scopeId, anchorKind, allocateStableId);
+            }
+            catch
+            {
+                if (entity != Entity.Null && _world.IsAlive(entity))
+                {
+                    Destroy(entity);
+                }
+
+                throw;
+            }
+
             return entity;
         }
 
@@ -1358,6 +1431,8 @@ namespace Ludots.Core.Presentation.Presenters
             _activeCount = 0;
             _structureVersion++;
             _nonRootCount = 0;
+            _createTraceHead = 0;
+            _createTraceCount = 0;
             _byDefinition.Clear();
             _byOwner.Clear();
             _byOwnerDefinition.Clear();
@@ -2177,75 +2252,136 @@ namespace Ludots.Core.Presentation.Presenters
             MarkRetainedPresentationRequestDirty(entity);
         }
 
-        private void CreateChildrenRecursive(
+        private void ExecuteCreatePresenterPlan(
             PresenterDefinitionRegistry definitions,
-            Entity parentEntity,
+            PresenterCreatePlan plan,
+            Entity rootEntity,
             Entity owner,
-            int parentScopeId,
+            int rootScopeId,
             PresentationAnchorKind anchorKind,
             Func<int>? allocateStableId)
         {
-            if (!definitions.TryGet(_world.Get<PresenterState>(parentEntity).DefId, out PresenterDefinition parentDefinition))
+            PresenterCreatePlanNode[] nodes = plan.Nodes;
+            if (nodes.Length == 0)
             {
                 return;
             }
 
-            ChildPresenterRef[] children = ResolveEffectiveChildren(parentEntity, parentDefinition);
-            if (children == null || children.Length == 0)
+            EnsurePlanNodeCapacity(nodes.Length);
+            ref readonly PresenterState rootState = ref _world.Get<PresenterState>(rootEntity);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                PresenterCreatePlanNode node = nodes[i];
+                Entity parentEntity = node.ParentNodeIndex < 0
+                    ? rootEntity
+                    : _planNodeEntities[node.ParentNodeIndex];
+                int parentScopeId = node.ParentNodeIndex < 0
+                    ? rootScopeId
+                    : _planNodeScopes[node.ParentNodeIndex];
+                int childScopeId = node.ScopeTag > 0 ? node.ScopeTag : parentScopeId;
+                int childStableId = allocateStableId != null ? allocateStableId() : 0;
+                if (parentEntity == Entity.Null ||
+                    !_world.IsAlive(parentEntity) ||
+                    !_world.Has<PresenterState>(parentEntity))
+                {
+                    throw new InvalidOperationException(
+                        $"{PresenterCreatePlanCompiler.PlanParentMissingError}: rootDefinitionId={plan.RootDefinitionId}, childPath='{node.Path}', planNode={i}, parent entity is not an active presenter.");
+                }
+
+                Entity childEntity;
+                try
+                {
+                    childEntity = CreateFromPlanNode(
+                        definitions, node, owner, childScopeId, anchorKind, parentEntity, childStableId);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"{PresenterCreatePlanCompiler.PlanNodeFailedError}: rootDefinitionId={plan.RootDefinitionId}, childPath='{node.Path}', planNode={i}: {ex.Message}", ex);
+                }
+
+                _planNodeEntities[i] = childEntity;
+                _planNodeScopes[i] = childScopeId;
+                ref readonly PresenterState childState = ref _world.Get<PresenterState>(childEntity);
+                AppendCreateTrace(new PresenterCreateTraceEntry(
+                    rootState.DefId, rootState.StableId, nodeIndex: i, node.Path,
+                    childState.DefId, childScopeId, childState.StableId, parentEntity, childEntity));
+            }
+        }
+
+        private Entity CreateFromPlanNode(
+            PresenterDefinitionRegistry definitions,
+            PresenterCreatePlanNode node,
+            Entity owner,
+            int childScopeId,
+            PresentationAnchorKind anchorKind,
+            Entity parentEntity,
+            int childStableId)
+        {
+            if (!definitions.TryGet(node.DefinitionId, out PresenterDefinition childDefinition))
+            {
+                throw new InvalidOperationException(
+                    $"{PresenterCreatePlanCompiler.UnknownChildDefinitionError}: childPath='{node.Path}', definitionId={node.DefinitionId} is not registered.");
+            }
+
+            Entity childEntity = Create(
+                node.DefinitionId,
+                owner,
+                childScopeId,
+                anchorKind,
+                Vector3.Zero,
+                childStableId,
+                parentEntity,
+                childDefinition);
+
+            ref PresenterState childState = ref _world.Get<PresenterState>(childEntity);
+            childState.BehaviorActiveMask = BuildDefaultBehaviorMask(childDefinition);
+            AttachChildInstanceOverride(childEntity, ref childState, node);
+            SyncTickBehaviorMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
+            SyncEmitWorkMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
+            SetParamDefault(childDefinition, childEntity);
+            ApplyParamOverrides(childEntity, node.ParamOverrides);
+            if (node.TransformOverride.HasOverride)
+            {
+                _world.Add(childEntity, node.TransformOverride);
+            }
+            InitializeTransform(childEntity, childDefinition);
+            if (childDefinition.RequiresBootstrapProcessing && !_world.Has<PresenterBootstrapPending>(childEntity))
+            {
+                AddMarker<PresenterBootstrapPending>(childEntity);
+            }
+
+            return childEntity;
+        }
+
+        private void EnsurePlanNodeCapacity(int required)
+        {
+            if (required <= _planNodeEntities.Length)
             {
                 return;
             }
 
-            for (int i = 0; i < children.Length; i++)
+            int capacity = Math.Max(required, Math.Max(64, _planNodeEntities.Length * 2));
+            Array.Resize(ref _planNodeEntities, capacity);
+            Array.Resize(ref _planNodeScopes, capacity);
+        }
+
+        private void AppendCreateTrace(in PresenterCreateTraceEntry entry)
+        {
+            if (_createTraceCount < _createTrace.Length)
             {
-                ref readonly ChildPresenterRef child = ref children[i];
-                if (!definitions.TryGet(child.DefinitionId, out PresenterDefinition childDefinition))
-                {
-                    throw new InvalidOperationException($"Presenter child definition id={child.DefinitionId} is not registered.");
-                }
-
-                int childScopeId = child.ScopeTag > 0 ? child.ScopeTag : parentScopeId;
-                Entity childEntity = Create(
-                    child.DefinitionId,
-                    owner,
-                    childScopeId,
-                    anchorKind,
-                    Vector3.Zero,
-                    allocateStableId != null ? allocateStableId() : 0,
-                    parentEntity,
-                    childDefinition);
-
-                ref PresenterState childState = ref _world.Get<PresenterState>(childEntity);
-                childState.BehaviorActiveMask = BuildDefaultBehaviorMask(childDefinition);
-                AttachChildInstanceOverride(childEntity, ref childState, in child);
-                SyncTickBehaviorMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
-                SyncEmitWorkMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
-                SetParamDefault(childDefinition, childEntity);
-                ApplyParamOverrides(childEntity, child.ParamOverrides);
-                if (child.TransformOverride.HasOverride)
-                {
-                    _world.Add(childEntity, child.TransformOverride);
-                }
-                InitializeTransform(childEntity, childDefinition);
-                if (childDefinition.RequiresBootstrapProcessing && !_world.Has<PresenterBootstrapPending>(childEntity))
-                {
-                    AddMarker<PresenterBootstrapPending>(childEntity);
-                }
-
-                CreateChildrenRecursive(definitions, childEntity, owner, childScopeId, anchorKind, allocateStableId);
+                _createTrace[(_createTraceHead + _createTraceCount) % _createTrace.Length] = entry;
+                _createTraceCount++;
+                return;
             }
+
+            _createTrace[_createTraceHead] = entry;
+            _createTraceHead = (_createTraceHead + 1) % _createTrace.Length;
         }
 
-        private ChildPresenterRef[] ResolveEffectiveChildren(Entity parentEntity, PresenterDefinition parentDefinition)
+        private void AttachChildInstanceOverride(Entity childEntity, ref PresenterState childState, PresenterCreatePlanNode node)
         {
-            return _world.Has<PresenterInstanceChildren>(parentEntity)
-                ? _world.Get<PresenterInstanceChildren>(parentEntity).Children
-                : parentDefinition.Children;
-        }
-
-        private void AttachChildInstanceOverride(Entity childEntity, ref PresenterState childState, in ChildPresenterRef child)
-        {
-            PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+            PresenterChildInstanceOverride? instanceOverride = node.InstanceOverride;
             if (instanceOverride == null)
             {
                 return;
@@ -2257,7 +2393,7 @@ namespace Ludots.Core.Presentation.Presenters
                 if (instanceChildren == null)
                 {
                     throw new InvalidOperationException(
-                        $"Presenter child definition id={child.DefinitionId} declares instance children mode without an instance children payload.");
+                        $"Presenter child definition id={node.DefinitionId} declares instance children mode without an instance children payload.");
                 }
 
                 _world.Add(childEntity, new PresenterInstanceChildren { Children = instanceChildren });
@@ -2278,11 +2414,14 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
-        private void CreateChildrenRecursiveBatch(
+        private void CreateChildrenBatch(
             PresenterDefinitionRegistry definitions,
+            PresenterDefinition parentDefinition,
+            PresenterCreatePlan plan,
             ReadOnlySpan<Entity> parentEntities,
             ReadOnlySpan<Entity> owners,
             ReadOnlySpan<int> parentScopeIds,
+            ReadOnlySpan<int> parentStableIds,
             ReadOnlySpan<VisualTransform> ownerTransforms,
             ReadOnlySpan<CullState> ownerCulls,
             PresentationAnchorKind anchorKind,
@@ -2295,29 +2434,26 @@ namespace Ludots.Core.Presentation.Presenters
 
             if (parentEntities.Length != owners.Length ||
                 parentEntities.Length != parentScopeIds.Length ||
+                parentEntities.Length != parentStableIds.Length ||
                 parentEntities.Length != ownerTransforms.Length ||
                 parentEntities.Length != ownerCulls.Length)
             {
                 throw new ArgumentException("Presenter child batch spans must have matching lengths.");
             }
 
-            if (!definitions.TryGet(_world.Get<PresenterState>(parentEntities[0]).DefId, out PresenterDefinition parentDefinition))
+            PresenterCreatePlanNode[] nodes = plan.Nodes;
+            if (nodes.Length == 0)
             {
                 return;
             }
 
-            ChildPresenterRef[] children = parentDefinition.Children;
-            if (children == null || children.Length == 0)
-            {
-                return;
-            }
-
-            if (!CanBatchCreateDirectChildren(definitions, children))
+            if (!CanBatchCreatePlanNodes(definitions, parentDefinition, plan))
             {
                 for (int i = 0; i < parentEntities.Length; i++)
                 {
-                    CreateChildrenRecursive(
+                    ExecuteCreatePresenterPlan(
                         definitions,
+                        plan,
                         parentEntities[i],
                         owners[i],
                         parentScopeIds[i],
@@ -2329,22 +2465,23 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             EnsureChildBatchCapacity(parentEntities.Length);
-            for (int childIndex = 0; childIndex < children.Length; childIndex++)
+            for (int nodeIndex = 0; nodeIndex < nodes.Length; nodeIndex++)
             {
-                ref readonly ChildPresenterRef child = ref children[childIndex];
-                if (!definitions.TryGet(child.DefinitionId, out PresenterDefinition childDefinition))
+                PresenterCreatePlanNode node = nodes[nodeIndex];
+                if (!definitions.TryGet(node.DefinitionId, out PresenterDefinition childDefinition))
                 {
-                    throw new InvalidOperationException($"Presenter child definition id={child.DefinitionId} is not registered.");
+                    throw new InvalidOperationException(
+                        $"{PresenterCreatePlanCompiler.UnknownChildDefinitionError}: childPath='{node.Path}', definitionId={node.DefinitionId} is not registered.");
                 }
 
-                EnsureParentsCanAcceptChild(parentEntities, child.DefinitionId);
+                EnsureParentsCanAcceptChild(parentEntities, node.DefinitionId);
 
                 bool hasParamDefaults = childDefinition.ParamDefaults != null && childDefinition.ParamDefaults.Length != 0;
                 long stableIdStart = Stopwatch.GetTimestamp();
                 int childScopeCount = 0;
                 for (int i = 0; i < parentEntities.Length; i++)
                 {
-                    _childBatchScopeIds[i] = child.ScopeTag > 0 ? child.ScopeTag : parentScopeIds[i];
+                    _childBatchScopeIds[i] = node.ScopeTag > 0 ? node.ScopeTag : parentScopeIds[i];
                     _childBatchStableIds[i] = allocateStableId != null ? allocateStableId() : 0;
                     childScopeCount++;
                 }
@@ -2390,7 +2527,7 @@ namespace Ludots.Core.Presentation.Presenters
                     ownerTransforms,
                     ownerCulls,
                     parentEntities,
-                    child.DefinitionId,
+                    node.DefinitionId,
                     childDefinition,
                     defaultBehaviorMask,
                     anchorKind,
@@ -2414,6 +2551,13 @@ namespace Ludots.Core.Presentation.Presenters
                     {
                         SetParamDefault(childDefinition, _childBatchCreated[i]);
                     }
+                }
+
+                for (int i = 0; i < childScopeCount; i++)
+                {
+                    AppendCreateTrace(new PresenterCreateTraceEntry(
+                        parentDefinition.Id, parentStableIds[i], nodeIndex, node.Path,
+                        node.DefinitionId, _childBatchScopeIds[i], _childBatchStableIds[i], parentEntities[i], _childBatchCreated[i]));
                 }
 
                 _activeCount += childScopeCount;
@@ -2475,19 +2619,37 @@ namespace Ludots.Core.Presentation.Presenters
             return true;
         }
 
-        private static bool CanBatchCreateDirectChildren(
+        private static bool CanBatchCreatePlanNodes(
             PresenterDefinitionRegistry definitions,
-            ChildPresenterRef[] children)
+            PresenterDefinition parentDefinition,
+            PresenterCreatePlan plan)
         {
-            for (int i = 0; i < children.Length; i++)
+            ChildPresenterRef[] children = parentDefinition.Children;
+            if (children == null || children.Length == 0)
             {
-                ref readonly ChildPresenterRef child = ref children[i];
-                if (child.InstanceOverride != null ||
-                    (child.ParamOverrides != null && child.ParamOverrides.Length != 0) ||
-                    child.TransformOverride.HasOverride ||
-                    !definitions.TryGet(child.DefinitionId, out PresenterDefinition childDefinition) ||
-                    RequiresDeferredBootstrapAfterBatchCreate(childDefinition) ||
-                    (childDefinition.Children != null && childDefinition.Children.Length != 0))
+                return false;
+            }
+
+            PresenterCreatePlanNode[] nodes = plan.Nodes;
+            if (nodes.Length != children.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                PresenterCreatePlanNode node = nodes[i];
+                if (node.ParentNodeIndex != -1 || node.HasOverridePayload)
+                {
+                    return false;
+                }
+
+                if (!definitions.TryGet(node.DefinitionId, out PresenterDefinition childDefinition))
+                {
+                    return false;
+                }
+
+                if (RequiresDeferredBootstrapAfterBatchCreate(childDefinition))
                 {
                     return false;
                 }

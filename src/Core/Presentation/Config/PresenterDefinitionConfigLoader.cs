@@ -138,6 +138,8 @@ namespace Ludots.Core.Presentation.Config
                 string key = parsedOrder[i];
                 _registry.Register(key, validByKey[key]);
             }
+
+            _registry.CompileAllCreatePlans();
         }
 
         private static void ValidateRawDefinitionIds(IReadOnlyList<ConfigFragment> fragments, string relativePath)
