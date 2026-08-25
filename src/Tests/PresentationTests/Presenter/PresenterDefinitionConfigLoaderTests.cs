@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Numerics;
 using System.Text;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
@@ -578,8 +579,9 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("rules[0].command"));
-            Assert.That(ex.Message, Does.Contain("unknown field 'ParamValue'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[strict_actor].rules[0].command"));
+            Assert.That(ex.Message, Does.Contain("field=ParamValue"));
+            Assert.That(ex.Message, Does.Contain("code=UnknownField"));
         }
 
         [TestCase(
@@ -652,21 +654,21 @@ namespace Ludots.Tests.Presentation
             """
             { "paramKey": "typo.binding", "source": "constant", "constantValu": 1.0 }
             """,
-            "Presenter 'typo_binding_actor' bindings[0]",
+            "presenters.json[typo_binding_actor].bindings[0]",
             "constantValu")]
         [TestCase(
             """
             { "paramKey": "typo.binding", "sorce": "graph" }
             """,
-            "Presenter 'typo_binding_actor' bindings[0]",
+            "presenters.json[typo_binding_actor].bindings[0]",
             "sorce")]
         [TestCase(
             """
             { "paramKey": "typo.binding", "source": "graph", "sourceId": 5, "textTken": "x" }
             """,
-            "Presenter 'typo_binding_actor' bindings[0]",
+            "presenters.json[typo_binding_actor].bindings[0]",
             "textTken")]
-        public void Load_RejectsUnknownBindingFields(string bindingJson, string expectedContext, string expectedField)
+        public void Load_RejectsUnknownBindingFields(string bindingJson, string expectedPath, string expectedField)
         {
             WriteCatalog();
             WritePresenters($$"""
@@ -685,23 +687,23 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain(expectedContext));
-            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+            Assert.That(ex.Message, Does.Contain($"path={expectedPath}"));
+            Assert.That(ex.Message, Does.Contain($"field={expectedField}"));
         }
 
         [TestCase(
             """
             { "paramKey": "typo.default", "lane": "Float", "floatValu": 1.0 }
             """,
-            "Presenter 'typo_defaults_actor' paramDefaults[0]",
+            "presenters.json[typo_defaults_actor].paramDefaults[0]",
             "floatValu")]
         [TestCase(
             """
             { "paramKey": "typo.default", "lane": "Float", "floatValue": 1.0, "intValu": 2 }
             """,
-            "Presenter 'typo_defaults_actor' paramDefaults[0]",
+            "presenters.json[typo_defaults_actor].paramDefaults[0]",
             "intValu")]
-        public void Load_RejectsUnknownParamDefaultFields(string defaultJson, string expectedContext, string expectedField)
+        public void Load_RejectsUnknownParamDefaultFields(string defaultJson, string expectedPath, string expectedField)
         {
             WriteCatalog();
             WritePresenters($$"""
@@ -720,8 +722,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain(expectedContext));
-            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+            Assert.That(ex.Message, Does.Contain($"path={expectedPath}"));
+            Assert.That(ex.Message, Does.Contain($"field={expectedField}"));
         }
 
         [TestCase(@"{ ""durationSeconds"": 1.0, ""persistenc"": ""Scoped"" }", "persistenc")]
@@ -743,8 +745,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("Presenter 'typo_lifecycle_actor' lifecycle"));
-            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[typo_lifecycle_actor].lifecycle"));
+            Assert.That(ex.Message, Does.Contain($"field={expectedField}"));
         }
 
         [TestCase(@"{ ""offet"": [0, 1, 0] }", "offet")]
@@ -766,8 +768,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("Presenter 'typo_anchor_actor' anchor"));
-            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[typo_anchor_actor].anchor"));
+            Assert.That(ex.Message, Does.Contain($"field={expectedField}"));
         }
 
         [Test]
@@ -795,8 +797,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("Presenter 'owner_context_actor' rules[0]"));
-            Assert.That(ex.Message, Does.Contain("unknown field 'inlin'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[owner_context_actor].rules[0]"));
+            Assert.That(ex.Message, Does.Contain("field=inlin"));
         }
 
         [TestCase(
@@ -807,7 +809,7 @@ namespace Ludots.Tests.Presentation
               "mobility": "Static"
             }
             """,
-            "AssetBinding.assetKind")]
+            "presenters.json[strict_asset_actor].behaviors[0].assetBinding.assetKind")]
         [TestCase(
             """
             {
@@ -816,7 +818,7 @@ namespace Ludots.Tests.Presentation
               "mobility": "Static"
             }
             """,
-            "AssetBinding.renderPath")]
+            "presenters.json[strict_asset_actor].behaviors[0].assetBinding.renderPath")]
         [TestCase(
             """
             {
@@ -825,7 +827,7 @@ namespace Ludots.Tests.Presentation
               "renderPath": "StaticMesh"
             }
             """,
-            "AssetBinding.mobility")]
+            "presenters.json[strict_asset_actor].behaviors[0].assetBinding.mobility")]
         public void Load_RejectsAssetBindingsMissingRequiredExplicitConfigFields(string assetBindingJson, string expectedContext)
         {
             WriteCatalog();
@@ -3182,8 +3184,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("Presenter 'typo_definition'"));
-            Assert.That(ex.Message, Does.Contain("unknown field 'lifecyle'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[typo_definition]"));
+            Assert.That(ex.Message, Does.Contain("field=lifecyle"));
         }
 
         [Test]
@@ -3217,8 +3219,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("Presenter 'typo_behavior' behavior[0]"));
-            Assert.That(ex.Message, Does.Contain("unknown field 'activeByDefaul'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[typo_behavior].behaviors[0]"));
+            Assert.That(ex.Message, Does.Contain("field=activeByDefaul"));
         }
 
         [Test]
@@ -3243,8 +3245,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("children[0]"));
-            Assert.That(ex.Message, Does.Contain("unknown field 'scopeTeg'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[typo_child].children[0]"));
+            Assert.That(ex.Message, Does.Contain("field=scopeTeg"));
         }
 
         [Test]
@@ -3271,8 +3273,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException eventEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(eventEx.Message, Does.Contain("rules[0].event"));
-            Assert.That(eventEx.Message, Does.Contain("unknown field 'kyeId'"));
+            Assert.That(eventEx.Message, Does.Contain("path=presenters.json[typo_rule_actor].rules[0].event"));
+            Assert.That(eventEx.Message, Does.Contain("field=kyeId"));
 
             WritePresenters(
                 """
@@ -3293,8 +3295,8 @@ namespace Ludots.Tests.Presentation
             loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException commandEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(commandEx.Message, Does.Contain("rules[0].command"));
-            Assert.That(commandEx.Message, Does.Contain("unknown field 'scopeSorce'"));
+            Assert.That(commandEx.Message, Does.Contain("path=presenters.json[typo_rule_actor].rules[0].command"));
+            Assert.That(commandEx.Message, Does.Contain("field=scopeSorce"));
         }
 
         [Test]
@@ -3432,8 +3434,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("rules[0]"));
-            Assert.That(ex.Message, Does.Contain("unknown field 'conditon'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[typo_rule_actor].rules[0]"));
+            Assert.That(ex.Message, Does.Contain("field=conditon"));
         }
 
         [Test]
@@ -3461,8 +3463,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("rules[0].condition"));
-            Assert.That(ex.Message, Does.Contain("unknown field 'inlin'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[typo_condition_actor].rules[0].condition"));
+            Assert.That(ex.Message, Does.Contain("field=inlin"));
         }
 
         [Test]
@@ -3501,8 +3503,8 @@ namespace Ludots.Tests.Presentation
                     kind == AssetKind.Mesh && string.Equals(key, "cube", StringComparison.Ordinal) ? 42 : 0);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("AssetBinding"));
-            Assert.That(ex.Message, Does.Contain("unknown field 'localSclae'"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[typo_asset_actor].behaviors[0].assetBinding"));
+            Assert.That(ex.Message, Does.Contain("field=localSclae"));
         }
 
         [Test]
@@ -3553,7 +3555,180 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("overrides field 'transfrom' is unsupported"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[override_typo].children[0].overrides"));
+            Assert.That(ex.Message, Does.Contain("field=transfrom"));
+            Assert.That(ex.Message, Does.Contain("code=UnknownField"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownInstanceChildFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_nested" },
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          { "definitionId": "leaf_nested", "scopeTag": "swapped", "scopeTeg": "swapped" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("code=UnknownField"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[root].children[0].instanceChildren[0]"));
+            Assert.That(ex.Message, Does.Contain("field=scopeTeg"));
+            Assert.That(ex.Message, Does.Contain("allowed="));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownInstanceBehaviorPayloadFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_nested" },
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "leaf_nested",
+                            "instanceBehaviors": [
+                              { "slot": "sound", "kind": "Sound", "soud": { "soundAssetId": "sfx_nested" } }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("code=UnknownField"));
+            Assert.That(
+                ex.Message,
+                Does.Contain("path=presenters.json[root].children[0].instanceChildren[0].instanceBehaviors[0]"));
+            Assert.That(ex.Message, Does.Contain("field=soud"));
+        }
+
+        [Test]
+        public void Load_ReportsFirstUnknownFieldInDocumentOrder()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "order_actor", "zz_first_typo": 1, "aa_second_typo": 2 }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("code=UnknownField"));
+            Assert.That(ex.Message, Does.Contain("field=zz_first_typo"));
+            Assert.That(ex.Message, Does.Not.Contain("aa_second_typo"));
+        }
+
+        [Test]
+        public void Load_ValidatesMergedEntryBeforeExtendsMerge()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "derived_first", "extends": "base_with_typo" },
+                  { "id": "base_with_typo", "lifecyle": { "durationSeconds": 1.0 } }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("code=UnknownField"));
+            Assert.That(ex.Message, Does.Contain("path=presenters.json[base_with_typo]"));
+            Assert.That(ex.Message, Does.Contain("field=lifecyle"));
+            Assert.That(ex.Message, Does.Not.Contain("presenters.json[derived_first]"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownFieldsInRealFixtureAndRegistersNothing()
+        {
+            string fixturePath = Path.Combine(
+                FindRepoRoot(),
+                "mods", "fixtures", "presenter_schema_reference", "PresenterSchemaReferenceMod",
+                "assets", "Presentation", "presenters.json");
+            JsonNode fixture = JsonNode.Parse(File.ReadAllText(fixturePath))!;
+            fixture[0]!["behaviors"]![0]!["assetBinding"]!["scaleParamKe"] = "presenter_schema_reference.asset.scale";
+            WriteCatalog();
+            WritePresenters(fixture.ToJsonString());
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("code=UnknownField"));
+            Assert.That(
+                ex.Message,
+                Does.Contain("path=presenters.json[ref_base_definition].behaviors[0].assetBinding"));
+            Assert.That(ex.Message, Does.Contain("field=scaleParamKe"));
+            Assert.That(registry.RegisteredIds, Is.Empty);
+        }
+
+        [Test]
+        public void Load_FailureLeavesRegistryWithoutPresenterDefinitions()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "typo_child",
+                    "children": [
+                      { "definitionId": "child_marker", "scopeTag": "structure", "scopeTeg": "structure" }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(registry.RegisteredIds, Is.Empty);
+            Assert.That(registry.TryGet(registry.GetId("child_marker"), out _), Is.False);
         }
 
 
@@ -4060,6 +4235,23 @@ namespace Ludots.Tests.Presentation
             string dir = Path.Combine(_root, modId, Path.GetDirectoryName(relativePath) ?? string.Empty);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.WorkDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                current = Path.GetDirectoryName(current) ?? string.Empty;
+            }
+
+            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
 
         private static string BuildPresenterWithChildCount(int childCount)
