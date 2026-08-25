@@ -7,6 +7,7 @@ internal static class LauncherModSdkExporter
     private static readonly (string RelativeProjectPath, string OutputDllName)[] ProjectSpecs =
     {
         ("src/Core/Ludots.Core.csproj", "Ludots.Core.dll"),
+        ("src/Contracts/Ludots.Contracts.csproj", "Ludots.Contracts.dll"),
         ("src/Platform/Ludots.Platform.Abstractions/Ludots.Platform.Abstractions.csproj", "Ludots.Platform.Abstractions.dll"),
         ("src/Libraries/Ludots.UI/Ludots.UI.csproj", "Ludots.UI.dll"),
         ("src/Libraries/Ludots.UI.HtmlEngine/Ludots.UI.HtmlEngine.csproj", "Ludots.UI.HtmlEngine.dll"),

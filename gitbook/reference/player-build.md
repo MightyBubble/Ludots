@@ -44,4 +44,4 @@
 ## 3 边界与后续
 
 - 发行脚本当前只打 Raylib 平台；Web 平台仍依赖 Node（开发向）。
-- 更进一步的「启动器内嵌 Roslyn 进程内编译」（玩家机连 BinaryOnly 都不用预编）见 epic #1190 族 E 可选项。
+- 无 SDK 的源码编译已由 `scripts/compile-mod.ps1`（内嵌 Roslyn）落地，契约见 [零环境/零网络契约](zero-env-setup.md)。
