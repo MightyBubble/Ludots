@@ -56,6 +56,12 @@ namespace Ludots.Core.Map
         /// </summary>
         public Ludots.Core.Gameplay.FieldRegions.RegionEntityIndex? RegionIndex { get; internal set; }
 
+        /// <summary>
+        /// Hierarchy group entities by key, wired at map load from Fields/hierarchies.json;
+        /// null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Gameplay.FieldRegions.RegionHierarchyRuntime? RegionGroups { get; internal set; }
+
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();
 
@@ -177,6 +183,7 @@ namespace Ludots.Core.Map
             Variables = null;
             Fields = null;
             RegionIndex = null;
+            RegionGroups = null;
 
             State = MapSessionState.Disposed;
         }
@@ -193,6 +200,7 @@ namespace Ludots.Core.Map
                 Variables = null;
                 Fields = null;
                 RegionIndex = null;
+                RegionGroups = null;
                 State = MapSessionState.Disposed;
             }
         }

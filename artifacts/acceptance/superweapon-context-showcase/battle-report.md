@@ -23,13 +23,13 @@
 | Field | Value |
 |-------|-------|
 | Ability id | 26 |
-| Local player | Entity = { Id = 8, WorldId = 13, Version = 1 } |
-| Commander context entity | Entity = { Id = 8, WorldId = 13, Version = 1 } |
-| Ability targets | Entity = { Id = 6, WorldId = 13, Version = 1 }, Entity = { Id = 7, WorldId = 13, Version = 1 } |
-| Raw local targets | Entity = { Id = 6, WorldId = 13, Version = 1 }, Entity = { Id = 7, WorldId = 13, Version = 1 } |
+| Local player | Entity = { Id = 8, WorldId = 14, Version = 1 } |
+| Commander context entity | Entity = { Id = 8, WorldId = 14, Version = 1 } |
+| Ability targets | Entity = { Id = 6, WorldId = 14, Version = 1 }, Entity = { Id = 7, WorldId = 14, Version = 1 } |
+| Raw local targets | Entity = { Id = 6, WorldId = 14, Version = 1 }, Entity = { Id = 7, WorldId = 14, Version = 1 } |
 | Confirm input observed | True |
 | Confirm events published | 1 |
-| Command source after frame restore | Entity = { Id = 8, WorldId = 13, Version = 1 } |
+| Command source after frame restore | Entity = { Id = 8, WorldId = 14, Version = 1 } |
 
 ## Summary Stats
 - total actions: 1 physical confirm press

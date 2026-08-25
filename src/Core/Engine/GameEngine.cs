@@ -2894,6 +2894,9 @@ namespace Ludots.Core.Engine
             session.Fields = Ludots.Core.Fields.FieldSessionStore.Create(
                 registry, mapConfig?.Fields?.Layers, cellsLoader);
             session.RegionIndex = Ludots.Core.Gameplay.FieldRegions.FieldRegionMaterializer.Materialize(World, session);
+            var rosters = new Ludots.Core.Fields.Config.FieldHierarchyConfigLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            session.RegionGroups = Ludots.Core.Gameplay.FieldRegions.RegionHierarchyBuilder.Build(World, session, rosters);
         }
 
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
