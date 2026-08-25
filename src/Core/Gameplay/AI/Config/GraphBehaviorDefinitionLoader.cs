@@ -308,7 +308,8 @@ namespace Ludots.Core.Gameplay.AI.Config
                     defaultChild,
                     ResolveOptionalAction(src.OnEnter, $"AI/hfsm.json:{hfsmId}.{src.Id}.onEnter"),
                     ResolveOptionalAction(src.OnTick, $"AI/hfsm.json:{hfsmId}.{src.Id}.onTick"),
-                    ResolveOptionalAction(src.OnExit, $"AI/hfsm.json:{hfsmId}.{src.Id}.onExit"));
+                    ResolveOptionalAction(src.OnExit, $"AI/hfsm.json:{hfsmId}.{src.Id}.onExit"),
+                    src.Id);
             }
 
             return states;
