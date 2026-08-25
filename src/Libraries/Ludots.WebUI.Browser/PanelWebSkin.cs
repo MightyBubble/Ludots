@@ -485,7 +485,7 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
 
             foreach (PanelPin pin in template.Pins)
             {
-                payload[pin.Name] = values.Get(pin.Name);
+                payload[pin.Name] = values.GetValue(pin.Name);
             }
 
             packet = CreatePacket(payload, in context);

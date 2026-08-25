@@ -100,3 +100,28 @@ Ruleset：ludots-doc-governance checklist（仓库相对路径、断言带证据
 2. 重写 `presenter-param-blackboard.md`（P3-01）。
 3. animation 链 schema + 决定是否挂流水线校验（对齐 mod-editor-prd TODO I10 的口径）。
 >>>>>>> theirs
+
+---
+
+# Documentation Governance Report — Configurable Data Schema
+
+Date: 2026-08-26
+Scope: `gitbook/architecture/configurable-data-schema.md`, `gitbook/SUMMARY.md`, and feature acceptance artifacts
+Ruleset: Ludots doc governance checklist, link validation, and repository SSOT rules
+
+## Summary
+- Total findings: 0
+- P0: 0
+- P1: 0
+- P2: 0
+- P3: 0
+
+## Findings
+
+None. The new architecture document has the required overview, structure, details, scenarios, boundaries, and Cucumber UAT sections. Its catalog, source, and test references resolve inside the repository.
+
+## Fix Order
+1. No corrective action required for this change.
+
+## Residual Risks
+- The documentation describes the supported first version; map/union/recursive schema support remains explicitly out of scope.

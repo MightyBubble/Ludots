@@ -12,7 +12,7 @@ namespace Ludots.Core.UI.PanelProjection
     public static class PanelTemplateLoader
     {
         private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "skin", "graph", "pins", "events", "intents" };
-        private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
+        private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "source", "key", "record", "path", "mode", "default" };
 
         public static PanelTemplate Load(string json)
         {
@@ -53,7 +53,7 @@ namespace Ludots.Core.UI.PanelProjection
                 PanelHosting.PanelSkinIds.ToId(skinText);
                 skin = skinText.Trim();
             }
-            string graph = RequireString(rootObject, "graph", "panel template");
+            string? graph = OptionalString(rootObject, "graph");
             if (rootObject["pins"] is not JsonArray pinsNode || pinsNode.Count == 0)
             {
                 throw new InvalidOperationException($"Panel template '{id}' must declare a non-empty 'pins' array.");
@@ -69,7 +69,7 @@ namespace Ludots.Core.UI.PanelProjection
 
                 RejectUnknownFields(pinObject, PinFields, $"panel template '{id}' pin");
                 string pinName = RequireString(pinObject, "name", $"panel template '{id}' pin");
-                string pinKey = RequireString(pinObject, "key", $"panel template '{id}' pin '{pinName}'");
+                string sourceText = OptionalString(pinObject, "source") ?? "graph";
                 string modeText = OptionalString(pinObject, "mode") ?? "realtime";
                 if (!string.Equals(modeText, "realtime", StringComparison.Ordinal) &&
                     !string.Equals(modeText, "snapshot", StringComparison.Ordinal))
@@ -91,7 +91,35 @@ namespace Ludots.Core.UI.PanelProjection
                     defaultValue = (float)defaultValueRaw;
                 }
 
-                pins.Add(new PanelPin(pinName, pinKey, realtime: string.Equals(modeText, "realtime", StringComparison.Ordinal), defaultValue));
+                bool realtime = string.Equals(modeText, "realtime", StringComparison.Ordinal);
+                if (string.Equals(sourceText, "graph", StringComparison.Ordinal))
+                {
+                    if (pinObject.ContainsKey("record") || pinObject.ContainsKey("path"))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{id}' graph pin '{pinName}' cannot declare data record/path.");
+                    }
+
+                    string pinKey = RequireString(pinObject, "key", $"panel template '{id}' pin '{pinName}'");
+                    pins.Add(new PanelPin(pinName, pinKey, realtime, defaultValue));
+                }
+                else if (string.Equals(sourceText, "data", StringComparison.Ordinal))
+                {
+                    if (pinObject.ContainsKey("key"))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{id}' data pin '{pinName}' cannot declare graph key.");
+                    }
+
+                    string recordId = RequireString(pinObject, "record", $"panel template '{id}' data pin '{pinName}'");
+                    string path = RequireString(pinObject, "path", $"panel template '{id}' data pin '{pinName}'");
+                    pins.Add(new PanelPin(pinName, PanelPinSourceKind.Data, recordId, recordId, path, realtime, defaultValue));
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{id}' pin '{pinName}' source must be graph or data, got '{sourceText}'.");
+                }
             }
 
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
