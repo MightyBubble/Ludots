@@ -15,6 +15,7 @@ namespace Ludots.Tests.RaylibAdapter
     /// 一帧结束缓冲里真的有条带、挥砍结束后条带真的老化离场。
     /// </summary>
     [TestFixture]
+    [Category("raylib-field")]
     public sealed class SlashTrailSceneTests
     {
         [Test]

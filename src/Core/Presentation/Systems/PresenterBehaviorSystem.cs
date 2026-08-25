@@ -264,6 +264,39 @@ namespace Ludots.Core.Presentation.Systems
                             "a deferred per-tick failure is not allowed.");
                     }
                 }
+
+                EnsureTrailMeshWiring(definition.Children);
+            }
+        }
+
+        private void EnsureTrailMeshWiring(ChildPresenterRef[]? children)
+        {
+            if (children == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                ChildPresenterRef child = children[i];
+                PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+                if (instanceOverride?.InstanceBehaviors != null)
+                {
+                    BehaviorSlot[] instanceBehaviors = instanceOverride.InstanceBehaviors;
+                    for (int slot = 0; slot < instanceBehaviors.Length; slot++)
+                    {
+                        if (instanceBehaviors[slot].Kind == BehaviorKind.TrailMesh)
+                        {
+                            throw new InvalidOperationException(
+                                $"Presenter child '{child.Key}' contains a TrailMesh instance behavior, but no TrailMeshBuffer is wired into PresenterBehaviorSystem.");
+                        }
+                    }
+                }
+
+                if (_definitions.TryGet(child.DefinitionId, out PresenterDefinition childDefinition))
+                {
+                    EnsureTrailMeshWiring(childDefinition.Children);
+                }
             }
         }
 
