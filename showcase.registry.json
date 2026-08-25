@@ -3839,10 +3839,10 @@
       "notes": "截图证据待 CI 验收产物补录"
     },
     {
-      "id": "capability_standard_performer_behavior_extension_showcase",
-      "path": "mods/showcases/capability_standard/CapabilityStandardPerformerBehaviorExtensionShowcaseMod",
-      "projectPath": "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.csproj",
-      "title": "Performer behavior 扩展",
+      "id": "capability_standard_presenter_behavior_extension_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterBehaviorExtensionShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterBehaviorExtensionShowcaseMod.csproj",
+      "title": "Presenter behavior 扩展",
       "summary": "CloudDrift 是 Mod 注册的 ContinuousTick 行为分片，进入地图后持续 tick，点击按钮时面板证明行为仍在运行。",
       "tier": "T2",
       "category": "capability",
@@ -3851,22 +3851,22 @@
         "capability-standard",
         "mod-extensible-runtime"
       ],
-      "binding": "capability_standard_performer_behavior_extension_showcase",
-      "preset": "capability_standard_performer_behavior_extension_showcase_raylib",
-      "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/performer-behavior-extension.md",
+      "binding": "capability_standard_presenter_behavior_extension_showcase",
+      "preset": "capability_standard_presenter_behavior_extension_showcase_raylib",
+      "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/presenter-behavior-extension.md",
       "readmePath": null,
       "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_performer_behavior_extension_showcase",
+      "artifactDir": "artifacts/evidence/capability_standard_presenter_behavior_extension_showcase",
       "screenshot": null,
       "status": "active",
-      "notes": "Mod behavior kind registered via IModContext.Extensions.Presentation.RegisterPerformerBehavior; shard under Presentation/presenters."
+      "notes": "Mod behavior kind registered via IModContext.Extensions.Presentation.RegisterPresenterBehavior; shard under Presentation/presenters."
     },
     {
-      "id": "capability_standard_performer_command_extension_showcase",
-      "path": "mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod",
-      "projectPath": "CapabilityStandardPerformerCommandExtensionShowcaseMod.csproj",
-      "title": "Performer command 扩展",
-      "summary": "信号命令由 Mod 注册的 presenter command 处理，路由到既有 performer 实例，面板显示信号被处理的次数。",
+      "id": "capability_standard_presenter_command_extension_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterCommandExtensionShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterCommandExtensionShowcaseMod.csproj",
+      "title": "Presenter command 扩展",
+      "summary": "信号命令由 Mod 注册的 presenter command 处理，路由到既有 presenter 实例，面板显示信号被处理的次数。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3874,15 +3874,15 @@
         "capability-standard",
         "mod-extensible-runtime"
       ],
-      "binding": "capability_standard_performer_command_extension_showcase",
-      "preset": "capability_standard_performer_command_extension_showcase_raylib",
-      "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/performer-command-extension.md",
+      "binding": "capability_standard_presenter_command_extension_showcase",
+      "preset": "capability_standard_presenter_command_extension_showcase_raylib",
+      "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/presenter-command-extension.md",
       "readmePath": null,
       "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_performer_command_extension_showcase",
+      "artifactDir": "artifacts/evidence/capability_standard_presenter_command_extension_showcase",
       "screenshot": null,
       "status": "active",
-      "notes": "Mod command kind registered via IModContext.Extensions.Presentation.RegisterPerformerCommand with explicit route strategy."
+      "notes": "Mod command kind registered via IModContext.Extensions.Presentation.RegisterPresenterCommand with explicit route strategy."
     },
     {
       "id": "capability_standard_presenter_command_showcase",

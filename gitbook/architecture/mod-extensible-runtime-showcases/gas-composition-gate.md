@@ -12,8 +12,8 @@
 |------|----------|--------|----------|
 | Config shards | `CapabilityStandardConfigShardsShowcaseMod` | Layer 2 | `ConfigPipeline` + `config_catalog.json` shard 目录 |
 | Effect preset type code | `CapabilityStandardEffectPresetTypeCodeShowcaseMod` | Layer 2 / 3 | Mod builtin handler registry + `GAS/preset_types/*.json` |
-| Presenter behavior extension | `CapabilityStandardPerformerBehaviorExtensionShowcaseMod` | Layer 2 | presenter behavior registry + `Presentation/performers/*.json` |
-| Presenter command extension | `CapabilityStandardPerformerCommandExtensionShowcaseMod` | Layer 2 | presenter command registry + presenter rule |
+| Presenter behavior extension | `CapabilityStandardPresenterBehaviorExtensionShowcaseMod` | Layer 2 | presenter behavior registry + `Presentation/presenters/*.json` |
+| Presenter command extension | `CapabilityStandardPresenterCommandExtensionShowcaseMod` | Layer 2 | presenter command registry + presenter rule |
 
 `CapabilityStandardGraphOpProviderMod` 是 provider，不是 root showcase。它只拥有 `CapabilityStandardGraphOpProviderMod.QueryThreat` 和 `CapabilityStandardGraphOpThreatScore` 契约。
 

@@ -20,7 +20,7 @@ preset `presenter_blacksmith_showcase_raylib` 把"事件 → 规则 → presente
 
 ## 路线四：指令层（命令怎么驱动 presenter）
 
-指令逐条目录见 [commands.md](commands.md)。三步走：先跑 preset `presenter_blacksmith_showcase_raylib` 看指令全链（出生建树、tag 切行为、日夜/区域 SetParam）；再读验收 `artifacts/acceptance/presenter-timer/battle-report.md`（TimerSet/TimerExpired/TimerKill 的受击闪黄时序与打断语义）；最后跑 Extension 黄金模板 preset `capability_standard_performer_command_extension_showcase_raylib`。参数怎么从黑板流到资产属性见 [param-sink.md](param-sink.md)；Timer 与指令层的可玩 showcase = preset `capability_standard_presenter_command_showcase_raylib`（四站点覆盖 11 种内建指令）。
+指令逐条目录见 [commands.md](commands.md)。三步走：先跑 preset `presenter_blacksmith_showcase_raylib` 看指令全链（出生建树、tag 切行为、日夜/区域 SetParam）；再读验收 `artifacts/acceptance/presenter-timer/battle-report.md`（TimerSet/TimerExpired/TimerKill 的受击闪黄时序与打断语义）；最后跑 Extension 黄金模板 preset `capability_standard_presenter_command_extension_showcase_raylib`。参数怎么从黑板流到资产属性见 [param-sink.md](param-sink.md)；Timer 与指令层的可玩 showcase = preset `capability_standard_presenter_command_showcase_raylib`（四站点覆盖 11 种内建指令）。
 
 ## 路线五：性能基线（信得过）
 
