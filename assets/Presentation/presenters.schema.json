@@ -1,0 +1,446 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ludots://presentation/presenters.schema.json",
+  "title": "Ludots presenters: definitions and bootstrap rules",
+  "type": "array",
+  "description": "Mod-side Presentation/presenters.json. Entries with `rules` are reactive rule sets; entries without are presenter definitions (composition trees of behaviors). Field allow-lists mirror PresenterDefinitionConfigLoader; unknown fields are rejected at load time. Semantics: gitbook/architecture/presenter-as-actor-architecture.md and gitbook/architecture/presenter-quickstart.md.",
+  "items": { "$ref": "#/$defs/entry" },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "_comment": { "type": "string" },
+        "extends": { "type": "string", "minLength": 1 },
+        "__delete": {},
+        "anchor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["offset"],
+          "properties": {
+            "offset": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } }
+          }
+        },
+        "lifecycle": {
+          "oneOf": [
+            { "type": "object", "additionalProperties": false, "required": ["durationSeconds"], "properties": { "durationSeconds": { "type": "number", "exclusiveMinimum": 0 } } },
+            { "type": "object", "additionalProperties": false, "required": ["persistence"], "properties": { "persistence": { "type": "string", "minLength": 1 } } }
+          ]
+        },
+        "visibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inline"],
+          "properties": { "inline": { "type": "string", "minLength": 1 } }
+        },
+        "behaviors": { "type": "array", "items": { "$ref": "#/$defs/behavior" } },
+        "bindings": { "type": "array", "items": { "$ref": "#/$defs/binding" } },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/child" } },
+        "paramDefaults": { "type": "array", "items": { "$ref": "#/$defs/paramDefault" } },
+        "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } }
+      }
+    },
+    "vec3": {
+      "type": "array", "minItems": 3, "maxItems": 4, "items": { "type": "number" }
+    },
+    "color4": {
+      "type": "array", "minItems": 4, "maxItems": 4, "items": { "type": "number" }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paramKey", "source"],
+      "properties": {
+        "paramKey": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "sourceId": { "type": ["string", "integer"] },
+        "textToken": { "type": "string" },
+        "constantValue": { "type": "number" },
+        "attributeId": { "type": ["string", "integer"] }
+      }
+    },
+    "child": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["definitionId"],
+      "properties": {
+        "definitionId": { "type": "string", "minLength": 1 },
+        "scopeTag": { "type": "string", "minLength": 1 },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "paramDefault": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paramKey", "lane"],
+      "properties": {
+        "paramKey": { "type": "string", "minLength": 1 },
+        "lane": { "enum": ["Float", "Int", "Vector"] },
+        "floatValue": { "type": "number" },
+        "intValue": { "type": "integer" },
+        "vectorValue": { "$ref": "#/$defs/vec3" }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "command"],
+      "properties": {
+        "event": { "$ref": "#/$defs/event" },
+        "condition": { "$ref": "#/$defs/condition" },
+        "command": { "$ref": "#/$defs/command" }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "GameplayEvent", "TagEffectiveChanged",
+            "EntitySpawned", "EntityDestroyed", "ProjectileSpawned",
+            "PresenterCreated", "PresenterDestroyed", "TimerExpired",
+            "EffectApplied", "EffectActivated", "EffectExpired", "EffectCancelled",
+            "CastCommitted", "CastFailed", "CastStarted", "CastFinished", "CastInterrupted",
+            "GlobalDayNight", "GlobalRegionChanged", "GlobalWeather",
+            "AttributeValueChanged",
+            "AbilityAimBegun", "AbilityAimUpdated", "AbilityAimEnded", "AbilityAimSlotAdvanced",
+            "MovePathBegun", "MovePathUpdated", "MovePathEnded",
+            "EntityCollectionMemberAdded", "EntityCollectionMemberRemoved",
+            "WorldOverlayUpdated", "WorldOverlayEnded",
+            "WorldHudUpdated", "WorldHudEnded",
+            "WorldSplineUpdated", "WorldSplineEnded"
+          ]
+        },
+        "key": { "type": "string", "minLength": 1 },
+        "keyId": { "type": "string", "minLength": 1 },
+        "gained": { "type": "boolean" }
+      }
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inline"],
+          "properties": {
+            "inline": { "enum": ["None", "SourceHasVisualTransform", "TagGained", "TagLost", "EventMagnitudePositive", "EventMagnitudeNonPositive"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["graphProgramId"],
+          "properties": { "graphProgramId": { "type": "integer", "minimum": 1 } }
+        }
+      ]
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "CreatePresenter", "DestroyPresenter", "DestroyPresenterScope",
+            "SetParam", "ActivateBehavior", "DeactivateBehavior",
+            "SinkParamToAsset", "InitializeTransform", "DestroyScopedPresenter",
+            "TimerSet", "TimerKill"
+          ]
+        },
+        "route": { "type": "string", "minLength": 1 },
+        "definitionId": { "type": "string", "minLength": 1 },
+        "scopeTag": { "type": "string", "minLength": 1 },
+        "scopeSource": { "type": "string", "minLength": 1 },
+        "ownerSource": { "type": "string", "minLength": 1 },
+        "useEventPosition": { "type": "boolean" },
+        "paramKey": { "type": "string", "minLength": 1 },
+        "paramLane": { "enum": ["Float", "Int", "Vector"] },
+        "valueSource": { "type": "string", "minLength": 1 },
+        "paramValue": { "type": "number" },
+        "intValue": { "type": "integer" },
+        "vectorValue": { "$ref": "#/$defs/vec3" },
+        "paramGraphProgramId": { "type": "integer", "minimum": 1 },
+        "vectorXSource": { "type": "string", "minLength": 1 },
+        "vectorYSource": { "type": "string", "minLength": 1 },
+        "vectorZSource": { "type": "string", "minLength": 1 },
+        "vectorWSource": { "type": "string", "minLength": 1 },
+        "targetBehaviorSlot": { "type": "string", "minLength": 1 },
+        "timerName": { "type": "string", "minLength": 1 },
+        "durationSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "durationRangeSeconds": { "type": "number", "minimum": 0 }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot"],
+      "properties": {
+        "slot": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": [
+            "AssetBinding", "AttributeBinding", "TagBinding", "Animator",
+            "Attachment", "Sound", "Material", "Spline",
+            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch"
+          ]
+        },
+        "activeByDefault": { "type": "boolean" },
+        "activationCondition": { "type": "string", "minLength": 1 },
+        "execution": { "type": "string", "minLength": 1 },
+        "style": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "color": { "$ref": "#/$defs/color4" },
+            "alphaPolicy": { "enum": ["FadeOverLifetime"] }
+          }
+        },
+        "motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "yDriftPerSecond": { "type": "number" }
+          }
+        },
+        "assetBinding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["assetKind"],
+          "properties": {
+            "assetKind": { "enum": ["Mesh", "SkinnedMesh", "Decal", "VFX", "Spline", "WorldHud", "GroundOverlay", "Surface"] },
+            "assetId": { "type": "string", "minLength": 1 },
+            "materialId": { "type": "string", "minLength": 1 },
+            "renderPath": { "enum": ["StaticMesh", "InstancedStaticMesh", "HierarchicalInstancedStaticMesh", "SkinnedMesh", "GpuSkinnedInstance", "Surface", "None"] },
+            "mobility": { "enum": ["Static", "Movable"] },
+            "localOffset": { "$ref": "#/$defs/vec3" },
+            "localRotation": { "$ref": "#/$defs/vec3" },
+            "localScale": { "$ref": "#/$defs/vec3" },
+            "scaleParamKey": { "type": "string" },
+            "colorParamKey": { "type": "string" },
+            "materialParamKey": { "type": "string" },
+            "assetIdParamKey": { "type": "string" },
+            "assetSwapParamKey": { "type": "string" },
+            "assetSwapTable": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["paramValue", "assetId"],
+                "properties": {
+                  "paramValue": { "type": "number" },
+                  "assetId": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "visibilityParamKey": { "type": "string" },
+            "surfaceLayerKey": { "type": "string" },
+            "sortId": { "type": "integer" },
+            "maxLod": { "type": "integer", "minimum": 0 },
+            "grounding": { "enum": ["None", "SnapToGround", "AlignToSurface"] },
+            "groundingOffset": { "type": "number" },
+            "materialCustomData": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["slot", "lane", "paramKey"],
+                "properties": {
+                  "slot": { "type": "integer", "minimum": 0 },
+                  "lane": { "enum": ["Float", "Int", "Vector"] },
+                  "paramKey": { "type": "string", "minLength": 1 },
+                  "defaultFloatValue": { "type": "number" },
+                  "defaultIntValue": { "type": "integer" },
+                  "defaultVectorValue": { "$ref": "#/$defs/vec3" }
+                }
+              }
+            }
+          }
+        },
+        "attributeBinding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["targetParamKey"],
+          "properties": {
+            "attributeId": { "type": "string" },
+            "attributeName": { "type": "string" },
+            "targetParamKey": { "type": "string", "minLength": 1 },
+            "mode": { "enum": ["Attribute", "AttributeBase", "AttributeCurrent", "AttributeCurrentOverBase", "AttributeRatio"] },
+            "thresholds": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["threshold", "outputParamKey", "outputValue"],
+                "properties": {
+                  "threshold": { "type": "number" },
+                  "outputParamKey": { "type": "string", "minLength": 1 },
+                  "outputValue": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "tagBinding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["targetParamKey"],
+          "properties": {
+            "tagId": { "type": "string" },
+            "tag": { "type": "string" },
+            "targetParamKey": { "type": "string", "minLength": 1 },
+            "invertLogic": { "type": "boolean" }
+          }
+        },
+        "animator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["animatorControllerId"],
+          "properties": {
+            "animatorControllerId": { "type": "string", "minLength": 1 },
+            "animationProfileId": { "type": "string", "minLength": 1 },
+            "speedParamKey": { "type": "string" },
+            "stateParamKey": { "type": "string" }
+          }
+        },
+        "attachment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "target": { "enum": ["Parent"] },
+            "boneId": { "type": ["string", "integer"] },
+            "offset": { "$ref": "#/$defs/vec3" },
+            "rotationOffset": { "$ref": "#/$defs/vec3" },
+            "inheritScale": { "type": "boolean" }
+          }
+        },
+        "sound": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["soundAssetId"],
+          "properties": {
+            "soundAssetId": { "type": "string", "minLength": 1 },
+            "loop": { "type": "boolean" },
+            "volume": { "type": "number" },
+            "volumeParamKey": { "type": "string" }
+          }
+        },
+        "material": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["baseMaterialId"],
+          "properties": {
+            "baseMaterialId": { "type": "string", "minLength": 1 },
+            "materialSwapParamKey": { "type": "string" },
+            "swapTable": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["paramValue", "materialId"],
+                "properties": {
+                  "paramValue": { "type": "number" },
+                  "materialId": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        "spline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["splineAssetId"],
+          "properties": {
+            "splineAssetId": { "type": "string", "minLength": 1 },
+            "usage": { "enum": ["Render", "Patrol"] },
+            "widthParamKey": { "type": "string" },
+            "colorParamKey": { "type": "string" },
+            "speedParamKey": { "type": "string" },
+            "progressParamKey": { "type": "string" },
+            "loop": { "type": "boolean" },
+            "pingPong": { "type": "boolean" },
+            "waypointEventId": { "type": "integer" }
+          }
+        },
+        "grounding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["None", "SnapToGround", "AlignToSurface"] },
+            "offset": { "type": "number" },
+            "updatePolicy": { "enum": ["Once", "EveryFrame"] }
+          }
+        },
+        "minimapMarker": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "shape": { "enum": ["Circle"] },
+            "color": { "$ref": "#/$defs/color4" },
+            "sizePx": { "type": "number", "exclusiveMinimum": 0 },
+            "colorParamKey": { "type": "string" },
+            "sizeParamKey": { "type": "string" },
+            "visibilityParamKey": { "type": "string" },
+            "orientationMode": { "enum": ["None", "PresenterForward"] },
+            "orientationParamKey": { "type": "string" },
+            "orientationOffsetRad": { "type": "number" },
+            "orientationLengthPx": { "type": "number" }
+          }
+        },
+        "surfaceSource": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "type": "string", "minLength": 1 },
+            "profileId": { "type": "string" },
+            "geometrySource": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "chunkBake": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "materialSet": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "lodProfileId": { "type": "string" },
+            "grounding": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "boundsPolicy": {
+              "type": ["string", "object"]
+            }
+          }
+        },
+        "instancedBatch": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["batchAssetId"],
+          "properties": {
+            "batchAssetId": { "type": "string", "minLength": 1 }
+          }
+        },
+        "worldText": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "textToken": { "type": "string", "minLength": 1 },
+            "mode": { "type": "string", "minLength": 1 },
+            "valueParamKey": { "type": "string" },
+            "secondaryValueParamKey": { "type": "string" },
+            "fontSize": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1327,7 +1327,9 @@ namespace Ludots.Core.Engine
                 stableDrawCache,
                 presenterVisualStableIds,
                 presenterCommandKinds,
-                presenterTimerTable);
+                presenterTimerTable,
+                GlobalContext,
+                soundRequestBuffer);
             var presenterBehaviorSystem = new PresenterBehaviorSystem(
                 World,
                 presenterRuntime,
@@ -1338,7 +1340,9 @@ namespace Ludots.Core.Engine
                 () => GetService(CoreServiceKeys.VisualHeightmap),
                 boneTransformProvider: null,
                 timingDiagnostics: presentationTimingDiagnostics,
-                extensionBehaviors: presenterBehaviorKinds);
+                extensionBehaviors: presenterBehaviorKinds,
+                graphPrograms: graphProgramRegistry,
+                graphApi: gasGraphApi);
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(
                 World,
                 animatorControllers,
