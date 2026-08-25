@@ -180,14 +180,11 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void EngineSchedule_RulesBeforeRuntimeBeforeBehavior_PreventsOneFrameActivationOutput()
+        public void EngineSchedule_OrdersRulesRuntimeBehavior_AndCreationStartsInactive()
         {
-            // 生产注册序（GameEngine.InitializeWithConfigPipelineInternal）：
-            //   presenterRuleSystem → presenterRuntimeSystem → … → presenterBehaviorSystem
-            // 同一帧内：规则产出命令 → 运行时按序应用到 mask（无条件 Deactivate 先于条件 Activate，
-            // PresenterRuntimeSystem.Update 在同一遍历中按序消费整批命令）→ 行为系统才读 mask 输出。
-            // 创建帧的 mask 由 BuildDefaultBehaviorMask 决定，而 loader 对带 activationCondition 的槽强制
-            // ActiveByDefault=false，因此条件首次求值（下一帧规则序）之前不可能出现一帧激活输出。
+            // 生产注册序（GameEngine.InitializeWithConfigPipelineInternal）为规则、运行时、行为。
+            // RuntimeSystem 发布 PresenterCreated 后，规则在下一次规则更新中产出命令；loader 强制
+            // ActiveByDefault=false，保证等待该下一帧规则求值时不会泄漏创建帧输出。
             using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine("LudotsCoreMod");
 
             FieldInfo field = typeof(GameEngine).GetField("_presentationSystems", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -586,7 +583,7 @@ namespace Ludots.Tests.Presentation
             };
         }
 
-        private ActivationFixture CreateConfigFixture(string presentersJson, Action<GraphProgramRegistry> registerPrograms = null)
+        private ActivationFixture CreateConfigFixture(string presentersJson, Action<GraphProgramRegistry>? registerPrograms = null)
         {
             WriteCatalog();
             WritePresenters(presentersJson);
