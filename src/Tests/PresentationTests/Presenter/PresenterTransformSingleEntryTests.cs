@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Requests;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using NUnit.Framework;
@@ -102,32 +103,45 @@ namespace Ludots.Tests.Presentation
                 new PresenterAnimatorStateBuffer(4), new SoundRequestBuffer());
             emitSystem.Update(0.016f);
 
-            PresentationRequest mesh = default;
-            PresentationRequest skinned = default;
-            PresentationRequest surface = default;
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            foreach (ref readonly PresentationRequest request in span)
+            PresentationVisualProxy mesh = default;
+            PresentationVisualProxy skinned = default;
+            SurfaceSourceRequest surface = default;
+            bool meshEmitted = false;
+            bool skinnedEmitted = false;
+            bool surfaceEmitted = false;
+            foreach (ref readonly PresentationRequestOp op in requests.Ops)
             {
-                if (request.Kind == PresentationRequestKind.VisualProxy && request.VisualProxy.MeshAssetId == 31)
+                switch (op.Channel)
                 {
-                    mesh = request;
-                }
-                else if (request.Kind == PresentationRequestKind.VisualProxy && request.VisualProxy.MeshAssetId == 32)
-                {
-                    skinned = request;
-                }
-                else if (request.Kind == PresentationRequestKind.SurfaceSource)
-                {
-                    surface = request;
+                    case PresentationRequestChannel.VisualProxy:
+                    {
+                        ref readonly VisualProxyChannelItem item = ref requests.VisualProxyAt(op.Slot);
+                        if (item.VisualProxy.MeshAssetId == 31)
+                        {
+                            mesh = item.VisualProxy;
+                            meshEmitted = true;
+                        }
+                        else if (item.VisualProxy.MeshAssetId == 32)
+                        {
+                            skinned = item.VisualProxy;
+                            skinnedEmitted = true;
+                        }
+
+                        break;
+                    }
+                    case PresentationRequestChannel.SurfaceSource:
+                        surface = requests.SurfaceSourceAt(op.Slot).Item;
+                        surfaceEmitted = true;
+                        break;
                 }
             }
 
-            Assert.That(mesh.Kind, Is.EqualTo(PresentationRequestKind.VisualProxy), "Mesh output must emit.");
-            Assert.That(mesh.VisualProxy.Position, Is.EqualTo(new Vector3(11f, 2f, 20f)), "Mesh consumes the shared root once and applies its localOffset once.");
-            Assert.That(skinned.Kind, Is.EqualTo(PresentationRequestKind.VisualProxy), "Skinned output must emit.");
-            Assert.That(skinned.VisualProxy.Position, Is.EqualTo(new Vector3(9f, 2f, 20f)), "Skinned output shares the same resolved root.");
-            Assert.That(surface.Kind, Is.EqualTo(PresentationRequestKind.SurfaceSource), "Surface output must emit.");
-            Assert.That(surface.SurfaceSource.AnchorPosition, Is.EqualTo(new Vector3(10f, 2f, 20f)), "Surface anchor equals the resolved root; the anchor offset is not added a second time at emit.");
+            Assert.That(meshEmitted, Is.True, "Mesh output must emit.");
+            Assert.That(mesh.Position, Is.EqualTo(new Vector3(11f, 2f, 20f)), "Mesh consumes the shared root once and applies its localOffset once.");
+            Assert.That(skinnedEmitted, Is.True, "Skinned output must emit.");
+            Assert.That(skinned.Position, Is.EqualTo(new Vector3(9f, 2f, 20f)), "Skinned output shares the same resolved root.");
+            Assert.That(surfaceEmitted, Is.True, "Surface output must emit.");
+            Assert.That(surface.AnchorPosition, Is.EqualTo(new Vector3(10f, 2f, 20f)), "Surface anchor equals the resolved root; the anchor offset is not added a second time at emit.");
         }
 
         [Test]
@@ -179,20 +193,20 @@ namespace Ludots.Tests.Presentation
                 world, runtime, definitions, requests, new Dictionary<string, object>(),
                 new PresenterAnimatorStateBuffer(4), new SoundRequestBuffer());
             emitSystem.Update(0.016f);
-            Assert.That(requests.GetSpan().Length, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].VisualProxy.Position, Is.EqualTo(new Vector3(10f, 2f, 20f)));
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.Position, Is.EqualTo(new Vector3(10f, 2f, 20f)));
 
             runtime.MarkTransformDrivenEmitDirty(presenter);
             emitSystem.Update(0.016f);
-            Assert.That(requests.GetSpan().Length, Is.EqualTo(2), "Dirty re-emit must emit again.");
+            Assert.That(requests.Count, Is.EqualTo(2), "Dirty re-emit must emit again.");
             Assert.That(
-                requests.GetSpan()[1].VisualProxy.Position,
+                requests.VisualProxyAt(1).VisualProxy.Position,
                 Is.EqualTo(new Vector3(10f, 2f, 20f)),
                 "Repeated emit must not stack the anchor offset a second time.");
 
             runtime.MarkTransformDrivenEmitDirty(presenter);
             emitSystem.Update(0.016f);
-            Assert.That(requests.GetSpan()[2].VisualProxy.Position, Is.EqualTo(new Vector3(10f, 2f, 20f)));
+            Assert.That(requests.VisualProxyAt(2).VisualProxy.Position, Is.EqualTo(new Vector3(10f, 2f, 20f)));
         }
 
         [Test]
@@ -254,13 +268,13 @@ namespace Ludots.Tests.Presentation
 
             runtime.MarkTransformDrivenEmitDirty(presenter);
             emitSystem.Update(0.016f);
-            Assert.That(requests.GetSpan()[0].VisualProxy.Position, Is.EqualTo(new Vector3(30f, 2f, 40f)));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.Position, Is.EqualTo(new Vector3(30f, 2f, 40f)));
 
             world.Get<VisualTransform>(owner).Position = new Vector3(50f, 0f, 60f);
             syncSystem.Update(0.016f);
             runtime.MarkTransformDrivenEmitDirty(presenter);
             emitSystem.Update(0.016f);
-            Assert.That(requests.GetSpan()[1].VisualProxy.Position, Is.EqualTo(new Vector3(50f, 2f, 60f)), "Anchor offset must never accumulate across sync cycles.");
+            Assert.That(requests.VisualProxyAt(1).VisualProxy.Position, Is.EqualTo(new Vector3(50f, 2f, 60f)), "Anchor offset must never accumulate across sync cycles.");
         }
 
         [Test]
@@ -342,12 +356,18 @@ namespace Ludots.Tests.Presentation
                 new PresenterAnimatorStateBuffer(4), new SoundRequestBuffer());
             emitSystem.Update(0.016f);
 
-            foreach (ref readonly PresentationRequest request in requests.GetSpan())
+            foreach (ref readonly PresentationRequestOp op in requests.Ops)
             {
-                if (request.Kind == PresentationRequestKind.VisualProxy && request.VisualProxy.MeshAssetId == 53)
+                if (op.Channel != PresentationRequestChannel.VisualProxy)
+                {
+                    continue;
+                }
+
+                ref readonly VisualProxyChannelItem item = ref requests.VisualProxyAt(op.Slot);
+                if (item.VisualProxy.MeshAssetId == 53)
                 {
                     Assert.That(
-                        request.VisualProxy.Position,
+                        item.VisualProxy.Position,
                         Is.EqualTo(new Vector3(11f, 3f, 20f)),
                         "Asset localOffset composes once on top of the attached root.");
                     return;
@@ -433,11 +453,17 @@ namespace Ludots.Tests.Presentation
             runtime.MarkTransformDrivenEmitDirty(presenter);
             emitSystem.Update(0.016f);
 
-            foreach (ref readonly PresentationRequest request in requests.GetSpan())
+            foreach (ref readonly PresentationRequestOp op in requests.Ops)
             {
-                if (request.Kind == PresentationRequestKind.VisualProxy && request.VisualProxy.MeshAssetId == 54)
+                if (op.Channel != PresentationRequestChannel.VisualProxy)
                 {
-                    Assert.That(request.VisualProxy.Position.Y, Is.EqualTo(3.5f).Within(0.001f));
+                    continue;
+                }
+
+                ref readonly VisualProxyChannelItem item = ref requests.VisualProxyAt(op.Slot);
+                if (item.VisualProxy.MeshAssetId == 54)
+                {
+                    Assert.That(item.VisualProxy.Position.Y, Is.EqualTo(3.5f).Within(0.001f));
                     return;
                 }
             }
@@ -507,8 +533,8 @@ namespace Ludots.Tests.Presentation
             runtime.MarkTransformDrivenEmitDirty(presenter);
             emitSystem.Update(0.016f);
 
-            Assert.That(requests.GetSpan()[0].VisualProxy.Position, Is.EqualTo(new Vector3(5f, 2f, 7f)));
-            Assert.That(requests.GetSpan()[1].VisualProxy.Position, Is.EqualTo(new Vector3(5f, 2f, 7f)));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.Position, Is.EqualTo(new Vector3(5f, 2f, 7f)));
+            Assert.That(requests.VisualProxyAt(1).VisualProxy.Position, Is.EqualTo(new Vector3(5f, 2f, 7f)));
         }
 
         [Test]
