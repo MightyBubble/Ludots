@@ -2,6 +2,7 @@
 
 - [Ludots 文档](README.md)
 - [快速开始](quick-start.md)
+- [Showcase 画廊导览](showcases/README.md)
 - [Agent Bridge](agent-bridge.md)
 - [贡献与开发](contributing/README.md)
   - [编码标准](contributing/coding-standards.md)
@@ -58,6 +59,8 @@
   - [Core Minimap Authoring](architecture/core-minimap-authoring.md)
 - [参考资料](reference/README.md)
   - [Launcher CLI Runbook](reference/cli-runbook.md)
+  - [图节点词典（Graph 节点画廊 Wiki）](reference/graph-node-op-wiki/README.md)
+  - [引擎画廊 Wiki（Raylib 引擎能力场景）](reference/engine-gallery-wiki/README.md)
   - [MassNavigation 用户教学书](reference/mass-navigation-user-book.md)
   - [MassNavigation 正式链路手册](reference/mass-navigation-formal-chain.md)
   - [Agent Profile](reference/agent-profile.md)

@@ -415,10 +415,10 @@
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "AbilityGraphSandboxShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_ability_graph_sandbox",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "Headless think-wave acceptance first; visual captures follow; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_ability_graph_sandbox 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_behavior_tree_arena",
@@ -437,10 +437,10 @@
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
       "readmePath": null,
       "acceptanceTest": "BehaviorTreeArenaShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_behavior_tree_arena",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "Headless think-wave acceptance first; visual captures follow; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_behavior_tree_arena 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_config_shards_showcase",
@@ -461,10 +461,10 @@
       "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/config-shards.md",
       "readmePath": null,
       "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_config_shards_showcase",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Config shards: catalog entry declares ShardDirectories; one shard per ability/effect, merged at startup into the same ArrayById config."
+      "notes": "Config shards: catalog entry declares ShardDirectories; one shard per ability/effect, merged at startup into the same ArrayById config; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_config_shards_showcase 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_crowd_physics_arena",
@@ -509,10 +509,10 @@
       "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/effect-preset-type-code.md",
       "readmePath": null,
       "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_effect_preset_type_code_showcase",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Mod-authored builtin handler registered via IModContext.Extensions.Gas.RegisterBuiltinHandler with explicit operation metadata."
+      "notes": "Mod-authored builtin handler registered via IModContext.Extensions.Gas.RegisterBuiltinHandler with explicit operation metadata; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_effect_preset_type_code_showcase 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_behavior_integration",
@@ -531,10 +531,10 @@
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
       "readmePath": null,
       "acceptanceTest": "GraphBehaviorIntegrationShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_behavior_integration",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "Headless think-wave acceptance first; visual captures follow; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_behavior_integration 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_AbsFloat",
@@ -3741,10 +3741,10 @@
       "docsPath": "gitbook/acceptance/graph-score-wounded-priority.md",
       "readmePath": null,
       "acceptanceTest": "GraphScoreWoundedPriorityShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_score",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Score graph driven by Utility GraphScore; subtitle reads UtilityAiDecisionTrace BestTarget/BestScore. ConstFloat 100 lives only in the authored Score graph."
+      "notes": "Score graph driven by Utility GraphScore; subtitle reads UtilityAiDecisionTrace BestTarget/BestScore. ConstFloat 100 lives only in the authored Score graph; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_score 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_hfsm_sentry_arena",
@@ -3763,10 +3763,10 @@
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
       "readmePath": null,
       "acceptanceTest": "HfsmSentryArenaShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "Headless think-wave acceptance first; visual captures follow; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_hfsm_sentry_arena 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_live_skill_workbench",
@@ -3788,10 +3788,10 @@
       "docsPath": "gitbook/acceptance/live-skill-workbench-uat.md",
       "readmePath": null,
       "acceptanceTest": "LiveSkillWorkbenchShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_live_skill_workbench",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Editor hot-apply via production LiveGasEditPipeline on Champion cast pipeline; WorldHud HP + chill countdown."
+      "notes": "Editor hot-apply via production LiveGasEditPipeline on Champion cast pipeline; WorldHud HP + chill countdown; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_live_skill_workbench 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_mass_navigation_large_world_10k",
@@ -3856,10 +3856,10 @@
       "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/performer-behavior-extension.md",
       "readmePath": null,
       "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_performer_behavior_extension_showcase",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Mod behavior kind registered via IModContext.Extensions.Presentation.RegisterPerformerBehavior; shard under Presentation/presenters."
+      "notes": "Mod behavior kind registered via IModContext.Extensions.Presentation.RegisterPerformerBehavior; shard under Presentation/presenters; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_performer_behavior_extension_showcase 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_performer_command_extension_showcase",
@@ -3879,10 +3879,10 @@
       "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/performer-command-extension.md",
       "readmePath": null,
       "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_performer_command_extension_showcase",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Mod command kind registered via IModContext.Extensions.Presentation.RegisterPerformerCommand with explicit route strategy."
+      "notes": "Mod command kind registered via IModContext.Extensions.Presentation.RegisterPerformerCommand with explicit route strategy; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_performer_command_extension_showcase 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_physics2d",
@@ -3967,10 +3967,10 @@
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
       "readmePath": null,
       "acceptanceTest": "ScriptFlowSandboxShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_script_flow_sandbox",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Atomic L1 Script showcase; separate from L2 behavior arenas."
+      "notes": "Atomic L1 Script showcase; separate from L2 behavior arenas; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_script_flow_sandbox 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_static_presenter_30k",
@@ -4972,14 +4972,14 @@
         "interaction"
       ],
       "binding": "night_raid_showcase",
-      "preset": null,
+      "preset": "map_trigger_night_raid_raylib",
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
       "readmePath": null,
       "acceptanceTest": null,
       "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Human-play interaction layer; every rule it triggers lives in map TriggerGraph data."
+      "notes": "Human-play interaction layer; every rule it triggers lives in map TriggerGraph data; 救活说明：非 map_trigger_night_raid 的重复条目，是其人类游玩交互伴随层——presets map_trigger_night_raid_raylib 与 map_trigger_night_raid_override_raylib 的 selectors 均含 $night_raid_showcase；无专属验收测试（MapTriggerNightRaidAcceptanceTests 以引擎真值驱动同一阶段链，不加载本交互层），acceptanceTest 留空。"
     },
     {
       "id": "night_raid_override",
@@ -4994,13 +4994,14 @@
         "override"
       ],
       "binding": "night_raid_override",
-      "preset": null,
+      "preset": "map_trigger_night_raid_override_raylib",
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
       "readmePath": null,
-      "acceptanceTest": null,
+      "acceptanceTest": "MapTriggerNightRaidAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "验收 MapTriggerNightRaidAcceptanceTests.NightRaid_InterModOverride_ThresholdAndStackedFlows 显式加载 NightRaidOverrideMod（kill_threshold 3→2 + 叠加计数图）。"
     },
     {
       "id": "multi_layer_fog_field",
@@ -5623,7 +5624,7 @@
       "docsPath": "docs/audits/raylib-client-parity/ACCEPTANCE.md",
       "readmePath": null,
       "acceptanceTest": null,
-      "artifactDir": "artifacts/raylib-client-parity/acceptance",
+      "artifactDir": null,
       "screenshot": "artifacts/raylib-client-parity/acceptance/01_static_ism.png",
       "status": "active",
       "tags": [
@@ -5631,7 +5632,8 @@
         "raylib",
         "gpu-skinned",
         "parity"
-      ]
+      ],
+      "notes": "artifactDir 待验收运行产出（原注册值 artifacts/raylib-client-parity/acceptance 磁盘与 git 树均不存在）。"
     },
     {
       "id": "raylib_ism_benchmark",
@@ -5667,7 +5669,7 @@
       "docsPath": "gitbook/architecture/presenter-field-gallery-uat.md",
       "readmePath": null,
       "acceptanceTest": "RaylibVisualAtmosphereFieldUatTests",
-      "artifactDir": "artifacts/raylib-visual-atmosphere/acceptance",
+      "artifactDir": null,
       "screenshot": "artifacts/raylib-visual-atmosphere/acceptance/01_sky_day.png",
       "status": "active",
       "tags": [
@@ -5680,7 +5682,7 @@
         "decal",
         "spline"
       ],
-      "notes": "01-07 仍是 GPU 截图合同（docs/audits/raylib-visual-atmosphere/ACCEPTANCE.md）。08-10 构图机位保留，P0–P2 合同是 RaylibVisualAtmosphereFieldUatTests 发射载荷，不是本包 GPU 截图。"
+      "notes": "01-07 仍是 GPU 截图合同（docs/audits/raylib-visual-atmosphere/ACCEPTANCE.md）。08-10 构图机位保留，P0–P2 合同是 RaylibVisualAtmosphereFieldUatTests 发射载荷，不是本包 GPU 截图；artifactDir 待验收运行产出（原注册值 artifacts/raylib-visual-atmosphere/acceptance 磁盘与 git 树均不存在）。"
     },
     {
       "id": "reactive_test",
@@ -5756,13 +5758,14 @@
       "preset": null,
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
+      "acceptanceTest": "RtsSpawnTargetAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
         "rts"
-      ]
+      ],
+      "notes": "验收 RtsSpawnTargetAcceptanceTests 以 RtsDemoMod 的 rts_entry 地图驱动集结点/训练/生成链。"
     },
     {
       "id": "rts_fourx_like",
@@ -5819,13 +5822,14 @@
       "preset": null,
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
+      "acceptanceTest": "RtsStrategicShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
         "rts"
-      ]
+      ],
+      "notes": "验收 RtsStrategicShowcaseAcceptanceTests 经 RtsDemoMod 的 rts_entry 地图驱动 RTS 战略链（RtsShowcaseMod 与 RtsDemoMod 组合加载，入口 game.rts.json）。"
     },
     {
       "id": "rts_starcraft_like",
@@ -6218,7 +6222,7 @@
       "docsPath": null,
       "readmePath": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod/README.md",
       "acceptanceTest": "UiNineSlicePanelTests",
-      "artifactDir": "artifacts/acceptance/ui-nineslice-panel",
+      "artifactDir": null,
       "screenshot": "artifacts/acceptance/ui-nineslice-panel/nineslice-compact.png",
       "status": "active",
       "tags": [
@@ -6228,7 +6232,8 @@
         "svg",
         "animation",
         "skeuomorphic"
-      ]
+      ],
+      "notes": "artifactDir 待验收运行产出（原注册值 artifacts/acceptance/ui-nineslice-panel 磁盘与 git 树均不存在）。"
     },
     {
       "id": "ui_skin_classic",
@@ -7124,8 +7129,8 @@
       "preset": "panel_skin_markup_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel-skin-markup",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7133,7 +7138,8 @@
         "ui",
         "markup",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel-skin-markup 磁盘与 git 树均不存在）。"
     },
     {
       "id": "panel_skin_compose",
@@ -7146,8 +7152,8 @@
       "preset": "panel_skin_compose_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel-skin-compose",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7155,7 +7161,8 @@
         "ui",
         "compose",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel-skin-compose 磁盘与 git 树均不存在）。"
     },
     {
       "id": "panel_skin_reactive",
@@ -7168,8 +7175,8 @@
       "preset": "panel_skin_reactive_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel-skin-reactive",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7177,7 +7184,8 @@
         "ui",
         "reactive",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel-skin-reactive 磁盘与 git 树均不存在）。"
     },
     {
       "id": "panel_skin_web",
@@ -7190,8 +7198,8 @@
       "preset": "panel_skin_web_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel-skin-web",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7199,7 +7207,8 @@
         "ui",
         "web",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel-skin-web 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_ReadMapVarFloat",
@@ -7320,8 +7329,8 @@
       "preset": "panel_theme_ink_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel_theme_ink",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7330,7 +7339,8 @@
         "theme",
         "ink-wash",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel_theme_ink 磁盘与 git 树均不存在）。"
     },
     {
       "id": "panel_theme_ink_web",
@@ -7343,8 +7353,8 @@
       "preset": "panel_theme_ink_web_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel_theme_ink_web",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7354,7 +7364,8 @@
         "ink-wash",
         "web",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel_theme_ink_web 磁盘与 git 树均不存在）。"
     },
     {
       "id": "panel_theme_fantasy",
@@ -7367,8 +7378,8 @@
       "preset": "panel_theme_fantasy_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel_theme_fantasy",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7377,7 +7388,8 @@
         "theme",
         "fantasy",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel_theme_fantasy 磁盘与 git 树均不存在）。"
     },
     {
       "id": "panel_theme_fantasy_web",
@@ -7390,8 +7402,8 @@
       "preset": "panel_theme_fantasy_web_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel_theme_fantasy_web",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7401,7 +7413,8 @@
         "fantasy",
         "web",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel_theme_fantasy_web 磁盘与 git 树均不存在）。"
     },
     {
       "id": "panel_theme_minimal",
@@ -7414,8 +7427,8 @@
       "preset": "panel_theme_minimal_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel_theme_minimal",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7424,7 +7437,8 @@
         "theme",
         "minimal",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel_theme_minimal 磁盘与 git 树均不存在）。"
     },
     {
       "id": "panel_theme_minimal_web",
@@ -7437,8 +7451,8 @@
       "preset": "panel_theme_minimal_web_raylib",
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": "artifacts/acceptance/panel_theme_minimal_web",
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
       "tags": [
@@ -7448,7 +7462,8 @@
         "minimal",
         "web",
         "showcase"
-      ]
+      ],
+      "notes": "验收统一由 PanelFireballShowcaseAcceptanceTests 驱动（fireball_arena 地图 + PanelThemeShowcaseMod 主题包目录合同）；artifactDir 待验收运行产出（原注册值 artifacts/acceptance/panel_theme_minimal_web 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_SpawnTemplate",
@@ -7471,11 +7486,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/SpawnTemplate.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_SpawnTemplate 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_SetWorldPosition",
@@ -7498,11 +7513,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/SetWorldPosition.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_SetWorldPosition 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_LoadEntryPayloadEntity",
@@ -7525,11 +7540,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/LoadEntryPayloadEntity.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadEntity",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadEntity/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadEntity/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadEntity 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_LoadEntryPayloadFloat",
@@ -7552,11 +7567,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/LoadEntryPayloadFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadFloat",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadFloat/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadFloat 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_LoadEntryPayloadInt",
@@ -7579,11 +7594,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/LoadEntryPayloadInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadInt",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadInt/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadInt 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_DispatchMapEvent",
@@ -7606,11 +7621,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/DispatchMapEvent.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_DispatchMapEvent",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_DispatchMapEvent 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_InvokeGraph",
@@ -7633,11 +7648,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/InvokeGraph.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_InvokeGraph",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_InvokeGraph/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_InvokeGraph/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_InvokeGraph 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_StoreArgEntity",
@@ -7660,11 +7675,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/StoreArgEntity.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_StoreArgEntity",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_StoreArgEntity/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_StoreArgEntity/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_StoreArgEntity 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_StoreArgFloat",
@@ -7687,11 +7702,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/StoreArgFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_StoreArgFloat",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_StoreArgFloat/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_StoreArgFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_StoreArgFloat 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_StoreArgInt",
@@ -7714,11 +7729,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/StoreArgInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_StoreArgInt",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_StoreArgInt/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_StoreArgInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_StoreArgInt 磁盘与 git 树均不存在）。"
     },
     {
       "id": "capability_standard_graph_op_LoadPlacedEntity",
@@ -7741,11 +7756,11 @@
       "docsPath": "gitbook/reference/graph-node-op-wiki/LoadPlacedEntity.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadPlacedEntity",
+      "artifactDir": null,
       "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadPlacedEntity/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_LoadPlacedEntity/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki; artifactDir 待验收运行产出（原注册值 artifacts/evidence/capability_standard_graph_op_LoadPlacedEntity 磁盘与 git 树均不存在）。"
     }
   ]
 }
