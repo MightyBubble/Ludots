@@ -54,6 +54,7 @@ internal sealed class PersistenceOnlineReplayPanelController
                 BuildSection("Live authoritative state", state.Metrics, "#8DE3AE").Height(178f),
                 Ui.ScrollView(
                     BuildSection("How to play", state.Controls, "#8AD7FF"),
+                    BuildSection("World markers", new[] { "Cyan rings = live ECS entities", "Gold rings = replay is driving the entities", "Red rings = disconnected", "Magenta boxes = checkpoint positions; lines show drift" }, "#EE5EDC"),
                     BuildSection("Trace", state.LogLines, "#FFB38A"))
                     .Height(126f).Gap(8f))
             .Width(500f).Height(680f).Padding(16f).Gap(10f).Radius(8f).Background("#0B1520").Border(1f, Color("#2F475E")))

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Input.Runtime;
@@ -20,6 +22,7 @@ public sealed class PersistenceOnlineReplayRuntime
     private readonly PersistenceOnlineReplayPanelController _panel;
     private readonly List<string> _log = new(12);
     private readonly List<AuthoritativeAction> _actionBuffer = new(16);
+    private readonly List<ReplayVisualMarker> _checkpointVisuals = new(8);
     private readonly SaveSlotStore _slots;
     private GameEngine? _engine;
     private ReplayRecorder? _recorder;
@@ -99,6 +102,8 @@ public sealed class PersistenceOnlineReplayRuntime
     }
 
     public bool IsReplayPlaying => _replayPlaying;
+    internal bool IsDisconnected => _disconnected;
+    internal IReadOnlyList<ReplayVisualMarker> CheckpointVisuals => _checkpointVisuals;
 
     public void RequestCheckpoint() { if (CurrentEngine() is { } engine) { engine.GetService(CoreServiceKeys.CheckpointCoordinator)?.RequestCheckpoint(); _checkpointRequested = true; _status = "Checkpoint requested; waiting for a completed fixed step."; Log(_status); RefreshPanel(engine); } }
 
@@ -125,6 +130,7 @@ public sealed class PersistenceOnlineReplayRuntime
             new WorldRestoreService().Restore(engine, snapshot);
             _checkpoint = snapshot;
             _checkpointDigest = Digest(snapshot.WorldBytes);
+            CaptureCheckpointVisuals(engine);
             _recoverySource = "disk save";
             _status = $"Restored manual/showcase from disk at tick {snapshot.Header.Tick}; continue playing.";
             Log(_status);
@@ -223,6 +229,7 @@ public sealed class PersistenceOnlineReplayRuntime
             if (!_disconnected) throw new SaveContextException("Simulate disconnect before reconnecting.");
             if (_checkpoint == null) throw new SaveContextException("Reconnect has no authoritative checkpoint.");
             new WorldRestoreService().Restore(engine, _checkpoint);
+            CaptureCheckpointVisuals(engine);
             _disconnected = false;
             engine.GetService(CoreServiceKeys.SimulationLoopController)?.SetRealtime();
             _recoverySource = "checkpoint recovery";
@@ -311,6 +318,7 @@ public sealed class PersistenceOnlineReplayRuntime
         _checkpoint = coordinator.Checkpoints[^1];
         _checkpointRequested = false;
         _checkpointDigest = Digest(_checkpoint.WorldBytes);
+        CaptureCheckpointVisuals(engine);
         _recoverySource = "live checkpoint";
         _status = $"Checkpoint captured at completed tick {_checkpoint.Header.Tick}; digest {_checkpointDigest}.";
         Log(_status);
@@ -376,6 +384,17 @@ public sealed class PersistenceOnlineReplayRuntime
         QueueNextReplayFrame(engine);
     }
     private static string Digest(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).Substring(0, 12);
+    private void CaptureCheckpointVisuals(GameEngine engine)
+    {
+        _checkpointVisuals.Clear();
+        var query = new QueryDescription().WithAll<Name, WorldPositionCm>();
+        engine.World.Query(in query, (Entity _, ref Name name, ref WorldPositionCm position) =>
+        {
+            if (string.IsNullOrWhiteSpace(name.Value) || name.Value.IndexOf("Replay", StringComparison.OrdinalIgnoreCase) < 0) return;
+            var cm = position.ToWorldCmInt2();
+            _checkpointVisuals.Add(new ReplayVisualMarker(name.Value, cm.X, cm.Y));
+        });
+    }
     private static string CaptureWorldDigest(GameEngine engine)
     {
         WorldSaveSnapshot snapshot = new WorldSnapshotService().Capture(engine, SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
@@ -398,3 +417,5 @@ public sealed class PersistenceOnlineReplayRuntime
     private void Fail(Exception ex) { _status = $"Rejected: {ex.Message}"; Log(_status); }
     private void Log(string line) { _log.Insert(0, $"[showcase] {line}"); if (_log.Count > 8) _log.RemoveAt(_log.Count - 1); }
 }
+
+internal readonly record struct ReplayVisualMarker(string Name, int XCm, int YCm);

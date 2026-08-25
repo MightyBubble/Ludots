@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using PersistenceOnlineReplayShowcaseMod.Runtime;
 using PersistenceOnlineReplayShowcaseMod.Systems;
 
@@ -22,8 +23,10 @@ public sealed class PersistenceOnlineReplayShowcaseModEntry : IMod
 
             engine.GlobalContext[PersistenceOnlineReplayShowcaseIds.InstalledKey] = true;
             engine.GlobalContext[PersistenceOnlineReplayShowcaseIds.RuntimeKey] = runtime;
+            var debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) ?? new DebugDrawCommandBuffer();
+            engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             engine.RegisterSystem(new PersistenceOnlineReplayInputSystem(engine, runtime), SystemGroup.InputCollection);
-            engine.RegisterPresentationSystem(new PersistenceOnlineReplayPresentationSystem(engine, runtime));
+            engine.RegisterPresentationSystem(new PersistenceOnlineReplayPresentationSystem(engine, runtime, debugDraw));
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
