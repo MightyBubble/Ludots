@@ -45,6 +45,13 @@
     "IdField": "id"
   },
   {
+    "Path": "Enums/enums.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "ArrayAppendFields": [ "members" ],
+    "AllowEmpty": true
+  },
+  {
     "Path": "AI/target_filters.json",
     "Policy": "ArrayById",
     "IdField": "id",

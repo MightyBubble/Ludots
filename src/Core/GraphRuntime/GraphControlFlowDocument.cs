@@ -252,6 +252,12 @@ namespace Ludots.Core.GraphRuntime
         /// names fail closed.
         /// </summary>
         public string? EnumType { get; set; }
+        /// <summary>
+        /// Map variable name for FsmState sugar: the FSM's current-state SSOT. Required
+        /// on FsmState nodes; the compile lowers it to a ReadMapVarInt symbol read and
+        /// transitions happen by WriteMapVarInt on the same name inside arm bodies.
+        /// </summary>
+        public string? StateVar { get; set; }
     }
 
     public sealed class GraphControlFlowEdge

@@ -209,7 +209,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             BtSequence = 5,
             BtSelector = 6,
             BtDecorator = 7,
-            SelectByEnum = 8
+            SelectByEnum = 8,
+            FsmState = 9
         }
 
         private readonly struct AuthoredOp
@@ -966,6 +967,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                // FSM dispatch container sugar (GraphControlFlowCompiler.Fsm.cs): same
+                // Script/TriggerGraph gating as SwitchInt; never a GraphNodeOp value.
+                if (string.Equals(node.Op, GraphAuthoringSugar.FsmState, StringComparison.Ordinal))
+                {
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"{GraphAuthoringSugar.FsmState} is Script/TriggerGraph compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.FsmState, GraphNodeOp.None);
+                    continue;
+                }
+
                 if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
                 {
                     if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
@@ -1090,7 +1107,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             bool anyBound = false;
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (ops[i].Kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum) ||
+                if (ops[i].Kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum or AuthoredOpKind.FsmState) ||
                     string.IsNullOrWhiteSpace(nodes[i].EnumType))
                 {
                     continue;
@@ -1109,7 +1126,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             for (int i = 0; i < nodes.Count; i++)
             {
                 AuthoredOpKind kind = ops[i].Kind;
-                if (kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum) ||
+                if (kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum or AuthoredOpKind.FsmState) ||
                     string.IsNullOrWhiteSpace(nodes[i].EnumType))
                 {
                     continue;
@@ -1126,7 +1143,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                if (kind == AuthoredOpKind.SwitchInt)
+                if (kind == AuthoredOpKind.SwitchInt || kind == AuthoredOpKind.FsmState)
                 {
                     List<GraphControlFlowEdge> edges = document.ControlEdges ?? new List<GraphControlFlowEdge>();
                     for (int e = 0; e < edges.Count; e++)
@@ -1348,6 +1365,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return GraphValueType.Int;
             }
 
+            // FsmState also produces a value: the state int read from stateVar, so the
+            // register doubles as the arm-check selector (ablation parity with a
+            // handwritten ReadMapVarInt→SwitchInt chain).
+            if (op.Kind == AuthoredOpKind.FsmState)
+            {
+                return GraphValueType.Int;
+            }
+
             if (graphKind == GraphKind.Query)
             {
                 return GraphOpDescriptorTable.GetQueryOutputType(op.NodeOp);
@@ -1489,6 +1514,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 if (op.Kind == AuthoredOpKind.SwitchInt)
                 {
                     ValidateSwitchIntEdges(node, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    continue;
+                }
+
+                if (op.Kind == AuthoredOpKind.FsmState)
+                {
+                    ValidateFsmStateEdges(node, controlEdges, graphId, diagnostics);
                     continue;
                 }
 
@@ -1676,6 +1707,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                        GraphControlFlowPorts.TryParseCasePort(port, out _);
             }
 
+            if (op.Kind == AuthoredOpKind.FsmState)
+            {
+                return port == GraphControlFlowPorts.Default ||
+                       GraphControlFlowPorts.TryParseCasePort(port, out _);
+            }
+
             if (op.Kind is AuthoredOpKind.While or AuthoredOpKind.Until)
             {
                 return port is GraphControlFlowPorts.Body or GraphControlFlowPorts.Next;
@@ -1736,6 +1773,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (op.Kind == AuthoredOpKind.SwitchInt)
             {
                 return port == GraphControlFlowPorts.Selector;
+            }
+
+            // FsmState has no value inputs: the selector is the stateVar map read baked
+            // into the expansion, so there is nothing an edge could legitimately feed.
+            if (op.Kind == AuthoredOpKind.FsmState)
+            {
+                return false;
             }
 
             if (op.Kind == AuthoredOpKind.SelectByEnum)
@@ -1922,6 +1966,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 int cases = CountSwitchCaseArms(node.Id, controlEdges);
                 // per arm: ConstInt + CompareEqInt + JumpIfFalse + Jump(arm); then Jump(default)
                 return (cases * 4) + 1;
+            }
+
+            if (op.Kind == AuthoredOpKind.FsmState)
+            {
+                int cases = CountSwitchCaseArms(node.Id, controlEdges);
+                // ReadMapVarInt + next-aligned Jump; then the SwitchInt-shaped arm chain + Jump(default)
+                return (cases * 4) + 3;
             }
 
             if (op.Kind == AuthoredOpKind.SelectByEnum)
@@ -2111,6 +2162,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     droppedRegisters,
                     definedInts,
                     definedBools,
+                    graphId,
+                    diagnostics,
+                    enumCases);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.FsmState)
+            {
+                CompileFsmState(
+                    document,
+                    node,
+                    sugarScratches[nodeIndex],
+                    controlEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    outputRegisters,
+                    definedInts,
+                    symbolToIndex,
+                    symbols,
                     graphId,
                     diagnostics,
                     enumCases);
@@ -2433,7 +2505,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (ops[i].Kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum))
+                if (ops[i].Kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum or AuthoredOpKind.FsmState))
                 {
                     continue;
                 }

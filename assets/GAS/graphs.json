@@ -655,30 +655,110 @@
   {
     "id": "Graph.HFSM.Cond.AlwaysTrue",
     "kind": "Script",
-    "entry": "c",
+    "entry": "readDist",
     "nodes": [
       {
-        "id": "c",
+        "id": "readDist",
+        "op": "MoveInt"
+      },
+      {
+        "id": "alertCm",
+        "op": "ConstInt",
+        "intValue": 500
+      },
+      {
+        "id": "near",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "yes",
         "op": "ConstInt",
         "intValue": 1
       },
       {
-        "id": "h",
+        "id": "no",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
         "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
       {
-        "from": "c",
+        "from": "readDist",
         "fromPort": "next",
-        "to": "h"
+        "to": "alertCm"
+      },
+      {
+        "from": "alertCm",
+        "fromPort": "next",
+        "to": "near"
+      },
+      {
+        "from": "near",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "yes"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "no"
+      },
+      {
+        "from": "yes",
+        "fromPort": "next",
+        "to": "haltYes"
+      },
+      {
+        "from": "no",
+        "fromPort": "next",
+        "to": "haltNo"
       }
     ],
     "valueEdges": [
       {
-        "from": "c",
+        "from": "readDist",
         "fromPort": "value",
-        "to": "h",
+        "to": "near",
+        "toPort": "a"
+      },
+      {
+        "from": "alertCm",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "b"
+      },
+      {
+        "from": "near",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "yes",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "no",
+        "fromPort": "value",
+        "to": "haltNo",
         "toPort": "value"
       }
     ]
@@ -686,30 +766,110 @@
   {
     "id": "Graph.HFSM.Combat.OnEnter",
     "kind": "Script",
-    "entry": "c",
+    "entry": "readDist",
     "nodes": [
       {
-        "id": "c",
-        "op": "ConstInt",
-        "intValue": 1
+        "id": "readDist",
+        "op": "MoveInt"
       },
       {
-        "id": "h",
+        "id": "combatCm",
+        "op": "ConstInt",
+        "intValue": 200
+      },
+      {
+        "id": "near",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "nearCode",
+        "op": "ConstInt",
+        "intValue": 11
+      },
+      {
+        "id": "farCode",
+        "op": "ConstInt",
+        "intValue": 10
+      },
+      {
+        "id": "haltNear",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltFar",
         "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
       {
-        "from": "c",
+        "from": "readDist",
         "fromPort": "next",
-        "to": "h"
+        "to": "combatCm"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "next",
+        "to": "near"
+      },
+      {
+        "from": "near",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "nearCode"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "farCode"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "next",
+        "to": "haltNear"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "next",
+        "to": "haltFar"
       }
     ],
     "valueEdges": [
       {
-        "from": "c",
+        "from": "readDist",
         "fromPort": "value",
-        "to": "h",
+        "to": "near",
+        "toPort": "a"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "b"
+      },
+      {
+        "from": "near",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "value",
+        "to": "haltNear",
+        "toPort": "value"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "value",
+        "to": "haltFar",
         "toPort": "value"
       }
     ]
@@ -717,30 +877,110 @@
   {
     "id": "Graph.HFSM.Combat.OnTick",
     "kind": "Script",
-    "entry": "c",
+    "entry": "readDist",
     "nodes": [
       {
-        "id": "c",
-        "op": "ConstInt",
-        "intValue": 2
+        "id": "readDist",
+        "op": "MoveInt"
       },
       {
-        "id": "h",
+        "id": "combatCm",
+        "op": "ConstInt",
+        "intValue": 200
+      },
+      {
+        "id": "near",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "nearCode",
+        "op": "ConstInt",
+        "intValue": 21
+      },
+      {
+        "id": "farCode",
+        "op": "ConstInt",
+        "intValue": 20
+      },
+      {
+        "id": "haltNear",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltFar",
         "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
       {
-        "from": "c",
+        "from": "readDist",
         "fromPort": "next",
-        "to": "h"
+        "to": "combatCm"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "next",
+        "to": "near"
+      },
+      {
+        "from": "near",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "nearCode"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "farCode"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "next",
+        "to": "haltNear"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "next",
+        "to": "haltFar"
       }
     ],
     "valueEdges": [
       {
-        "from": "c",
+        "from": "readDist",
         "fromPort": "value",
-        "to": "h",
+        "to": "near",
+        "toPort": "a"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "b"
+      },
+      {
+        "from": "near",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "value",
+        "to": "haltNear",
+        "toPort": "value"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "value",
+        "to": "haltFar",
         "toPort": "value"
       }
     ]
@@ -748,30 +988,110 @@
   {
     "id": "Graph.HFSM.Combat.OnExit",
     "kind": "Script",
-    "entry": "c",
+    "entry": "readDist",
     "nodes": [
       {
-        "id": "c",
-        "op": "ConstInt",
-        "intValue": 3
+        "id": "readDist",
+        "op": "MoveInt"
       },
       {
-        "id": "h",
+        "id": "combatCm",
+        "op": "ConstInt",
+        "intValue": 200
+      },
+      {
+        "id": "near",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "nearCode",
+        "op": "ConstInt",
+        "intValue": 31
+      },
+      {
+        "id": "farCode",
+        "op": "ConstInt",
+        "intValue": 30
+      },
+      {
+        "id": "haltNear",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltFar",
         "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
       {
-        "from": "c",
+        "from": "readDist",
         "fromPort": "next",
-        "to": "h"
+        "to": "combatCm"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "next",
+        "to": "near"
+      },
+      {
+        "from": "near",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "nearCode"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "farCode"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "next",
+        "to": "haltNear"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "next",
+        "to": "haltFar"
       }
     ],
     "valueEdges": [
       {
-        "from": "c",
+        "from": "readDist",
         "fromPort": "value",
-        "to": "h",
+        "to": "near",
+        "toPort": "a"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "b"
+      },
+      {
+        "from": "near",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "value",
+        "to": "haltNear",
+        "toPort": "value"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "value",
+        "to": "haltFar",
         "toPort": "value"
       }
     ]
@@ -1054,6 +1374,380 @@
         "fromPort": "value",
         "to": "drinkAdd",
         "toPort": "b"
+      }
+    ]
+  },
+  {
+    "id": "Graph.FSM.Sentry",
+    "kind": "Script",
+    "entry": "distIn",
+    "nodes": [
+      {
+        "id": "distIn",
+        "op": "MoveInt",
+        "pinRegister": 1
+      },
+      {
+        "id": "fsm",
+        "op": "FsmState",
+        "enumType": "Ludots.SentryPhase",
+        "stateVar": "sentry.phase"
+      },
+      {
+        "id": "iAlertCm",
+        "op": "ConstInt",
+        "intValue": 500
+      },
+      {
+        "id": "iNear",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "iBranch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "iAlertCode",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "iWrite",
+        "op": "WriteMapVarInt",
+        "var": "sentry.phase"
+      },
+      {
+        "id": "iDone",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "iHold",
+        "op": "ConstInt",
+        "intValue": 10
+      },
+      {
+        "id": "iHoldDone",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "aCombatCode",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "aWrite",
+        "op": "WriteMapVarInt",
+        "var": "sentry.phase"
+      },
+      {
+        "id": "aDone",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "cCombatCm",
+        "op": "ConstInt",
+        "intValue": 200
+      },
+      {
+        "id": "cNear",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "cBranch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "cHold",
+        "op": "ConstInt",
+        "intValue": 20
+      },
+      {
+        "id": "cHoldDone",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "cRetreatCode",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "cWrite",
+        "op": "WriteMapVarInt",
+        "var": "sentry.phase"
+      },
+      {
+        "id": "cDone",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "rIdleCode",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "rWrite",
+        "op": "WriteMapVarInt",
+        "var": "sentry.phase"
+      },
+      {
+        "id": "rDone",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "dIdleCode",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "dWrite",
+        "op": "WriteMapVarInt",
+        "var": "sentry.phase"
+      },
+      {
+        "id": "dDone",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "distIn",
+        "fromPort": "next",
+        "to": "fsm"
+      },
+      {
+        "from": "fsm",
+        "fromPort": "case:Idle",
+        "to": "iAlertCm"
+      },
+      {
+        "from": "iAlertCm",
+        "fromPort": "next",
+        "to": "iNear"
+      },
+      {
+        "from": "iNear",
+        "fromPort": "next",
+        "to": "iBranch"
+      },
+      {
+        "from": "iBranch",
+        "fromPort": "true",
+        "to": "iAlertCode"
+      },
+      {
+        "from": "iAlertCode",
+        "fromPort": "next",
+        "to": "iWrite"
+      },
+      {
+        "from": "iWrite",
+        "fromPort": "next",
+        "to": "iDone"
+      },
+      {
+        "from": "iBranch",
+        "fromPort": "false",
+        "to": "iHold"
+      },
+      {
+        "from": "iHold",
+        "fromPort": "next",
+        "to": "iHoldDone"
+      },
+      {
+        "from": "fsm",
+        "fromPort": "case:Alert",
+        "to": "aCombatCode"
+      },
+      {
+        "from": "aCombatCode",
+        "fromPort": "next",
+        "to": "aWrite"
+      },
+      {
+        "from": "aWrite",
+        "fromPort": "next",
+        "to": "aDone"
+      },
+      {
+        "from": "fsm",
+        "fromPort": "case:Combat",
+        "to": "cCombatCm"
+      },
+      {
+        "from": "cCombatCm",
+        "fromPort": "next",
+        "to": "cNear"
+      },
+      {
+        "from": "cNear",
+        "fromPort": "next",
+        "to": "cBranch"
+      },
+      {
+        "from": "cBranch",
+        "fromPort": "true",
+        "to": "cHold"
+      },
+      {
+        "from": "cHold",
+        "fromPort": "next",
+        "to": "cHoldDone"
+      },
+      {
+        "from": "cBranch",
+        "fromPort": "false",
+        "to": "cRetreatCode"
+      },
+      {
+        "from": "cRetreatCode",
+        "fromPort": "next",
+        "to": "cWrite"
+      },
+      {
+        "from": "cWrite",
+        "fromPort": "next",
+        "to": "cDone"
+      },
+      {
+        "from": "fsm",
+        "fromPort": "case:Retreat",
+        "to": "rIdleCode"
+      },
+      {
+        "from": "rIdleCode",
+        "fromPort": "next",
+        "to": "rWrite"
+      },
+      {
+        "from": "rWrite",
+        "fromPort": "next",
+        "to": "rDone"
+      },
+      {
+        "from": "fsm",
+        "fromPort": "default",
+        "to": "dIdleCode"
+      },
+      {
+        "from": "dIdleCode",
+        "fromPort": "next",
+        "to": "dWrite"
+      },
+      {
+        "from": "dWrite",
+        "fromPort": "next",
+        "to": "dDone"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "distIn",
+        "fromPort": "value",
+        "to": "iNear",
+        "toPort": "a"
+      },
+      {
+        "from": "iAlertCm",
+        "fromPort": "value",
+        "to": "iNear",
+        "toPort": "b"
+      },
+      {
+        "from": "iNear",
+        "fromPort": "value",
+        "to": "iBranch",
+        "toPort": "condition"
+      },
+      {
+        "from": "iAlertCode",
+        "fromPort": "value",
+        "to": "iWrite",
+        "toPort": "value"
+      },
+      {
+        "from": "iAlertCode",
+        "fromPort": "value",
+        "to": "iDone",
+        "toPort": "value"
+      },
+      {
+        "from": "iHold",
+        "fromPort": "value",
+        "to": "iHoldDone",
+        "toPort": "value"
+      },
+      {
+        "from": "aCombatCode",
+        "fromPort": "value",
+        "to": "aWrite",
+        "toPort": "value"
+      },
+      {
+        "from": "aCombatCode",
+        "fromPort": "value",
+        "to": "aDone",
+        "toPort": "value"
+      },
+      {
+        "from": "distIn",
+        "fromPort": "value",
+        "to": "cNear",
+        "toPort": "a"
+      },
+      {
+        "from": "cCombatCm",
+        "fromPort": "value",
+        "to": "cNear",
+        "toPort": "b"
+      },
+      {
+        "from": "cNear",
+        "fromPort": "value",
+        "to": "cBranch",
+        "toPort": "condition"
+      },
+      {
+        "from": "cHold",
+        "fromPort": "value",
+        "to": "cHoldDone",
+        "toPort": "value"
+      },
+      {
+        "from": "cRetreatCode",
+        "fromPort": "value",
+        "to": "cWrite",
+        "toPort": "value"
+      },
+      {
+        "from": "cRetreatCode",
+        "fromPort": "value",
+        "to": "cDone",
+        "toPort": "value"
+      },
+      {
+        "from": "rIdleCode",
+        "fromPort": "value",
+        "to": "rWrite",
+        "toPort": "value"
+      },
+      {
+        "from": "rIdleCode",
+        "fromPort": "value",
+        "to": "rDone",
+        "toPort": "value"
+      },
+      {
+        "from": "dIdleCode",
+        "fromPort": "value",
+        "to": "dWrite",
+        "toPort": "value"
+      },
+      {
+        "from": "dIdleCode",
+        "fromPort": "value",
+        "to": "dDone",
+        "toPort": "value"
       }
     ]
   }
