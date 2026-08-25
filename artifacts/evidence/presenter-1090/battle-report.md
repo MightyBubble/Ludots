@@ -30,10 +30,10 @@
 ## Residual ignore/warn branches
 - Searched the loader for ignore/warn-and-continue paths: none remain. Every object parse starts with `RejectUnknownFields` against a whitelist array; `overrides` / `overrides.transform` / extension `execution` / `execution.trigger` were the last ad-hoc loops and now route through the same helper.
 
-## Test results (branch `codex/issue-1090-closed-set-reject`, pre-merge with origin/main)
+## Test results (branch `codex/issue-1090-closed-set-reject`, after merging origin/main f617c937f4)
 - `dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --filter "FullyQualifiedName~PresenterDefinitionConfigLoaderTests"`: 158 passed, 0 failed.
 - Same project, filter `PresenterTreeLifecycleTests|PresenterBehaviorKindTests`: 45 passed, 0 failed.
-- Full `PresentationTests` project: recorded in `trace.jsonl`.
+- Full `PresentationTests` project: 813 passed, 20 failed. The 20 failures are byte-identical before and after this branch's change and match the pre-existing main failure families (CrowdPhysicsArena showcase acceptance, MassNavigation/minimap/scatter showcase and benchmark families, GenreInfo showcase, VfxForge map load, plus three asset-loader tests verified failing identically on base commit c497ea5e29). None touch `PresenterDefinitionConfigLoaderTests`.
 
 ## Trace
 - `trace.jsonl` holds one JSON line per verification step.
