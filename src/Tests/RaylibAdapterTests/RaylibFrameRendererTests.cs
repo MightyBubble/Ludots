@@ -1,4 +1,6 @@
 using Ludots.Adapter.Raylib;
+using Ludots.Adapter.Raylib.Rendering;
+using Ludots.Raylib.Render;
 using NUnit.Framework;
 
 namespace Ludots.Tests.RaylibAdapter;
@@ -109,5 +111,17 @@ public sealed class RaylibFrameRendererTests
         }
 
         Assert.That(error, Is.Not.Null);
+    }
+
+    [Test]
+    public void BindInstancedBatchLaneSource_EmptyStoreBindsWithoutResidentLanes()
+    {
+        var store = new RaylibInstancedBatchLaneStore();
+        using var renderer = new RaylibPrimitiveRenderer();
+
+        Assert.DoesNotThrow(() => renderer.BindInstancedBatchLaneSource(store));
+        Assert.That(store.ResidentLaneCount, Is.EqualTo(0));
+        Assert.That(store.LastAppliedRequestCount, Is.EqualTo(0));
+        Assert.Throws<ArgumentNullException>(() => renderer.BindInstancedBatchLaneSource(null!));
     }
 }

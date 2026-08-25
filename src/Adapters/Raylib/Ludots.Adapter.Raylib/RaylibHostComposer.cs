@@ -1,4 +1,5 @@
 using System;
+using Ludots.Adapter.Raylib.Rendering;
 using Ludots.Client.Raylib.Diagnostics;
 using Ludots.Client.Raylib.Input;
 using Ludots.Core.Config;
@@ -26,7 +27,8 @@ namespace Ludots.Adapter.Raylib
         GameConfig Config,
         UIRoot UiRoot,
         SkiaUiRenderer Renderer,
-        IBrowserRuntime? BrowserRuntime);
+        IBrowserRuntime? BrowserRuntime,
+        RaylibInstancedBatchLaneStore InstancedBatchLaneStore);
 
     internal static class RaylibHostComposer
     {
@@ -102,16 +104,23 @@ namespace Ludots.Adapter.Raylib
             engine.SetService(CoreServiceKeys.SyntheticInput, syntheticInput);
             engine.SetService(CoreServiceKeys.HostFrameCapture, (IHostFrameCapture)new Services.RaylibFrameCaptureService());
 
+            var instancedBatchLaneStore = new RaylibInstancedBatchLaneStore();
+            engine.SetService(RaylibInstancedBatchLaneStore.LaneStoreServiceKey, instancedBatchLaneStore);
+
             engine.RegisterPresentationAdapterCapabilities(
-                new PresentationAdapterCapabilities(
-                    PresentationVisualCapabilities.Decal |
-                    PresentationVisualCapabilities.Vfx |
-                    PresentationVisualCapabilities.Surface |
-                    PresentationVisualCapabilities.NavMeshTileGeometry));
+                new PresentationAdapterCapabilities(ComposePresentationVisualCapabilities()));
 
             ValidateRequiredContextBeforeStart(engine);
 
-            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime);
+            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime, instancedBatchLaneStore);
+        }
+
+        internal static PresentationVisualCapabilities ComposePresentationVisualCapabilities()
+        {
+            return PresentationVisualCapabilities.Decal |
+                   PresentationVisualCapabilities.Vfx |
+                   PresentationVisualCapabilities.Surface |
+                   PresentationVisualCapabilities.NavMeshTileGeometry;
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
