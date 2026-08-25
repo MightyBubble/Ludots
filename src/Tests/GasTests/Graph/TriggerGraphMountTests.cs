@@ -472,6 +472,33 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void LoadMap_WithAbilityDomainMount_FailsClosedNoRuntimePipeline()
+        {
+            const string abilityId = "ability.mount_probe";
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: true, abilityDomainMount: true);
+            using GameEngine engine = fixture.CreateEngine();
+            fixture.RegisterTriggerGraph(engine, HaltProgram(), ProbeEntries());
+
+            string? message = null;
+            try
+            {
+                engine.LoadMap(MapId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
+
+            Assert.That(message, Is.Not.Null, "Map load must fail closed on an ability-domain mount.");
+            Assert.That(message, Does.Contain(MapId));
+            Assert.That(message, Does.Contain(TriggerGraphMount.FieldName));
+            Assert.That(message, Does.Contain(abilityId));
+            Assert.That(message, Does.Contain("no runtime mount pipeline"));
+            Assert.That(engine.TriggerManager.Get<TriggerGraphMountTrigger>(), Is.Null,
+                "A rejected ability-domain mount must leave no partial map-domain mount behind.");
+        }
+
+        [Test]
         public void LoadMap_WithUnknownMountedGraph_Throws()
         {
             using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: true, graphName: "Graph.Missing");
@@ -548,7 +575,7 @@ namespace Ludots.Tests.Gas.Graph
 
             public string Root { get; }
 
-            public static TriggerGraphEngineFixture Create(bool includeMapMount, string? graphName = null)
+            public static TriggerGraphEngineFixture Create(bool includeMapMount, string? graphName = null, bool abilityDomainMount = false)
             {
                 string effectiveGraphName = graphName ?? GraphName;
                 string root = Path.Combine(Path.GetTempPath(), "Ludots_TriggerGraphMountTests", Guid.NewGuid().ToString("N"));
@@ -643,16 +670,7 @@ namespace Ludots.Tests.Gas.Graph
                     ]
                     """);
                 string mapJson = includeMapMount
-                    ? $$"""
-                      {
-                        "Id": "{{MapId}}",
-                        "Tags": [ "camera.skip_default_on_load" ],
-                        "Entities": [
-                          { "InstanceId": "{{ScopeInstanceId}}", "Template": "{{TemplateId}}" }
-                        ],
-                        "TriggerGraphs": [ { "graph": "{{effectiveGraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}" } ]
-                      }
-                      """
+                    ? BuildMapJson(effectiveGraphName, abilityDomainMount)
                     : $$"""
                       {
                         "Id": "{{MapId}}",
@@ -664,6 +682,23 @@ namespace Ludots.Tests.Gas.Graph
                       """;
                 File.WriteAllText(Path.Combine(root, ModId, "assets", "Maps", $"{MapId}.json"), mapJson);
                 return new TriggerGraphEngineFixture(root);
+            }
+
+            private static string BuildMapJson(string effectiveGraphName, bool abilityDomainMount)
+            {
+                string mounts = abilityDomainMount
+                    ? $$"""[ { "graph": "{{effectiveGraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}", "domain": "ability", "ability": "ability.mount_probe" } ]"""
+                    : $$"""[ { "graph": "{{effectiveGraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}" } ]""";
+                return $$"""
+                    {
+                      "Id": "{{MapId}}",
+                      "Tags": [ "camera.skip_default_on_load" ],
+                      "Entities": [
+                        { "InstanceId": "{{ScopeInstanceId}}", "Template": "{{TemplateId}}" }
+                      ],
+                      "TriggerGraphs": {{mounts}}
+                    }
+                    """;
             }
 
             public GameEngine CreateEngine()

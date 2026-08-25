@@ -225,3 +225,73 @@ Spawn/death 观察来自 World 结构事件（`ComponentAdded<MapEntity>` / `Ent
 ### 10.1 入口过滤（entries[].filters）
 
 TriggerGraph 图的 entry 可声明可选 `filters` 块（`region`/`tag`/`team`/`threshold`/`direction` 全部可选，未知字段在作者面拒绝；`threshold` 与 `direction`（`cross_above`|`cross_below`）必须成对声明，`direction` 拼写由编译器与 GraphProgramRegistry 双重校验）。分发时由 `TriggerGraphEntryFiltersEvaluator.Matches` 评估：任一声明的过滤项在 payload 缺失或不相等时不匹配（fail closed，不抛错）。`tag` 目前没有任何事件携带 tag payload，声明即永不匹配——待 tag 型事件落地后放开。
+
+## 11 TriggerGraph 域与时序合同
+
+TriggerGraph 只有一套 Graph VM（`GraphKind.TriggerGraph`）和一条 `TriggerManager` 分发路径。挂载位置决定作用域和生命周期，不改变图的作者面：
+
+| 域 | 作者入口 | 作用域 | 事件入口 | 回收时机 |
+|---|---|---|---|---|
+| map | 地图 `TriggerGraphs[]`（`scopeInstanceId` 可选） | 当前 `MapSession` | 地图生命周期（`MapLoaded`/`MapUnloaded`）、ThinkWave 时钟（`MapHeartbeat`/死生/区域）、GAS 桥（`Gas.Event.*`）、时刻桥（`Ability.*`/`Effect.*`） | 地图卸载 |
+| entity | 实体模板 `TriggerGraphs` 或地图 entity 挂载 | 实体自身（`scope=self`，`E[0]=SourceEntity=caster=自身`） | 出生/销毁当拍（`EntitySpawned`/`EntityDied`）、ThinkWave、GAS 桥、时刻桥 | 实体死亡（惰性清扫）或地图卸载 |
+| ability | 挂载数组 `domain: "ability"` + `scopeInstanceId` + `ability` | 施法者（作者面即如此声明） | 暂无——运行时没有挂载管线 | 不适用 |
+
+同一实体可以声明多张图；列表顺序就是挂载顺序，重复/空白/未登记图名在加载时失败关闭。`domain` 严格解析：`map`/`entity`/`ability` 之外的取值拒绝；entity 域必须有 `scopeInstanceId`；ability 域必须有 `scopeInstanceId` 与 `ability` 两个字段。实体 attachment 只定义成员身份、父子关系和位姿，不改变图的作用域。
+
+**ability 域是作者契约，不是运行能力**：`TriggerGraphMount` 解析并校验 ability 域声明，但 `TriggerGraphMounting.BuildTriggers` 在挂载点直接失败关闭（"no runtime mount pipeline"），绝不把 ability 域图降级为 map/entity 域执行。ability 运行时挂载管线落地前，ability 域挂载不产生任何执行。
+
+## 12 固定 Tick 时序
+
+模拟帧内顺序固定如下（系统组顺序见 `src/Contracts/SystemGroup.cs`），图作者据此推理"本拍看到什么"：
+
+```text
+InputCollection 输入/命令写入
+  -> AbilityActivation / EffectProcessing：GAS 模拟提交本拍副作用到 GameplayEventBus（未换页）
+  -> AttributeCalculation
+  -> DeferredTriggerCollection：地图心跳/区域/死亡规则与挂载图经 TriggerManager 分发（本拍视图）
+  -> Cleanup
+  -> EventDispatch：GameplayEventDispatchSystem 换页（本拍 GameplayEvent 可见）
+     -> GasEventTriggerBridgeSystem：Gas.Event.<TagName> 地图域路由（Target 优先，Source 回退）
+     -> 挂载图同步执行；图内再发的 GAS 事件写入下一拍缓冲（严格一拍后可见）
+  -> ClearPresentationFlags：TriggerGraphMomentBridgeSystem 只读镜像 Ability.*/Effect.*（不清缓冲）
+     -> 挂载图同步执行 -> GameplayPresentationProjectionSystem 消费表现缓冲（每刻一次）
+  -> PresenterRuleSystem（渲染帧）：只读消费表现缓冲，不触发 TriggerGraph
+```
+
+桥接事件是换页后的本拍视图；图中再次发送的 GAS 事件严格下一拍可见。图只能在模拟组触发 `Fire*`，表现层、客户端和适配器不得反向开火（源扫描守卫）。实体出生/销毁是生命周期点的同步分发，不等待 ThinkWave；实体图的持续执行仍共用所属地图的 ThinkWave，不创建实体级时钟。
+
+## 13 GAS 与表现层边界
+
+GAS 桥是事件的唯一转换点，不能由每个生产者重复调用 `TriggerManager`。载荷键集中在 `MapTriggerEventPayloadKeys`（`TargetEntity`/`TagId`/`Magnitude`/`AbilityId`/`EffectId`/`Moment`/`SourceEntity`/`SourceTeamId` 等），寄存器种子按在场才种：`E[0]=SourceEntity`（兼 caster）、`E[1]=TargetEntity`、`I[2]=TagId`、`F[1]=Magnitude`。
+
+图的写入在模拟组内提交，GAS 反应系统遵循既有一步滞后；表现投影可以看到本拍已提交的全部副作用。Presenter 只读 ECS/表现缓冲，不写地图变量、GAS 状态，也不触发 TriggerGraph。表现事件不是没有 schema 的自由消息：`GasPresentationEventKind` 到事件键的映射由 `TriggerGraphMomentBridgeSystem.EventNameFor` 单表维护，枚举全覆盖有测试钉死。
+
+## 14 时序 UAT
+
+```gherkin
+Feature: TriggerGraph 跨域时序可推理
+
+  Scenario: GAS 桥看到本拍事件
+    Given 第 N 拍 GameplayEventDispatch 已换页
+    When 事件桥发布 Gas.Event.Combat.Hit
+    Then 地图和实体域图都能在第 N 拍读取该事件
+    And 图内再次发送的事件只能在第 N+1 拍被读取
+
+  Scenario: 实体域作用域为自身
+    Given 一个实体模板声明一张 TriggerGraph
+    When 该实体出生/销毁
+    Then 只有该实体的图在当拍执行，E[0] 指向自身
+    And 死后的挂载惰性清扫，不残留注册
+
+  Scenario: ability 域无管线拒绝
+    Given 地图 TriggerGraphs 声明 domain "ability"
+    When 地图加载
+    Then 挂载失败关闭，指名 ability 与缺失的运行时管线
+    And 该图不会被降级为 map/entity 域执行
+
+  Scenario: 表现层只读
+    Given 本拍图已经写入状态并产生表现事件
+    When PresenterRuleSystem 在渲染帧消费缓冲
+    Then 画面显示本拍副作用
+    And Presenter 不触发任何 TriggerGraph
+```

@@ -88,7 +88,7 @@
 
 新开了一条线，别当成图能力收口的回锅：触发器图（TriggerGraph，原 MapTriggerGraph）。
 进度与计划只认两张票：地图域线 https://github.com/MightyBubble/Ludots/issues/1030 ；域扩展线（实体域挂载、GAS 事件桥、技能/效果时刻桥、presenter 时序合同）https://github.com/MightyBubble/Ludots/issues/1031 ——两张票顶部各有进度快照与剩余切片清单，新活从快照开工，别重做已落地的。
-方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰、跨 mod 叠加（NightRaidOverrideMod：kill_threshold 覆盖 + 叠加计数图，验收测试在场）与旧 LevelDirector 试验线退役都已入 main（#1037 族收口批，非待合分支）。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。技能域挂载仍是 #1031 的开口；#1030 其余剩余切片与后续战役队列（挂载仲裁残余、destroy 图动词、launcher 可玩性 polish、FSM-1a 收尾、#1126、基线失败清偿）以两张票票面快照为准。
+方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰、跨 mod 叠加（NightRaidOverrideMod：kill_threshold 覆盖 + 叠加计数图，验收测试在场）与旧 LevelDirector 试验线退役都已入 main（#1037 族收口批，非待合分支）。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。#1031 域扩展线已收口入 main：S1 更名（TriggerGraph 唯一命名）+实体域（scope=self、出生/销毁当拍、死挂载惰性清扫）、S2 GAS 事件桥（Gas.Event.*，EventDispatch 换页后）+技能/效果时刻桥（Ability.*/Effect.* 只读镜像）+ D6 表现层禁 Fire* 源扫描守卫、S3 技能域作者契约（严格解析 scopeInstanceId+ability，运行时无挂载管线即失败关闭，不降级为 map/entity 域执行）、S4 时序合同（trigger_guide §11-14）；实体域管线在 Core 与 GasTests 全覆盖，生产挂载仍走地图域（夜袭/火球）。#1030 其余剩余切片与后续战役队列（挂载仲裁残余、destroy 图动词、launcher 可玩性 polish、FSM-1a 收尾、#1126、基线失败清偿）以两张票票面快照为准。
 
 下面这些早就知道、还没做，**不要当成新发现再审一轮**：默认「看见敌人 / 进入射程」还要有人先塞数字；图号在代码里还是普通整数；有一条事件丢弃计数永远是零；两个节点钉同一格时说不清。
 
