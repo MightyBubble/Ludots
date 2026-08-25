@@ -680,6 +680,7 @@ namespace Ludots.Core.Presentation.Config
             def.Id = _registry.GetId(key);
 
             AppendCompiledDurationRules(def);
+            AppendCompiledActivationConditionRules(def);
             ValidateAssetVisibilityParamProduction(key, def);
             StampRuleOwners(def.Id, def.Rules);
             return (key, def);
@@ -1221,6 +1222,88 @@ namespace Ludots.Core.Presentation.Config
                     RouteStrategy = ResolveBuiltinCommandRoute(PresenterCommandKind.DestroyPresenter, presenterDefinitionId: 0),
                 },
             };
+            def.Rules = rules;
+        }
+
+        /// <summary>
+        /// Compiles each behavior slot's activationCondition into the canonical rule
+        /// pipeline: one unconditional DeactivateBehavior + conditional ActivateBehavior
+        /// pair on PresenterCreated (exact definition key), so the slot's active mask
+        /// converges to the condition result when the presenter instance is created.
+        /// Commands inside one event bucket execute in rule order, so the unconditional
+        /// Deactivate lands before the conditional Activate. Condition evaluation reuses
+        /// the existing PresenterRuleSystem ConditionRef path; no second condition
+        /// system is added. Runtime re-evaluation of tag/attribute-driven behavior stays
+        /// in authored keyed rules (TagEffectiveChanged + TagGained/TagLost), which is
+        /// the SSOT pattern; wildcard re-evaluation against unrelated events is
+        /// intentionally not compiled. activationCondition is a root-presenter
+        /// contract: child creation bypasses PresenterCreated, enforced by
+        /// ValidateChildGraph.
+        /// </summary>
+        private static void AppendCompiledActivationConditionRules(PresenterDefinition def)
+        {
+            BehaviorSlot[] behaviors = def.Behaviors;
+            if (behaviors == null || behaviors.Length == 0)
+            {
+                return;
+            }
+
+            var conditioned = new List<int>(2);
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.ActivationCondition.Inline != InlineConditionKind.None ||
+                    slot.ActivationCondition.GraphProgramId > 0)
+                {
+                    conditioned.Add(i);
+                }
+            }
+
+            if (conditioned.Count == 0)
+            {
+                return;
+            }
+
+            PresenterRule[] authored = def.Rules ?? Array.Empty<PresenterRule>();
+            var rules = new PresenterRule[authored.Length + conditioned.Count * 2];
+            Array.Copy(authored, rules, authored.Length);
+            int cursor = authored.Length;
+            for (int k = 0; k < conditioned.Count; k++)
+            {
+                int behaviorIndex = conditioned[k];
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                if (slot.SlotIndex is < 0 or >= 32)
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{def.Key}' behavior index {behaviorIndex} declares activationCondition on invalid slot {slot.SlotIndex}; valid behavior slots are 0-31.");
+                }
+
+                rules[cursor++] = new PresenterRule
+                {
+                    Event = new EventFilter { Kind = PresentationEventKind.PresenterCreated, KeyId = def.Id },
+                    Condition = ConditionRef.AlwaysTrue,
+                    Command = new PresenterCommand
+                    {
+                        CommandKind = PresenterCommandKind.DeactivateBehavior,
+                        CommandKindId = (byte)PresenterCommandKind.DeactivateBehavior,
+                        RouteStrategy = ResolveBuiltinCommandRoute(PresenterCommandKind.DeactivateBehavior, presenterDefinitionId: 0),
+                        TargetBehaviorSlot = slot.SlotIndex,
+                    },
+                };
+                rules[cursor++] = new PresenterRule
+                {
+                    Event = new EventFilter { Kind = PresentationEventKind.PresenterCreated, KeyId = def.Id },
+                    Condition = slot.ActivationCondition,
+                    Command = new PresenterCommand
+                    {
+                        CommandKind = PresenterCommandKind.ActivateBehavior,
+                        CommandKindId = (byte)PresenterCommandKind.ActivateBehavior,
+                        RouteStrategy = ResolveBuiltinCommandRoute(PresenterCommandKind.ActivateBehavior, presenterDefinitionId: 0),
+                        TargetBehaviorSlot = slot.SlotIndex,
+                    },
+                };
+            }
+
             def.Rules = rules;
         }
 
@@ -2489,6 +2572,13 @@ namespace Ludots.Core.Presentation.Config
                             + "lifecycle.durationSeconds is a root-presenter contract: child creation bypasses PresenterCreated, so its duration timer could never arm.");
                     }
 
+                    if (HasActivationConditionedBehaviors(parsedByKey[childKey]))
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter '{key}' child[{i}] references activation-conditioned definition '{childKey}'. "
+                            + "behavior activationCondition is a root-presenter contract: child creation bypasses PresenterCreated, so its condition could never be evaluated.");
+                    }
+
                     if (string.IsNullOrWhiteSpace(childKey))
                     {
                         throw new InvalidOperationException($"Presenter '{key}' child[{i}] references definition id={childDefinitionId} that failed to load.");
@@ -2510,6 +2600,27 @@ namespace Ludots.Core.Presentation.Config
                 path.RemoveAt(path.Count - 1);
                 pathIds.Remove(definition.Id);
             }
+        }
+
+        private static bool HasActivationConditionedBehaviors(PresenterDefinition definition)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            if (behaviors == null || behaviors.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.ActivationCondition.Inline != InlineConditionKind.None ||
+                    slot.ActivationCondition.GraphProgramId > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void ValidateChildInstanceBehaviorSlots(
@@ -2717,10 +2828,11 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 seenSlots |= slotBit;
-                if (obj["activationCondition"] != null)
+                if (obj["activationCondition"] != null &&
+                    string.Equals(arrayFieldName, "instanceBehaviors", StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"Presenter '{ownerKey}' behavior[{i}] declares activationCondition, but behavior activation conditions are not wired into runtime consumption.");
+                        $"Presenter '{ownerKey}' behavior[{i}] declares activationCondition on child instance behaviors; activation conditions are definition-scoped and compile to PresenterCreated rules targeting definition slots.");
                 }
 
                 var slot = new BehaviorSlot
@@ -2731,6 +2843,7 @@ namespace Ludots.Core.Presentation.Config
                     ExtensionLane = extensionLane,
                     ExtensionTriggerId = extensionTriggerId,
                     ActiveByDefault = obj["activeByDefault"]?.GetValue<bool>() ?? false,
+                    ActivationCondition = ParseBehaviorActivationCondition(obj["activationCondition"], $"{behaviorPath}.activationCondition"),
                 };
 
                 switch (kind)
@@ -4159,6 +4272,23 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 cond.GraphProgramId = obj["graphProgramId"]?.GetValue<int>() ?? 0;
+            }
+
+            return cond;
+        }
+
+        private static ConditionRef ParseBehaviorActivationCondition(JsonNode? node, string context)
+        {
+            if (node == null)
+            {
+                return ConditionRef.AlwaysTrue;
+            }
+
+            ConditionRef cond = ParseConditionRef(node, context, allowGraphProgramId: true);
+            if (cond.Inline == InlineConditionKind.None && cond.GraphProgramId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context} must declare a condition contract: author 'inline' or a positive 'graphProgramId'. An empty activationCondition is authoring noise; omit the field or use activeByDefault.");
             }
 
             return cond;
