@@ -195,6 +195,16 @@ namespace Ludots.Core.Presentation.Requests
                 return;
             }
 
+            if (proxy.Visibility != VisualVisibility.Visible &&
+                !_stableDrawCache.Contains(proxy.StableId))
+            {
+                // A hidden/culled snapshot only preserves an adapter binding slot that
+                // already exists (once-visible contract). A static that was never visible
+                // must not allocate a cache entry: there is no slot to preserve and the
+                // entry would otherwise live until the presenter is destroyed.
+                return;
+            }
+
             _stableDrawCache.Upsert(proxy);
         }
 

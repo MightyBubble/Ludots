@@ -83,6 +83,27 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Sink_CameraCulledPresenter_SuppressedWithVisibilityDiagnostic()
+        {
+            _fixture.RegisterSoundDefinition();
+            Entity presenter = _fixture.CreatePresenter(_fixture.SoundDefinitionId);
+            _fixture.EnqueueSetParam(presenter, ParamLane.Float, 1f);
+
+            ref PresenterCullState cull = ref _fixture.World.Get<PresenterCullState>(presenter);
+            cull.OwnerCullVisible = false;
+            cull.LOD = LODLevel.Low;
+
+            _fixture.EnqueueSink(presenter, ParamLane.Float, slot: 0);
+            _fixture.RuntimeSystem.Update(0.016f);
+            PresenterSinkOutcome outcome = _fixture.RuntimeSystem.SinkDiagnostics.GetRecent(0);
+            Assert.That(outcome.Accepted, Is.False);
+            Assert.That(outcome.Rejection, Is.EqualTo(PresenterSinkRejection.AssetWriteSuppressed));
+            Assert.That(outcome.Message, Does.Contain("ownerCullVisible=False"),
+                "suppressed sink diagnostic must name the visibility truth, not just LOD");
+            Assert.That(outcome.Message, Does.Contain("LOD=Low"));
+        }
+
+        [Test]
         public void Sink_TargetPresenterMissing_RejectedThenSubsequentCommandStillProcessed()
         {
             _fixture.RegisterMeshDefinition();
@@ -306,6 +327,34 @@ namespace Ludots.Tests.Presentation
             }
 
             public int MeshDefinitionId { get; private set; }
+            public int SoundDefinitionId { get; private set; }
+
+            public int RegisterSoundDefinition()
+            {
+                SoundDefinitionId = Definitions.Register("it.sink.sound", new PresenterDefinition
+                {
+                    Behaviors = new[]
+                    {
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.Sound,
+                                AssetId = 88,
+                                MaterialId = 0,
+                                RenderPath = VisualRenderPath.None,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                                ScaleParamKey = ScaleKey,
+                            },
+                        },
+                    },
+                });
+                return SoundDefinitionId;
+            }
 
             public int RegisterMeshDefinition()
             {
@@ -333,9 +382,9 @@ namespace Ludots.Tests.Presentation
                 return MeshDefinitionId;
             }
 
-            public Entity CreatePresenter()
+            public Entity CreatePresenter(int? definitionId = null)
             {
-                int defId = MeshDefinitionId;
+                int defId = definitionId ?? MeshDefinitionId;
                 Commands.TryAdd(new PresenterCommand
                 {
                     CommandKind = PresenterCommandKind.CreatePresenter,

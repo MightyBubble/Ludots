@@ -983,6 +983,7 @@ namespace Ludots.Core.Presentation.Systems
                                 in state,
                                 definition,
                                 cull.LOD,
+                                ownerCullVisible,
                                 position.Value,
                                 rotation.Value,
                                 in facing,
@@ -1082,6 +1083,7 @@ namespace Ludots.Core.Presentation.Systems
                 in state,
                 definition,
                 cull.LOD,
+                ownerCullVisible,
                 position.Value,
                 rotation.Value,
                 in facing,
@@ -1148,6 +1150,7 @@ namespace Ludots.Core.Presentation.Systems
                 in state,
                 definition,
                 cull.LOD,
+                ownerCullVisible,
                 position.Value,
                 rotation.Value,
                 in facing,
@@ -1347,7 +1350,6 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
                 if (TryEmitSkinnedVisualBatchFast(
                         entity,
                         in state,
@@ -1362,6 +1364,7 @@ namespace Ludots.Core.Presentation.Systems
                         presenterWorldScale,
                         animatorSlot))
                 {
+                    PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
                     emittedStableVisual = true;
                     continue;
                 }
@@ -1390,6 +1393,7 @@ namespace Ludots.Core.Presentation.Systems
             in PresenterState state,
             PresenterDefinition definition,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -1419,8 +1423,8 @@ namespace Ludots.Core.Presentation.Systems
                     in state,
                     presenterWorldPosition,
                     slot.Motion.YDriftPerSecond);
-                VisualVisibility visibility = asset.HasMaxLod && lod > asset.MaxLod
-                    ? VisualVisibility.Culled
+                VisualVisibility visibility = !ownerCullVisible || (asset.HasMaxLod && lod > asset.MaxLod)
+                    ? VisualVisibility.Hidden
                     : VisualVisibility.Visible;
                 if (visibility == VisualVisibility.Visible &&
                     TryEmitSkinnedVisualBatchFast(
@@ -1430,7 +1434,7 @@ namespace Ludots.Core.Presentation.Systems
                         in slot,
                         in asset,
                         lod,
-                        true,
+                        ownerCullVisible,
                         resolvedPosition,
                         presenterWorldRotation,
                         in presenterWorldFacing,

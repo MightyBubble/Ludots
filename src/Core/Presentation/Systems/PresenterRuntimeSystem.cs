@@ -370,7 +370,8 @@ namespace Ludots.Core.Presentation.Systems
             if (_requests.Count == requestsBefore && (_soundRequests?.Count ?? 0) == soundRequestsBefore)
             {
                 RejectSinkCommand(in cmd, commandId, target, state.DefId, PresenterSinkRejection.AssetWriteSuppressed,
-                    $"asset kind {slot.AssetBinding.AssetKind} at slot {slotIndex} produced no synchronous write at LOD {cull.LOD}");
+                    $"asset kind {slot.AssetBinding.AssetKind} at slot {slotIndex} produced no synchronous write " +
+                    $"(ownerCullVisible={cull.OwnerCullVisible}, LOD={cull.LOD})");
                 return;
             }
 

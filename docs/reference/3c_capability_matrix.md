@@ -13,7 +13,7 @@
 - [x] `CameraPresenter` 基于 `PreviousState` / `State` 的表现插值
 - [x] 跟随目标解析：`LocalPlayer` / `SelectedEntity` / `SelectedOrLocalPlayer`
 - [x] 轨道相机缩放 / 平移 / 旋转输入
-- [x] 视锥 AABB 裁剪 + 4 级 LOD
+- [x] 视锥 AABB 裁剪（`CullState.IsVisible` 为可见性真相）+ 3 级质量 LOD（`LODLevel`：High/Medium/Low，只作质量档）
 - [x] Screen→World / World→Screen 投影工具
 - [x] Camera capability mod 分层：shared profile pack / profile / shot / bootstrap / acceptance
 

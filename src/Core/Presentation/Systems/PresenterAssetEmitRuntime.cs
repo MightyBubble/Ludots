@@ -256,6 +256,20 @@ namespace Ludots.Core.Presentation.Systems
                     out int stableId))
                 {
                     stableDrawCache.Remove(stableId);
+                    continue;
+                }
+
+                // Request-path (non-event-driven) statics enter the cache with a composed
+                // stable id that is never registered in the table. Without an explicit
+                // removal here a destroyed presenter leaks its cache slot forever.
+                int composedStableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
+                    state.StableId,
+                    slot.SlotIndex,
+                    slot.AssetBinding.AssetKind,
+                    state.DefId);
+                if (stableDrawCache.Contains(composedStableId))
+                {
+                    stableDrawCache.Remove(composedStableId);
                 }
             }
         }

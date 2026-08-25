@@ -119,7 +119,7 @@ GasTests 里那份逐字节复制的 `Integration/ArchitectureGuardTests.cs`（1
 
 **镜头外指挥测试真造了看不见但仍可选。**
 
-`CommandSourceAcquisitionSystem_CameraCulledEntity_RemainsSelectableAndReceivesOrders`：实体挂 `CullState { IsVisible = false, LOD = Culled }`，点选进编队，框选带上第二个镜头外单位，Stop 订单两个 actor 都收到。`CommandSourcePointerHitResolver_UsesWorldPositionCm_NotVisualTransformOrCull` 把 `VisualTransform` 放到 `(80,0,80)`、裁剪关掉，指针打在模拟厘米坐标 `(1600,1200)`，命中的仍是这个实体。本轮这两条绿。
+`CommandSourceAcquisitionSystem_CameraCulledEntity_RemainsSelectableAndReceivesOrders`：实体挂 `CullState { IsVisible = false, LOD = LODLevel.Low }`（issue #999 后 `LODLevel` 只作质量档，可见性只读 `CullState.IsVisible`），点选进编队，框选带上第二个镜头外单位，Stop 订单两个 actor 都收到。`CommandSourcePointerHitResolver_UsesWorldPositionCm_NotVisualTransformOrCull` 把 `VisualTransform` 放到 `(80,0,80)`、裁剪关掉，指针打在模拟厘米坐标 `(1600,1200)`，命中的仍是这个实体。本轮这两条绿。
 
 **三个跨层组件 owner 写进分层文档。**
 

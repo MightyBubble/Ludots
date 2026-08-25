@@ -624,7 +624,7 @@ Deferred 模式下：
 
 Presenter 的可见性由两层控制：
 
-1. **Entity CullState 继承** — owner entity 被摄像机裁剪时，其 presenter 树跳过 emit（不发射 proxy）。子 presenter 继承父的 cull 状态。
+1. **Entity CullState 继承** — owner entity 被摄像机裁剪时（`CullState.IsVisible == false`），其 presenter 树跳过 emit（不发射 proxy）。子 presenter 继承父的 cull 状态。可见性真相只读 `CullState.IsVisible`（presenter 侧为 `PresenterCullState.OwnerCullVisible`）；`LODLevel` 只作质量档（High/Medium/Low），距离 LOD 不作为可见性剔除（issue #999）。
 2. **VisibilityParamKey** — 命令式控制（如雾战系统写入 0=hidden/1=visible）。
 
 选择高亮和队伍着色通过 Material behavior 实现：

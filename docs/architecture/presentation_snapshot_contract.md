@@ -11,8 +11,14 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 * `src/Core/Engine/GameEngine.cs` 创建并每帧清空 `PresentationVisualSnapshotBuffer`，同时保留 `PresentationPrimitiveDrawBuffer` 作为“当前可绘制项”缓冲。
 * `src/Core/Presentation/Rendering/PresentationTargetGeneration.cs` 是 adapter 可见的外部 presentation target lifecycle 信号；它只表示 target / projection generation 变化，不表示 retained 内容变化。
 * `src/Core/Presentation/Systems/WorldToVisualSyncSystem.cs` 在 render frame 内刷新 `VisualTransform`，即使实体当前处于 `CullState.IsVisible == false`，也不会停止更新 transform。
-* `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs` 负责把 `VisualTransform`、`VisualRuntimeState`、`PresentationStableId` 和 `CullState` 组合成 adapter-facing snapshot item。
-* `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs` 不输出 dirty-only contract；它始终按 frame snapshot 语义重建当前帧数据。
+* `src/Core/Presentation/Systems/PresenterEmitSystem.cs` + `src/Core/Presentation/Requests/PresentationRequestFlushSystem.cs` 把 presenter 资产输出写入 `StableDrawCache`，再投影成 adapter-facing snapshot item；`VisualVisibility` 与 `CullState` 组合决定每项可见性。
+* 该 emit 路径不输出 dirty-only contract；它始终按 frame snapshot 语义重建当前帧数据。
+
+### 1.1 可见性真相与质量档（issue #999）
+
+* **可见性真相**：camera / viewport 可见性只由 `CullState.IsVisible` 承载，运行时唯一写入者是 `CameraCullingSystem`。presenter 侧同步为 `PresenterCullState.OwnerCullVisible`，emit 路径用它决定隐藏/移除。
+* **LODLevel 只作质量档**：`LODLevel` 只有 `High / Medium / Low` 三档，没有 `Culled` 成员；距离 LOD 不得作为可见性剔除。
+* **VisualVisibility 语义**：presenter emit 只输出 `Visible` / `Hidden` 两种 snapshot——相机裁剪或 maxLod 排除的 static 视觉保留已可见的 binding slot（`Hidden` 快照），从未可见的 static 不产生快照条目。`Culled` 仅作为 adapter 侧的预算/相机裁剪分类，Core presenter emit 不再产出。
 
 这意味着 adapter 侧只能在读取 snapshot 后自行维护 persistent static manager、persistent skeleton manager 与 dirty sync。Core 不提供第二套“只发脏项”的并行表现管线，也不允许用 gameplay event 或 content revision 假装 target lifecycle 变化。
 
@@ -23,7 +29,7 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 1. `src/Core/Engine/GameEngine.cs` 在初始化阶段创建 snapshot buffer。
 2. 每帧进入 presentation systems 前，`src/Core/Engine/GameEngine.cs` 先清空 snapshot buffer。
 3. `src/Core/Presentation/Systems/WorldToVisualSyncSystem.cs` 刷新 `VisualTransform.Position` 与 `VisualTransform.Rotation`。
-4. `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs` 把 renderable visual 写入 snapshot buffer。
+4. `src/Core/Presentation/Systems/PresenterEmitSystem.cs` 把 presenter 资产请求写入 `PresentationRequestBuffer`，`PresentationRequestFlushSystem` 将 retained 项 Upsert 进 `StableDrawCache` 并投影 renderable visual 到 snapshot buffer。
 5. `src/Core/Presentation/Requests/PresentationRequestFlushSystem.cs` 在 retained content revision 或 `PresentationTargetGeneration.Generation` 变化时，重新把 `StableDrawCache` 投影到 adapter-facing buffers。
 6. Adapter 在本帧渲染阶段读取 snapshot buffer，自行完成 persistent object 对齐。
 
@@ -39,7 +45,7 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 |------|------|--------|------|
 | `StableId` | `PresentationStableId.Value` | 所有 renderable visual 必须带正整数 `StableId`；缺失或非正值直接抛错，禁止输出 `0` | `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs`, `src/Tests/PresentationTests/PresentationFoundationTests.cs` |
 | `Position` / `Rotation` / `Scale` | `VisualTransform` + `VisualRuntimeState.BaseScale` | 即使实体 hidden / culled，也必须保持本帧 transform 新鲜，禁止沿用旧帧值 | `src/Core/Presentation/Systems/WorldToVisualSyncSystem.cs`, `src/Tests/ThreeCTests/ThreeCSystemTests.cs` |
-| `Visibility` | `VisualRuntimeState.ResolveVisibility(...)` | `Visible`、`Hidden`、`Culled` 三态必须显式输出；adapter 不得再从“是否出现在 draw buffer”反推可见性 | `src/Core/Presentation/Components/VisualRuntimeState.cs`, `src/Core/Presentation/Components/VisualVisibility.cs`, `src/Tests/PresentationTests/PresentationFoundationTests.cs` |
+| `Visibility` | `CullState.IsVisible` + `VisualVisibility` | `CullState.IsVisible` 是可见性真相（`CameraCullingSystem` 写）；presenter emit 显式输出 `Visible` / `Hidden`；adapter 不得再从“是否出现在 draw buffer”反推可见性 | `src/Core/Presentation/Components/CullState.cs`, `src/Platform/Ludots.Platform.Abstractions/VisualVisibility.cs`, `src/Core/Presentation/Systems/PresenterEmitSystem.cs` |
 | `RenderPath` / `Animator` | `VisualRuntimeState` + `AnimatorPackedState` | static mesh lane 与 skinned mesh lane 共享同一 snapshot 入口，但保留各自 lane 判定字段 | `src/Core/Presentation/Rendering/PrimitiveDrawItem.cs`, `src/Tests/PresentationTests/ProjectionMapPresentationRuntimeTests.cs` |
 | `TemplateId` | `VisualTemplateRef.TemplateId` | entity 带 `VisualTemplateRef` 时必须原样进入 snapshot；无模板实例允许为 `0` | `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs`, `src/Tests/PresentationTests/PresentationFoundationTests.cs` |
 | `Revision` | `StableDrawCache.ContentRevision` | 只表示 retained visual content 变化；target / viewport / render target lifecycle 不得写入该 revision | `src/Core/Presentation/Rendering/StableDrawCache.cs`, `src/Core/Presentation/Requests/PresentationRequestFlushSystem.cs` |
@@ -50,7 +56,7 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 
 `PresentationVisualSnapshotBuffer` 与 `PresentationPrimitiveDrawBuffer` 语义不同，不能混用：
 
-* `PresentationVisualSnapshotBuffer` 是 adapter-facing frame snapshot，包含 `Visible`、`Hidden`、`Culled` 的 renderable visual，用于 persistent manager 对齐。
+* `PresentationVisualSnapshotBuffer` 是 adapter-facing frame snapshot，包含 `Visible`、`Hidden` 的 renderable visual（`Culled` 仅作 adapter 侧对相机/预算裁剪 static 的分类，Core presenter emit 不产出），用于 persistent manager 对齐。
 * `PresentationPrimitiveDrawBuffer` 是当前帧可直接绘制的可见项集合，仅保留 `Visibility == Visible` 的项。
 * `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs` 先写 snapshot，再按 `Visibility == Visible` 过滤写 draw buffer。
 
