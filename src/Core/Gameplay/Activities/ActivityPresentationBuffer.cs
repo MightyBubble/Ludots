@@ -8,6 +8,7 @@ namespace Ludots.Core.Gameplay.Activities
         OptionBlocked = 2,
         Resolved = 3,
         AutomaticSettled = 4,
+        AdmissionRejected = 5,
     }
 
     public readonly record struct ActivityPresentationCue(
@@ -15,7 +16,8 @@ namespace Ludots.Core.Gameplay.Activities
         string ActivityId,
         int InstanceId,
         string OptionId,
-        string Reason);
+        string Reason,
+        int ScopeKey = 0);
 
     public sealed class ActivityPresentationBuffer
     {

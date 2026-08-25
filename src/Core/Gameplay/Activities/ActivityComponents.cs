@@ -16,6 +16,13 @@ namespace Ludots.Core.Gameplay.Activities
         Automatic = 3,
     }
 
+    public enum ActivityRepeatPolicy : byte
+    {
+        PendingDedupe = 1,
+        Repeatable = 2,
+        Unique = 3,
+    }
+
     public struct ActivityInstanceCm
     {
         public int DefinitionId;
