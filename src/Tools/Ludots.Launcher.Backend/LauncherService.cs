@@ -307,6 +307,7 @@ public sealed class LauncherService
     private static bool ShouldSkipAppBuild(LauncherLaunchPlan plan)
     {
         return plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
+               !string.IsNullOrWhiteSpace(plan.AppAssemblyPath) &&
                File.Exists(plan.AppAssemblyPath);
     }
 
