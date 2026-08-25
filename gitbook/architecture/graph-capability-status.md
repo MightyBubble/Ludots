@@ -81,6 +81,11 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 
 ### 3.3 真正还在做的
 
+**编辑器里程碑（本轮已收口的能力）。**
+节点联想只从运行时 descriptor 获取；Break 是 Script/TriggerGraph 的作者糖，编译时严格降低为带显式 `target` 边的 Jump；Select 仍明确是实体选择 `SelectEntity`，不是尚不存在的通用 Select。编辑器连线、删节点后的悬挂边清理、布局数据校验和 live trace source map 校验均走失败关闭。
+
+字符串花括号自动引脚、字符串寄存器、组合文本与 `Concat` 仍未完成。当前运行时没有正式的 text value、固定容量/零分配传递、符号 patch 和 presentation sink 合同，因此编辑器不会展示可保存但运行时不可执行的假节点。它们必须作为独立基建切片先补齐合同，再进入 descriptor 名册。
+
 **分层：架子有了，墙没有。**  
 工程里多了两份薄的契约，核心工程还是一大坨。展厅大多还能一把抓住整台引擎。把空间、输入、画面、结算真正拆开，以及不许再抓整台引擎，这两步没做。要做就单独开活，对照 `docs/audits/s14_layering_physicalization_design.md`，别和修演示、修构建捆在一起。没拆完之前，总规矩继续写「修复中」。
 
