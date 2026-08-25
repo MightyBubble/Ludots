@@ -306,6 +306,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_presenter_command_showcase_raylib",
+      "name": "Capability Standard Presenter Command Raylib",
+      "selectors": [
+        "$capability_standard_presenter_command_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_transport_network_raylib",
       "name": "Capability Standard Transport Network Raylib",
       "selectors": [
