@@ -25,11 +25,17 @@ namespace Ludots.Core.Scripting
         Global = 2,
     }
 
+    /// <summary>
+    /// Optional enum annotation: the parameter carries ints whose meaning is a member of the
+    /// named <see cref="EnumCatalog"/> type. It stays a separate string annotation instead of an
+    /// <see cref="EventParamType"/> member so the payload type contract (int) is unchanged.
+    /// </summary>
     public sealed record EventParamSchema(
         string Name,
         EventParamType Type,
         string PayloadKey,
-        bool Optional = false);
+        bool Optional = false,
+        string? EnumType = null);
 
     public sealed record EventSchema(
         string EventName,

@@ -1755,6 +1755,14 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
         });
         authoringSugars.Add(new
         {
+            op = GraphAuthoringSugar.SelectByEnum,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Next },
+            valueInputPorts = new[] { GraphControlFlowPorts.Selector, GraphControlFlowPorts.Default },
+            outputType = GraphValueType.Int.ToString(),
+            lowersTo = GraphNodeOp.CompareEqInt.ToString(),
+        });
+        authoringSugars.Add(new
+        {
             op = GraphAuthoringSugar.Wait,
             controlOutputPorts = new[] { GraphControlFlowPorts.Next },
             valueInputPorts = Array.Empty<string>(),
@@ -1809,7 +1817,8 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
 // the same schema SSOT the engine uses.
 Ludots.Core.Scripting.EventSchemaRegistry BuildLauncherEventSchemas(
     List<string> conflicts,
-    Dictionary<string, string> sources)
+    Dictionary<string, string> sources,
+    Ludots.Core.Scripting.EnumCatalog? enums = null)
 {
     var registry = new Ludots.Core.Scripting.EventSchemaRegistry();
     foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
@@ -1841,6 +1850,17 @@ Ludots.Core.Scripting.EventSchemaRegistry BuildLauncherEventSchemas(
                     continue;
                 }
 
+                for (int pi = 0; pi < schema.Params.Count; pi++)
+                {
+                    string? paramEnum = schema.Params[pi].EnumType;
+                    if (paramEnum != null && (enums == null || !enums.TryGet(paramEnum, out _)))
+                    {
+                        throw new InvalidOperationException(
+                            $"{customEventsPath} entry '{name}' param '{schema.Params[pi].Name}' annotates enumType '{paramEnum}' " +
+                            $"which is not registered in any launcher mod's {Ludots.Core.Scripting.EnumCatalogLoader.ConfigPath}.");
+                    }
+                }
+
                 sources[name] = mod.Id;
                 registry.RegisterCustom(schema);
             }
@@ -1849,6 +1869,83 @@ Ludots.Core.Scripting.EventSchemaRegistry BuildLauncherEventSchemas(
 
     return registry;
 }
+
+// Aggregate every launcher mod's Enums/enums.json in load order (#1125): first sight of a
+// type name freezes declaration order (the member values); later mods may only append
+// members. The editor's enum pickers and the validate compile resolve against this catalog,
+// mirroring the engine's EnumCatalogLoader instead of one mod's slice.
+Ludots.Core.Scripting.EnumCatalog BuildLauncherEnumCatalog(
+    Dictionary<string, string> sources)
+{
+    var builder = new Ludots.Core.Scripting.EnumCatalog.Builder();
+    foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        string enumsPath = Path.Combine(mod.RootPath, "assets",
+            Ludots.Core.Scripting.EnumCatalogLoader.ConfigPath.Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(enumsPath))
+        {
+            continue;
+        }
+
+        JsonNode? root = JsonNode.Parse(File.ReadAllText(enumsPath));
+        if (root is not JsonArray entries)
+        {
+            throw new InvalidOperationException($"{enumsPath} must be a JSON array.");
+        }
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (entries[i] is not JsonObject node)
+            {
+                throw new InvalidOperationException($"{enumsPath} entry #{i} must be an object.");
+            }
+
+            string? id = node["id"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new InvalidOperationException($"{enumsPath} entry #{i} must define non-empty 'id'.");
+            }
+
+            builder.AddOrAppend(node, $"{enumsPath} entry '{id}'");
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                sources.TryAdd(id.Trim(), mod.Id);
+            }
+        }
+    }
+
+    return builder.ToCatalog();
+}
+
+app.MapGet("/api/graph/enums/{modId}", (string modId) =>
+{
+    var sources = new Dictionary<string, string>(StringComparer.Ordinal);
+    Ludots.Core.Scripting.EnumCatalog catalog;
+    try
+    {
+        catalog = BuildLauncherEnumCatalog(sources);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    var enums = catalog.All
+        .OrderBy(e => e.TypeName, StringComparer.Ordinal)
+        .Select(e => new
+        {
+            name = e.TypeName,
+            members = e.Members.Select((member, value) => new { name = member, value }).ToArray(),
+            source = sources.TryGetValue(e.TypeName, out string? mod) ? mod : "unknown",
+        })
+        .ToArray();
+
+    return Results.Ok(new { ok = true, enums });
+});
 
 app.MapGet("/api/graph/event-schemas/{modId}", (string modId) =>
 {
@@ -1880,6 +1977,7 @@ app.MapGet("/api/graph/event-schemas/{modId}", (string modId) =>
                 type = p.Type.ToString(),
                 key = p.PayloadKey,
                 optional = p.Optional,
+                enumType = p.EnumType,
             }).ToArray(),
             source = sources.TryGetValue(s.EventName, out string? mod) ? mod : "builtin",
         })
@@ -2218,11 +2316,13 @@ bool TryCompileGasGraph(
     error = string.Empty;
     try
     {
+        var enumCatalog = BuildLauncherEnumCatalog(new Dictionary<string, string>(StringComparer.Ordinal));
         var result = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(
             graphObj,
             graphId,
             StrictJsonOptions.CreateCamelCase(includeFields: true),
-            BuildLauncherEventSchemas(new List<string>(), new Dictionary<string, string>(StringComparer.Ordinal)));
+            BuildLauncherEventSchemas(new List<string>(), new Dictionary<string, string>(StringComparer.Ordinal), enumCatalog),
+            enumCatalog);
         package = result.Package;
         diagnostics = result.Diagnostics;
         return true;

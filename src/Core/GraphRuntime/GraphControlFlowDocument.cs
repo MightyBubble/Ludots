@@ -247,6 +247,13 @@ namespace Ludots.Core.GraphRuntime
         /// names must be unique within one graph; empty means "no anchor".
         /// </summary>
         public string? Anchor { get; set; }
+        /// <summary>
+        /// Enum type name binding SwitchInt case arms and SelectByEnum candidates to
+        /// Enums/enums.json members; case ports are then authored as case:{memberName}
+        /// and resolved to declaration-order ints at compile time. Unregistered type
+        /// names fail closed.
+        /// </summary>
+        public string? EnumType { get; set; }
     }
 
     public sealed class GraphControlFlowEdge

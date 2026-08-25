@@ -926,7 +926,11 @@ namespace Ludots.Core.Engine
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
-            var customEventCatalog = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            // Enums load before events (#1125): custom event params may annotate enumType
+            // against this catalog, and graph compilation resolves enum-bound sugar through it.
+            var enumCatalog = new Ludots.Core.Scripting.EnumCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.EnumCatalog, enumCatalog);
+            var customEventCatalog = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport, enumCatalog);
             SetService(CoreServiceKeys.CustomEventNameRegistry, customEventCatalog.Names);
             SetService(CoreServiceKeys.EventSchemaRegistry, customEventCatalog.Schemas);
             TriggerManager.EventSchemas = customEventCatalog.Schemas;
@@ -990,7 +994,8 @@ namespace Ludots.Core.Engine
                 entityCollectionStore,
                 graphOps,
                 builtinHandlers,
-                customEventCatalog.Schemas);
+                customEventCatalog.Schemas,
+                enumCatalog);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
