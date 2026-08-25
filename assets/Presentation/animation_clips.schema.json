@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ludots://presentation/animation_clips.schema.json",
+  "title": "Ludots animation clips",
+  "type": "array",
+  "description": "Mod-side Presentation/animation_clips.json. Platform-agnostic clip ids bound to per-backend sources via locators; duplicate backend ids within one clip are rejected at load time. assetKind defaults to Clip; blendInputs default to Scalar0/Scalar1. Field sets mirror AnimationClipConfigLoader. Authoring guide: gitbook/reference/mod-editor-prd/config/pres-03-animation.md.",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "locators"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "assetKind": { "enum": ["None", "Clip", "BlendTree", "Montage", "PoseAsset"] },
+      "locators": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["backendId", "assetRef"],
+          "properties": {
+            "backendId": { "type": "string", "minLength": 1 },
+            "assetRef": { "type": "string", "minLength": 1 },
+            "variant": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "blendInputs": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "x": { "enum": ["Zero", "Scalar0", "Scalar1", "NormalizedTime", "Weight01"] },
+          "y": { "enum": ["Zero", "Scalar0", "Scalar1", "NormalizedTime", "Weight01"] }
+        }
+      }
+    }
+  }
+}

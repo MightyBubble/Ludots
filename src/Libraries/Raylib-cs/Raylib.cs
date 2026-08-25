@@ -432,6 +432,9 @@ namespace Raylib_cs
         public static extern void DrawLine3D(Vector3 startPos, Vector3 endPos, Color color);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawTriangle3D(Vector3 v1, Vector3 v2, Vector3 v3, Color color);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawSphere(Vector3 centerPos, float radius, Color color);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
