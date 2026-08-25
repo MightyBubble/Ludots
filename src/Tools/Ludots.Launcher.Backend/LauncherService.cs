@@ -436,12 +436,19 @@ public sealed class LauncherService
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
         ReplacePreviousActiveProcess(resolveResult.Plan);
-        var startInfo = CreateAppStartInfo(
-            resolveResult.Plan.AppAssemblyPath,
-            resolveResult.Plan.AppOutputDirectory,
-            $"\"{bootstrapPath}\"");
+        Process process;
+        try
+        {
+            process = Process.Start(CreateAppStartInfo(
+                resolveResult.Plan.AppAssemblyPath,
+                resolveResult.Plan.AppOutputDirectory,
+                $"\"{bootstrapPath}\""));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, bootstrapPath, resolveResult.Plan);
+        }
 
-        var process = Process.Start(startInfo);
         if (process == null)
         {
             return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, bootstrapPath, resolveResult.Plan);
@@ -461,12 +468,19 @@ public sealed class LauncherService
         }
 
         ReplacePreviousActiveProcess(plan);
-        var startInfo = CreateAppStartInfo(
-            plan.AppAssemblyPath,
-            plan.AppOutputDirectory,
-            BuildExecutableTargetArguments(plan));
+        Process process;
+        try
+        {
+            process = Process.Start(CreateAppStartInfo(
+                plan.AppAssemblyPath,
+                plan.AppOutputDirectory,
+                BuildExecutableTargetArguments(plan)));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, string.Empty, plan);
+        }
 
-        var process = Process.Start(startInfo);
         if (process == null)
         {
             return new LauncherLaunchResult(false, "Failed to start executable target process.", -1, string.Empty, string.Empty, plan);
@@ -518,7 +532,8 @@ public sealed class LauncherService
 
     /// <summary>
     /// 自包含发布布局下 apphost exe 与应用 DLL 同目录；存在则直接启动 exe，
-    /// 玩家机无需安装 .NET 运行时。否则回退 dotnet exec（开发机布局）。
+    /// 玩家机无需安装 .NET 运行时。否则回退 dotnet exec（开发机布局）；
+    /// 回退前显式校验 dotnet 可用性，避免把配置错误推迟成晦涩的进程启动失败。
     /// </summary>
     private static (string FileName, string Arguments) BuildAppRunnerCommand(string appAssemblyPath, string arguments)
     {
@@ -528,10 +543,42 @@ public sealed class LauncherService
             return (appHostPath, arguments);
         }
 
+        var dotnet = ResolveDotnetCommand();
+        if (!IsUsableDotnetCommand(dotnet))
+        {
+            throw new InvalidOperationException(
+                $"App host executable not found next to '{appAssemblyPath}', and no usable dotnet is available. " +
+                "Prebuilt/player packages must ship the self-contained apphost exe next to the app DLL; " +
+                "dev layouts require a runnable dotnet (launcher must run under dotnet, or dotnet must be on PATH).");
+        }
+
         var dotnetArguments = string.IsNullOrWhiteSpace(arguments)
             ? $"exec --roll-forward Major \"{appAssemblyPath}\""
             : $"exec --roll-forward Major \"{appAssemblyPath}\" {arguments}";
-        return (ResolveDotnetCommand(), dotnetArguments);
+        return (dotnet, dotnetArguments);
+    }
+
+    private static bool IsUsableDotnetCommand(string command)
+    {
+        if (!string.Equals(Path.GetFileName(command), "dotnet", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(Path.GetFileName(command), "dotnet.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return File.Exists(command);
+        }
+
+        // 裸 "dotnet"：必须真的能在 PATH 上找到
+        var pathVariable = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var extensions = OperatingSystem.IsWindows() ? new[] { ".exe", ".cmd", ".bat", "" } : new[] { "" };
+        return pathVariable.Split(Path.PathSeparator).Any(directory =>
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return false;
+            }
+
+            return extensions.Any(extension =>
+                File.Exists(Path.Combine(directory.Trim(), $"dotnet{extension}")));
+        });
     }
 
     private static ProcessStartInfo CreateAppStartInfo(string appAssemblyPath, string workingDirectory, string arguments)
