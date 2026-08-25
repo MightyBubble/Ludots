@@ -68,7 +68,6 @@ public sealed class PresenterDefinition
     public PresenterParamBinding[] Bindings;  // 每帧绑定（复用）
     public ParamDefault[] ParamDefaults;      // 黑板默认值
     public float DefaultLifetime;             // <=0 = 持久
-    public ConditionRef VisibilityCondition;  // 复用
 }
 
 public struct ChildPresenterRef
@@ -618,11 +617,10 @@ Deferred 模式下：
 
 ### 9.3 可见性、雾战与选择高亮
 
-Presenter 的可见性由三层控制：
+Presenter 的可见性由两层控制：
 
 1. **Entity CullState 继承** — owner entity 被摄像机裁剪时，其 presenter 树跳过 emit（不发射 proxy）。子 presenter 继承父的 cull 状态。
-2. **VisibilityCondition** — 声明式条件（如 `OwnerCullVisible`、`SourceIsSolePossessedRep`），每帧评估。
-3. **VisibilityParamKey** — 命令式控制（如雾战系统写入 0=hidden/1=visible）。
+2. **VisibilityParamKey** — 命令式控制（如雾战系统写入 0=hidden/1=visible）。
 
 选择高亮和队伍着色通过 Material behavior 实现：
 - 选择系统写入 `selectionParamKey=1` → Material behavior 切换到高亮材质

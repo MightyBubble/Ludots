@@ -702,7 +702,6 @@ namespace Ludots.Tests.Presentation
                         },
                     }
                 },
-                VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
                 PositionOffset = positionOffset,
                 Rules = rules,
             };

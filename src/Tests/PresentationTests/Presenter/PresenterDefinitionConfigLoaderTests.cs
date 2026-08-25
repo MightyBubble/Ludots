@@ -2234,7 +2234,6 @@ namespace Ludots.Tests.Presentation
                     "id": "floating_text",
                     "lifecycle": { "durationSeconds": 1.2 },
                     "anchor": { "offset": [0, 1, 0] },
-                    "visibility": { "inline": "SourceIsAlive" },
                     "behaviors": [
                       {
                         "slot": "body",
@@ -2272,7 +2271,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(registry.GetId("floating_text"), out var definition), Is.True);
             Assert.That(definition.DefaultLifetime, Is.EqualTo(1.2f).Within(0.001f));
             Assert.That(definition.PositionOffset, Is.EqualTo(new Vector3(0f, 1f, 0f)));
-            Assert.That(definition.VisibilityCondition.Inline, Is.EqualTo(InlineConditionKind.SourceIsAlive));
             Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.WorldText));
             Assert.That(definition.Behaviors[0].WorldText.FontSize, Is.EqualTo(18));
             Assert.That(definition.Behaviors[0].WorldText.Mode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
@@ -2528,7 +2526,43 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_RejectsVisibilityGraphProgramId()
+        public void Load_RejectsVisibilityParamKeyWithoutIntProducer()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "orphan_visibility",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "WorldHud",
+                          "renderPath": "None",
+                          "mobility": "Movable",
+                          "visibilityParamKey": "orphan.visibility"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("orphan_visibility"));
+            Assert.That(ex.Message, Does.Contain("visibilityParamKey"));
+            Assert.That(ex.Message, Does.Contain("Param/Behavior/Command"));
+        }
+
+        [Test]
+        public void Load_RejectsTopLevelVisibilityFieldWithMigrationError()
         {
             WriteCatalog();
             WritePresenters(
@@ -2546,8 +2580,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("visibility.graphProgramId"));
-            Assert.That(ex.Message, Does.Contain("not wired"));
+            Assert.That(ex.Message, Does.Contain("removed field 'visibility'"));
+            Assert.That(ex.Message, Does.Contain("Param/Behavior/Command"));
         }
 
         [Test]
@@ -3311,7 +3345,6 @@ namespace Ludots.Tests.Presentation
                     "id": "legal_root",
                     "lifecycle": { "durationSeconds": 1.0 },
                     "anchor": { "offset": [0, 1, 0] },
-                    "visibility": { "inline": "SourceIsAlive" },
                     "bindings": [
                       { "paramKey": "legal.binding", "source": "constant", "constantValue": 3 }
                     ],

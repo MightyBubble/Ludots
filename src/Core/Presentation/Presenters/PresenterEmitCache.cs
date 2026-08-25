@@ -9,7 +9,6 @@ namespace Ludots.Core.Presentation.Presenters
         public int CachedVersion;
         public Vector3 LastEmitPosition;
         public byte LastOwnerCullVisible;
-        public byte LastDefinitionVisible;
         public byte StableVisualPresent;
         public byte RetainedRequestPresent;
         public byte StaticDirty;

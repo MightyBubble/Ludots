@@ -2,9 +2,6 @@
   {
     "_comment": "RTS actor ground ring: always-on entity-scoped overlay so units/buildings remain readable on the grid.",
     "id": "rts_actor_ring",
-    "visibility": {
-      "inline": "OwnerCullVisible"
-    },
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -103,9 +100,6 @@
   {
     "_comment": "RTS actor marker: simple readable body proxy for RtsDemoMod when no showcase-only presenter pack is loaded.",
     "id": "rts_actor_marker",
-    "visibility": {
-      "inline": "OwnerCullVisible"
-    },
     "bindings": [
       {
         "paramKey": "marker3d.scale.x",
