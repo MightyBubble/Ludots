@@ -20,4 +20,4 @@ presentation 域的全部作者面能力，逐条可看。每条回答四件事�
 
 架构全景（为什么是"资产+行为+车道"三层）见 [Presenter-as-Actor 架构设计](../../architecture/presenter-as-actor-architecture.md)；全部配置文件的字段表与 fail-loud 边界见 [Raylib 渲染配置结构](../raylib-render-config-structure.md)；五类配置文件的字段表与校验边界统一见 [Raylib 渲染配置结构](../raylib-render-config-structure.md)。
 
-诚实标注：**Sound（音频）目前契约就绪、raylib 侧无消费者**——见 [asset-kinds.md](asset-kinds.md) 对应条目，这是 presentation 域唯一"合同在、执行缺"的能力面。
+Sound（音频）已由 raylib 适配器消费（设备生命周期 + 距离衰减 + stableId 释放）——跑法与衰减配置见 [asset-kinds.md](asset-kinds.md) Sound 条目。

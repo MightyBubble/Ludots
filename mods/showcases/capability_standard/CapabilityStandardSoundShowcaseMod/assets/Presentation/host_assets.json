@@ -1,0 +1,20 @@
+[
+  {
+    "id": "sound_showcase.tone_440.raylib",
+    "assetKind": "Sound",
+    "assetId": "sound_showcase.tone_440",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardSoundShowcaseMod:assets/Sounds/tone_440hz.wav"
+    ]
+  },
+  {
+    "id": "sound_showcase.tone_880.raylib",
+    "assetKind": "Sound",
+    "assetId": "sound_showcase.tone_880",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardSoundShowcaseMod:assets/Sounds/tone_880hz.wav"
+    ]
+  }
+]

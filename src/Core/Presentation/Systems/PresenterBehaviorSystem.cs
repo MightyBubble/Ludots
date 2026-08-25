@@ -2564,6 +2564,14 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool CanProcessBootstrapChunkFast(PresenterDefinition definition)
         {
+            // Sound slots carry per-entity tracking state (_soundTracking) that only the full
+            // ProcessPresenter pass maintains; default-inactive sound slots would otherwise skip
+            // the StopInactiveSounds flush when a later activation is un-bootstrapped here.
+            if (definition.HasSoundBehavior)
+            {
+                return false;
+            }
+
             if (definition.Bindings.Length != 0 ||
                 definition.MaterialBehaviorIndices.Length != 0 ||
                 definition.ExtensionBootstrapBehaviorIndices.Length != 0 ||

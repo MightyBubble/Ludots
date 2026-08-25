@@ -4018,6 +4018,29 @@
       "status": "active"
     },
     {
+      "id": "capability_standard_sound_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardSoundShowcaseMod",
+      "projectPath": "CapabilityStandardSoundShowcaseMod.csproj",
+      "title": "标准能力·声音消费端",
+      "summary": "raylib 音频消费端验收：循环音随移动声源演示距离衰减、一次性 beacon 音、显式 Stop；assets/Sounds 为程序生成测试音源（440/880 Hz 正弦），非美术素材。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "sound",
+        "audio",
+        "presenter"
+      ],
+      "binding": "capability_standard_sound_showcase",
+      "preset": "capability_standard_sound_showcase_raylib",
+      "docsPath": "gitbook/reference/presenter-capability-catalog/asset-kinds.md",
+      "readmePath": null,
+      "acceptanceTest": "SoundShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": "无音频设备的 CI 走逻辑断言；原生设备测试失败显式 skip。"
+    },
+    {
       "id": "capability_standard_time_flow_showcase",
       "path": "mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod",
       "projectPath": "CapabilityStandardTimeFlowShowcaseMod.csproj",

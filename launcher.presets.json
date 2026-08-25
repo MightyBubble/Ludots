@@ -315,6 +315,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_sound_showcase_raylib",
+      "name": "Capability Standard Sound Raylib",
+      "selectors": [
+        "$capability_standard_sound_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_transport_network_raylib",
       "name": "Capability Standard Transport Network Raylib",
       "selectors": [

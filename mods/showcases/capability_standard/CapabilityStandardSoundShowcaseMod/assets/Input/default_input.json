@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "SoundShowcase.ToggleEmitter", "name": "SoundShowcase_ToggleEmitter", "type": "Button" },
+    { "id": "SoundShowcase.FireBeacon", "name": "SoundShowcase_FireBeacon", "type": "Button" },
+    { "id": "SoundShowcase.StopAll", "name": "SoundShowcase_StopAll", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "SoundShowcase.Controls",
+      "name": "Sound Showcase Controls",
+      "priority": 140,
+      "bindings": [
+        { "actionId": "SoundShowcase.ToggleEmitter", "path": "<Keyboard>/1" },
+        { "actionId": "SoundShowcase.FireBeacon", "path": "<Keyboard>/2" },
+        { "actionId": "SoundShowcase.StopAll", "path": "<Keyboard>/3" }
+      ]
+    }
+  ]
+}

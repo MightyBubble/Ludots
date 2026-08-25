@@ -120,6 +120,7 @@ namespace Ludots.Core.Presentation.Config
             foreach ((string key, JsonObject _) in mergedByKey)
             {
                 JsonObject expanded = ExpandDefinition(key, mergedByKey, new HashSet<string>(StringComparer.Ordinal));
+                ExpandBindSpawn(key, expanded);
                 var (_, def) = ParseDefinition(expanded);
                 if (def == null)
                 {
@@ -213,6 +214,143 @@ namespace Ludots.Core.Presentation.Config
             finally
             {
                 expansionStack.Remove(key);
+            }
+        }
+
+        /// <summary>
+        /// bindSpawn is load-time authoring sugar in the same layer as the children expansion:
+        /// it is rewritten into two canonical rules appended to this definition's rules, and the
+        /// runtime IR stays single-track. Event kinds stay restricted to the entity-template
+        /// keyed pair because bindSpawn.template resolves through the entity template registry.
+        /// </summary>
+        private static void ExpandBindSpawn(string key, JsonObject expanded)
+        {
+            if (expanded["bindSpawn"] == null)
+            {
+                return;
+            }
+
+            string path = $"{DefinitionPath(key)}.bindSpawn";
+            if (expanded["bindSpawn"] is not JsonObject bindSpawn)
+            {
+                throw new InvalidOperationException($"{path} must be an object.");
+            }
+
+            RejectUnknownFields(bindSpawn, path, BindSpawnFields);
+
+            if (bindSpawn["scopeSource"] == null)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.scopeSource is required: the expanded CreatePresenter and DestroyPresenterScope commands both require an explicit scopeSource.");
+            }
+
+            string template = ParseRequiredSemanticString(bindSpawn["template"], $"{path}.template");
+            RequireBindSpawnEventKind(bindSpawn["spawnedOn"], PresentationEventKind.EntitySpawned, path, "spawnedOn");
+            RequireBindSpawnEventKind(bindSpawn["destroyedOn"], PresentationEventKind.EntityDestroyed, path, "destroyedOn");
+
+            JsonNode? rulesNode = expanded["rules"];
+            if (rulesNode != null && rulesNode is not JsonArray)
+            {
+                throw new InvalidOperationException($"{DefinitionPath(key)} rules must be an array.");
+            }
+
+            var rules = (JsonArray?)rulesNode ?? new JsonArray();
+            RejectDuplicateTemplateBinding(key, template, rules);
+
+            var createCommand = new JsonObject
+            {
+                ["kind"] = "CreatePresenter",
+                ["definitionId"] = key,
+                ["scopeSource"] = bindSpawn["scopeSource"]!.DeepClone(),
+            };
+            CopyBindSpawnField(createCommand, bindSpawn, "scopeTag");
+            CopyBindSpawnField(createCommand, bindSpawn, "ownerSource");
+            CopyBindSpawnField(createCommand, bindSpawn, "useEventPosition");
+
+            var destroyCommand = new JsonObject
+            {
+                ["kind"] = "DestroyPresenterScope",
+                ["scopeSource"] = bindSpawn["scopeSource"]!.DeepClone(),
+            };
+            CopyBindSpawnField(destroyCommand, bindSpawn, "scopeTag");
+            CopyBindSpawnField(destroyCommand, bindSpawn, "ownerSource");
+
+            var spawnRule = new JsonObject
+            {
+                ["event"] = new JsonObject { ["kind"] = "EntitySpawned", ["key"] = template },
+                ["command"] = createCommand,
+            };
+            CopyBindSpawnField(spawnRule, bindSpawn, "condition");
+
+            var destroyRule = new JsonObject
+            {
+                ["event"] = new JsonObject { ["kind"] = "EntityDestroyed", ["key"] = template },
+                ["command"] = destroyCommand,
+            };
+
+            expanded.Remove("bindSpawn");
+            if (rulesNode == null)
+            {
+                expanded["rules"] = rules;
+            }
+
+            rules.Add(spawnRule);
+            rules.Add(destroyRule);
+        }
+
+        private static void RejectDuplicateTemplateBinding(string key, string template, JsonArray rules)
+        {
+            for (int i = 0; i < rules.Count; i++)
+            {
+                if (rules[i] is not JsonObject rule ||
+                    rule["event"] is not JsonObject ruleEvent)
+                {
+                    continue;
+                }
+
+                string? kind = ruleEvent["kind"] is JsonValue kindValue && kindValue.TryGetValue<string>(out string? kindText)
+                    ? kindText
+                    : null;
+                if (kind != nameof(PresentationEventKind.EntitySpawned) &&
+                    kind != nameof(PresentationEventKind.EntityDestroyed))
+                {
+                    continue;
+                }
+
+                string? ruleTemplate = ruleEvent["key"] is JsonValue keyValue && keyValue.TryGetValue<string>(out string? keyText)
+                    ? keyText
+                    : ruleEvent["keyId"] is JsonValue keyIdValue && keyIdValue.TryGetValue<string>(out string? keyIdText)
+                        ? keyIdText
+                        : null;
+                if (string.Equals(ruleTemplate, template, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"code=DuplicateBindSpawn path={DefinitionPath(key)} template={template}: " +
+                        $"rules[{i}] already binds '{kind}' for this template; bindSpawn would expand a duplicate rule pair. " +
+                        "Keep either the handwritten rule or the bindSpawn shorthand.");
+                }
+            }
+        }
+
+        private static void RequireBindSpawnEventKind(
+            JsonNode? node,
+            PresentationEventKind required,
+            string path,
+            string fieldName)
+        {
+            PresentationEventKind kind = ParseRequiredEnumOrDefault(node, required, $"{path}.{fieldName}");
+            if (kind != required)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.{fieldName} has invalid value '{kind}'. bindSpawn only supports '{required}' for entity-template keyed birth rules.");
+            }
+        }
+
+        private static void CopyBindSpawnField(JsonObject destination, JsonObject bindSpawn, string field)
+        {
+            if (bindSpawn[field] != null)
+            {
+                destination[field] = bindSpawn[field]!.DeepClone();
             }
         }
 
@@ -785,7 +923,13 @@ namespace Ludots.Core.Presentation.Config
         {
             "id", "extends", "lifecycle", "anchor",
             "rules", "bindings", "paramDefaults", "behaviors", "children",
-            "_comment",
+            "bindSpawn", "_comment",
+        };
+
+        private static readonly string[] BindSpawnFields =
+        {
+            "template", "spawnedOn", "destroyedOn", "condition",
+            "scopeTag", "scopeSource", "ownerSource", "useEventPosition",
         };
 
         private static readonly string[] BehaviorSlotFields =

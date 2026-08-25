@@ -732,6 +732,48 @@ JSON 中的 `children` 字段是语法糖——ConfigLoader 将其展开为 `Pre
 - 深层嵌套：子 presenter 的定义中也可以有 `children` 或 Rule，递归展开
 - 所有层级关系最终都归结为 `CreatePresenter(parentHandle=X)`
 
+### 9.11 出生绑定语法糖 bindSpawn
+
+presenters.json 里最高频的样板是成对的出生规则：`EntitySpawned(key=T) → CreatePresenter` 加 `EntityDestroyed(key=T) → DestroyPresenterScope`（33 个 mod、453 条成对规则）。`bindSpawn` 是与 `children` 同层的装载期语法糖：ConfigLoader 在装载时把它展开为两条 canonical 规则追加进该定义的 rules，运行时 IR 唯一，非双轨。
+
+```jsonc
+// 写法 1：bindSpawn 语法糖
+{
+  "id": "core.template.moba_hero_visual",
+  "bindSpawn": {
+    "template": "moba_hero",                                // 实体模板 id（展开为事件 key）
+    "spawnedOn": "EntitySpawned",                           // 可省略；当前仅支持 EntitySpawned
+    "destroyedOn": "EntityDestroyed",                       // 可省略；当前仅支持 EntityDestroyed
+    "scopeSource": "EventPayloadA",                         // 必填：两条展开指令都要求显式 scopeSource
+    "scopeTag": "unit.spawn",                               // 可选，透传给两条指令
+    "ownerSource": "EventSource",                           // 可选，透传给两条指令
+    "useEventPosition": true,                               // 可选，仅透传给 CreatePresenter
+    "condition": { "inline": "SourceHasVisualTransform" }   // 可选，仅透传给出生规则
+  }
+}
+
+// 写法 2：等价的显式规则（ConfigLoader 展开后的实际形式）
+{
+  "id": "core.template.moba_hero_visual",
+  "rules": [
+    { "event": { "kind": "EntitySpawned", "key": "moba_hero" },
+      "condition": { "inline": "SourceHasVisualTransform" },
+      "command": { "kind": "CreatePresenter",
+                   "definitionId": "core.template.moba_hero_visual",
+                   "scopeSource": "EventPayloadA" } },
+    { "event": { "kind": "EntityDestroyed", "key": "moba_hero" },
+      "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" } }
+  ]
+}
+```
+
+展开语义与约束：
+- 展开规则的 `definitionId` 恒为承载 `bindSpawn` 的定义自身；bootstrap 式"规则宿主建别的定义"（一个规则集条目给多个目标定义出生）不用 bindSpawn，保持手写规则。
+- 展开的两条规则追加在该定义既有 rules 之后；简写与手写规则可在同一定义共存，但同 template 已有 `EntitySpawned`/`EntityDestroyed` 规则时再写 bindSpawn 装载期抛 `DuplicateBindSpawn`（防重复展开出双实例）。
+- `extends` 继承遵循对象字段默认合并语义：子定义声明 `bindSpawn` 即整体替换父定义的；未声明则继承父定义的（展开时 definitionId 取子定义自身）。
+- 字段白名单 `template/spawnedOn/destroyedOn/condition/scopeTag/scopeSource/ownerSource/useEventPosition`，未知字段照 `RejectUnknownFields` 抛错；缺 `scopeSource` 也装载期抛错。
+- 展开后即是 canonical 规则：出生快速路径（CompiledPresenterBootstrapRegistry）按普通规则编译，同 template 多定义分层绑定（如英雄本体 + 血条分属两个定义）不受影响。
+
 ## 10 编译式执行分层
 
 Presenter 配置（`presenters.json` → `PresenterDefinition`）是 authoring IR，是唯一的语义真相（SSOT）。运行时不应每帧重新解释这棵语义树，而应在注册时将其编译为分层 execution lanes。

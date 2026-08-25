@@ -58,6 +58,12 @@ namespace Ludots.Core.Presentation.Config
                     continue;
                 }
 
+                if (string.Equals(assetKind, "Sound", StringComparison.Ordinal))
+                {
+                    ApplySoundHostAsset(node, backendId);
+                    continue;
+                }
+
                 throw new InvalidOperationException(
                     $"Presentation host asset '{RequireString(node, "id", "host asset row")}' has unsupported assetKind '{assetKind}'.");
             }
@@ -78,6 +84,29 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException(
                     $"Presentation host asset '{rowId}' targets mesh asset '{assetId}' with type '{descriptor.Type}'. Only Model and Billboard require host sourceUris.");
+            }
+
+            descriptor.SourceUris = ParseSourceUris(node["sourceUris"], rowId);
+            _meshRegistry.Register(assetId, in descriptor);
+        }
+
+        private void ApplySoundHostAsset(JsonNode node, string backendId)
+        {
+            string rowId = RequireString(node, "id", "host asset row");
+            string assetId = RequireString(node, "assetId", rowId);
+            int soundAssetId = _meshRegistry.GetId(assetId);
+            if (soundAssetId == 0 || !_meshRegistry.TryGetDescriptor(soundAssetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation host asset '{rowId}' targets unknown sound asset '{assetId}' for backend '{backendId}'.");
+            }
+
+            // Sound ids register as Primitive placeholders in mesh_assets.json; Model/Billboard
+            // types are owned by the mesh render lanes and must not be rebound as audio sources.
+            if (descriptor.Type != MeshAssetType.Primitive)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation host asset '{rowId}' targets sound asset '{assetId}' with type '{descriptor.Type}'. Sound assets must be Primitive placeholders in mesh_assets.json.");
             }
 
             descriptor.SourceUris = ParseSourceUris(node["sourceUris"], rowId);

@@ -331,6 +331,91 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Apply_WhenSoundBackendMatches_InjectsHostUrisIntoPrimitivePlaceholder()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "mesh_assets.json"),
+                """
+                [
+                  { "id": "sound_test.tone", "type": "Primitive", "primitiveKind": "Cube" }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "host_assets.json"),
+                """
+                [
+                  {
+                    "id": "sound_test.tone.raylib",
+                    "assetKind": "Sound",
+                    "assetId": "sound_test.tone",
+                    "backendId": "raylib",
+                    "sourceUris": [ "TestMod:assets/Sounds/tone.wav" ]
+                  },
+                  {
+                    "id": "sound_test.tone.ue5",
+                    "assetKind": "Sound",
+                    "assetId": "sound_test.tone",
+                    "backendId": "ue5",
+                    "sourceUris": [ "ue5.sound:/Game/Test/Tone.Tone" ]
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
+
+            new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog);
+
+            int toneId = meshes.GetId("sound_test.tone");
+            Assert.That(meshes.TryGetDescriptor(toneId, out var tone), Is.True);
+            Assert.That(tone.Type, Is.EqualTo(MeshAssetType.Primitive));
+            Assert.That(tone.PrimitiveKind, Is.EqualTo(PrimitiveMeshKind.Cube), "sound binding must not rewrite the placeholder mesh type");
+            Assert.That(tone.SourceUris, Is.EqualTo(new[] { "TestMod:assets/Sounds/tone.wav" }));
+        }
+
+        [Test]
+        public void Apply_WhenSoundRowTargetsModelAsset_ThrowsPrimitivePlaceholderError()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "mesh_assets.json"),
+                """
+                [
+                  { "id": "sound_test.model", "type": "Model" }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "host_assets.json"),
+                """
+                [
+                  {
+                    "id": "sound_test.model.raylib",
+                    "assetKind": "Sound",
+                    "assetId": "sound_test.model",
+                    "backendId": "raylib",
+                    "sourceUris": [ "TestMod:assets/Sounds/tone.wav" ]
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog));
+            Assert.That(ex!.Message, Does.Contain("Sound assets must be Primitive placeholders"));
+        }
+
+        [Test]
         public void Resolve_WhenInstanceChainMerges_ChildOverridesParentSparsely()
         {
             string root = CreateTempCoreRoot();
