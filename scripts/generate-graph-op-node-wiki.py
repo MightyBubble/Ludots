@@ -38,6 +38,9 @@ DRIVER_LABELS = {
     "rel": "关系与好感",
     "blackboard": "黑板与配置",
     "event": "事件与吸附",
+    "entryPayload": "事件载荷捕获",
+    "invokeGraph": "子图调用与事件派发",
+    "placedEntity": "放置实体名册",
     "sandbox": "组合短剧",
 }
 
@@ -50,6 +53,9 @@ HANDBOOK_BY_DRIVER = {
     "rel": ("gr-op-08-relationship.md", "关系与好感 · gr-op-08"),
     "blackboard": ("gr-op-05-blackboard.md", "黑板与配置 · gr-op-05"),
     "event": ("gr-op-01-context.md", "事件与情境 · gr-op-01"),
+    "entryPayload": ("map-02-triggers.md", "地图触发器 · map-02"),
+    "invokeGraph": ("map-02-triggers.md", "地图触发器 · map-02"),
+    "placedEntity": ("map-02-triggers.md", "地图触发器 · map-02"),
     "sandbox": ("gr-02-document.md", "图文档写法 · gr-02"),
 }
 

@@ -44,17 +44,17 @@ internal sealed class HfsmSentryArenaPresentationSystem : ISystem<float>
         {
             for (int i = 0; i < _runtime.SentryCount; i++)
             {
-                int leaf = world.GetLeafState(i);
-                DebugDrawColor color = leaf switch
+                string stateName = world.GetLeafStateName(i);
+                DebugDrawColor color = stateName switch
                 {
-                    1 => GraphShowcaseStagePresenter.SentryIdle,
-                    3 => GraphShowcaseStagePresenter.SentryAlert,
-                    4 => GraphShowcaseStagePresenter.SentryCombat,
-                    5 => GraphShowcaseStagePresenter.SentryRetreat,
+                    "idle" => GraphShowcaseStagePresenter.SentryIdle,
+                    "alert" => GraphShowcaseStagePresenter.SentryAlert,
+                    "combat" => GraphShowcaseStagePresenter.SentryCombat,
+                    "retreat" => GraphShowcaseStagePresenter.SentryRetreat,
                     _ => DebugDrawColor.Gray
                 };
                 GraphShowcaseStagePresenter.DrawActor(_debugDraw, _runtime.SentryX[i], _runtime.SentryY[i], 0.48f, color);
-                if (_runtime.IntruderAlive && (leaf == 3 || leaf == 4))
+                if (_runtime.IntruderAlive && (stateName == "alert" || stateName == "combat"))
                 {
                     GraphShowcaseStagePresenter.DrawAggroLine(
                         _debugDraw, _runtime.SentryX[i], _runtime.SentryY[i], _runtime.IntruderX, _runtime.IntruderY);

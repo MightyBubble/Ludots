@@ -1,0 +1,32 @@
+[
+  {
+    "id": "showcase.graph_op.LoadEntryPayloadFloat",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_input_action",
+        "event": "InputActionFired",
+        "start": "readGroundX"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "readGroundX",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.GroundXCm"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readGroundX",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": []
+  }
+]
