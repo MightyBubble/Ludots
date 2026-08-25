@@ -55,6 +55,13 @@ public sealed class RaylibNavMeshPresentationContractTests
             "src/Client/Ludots.Client.Raylib/Rendering/RaylibNavMeshPresentationRenderer.cs"));
 
         Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.NavMeshTileGeometry"));
+        Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Decal"));
+        Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Vfx"));
+        Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Surface"));
+        // raylib 渲染走 PrimitiveDrawItem 静态 lane，typed InstancedBatch lane 无消费者；
+        // 声明了会被 InstancedBatchCapabilityValidator 放行然后静默不画，违反 fail-loud。
+        Assert.That(composerSource, Does.Not.Contain("PresentationVisualCapabilities.InstancedStaticMeshBatch"));
+        Assert.That(composerSource, Does.Not.Contain("PresentationVisualCapabilities.HierarchicalInstancedStaticMeshBatch"));
         Assert.That(hostSource, Does.Contain("GetService(CoreServiceKeys.NavMeshPresentationBuffer)"));
         Assert.That(hostSource, Does.Contain("navMeshPresentationRenderer.Draw(navMeshPresentationBuffer)"));
         Assert.That(rendererSource, Does.Not.Contain("NavQueryServiceRegistry"));

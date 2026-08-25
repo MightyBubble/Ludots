@@ -16,7 +16,6 @@ namespace Ludots.Raylib.Render
         public const string DefaultAlbedoRelativePath = "Presentation/terrain_albedo_environments.json";
         public const string BackendIdRaylib = "raylib";
         public const int TerrainAlbedoLayerCount = 4;
-        internal const int DecalStampHeightSampleSegments = 6;
         private const int OverviewTextureMinLongEdgePixels = 1024;
         private const int OverviewTextureMaxLongEdgePixels = 3072;
         private const int OverviewTextureScreenScale = 2;
@@ -409,43 +408,13 @@ namespace Ludots.Raylib.Render
                 ?? throw new InvalidOperationException(
                     $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} has no stamp height sample source. Call {nameof(BindStampHeightSampleSource)} before projecting Decals.");
 
-            if (!float.IsFinite(stampSizeMeters.X) || !float.IsFinite(stampSizeMeters.Y) ||
-                stampSizeMeters.X <= 0f || stampSizeMeters.Y <= 0f)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} stamp size must be finite and positive, got {stampSizeMeters}.");
-            }
-
-            float cos = MathF.Cos(yawRad);
-            float sin = MathF.Sin(yawRad);
-            float minHeightM = float.PositiveInfinity;
-            float maxHeightM = float.NegativeInfinity;
-            int samples = DecalStampHeightSampleSegments;
-            for (int y = 0; y <= samples; y++)
-            {
-                float v = (y / (float)samples) - 0.5f;
-                float localZ = v * stampSizeMeters.Y;
-                for (int x = 0; x <= samples; x++)
-                {
-                    float u = (x / (float)samples) - 0.5f;
-                    float localX = u * stampSizeMeters.X;
-                    float worldX = stampCenter.X + (localX * cos) - (localZ * sin);
-                    float worldZ = stampCenter.Z + (localX * sin) + (localZ * cos);
-                    float worldXCm = worldX * WorldUnits.CmPerMeter;
-                    float worldYCm = worldZ * WorldUnits.CmPerMeter;
-                    if (!heightmap.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
-                    {
-                        throw new InvalidOperationException(
-                            $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} stamp does not overlap sampleable receiver height at ({worldXCm:F1},{worldYCm:F1}).");
-                    }
-
-                    float heightM = WorldUnits.CmToM(heightCm);
-                    minHeightM = MathF.Min(minHeightM, heightM);
-                    maxHeightM = MathF.Max(maxHeightM, heightM);
-                }
-            }
-
-            return new Vector3(stampCenter.X, (minHeightM + maxHeightM) * 0.5f, stampCenter.Z);
+            return RaylibDecalStampFit.FitCenter(
+                in stampCenter,
+                yawRad,
+                in stampSizeMeters,
+                stableId,
+                heightmap,
+                nameof(RaylibVisualHeightmapRenderer));
         }
 
         private void EnsureInitialized()

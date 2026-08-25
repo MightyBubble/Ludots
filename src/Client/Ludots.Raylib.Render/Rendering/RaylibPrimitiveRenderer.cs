@@ -175,6 +175,9 @@ namespace Ludots.Raylib.Render
             _receiverMeshProjector = projector ?? throw new ArgumentNullException(nameof(projector));
         }
 
+        /// <summary>Surface 线框是调试可视化；宿主每帧用 RenderDebugState.DrawDebugDraw 与 cleanPerformanceMode 覆写。</summary>
+        public bool DrawSurfaceWireBoxes { get; set; } = true;
+
         internal static IRaylibReceiverMeshProjector RequireBoundReceiverMeshProjector(
             IRaylibReceiverMeshProjector? projector,
             int stableId)
@@ -573,11 +576,15 @@ namespace Ludots.Raylib.Render
                     item.MaterialId,
                     instancedPrimitives: false,
                     countAsMesh: false);
-                DrawWireBox(
-                    item.Position,
-                    item.Scale * scaleMul,
-                    VisualMath.NormalizeOrIdentity(item.Rotation),
-                    MultiplyColor(item.Color, 1.18f, 1.08f, 0.86f, 0.96f));
+                if (DrawSurfaceWireBoxes)
+                {
+                    DrawWireBox(
+                        item.Position,
+                        item.Scale * scaleMul,
+                        VisualMath.NormalizeOrIdentity(item.Rotation),
+                        MultiplyColor(item.Color, 1.18f, 1.08f, 0.86f, 0.96f));
+                }
+
                 return true;
             }
 
