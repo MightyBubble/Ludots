@@ -41,11 +41,15 @@ function TextInput({
 export function EventEntryInspector({
   entry,
   startOptions,
+  instanceOptions,
+  variableOptions,
   onChange,
   onAdd,
 }: {
   entry: EventEntryConfig;
   startOptions: string[];
+  instanceOptions: string[];
+  variableOptions: string[];
   onChange: (next: EventEntryConfig) => void;
   onAdd?: () => void;
 }) {
@@ -122,6 +126,30 @@ export function EventEntryInspector({
       <div className="border-t border-rose-900 pt-2 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
         Who can fire this
       </div>
+      <Field label="Instance (exact placed unit)">
+        <select
+          value={filters.instanceId ?? ''}
+          onChange={(event) => patchFilters({ instanceId: event.target.value || null })}
+          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+        >
+          <option value="">any source</option>
+          {instanceOptions.map((instanceId) => (
+            <option key={instanceId} value={instanceId}>{instanceId}</option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Variable (exact map variable)">
+        <select
+          value={filters.varName ?? ''}
+          onChange={(event) => patchFilters({ varName: event.target.value || null })}
+          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+        >
+          <option value="">any variable</option>
+          {variableOptions.map((varName) => (
+            <option key={varName} value={varName}>{varName}</option>
+          ))}
+        </select>
+      </Field>
       <Field label="Region">
         <TextInput value={filters.region ?? ''} placeholder="raid_circle" onChange={(region) => patchFilters({ region })} />
       </Field>
@@ -161,8 +189,8 @@ export function EventEntryInspector({
         />
       </Field>
       <p className="rounded border border-rose-950 bg-slate-950/70 p-2 text-[11px] leading-5 text-rose-100/80">
-        This card only decides when the chain starts. Who died or who walked in is not a pin yet.
-        Follow the Then wire with LoadCaster / LoadExplicitTarget / LoadEventPayloadInt.
+        This card only decides when the chain starts. The named pins above hand over what
+        happened this time; drag one onto a value input to place the read node.
       </p>
     </div>
   );

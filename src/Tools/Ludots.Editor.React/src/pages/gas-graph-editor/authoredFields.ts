@@ -2,6 +2,11 @@ export type AuthoredFieldKey =
   | 'intValue'
   | 'floatValue'
   | 'boolValue'
+  | 'graphId'
+  | 'entryLabel'
+  | 'event'
+  | 'scope'
+  | 'argKey'
   | 'panelType'
   | 'panelAnchor'
   | 'panelSkin'
@@ -12,11 +17,13 @@ export type AuthoredFieldKey =
   | 'tag'
   | 'blackboardKey'
   | 'configKey'
+  | 'payloadKey'
+  | 'instanceId'
   | 'lookupTable'
   | 'lookupField'
   | 'teamId';
 
-export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor';
+export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId';
 
 export type AuthoredFieldSpec = {
   key: AuthoredFieldKey;
@@ -27,6 +34,11 @@ export type AuthoredFieldSpec = {
 const intValue: AuthoredFieldSpec = { key: 'intValue', label: 'Value', kind: 'int' };
 const floatValue: AuthoredFieldSpec = { key: 'floatValue', label: 'Value', kind: 'float' };
 const boolValue: AuthoredFieldSpec = { key: 'boolValue', label: 'Value', kind: 'bool' };
+const graphId: AuthoredFieldSpec = { key: 'graphId', label: 'Graph id', kind: 'int' };
+const entryLabel: AuthoredFieldSpec = { key: 'entryLabel', label: 'Entry label', kind: 'string' };
+const eventName: AuthoredFieldSpec = { key: 'event', label: 'Event', kind: 'string' };
+const scope: AuthoredFieldSpec = { key: 'scope', label: 'Scope (map/self/global)', kind: 'string' };
+const argKey: AuthoredFieldSpec = { key: 'argKey', label: 'Arg key', kind: 'string' };
 const panelType: AuthoredFieldSpec = { key: 'panelType', label: 'Panel', kind: 'string' };
 const panelAnchor: AuthoredFieldSpec = { key: 'panelAnchor', label: 'Anchor', kind: 'anchor' };
 const panelSkin: AuthoredFieldSpec = { key: 'panelSkin', label: 'Skin', kind: 'string' };
@@ -39,6 +51,8 @@ const blackboardKey: AuthoredFieldSpec = { key: 'blackboardKey', label: 'Blackbo
 const configKey: AuthoredFieldSpec = { key: 'configKey', label: 'Config key', kind: 'string' };
 const lookupTable: AuthoredFieldSpec = { key: 'lookupTable', label: 'Lookup table', kind: 'string' };
 const lookupField: AuthoredFieldSpec = { key: 'lookupField', label: 'Lookup field', kind: 'string' };
+const payloadKey: AuthoredFieldSpec = { key: 'payloadKey', label: 'Payload key', kind: 'payloadKey' };
+const instanceId: AuthoredFieldSpec = { key: 'instanceId', label: 'Placed instance', kind: 'instanceId' };
 const teamId: AuthoredFieldSpec = { key: 'teamId', label: 'Team', kind: 'int' };
 
 const FIELDS: Record<string, AuthoredFieldSpec[]> = {
@@ -72,6 +86,15 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   ResolveTableRow: [lookupTable],
   TableReadInt: [lookupTable, lookupField],
   TableReadFloat: [lookupTable, lookupField],
+  LoadEntryPayloadEntity: [payloadKey],
+  LoadEntryPayloadInt: [payloadKey],
+  LoadEntryPayloadFloat: [payloadKey],
+  LoadPlacedEntity: [instanceId],
+  InvokeGraph: [graphId, entryLabel],
+  DispatchMapEvent: [eventName, scope],
+  StoreArgInt: [argKey],
+  StoreArgFloat: [argKey],
+  StoreArgEntity: [argKey],
   QueryFilterTeam: [teamId],
 };
 

@@ -1795,7 +1795,138 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
         descriptors,
         authoringSugars,
         panelAnchors = PanelAnchorCatalog.All,
+        payloadKeys = typeof(Ludots.Core.Scripting.MapTriggerEventPayloadKeys)
+            .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(f => f.GetRawConstantValue() is string)
+            .Select(f => (string)f.GetRawConstantValue()!)
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .ToArray(),
     });
+});
+
+// Aggregate every launcher mod's custom_events.json — cross-mod events need pins
+// too, mirroring the engine's merged-config vocabulary rather than one mod's slice.
+// Also feeds graph compile validation so DispatchMapEvent authoring validates against
+// the same schema SSOT the engine uses.
+Ludots.Core.Scripting.EventSchemaRegistry BuildLauncherEventSchemas(
+    List<string> conflicts,
+    Dictionary<string, string> sources)
+{
+    var registry = new Ludots.Core.Scripting.EventSchemaRegistry();
+    foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        string customEventsPath = Path.Combine(mod.RootPath, "assets", Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry.ConfigPath.Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(customEventsPath))
+        {
+            continue;
+        }
+
+        JsonNode? root = JsonNode.Parse(File.ReadAllText(customEventsPath));
+        if (root is JsonArray entries)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i] is not JsonObject node || node["id"]?.GetValue<string>() is not { } name)
+                {
+                    throw new InvalidOperationException($"{customEventsPath} entry #{i} must be an object with 'id'.");
+                }
+
+                if (Ludots.Core.Gameplay.MapTriggers.CustomEventSchemaParser.TryParse(node, name, $"{Path.GetFileName(customEventsPath)} entry '{name}'") is not { } schema)
+                {
+                    continue;
+                }
+
+                if (sources.TryGetValue(name, out string? declaredBy))
+                {
+                    conflicts.Add($"Event '{name}' is declared by both '{declaredBy}' and '{mod.Id}'.");
+                    continue;
+                }
+
+                sources[name] = mod.Id;
+                registry.RegisterCustom(schema);
+            }
+        }
+    }
+
+    return registry;
+}
+
+app.MapGet("/api/graph/event-schemas/{modId}", (string modId) =>
+{
+    var sources = new Dictionary<string, string>(StringComparer.Ordinal);
+    var conflicts = new List<string>();
+    Ludots.Core.Scripting.EventSchemaRegistry registry;
+    try
+    {
+        registry = BuildLauncherEventSchemas(conflicts, sources);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    var schemas = registry.All
+        .OrderBy(s => s.EventName, StringComparer.Ordinal)
+        .Select(s => new
+        {
+            name = s.EventName,
+            scope = s.Scope.ToString(),
+            parameters = s.Params.Select(p => new
+            {
+                name = p.Name,
+                type = p.Type.ToString(),
+                key = p.PayloadKey,
+                optional = p.Optional,
+            }).ToArray(),
+            source = sources.TryGetValue(s.EventName, out string? mod) ? mod : "builtin",
+        })
+        .ToArray();
+
+    return Results.Ok(new { ok = true, schemas, conflicts });
+});
+
+app.MapGet("/api/mods/{modId}/maps/{mapId}/instances", (string modId, string mapId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var seen = new Dictionary<string, string>(StringComparer.Ordinal);
+        IReadOnlyList<string> paths = EditorRepo.ListMapConfigPaths(ctx, mapId);
+        for (int i = 0; i < paths.Count; i++)
+        {
+            JsonNode? root = JsonNode.Parse(File.ReadAllText(paths[i]));
+            if (root is not JsonObject obj || obj["Entities"] is not JsonArray entities)
+            {
+                continue;
+            }
+
+            for (int e = 0; e < entities.Count; e++)
+            {
+                if (entities[e] is not JsonObject entity ||
+                    entity["InstanceId"]?.GetValue<string>() is not { } instanceId ||
+                    string.IsNullOrWhiteSpace(instanceId))
+                {
+                    continue;
+                }
+
+                seen[instanceId.Trim()] = entity["Template"]?.GetValue<string>() ?? string.Empty;
+            }
+        }
+
+        var instances = seen.OrderBy(kvp => kvp.Key, StringComparer.Ordinal)
+            .Select(kvp => new { instanceId = kvp.Key, template = kvp.Value })
+            .ToArray();
+        return Results.Ok(new { ok = true, mapId, instances });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 static string[] ControlOutputPorts(GraphNodeOp op)
@@ -2076,7 +2207,7 @@ static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out str
     return true;
 }
 
-static bool TryCompileGasGraph(
+bool TryCompileGasGraph(
     JsonObject graphObj,
     string graphId,
     out GraphProgramPackage? package,
@@ -2088,10 +2219,11 @@ static bool TryCompileGasGraph(
     error = string.Empty;
     try
     {
-        var result = GraphProgramAuthoringFrontDoor.CompileJsonObject(
+        var result = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(
             graphObj,
             graphId,
-            StrictJsonOptions.CreateCamelCase(includeFields: true));
+            StrictJsonOptions.CreateCamelCase(includeFields: true),
+            BuildLauncherEventSchemas(new List<string>(), new Dictionary<string, string>(StringComparer.Ordinal)));
         package = result.Package;
         diagnostics = result.Diagnostics;
         return true;
@@ -2779,7 +2911,7 @@ static class EditorRepo
 
     public sealed record MergedMapResult(bool Found, Ludots.Core.Config.MapConfig Map, List<string> Sources);
 
-    public sealed record MapVariableAuthoringDto(string Name, string Type, double Initial, bool Phase);
+    public sealed record MapVariableAuthoringDto(string Name, string Type, double Initial);
 
     public sealed record GraphMapVariableHostDto(string MapId, string Path, IReadOnlyList<MapVariableAuthoringDto> Variables);
     public sealed record BoardMutationResult(
@@ -3184,8 +3316,7 @@ static class EditorRepo
             rows[i] = new MapVariableAuthoringDto(
                 declaration.Name,
                 declaration.Type == MapVariableType.Float ? "float" : "int",
-                declaration.Initial ?? 0,
-                declaration.Phase);
+                declaration.Initial ?? 0);
         }
 
         return rows;
@@ -3259,11 +3390,6 @@ static class EditorRepo
                 ["type"] = declaration.Type == MapVariableType.Float ? "float" : "int",
                 ["initial"] = declaration.Initial ?? 0,
             };
-            if (declaration.Phase)
-            {
-                item["phase"] = true;
-            }
-
             array.Add(item);
         }
 

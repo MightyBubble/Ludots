@@ -14,7 +14,22 @@ export type GasNodeViewEntry = {
     threshold?: number | null;
     direction?: string | null;
     action?: string | null;
+    instanceId?: string | null;
+    varName?: string | null;
   } | null;
+};
+
+export type EventSchemaParam = {
+  name: string;
+  type: 'Entity' | 'Int' | 'Float' | 'String';
+  key: string;
+  optional: boolean;
+};
+
+export type EventSchemaView = {
+  name: string;
+  scope: string;
+  parameters: EventSchemaParam[];
 };
 
 export type GasNodeViewData = {
@@ -28,6 +43,10 @@ export type GasNodeViewData = {
   var?: string | null;
   template?: string | null;
   panelType?: string | null;
+  event?: string | null;
+  argKey?: string | null;
+  entryLabel?: string | null;
+  schema?: EventSchemaView | null;
   descriptor?: {
     linearInputPorts: string[];
     queryInputPorts: string[];
@@ -54,6 +73,9 @@ function authoredCaption(data: GasNodeViewData): string | null {
   if (data.var) return data.var;
   if (data.template) return data.template;
   if (data.panelType) return data.panelType;
+  if (data.event) return data.event;
+  if (data.argKey) return `arg ${data.argKey}`;
+  if (data.op === 'InvokeGraph' && data.entryLabel) return `@${data.entryLabel}`;
   if (data.op === 'HaltReturnInt') return 'end this run';
   if (data.op === 'Yield') return 'wait one tick';
   return null;
@@ -91,6 +113,8 @@ function filterChips(entry?: GasNodeViewEntry): string[] {
   if (!entry?.filters) return [];
   const chips: string[] = [];
   const filters = entry.filters;
+  if (filters.instanceId) chips.push(`@${filters.instanceId}`);
+  if (filters.varName) chips.push(`$${filters.varName}`);
   if (filters.region) chips.push(filters.region);
   if (filters.action) chips.push(filters.action);
   if (filters.tag) chips.push(filters.tag);
@@ -114,6 +138,7 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
   const outputs = outputPorts(data);
 
   if (isEvent) {
+    const params = data.schema?.parameters.filter((param) => param.type !== 'String') ?? [];
     return (
       <div
         className={`min-w-[220px] overflow-hidden rounded-md border shadow-lg ${
@@ -121,7 +146,7 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
         }`}
       >
         <div className="bg-rose-700 px-3 py-1.5">
-          <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-rose-100">Event</div>
+          <div className="text-[9px] font-bold uppercase tracking-[.18em] text-rose-100">Event</div>
           <div className="text-sm font-semibold text-white">{data.entry?.event ?? 'Event'}</div>
         </div>
         <div className="relative bg-slate-950 px-3 py-2">
@@ -133,6 +158,38 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
               ))}
             </div>
           ) : null}
+          <div className="mt-2 space-y-1">
+            <div className="flex h-5 items-center text-[10px] font-medium text-amber-200">
+              <Handle
+                id="owner"
+                type="source"
+                position={Position.Right}
+                className={`gas-pin gas-pin-right ${pinClass('exec')}`}
+              />
+              owner (mount)
+            </div>
+            <div className="flex h-5 items-center text-[10px] font-medium text-amber-200">
+              <Handle
+                id="caster"
+                type="source"
+                position={Position.Right}
+                className={`gas-pin gas-pin-right ${pinClass('exec')}`}
+              />
+              caster (event actor)
+            </div>
+            {params.map((param) => (
+              <div key={param.key} className="flex h-5 items-center text-[10px] font-medium text-violet-200">
+                <Handle
+                  id={`payload:${param.key}`}
+                  type="source"
+                  position={Position.Right}
+                  className={`gas-pin gas-pin-right ${pinClass('value')}`}
+                />
+                {param.name}
+                <span className="ml-1 text-[8px] uppercase text-slate-500">{param.type}</span>
+              </div>
+            ))}
+          </div>
           <div className="mt-3 flex items-center justify-end text-[10px] font-medium text-sky-200">
             Then
             <Handle
