@@ -35,6 +35,7 @@ Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服�
 | 资产 DTO | `MeshAssetDescriptor.cs`、`MaterialAssetDescriptor.cs`（含 `MaterialAssetResolver` 实例链合并） | 材质库 / mesh 注册表 / 各车道 |
 | 粒子 | `ParticleVfxAssetData.cs`、`ParticleSystemRuntime.cs`、`ParticleVfxSpawnMode.cs` | `RaylibVfxRenderer` |
 | 覆盖层 | `GroundOverlayBuffer.cs`、`SplineRibbonBuffer.cs` | `RaylibWorldOverlayRenderer` |
+| 拖尾轨迹 | `TrailMeshBuffer.cs` | `RaylibTrailMeshRenderer` |
 | 调试 | `DebugDrawCommandBuffer.cs` | `RaylibDebugDrawRenderer` |
 | 地形 | `ITerrainChunkMeshSource.cs`、`IVisualHeightmap(RenderSource).cs`、`VisualHeightmapRenderProfile.cs` | 地形/高度图渲染器 |
 | 相机/数学 | `CameraRenderState3D.cs`、`VisualMath.cs`、`LODLevel.cs` | 全部 |
@@ -43,7 +44,7 @@ Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服�
 
 ## 渲染器清单（Ludots.Raylib.Render/Rendering/）
 
-38 个文件的职责分组：
+40 个文件的职责分组：
 
 | 分组 | 文件 | 车道 |
 |---|---|---|
@@ -53,7 +54,7 @@ Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服�
 | 环境 | `RaylibSkyboxRenderer`、`RaylibSkyEnvironment`、`RaylibRenderEnvironment(Renderer/Config)`、`RaylibWaterPass`、`RaylibPostProcessRenderer` | `skybox` / `sky_daynight` / `water` / `postprocess` |
 | 地表 | `RaylibTerrainRenderer`、`RaylibVisualHeightmapRenderer`、`RaylibVegetationCutoutRenderer`、`RaylibDecalProjectorRenderer`、`IRaylibReceiverMeshProjector` | `terrain` / `vegetation_cutout` / `decal_project` |
 | 材质/着色 | `RaylibMaterialLibrary`、`RaylibShaderCatalog`、`RaylibLaneShader`、`RaylibShaderLoader`、`RaylibShaderBindingGuard`、`RaylibEffectShaderRegistry` | 装订与分派 |
-| 特效/覆盖 | `RaylibVfxRenderer`、`RaylibWorldOverlayRenderer`、`RaylibSkiaRenderer` + `SkiaRasterLayer` | `vfx_unlit_tint` / overlay / Skia |
+| 特效/覆盖 | `RaylibVfxRenderer`、`RaylibWorldOverlayRenderer`、`RaylibTrailMeshRenderer`、`TrailMeshGeometry`、`RaylibSkiaRenderer` + `SkiaRasterLayer` | `vfx_unlit_tint` / overlay / trail-mesh / Skia |
 | 工具 | `RaylibDebugDrawRenderer`、`RaylibBenchmarkRenderer`、`RaylibColorUtil`、`RenderDiagnostics` | 调试 / 基准 / 诊断出口 |
 
 shader 装载约定唯一真源在 `src/Platforms/Desktop/`（经 csproj 传递复制到输出根），include 展开与 fail-loud 校验由 `RaylibShaderLoader` 运行时执行。

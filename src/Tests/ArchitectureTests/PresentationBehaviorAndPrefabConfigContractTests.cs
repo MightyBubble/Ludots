@@ -10,6 +10,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Config;
 using System.Reflection;
 using Ludots.Core.Presentation.Presenters;
@@ -1021,6 +1022,7 @@ namespace Ludots.Tests.Architecture
     "visualProxyBufferCapacity": 16384,
     "skinnedVisualBatchCapacity": 2048,
     "presentationRequestCapacity": 16384,
+    "clearTransientVisualProjectionCapacity": 8192,
     "instancedBatchRequestCapacity": 2048,
     "instancedBatchOperationCapacity": 4096,
     "globalFieldVisualRecordCapacity": 128,
@@ -1028,6 +1030,7 @@ namespace Ludots.Tests.Architecture
     "globalFieldVisualDirtyRectCapacity": 1024,
     "groundOverlayCapacity": 1024,
     "splineRibbonCapacity": 2048,
+    "trailMeshCapacity": 2048,
     "worldHudCapacity": 4096,
     "screenHudCapacity": 4096,
     "minimapMarkerCapacity": 4096,
@@ -1070,6 +1073,7 @@ namespace Ludots.Tests.Architecture
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 32768,
     "presentationRequestCapacity": 131072,
+    "clearTransientVisualProjectionCapacity": 16384,
     "instancedBatchRequestCapacity": 8192,
     "instancedBatchOperationCapacity": 16384,
     "globalFieldVisualRecordCapacity": 512,
@@ -1077,6 +1081,7 @@ namespace Ludots.Tests.Architecture
     "globalFieldVisualDirtyRectCapacity": 4096,
     "groundOverlayCapacity": 16384,
     "splineRibbonCapacity": 32768,
+    "trailMeshCapacity": 8192,
     "worldHudCapacity": 65536,
     "screenHudCapacity": 65536,
     "minimapMarkerCapacity": 65536,
@@ -1107,6 +1112,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.VisualProxyBufferCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.SkinnedVisualBatchCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.PresentationRequestCapacity, Is.EqualTo(131072));
+            Assert.That(config.Presentation.ClearTransientVisualProjectionCapacity, Is.EqualTo(16384));
             Assert.That(config.Presentation.InstancedBatchRequestCapacity, Is.EqualTo(8192));
             Assert.That(config.Presentation.InstancedBatchOperationCapacity, Is.EqualTo(16384));
             Assert.That(config.Presentation.GlobalFieldVisualRecordCapacity, Is.EqualTo(512));
@@ -1114,6 +1120,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.GlobalFieldVisualDirtyRectCapacity, Is.EqualTo(4096));
             Assert.That(config.Presentation.GroundOverlayCapacity, Is.EqualTo(16384));
             Assert.That(config.Presentation.SplineRibbonCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.TrailMeshCapacity, Is.EqualTo(8192));
             Assert.That(config.Presentation.WorldHudCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.ScreenHudCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.MinimapMarkerCapacity, Is.EqualTo(65536));
@@ -1122,6 +1129,27 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.CameraCulling.HighLodDistanceCm, Is.EqualTo(4000.0f));
             Assert.That(config.Presentation.Minimap.DebugMarkerSampleCapacity, Is.EqualTo(64));
             config.Presentation.Validate();
+        }
+
+        [Test]
+        public void PresentationRuntimeConfig_TrailMeshCapacity_HasNoSilentFallbackDefault()
+        {
+            var config = new PresentationRuntimeConfig();
+
+            Assert.That(
+                config.TrailMeshCapacity,
+                Is.Zero,
+                "TrailMeshCapacity must not silently fall back to a hardcoded capacity when game.json omits it.");
+        }
+
+        [Test]
+        public void PresentationRuntimeConfig_Validate_RequiresExplicitTrailMeshCapacity()
+        {
+            PresentationRuntimeConfig config = CreateValidPresentationRuntimeConfig();
+            config.TrailMeshCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => config.Validate())!;
+            Assert.That(ex.Message, Does.Contain("presentation.trailMeshCapacity"));
         }
 
         [Test]
@@ -1203,6 +1231,60 @@ namespace Ludots.Tests.Architecture
             }
 
             throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
+        }
+
+        private static PresentationRuntimeConfig CreateValidPresentationRuntimeConfig()
+        {
+            return new PresentationRuntimeConfig
+            {
+                PresenterInstanceCapacity = 2048,
+                GasPresentationEventCapacity = 16384,
+                PresentationEventStreamCapacity = 32768,
+                PresentationOwnerChangeCapacity = 12288,
+                PresenterCommandCapacity = 4096,
+                PresenterTimerCapacity = 4096,
+                PrimitiveDrawBufferCapacity = 8192,
+                VisualSnapshotBufferCapacity = 16384,
+                VisualProxyBufferCapacity = 16384,
+                SkinnedVisualBatchCapacity = 2048,
+                PresentationRequestCapacity = 16384,
+                ClearTransientVisualProjectionCapacity = 8192,
+                InstancedBatchRequestCapacity = 2048,
+                InstancedBatchOperationCapacity = 4096,
+                GlobalFieldVisualRecordCapacity = 128,
+                GlobalFieldVisualCellCapacity = 65536,
+                GlobalFieldVisualDirtyRectCapacity = 1024,
+                GroundOverlayCapacity = 1024,
+                SplineRibbonCapacity = 2048,
+                WorldHudCapacity = 4096,
+                ScreenHudCapacity = 4096,
+                MinimapMarkerCapacity = 4096,
+                TrailMeshCapacity = 64,
+                RuntimeEntitySpawnQueueCapacity = 8192,
+                RuntimeEntitySpawnReceiptQueueCapacity = 8192,
+                RuntimeEntityLifecycleQueueCapacity = 8192,
+                RuntimeEntityLifecycleReceiptQueueCapacity = 8192,
+                CameraCulling = new CameraCullingRuntimeConfig
+                {
+                    HighLodDistanceCm = 4000f,
+                    MediumLodDistanceCm = 10000f,
+                    LowLodDistanceCm = 20000f,
+                },
+                Minimap = new MinimapRuntimeConfig
+                {
+                    InitialZoomNormalized = 1f,
+                    WheelZoomNormalizedStep = 0.08f,
+                    ButtonZoomNormalizedStep = 0.18f,
+                    ZoomSliderEnabled = true,
+                    ModeToggleEnabled = true,
+                    RotateToggleEnabled = true,
+                    DebugMarkerSampleCapacity = 64,
+                    MinZoomExtentMode = MinimapZoomExtentMode.OneChunk,
+                    MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
+                    MinZoomExplicitHalfExtentCm = 750f,
+                    MaxZoomExplicitHalfExtentCm = 0f,
+                },
+            };
         }
 
         private static void WriteCatalog(string coreRoot, params string[] triples)

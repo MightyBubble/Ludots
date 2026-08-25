@@ -212,6 +212,13 @@ Transform 后续更新也不是 behavior，而是 runtime system 的 dirty sync 
 | **Animator** | 动画状态推进 | Continuous Tick | 每帧（仅 active + visible candidate） |
 | **Sound** | 声音请求 | Event-Driven | ActivateBehavior / DeactivateBehavior / scope 销毁 |
 | **AssetBinding** | 投影为 mesh/vfx/hud/text/spline/decal | Visible Projection | 每帧（仅 visible），dirty 时重算，stable 时 memcpy |
+| **TrailMesh** | 刀光/拖尾轨迹：激活期采样弧线，逐帧折算 age01 快照 upsert 进 TrailMeshBuffer | Continuous Tick | 每帧（仅 active）；停用后存量样本按 SampleLifetimeSeconds 淡出收尾 |
+
+TrailMesh 行为契约：`PresenterBehaviorSystem` 是 `TrailMeshBuffer` 的唯一写入方（无平行 producer）。
+缓冲区固定容量来自 `presentation.trailMeshCapacity`（game.json，LudotsCoreMod 64），必须显式配置，
+缺失或非正数在启动校验 fail-fast，buffer 满 upsert 同样 fail-fast。
+每条 trail 的采样条带上限为 `TrailMeshBuffer.MaxSamplesPerTrail`（32），
+实际采样数由 `TrailMeshConfig.MaxSamples` 约束（2..32）。
 
 核心区分：
 

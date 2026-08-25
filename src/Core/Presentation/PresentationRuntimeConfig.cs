@@ -63,7 +63,7 @@ namespace Ludots.Core.Presentation
         public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
         public int NavMeshTileCapacity { get => _navMeshTileCapacity ?? 4096; set => _navMeshTileCapacity = value; }
-        public int TrailMeshCapacity { get => _trailMeshCapacity ?? 64; set => _trailMeshCapacity = value; }
+        public int TrailMeshCapacity { get => _trailMeshCapacity ?? 0; set => _trailMeshCapacity = value; }
         public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
         public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
         public int RuntimeEntityLifecycleQueueCapacity { get => _runtimeEntityLifecycleQueueCapacity ?? 0; set => _runtimeEntityLifecycleQueueCapacity = value; }
@@ -105,6 +105,7 @@ namespace Ludots.Core.Presentation
             RequirePositive(_worldHudCapacity, "presentation.worldHudCapacity");
             RequirePositive(_screenHudCapacity, "presentation.screenHudCapacity");
             RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");
+            RequirePositive(_trailMeshCapacity, "presentation.trailMeshCapacity");
             RequirePositive(_runtimeEntitySpawnQueueCapacity, "presentation.runtimeEntitySpawnQueueCapacity");
             RequirePositive(_runtimeEntitySpawnReceiptQueueCapacity, "presentation.runtimeEntitySpawnReceiptQueueCapacity");
             RequirePositive(_runtimeEntityLifecycleQueueCapacity, "presentation.runtimeEntityLifecycleQueueCapacity");
