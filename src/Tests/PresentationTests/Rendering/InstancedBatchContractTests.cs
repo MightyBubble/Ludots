@@ -378,6 +378,71 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(0, out _), Is.False);
         }
 
+        [TestCase("not-a-vfs-uri")]
+        [TestCase(":relative.json")]
+        [TestCase("ExampleMod:")]
+        public void Load_RejectsMalformedFactorizedSourceAssetUriShapeBeforeOpeningStream(string assetUri)
+        {
+            var vfs = new StubFactorizedVfs();
+            var loader = new InstancedBatchFactorizedSourceLoader(vfs);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => loader.Load(
+                    new InstancedBatchInstanceSource(
+                        InstancedBatchFactorizedSourceLoader.SupportedFormat,
+                        assetUri,
+                        "set.alpha",
+                        instanceCount: 2,
+                        groundToVisualHeightmap: false),
+                    "batch.test",
+                    "group.a"))!;
+
+            Assert.That(ex.Message, Does.Contain($"malformed factorized source assetUri '{assetUri}'"));
+            Assert.That(vfs.GetStreamCalls, Is.EqualTo(0));
+        }
+
+        [TestCase(typeof(IOException), "disk read failed")]
+        [TestCase(typeof(UnauthorizedAccessException), "access denied")]
+        public void Load_WrapsVfsStreamOpenFailuresAsUnreadableFactorizedSourceAsset(Type exceptionType, string message)
+        {
+            var vfs = new StubFactorizedVfs();
+            vfs.ThrowOnGetStream = _ => (Exception)Activator.CreateInstance(exceptionType, message)!;
+            var loader = new InstancedBatchFactorizedSourceLoader(vfs);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => loader.Load(ValidFactorizedSource(), "batch.test", "group.a"))!;
+
+            Assert.That(ex.Message, Does.Contain("references unreadable factorized source asset 'ExampleMod:assets/source.json'"));
+            Assert.That(ex.InnerException, Is.InstanceOf(exceptionType));
+        }
+
+        [Test]
+        public void Load_WrapsIOExceptionWhileReadingStreamAsUnreadableFactorizedSourceAsset()
+        {
+            var vfs = new StubFactorizedVfs();
+            vfs.GetStreamImpl = _ => new ThrowingReadStream(new IOException("read failed mid-stream"));
+            var loader = new InstancedBatchFactorizedSourceLoader(vfs);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => loader.Load(ValidFactorizedSource(), "batch.test", "group.a"))!;
+
+            Assert.That(ex.Message, Does.Contain("references unreadable factorized source asset 'ExampleMod:assets/source.json'"));
+            Assert.That(ex.InnerException, Is.InstanceOf<IOException>());
+        }
+
+        [Test]
+        public void Load_DoesNotRelabelProgrammingArgumentNullExceptionFromVfs()
+        {
+            var vfs = new StubFactorizedVfs();
+            vfs.ThrowOnGetStream = _ => new ArgumentNullException("uri", "model guard reached");
+            var loader = new InstancedBatchFactorizedSourceLoader(vfs);
+
+            ArgumentNullException ex = Assert.Throws<ArgumentNullException>(
+                () => loader.Load(ValidFactorizedSource(), "batch.test", "group.a"))!;
+
+            Assert.That(ex.ParamName, Is.EqualTo("uri"));
+        }
+
         private static string SourceBatchJson(string groupJson)
         {
             return $$"""
@@ -1893,6 +1958,75 @@ namespace Ludots.Tests.Presentation
                   }
                 }
                 """;
+        }
+
+        private static InstancedBatchInstanceSource ValidFactorizedSource()
+        {
+            return new InstancedBatchInstanceSource(
+                InstancedBatchFactorizedSourceLoader.SupportedFormat,
+                "ExampleMod:assets/source.json",
+                "set.alpha",
+                instanceCount: 2,
+                groundToVisualHeightmap: false);
+        }
+
+        private sealed class StubFactorizedVfs : IVirtualFileSystem
+        {
+            public int GetStreamCalls { get; private set; }
+            public Func<string, Stream>? GetStreamImpl { get; set; }
+            public Func<string, Exception>? ThrowOnGetStream { get; set; }
+
+            public Stream GetStream(string uri)
+            {
+                GetStreamCalls++;
+                if (ThrowOnGetStream != null)
+                {
+                    throw ThrowOnGetStream(uri);
+                }
+
+                if (GetStreamImpl != null)
+                {
+                    return GetStreamImpl(uri);
+                }
+
+                throw new FileNotFoundException($"Stub VFS: '{uri}' not found.");
+            }
+
+            public void Mount(string modId, string physicalPath)
+            {
+            }
+
+            public bool Unmount(string modId)
+            {
+                return false;
+            }
+
+            public bool TryResolveFullPath(string uri, out string fullPath)
+            {
+                fullPath = string.Empty;
+                return false;
+            }
+        }
+
+        private sealed class ThrowingReadStream : Stream
+        {
+            private readonly Exception _exception;
+
+            public ThrowingReadStream(Exception exception)
+            {
+                _exception = exception;
+            }
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+            public override void Flush() { }
+            public override int Read(byte[] buffer, int offset, int count) => throw _exception;
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         }
 
         private static ConfigCatalog BuildCatalog()
