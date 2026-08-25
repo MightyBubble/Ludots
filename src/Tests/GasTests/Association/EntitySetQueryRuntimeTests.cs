@@ -494,6 +494,62 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GraphReturnWriter_RejectsRegisteredTriggerGraphKind_FailsClosed()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            var programs = new GraphProgramRegistry();
+            var schemas = new GraphOutputSchemaRegistry();
+            var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            var outputValues = new GraphOutputValueStore(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                initialCapacity: 16);
+            int graphId = GraphIdRegistry.Register("tests.graph.trigger-kind");
+            programs.Register(
+                graphId,
+                new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                symbols: null,
+                triggerGraphEntries: new[] { new TriggerGraphEntry("boot", "MapHeartbeat", 0, once: false) });
+            var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);
+            var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
+            Entity owner = world.Create();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                writer.ExecuteAndWrite(graphId, owner, owner, Entity.Null, Entity.Null, default, randomSeed: 0u, api))!;
+
+            Assert.That(ex.Message, Does.Contain("kind is 'TriggerGraph'"));
+        }
+
+        [TestCase(GraphNodeOp.SendEvent)]
+        [TestCase(GraphNodeOp.WriteBlackboardFloat)]
+        [TestCase(GraphNodeOp.Yield)]
+        public void GraphKindOperationPolicy_QueryRejectsEventStoreAndContinuation(GraphNodeOp forbiddenOperation)
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)forbiddenOperation },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId: 1099,
+                    entrypoint: nameof(EntitySetQueryRuntimeTests)))!;
+
+            Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
+            Assert.That(error.Message, Does.Contain("kind='Query'"));
+        }
+
+        [Test]
         public void Benchmark_CodeApiFilterSortAggregateZeroAllocAfterWarmup()
         {
             using var world = World.Create();

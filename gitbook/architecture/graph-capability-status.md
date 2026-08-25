@@ -73,7 +73,11 @@
 Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 Store/事件/动作/continuation 的合同已由主干 GraphReturnWriter/操作策略与回归测试覆盖，本页只记关单。
 → https://github.com/MightyBubble/Ludots/issues/1084
 
-这四张票都已经进主干；本页只记关单，不再派实现票。
+**第五件：TriggerGraph/Dialogue 统一 QueryGraphGateway（#1099）。**
+显式 subject + pins、目标必须已登记 GraphKind.Query、typed Bool/Int/Float/Entity/EntitySet、缺失/类型不符失败关闭、禁止 Query 动作/事件/Store/continuation、不新增第二 VM 的统一 Query 网关合同已由主干 GraphReturnWriter/操作策略/编译器与回归测试覆盖（TriggerGraph 程序走同一 GraphExecutor，不经 Query 网关），本页只记关单。
+→ https://github.com/MightyBubble/Ludots/issues/1099
+
+这五张票都已经进主干；本页只记关单，不再派实现票。
 
 ### 3.3 真正还在做的
 
@@ -182,7 +186,7 @@ Feature: 接手的人只看一页
 
 已经合进主干：941、944、945、946、948、950、951、952、953、954、956、957、959、960、962、963、964、965、966、967、968。
 
-已合进主干、只剩关单：916、917、918、1084。
+已合进主干、只剩关单：916、917、918、1084、1099。
 
 还开着、本页点过名的：915、861。
 
