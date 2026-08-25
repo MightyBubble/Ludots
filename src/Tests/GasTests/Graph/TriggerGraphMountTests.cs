@@ -180,6 +180,31 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void ModMount_RequiresMatchingModId()
+        {
+            var mount = new TriggerGraphMountTrigger(
+                1,
+                GraphName,
+                new TriggerGraphEntry("loaded", "ModLoaded", 0, once: false),
+                Entity.Null,
+                TriggerGraphRefirePolicy.Ignore,
+                TriggerGraphMountDomain.Mod,
+                TriggerGraphMountRoute.Local,
+                modIdFilter: "FixtureMod");
+
+            var missing = new ScriptContext();
+            Assert.That(mount.CheckConditions(missing), Is.False);
+
+            var other = new ScriptContext();
+            other.Set(MapTriggerEventPayloadKeys.ModId, "OtherMod");
+            Assert.That(mount.CheckConditions(other), Is.False);
+
+            var matching = new ScriptContext();
+            matching.Set(MapTriggerEventPayloadKeys.ModId, "FixtureMod");
+            Assert.That(mount.CheckConditions(matching), Is.True);
+        }
+
+        [Test]
         public void GlobalMapRoute_BroadcastsAndUnregistersWithOwnerMap()
         {
             var manager = new TriggerManager();
