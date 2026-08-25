@@ -58,9 +58,9 @@ public sealed class RaylibNavMeshPresentationContractTests
         Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Decal"));
         Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Vfx"));
         Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Surface"));
-        // raylib 渲染走 PrimitiveDrawItem 静态 lane，typed InstancedBatch lane 无消费者；
-        // 声明了会被 InstancedBatchCapabilityValidator 放行然后静默不画，违反 fail-loud。
-        Assert.That(composerSource, Does.Not.Contain("PresentationVisualCapabilities.InstancedStaticMeshBatch"));
+        // typed InstancedBatch lane 由 RaylibInstancedBatchLaneStore 消费，flat 位在组装期与
+        // lane source 绑定原子声明；Hierarchical 在 raylib 无真分层，保持不声明以 fail-loud。
+        Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.InstancedStaticMeshBatch"));
         Assert.That(composerSource, Does.Not.Contain("PresentationVisualCapabilities.HierarchicalInstancedStaticMeshBatch"));
         Assert.That(hostSource, Does.Contain("GetService(CoreServiceKeys.NavMeshPresentationBuffer)"));
         Assert.That(hostSource, Does.Contain("navMeshPresentationRenderer.Draw(navMeshPresentationBuffer)"));

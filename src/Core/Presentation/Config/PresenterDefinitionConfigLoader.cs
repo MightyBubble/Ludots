@@ -3774,6 +3774,7 @@ namespace Ludots.Core.Presentation.Config
                 ["attributeRatio"] = 13,
                 ["attributeCurrent"] = 14,
                 ["attributeBase"] = 15,
+                ["instancedBatch"] = 16,
             };
 
             public static int Register(string key)

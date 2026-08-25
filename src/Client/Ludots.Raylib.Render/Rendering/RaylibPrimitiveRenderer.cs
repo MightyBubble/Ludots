@@ -31,6 +31,7 @@ namespace Ludots.Raylib.Render
         private readonly RaylibMaterialLibrary? _materialLibrary;
         private const int DefaultMaxModelInstancesPerDraw = 32768;
         private const int HardMaxModelInstancesPerDraw = 131072;
+        private const uint ShadowColorKey = 0;
 
         private bool _initialized;
         internal const float DefaultVegetationAlphaCutoff = 0.9f;
@@ -63,6 +64,10 @@ namespace Ludots.Raylib.Render
         private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _shadowInstanceBatches = new();
+        private readonly Dictionary<int, ModelInstanceBatch> _typedLaneBatches = new();
+        private readonly Dictionary<int, ModelInstanceBatch> _typedLaneShadowBatches = new();
+        private readonly List<int> _typedLaneIdsSeen = new(8);
+        private IRaylibInstancedBatchLaneSource? _instancedBatchLaneSource;
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
         private readonly RaylibInstancedMaterialPipeline _materialPipeline;
@@ -182,6 +187,11 @@ namespace Ludots.Raylib.Render
             _receiverMeshProjector = projector ?? throw new ArgumentNullException(nameof(projector));
         }
 
+        public void BindInstancedBatchLaneSource(IRaylibInstancedBatchLaneSource source)
+        {
+            _instancedBatchLaneSource = source ?? throw new ArgumentNullException(nameof(source));
+        }
+
         /// <summary>Surface 线框是调试可视化；宿主每帧用 RenderDebugState.DrawDebugDraw 与 cleanPerformanceMode 覆写。</summary>
         public bool DrawSurfaceWireBoxes { get; set; } = true;
 
@@ -285,6 +295,7 @@ namespace Ludots.Raylib.Render
                     long bucketStart = Stopwatch.GetTimestamp();
                     DrawPersistentStaticLanes(camera, meshes, scaleMul);
                     LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
+                    DrawInstancedBatchLanes(meshes, scaleMul);
                     if (skinnedBatch != null)
                     {
                         DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul);
@@ -347,6 +358,8 @@ namespace Ludots.Raylib.Render
                     shadow,
                     item.MaterialId);
             }
+
+            DrawInstancedBatchLaneShadows(meshes, shadow, scaleMul);
         }
 
         public void DrawShadow(
@@ -2188,6 +2201,253 @@ namespace Ludots.Raylib.Render
                 default:
                     throw new InvalidOperationException(
                         $"{nameof(RaylibPrimitiveRenderer)} refuses composite shadow mesh type '{descriptor.Type}' for meshAssetId={first.MeshAssetId}. Author Presenter children instead of Prefab.");
+            }
+        }
+
+        private void DrawInstancedBatchLanes(IRenderMeshAssets meshes, float scaleMul)
+        {
+            IRaylibInstancedBatchLaneSource? source = _instancedBatchLaneSource;
+            if (source == null)
+            {
+                return;
+            }
+
+            int laneCount = source.ResidentLaneCount;
+            if (laneCount == 0)
+            {
+                return;
+            }
+
+            EnsureInitialized();
+            _typedLaneIdsSeen.Clear();
+            for (int i = 0; i < laneCount; i++)
+            {
+                RaylibInstancedBatchLane lane = source.GetResidentLane(i);
+                _typedLaneIdsSeen.Add(lane.LaneId);
+                if (!lane.Visible || lane.Count <= 0)
+                {
+                    continue;
+                }
+
+                if (!meshes.TryGetDescriptor(lane.MeshAssetId, out MeshAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} cannot draw typed instanced lane meshAssetId={lane.MeshAssetId}.");
+                }
+
+                switch (descriptor.Type)
+                {
+                    case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                        DrawTypedPrimitiveLane(lane, descriptor.PrimitiveKind, scaleMul);
+                        break;
+                    case MeshAssetType.Model:
+                        DrawTypedModelLane(lane, descriptor, meshes, scaleMul);
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} refuses mesh type '{descriptor.Type}' for typed instanced lane meshAssetId={lane.MeshAssetId}. Use a Primitive or Model mesh asset.");
+                }
+            }
+
+            PruneTypedLaneBatches();
+        }
+
+        private void DrawInstancedBatchLaneShadows(IRenderMeshAssets meshes, RaylibDirectionalShadowMap shadow, float scaleMul)
+        {
+            IRaylibInstancedBatchLaneSource? source = _instancedBatchLaneSource;
+            if (source == null)
+            {
+                return;
+            }
+
+            int laneCount = source.ResidentLaneCount;
+            if (laneCount == 0)
+            {
+                return;
+            }
+
+            EnsureInitialized();
+            for (int i = 0; i < laneCount; i++)
+            {
+                RaylibInstancedBatchLane lane = source.GetResidentLane(i);
+                if (!lane.Visible || lane.Count <= 0)
+                {
+                    continue;
+                }
+
+                if (!meshes.TryGetDescriptor(lane.MeshAssetId, out MeshAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} cannot shadow typed instanced lane meshAssetId={lane.MeshAssetId}.");
+                }
+
+                switch (descriptor.Type)
+                {
+                    case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                        Mesh primitiveMesh = descriptor.PrimitiveKind == PrimitiveMeshKind.Cube ? _cubeMesh : _sphereMesh;
+                        DrawMeshInstancedShadow(
+                            primitiveMesh,
+                            ResolveTypedLaneBatch(_typedLaneShadowBatches, lane, ShadowColorKey, scaleMul),
+                            shadow);
+                        break;
+                    case MeshAssetType.Model:
+                        if (!TryGetOrLoadModel(lane.MeshAssetId, in descriptor, out CachedModel cached))
+                        {
+                            WarnMissingModelSkipped(lane.MeshAssetId, stableId: 0, "typed instanced batch lane shadow");
+                            break;
+                        }
+
+                        ModelInstanceBatch shadowBatch = ResolveTypedLaneBatch(_typedLaneShadowBatches, lane, ShadowColorKey, scaleMul);
+                        for (int meshIndex = 0; meshIndex < cached.Model.meshCount; meshIndex++)
+                        {
+                            DrawMeshInstancedShadow(cached.Model.meshes[meshIndex], shadowBatch, shadow);
+                        }
+
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} refuses shadow mesh type '{descriptor.Type}' for typed instanced lane meshAssetId={lane.MeshAssetId}. Use a Primitive or Model mesh asset.");
+                }
+            }
+        }
+
+        private void DrawTypedPrimitiveLane(
+            in RaylibInstancedBatchLane lane,
+            PrimitiveMeshKind primitiveKind,
+            float scaleMul)
+        {
+            Mesh mesh = primitiveKind == PrimitiveMeshKind.Cube ? _cubeMesh : _sphereMesh;
+            uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(Vector4.One);
+            ModelInstanceBatch batch = ResolveTypedLaneBatch(_typedLaneBatches, lane, colorKey, scaleMul);
+            long drawStart = Stopwatch.GetTimestamp();
+            EnsureFrameLightingAppliedForInstancing();
+            RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "Instanced typed lane");
+            RaylibLaneShader laneShader = ResolveInstancingLaneShader(lane.MaterialAssetId);
+            _material.shader = laneShader.Shader;
+            SetTintUniform(laneShader, colorKey);
+            laneShader.SetColDiffuse(Vector4.One);
+            _materialPipeline.ApplyHostMaterialMaps(ref _material, lane.MaterialAssetId, laneShader.Shader, in laneShader.PbrLocs);
+            BindFrameShadow(ref _material);
+            int drawCalls = 0;
+            fixed (RaylibMatrix* transforms = batch.Transforms)
+            {
+                for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                {
+                    int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                    Rl.DrawMeshInstanced(mesh, _material, transforms + offset, chunkCount);
+                    drawCalls++;
+                }
+            }
+
+            LastInstancedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000.0 / Stopwatch.Frequency;
+            LastInstancedInstances += batch.Count;
+            LastInstancedBatches += drawCalls;
+        }
+
+        private void DrawTypedModelLane(
+            in RaylibInstancedBatchLane lane,
+            in MeshAssetDescriptor descriptor,
+            IRenderMeshAssets meshes,
+            float scaleMul)
+        {
+            if (!TryGetOrLoadModel(lane.MeshAssetId, in descriptor, out CachedModel cached))
+            {
+                WarnMissingModelSkipped(lane.MeshAssetId, stableId: 0, "typed instanced batch lane");
+                return;
+            }
+
+            uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(Vector4.One);
+            ModelInstanceBatch batch = ResolveTypedLaneBatch(_typedLaneBatches, lane, colorKey, scaleMul);
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, lane.MaterialAssetId);
+            LastInstancedInstances += batch.Count;
+            LastInstancedBatches += drawCalls;
+        }
+
+        private ModelInstanceBatch ResolveTypedLaneBatch(
+            Dictionary<int, ModelInstanceBatch> cache,
+            in RaylibInstancedBatchLane lane,
+            uint colorKey,
+            float scaleMul)
+        {
+            if (!cache.TryGetValue(lane.LaneId, out ModelInstanceBatch batch) || batch.ColorKey != colorKey)
+            {
+                batch = new ModelInstanceBatch(colorKey, Math.Max(4, lane.Count));
+            }
+
+            // scaleMul != 1 rescales the world-space matrix basis per frame, so only the exact
+            // static scale (acceptance zoom disabled) is cacheable — mirrors bucket lane policy.
+            bool canCacheStaticMatrices = MathF.Abs(scaleMul - 1f) <= 0.0001f;
+            if (!canCacheStaticMatrices ||
+                batch.Revision != lane.Revision ||
+                batch.Count != lane.Count)
+            {
+                LastInstancedMatrixCacheMisses++;
+                RebuildTypedLaneBatch(ref batch, in lane, scaleMul);
+                cache[lane.LaneId] = batch;
+            }
+            else
+            {
+                LastInstancedMatrixCacheHits++;
+            }
+
+            return batch;
+        }
+
+        private void RebuildTypedLaneBatch(ref ModelInstanceBatch batch, in RaylibInstancedBatchLane lane, float scaleMul)
+        {
+            long start = Stopwatch.GetTimestamp();
+            batch.Count = 0;
+            batch.Revision = lane.Revision;
+            bool rescale = MathF.Abs(scaleMul - 1f) > 0.0001f;
+            for (int i = 0; i < lane.Count; i++)
+            {
+                Matrix4x4 matrix = lane.Matrices[i];
+                if (rescale)
+                {
+                    matrix.M11 *= scaleMul;
+                    matrix.M12 *= scaleMul;
+                    matrix.M13 *= scaleMul;
+                    matrix.M21 *= scaleMul;
+                    matrix.M22 *= scaleMul;
+                    matrix.M23 *= scaleMul;
+                    matrix.M31 *= scaleMul;
+                    matrix.M32 *= scaleMul;
+                    matrix.M33 *= scaleMul;
+                }
+
+                batch.Add(RaylibMatrix.FromSystemNumerics(in matrix));
+            }
+
+            LastInstancedMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
+        }
+
+        private void PruneTypedLaneBatches()
+        {
+            PruneTypedLaneCache(_typedLaneBatches);
+            PruneTypedLaneCache(_typedLaneShadowBatches);
+        }
+
+        private void PruneTypedLaneCache(Dictionary<int, ModelInstanceBatch> cache)
+        {
+            // A cache entry whose lane id is absent from this frame's resident enumeration belongs
+            // to a removed lane; free it instead of leaking the native-sized matrix array.
+            List<int>? stale = null;
+            foreach (int laneId in cache.Keys)
+            {
+                if (!_typedLaneIdsSeen.Contains(laneId))
+                {
+                    (stale ??= new List<int>()).Add(laneId);
+                }
+            }
+
+            if (stale == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < stale.Count; i++)
+            {
+                cache.Remove(stale[i]);
             }
         }
 

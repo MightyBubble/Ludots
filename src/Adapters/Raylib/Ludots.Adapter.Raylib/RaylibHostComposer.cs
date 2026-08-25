@@ -1,4 +1,5 @@
 using System;
+using Ludots.Adapter.Raylib.Rendering;
 using Ludots.Client.Raylib.Diagnostics;
 using Ludots.Client.Raylib.Input;
 using Ludots.Core.Config;
@@ -26,7 +27,8 @@ namespace Ludots.Adapter.Raylib
         GameConfig Config,
         UIRoot UiRoot,
         SkiaUiRenderer Renderer,
-        IBrowserRuntime? BrowserRuntime);
+        IBrowserRuntime? BrowserRuntime,
+        RaylibInstancedBatchLaneStore InstancedBatchLaneStore);
 
     internal static class RaylibHostComposer
     {
@@ -102,16 +104,38 @@ namespace Ludots.Adapter.Raylib
             engine.SetService(CoreServiceKeys.SyntheticInput, syntheticInput);
             engine.SetService(CoreServiceKeys.HostFrameCapture, (IHostFrameCapture)new Services.RaylibFrameCaptureService());
 
+            var instancedBatchLaneStore = new RaylibInstancedBatchLaneStore();
+            engine.SetService(RaylibInstancedBatchLaneStore.LaneStoreServiceKey, instancedBatchLaneStore);
+
             engine.RegisterPresentationAdapterCapabilities(
-                new PresentationAdapterCapabilities(
-                    PresentationVisualCapabilities.Decal |
-                    PresentationVisualCapabilities.Vfx |
-                    PresentationVisualCapabilities.Surface |
-                    PresentationVisualCapabilities.NavMeshTileGeometry));
+                new PresentationAdapterCapabilities(ComposePresentationVisualCapabilities()));
 
             ValidateRequiredContextBeforeStart(engine);
 
-            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime);
+            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime, instancedBatchLaneStore);
+        }
+
+        internal static PresentationVisualCapabilities ComposePresentationVisualCapabilities()
+        {
+            // InstancedStaticMeshBatch is flat-only on purpose: raylib has no hierarchical ISM,
+            // so HierarchicalInstancedStaticMeshBatch stays undeclared and fail-loud at the
+            // tick-tail validator rather than silently degrading to a flat draw.
+            return PresentationVisualCapabilities.Decal |
+                   PresentationVisualCapabilities.Vfx |
+                   PresentationVisualCapabilities.Surface |
+                   PresentationVisualCapabilities.NavMeshTileGeometry |
+                   PresentationVisualCapabilities.InstancedStaticMeshBatch;
+        }
+
+        internal static void EnsureInstancedBatchLaneSourceBound(
+            PresentationVisualCapabilities visuals,
+            bool laneSourceBound)
+        {
+            if (visuals.HasFlag(PresentationVisualCapabilities.InstancedStaticMeshBatch) && !laneSourceBound)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib host declared {nameof(PresentationVisualCapabilities.InstancedStaticMeshBatch)} without binding an instanced batch lane source; bind {nameof(RaylibInstancedBatchLaneStore)} in the same compose step or drop the capability bit.");
+            }
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
@@ -121,6 +145,12 @@ namespace Ludots.Adapter.Raylib
             ValidateKey(engine, CoreServiceKeys.UISystem);
             ValidateKey(engine, CoreServiceKeys.InputHandler);
             ValidateKey(engine, CoreServiceKeys.InputBackend);
+            PresentationVisualCapabilities visuals = engine
+                .GetService(CoreServiceKeys.PresentationAdapterCapabilities)
+                .Visuals;
+            EnsureInstancedBatchLaneSourceBound(
+                visuals,
+                engine.TryGetService(RaylibInstancedBatchLaneStore.LaneStoreServiceKey, out _));
         }
 
         private static void ValidateKey<T>(GameEngine engine, ServiceKey<T> key)

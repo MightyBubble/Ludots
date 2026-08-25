@@ -4774,6 +4774,27 @@
       ]
     },
     {
+      "id": "instanced_batch_demo",
+      "path": "mods/fixtures/instanced_batch/InstancedBatchDemoMod",
+      "projectPath": "InstancedBatchDemoMod.csproj",
+      "title": "Typed Instanced Batch 夹具",
+      "summary": "InstancedBatch typed lane 首个使用者：8x8 inline transforms 网格经 InstancedBatchRequestBuffer → RaylibInstancedBatchLaneStore → 中性注入接口真实绘制（#1151）。",
+      "tier": "T1",
+      "category": "fixture",
+      "binding": "instanced_batch_demo",
+      "preset": "instanced_batch_demo_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "RaylibInstancedBatchDemoIntegrationTests",
+      "artifactDir": "artifacts/acceptance/instanced-batch-demo",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "instanced-batch",
+        "render-lane"
+      ]
+    },
+    {
       "id": "interaction",
       "path": "mods/showcases/interaction/InteractionShowcaseMod",
       "projectPath": "InteractionShowcaseMod.csproj",

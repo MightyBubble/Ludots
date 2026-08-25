@@ -1,0 +1,225 @@
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+using Ludots.Core.Presentation.Instancing;
+using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
+using Ludots.Raylib.Render;
+
+namespace Ludots.Adapter.Raylib.Rendering
+{
+    /// <summary>
+    /// Pure state machine mirroring Core-owned typed instanced batch requests into resident
+    /// lanes for the renderer. Core stays the single source of truth for instance totals and
+    /// chunk scheduling; this store only allocates local matrix buffers, validates chunk
+    /// bounds against the declared capacity (fail-loud on divergence), and converts transforms
+    /// (position cm → visual meters) once per arriving chunk. It never touches raylib APIs and
+    /// never shares state with the ISM bridge bucket cache.
+    /// </summary>
+    public sealed class RaylibInstancedBatchLaneStore : IRaylibInstancedBatchLaneSource
+    {
+        public static readonly ServiceKey<RaylibInstancedBatchLaneStore> LaneStoreServiceKey =
+            new("Platform.RaylibInstancedBatchLaneStore");
+
+        private readonly Dictionary<LaneKey, ResidentLane> _lanes = new();
+        private readonly List<ResidentLane> _residentOrder = new(8);
+        private int _nextLaneId = 1;
+
+        public int ResidentLaneCount => _residentOrder.Count;
+        public int LastAppliedRequestCount { get; private set; }
+
+        public RaylibInstancedBatchLane GetResidentLane(int index)
+        {
+            if ((uint)index >= (uint)_residentOrder.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            ResidentLane lane = _residentOrder[index];
+            return new RaylibInstancedBatchLane(
+                lane.LaneId,
+                lane.MeshAssetId,
+                lane.MaterialAssetId,
+                lane.RenderPath,
+                lane.Matrices,
+                lane.ResidentCount,
+                lane.Revision,
+                lane.Visible);
+        }
+
+        public void ApplyRequests(ReadOnlySpan<InstancedBatchRequest> requests, InstancedBatchAssetRegistry registry)
+        {
+            if (registry == null) throw new ArgumentNullException(nameof(registry));
+
+            LastAppliedRequestCount = requests.Length;
+            for (int i = 0; i < requests.Length; i++)
+            {
+                ref readonly InstancedBatchRequest request = ref requests[i];
+                switch (request.Kind)
+                {
+                    case InstancedBatchRequestKind.CreateOrUpdate:
+                        ApplyCreateOrUpdate(in request, registry);
+                        break;
+                    case InstancedBatchRequestKind.Remove:
+                        ApplyRemove(in request);
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"RaylibInstancedBatchLaneStore received unknown request kind {request.Kind} for batchAssetId={request.BatchAssetId}.");
+                }
+            }
+        }
+
+        private void ApplyCreateOrUpdate(in InstancedBatchRequest request, InstancedBatchAssetRegistry registry)
+        {
+            if (!registry.TryGet(request.BatchAssetId, out InstancedBatchAsset asset))
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore cannot resolve batchAssetId={request.BatchAssetId} referenced by presenterStableId={request.PresenterStableId}.");
+            }
+
+            InstancedBatchGroup group = ResolveGroup(asset, in request);
+            if (group.Source.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore does not consume external instanced batch sources yet (batch '{asset.Key}' group '{group.Id}'); external source consumption lands with #1152.");
+            }
+
+            InstancedBatchTransform[] transforms = group.Transforms ?? Array.Empty<InstancedBatchTransform>();
+            int declaredInstanceCount = transforms.Length;
+            if (declaredInstanceCount == 0)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore received a chunk for batch '{asset.Key}' group '{group.Id}' without inline transforms.");
+            }
+
+            if (request.InstanceStart < 0 ||
+                request.InstanceCount < 0 ||
+                request.InstanceStart + request.InstanceCount > declaredInstanceCount)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore chunk [{request.InstanceStart}..{request.InstanceStart + request.InstanceCount}) exceeds the declared capacity {declaredInstanceCount} of batch '{asset.Key}' group '{group.Id}'.");
+            }
+
+            var key = new LaneKey(request.BatchAssetId, request.PresenterStableId, request.Address);
+            if (!_lanes.TryGetValue(key, out ResidentLane? lane))
+            {
+                lane = new ResidentLane(_nextLaneId++, key, declaredInstanceCount);
+                _lanes.Add(key, lane);
+                _residentOrder.Add(lane);
+            }
+            else if (lane.DeclaredInstanceCount != declaredInstanceCount)
+            {
+                // A re-registered batch with a smaller instance total leaves stale tail matrices;
+                // reset the whole lane so the incoming chunk stream rebuilds from Core's new declaration.
+                lane.Reset(declaredInstanceCount);
+            }
+
+            lane.MeshAssetId = request.MeshAssetId;
+            lane.MaterialAssetId = request.MaterialAssetId;
+            lane.RenderPath = request.RenderPath;
+            for (int i = 0; i < request.InstanceCount; i++)
+            {
+                lane.Matrices[request.InstanceStart + i] = BuildMatrix(transforms[request.InstanceStart + i]);
+            }
+
+            lane.ResidentCount = Math.Max(lane.ResidentCount, request.InstanceStart + request.InstanceCount);
+            lane.Revision++;
+            if (request.FinalChunk)
+            {
+                lane.Completed = true;
+            }
+        }
+
+        private void ApplyRemove(in InstancedBatchRequest request)
+        {
+            var key = new LaneKey(request.BatchAssetId, request.PresenterStableId, request.Address);
+            if (!_lanes.TryGetValue(key, out ResidentLane? lane))
+            {
+                return;
+            }
+
+            _lanes.Remove(key);
+            _residentOrder.Remove(lane);
+        }
+
+        private static InstancedBatchGroup ResolveGroup(InstancedBatchAsset asset, in InstancedBatchRequest request)
+        {
+            InstancedBatchGroup[] groups = asset.Groups ?? Array.Empty<InstancedBatchGroup>();
+            for (int i = 0; i < groups.Length; i++)
+            {
+                if (groups[i].Address.Equals(request.Address))
+                {
+                    return groups[i];
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"RaylibInstancedBatchLaneStore cannot resolve address {{batch={request.Address.BatchId}, group={request.Address.Group.Value}}} of batch '{asset.Key}' referenced by presenterStableId={request.PresenterStableId}.");
+        }
+
+        private static Matrix4x4 BuildMatrix(in InstancedBatchTransform transform)
+        {
+            Vector3 positionMeters = WorldUnits.CmToM(transform.PositionCm);
+            return Matrix4x4.CreateScale(transform.Scale) *
+                   Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(transform.Rotation)) *
+                   Matrix4x4.CreateTranslation(positionMeters);
+        }
+
+        private readonly struct LaneKey : IEquatable<LaneKey>
+        {
+            public LaneKey(int batchAssetId, int presenterStableId, InstancedBatchAddress address)
+            {
+                BatchAssetId = batchAssetId;
+                PresenterStableId = presenterStableId;
+                Address = address;
+            }
+
+            public int BatchAssetId { get; }
+            public int PresenterStableId { get; }
+            public InstancedBatchAddress Address { get; }
+
+            public bool Equals(LaneKey other)
+            {
+                return BatchAssetId == other.BatchAssetId &&
+                       PresenterStableId == other.PresenterStableId &&
+                       Address.Equals(other.Address);
+            }
+
+            public override bool Equals(object? obj) => obj is LaneKey other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(BatchAssetId, PresenterStableId, Address);
+        }
+
+        private sealed class ResidentLane
+        {
+            public ResidentLane(int laneId, LaneKey key, int declaredInstanceCount)
+            {
+                LaneId = laneId;
+                Key = key;
+                DeclaredInstanceCount = declaredInstanceCount;
+                Matrices = new Matrix4x4[declaredInstanceCount];
+            }
+
+            public int LaneId { get; }
+            public LaneKey Key { get; }
+            public int MeshAssetId { get; set; }
+            public int MaterialAssetId { get; set; }
+            public VisualRenderPath RenderPath { get; set; }
+            public Matrix4x4[] Matrices { get; private set; }
+            public int ResidentCount { get; set; }
+            public int DeclaredInstanceCount { get; private set; }
+            public int Revision { get; set; }
+            public bool Completed { get; set; }
+            public bool Visible { get; set; } = true;
+
+            public void Reset(int declaredInstanceCount)
+            {
+                DeclaredInstanceCount = declaredInstanceCount;
+                Matrices = new Matrix4x4[declaredInstanceCount];
+                ResidentCount = 0;
+                Completed = false;
+                Revision++;
+            }
+        }
+    }
+}

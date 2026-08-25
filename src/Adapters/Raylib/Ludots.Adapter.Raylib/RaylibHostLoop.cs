@@ -311,6 +311,7 @@ namespace Ludots.Adapter.Raylib
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
                 primitiveRenderer.BindReceiverMeshProjector(
                     new MapLaneReceiverMeshProjector(engine, visualHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
+                primitiveRenderer.BindInstancedBatchLaneSource(setup.InstancedBatchLaneStore);
                 engine.SetService(
                     CoreServiceKeys.BoneTransformProvider,
                     (Core.Presentation.Presenters.IBoneTransformProvider)new RaylibBoneTransformProvider(
@@ -501,6 +502,11 @@ namespace Ludots.Adapter.Raylib
 
                         engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
                         engine.Tick(dt);
+                        // Typed instanced batch requests live from tick end until the next tick's
+                        // buffer clear; consuming them here hands resident lanes to this frame's draw.
+                        setup.InstancedBatchLaneStore.ApplyRequests(
+                            engine.GetService(CoreServiceKeys.InstancedBatchRequestBuffer).GetSpan(),
+                            engine.GetService(CoreServiceKeys.InstancedBatchAssetRegistry));
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
                         {
