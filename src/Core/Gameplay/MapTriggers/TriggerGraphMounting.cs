@@ -219,13 +219,24 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"Mod '{manifest.Name}'");
                 for (int e = 0; e < registration.TriggerGraphEntries.Count; e++)
                 {
-                    string eventName = registration.TriggerGraphEntries[e].EventName;
-                    if (GameEvents.IsMapScoped(eventName) ||
-                        eventName.StartsWith(CustomEventNameRegistry.GasEventPrefix, StringComparison.Ordinal) ||
-                        customEvents.IsDeclaredCustom(eventName))
+                    TriggerGraphEntry entry = registration.TriggerGraphEntries[e];
+                    string eventName = entry.EventName;
+                    if (GameEvents.IsMapScoped(eventName))
                     {
                         throw new InvalidOperationException(
-                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{registration.TriggerGraphEntries[e].Label}' names unsupported event '{eventName}'; Mod TriggerGraphs accept global engine events only.");
+                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{entry.Label}' names map-scoped event '{eventName}'; Mod TriggerGraphs accept global engine events only, and map-scoped events fire only inside a map session.");
+                    }
+
+                    if (eventName.StartsWith(CustomEventNameRegistry.GasEventPrefix, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{entry.Label}' names GAS bridge event '{eventName}'; Mod TriggerGraphs accept global engine events only, and {CustomEventNameRegistry.GasEventPrefix}* events fire only inside a map session.");
+                    }
+
+                    if (customEvents.IsDeclaredCustom(eventName))
+                    {
+                        throw new InvalidOperationException(
+                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{entry.Label}' names declared custom event '{eventName}'; Mod TriggerGraphs accept global engine events only, and custom events fire only inside a map session.");
                     }
                 }
 

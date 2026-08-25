@@ -3325,7 +3325,6 @@ namespace Ludots.Core.Engine
                         ?? throw new InvalidOperationException("Mod TriggerGraph installation requires CustomEventNameRegistry."));
                 ApplyTriggerDecorators(triggers);
                 TriggerManager.RegisterModTriggers(manifest.Name, triggers);
-
             }
         }
 
@@ -3339,7 +3338,7 @@ namespace Ludots.Core.Engine
             for (int i = 0; i < ModLoader.LoadedManifests.Count; i++)
             {
                 ScriptContext context = CreateContext();
-                context.Set("ModId", ModLoader.LoadedManifests[i].Name);
+                context.Set(MapTriggerEventPayloadKeys.ModId, ModLoader.LoadedManifests[i].Name);
                 TriggerManager.FireEvent(GameEvents.ModLoaded, context);
             }
         }

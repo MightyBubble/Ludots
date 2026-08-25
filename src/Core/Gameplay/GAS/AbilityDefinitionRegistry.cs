@@ -186,6 +186,7 @@ namespace Ludots.Core.Gameplay.GAS
             System.Array.Clear(_items, 0, _items.Length);
             System.Array.Clear(_has, 0, _has.Length);
             _registrationSource.Clear();
+            _registeredIds = null;
         }
 
         public void Register(int abilityId, in AbilityDefinition definition, string modId = null)
@@ -204,6 +205,7 @@ namespace Ludots.Core.Gameplay.GAS
             _items[abilityId] = definition;
             _has[abilityId] = true;
             _registrationSource[abilityId] = modId ?? "(core)";
+            _registeredIds = null;
         }
 
         public bool TryGet(int abilityId, out AbilityDefinition definition)
@@ -218,14 +220,27 @@ namespace Ludots.Core.Gameplay.GAS
             return true;
         }
 
+        private List<int>? _registeredIds;
+
+        /// <summary>
+        /// Ascending snapshot of registered ability ids. Cached and invalidated on
+        /// <see cref="Register"/>/<see cref="Clear"/>; the returned list is a stable snapshot
+        /// and never refreshes in place, so callers must re-read after a later registration.
+        /// </summary>
         public IReadOnlyList<int> RegisteredAbilityIds
         {
             get
             {
-                var ids = new List<int>();
-                for (int i = 1; i < _has.Length; i++)
+                List<int>? ids = _registeredIds;
+                if (ids == null)
                 {
-                    if (_has[i]) ids.Add(i);
+                    ids = new List<int>();
+                    for (int i = 1; i < _has.Length; i++)
+                    {
+                        if (_has[i]) ids.Add(i);
+                    }
+
+                    _registeredIds = ids;
                 }
 
                 return ids;
