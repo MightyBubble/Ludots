@@ -3468,6 +3468,14 @@ static class EditorRepo
     {
         if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
         if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset)) target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+        if (source.VisualHeightmap != null)
+        {
+            target.VisualHeightmap = source.VisualHeightmap.Clone();
+            if (!string.IsNullOrWhiteSpace(target.VisualHeightmap.Asset))
+            {
+                target.VisualHeightmapAsset = target.VisualHeightmap.Asset;
+            }
+        }
         if (!string.IsNullOrWhiteSpace(source.StructureCollisionAsset)) target.StructureCollisionAsset = source.StructureCollisionAsset;
         if (source.StructureAwareGrounding) target.StructureAwareGrounding = true;
         if (source.StructureAwareNavigation) target.StructureAwareNavigation = true;

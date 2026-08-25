@@ -6,8 +6,8 @@ namespace Ludots.Tests.EditorBridge;
 [TestFixture]
 public sealed class EditorBridgeEastAsiaMapContractTests
 {
-    [TestCase("EastAsiaGridEntryMod", "east_asia_grid", "east_asia_grid_map_data.bin")]
-    [TestCase("EastAsiaHexEntryMod", "east_asia_hex", "east_asia_hex.vtxm")]
+    [TestCase("EastAsiaGridEntryMod", "east_asia_grid", "samples/LudotsSample/east_asia/east_asia_grid_map_data.bin")]
+    [TestCase("EastAsiaHexEntryMod", "east_asia_hex", "samples/LudotsSample/east_asia/east_asia_hex.vtxm")]
     [TestCase("EastAsiaVisualHeightmapEntryMod", "east_asia_visual_heightmap", null)]
     public void EastAsiaEntryMaps_KeepSharedPlayableTerrainAssetsAsEditorSource(
         string entryModId,
@@ -31,7 +31,7 @@ public sealed class EditorBridgeEastAsiaMapContractTests
         Assert.That(loaded.Found, Is.True, mapId);
         Assert.That(directSources, Is.EqualTo(new[] { expectedMapPath }), mapId);
         Assert.That(global::EditorRepo.ResolveWritableMapConfigPath(ctx, mapId), Is.EqualTo(expectedMapPath), mapId);
-        Assert.That(loaded.Map.VisualHeightmapAsset, Is.EqualTo("assets/terrain/east_asia_continuous.vhtm"), mapId);
+        Assert.That(loaded.Map.VisualHeightmapAsset, Is.EqualTo("assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm"), mapId);
         Assert.That(loaded.Map.Metadata.Keys, Does.Contain("terrainProfile"), mapId);
         Assert.That(loaded.Map.DefaultCamera?.VirtualCameraId, Is.EqualTo("EastAsia.Camera.PlayableTerrain"), mapId);
 
@@ -41,7 +41,7 @@ public sealed class EditorBridgeEastAsiaMapContractTests
             return;
         }
 
-        string expectedDataPath = Path.Combine(sharedAssetRoot, "Data", "Maps", dataFile);
+        string expectedDataPath = Path.Combine(sharedAssetRoot, dataFile.Replace('/', Path.DirectorySeparatorChar));
         Assert.That(global::EditorRepo.TryResolveDataFile(ctx, dataFile, out string resolvedDataPath, out _), Is.True, dataFile);
         Assert.That(resolvedDataPath, Is.EqualTo(expectedDataPath), dataFile);
         Assert.That(global::EditorRepo.ResolveWritableDataFilePath(ctx, dataFile), Is.EqualTo(expectedDataPath), dataFile);

@@ -217,10 +217,10 @@ namespace Ludots.Tests.Architecture
                 "EastAsiaPlayableTerrainMod",
                 "assets");
 
-            string gridPath = Path.Combine(assetRoot, "Data", "Maps", "east_asia_grid_map_data.bin");
-            string hexReactSourcePath = Path.Combine(assetRoot, "Data", "Maps", "east_asia_hex_source_map_data.bin");
-            string hexPath = Path.Combine(assetRoot, "Data", "Maps", "east_asia_hex.vtxm");
-            string visualPath = Path.Combine(assetRoot, "terrain", "east_asia_continuous.vhtm");
+            string gridPath = Path.Combine(assetRoot, "samples", "LudotsSample", "east_asia", "east_asia_grid_map_data.bin");
+            string hexReactSourcePath = Path.Combine(assetRoot, "samples", "LudotsSample", "east_asia", "east_asia_hex_source_map_data.bin");
+            string hexPath = Path.Combine(assetRoot, "samples", "LudotsSample", "east_asia", "east_asia_hex.vtxm");
+            string visualPath = Path.Combine(assetRoot, "samples", "LudotsSample", "east_asia", "east_asia_continuous.vhtm");
             string profilePath = Path.Combine(assetRoot, "terrain", "east_asia_terrain_profile.json");
 
             LogicTerrainField gridTerrain = ReactLogicTerrainBinary.ReadGridLogicTerrainField(gridPath, cellSizeCm: 100);
@@ -284,7 +284,7 @@ namespace Ludots.Tests.Architecture
                 "EastAsiaPlayableTerrainMod",
                 "assets");
 
-            string cameraPath = Path.Combine(assetRoot, "Configs", "Camera", "virtual_cameras.json");
+            string cameraPath = Path.Combine(assetRoot, "Camera", "virtual_cameras.json");
             using JsonDocument cameraDocument = JsonDocument.Parse(File.ReadAllText(cameraPath));
             JsonElement camera = cameraDocument.RootElement[0];
             string cameraId = camera.GetProperty("id").GetString()!;

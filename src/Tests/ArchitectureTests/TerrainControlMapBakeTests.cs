@@ -102,7 +102,7 @@ namespace Ludots.Tests.Architecture
                 "EastAsiaPlayableTerrainMod");
             TerrainWeightRules rules = TerrainWeightRules.Load(Path.Combine(modRoot, "assets", "terrain", "east_asia_weight_rules.json"));
             VisualHeightmapAsset heightmap;
-            using (FileStream stream = File.OpenRead(Path.Combine(modRoot, "assets", "terrain", "east_asia_continuous.vhtm")))
+            using (FileStream stream = File.OpenRead(Path.Combine(modRoot, "assets", "samples", "LudotsSample", "east_asia", "east_asia_continuous.vhtm")))
             {
                 heightmap = VisualHeightmapBinary.Read(stream);
             }
