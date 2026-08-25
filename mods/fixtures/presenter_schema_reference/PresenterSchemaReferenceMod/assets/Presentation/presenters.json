@@ -530,9 +530,6 @@
 ,
   {
     "id": "ref_anchor_offset_definition",
-    "visibility": {
-      "inline": "None"
-    },
     "behaviors": [
       {
         "slot": "body",
