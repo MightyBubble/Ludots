@@ -31,7 +31,7 @@ namespace Ludots.Tests.GraphRuntime
         }
 
         [Test]
-        public void ExecuteSlice_50000EntityOneTickBatch_DoesNotAllocate()
+        public void ExecuteSlice_50000EntityYieldResumeHalt_DoesNotAllocate()
         {
             GraphVmCompileResult compiled = GraphVmCompiler.Compile(GraphVmTestGraphs.CreateDrinkUntilFullGraph());
             Assert.That(compiled.Succeeded, Is.True, GraphVmTestGraphs.FormatDiagnostics(compiled.Diagnostics));
@@ -41,19 +41,46 @@ namespace Ludots.Tests.GraphRuntime
             int[] callStacks = new int[EntityCount * GraphVmRuntimeLimits.MaxCallStackDepth];
             GraphVmExecutionCursor[] cursors = new GraphVmExecutionCursor[EntityCount];
 
-            RunOneTick(compiled.Program, ints, bools, callStacks, cursors, entity: 0);
+            for (int entity = 0; entity < EntityCount; entity++)
+            {
+                cursors[entity].Reset();
+            }
+
+            RunSlice(compiled.Program, ints, bools, callStacks, cursors, entity: 0, sliceSteps: GraphVmRuntimeLimits.MaxInstructionsPerExecution);
 
             long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+
             int yielded = 0;
             for (int entity = 0; entity < EntityCount; entity++)
             {
-                GraphVmExecutionResult result = RunOneTick(compiled.Program, ints, bools, callStacks, cursors, entity);
-                yielded += result.Yielded ? 1 : 0;
+                GraphVmExecutionResult first = RunSlice(compiled.Program, ints, bools, callStacks, cursors, entity, GraphVmRuntimeLimits.MaxInstructionsPerExecution);
+                yielded += first.Yielded ? 1 : 0;
+            }
+
+            int resumed = 0;
+            for (int entity = 0; entity < EntityCount; entity++)
+            {
+                GraphVmExecutionResult second = RunSlice(compiled.Program, ints, bools, callStacks, cursors, entity, GraphVmRuntimeLimits.MaxInstructionsPerExecution);
+                resumed += second.Yielded ? 1 : 0;
+            }
+
+            int halted = 0;
+            for (int entity = 0; entity < EntityCount; entity++)
+            {
+                GraphVmExecutionResult result;
+                do
+                {
+                    result = RunSlice(compiled.Program, ints, bools, callStacks, cursors, entity, GraphVmRuntimeLimits.MaxInstructionsPerExecution);
+                }
+                while (!result.Halted);
+                halted++;
             }
 
             long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
 
             Assert.That(yielded, Is.EqualTo(EntityCount));
+            Assert.That(resumed, Is.EqualTo(EntityCount));
+            Assert.That(halted, Is.EqualTo(EntityCount));
             Assert.That(allocatedBytes, Is.EqualTo(0));
         }
 
@@ -80,13 +107,14 @@ namespace Ludots.Tests.GraphRuntime
             return result;
         }
 
-        private static GraphVmExecutionResult RunOneTick(
+        private static GraphVmExecutionResult RunSlice(
             GraphInstruction[] program,
             int[] ints,
             byte[] bools,
             int[] callStacks,
             GraphVmExecutionCursor[] cursors,
-            int entity)
+            int entity,
+            int sliceSteps)
         {
             int intOffset = entity * GraphVmRuntimeLimits.MaxIntRegisters;
             int boolOffset = entity * GraphVmRuntimeLimits.MaxBoolRegisters;
@@ -96,7 +124,6 @@ namespace Ludots.Tests.GraphRuntime
             Span<byte> entityBools = bools.AsSpan(boolOffset, GraphVmRuntimeLimits.MaxBoolRegisters);
             Span<int> entityCallStack = callStacks.AsSpan(stackOffset, GraphVmRuntimeLimits.MaxCallStackDepth);
 
-            cursors[entity].Reset();
             GraphVmExecutionCursor cursor = cursors[entity];
             GraphVmExecutionResult result = GraphVmExecutor.ExecuteSlice(
                 program,
@@ -104,7 +131,7 @@ namespace Ludots.Tests.GraphRuntime
                 entityBools,
                 entityCallStack,
                 ref cursor,
-                GraphVmRuntimeLimits.MaxInstructionsPerExecution);
+                sliceSteps);
             cursors[entity] = cursor;
             return result;
         }

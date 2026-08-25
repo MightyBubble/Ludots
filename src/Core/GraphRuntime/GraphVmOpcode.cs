@@ -37,6 +37,22 @@ namespace Ludots.Core.GraphRuntime
         public const int MaxBoolRegisters = 32;
         public const int MaxInstructions = 256;
         public const int MaxInstructionsPerExecution = 1024;
+
+        /// <summary>
+        /// Instruction budget for one contiguous execution segment: the steps a
+        /// cursor may consume between two <see cref="GraphVmOpcode.Yield"/>
+        /// points (including the segment from start to the first Yield and from
+        /// the last Yield to Halt). The segment counter is
+        /// <see cref="GraphVmExecutionCursor.StepsSinceYield"/>, reset to zero
+        /// at every Yield, so long-lived coroutines that yield once per
+        /// scheduler slice are never budget-capped across their lifetime. A
+        /// segment that reaches the budget without yielding is a non-terminating
+        /// loop and fails closed instead of being resumed forever. The value is
+        /// 16 per-slice budgets: generous headroom for a legitimate segment that
+        /// spans several slices, while a runaway loop is still caught within a
+        /// few frames.
+        /// </summary>
+        public const int MaxInstructionsBetweenYields = MaxInstructionsPerExecution * 16;
         public const int MaxCallStackDepth = 16;
     }
 

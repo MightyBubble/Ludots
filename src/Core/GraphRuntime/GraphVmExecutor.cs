@@ -26,7 +26,25 @@ namespace Ludots.Core.GraphRuntime
     public struct GraphVmExecutionCursor
     {
         public int Pc;
+
+        /// <summary>
+        /// Lifetime cumulative instruction count: total instructions executed by
+        /// this cursor since the last <see cref="Reset"/>. Strictly monotonic —
+        /// it grows across Yield/resume slices and is never reset at a Yield,
+        /// so <see cref="GraphVmExecutionResult.Steps"/> and trace Step values
+        /// stay cumulative. Cleared only by <see cref="Reset"/>.
+        /// </summary>
         public int Steps;
+
+        /// <summary>
+        /// Instructions executed in the current contiguous segment — from the
+        /// last <see cref="GraphVmOpcode.Yield"/> (or from start/resume) until
+        /// the next Yield or Halt. Reset to zero at every Yield so long-lived
+        /// yielding coroutines are never budget-capped across their lifetime.
+        /// Guarded by <see cref="GraphVmRuntimeLimits.MaxInstructionsBetweenYields"/>:
+        /// a segment that reaches the budget without yielding fails closed.
+        /// </summary>
+        public int StepsSinceYield;
         public int CallStackCount;
         public int ReturnInt;
         public GraphVmExecutionStatus Status;
@@ -35,6 +53,7 @@ namespace Ludots.Core.GraphRuntime
         {
             Pc = 0;
             Steps = 0;
+            StepsSinceYield = 0;
             CallStackCount = 0;
             ReturnInt = 0;
             Status = GraphVmExecutionStatus.Running;
@@ -112,9 +131,33 @@ namespace Ludots.Core.GraphRuntime
                     $"GraphVM exceeded MaxInstructionsPerExecution ({GraphVmRuntimeLimits.MaxInstructionsPerExecution}).");
             }
 
+            if (result.Status == GraphVmExecutionStatus.Yielded)
+            {
+                throw new InvalidOperationException(
+                    "GraphVmExecutor.Execute cannot resume a program that yielded: it uses a stack-local " +
+                    "register span and call stack, so a Yielded result is not resumable. " +
+                    $"Use {nameof(GraphVmExecutor.ExecuteSlice)} with a persistent cursor, register span, and call stack to resume across yields.");
+            }
+
             return result;
         }
 
+        /// <summary>
+        /// Executes up to <paramref name="maxInstructionSteps"/> instructions,
+        /// suspending at <see cref="GraphVmOpcode.Yield"/> with
+        /// <see cref="GraphVmExecutionStatus.Yielded"/> or completing with
+        /// <see cref="GraphVmExecutionStatus.Halted"/>.
+        /// <para>
+        /// A Yielded (or Running) result must be resumed by calling this method
+        /// again with the <em>same</em> <paramref name="ints"/>,
+        /// <paramref name="bools"/> and <paramref name="callStack"/> spans that
+        /// were passed for the suspended slice. The executor cannot detect span
+        /// identity — registers and the call stack live in caller memory, so
+        /// passing different spans silently loses state. A Yielded result from a
+        /// convenience <see cref="Execute"/> overload is not resumable and is
+        /// rejected there instead.
+        /// </para>
+        /// </summary>
         public static GraphVmExecutionResult ExecuteSlice(
             ReadOnlySpan<GraphInstruction> program,
             Span<int> ints,
@@ -149,6 +192,16 @@ namespace Ludots.Core.GraphRuntime
                 throw new ArgumentOutOfRangeException(nameof(maxInstructionSteps));
             }
 
+            if (cursor.Steps < 0)
+            {
+                throw new InvalidOperationException($"GraphVM cursor step counter is negative: {cursor.Steps}.");
+            }
+
+            if (cursor.StepsSinceYield < 0)
+            {
+                throw new InvalidOperationException($"GraphVM cursor between-yields step counter is negative: {cursor.StepsSinceYield}.");
+            }
+
             if (cursor.Status == GraphVmExecutionStatus.Halted)
             {
                 return new GraphVmExecutionResult(GraphVmExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps);
@@ -166,6 +219,19 @@ namespace Ludots.Core.GraphRuntime
 
             while (stepsThisSlice < maxInstructionSteps)
             {
+                // Check the between-yields budget before executing the next
+                // instruction: reaching the budget without a Yield means the
+                // current segment is a non-terminating loop. Checking before
+                // incrementing (instead of after) keeps the counter from ever
+                // overflowing past the budget.
+                if (cursor.StepsSinceYield >= GraphVmRuntimeLimits.MaxInstructionsBetweenYields)
+                {
+                    throw new InvalidOperationException(
+                        $"GraphVM exceeded instruction budget MaxInstructionsBetweenYields " +
+                        $"({GraphVmRuntimeLimits.MaxInstructionsBetweenYields}) between yields; " +
+                        "the current segment does not terminate.");
+                }
+
                 if ((uint)pc >= (uint)program.Length)
                 {
                     throw new InvalidOperationException($"GraphVM PC left program without ReturnInt: pc={pc}, len={program.Length}.");
@@ -175,6 +241,7 @@ namespace Ludots.Core.GraphRuntime
                 ref readonly GraphInstruction instruction = ref program[instructionIndex];
                 pc++;
                 cursor.Steps++;
+                cursor.StepsSinceYield++;
                 stepsThisSlice++;
 
                 switch ((GraphVmOpcode)instruction.Op)
@@ -225,13 +292,24 @@ namespace Ludots.Core.GraphRuntime
                             throw new InvalidOperationException("GraphVM Return executed with an empty call stack.");
                         }
 
-                        pc = callStack[--cursor.CallStackCount];
+                        // Validate the popped return address like any other
+                        // control target: a corrupted call stack slot must fail
+                        // closed instead of running with an out-of-bounds pc.
+                        pc = RequireInstructionTarget(program, callStack[--cursor.CallStackCount]);
                         break;
                     case GraphVmOpcode.Yield:
+                    {
                         cursor.Pc = pc;
                         cursor.Status = GraphVmExecutionStatus.Yielded;
+                        // Trace Step and result Steps report the lifetime
+                        // cumulative count; only the segment budget counter is
+                        // reset, so a long-lived yielding coroutine is never
+                        // budget-capped across its lifetime.
                         traceSink?.OnInstruction(new GraphVmTraceEvent(cursor.Steps - 1, instructionIndex, instruction.Op, pc));
-                        return new GraphVmExecutionResult(GraphVmExecutionStatus.Yielded, cursor.ReturnInt, cursor.Steps);
+                        int yieldedSteps = cursor.Steps;
+                        cursor.StepsSinceYield = 0;
+                        return new GraphVmExecutionResult(GraphVmExecutionStatus.Yielded, cursor.ReturnInt, yieldedSteps);
+                    }
                     case GraphVmOpcode.ReturnInt:
                         cursor.Pc = pc;
                         cursor.ReturnInt = ints[RequireIntRegister(instruction.A)];
