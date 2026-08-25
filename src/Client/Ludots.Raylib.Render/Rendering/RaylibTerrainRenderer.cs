@@ -438,9 +438,9 @@ namespace Ludots.Raylib.Render
             _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, viewPos);
             ApplyTerrainShadow();
 
-            Vector3 lightPos = lighting.FarLightPosition();
-            float ambient = lighting.AmbientRgba.W;
-            float intensity = lighting.LightIntensity;
+            Vector3 lightPos = _frameLighting.FarLightPosition();
+            float ambient = _frameLighting.AmbientRgba.W;
+            float intensity = _frameLighting.LightIntensity;
             Rl.SetShaderValue(_waterShader, _locWaterLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_waterShader, _locWaterViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_waterShader, _locWaterAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
