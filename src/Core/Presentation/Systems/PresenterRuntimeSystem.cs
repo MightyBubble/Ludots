@@ -342,6 +342,7 @@ namespace Ludots.Core.Presentation.Systems
             ref readonly PresenterWorldRotation rotation = ref World.Get<PresenterWorldRotation>(target);
             ref readonly PresenterWorldFacing facing = ref World.Get<PresenterWorldFacing>(target);
             ref readonly PresenterWorldScale scale = ref World.Get<PresenterWorldScale>(target);
+            uint sinkLocalOffsetConsumedMask = 0u;
             _assetEmitter.Emit(
                 target,
                 in state,
@@ -352,7 +353,8 @@ namespace Ludots.Core.Presentation.Systems
                 position.Value,
                 rotation.Value,
                 in facing,
-                scale.Value);
+                scale.Value,
+                ref sinkLocalOffsetConsumedMask);
 
             if (_requests.Count == requestsBefore && (_soundRequests?.Count ?? 0) == soundRequestsBefore)
             {
