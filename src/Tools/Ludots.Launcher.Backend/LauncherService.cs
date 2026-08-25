@@ -300,6 +300,16 @@ public sealed class LauncherService
         return await BuildPlanRuntimeAsync(resolveResult.Plan, config, ct);
     }
 
+    /// <summary>
+    /// 与 BuildExecutableTargetAsync 的 Never 语义对齐：预构建布局（玩家发行包）跳过 app 编译，
+    /// 避免玩家机需要 .NET SDK。
+    /// </summary>
+    private static bool ShouldSkipAppBuild(LauncherLaunchPlan plan)
+    {
+        return plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
+               File.Exists(plan.AppAssemblyPath);
+    }
+
     public async Task<LauncherBuildResult> BuildAppAsync(string platformId)
     {
         var profile = GetPlatformProfile(platformId);
@@ -415,7 +425,9 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+        var appBuild = ShouldSkipAppBuild(resolveResult.Plan)
+            ? new LauncherBuildResult(resolveResult.Plan.AdapterId, true, 0, "App build skipped by request; using prebuilt assembly.")
+            : await BuildAppAsync(resolveResult.Plan.AdapterId);
         if (!appBuild.Ok)
         {
             return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
@@ -423,13 +435,10 @@ public sealed class LauncherService
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
         ReplacePreviousActiveProcess(resolveResult.Plan);
-        var startInfo = new ProcessStartInfo(
-            ResolveDotnetCommand(),
-            $"exec --roll-forward Major \"{resolveResult.Plan.AppAssemblyPath}\" \"{bootstrapPath}\"")
-        {
-            WorkingDirectory = resolveResult.Plan.AppOutputDirectory,
-            UseShellExecute = false
-        };
+        var startInfo = CreateAppStartInfo(
+            resolveResult.Plan.AppAssemblyPath,
+            resolveResult.Plan.AppOutputDirectory,
+            $"\"{bootstrapPath}\"");
 
         var process = Process.Start(startInfo);
         if (process == null)
@@ -451,11 +460,10 @@ public sealed class LauncherService
         }
 
         ReplacePreviousActiveProcess(plan);
-        var startInfo = new ProcessStartInfo(ResolveDotnetCommand(), BuildExecutableTargetArguments(plan))
-        {
-            WorkingDirectory = plan.AppOutputDirectory,
-            UseShellExecute = false
-        };
+        var startInfo = CreateAppStartInfo(
+            plan.AppAssemblyPath,
+            plan.AppOutputDirectory,
+            BuildExecutableTargetArguments(plan));
 
         var process = Process.Start(startInfo);
         if (process == null)
@@ -480,24 +488,59 @@ public sealed class LauncherService
         }
 
         ct.ThrowIfCancellationRequested();
-        var arguments = BuildExecutableTargetArguments(plan);
+        var (runnerFileName, runnerArguments) = BuildAppRunnerCommand(
+            plan.AppAssemblyPath,
+            BuildExecutableTargetArguments(plan));
         var run = await RunProcessAsync(
-            ResolveDotnetCommand(),
-            arguments,
+            runnerFileName,
+            runnerArguments,
             plan.AppOutputDirectory,
             timeoutMs: 300_000);
-        return new LauncherExecutableTargetRun($"{ResolveDotnetCommand()} {arguments}", run.ExitCode, run.Output);
+        return new LauncherExecutableTargetRun($"{runnerFileName} {runnerArguments}", run.ExitCode, run.Output);
     }
 
     private static string BuildExecutableTargetArguments(LauncherLaunchPlan plan)
     {
-        var arguments = new StringBuilder($"exec --roll-forward Major \"{plan.AppAssemblyPath}\"");
+        var arguments = new StringBuilder();
         foreach (var argument in plan.ExecutableArgs ?? Array.Empty<string>())
         {
-            arguments.Append(' ').Append(QuoteProcessArgument(argument));
+            if (arguments.Length > 0)
+            {
+                arguments.Append(' ');
+            }
+
+            arguments.Append(QuoteProcessArgument(argument));
         }
 
         return arguments.ToString();
+    }
+
+    /// <summary>
+    /// 自包含发布布局下 apphost exe 与应用 DLL 同目录；存在则直接启动 exe，
+    /// 玩家机无需安装 .NET 运行时。否则回退 dotnet exec（开发机布局）。
+    /// </summary>
+    private static (string FileName, string Arguments) BuildAppRunnerCommand(string appAssemblyPath, string arguments)
+    {
+        var appHostPath = Path.ChangeExtension(appAssemblyPath, ".exe");
+        if (File.Exists(appHostPath))
+        {
+            return (appHostPath, arguments);
+        }
+
+        var dotnetArguments = string.IsNullOrWhiteSpace(arguments)
+            ? $"exec --roll-forward Major \"{appAssemblyPath}\""
+            : $"exec --roll-forward Major \"{appAssemblyPath}\" {arguments}";
+        return (ResolveDotnetCommand(), dotnetArguments);
+    }
+
+    private static ProcessStartInfo CreateAppStartInfo(string appAssemblyPath, string workingDirectory, string arguments)
+    {
+        var (fileName, fullArguments) = BuildAppRunnerCommand(appAssemblyPath, arguments);
+        return new ProcessStartInfo(fileName, fullArguments)
+        {
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false
+        };
     }
 
     private static string QuoteProcessArgument(string argument)
