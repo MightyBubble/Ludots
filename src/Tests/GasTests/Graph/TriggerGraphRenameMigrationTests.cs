@@ -164,12 +164,19 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void ParseObject_MountDomain_AuthoringRules()
         {
-            JsonObject ability = (JsonObject)JsonNode.Parse(
+            JsonObject abilityWithoutScope = (JsonObject)JsonNode.Parse(
                 """{ "graph": "Graph.Probe", "domain": "ability" }""")!;
-            InvalidOperationException abilityEx = Assert.Throws<InvalidOperationException>(() =>
-                TriggerGraphMount.ParseObject(ability, "map probe"))!;
-            Assert.That(abilityEx.Message, Does.Contain("ability"));
-            Assert.That(abilityEx.Message, Does.Contain("map probe"));
+            InvalidOperationException abilityScopeEx = Assert.Throws<InvalidOperationException>(() =>
+                TriggerGraphMount.ParseObject(abilityWithoutScope, "map probe"))!;
+            Assert.That(abilityScopeEx.Message, Does.Contain("scopeInstanceId"));
+            Assert.That(abilityScopeEx.Message, Does.Contain("map probe"));
+
+            JsonObject abilityWithoutBinding = (JsonObject)JsonNode.Parse(
+                """{ "graph": "Graph.Probe", "scopeInstanceId": "hero", "domain": "ability" }""")!;
+            InvalidOperationException abilityBindingEx = Assert.Throws<InvalidOperationException>(() =>
+                TriggerGraphMount.ParseObject(abilityWithoutBinding, "map probe"))!;
+            Assert.That(abilityBindingEx.Message, Does.Contain("ability"));
+            Assert.That(abilityBindingEx.Message, Does.Contain("map probe"));
 
             JsonObject unknown = (JsonObject)JsonNode.Parse(
                 """{ "graph": "Graph.Probe", "domain": "galaxy" }""")!;
@@ -193,6 +200,13 @@ namespace Ludots.Tests.Gas.Graph
             TriggerGraphMount entity = TriggerGraphMount.ParseObject(
                 (JsonObject)JsonNode.Parse("""{ "graph": "Graph.Probe", "scopeInstanceId": "hero", "domain": "entity" }""")!, "map probe");
             Assert.That(entity.Domain, Is.EqualTo(TriggerGraphMountDomain.Entity));
+
+            TriggerGraphMount ability = TriggerGraphMount.ParseObject(
+                (JsonObject)JsonNode.Parse(
+                    """{ "graph": "Graph.Probe", "scopeInstanceId": "hero", "domain": "ability", "ability": "Ability.Probe" }"""),
+                "map probe");
+            Assert.That(ability.Domain, Is.EqualTo(TriggerGraphMountDomain.Ability));
+            Assert.That(ability.Ability, Is.EqualTo("Ability.Probe"));
         }
 
         private static string FindRepoRoot()

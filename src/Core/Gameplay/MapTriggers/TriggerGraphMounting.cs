@@ -39,24 +39,30 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             for (int m = 0; m < mounts.Count; m++)
             {
-                if (mounts[m].Domain == TriggerGraphMountDomain.Entity)
+                TriggerGraphMount mount = mounts[m];
+                string ownerLabel = $"Map '{mapId}' {TriggerGraphMount.FieldName}[{m}]";
+                switch (mount.Domain)
                 {
-                    if (entityMounts == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"Map '{mapId}' {TriggerGraphMount.FieldName}[{m}] declares domain 'entity' but the entity mount pipeline is not available.");
-                    }
+                    case TriggerGraphMountDomain.Entity:
+                        if (entityMounts == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"{ownerLabel} declares domain 'entity' but the entity mount pipeline is not available.");
+                        }
 
-                    Entity scope = ResolveRequiredScope(session, mounts[m], $"Map '{mapId}' {TriggerGraphMount.FieldName}[{m}]");
-                    triggers.AddRange(entityMounts.MountEntityGraphs(
-                        session,
-                        scope,
-                        mounts[m].Graph,
-                        $"Map '{mapId}' {TriggerGraphMount.FieldName}[{m}]"));
-                    continue;
+                        Entity scope = ResolveRequiredScope(session, mount, ownerLabel);
+                        triggers.AddRange(entityMounts.MountEntityGraphs(session, scope, mount.Graph, ownerLabel));
+                        break;
+
+                    case TriggerGraphMountDomain.Ability:
+                        throw new InvalidOperationException(
+                            $"{ownerLabel} declares domain 'ability' (ability '{mount.Ability}') but no runtime mount pipeline exists yet; ability-domain TriggerGraph mounts are an authoring contract only and must not run as map-domain mounts.");
+
+                    case TriggerGraphMountDomain.Map:
+                        AppendMapMountTriggers(triggers, session, programs, mount, mapId, customEvents);
+                        break;
                 }
 
-                AppendMapMountTriggers(triggers, session, programs, mounts[m], mapId, customEvents);
             }
 
             return triggers;

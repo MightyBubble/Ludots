@@ -391,7 +391,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
         {
             if (!_mapScopeResolved)
             {
-                _mapScope = dependencies.Engine.World.TryGet<MapEntity>(_scope, out MapEntity anchor)
+                _mapScope = _scope != Entity.Null &&
+                    _scope != default &&
+                    dependencies.Engine.World.IsAlive(_scope) &&
+                    dependencies.Engine.World.TryGet<MapEntity>(_scope, out MapEntity anchor)
                     ? anchor.MapId
                     : null;
                 _mapScopeResolved = true;

@@ -224,6 +224,33 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void BuildTriggers_AbilityDomainMount_ThrowsNoRuntimePipeline()
+        {
+            using var world = World.Create();
+            const string abilityId = "ability.mount_probe";
+            MapSession session = CreateSession(world,
+                $$"""[ { "graph": "{{GraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}", "domain": "ability", "ability": "{{abilityId}}" } ]""");
+            var programs = new GraphProgramRegistry();
+            RegisterProgram(programs, GraphName, GraphKind.TriggerGraph, HaltProgram(), entries: ProbeEntries());
+
+            string? message = null;
+            try
+            {
+                TriggerGraphMounting.BuildTriggers(session, programs, entityMounts: null);
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
+
+            Assert.That(message, Is.Not.Null);
+            Assert.That(message, Does.Contain(MapId));
+            Assert.That(message, Does.Contain(TriggerGraphMount.FieldName));
+            Assert.That(message, Does.Contain(abilityId));
+            Assert.That(message, Does.Contain("no runtime mount pipeline"));
+        }
+
+        [Test]
         public void BuildTriggers_ValidMount_BuildsOneTriggerPerEntryWithResolvedScope()
         {
             using var world = World.Create();
