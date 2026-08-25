@@ -121,7 +121,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
         }
 
-        public CustomEventCatalog Load(ConfigCatalog? catalog = null, ConfigConflictReport? report = null)
+        public CustomEventCatalog Load(
+            ConfigCatalog? catalog = null,
+            ConfigConflictReport? report = null,
+            Ludots.Core.Scripting.EnumCatalog? enums = null)
         {
             var names = new CustomEventNameRegistry();
             var schemas = new EventSchemaRegistry();
@@ -151,26 +154,48 @@ namespace Ludots.Core.Gameplay.MapTriggers
                             $"TriggerGraph entry payload capture supports at most {Ludots.Core.NodeLibraries.GASGraph.GraphEntryPayloadTable.Capacity}.");
                     }
 
+                    ValidateEnumAnnotations(schema, enums);
                     schemas.RegisterCustom(schema);
                 }
             }
 
             return new CustomEventCatalog(names, schemas);
         }
+
+        private static void ValidateEnumAnnotations(EventSchema schema, Ludots.Core.Scripting.EnumCatalog? enums)
+        {
+            for (int i = 0; i < schema.Params.Count; i++)
+            {
+                string? enumType = schema.Params[i].EnumType;
+                if (enumType == null)
+                {
+                    continue;
+                }
+
+                if (enums == null || !enums.TryGet(enumType, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"{CustomEventNameRegistry.ConfigPath} entry '{schema.EventName}' param '{schema.Params[i].Name}' " +
+                        $"annotates enumType '{enumType}' which is not registered in {Ludots.Core.Scripting.EnumCatalogLoader.ConfigPath}.");
+                }
+            }
+        }
     }
 
     /// <summary>
     /// Strict parser for the optional schema fields of a custom event entry:
     /// <c>scope</c> ("map" default / "entity" / "global") and <c>params[]</c> of
-    /// <c>{ name, type, key, optional? }</c>. Unknown fields, out-of-whitelist types
+    /// <c>{ name, type, key, optional?, enumType? }</c>. Unknown fields, out-of-whitelist types
     /// (bool / region / team wait on the map variable type contract), and malformed
-    /// shapes fail closed. Entries without <c>params</c> yield a parameterless schema
+    /// shapes fail closed. <c>enumType</c> annotates int params with an
+    /// <see cref="Ludots.Core.Scripting.EnumCatalog"/> type name; registration is validated by the
+    /// loader, which owns the catalog. Entries without <c>params</c> yield a parameterless schema
     /// that still carries the authored scope.
     /// </summary>
     public static class CustomEventSchemaParser
     {
         private static readonly string[] EntryFields = { "id", "description", "scope", "params" };
-        private static readonly string[] ParamFields = { "name", "type", "key", "optional" };
+        private static readonly string[] ParamFields = { "name", "type", "key", "optional", "enumType" };
 
         public static EventSchema? TryParse(JsonObject node, string eventName, string context)
         {
@@ -265,7 +290,25 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 optional = parsedOptional;
             }
 
-            return new EventParamSchema(name, type, key, optional);
+            string? enumType = null;
+            if (param.ContainsKey("enumType"))
+            {
+                enumType = param["enumType"]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(enumType))
+                {
+                    throw new InvalidOperationException($"{label} 'enumType' must be a non-empty string.");
+                }
+
+                if (type != EventParamType.Int)
+                {
+                    throw new InvalidOperationException(
+                        $"{label} 'enumType' annotates int parameters only (got type '{type}'); enum members lower to ints at compile time.");
+                }
+
+                enumType = enumType.Trim();
+            }
+
+            return new EventParamSchema(name, type, key, optional, enumType);
         }
 
         private static EventParamType ParseType(JsonNode? node, string label)

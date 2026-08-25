@@ -12,6 +12,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         public const string BranchBool = "BranchBool";
         public const string SwitchInt = "SwitchInt";
+        /// <summary>
+        /// Enum-driven value pick: selector(int) + one value input per bound member
+        /// (case:{memberName}) + optional default, lowering to a ConstInt/CompareEqInt/
+        /// JumpIfFalse/MoveInt chain. Produces an int; never a GraphNodeOp value.
+        /// </summary>
+        public const string SelectByEnum = "SelectByEnum";
         public const string Wait = "Wait";
         public const string While = "While";
         public const string Until = "Until";
@@ -29,6 +35,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             return string.Equals(opName, BranchBool, StringComparison.Ordinal) ||
                    string.Equals(opName, SwitchInt, StringComparison.Ordinal) ||
+                   string.Equals(opName, SelectByEnum, StringComparison.Ordinal) ||
                    string.Equals(opName, Wait, StringComparison.Ordinal) ||
                    string.Equals(opName, While, StringComparison.Ordinal) ||
                    string.Equals(opName, Until, StringComparison.Ordinal) ||
@@ -53,7 +60,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         public static string DescribeScriptOnlySugar()
-            => $"{BranchBool}, {SwitchInt}, {Wait}, {While}, {Until}, {Break}";
+            => $"{BranchBool}, {SwitchInt}, {SelectByEnum}, {Wait}, {While}, {Until}, {Break}";
 
         public static string DescribeBtSugar()
             => $"{BtSequence}, {BtSelector}, {BtDecorator}";

@@ -100,6 +100,7 @@ type GraphNodeConfig = {
   event?: string | null;
   scope?: string | null;
   argKey?: string | null;
+  enumType?: string | null;
   pinRegister?: number;
 };
 
@@ -134,6 +135,12 @@ type GraphSugarDescriptor = {
   valueInputPorts: string[];
   outputType: string;
   lowersTo: string;
+};
+
+type EnumTypeView = {
+  name: string;
+  members: Array<{ name: string; value: number }>;
+  source: string;
 };
 
 type EditorLayout = {
@@ -299,6 +306,7 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     event: n.event ?? undefined,
     scope: n.scope ?? undefined,
     argKey: n.argKey ?? undefined,
+    enumType: n.enumType ?? undefined,
     pinRegister: n.pinRegister,
   });
 }
@@ -619,6 +627,7 @@ export const GasGraphEditorPage: React.FC = () => {
   const [panelAnchors, setPanelAnchors] = React.useState<string[]>([]);
   const [payloadKeys, setPayloadKeys] = React.useState<string[]>([]);
   const [eventSchemas, setEventSchemas] = React.useState<EventSchemaView[]>([]);
+  const [enumCatalog, setEnumCatalog] = React.useState<EnumTypeView[]>([]);
   const [mapInstances, setMapInstances] = React.useState<GraphPlacedInstance[]>([]);
   const [nodeSearch, setNodeSearch] = React.useState('');
   const [layout, setLayout] = React.useState<EditorLayout>({});
@@ -754,6 +763,26 @@ export const GasGraphEditorPage: React.FC = () => {
   React.useEffect(() => {
     void loadEventSchemas();
   }, [loadEventSchemas]);
+
+  // #1125: launcher-wide enum vocabulary — feeds the SwitchInt enumType picker and the
+  // case:{member} dropdown once a node is bound.
+  const loadEnumCatalog = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/graph/enums/${encodeURIComponent(modId)}`);
+      const payload = await res.json();
+      if (!res.ok || !payload.ok || !Array.isArray(payload.enums)) {
+        throw new Error(payload.error ?? `Enum catalog load failed (${res.status})`);
+      }
+      setEnumCatalog(payload.enums as EnumTypeView[]);
+    } catch (err) {
+      setEnumCatalog([]);
+      setStatus(`Enum catalog unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [modId]);
+
+  React.useEffect(() => {
+    void loadEnumCatalog();
+  }, [loadEnumCatalog]);
 
   React.useEffect(() => {
     setNodes((previous) => previous.map((node) => {
@@ -1124,12 +1153,29 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const addSwitchCase = React.useCallback(() => {
     if (!selectedNodeId || !graph || !isControlFlowGraph(graph) || selectedData?.op !== 'SwitchInt') return;
-    const caseValue = Number.parseInt(switchCaseValue, 10);
-    if (!Number.isInteger(caseValue) || !switchCaseTarget || !nodes.some((node) => node.id === switchCaseTarget)) {
-      setStatus('SwitchInt case requires an integer value and an existing target node.');
+    const boundEnum = selectedData.enumType
+      ? enumCatalog.find((candidate) => candidate.name === selectedData.enumType)
+      : null;
+    let sourceHandle: string;
+    if (boundEnum) {
+      // Enum-bound arms author member names; the compiler resolves them to values.
+      if (!boundEnum.members.some((member) => member.name === switchCaseValue)) {
+        setStatus(`'${switchCaseValue}' is not a member of enum '${boundEnum.name}'.`);
+        return;
+      }
+      sourceHandle = `case:${switchCaseValue}`;
+    } else {
+      const caseValue = Number.parseInt(switchCaseValue, 10);
+      if (!Number.isInteger(caseValue) || !switchCaseTarget || !nodes.some((node) => node.id === switchCaseTarget)) {
+        setStatus('SwitchInt case requires an integer value and an existing target node.');
+        return;
+      }
+      sourceHandle = `case:${caseValue}`;
+    }
+    if (!switchCaseTarget || !nodes.some((node) => node.id === switchCaseTarget)) {
+      setStatus('SwitchInt case requires an existing target node.');
       return;
     }
-    const sourceHandle = `case:${caseValue}`;
     if (edges.some((edge) => edge.source === selectedNodeId && edge.sourceHandle === sourceHandle)) {
       setStatus(`SwitchInt case '${sourceHandle}' already exists.`);
       return;
@@ -1148,7 +1194,7 @@ export const GasGraphEditorPage: React.FC = () => {
       ? node
       : { ...node, data: { ...node.data, controlOutputPorts: [...new Set([...(node.data.controlOutputPorts ?? []), sourceHandle])] } }));
     setStatus(`Added SwitchInt ${sourceHandle} -> ${switchCaseTarget}.`);
-  }, [edges, graph, nodes, selectedData?.op, selectedNodeId, switchCaseTarget, switchCaseValue]);
+  }, [edges, enumCatalog, graph, nodes, selectedData?.enumType, selectedData?.op, selectedNodeId, switchCaseTarget, switchCaseValue]);
 
   const availableNodes = React.useMemo(() => {
     const entries = [
@@ -2058,6 +2104,27 @@ export const GasGraphEditorPage: React.FC = () => {
                           </label>
                         );
                       }
+                      if (field.kind === 'enumType' && enumCatalog.length > 0) {
+                        const current = raw == null ? '' : String(raw);
+                        const options = current && !enumCatalog.some((candidate) => candidate.name === current)
+                          ? [current, ...enumCatalog.map((candidate) => candidate.name)]
+                          : enumCatalog.map((candidate) => candidate.name);
+                        return (
+                          <label key={field.key} className="block">
+                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <select
+                              value={current}
+                              onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            >
+                              <option value="">Unbound (raw case ints)</option>
+                              {options.map((name) => (
+                                <option key={name} value={name}>{name}</option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      }
                       if (field.kind === 'instanceId' && mapInstances.length > 0) {
                         const current = raw == null ? '' : String(raw);
                         const instanceIds = mapInstances.map((instance) => instance.instanceId);
@@ -2113,16 +2180,40 @@ export const GasGraphEditorPage: React.FC = () => {
                 {selectedData.op === 'SwitchInt' && graph && isControlFlowGraph(graph) ? (
                   <div className="space-y-2 rounded border border-sky-900 bg-sky-950/30 p-2">
                     <div className="text-sky-300">Switch cases</div>
-                    <label className="block">
-                      <div className="mb-1 text-slate-500">Case value</div>
-                      <input
-                        type="number"
-                        step="1"
-                        value={switchCaseValue}
-                        onChange={(event) => setSwitchCaseValue(event.target.value)}
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
-                      />
-                    </label>
+                    {(() => {
+                      const boundEnum = selectedData.enumType
+                        ? enumCatalog.find((candidate) => candidate.name === selectedData.enumType)
+                        : null;
+                      if (boundEnum) {
+                        return (
+                          <label className="block">
+                            <div className="mb-1 text-slate-500">Case member ({boundEnum.name})</div>
+                            <select
+                              value={boundEnum.members.some((member) => member.name === switchCaseValue) ? switchCaseValue : ''}
+                              onChange={(event) => setSwitchCaseValue(event.target.value)}
+                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            >
+                              <option value="">Select member</option>
+                              {boundEnum.members.map((member) => (
+                                <option key={member.name} value={member.name}>{member.name} ({member.value})</option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      }
+                      return (
+                        <label className="block">
+                          <div className="mb-1 text-slate-500">Case value</div>
+                          <input
+                            type="number"
+                            step="1"
+                            value={switchCaseValue}
+                            onChange={(event) => setSwitchCaseValue(event.target.value)}
+                            className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                          />
+                        </label>
+                      );
+                    })()}
                     <label className="block">
                       <div className="mb-1 text-slate-500">Target node</div>
                       <select

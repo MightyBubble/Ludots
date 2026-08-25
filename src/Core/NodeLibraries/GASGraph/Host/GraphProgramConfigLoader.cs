@@ -22,6 +22,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GasGraphOpRegistry? _opRegistry;
         private readonly BuiltinHandlerRegistry? _builtinHandlers;
         private readonly Ludots.Core.Scripting.EventSchemaRegistry? _eventSchemas;
+        private readonly Ludots.Core.Scripting.EnumCatalog? _enums;
         private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, GraphInstructionSourceMap> _pendingSourceMaps = new(StringComparer.OrdinalIgnoreCase);
         // #1124 hook weaving source: the authored documents in compile order, consumed by
@@ -37,7 +38,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntityCollectionStore? entityCollections = null,
             GasGraphOpRegistry? opRegistry = null,
             BuiltinHandlerRegistry? builtinHandlers = null,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
+            Ludots.Core.Scripting.EnumCatalog? enums = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -48,6 +50,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _opRegistry = opRegistry;
             _builtinHandlers = builtinHandlers;
             _eventSchemas = eventSchemas;
+            _enums = enums;
         }
 
         public List<GraphProgramPackage> LoadIdsAndCompile(
@@ -81,7 +84,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 {
                     GraphIdRegistry.Register(id);
                     GraphControlFlowCompileResult compiled =
-                        GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options, _eventSchemas);
+                        GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options, _eventSchemas, _enums);
                     GraphProgramPackage? pkg = compiled.Package;
                     GraphOutputSchema outputSchema = compiled.OutputSchema;
                     List<GraphDiagnostic> diags = compiled.Diagnostics;
@@ -168,7 +171,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _symbolResolver,
                 _eventSchemas,
                 _entityCollections,
-                _builtinHandlers);
+                _builtinHandlers,
+                _enums);
             _pendingDocuments.Clear();
         }
 

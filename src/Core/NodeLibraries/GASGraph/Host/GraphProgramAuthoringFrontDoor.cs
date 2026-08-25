@@ -26,7 +26,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             JsonObject obj,
             string graphId,
             JsonSerializerOptions options,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
+            Ludots.Core.Scripting.EnumCatalog? enums = null)
         {
             if (obj == null) throw new ArgumentNullException(nameof(obj));
             if (string.IsNullOrWhiteSpace(graphId)) throw new ArgumentException("graphId is required.", nameof(graphId));
@@ -68,7 +69,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 doc.Kind = kind.ToString();
             }
 
-            return GraphControlFlowCompiler.Compile(doc, eventSchemas);
+            return GraphControlFlowCompiler.Compile(doc, eventSchemas, enums);
         }
 
         public static GraphKind RequireKind(JsonObject obj, string graphId)

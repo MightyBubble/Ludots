@@ -7,6 +7,7 @@ export type AuthoredFieldKey =
   | 'event'
   | 'scope'
   | 'argKey'
+  | 'enumType'
   | 'panelType'
   | 'panelAnchor'
   | 'panelSkin'
@@ -23,7 +24,7 @@ export type AuthoredFieldKey =
   | 'lookupField'
   | 'teamId';
 
-export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId';
+export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId' | 'enumType';
 
 export type AuthoredFieldSpec = {
   key: AuthoredFieldKey;
@@ -39,6 +40,7 @@ const entryLabel: AuthoredFieldSpec = { key: 'entryLabel', label: 'Entry label',
 const eventName: AuthoredFieldSpec = { key: 'event', label: 'Event', kind: 'string' };
 const scope: AuthoredFieldSpec = { key: 'scope', label: 'Scope (map/self/global)', kind: 'string' };
 const argKey: AuthoredFieldSpec = { key: 'argKey', label: 'Arg key', kind: 'string' };
+const enumType: AuthoredFieldSpec = { key: 'enumType', label: 'Enum type (Enums/enums.json)', kind: 'enumType' };
 const panelType: AuthoredFieldSpec = { key: 'panelType', label: 'Panel', kind: 'string' };
 const panelAnchor: AuthoredFieldSpec = { key: 'panelAnchor', label: 'Anchor', kind: 'anchor' };
 const panelSkin: AuthoredFieldSpec = { key: 'panelSkin', label: 'Skin', kind: 'string' };
@@ -92,6 +94,8 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   LoadPlacedEntity: [instanceId],
   InvokeGraph: [graphId, entryLabel],
   DispatchMapEvent: [eventName, scope],
+  SwitchInt: [enumType],
+  SelectByEnum: [enumType],
   StoreArgInt: [argKey],
   StoreArgFloat: [argKey],
   StoreArgEntity: [argKey],

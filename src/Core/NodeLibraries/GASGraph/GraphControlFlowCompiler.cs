@@ -66,6 +66,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         public const string BranchBoolOp = GraphAuthoringSugar.BranchBool;
         public const string SwitchIntOp = GraphAuthoringSugar.SwitchInt;
+        public const string SelectByEnumOp = GraphAuthoringSugar.SelectByEnum;
         public const string WaitOp = GraphAuthoringSugar.Wait;
         public const string WhileOp = GraphAuthoringSugar.While;
         public const string UntilOp = GraphAuthoringSugar.Until;
@@ -84,14 +85,68 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private readonly struct SwitchCaseArm
         {
-            public SwitchCaseArm(int caseValue, string targetNodeId)
+            public SwitchCaseArm(int caseValue, string authoredPort, string targetNodeId)
             {
                 CaseValue = caseValue;
+                AuthoredPort = authoredPort;
                 TargetNodeId = targetNodeId;
             }
 
             public int CaseValue { get; }
+            /// <summary>The authored port spelling ("case:Combat" when enum-bound, else "case:{n}") — source-map label.</summary>
+            public string AuthoredPort { get; }
             public string TargetNodeId { get; }
+        }
+
+        /// <summary>One SelectByEnum candidate: the bound member's value plus the authored case port it wires from.</summary>
+        private readonly struct SelectCandidateArm
+        {
+            public SelectCandidateArm(int memberValue, string authoredPort)
+            {
+                MemberValue = memberValue;
+                AuthoredPort = authoredPort;
+            }
+
+            public int MemberValue { get; }
+            public string AuthoredPort { get; }
+        }
+
+        /// <summary>
+        /// Per-compilation resolution of enum-bound case ports (#1125): authored
+        /// case:{memberName} ports → declaration-order ints, plus the reverse map that keeps
+        /// the authored member spelling for instruction source labels. Built once from the
+        /// document + EnumCatalog; unregistered enumType, unknown member names, and raw int
+        /// literals under an enumType all fail closed here.
+        /// </summary>
+        private sealed class EnumCaseTable
+        {
+            private readonly Dictionary<ControlKey, int> _memberValues = new();
+            private readonly Dictionary<(string NodeId, int Value), string> _authoredPorts = new();
+            private readonly HashSet<string> _enumBoundNodes = new(StringComparer.Ordinal);
+
+            public static readonly EnumCaseTable Empty = new();
+
+            public bool IsEnumBound(string nodeId)
+                => _enumBoundNodes.Contains(nodeId);
+
+            public void MarkEnumBound(string nodeId)
+                => _enumBoundNodes.Add(nodeId);
+
+            public void Record(string nodeId, string authoredPort, int memberValue)
+            {
+                _memberValues[new ControlKey(nodeId, authoredPort)] = memberValue;
+                _authoredPorts[(nodeId, memberValue)] = authoredPort;
+            }
+
+            /// <summary>Authored case port → member int. Int-literal ports parse before this table.</summary>
+            public bool TryResolveMemberPort(string nodeId, string port, out int memberValue)
+                => _memberValues.TryGetValue(new ControlKey(nodeId, port), out memberValue);
+
+            /// <summary>Source-map label for a resolved case value: the authored member port when enum-bound.</summary>
+            public string AuthoredPortOrNumeric(string nodeId, int caseValue)
+                => _authoredPorts.TryGetValue((nodeId, caseValue), out string? authored)
+                    ? authored
+                    : GraphControlFlowPorts.Case(caseValue);
         }
 
         private readonly struct ControlKey : IEquatable<ControlKey>
@@ -153,7 +208,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Until = 4,
             BtSequence = 5,
             BtSelector = 6,
-            BtDecorator = 7
+            BtDecorator = 7,
+            SelectByEnum = 8
         }
 
         private readonly struct AuthoredOp
@@ -169,7 +225,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         public static GraphControlFlowCompileResult Compile(GraphControlFlowDocument document)
-            => CompileCore(document, eventSchemas: null) with { Document = document };
+            => CompileCore(document, eventSchemas: null, enums: null) with { Document = document };
 
         /// <summary>
         /// Compiles with the event schema SSOT in scope (#1115): DispatchMapEvent nodes
@@ -177,18 +233,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// against it. Hosts that never author DispatchMapEvent may compile without it.
         /// </summary>
         public static GraphControlFlowCompileResult Compile(GraphControlFlowDocument document, Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas)
-            => CompileCore(document, eventSchemas) with { Document = document };
+            => CompileCore(document, eventSchemas, enums: null) with { Document = document };
+
+        /// <summary>
+        /// Compiles with the enum catalog in scope (#1125): SwitchInt nodes bound to an
+        /// <c>enumType</c> and SelectByEnum nodes resolve their case:{memberName} ports to
+        /// declaration-order ints here; unregistered types and unknown members fail closed.
+        /// Hosts that never author enum-bound sugar may compile without it — but an authored
+        /// enumType without a catalog is itself fail-closed, not silently ignored.
+        /// </summary>
+        public static GraphControlFlowCompileResult Compile(
+            GraphControlFlowDocument document,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
+            Ludots.Core.Scripting.EnumCatalog? enums)
+            => CompileCore(document, eventSchemas, enums) with { Document = document };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
             GraphControlFlowDocument document)
         {
-            GraphControlFlowCompileResult result = CompileCore(document, eventSchemas: null);
+            GraphControlFlowCompileResult result = CompileCore(document, eventSchemas: null, enums: null);
             return (result.Package, result.OutputSchema, result.Diagnostics);
         }
 
         private static GraphControlFlowCompileResult CompileCore(
             GraphControlFlowDocument document,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
+            Ludots.Core.Scripting.EnumCatalog? enums)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
 
@@ -201,6 +271,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<string, int> nodeIndices = BuildNodeIndex(nodes, graphId, diagnostics);
             var ops = new AuthoredOp[nodes.Count];
             ParseOps(nodes, ops, graphKind, graphId, diagnostics);
+            EnumCaseTable enumCases = BuildEnumCaseTable(document, nodes, ops, enums, graphId, diagnostics);
 
             Dictionary<string, Ludots.Core.Scripting.EventSchema> dispatchSchemas =
                 BuildDispatchEventSchemas(nodes, graphKind, eventSchemas, graphId, diagnostics);
@@ -216,7 +287,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"{GraphKindLabel(graphKind)} entry node '{document.Entry}' does not exist.", document.Entry));
             }
 
-            Dictionary<ControlKey, string> controlEdges = BuildControlEdges(document, nodeIndices, ops, graphId, diagnostics);
+            Dictionary<ControlKey, string> controlEdges = BuildControlEdges(document, nodeIndices, ops, graphId, diagnostics, enumCases);
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges = BuildValueEdges(document, nodeIndices, graphId, diagnostics);
 
             var outputTypes = new GraphValueType[nodes.Count];
@@ -229,12 +300,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AllocateDroppedOutputs(nodes, ops, outputRegisters, droppedRegisters, registers, graphId, diagnostics);
             BtSugarPlan? btPlan = AnalyzeBtSugar(
                 document, nodes, ops, nodeIndices, controlEdges, outputTypes, graphId, diagnostics);
-            ValidateRequiredEdges(nodes, ops, graphKind, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics, dispatchSchemas, btPlan);
+            ValidateRequiredEdges(nodes, ops, graphKind, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics, dispatchSchemas, btPlan, enumCases);
             DetectUnreachable(EntryRoots(document, graphKind, triggerGraphEntries), nodes, document.ControlEdges, graphId, diagnostics);
 
             var sugarScratches = new SugarScratch[nodes.Count];
             AllocateSugarScratches(nodes, ops, sugarScratches, registers, graphId, diagnostics, btPlan);
-            NodeLayout[] layouts = BuildLayouts(nodes, ops, graphKind, controlEdges, valueEdges, dispatchSchemas, diagnostics, btPlan);
+            NodeLayout[] layouts = BuildLayouts(nodes, ops, graphKind, controlEdges, valueEdges, dispatchSchemas, diagnostics, btPlan, enumCases);
             if (HasErrors(diagnostics))
             {
                 return new GraphControlFlowCompileResult(Array.Empty<GraphInstruction>(), GraphInstructionSourceMap.Empty, diagnostics);
@@ -313,7 +384,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     graphId,
                     diagnostics,
                     dispatchSchemas,
-                    btPlan);
+                    btPlan,
+                    enumCases);
             }
 
             if (HasErrors(diagnostics))
@@ -880,6 +952,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (string.Equals(node.Op, SelectByEnumOp, StringComparison.Ordinal))
+                {
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"{SelectByEnumOp} is Script/TriggerGraph compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.SelectByEnum, GraphNodeOp.None);
+                    continue;
+                }
+
                 if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
                 {
                     if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
@@ -988,12 +1074,126 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static string GraphKindLabel(GraphKind graphKind)
             => graphKind.ToString();
 
+        /// <summary>
+        /// Resolves enum bindings for SwitchInt case arms (control edges) and SelectByEnum
+        /// candidates (value inputs) before the generic edge passes run. Ports keep their
+        /// authored spelling in the document; the table is the only place name→int happens.
+        /// </summary>
+        private static EnumCaseTable BuildEnumCaseTable(
+            GraphControlFlowDocument document,
+            List<GraphControlFlowNode> nodes,
+            AuthoredOp[] ops,
+            Ludots.Core.Scripting.EnumCatalog? enums,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            bool anyBound = false;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (ops[i].Kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum) ||
+                    string.IsNullOrWhiteSpace(nodes[i].EnumType))
+                {
+                    continue;
+                }
+
+                anyBound = true;
+                break;
+            }
+
+            if (!anyBound)
+            {
+                return EnumCaseTable.Empty;
+            }
+
+            var table = new EnumCaseTable();
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                AuthoredOpKind kind = ops[i].Kind;
+                if (kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum) ||
+                    string.IsNullOrWhiteSpace(nodes[i].EnumType))
+                {
+                    continue;
+                }
+
+                GraphControlFlowNode node = nodes[i];
+                string enumType = node.EnumType!.Trim();
+                table.MarkEnumBound(node.Id);
+                if (enums == null || !enums.TryGet(enumType, out Ludots.Core.Scripting.EnumSchema? schema))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                        $"Node '{node.Id}' enumType '{enumType}' is not registered in the enum catalog " +
+                        $"({Ludots.Core.Scripting.EnumCatalogLoader.ConfigPath}).", node.Id));
+                    continue;
+                }
+
+                if (kind == AuthoredOpKind.SwitchInt)
+                {
+                    List<GraphControlFlowEdge> edges = document.ControlEdges ?? new List<GraphControlFlowEdge>();
+                    for (int e = 0; e < edges.Count; e++)
+                    {
+                        if (!string.Equals(edges[e].From, node.Id, StringComparison.Ordinal) ||
+                            !edges[e].FromPort.StartsWith(GraphControlFlowPorts.CasePrefix, StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        ResolveEnumCasePort(edges[e].FromPort, schema, node, graphId, diagnostics, table);
+                    }
+                }
+                else
+                {
+                    List<GraphControlFlowValueEdge> edges = document.ValueEdges ?? new List<GraphControlFlowValueEdge>();
+                    for (int e = 0; e < edges.Count; e++)
+                    {
+                        if (!string.Equals(edges[e].To, node.Id, StringComparison.Ordinal) ||
+                            !edges[e].ToPort.StartsWith(GraphControlFlowPorts.CasePrefix, StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        ResolveEnumCasePort(edges[e].ToPort, schema, node, graphId, diagnostics, table);
+                    }
+                }
+            }
+
+            return table;
+        }
+
+        private static void ResolveEnumCasePort(
+            string port,
+            Ludots.Core.Scripting.EnumSchema schema,
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics,
+            EnumCaseTable table)
+        {
+            string member = port[GraphControlFlowPorts.CasePrefix.Length..];
+            if (int.TryParse(member, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' is bound to enumType '{schema.TypeName}'; case ports must name members " +
+                    $"(case:{schema.Members[0]}...), not raw ints — member values are declaration-order and drifting " +
+                    "literals are exactly what the binding prevents.", node.Id));
+                return;
+            }
+
+            if (!schema.TryGetValue(member, out int value))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' case '{member}' is not a member of enum '{schema.TypeName}'.", node.Id));
+                return;
+            }
+
+            table.Record(node.Id, port, value);
+        }
+
         private static Dictionary<ControlKey, string> BuildControlEdges(
             GraphControlFlowDocument document,
             Dictionary<string, int> nodeIndices,
             AuthoredOp[] ops,
             string graphId,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            EnumCaseTable? enumCases = null)
         {
             var result = new Dictionary<ControlKey, string>();
             List<GraphControlFlowEdge> edges = document.ControlEdges ?? new List<GraphControlFlowEdge>();
@@ -1016,7 +1216,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                var key = new ControlKey(edge.From, edge.FromPort);
+                // Enum-bound case:{memberName} enters the generic dictionary as case:{int} so
+                // validation, counting, and lowering below stay the SwitchInt path unchanged.
+                string port = edge.FromPort;
+                if (enumCases != null &&
+                    enumCases.TryResolveMemberPort(edge.From, port, out int memberValue))
+                {
+                    port = GraphControlFlowPorts.Case(memberValue);
+                }
+
+                var key = new ControlKey(edge.From, port);
                 if (!result.TryAdd(key, edge.To))
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.DuplicateControlEdge,
@@ -1133,6 +1342,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return GraphValueType.Void;
             }
 
+            // SelectByEnum is sugar that produces a value: the picked candidate's int.
+            if (op.Kind == AuthoredOpKind.SelectByEnum)
+            {
+                return GraphValueType.Int;
+            }
+
             if (graphKind == GraphKind.Query)
             {
                 return GraphOpDescriptorTable.GetQueryOutputType(op.NodeOp);
@@ -1237,7 +1452,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string graphId,
             List<GraphDiagnostic> diagnostics,
             Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null,
-            BtSugarPlan? btPlan = null)
+            BtSugarPlan? btPlan = null,
+            EnumCaseTable? enumCases = null)
         {
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -1248,12 +1464,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 {
                     // BT composites have no linear Next/value contract; AnalyzeBtSugar owns their
                     // child-arm and decorator-kind rules, the generic port whitelist still applies.
-                    ValidateAllowedPorts(node, op, graphKind, controlEdges, valueEdges, graphId, diagnostics, dispatchSchemas);
+                    ValidateAllowedPorts(node, op, graphKind, controlEdges, valueEdges, graphId, diagnostics, dispatchSchemas, enumCases);
                     continue;
                 }
 
                 ValidateAuxiliaryOutputs(node, op, graphKind, graphId, diagnostics);
-                ValidateAllowedPorts(node, op, graphKind, controlEdges, valueEdges, graphId, diagnostics, dispatchSchemas);
+                ValidateAllowedPorts(node, op, graphKind, controlEdges, valueEdges, graphId, diagnostics, dispatchSchemas, enumCases);
 
                 if (graphKind == GraphKind.Query)
                 {
@@ -1273,6 +1489,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 if (op.Kind == AuthoredOpKind.SwitchInt)
                 {
                     ValidateSwitchIntEdges(node, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    continue;
+                }
+
+                if (op.Kind == AuthoredOpKind.SelectByEnum)
+                {
+                    ValidateSelectByEnumEdges(node, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics, enumCases);
                     continue;
                 }
 
@@ -1368,7 +1590,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
             string graphId,
             List<GraphDiagnostic> diagnostics,
-            Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null)
+            Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null,
+            EnumCaseTable? enumCases = null)
         {
             foreach (ControlKey edge in controlEdges.Keys)
             {
@@ -1394,7 +1617,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 if (string.Equals(edge.To, node.Id, StringComparison.Ordinal) &&
-                    !IsAllowedInputPort(node, op, graphKind, edge.ToPort, dispatchSchemas))
+                    !IsAllowedInputPort(node, op, graphKind, edge.ToPort, dispatchSchemas, enumCases))
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
                         $"Unexpected value input '{edge.ToPort}' on node '{node.Id}'.", node.Id));
@@ -1487,7 +1710,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AuthoredOp op,
             GraphKind graphKind,
             string port,
-            Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null)
+            Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null,
+            EnumCaseTable? enumCases = null)
         {
             // DispatchMapEvent payload ports are dynamic (schema parameter names); the
             // per-port name/type contract is enforced in ValidateLinearNode.
@@ -1512,6 +1736,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (op.Kind == AuthoredOpKind.SwitchInt)
             {
                 return port == GraphControlFlowPorts.Selector;
+            }
+
+            if (op.Kind == AuthoredOpKind.SelectByEnum)
+            {
+                // Candidate ports are dynamic (case:{memberName} per enum binding); member
+                // existence was already fail-closed in BuildEnumCaseTable.
+                return port == GraphControlFlowPorts.Selector ||
+                       port == GraphControlFlowPorts.Default ||
+                       (enumCases != null && enumCases.TryResolveMemberPort(node.Id, port, out _));
             }
 
             if (graphKind == GraphKind.Query)
@@ -1630,13 +1863,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
             Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas,
             List<GraphDiagnostic> diagnostics,
-            BtSugarPlan? btPlan = null)
+            BtSugarPlan? btPlan = null,
+            EnumCaseTable? enumCases = null)
         {
             var layouts = new NodeLayout[nodes.Count];
             int cursor = 0;
             for (int i = 0; i < nodes.Count; i++)
             {
-                int count = InstructionCount(nodes[i], ops[i], graphKind, controlEdges, valueEdges, dispatchSchemas, btPlan, i);
+                int count = InstructionCount(nodes[i], ops[i], graphKind, controlEdges, valueEdges, dispatchSchemas, btPlan, i, enumCases);
                 layouts[i] = new NodeLayout(cursor, count);
                 cursor += count;
             }
@@ -1652,7 +1886,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
             Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null,
             BtSugarPlan? btPlan = null,
-            int nodeIndex = -1)
+            int nodeIndex = -1,
+            EnumCaseTable? enumCases = null)
         {
             if (btPlan != null && nodeIndex >= 0 && btPlan.IsComposite(nodeIndex))
             {
@@ -1687,6 +1922,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 int cases = CountSwitchCaseArms(node.Id, controlEdges);
                 // per arm: ConstInt + CompareEqInt + JumpIfFalse + Jump(arm); then Jump(default)
                 return (cases * 4) + 1;
+            }
+
+            if (op.Kind == AuthoredOpKind.SelectByEnum)
+            {
+                int candidates = CountSelectCandidates(node.Id, valueEdges, enumCases);
+                bool hasDefault = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Default));
+                // per candidate: ConstInt(memberValue) + CompareEqInt + JumpIfFalse(next) + MoveInt + Jump(end);
+                // optional default MoveInt; the shared slot is the linear next-jump.
+                return (candidates * 5) + (hasDefault ? 1 : 0) + 1;
             }
 
             // DispatchMapEvent emits one StoreArg* per wired schema parameter, then the fire,
@@ -1764,7 +2008,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string graphId,
             List<GraphDiagnostic> diagnostics,
             Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null,
-            BtSugarPlan? btPlan = null)
+            BtSugarPlan? btPlan = null,
+            EnumCaseTable? enumCases = null)
         {
             int nodeIndex = nodeIndices[node.Id];
             int bodyIndex = layouts[nodeIndex].BodyIndex;
@@ -1867,7 +2112,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     definedInts,
                     definedBools,
                     graphId,
-                    diagnostics);
+                    diagnostics,
+                    enumCases);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.SelectByEnum)
+            {
+                CompileSelectByEnum(
+                    document,
+                    node,
+                    sugarScratches[nodeIndex],
+                    controlEdges,
+                    valueEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    outputRegisters,
+                    outputTypes,
+                    boolScratches,
+                    droppedRegisters,
+                    definedInts,
+                    definedBools,
+                    graphId,
+                    diagnostics,
+                    enumCases,
+                    btPlan,
+                    nodeIndex);
                 return;
             }
 
@@ -2161,7 +2433,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (ops[i].Kind != AuthoredOpKind.SwitchInt)
+                if (ops[i].Kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum))
                 {
                     continue;
                 }
@@ -2243,9 +2515,82 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return count;
         }
 
+        private static void ValidateSelectByEnumEdges(
+            GraphControlFlowNode node,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            GraphValueType[] outputTypes,
+            string graphId,
+            List<GraphDiagnostic> diagnostics,
+            EnumCaseTable? enumCases = null)
+        {
+            RequireControlEdge(node, GraphControlFlowPorts.Next, controlEdges, graphId, diagnostics);
+            RequireValueInput(node, GraphControlFlowPorts.Selector, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+
+            if (string.IsNullOrWhiteSpace(node.EnumType))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"{SelectByEnumOp} node '{node.Id}' requires an enumType binding.", node.Id));
+                return;
+            }
+
+            var seenValues = new HashSet<int>();
+            int candidateCount = 0;
+            foreach (KeyValuePair<ValueInputKey, GraphControlFlowValueEdge> pair in valueEdges)
+            {
+                if (!string.Equals(pair.Key.NodeId, node.Id, StringComparison.Ordinal) ||
+                    !pair.Key.Port.StartsWith(GraphControlFlowPorts.CasePrefix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                int memberValue = ResolveAuthoredCaseValue(node.Id, pair.Key.Port, enumCases);
+                if (memberValue < 0)
+                {
+                    // Name resolution failures were already reported by BuildEnumCaseTable.
+                    continue;
+                }
+
+                if (!seenValues.Add(memberValue))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.DuplicateValueEdge,
+                        $"{SelectByEnumOp} node '{node.Id}' binds member value {memberValue} more than once.", node.Id));
+                }
+
+                RequireValueInput(node, pair.Key.Port, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                candidateCount++;
+            }
+
+            if (candidateCount == 0)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
+                    $"{SelectByEnumOp} node '{node.Id}' requires at least one case:{{member}} candidate value input.", node.Id));
+            }
+
+            if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Default)))
+            {
+                RequireValueInput(node, GraphControlFlowPorts.Default, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+            }
+        }
+
+        /// <summary>Authored case port → int: literal first (unbound SwitchInt), then enum member name.</summary>
+        private static int ResolveAuthoredCaseValue(string nodeId, string port, EnumCaseTable? enumCases)
+        {
+            if (GraphControlFlowPorts.TryParseCasePort(port, out int literal))
+            {
+                return literal;
+            }
+
+            return enumCases != null && enumCases.TryResolveMemberPort(nodeId, port, out int memberValue)
+                ? memberValue
+                : -1;
+        }
+
         private static List<SwitchCaseArm> CollectSwitchCaseArms(
             GraphControlFlowDocument document,
-            GraphControlFlowNode node)
+            GraphControlFlowNode node,
+            EnumCaseTable? enumCases = null)
         {
             var arms = new List<SwitchCaseArm>();
             List<GraphControlFlowEdge> edges = document.ControlEdges ?? new List<GraphControlFlowEdge>();
@@ -2259,10 +2604,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (!GraphControlFlowPorts.TryParseCasePort(edge.FromPort, out int caseValue))
                 {
-                    continue;
+                    if (enumCases == null || !enumCases.TryResolveMemberPort(node.Id, edge.FromPort, out caseValue))
+                    {
+                        continue;
+                    }
                 }
 
-                arms.Add(new SwitchCaseArm(caseValue, edge.To));
+                arms.Add(new SwitchCaseArm(caseValue, edge.FromPort, edge.To));
             }
 
             return arms;
@@ -2285,11 +2633,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             bool[] definedInts,
             bool[] definedBools,
             string graphId,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            EnumCaseTable? enumCases = null)
         {
             int nodeIndex = nodeIndices[node.Id];
             int bodyIndex = layouts[nodeIndex].BodyIndex;
-            List<SwitchCaseArm> arms = CollectSwitchCaseArms(document, node);
+            List<SwitchCaseArm> arms = CollectSwitchCaseArms(document, node, enumCases);
             byte selector = ResolveValueInput(
                 node, GraphControlFlowPorts.Selector, GraphValueType.Int,
                 valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
@@ -2302,6 +2651,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 int armBase = bodyIndex + (i * 4);
                 int nextCheck = (i + 1 < arms.Count) ? bodyIndex + ((i + 1) * 4) : defaultJumpIndex;
                 int armAbs = layouts[nodeIndices[arm.TargetNodeId]].BodyIndex;
+                string armPort = enumCases != null
+                    ? enumCases.AuthoredPortOrNumeric(node.Id, arm.CaseValue)
+                    : GraphControlFlowPorts.Case(arm.CaseValue);
 
                 program[armBase] = new GraphInstruction
                 {
@@ -2309,7 +2661,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     Dst = scratch.IntReg,
                     Imm = arm.CaseValue
                 };
-                SetSource(sources, armBase, graphId, node, SwitchIntOp, GraphControlFlowPorts.Case(arm.CaseValue));
+                SetSource(sources, armBase, graphId, node, SwitchIntOp, armPort);
 
                 program[armBase + 1] = new GraphInstruction
                 {
@@ -2318,7 +2670,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     A = selector,
                     B = scratch.IntReg
                 };
-                SetSource(sources, armBase + 1, graphId, node, SwitchIntOp, GraphControlFlowPorts.Case(arm.CaseValue));
+                SetSource(sources, armBase + 1, graphId, node, SwitchIntOp, armPort);
 
                 program[armBase + 2] = new GraphInstruction
                 {
@@ -2326,14 +2678,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     A = scratch.BoolReg,
                     Imm = RelativeOffset(armBase + 2, nextCheck)
                 };
-                SetSource(sources, armBase + 2, graphId, node, SwitchIntOp, GraphControlFlowPorts.Case(arm.CaseValue));
+                SetSource(sources, armBase + 2, graphId, node, SwitchIntOp, armPort);
 
                 program[armBase + 3] = new GraphInstruction
                 {
                     Op = (ushort)GraphNodeOp.Jump,
                     Imm = RelativeOffset(armBase + 3, armAbs)
                 };
-                SetSource(sources, armBase + 3, graphId, node, SwitchIntOp, GraphControlFlowPorts.Case(arm.CaseValue));
+                SetSource(sources, armBase + 3, graphId, node, SwitchIntOp, armPort);
             }
 
             program[defaultJumpIndex] = new GraphInstruction
@@ -2342,6 +2694,157 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Imm = RelativeOffset(defaultJumpIndex, defaultAbs)
             };
             SetSource(sources, defaultJumpIndex, graphId, node, SwitchIntOp, GraphControlFlowPorts.Default);
+        }
+
+        private static int CountSelectCandidates(
+            string nodeId,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            EnumCaseTable? enumCases)
+        {
+            int count = 0;
+            foreach (KeyValuePair<ValueInputKey, GraphControlFlowValueEdge> pair in valueEdges)
+            {
+                if (string.Equals(pair.Key.NodeId, nodeId, StringComparison.Ordinal) &&
+                    ResolveAuthoredCaseValue(nodeId, pair.Key.Port, enumCases) >= 0)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Lowers SelectByEnum (#1125): per candidate a ConstInt(memberValue) +
+        /// CompareEqInt(selector) + JumpIfFalse(next check) + MoveInt(candidate) +
+        /// Jump(end) chain, an optional default MoveInt, and the shared linear next-jump.
+        /// No new executor or opcode — the running VM only ever sees the existing int ops.
+        /// </summary>
+        private static void CompileSelectByEnum(
+            GraphControlFlowDocument document,
+            GraphControlFlowNode node,
+            SugarScratch scratch,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            NodeLayout[] layouts,
+            GraphInstruction[] program,
+            GraphInstructionSource[] sources,
+            byte[] outputRegisters,
+            GraphValueType[] outputTypes,
+            byte[] boolScratches,
+            byte[] droppedRegisters,
+            bool[] definedInts,
+            bool[] definedBools,
+            string graphId,
+            List<GraphDiagnostic> diagnostics,
+            EnumCaseTable? enumCases = null,
+            BtSugarPlan? btPlan = null,
+            int nodeIndex = -1)
+        {
+            int bodyIndex = layouts[nodeIndices[node.Id]].BodyIndex;
+            List<SelectCandidateArm> arms = CollectSelectCandidateArms(document, node, enumCases);
+            byte selector = ResolveValueInput(
+                node, GraphControlFlowPorts.Selector, GraphValueType.Int,
+                valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+            bool hasDefault = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Default));
+            int defaultIndex = bodyIndex + (arms.Count * 5);
+            int endSlot = defaultIndex + (hasDefault ? 1 : 0);
+            byte output = outputRegisters[nodeIndices[node.Id]];
+
+            for (int i = 0; i < arms.Count; i++)
+            {
+                SelectCandidateArm arm = arms[i];
+                int armBase = bodyIndex + (i * 5);
+                int nextCheck = (i + 1 < arms.Count) ? bodyIndex + ((i + 1) * 5) : defaultIndex;
+
+                program[armBase] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.ConstInt,
+                    Dst = scratch.IntReg,
+                    Imm = arm.MemberValue
+                };
+                SetSource(sources, armBase, graphId, node, SelectByEnumOp, arm.AuthoredPort);
+
+                program[armBase + 1] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.CompareEqInt,
+                    Dst = scratch.BoolReg,
+                    A = selector,
+                    B = scratch.IntReg
+                };
+                SetSource(sources, armBase + 1, graphId, node, SelectByEnumOp, arm.AuthoredPort);
+
+                program[armBase + 2] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.JumpIfFalse,
+                    A = scratch.BoolReg,
+                    Imm = RelativeOffset(armBase + 2, nextCheck)
+                };
+                SetSource(sources, armBase + 2, graphId, node, SelectByEnumOp, arm.AuthoredPort);
+
+                program[armBase + 3] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.MoveInt,
+                    Dst = output,
+                    A = ResolveValueInput(
+                        node, arm.AuthoredPort, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                };
+                definedInts[output] = true;
+                SetSource(sources, armBase + 3, graphId, node, SelectByEnumOp, arm.AuthoredPort);
+
+                program[armBase + 4] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.Jump,
+                    Imm = RelativeOffset(armBase + 4, endSlot)
+                };
+                SetSource(sources, armBase + 4, graphId, node, SelectByEnumOp, arm.AuthoredPort);
+            }
+
+            if (hasDefault)
+            {
+                program[defaultIndex] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.MoveInt,
+                    Dst = output,
+                    A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Default, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                };
+                definedInts[output] = true;
+                SetSource(sources, defaultIndex, graphId, node, SelectByEnumOp, GraphControlFlowPorts.Default);
+            }
+
+            EmitNextJumpOrBtEpilogue(
+                document, node, endSlot, controlEdges, nodeIndices, layouts, program, sources, graphId, btPlan, nodeIndex, outputTypes, outputRegisters);
+        }
+
+        private static List<SelectCandidateArm> CollectSelectCandidateArms(
+            GraphControlFlowDocument document,
+            GraphControlFlowNode node,
+            EnumCaseTable? enumCases)
+        {
+            var arms = new List<SelectCandidateArm>();
+            List<GraphControlFlowValueEdge> edges = document.ValueEdges ?? new List<GraphControlFlowValueEdge>();
+            for (int i = 0; i < edges.Count; i++)
+            {
+                GraphControlFlowValueEdge edge = edges[i];
+                if (!string.Equals(edge.To, node.Id, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                int memberValue = ResolveAuthoredCaseValue(node.Id, edge.ToPort, enumCases);
+                if (memberValue < 0)
+                {
+                    continue;
+                }
+
+                arms.Add(new SelectCandidateArm(memberValue, edge.ToPort));
+            }
+
+            return arms;
         }
 
         private static void EmitExplicitHalt(
