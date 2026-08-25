@@ -159,6 +159,10 @@ namespace Ludots.Tests.Presentation
             ReadOnlySpan<TrailMeshSample> samples = buffer.GetSamples(0);
             Assert.That(samples.Length, Is.EqualTo(1));
             Assert.That(samples[0].Base, Is.EqualTo(Vector3.UnitX), "释放旧属主声明后，新属主的条带接管缓冲槽位");
+
+            Entity third = world.Create();
+            Assert.Throws<InvalidOperationException>(
+                () => runtime.Sample(world, third, stableId: 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.1f));
         }
 
         [Test]
