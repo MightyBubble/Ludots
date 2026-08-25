@@ -1,4 +1,3 @@
-using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -14,10 +13,6 @@ namespace Ludots.Core.Presentation.Requests
         public LODLevel LOD;
         public PresentationVisualProxy VisualProxy;
         public int StableId;
-        public Vector3 Position;
-        public Quaternion Rotation;
-        public Vector3 Scale;
-        public Vector4 Color;
         public GroundOverlayItem GroundOverlay;
         public WorldHudItem WorldHud;
         public SplineRibbonRequest SplineRibbon;
