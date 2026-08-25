@@ -1,398 +1,198 @@
 [
- {
-  "id": "graphops.hud.health_bar",
-  "extends": "entity_health_bar",
-  "visibility": {
-   "inline": "None"
+  {
+    "id": "graphops.hud.health_bar",
+    "extends": "entity_health_bar",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [90, 12, 1],
+          "materialParamKey": "worldBar.fillRatio"
+        },
+        "style": { "color": [0.12, 0.92, 0.28, 1] }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 2.35, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ],
+    "anchor": { "offset": [0, 0, 0] }
   },
-  "behaviors": [
-   {
-    "slot": "body",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "WorldHud",
-     "renderPath": "None",
-     "mobility": "Movable",
-     "localScale": [
-      90,
-      12,
-      1
-     ],
-     "materialParamKey": "worldBar.fillRatio"
-    },
-    "style": {
-     "color": [
-      0.12,
-      0.92,
-      0.28,
-      1
-     ]
-    }
-   },
-   {
-    "slot": "attachment",
-    "kind": "Attachment",
-    "activeByDefault": true,
-    "attachment": {
-     "target": "Parent",
-     "offset": [
-      0,
-      2.35,
-      0
-     ],
-     "rotationOffset": [
-      0,
-      0,
-      0,
-      1
-     ],
-     "inheritScale": false
-    }
-   }
-  ],
-  "anchor": {
-   "offset": [
-    0,
-    0,
-    0
-   ]
+  {
+    "id": "graphops.hud.health_text",
+    "extends": "entity_world_text",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "fontSize": 18,
+          "valueParamKey": "worldText.value0",
+          "secondaryValueParamKey": "worldText.value1"
+        },
+        "style": { "color": [1, 0.98, 0.94, 1] }
+      }
+    ],
+    "anchor": { "offset": [0, 2.65, 0] }
+  },
+  {
+    "id": "graphops.visual.caster",
+    "children": [
+      { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
+      { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.05, 2.2, 1.05]
+        },
+        "style": { "color": [1, 0.82, 0.2, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "GraphOps.Caster" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.caster" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "GraphOps.Caster" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graphops.visual.ally",
+    "children": [
+      { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
+      { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.85, 1.9, 0.85]
+        },
+        "style": { "color": [0.28, 0.72, 1, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "GraphOps.Ally" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.ally" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "GraphOps.Ally" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graphops.visual.enemy",
+    "children": [
+      { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
+      { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.9, 1.95, 0.9]
+        },
+        "style": { "color": [0.95, 0.28, 0.24, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "GraphOps.Target" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "GraphOps.Target" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntitySpawned", "key": "Unit.Soldier" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "Unit.Soldier" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graphops.visual.scout",
+    "children": [
+      { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
+      { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.7, 1.65, 0.7]
+        },
+        "style": { "color": [0.35, 0.9, 0.72, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "Unit.Scout" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.scout" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "Unit.Scout" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
   }
- },
- {
-  "id": "graphops.hud.health_text",
-  "extends": "entity_world_text",
-  "visibility": {
-   "inline": "None"
-  },
-  "behaviors": [
-   {
-    "slot": "body",
-    "kind": "WorldText",
-    "activeByDefault": true,
-    "worldText": {
-     "textToken": "hud.attribute.current_over_base",
-     "mode": "AttributeCurrentOverBase",
-     "fontSize": 18,
-     "valueParamKey": "worldText.value0",
-     "secondaryValueParamKey": "worldText.value1"
-    },
-    "style": {
-     "color": [
-      1,
-      0.98,
-      0.94,
-      1
-     ]
-    }
-   }
-  ],
-  "anchor": {
-   "offset": [
-    0,
-    2.65,
-    0
-   ]
-  }
- },
- {
-  "id": "graphops.visual.caster",
-  "visibility": {
-   "inline": "None"
-  },
-  "children": [
-   {
-    "definitionId": "graphops.hud.health_bar",
-    "scopeTag": "hud"
-   },
-   {
-    "definitionId": "graphops.hud.health_text",
-    "scopeTag": "hud-text"
-   }
-  ],
-  "behaviors": [
-   {
-    "slot": "body",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "materialId": "default_surface",
-     "renderPath": "InstancedStaticMesh",
-     "mobility": "Movable",
-     "localScale": [
-      1.05,
-      2.2,
-      1.05
-     ]
-    },
-    "style": {
-     "color": [
-      1,
-      0.82,
-      0.2,
-      1
-     ]
-    }
-   }
-  ],
-  "rules": [
-   {
-    "event": {
-     "kind": "EntitySpawned",
-     "key": "GraphOps.Caster"
-    },
-    "condition": {
-     "inline": "SourceHasVisualTransform"
-    },
-    "command": {
-     "kind": "CreatePresenter",
-     "scopeSource": "EventPayloadA",
-     "definitionId": "graphops.visual.caster"
-    }
-   },
-   {
-    "event": {
-     "kind": "EntityDestroyed",
-     "key": "GraphOps.Caster"
-    },
-    "command": {
-     "kind": "DestroyPresenterScope",
-     "scopeSource": "EventPayloadA"
-    }
-   }
-  ]
- },
- {
-  "id": "graphops.visual.ally",
-  "visibility": {
-   "inline": "None"
-  },
-  "children": [
-   {
-    "definitionId": "graphops.hud.health_bar",
-    "scopeTag": "hud"
-   },
-   {
-    "definitionId": "graphops.hud.health_text",
-    "scopeTag": "hud-text"
-   }
-  ],
-  "behaviors": [
-   {
-    "slot": "body",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "materialId": "default_surface",
-     "renderPath": "InstancedStaticMesh",
-     "mobility": "Movable",
-     "localScale": [
-      0.85,
-      1.9,
-      0.85
-     ]
-    },
-    "style": {
-     "color": [
-      0.28,
-      0.72,
-      1,
-      1
-     ]
-    }
-   }
-  ],
-  "rules": [
-   {
-    "event": {
-     "kind": "EntitySpawned",
-     "key": "GraphOps.Ally"
-    },
-    "condition": {
-     "inline": "SourceHasVisualTransform"
-    },
-    "command": {
-     "kind": "CreatePresenter",
-     "scopeSource": "EventPayloadA",
-     "definitionId": "graphops.visual.ally"
-    }
-   },
-   {
-    "event": {
-     "kind": "EntityDestroyed",
-     "key": "GraphOps.Ally"
-    },
-    "command": {
-     "kind": "DestroyPresenterScope",
-     "scopeSource": "EventPayloadA"
-    }
-   }
-  ]
- },
- {
-  "id": "graphops.visual.enemy",
-  "visibility": {
-   "inline": "None"
-  },
-  "children": [
-   {
-    "definitionId": "graphops.hud.health_bar",
-    "scopeTag": "hud"
-   },
-   {
-    "definitionId": "graphops.hud.health_text",
-    "scopeTag": "hud-text"
-   }
-  ],
-  "behaviors": [
-   {
-    "slot": "body",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "materialId": "default_surface",
-     "renderPath": "InstancedStaticMesh",
-     "mobility": "Movable",
-     "localScale": [
-      0.9,
-      1.95,
-      0.9
-     ]
-    },
-    "style": {
-     "color": [
-      0.95,
-      0.28,
-      0.24,
-      1
-     ]
-    }
-   }
-  ],
-  "rules": [
-   {
-    "event": {
-     "kind": "EntitySpawned",
-     "key": "GraphOps.Target"
-    },
-    "condition": {
-     "inline": "SourceHasVisualTransform"
-    },
-    "command": {
-     "kind": "CreatePresenter",
-     "scopeSource": "EventPayloadA",
-     "definitionId": "graphops.visual.enemy"
-    }
-   },
-   {
-    "event": {
-     "kind": "EntityDestroyed",
-     "key": "GraphOps.Target"
-    },
-    "command": {
-     "kind": "DestroyPresenterScope",
-     "scopeSource": "EventPayloadA"
-    }
-   },
-   {
-    "event": {
-     "kind": "EntitySpawned",
-     "key": "Unit.Soldier"
-    },
-    "condition": {
-     "inline": "SourceHasVisualTransform"
-    },
-    "command": {
-     "kind": "CreatePresenter",
-     "scopeSource": "EventPayloadA",
-     "definitionId": "graphops.visual.enemy"
-    }
-   },
-   {
-    "event": {
-     "kind": "EntityDestroyed",
-     "key": "Unit.Soldier"
-    },
-    "command": {
-     "kind": "DestroyPresenterScope",
-     "scopeSource": "EventPayloadA"
-    }
-   }
-  ]
- },
- {
-  "id": "graphops.visual.scout",
-  "visibility": {
-   "inline": "None"
-  },
-  "children": [
-   {
-    "definitionId": "graphops.hud.health_bar",
-    "scopeTag": "hud"
-   },
-   {
-    "definitionId": "graphops.hud.health_text",
-    "scopeTag": "hud-text"
-   }
-  ],
-  "behaviors": [
-   {
-    "slot": "body",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "materialId": "default_surface",
-     "renderPath": "InstancedStaticMesh",
-     "mobility": "Movable",
-     "localScale": [
-      0.7,
-      1.65,
-      0.7
-     ]
-    },
-    "style": {
-     "color": [
-      0.35,
-      0.9,
-      0.72,
-      1
-     ]
-    }
-   }
-  ],
-  "rules": [
-   {
-    "event": {
-     "kind": "EntitySpawned",
-     "key": "Unit.Scout"
-    },
-    "condition": {
-     "inline": "SourceHasVisualTransform"
-    },
-    "command": {
-     "kind": "CreatePresenter",
-     "scopeSource": "EventPayloadA",
-     "definitionId": "graphops.visual.scout"
-    }
-   },
-   {
-    "event": {
-     "kind": "EntityDestroyed",
-     "key": "Unit.Scout"
-    },
-    "command": {
-     "kind": "DestroyPresenterScope",
-     "scopeSource": "EventPayloadA"
-    }
-   }
-  ]
- }
 ]

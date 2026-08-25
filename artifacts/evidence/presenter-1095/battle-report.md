@@ -4,7 +4,7 @@
 - scenario: lifecycle.durationSeconds 编译为 TimerSet 计划，唯一销毁链路 TimerSet → TimerExpired → Rule → DestroyPresenter
 - build: local PresentationTests, 真实 JSON 配置管线（PresenterDefinitionConfigLoader）
 - clock: headless fixture, 生产系统序 Timer → Rules → Runtime, dt=0.125s/拍
-- execution timestamp: 2026-08-25T05:03:42.6661507+00:00
+- execution timestamp: 2026-08-25T05:41:48.8723649+00:00
 
 ## Timeline
 - [T+002] command TimerSet: timer='presenter.duration' duration=0.5s instance=1

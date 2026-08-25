@@ -1,9 +1,6 @@
 [
   {
     "id": "moba_unit_marker",
-    "visibility": {
-      "inline": "OwnerCullVisible"
-    },
     "bindings": [
       {
         "paramKey": "marker3d.color.r",
@@ -176,9 +173,6 @@
   },
   {
     "id": "moba_ability_range",
-    "visibility": {
-      "inline": "OwnerCullVisible"
-    },
     "behaviors": [
       {
         "slot": "body",

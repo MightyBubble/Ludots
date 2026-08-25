@@ -3,7 +3,7 @@ namespace Ludots.Core.Presentation.Presenters
     /// <summary>
     /// A reference to either an inline predicate or a Graph program that evaluates
     /// to a boolean result. Used by <see cref="PresenterRule"/> conditions and
-    /// <see cref="PresenterDefinition.VisibilityCondition"/>.
+    /// behavior activation conditions.
     ///
     /// Evaluation priority:
     ///   1. If <see cref="Inline"/> != None → evaluate the inline predicate.

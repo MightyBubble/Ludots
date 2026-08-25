@@ -956,7 +956,6 @@ internal sealed class VisualTerrainEditorRuntime
             Key = definitionKey,
             DefaultLifetime = template.DefaultLifetime,
             PositionOffset = template.PositionOffset,
-            VisibilityCondition = template.VisibilityCondition,
             Children = template.Children,
             Rules = CloneRules(template.Rules),
             Bindings = CloneBindings(template.Bindings),

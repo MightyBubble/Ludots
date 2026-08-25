@@ -27,7 +27,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 }
 ```
 
-路由策略（内建指令按 kind 固定，见 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:1243-1263`；枚举 `src/Core/Presentation/Presenters/PerformerExtensionRegistries.cs:8-16`）：`CreatePerformer` / `DestroyScope` / `ScopedInstance`（按 definition+scope 定位实例）/ `ExistingInstances`（路由到事件命中的现存实例）/ `SingleRuntime`。
+路由策略（内建指令按 kind 固定，见 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:1243-1263`；枚举 `src/Core/Presentation/Presenters/PresenterExtensionRegistries.cs:8-16`）：`CreatePerformer` / `DestroyScope` / `ScopedInstance`（按 definition+scope 定位实例）/ `ExistingInstances`（路由到事件命中的现存实例）/ `SingleRuntime`。
 
 ## 指令逐条
 
@@ -146,11 +146,11 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 
 ### SinkParamToAsset
 
-- **做什么**：对路由到的 presenter 实例**强制重 emit**——param 值未变也刷新资产输出；payload 允许 paramKey/paramLane 指定刷新的 lane。用途：外部系统改了资产侧状态（如材质库热替换）后，让画面立即反映，而不必制造一次假参数变更。
-- **authoring**：`kind: "SinkParamToAsset"` + 可选 selector：`paramKey` 与 `paramLane` **必须成对**（都不写 = 刷新全部 lane；只写其一装载即抛；值字段一律被拒绝）；可选 `definitionId` 配合 scope 定位；路由 SingleRuntime。
-- **在哪执行**：路由见 `src/Core/Presentation/Systems/PresenterRuleSystem.cs:644` 与装载白名单；**运行时执行分支随配套 PR 落地**（当前 `src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:89-207` 的 switch 尚无此 case）。
-- **现有演示与验收**：尚无（指令已入枚举与装载面，0 mod 使用；可玩 showcase 随配套 PR 提供）。
-- **缺口状态**：实现随配套 PR 落地；落地前不要在生产 mod 依赖此指令。
+- **做什么**：对目标 presenter 的指定**资产槽位**做一次**同步资产写入**——在指令执行内当场重新 emit 该 AssetBinding（不等下一帧 dirty 周期），读取黑板当前值写入资产属性。全程结构化审计：accepted / rejected 各留一条日志，拒绝原因枚举八种（目标实例缺失、定义未注册、槽位越界、槽位非资产槽、槽位已停用、lane 上无当前值、lane 类型不符、emit 组件缺失/写入被抑制）。用途：外部系统改了资产侧状态后让画面立即反映（#1091）。
+- **authoring**：`kind: "SinkParamToAsset"` + `targetBehaviorSlot`（语义字符串槽位名，须是 AssetBinding 槽且处于激活）+ `paramKey`/`paramLane`（读取黑板**当前值**所在的 lane，值必须已存在）；可选 `definitionId`/`scopeTag`/`scopeSource` 定位；路由 SingleRuntime。
+- **在哪执行**：`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs` 的 `HandleSinkParamToAsset`（目标解析 → 槽位/lane 校验 → 同步 emit → 审计日志）。
+- **现有演示与验收**：preset `capability_standard_presenter_command_showcase_raylib` B 站「灯柱参数 sink」第 4 根对照柱（不写值只刷新）；单测 `src/Tests/PresentationTests/Presenter/PresenterSinkParamToAssetTests.cs`。
+- **缺口状态**：无缺口（#1091 实现已合入 main）。
 
 ### InitializeTransform
 
@@ -165,7 +165,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 - **做什么**：在 presenter 实例上启动命名 timer；`durationRangeSeconds` > 0 时在 [duration - range, duration] 内取抖动值。到时由 PresenterTimerSystem 发布 TimerExpired 事件（规则当帧可消费），支持 keyId 通配 `*`。
 - **authoring**：`timerName` + `durationSeconds`（可选 `durationRangeSeconds`），路由 ExistingInstances。
 - **在哪执行**：PresenterRuntimeSystem → PresenterTimerTable.Set（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:170-182`）；到时发布见 `src/Core/Engine/GameEngine.cs:2131-2133`。
-- **现有演示与验收**：fixture `mods/fixtures/presenter_timer/PresenterTimerTestMod/assets/Presentation/presenters.json` + 验收 `artifacts/acceptance/presenter-timer/battle-report.md`（受击闪黄时序：TimerSet 0.3s → TimerExpired 复原；TimerKill "*" 打断）；可玩 showcase 随配套 PR。
+- **现有演示与验收**：fixture `mods/fixtures/presenter_timer/PresenterTimerTestMod/assets/Presentation/presenters.json` + 验收 `artifacts/acceptance/presenter-timer/battle-report.md`（受击闪黄时序：TimerSet 0.3s → TimerExpired 复原；TimerKill "*" 打断）；可玩 showcase = preset `capability_standard_presenter_command_showcase_raylib` A 站「闪烁广场」。
 - **缺口状态**：契约与验收就绪，尚无可玩 showcase preset。
 
 ```jsonc
@@ -183,7 +183,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 - **authoring**：`timerName`（`*` 或具体名），路由 ExistingInstances。
 - **在哪执行**：PresenterRuntimeSystem → PresenterTimerTable.Kill/KillAll（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:184-198`）。
 - **现有演示与验收**：与 TimerSet 同 fixture 同验收（Suppressed tag 丢失 → TimerKill "*" 打断闪黄，battle-report 的 taglost_interrupt_no_expiry 断言）。
-- **缺口状态**：同 TimerSet——契约就绪，可玩 showcase 随配套 PR。
+- **缺口状态**：同 TimerSet——契约就绪，可玩 showcase = preset `capability_standard_presenter_command_showcase_raylib` A 站「闪烁广场」。
 
 ```jsonc
 {
@@ -200,7 +200,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 - **做什么**：Mod 注册一次性表现指令——作者面在 rules[].command.kind 写 **Mod 限定的 command key**（非 11 种内建名），loader 编译为 `PresenterCommandKind.Extension` + 动态 CommandKindId，执行时分发给 Mod 注册的 handler。
 - **authoring**：`kind: "<ModCommandKey>"` + `route`（必填，必须与注册 descriptor 一致，否则装载 fail-loud）+ 常规载荷字段（paramKey/paramLane/valueSource/scopeTag…）。
 - **在哪执行**：PresenterRuntimeSystem → `HandleExtensionCommand`（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:245-274`：descriptor 查找、route 校验、routed performer 校验，然后 `PerformerCommandExecutionContext` 交给 handler）。
-- **现有演示与验收（黄金模板）**：preset `capability_standard_performer_command_extension_showcase_raylib`；mod `mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod/`；文档 [Performer Command Extension](../../architecture/mod-extensible-runtime-showcases/performer-command-extension.md)。
+- **现有演示与验收（黄金模板）**：preset `capability_standard_performer_command_extension_showcase_raylib`；mod `mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod/`；文档 [Performer Command Extension](../../architecture/mod-extensible-runtime-showcases/presenter-command-extension.md)。
 - **缺口状态**：无缺口（模板、装载校验、运行时分发、可玩 showcase 全链齐备）。
 
 ```jsonc

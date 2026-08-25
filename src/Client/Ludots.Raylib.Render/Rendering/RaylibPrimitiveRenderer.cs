@@ -69,6 +69,7 @@ namespace Ludots.Raylib.Render
         private readonly RaylibGpuSkinnedBatchRenderer _gpuSkinned;
         private readonly RaylibVfxRenderer _vfxRenderer;
         private readonly RaylibDecalProjectorRenderer _decalRenderer;
+        private readonly RaylibStaticMeshReceiverProjector _staticMeshReceiverProjector = new();
         private readonly RaylibVegetationCutoutRenderer _vegetationCutout = new();
         private double _frameTimeSeconds;
 
@@ -109,6 +110,9 @@ namespace Ludots.Raylib.Render
         public int TotalDrawnVfxCount => _vfxRenderer.TotalDrawnVfxCount;
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
+
+        /// <summary>单件静态网格（StaticMesh 车道）的 Decal 接收面；宿主把它与地形接收面组合绑定。</summary>
+        public IRaylibReceiverMeshProjector StaticMeshReceiverProjector => _staticMeshReceiverProjector;
 
         public void ApplyFrameLighting(
             RaylibFrameLighting lighting,
@@ -263,6 +267,7 @@ namespace Ludots.Raylib.Render
             LastSurfaceVisualCount = 0;
             _frameVisualHeightmap = visualHeightmap;
             _vfxRenderer.BeginFrame();
+            _staticMeshReceiverProjector.BeginFrame();
             try
             {
                 var span = draw.GetSpan();
@@ -397,7 +402,85 @@ namespace Ludots.Raylib.Render
         {
             foreach (RaylibIsmRenderBridge.Bucket bucket in _ismBridge.ActiveBuckets)
             {
+                if (bucket.Lane.RenderPath == VisualRenderPath.StaticMesh)
+                {
+                    RegisterStaticMeshReceiverBucket(bucket, meshes, scaleMul);
+                }
+
                 DrawInstancedBucket(bucket, meshes, scaleMul);
+            }
+        }
+
+        /// <summary>
+        /// 单件静态网格车道注册为 Decal 接收面。注册发生在重画可见面之前且使用与可见 pass 完全相同的
+        /// TRS 与网格缓存，保证贴花重画与已画表面逐顶点对齐。Billboard 是面向相机的 splat，不是接收面；
+        /// 无法加载的模型同样不可见地跳过（可见 pass 已负责告警/抛错）。
+        /// </summary>
+        private void RegisterStaticMeshReceiverBucket(RaylibIsmRenderBridge.Bucket bucket, IRenderMeshAssets meshes, float scaleMul)
+        {
+            EnsureInitialized();
+            List<PrimitiveDrawItem> items = bucket.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                PrimitiveDrawItem item = items[i];
+                if (!meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} cannot register static receiver for unknown meshAssetId={item.MeshAssetId}.");
+                }
+
+                Vector3 scale = item.Scale * scaleMul;
+                switch (descriptor.Type)
+                {
+                    case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                        _staticMeshReceiverProjector.RegisterReceiver(
+                            item.StableId,
+                            descriptor.PrimitiveKind == PrimitiveMeshKind.Cube ? _cubeMesh : _sphereMesh,
+                            submeshes: null,
+                            item.Position,
+                            item.Rotation,
+                            scale,
+                            new Vector3(-0.5f),
+                            new Vector3(0.5f));
+                        break;
+                    case MeshAssetType.Model:
+                        if (!TryGetOrLoadModel(item.MeshAssetId, in descriptor, out CachedModel cached) || cached.Meshes.Length == 0)
+                        {
+                            break;
+                        }
+
+                        _staticMeshReceiverProjector.RegisterReceiver(
+                            item.StableId,
+                            cached.Meshes[0],
+                            cached.Meshes,
+                            item.Position,
+                            item.Rotation,
+                            scale,
+                            cached.LocalMin,
+                            cached.LocalMax);
+                        break;
+                    case MeshAssetType.ProceduralMesh:
+                        if (!TryGetOrBuildProceduralMesh(item.MeshAssetId, in descriptor, out CachedProceduralMesh cachedProcedural))
+                        {
+                            break;
+                        }
+
+                        ProceduralMeshBounds localBounds = descriptor.ProceduralMeshData.LocalBounds;
+                        _staticMeshReceiverProjector.RegisterReceiver(
+                            item.StableId,
+                            cachedProcedural.Mesh,
+                            cachedProcedural.SubmeshMeshes,
+                            item.Position,
+                            item.Rotation,
+                            scale,
+                            localBounds.Min,
+                            localBounds.Max);
+                        break;
+                    case MeshAssetType.Billboard:
+                        break;
+                    default:
+                        break;
+                }
             }
         }
 
@@ -1550,7 +1633,16 @@ namespace Ludots.Raylib.Render
 
                 if (model.meshCount > 0)
                 {
-                    cached = new CachedModel { Model = model, Loaded = true };
+                    Mesh[] modelMeshes = CopyModelMeshes(model);
+                    ComputeModelLocalAabbMeters(modelMeshes, out Vector3 localMin, out Vector3 localMax);
+                    cached = new CachedModel
+                    {
+                        Model = model,
+                        Meshes = modelMeshes,
+                        LocalMin = localMin,
+                        LocalMax = localMax,
+                        Loaded = true,
+                    };
                     _modelCache[meshAssetId] = cached;
                     return true;
                 }
@@ -1560,6 +1652,60 @@ namespace Ludots.Raylib.Render
 
             _modelCache[meshAssetId] = cached;
             return false;
+        }
+
+        private static Mesh[] CopyModelMeshes(Model model)
+        {
+            var modelMeshes = new Mesh[model.meshCount];
+            for (int i = 0; i < modelMeshes.Length; i++)
+            {
+                modelMeshes[i] = model.meshes[i];
+            }
+
+            return modelMeshes;
+        }
+
+        internal static void ComputeModelLocalAabbMeters(Mesh[] modelMeshes, out Vector3 localMin, out Vector3 localMax)
+        {
+            float minX = float.PositiveInfinity;
+            float minY = float.PositiveInfinity;
+            float minZ = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float maxY = float.NegativeInfinity;
+            float maxZ = float.NegativeInfinity;
+            bool anyVertex = false;
+            for (int i = 0; i < modelMeshes.Length; i++)
+            {
+                Mesh mesh = modelMeshes[i];
+                if (mesh.vertices == null || mesh.vertexCount <= 0)
+                {
+                    continue;
+                }
+
+                int floatCount = mesh.vertexCount * 3;
+                for (int f = 0; f < floatCount; f += 3)
+                {
+                    anyVertex = true;
+                    float x = mesh.vertices[f];
+                    float y = mesh.vertices[f + 1];
+                    float z = mesh.vertices[f + 2];
+                    if (x < minX) minX = x;
+                    if (y < minY) minY = y;
+                    if (z < minZ) minZ = z;
+                    if (x > maxX) maxX = x;
+                    if (y > maxY) maxY = y;
+                    if (z > maxZ) maxZ = z;
+                }
+            }
+
+            if (!anyVertex)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} static receiver model has no vertices; the local AABB is undefined.");
+            }
+
+            localMin = new Vector3(minX, minY, minZ);
+            localMax = new Vector3(maxX, maxY, maxZ);
         }
 
         private bool TryGetOrBuildProceduralMesh(int meshAssetId, in MeshAssetDescriptor desc, out CachedProceduralMesh cached)
@@ -2606,6 +2752,9 @@ namespace Ludots.Raylib.Render
         private struct CachedModel
         {
             public Model Model;
+            public Mesh[] Meshes;
+            public Vector3 LocalMin;
+            public Vector3 LocalMax;
             public bool Loaded;
         }
 

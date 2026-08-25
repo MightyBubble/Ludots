@@ -83,4 +83,4 @@ PresentationRequest → raylib 适配器 draw buffer → 画面换砖
 
 值未变的 SetParam 在第二步就返回 false，不会走到标脏——这就是"黑板写入是廉价的，视觉重画只发生在真变更"。
 
-强制重发（值未变也要刷新画面）的指令入口是 SinkParamToAsset，见 [commands.md](commands.md) 的 SinkParamToAsset 条目（实现随配套 PR 落地）。
+同步强制刷新的指令入口是 SinkParamToAsset（槽位定向、当场重 emit、带 accepted/rejected 审计），见 [commands.md](commands.md) 对应条目。
