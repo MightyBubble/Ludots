@@ -1,0 +1,14 @@
+{
+  "Id": "capability_standard_presenter_command_showcase",
+  "Tags": ["showcase", "capability-standard", "presenter-command"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 100,
+    "DistanceCm": 16000,
+    "Pitch": 55,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

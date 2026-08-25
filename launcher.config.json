@@ -313,6 +313,14 @@
       }
     },
     {
+      "name": "capability_standard_presenter_command_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPresenterCommandShowcaseMod",
+        "projectPath": "CapabilityStandardPresenterCommandShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_transport_network",
       "target": {
         "type": "path",

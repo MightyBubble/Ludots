@@ -1,0 +1,71 @@
+[
+  {
+    "id": "pcmd.boiler",
+    "children": [
+      {
+        "definitionId": "pcmd.chimney_smoke",
+        "scopeTag": "pcmd.boiler.chimney"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.8, 1.3, 1.8]
+        },
+        "style": {
+          "color": [0.32, 0.28, 0.26, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "pcmd.chimney_smoke",
+    "anchor": {
+      "offset": [0, 2.6, 0]
+    },
+    "rules": [
+      {
+        "event": { "kind": "TagEffectiveChanged", "keyId": "pcmd.working" },
+        "condition": { "inline": "TagGained" },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "keyId": "pcmd.working" },
+        "condition": { "inline": "TagLost" },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": false,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.9, 0.9, 0.9]
+        },
+        "style": {
+          "color": [0.62, 0.62, 0.66, 0.85]
+        }
+      }
+    ]
+  }
+]

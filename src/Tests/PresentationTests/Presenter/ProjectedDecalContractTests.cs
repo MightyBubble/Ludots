@@ -381,6 +381,82 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ReceiverMeshProjectorContract_StaticMeshReceiverIsABindableLane()
+        {
+            using var renderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate);
+            Assert.That(renderer.StaticMeshReceiverProjector, Is.InstanceOf<IRaylibReceiverMeshProjector>());
+        }
+
+        [Test]
+        public void StaticMeshProjector_StubReceiverRemainsBindableForStaticLaneDecals()
+        {
+            using var renderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate);
+            renderer.BindReceiverMeshProjector(new StubReceiverMeshProjector());
+        }
+
+        [Test]
+        public void StaticMeshProjector_FitThrowsInsteadOfLeavingAuthoredY()
+        {
+            using var renderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate);
+            IRaylibReceiverMeshProjector projector = renderer.StaticMeshReceiverProjector;
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => projector.FitYawedStampProjectorCenter(
+                    new Vector3(1f, 9f, 2f),
+                    0f,
+                    new Vector2(3.8f, 4.2f),
+                    50))!;
+            Assert.That(ex.Message, Does.Contain("no height sampling"));
+        }
+
+        [Test]
+        public void StaticMeshProjector_AabbDrawRejectsNonFiniteAndInvertedBounds()
+        {
+            using var renderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate);
+            IRaylibReceiverMeshProjector projector = renderer.StaticMeshReceiverProjector;
+            Assert.That(
+                () => projector.DrawMeshesOverlappingAabbMeters(float.NaN, 0f, 0f, 10f, 10f, 10f, default),
+                Throws.ArgumentException.With.Message.Contains("finite"));
+            Assert.That(
+                () => projector.DrawMeshesOverlappingAabbMeters(10f, 0f, 0f, 0f, 10f, 10f, default),
+                Throws.ArgumentException.With.Message.Contains("min must be <= max"));
+        }
+
+        [Test]
+        public void StaticMeshProjector_EmptyLaneDrawsZeroInsteadOfThrowing()
+        {
+            using var renderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate);
+            IRaylibReceiverMeshProjector projector = renderer.StaticMeshReceiverProjector;
+            Assert.That(
+                projector.DrawMeshesOverlappingAabbMeters(0f, 0f, 0f, 10f, 10f, 10f, default(Material)),
+                Is.EqualTo(0));
+        }
+
+        [Test]
+        public void StaticMeshProjector_ComputeWorldAabbTracksTransformedLocalBounds()
+        {
+            Matrix4x4 world = Matrix4x4.CreateScale(2f, 3f, 4f) *
+                Matrix4x4.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.5f) *
+                Matrix4x4.CreateTranslation(10f, 20f, 30f);
+            RaylibStaticMeshReceiverProjector.ComputeWorldAabbMeters(
+                in world,
+                new Vector3(-1f, -2f, -3f),
+                new Vector3(1f, 2f, 3f),
+                out float minX,
+                out float minY,
+                out float minZ,
+                out float maxX,
+                out float maxY,
+                out float maxZ);
+
+            Assert.That(minX, Is.EqualTo(-2f).Within(1e-4f));
+            Assert.That(maxX, Is.EqualTo(22f).Within(1e-4f));
+            Assert.That(minY, Is.EqualTo(14f).Within(1e-4f));
+            Assert.That(maxY, Is.EqualTo(26f).Within(1e-4f));
+            Assert.That(minZ, Is.EqualTo(28f).Within(1e-4f));
+            Assert.That(maxZ, Is.EqualTo(32f).Within(1e-4f));
+        }
+
+        [Test]
         public void VertexMapProjector_FitWithoutSampleSourceThrows()
         {
             using var projector = new RaylibTerrainRenderer();
