@@ -56,6 +56,11 @@ namespace AgentBridgeMod
                 tools.Register(new RecordingStartTool(recording, runtime));
                 tools.Register(new RecordingStopTool(recording));
                 tools.Register(new GraphDebugTool());
+                tools.Register(new SaveSlotsTool());
+                tools.Register(new SaveCaptureTool());
+                tools.Register(new SaveWriteTool());
+                tools.Register(new SaveReadTool());
+                tools.Register(new SaveRestoreTool());
 
                 engine.SetService(ToolRegistryKey, tools);
 
