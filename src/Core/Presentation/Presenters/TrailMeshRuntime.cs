@@ -90,6 +90,12 @@ namespace Ludots.Core.Presentation.Presenters
                 sampler.Reset(entity, stableId);
                 _samplers.Add(entity.Id, sampler);
             }
+            else if (sampler.Entity != entity || sampler.StableId != stableId)
+            {
+                // Arch may recycle an entity id. A recycled id must start a fresh trail;
+                // retaining the old sampler would leak samples and stable ownership.
+                sampler.Reset(entity, stableId);
+            }
 
             sampler.Config = config;
             int maxSamples = Math.Clamp(config.MaxSamples, 2, TrailMeshBuffer.MaxSamplesPerTrail);
