@@ -170,7 +170,7 @@ namespace Ludots.Core.Gameplay.Activities
 
             if (definition.DispatchPolicy == ActivityDispatchPolicy.Pooled)
             {
-                return DispatchPooled(definition, scopeHost, contextBindings);
+                return DispatchPooled(definition, scopeHost, contextBindings, signalBindings);
             }
 
             switch (definition.RepeatPolicy)
@@ -498,7 +498,8 @@ namespace Ludots.Core.Gameplay.Activities
         private ActivityAdmissionResult DispatchPooled(
             ActivityDefinition definition,
             Entity scopeHost,
-            IReadOnlyDictionary<string, object?>? contextBindings)
+            IReadOnlyDictionary<string, object?>? contextBindings,
+            IReadOnlyDictionary<string, object?>? signalBindings)
         {
             if (_rngPickService == null)
             {
@@ -508,7 +509,7 @@ namespace Ludots.Core.Gameplay.Activities
 
             if (definition.TriggerCondition != null)
             {
-                Dictionary<string, object?> bindings = ProviderContextBinding.CreateBindings(contextBindings);
+                Dictionary<string, object?> bindings = ProviderContextBinding.CreateBindings(contextBindings, signalBindings);
                 var context = new ProviderExecutionContext(_world, scopeHost, bindings);
                 if (!EvaluateCondition(definition.TriggerCondition, context))
                 {
@@ -540,7 +541,7 @@ namespace Ludots.Core.Gameplay.Activities
                     $"Pool '{definition.PoolKey}' entry '{drawnId}' is itself pooled; pools must reference forced or automatic definitions.");
             }
 
-            return OfferOrActivateChecked(drawnId, scopeHost, contextBindings);
+            return OfferOrActivateChecked(drawnId, scopeHost, contextBindings, signalBindings);
         }
 
         private void ActivateForPresentation(Entity entity, ActivityDefinition definition)
