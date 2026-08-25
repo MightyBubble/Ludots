@@ -6,6 +6,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Randomization;
 using Ludots.Core.Engine.TimeFlow;
+using Ludots.Core.Fields;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
@@ -31,6 +32,7 @@ namespace Ludots.Core.Persistence
             registry.Register(CreateGameSessionParticipant(engine.GameSession));
             registry.Register(new EmptySaveParticipant("inventory"));
             registry.Register(CreateMapSessionsParticipant(engine.MapSessions));
+            registry.Register(CreateFieldLayersParticipant(engine.MapSessions));
             registry.Register(CreateActivityParticipant(engine.GetService(CoreServiceKeys.ActivityRuntimeService)));
             registry.Register(CreateTaskParticipant(engine.GetService(CoreServiceKeys.TaskRuntimeService)));
             registry.Register(CreateNarrativeParticipant(engine.GetService(CoreServiceKeys.NarrativeDirector)));
@@ -63,6 +65,11 @@ namespace Ludots.Core.Persistence
         public static ISaveParticipant CreateMapSessionsParticipant(MapSessionManager manager)
         {
             return new MapSessionsSaveParticipant(manager);
+        }
+
+        public static ISaveParticipant CreateFieldLayersParticipant(MapSessionManager manager)
+        {
+            return new FieldLayersSaveParticipant(manager);
         }
 
         public static ISaveParticipant CreateNarrativeParticipant(NarrativeDirector director)
@@ -1244,6 +1251,331 @@ namespace Ludots.Core.Persistence
             }
 
             return MapLaunchContext.Create(seats, metadata);
+        }
+
+        /// <summary>
+        /// Saves and restores the field layers of every loaded map session. All values are
+        /// stored as region keys / plain numbers (never runtime ids). Restoring requires the
+        /// session and layer to be loaded already: an unknown map or layer fails the restore.
+        /// </summary>
+        private sealed class FieldLayersSaveParticipant : ISaveParticipant
+    {
+        private readonly MapSessionManager _manager;
+
+        public FieldLayersSaveParticipant(MapSessionManager manager)
+        {
+            _manager = manager ?? throw new ArgumentNullException(nameof(manager));
+        }
+
+        public string DomainKey => "fields";
+
+        public JsonNode CaptureState()
+        {
+            var sessions = new JsonArray();
+            foreach (KeyValuePair<Ludots.Core.Map.MapId, MapSession> pair in _manager.All)
+            {
+                FieldSessionStore? store = pair.Value.Fields;
+                if (store == null)
+                {
+                    continue;
+                }
+
+                var layers = new JsonArray();
+                foreach (FieldLayerData layer in store.Layers)
+                {
+                    if (!layer.Persistent)
+                    {
+                        continue;
+                    }
+
+                    layers.Add(CaptureLayer(layer));
+                }
+
+                if (layers.Count > 0)
+                {
+                    sessions.Add(new JsonObject
+                    {
+                        ["mapId"] = pair.Key.Value,
+                        ["layers"] = layers,
+                    });
+                }
+            }
+
+            return new JsonObject { ["sessions"] = sessions };
+        }
+
+        public void RestoreState(JsonNode state)
+        {
+            if (state is not JsonObject root || root["sessions"] is not JsonArray sessions)
+            {
+                throw new InvalidOperationException("Save domain 'fields' is malformed: 'sessions' array is missing.");
+            }
+
+            foreach (JsonNode? sessionNode in sessions)
+            {
+                JsonObject sessionObject = sessionNode as JsonObject
+                    ?? throw new InvalidOperationException("Save domain 'fields': each session entry must be an object.");
+                string mapId = sessionObject["mapId"]?.GetValue<string>()
+                    ?? throw new InvalidOperationException("Save domain 'fields': session entry is missing 'mapId'.");
+                MapSession session = _manager.GetSession(new Ludots.Core.Map.MapId(mapId))
+                    ?? throw new InvalidOperationException($"Save domain 'fields' references map '{mapId}' which is not loaded.");
+                FieldSessionStore store = session.Fields
+                    ?? throw new InvalidOperationException($"Save domain 'fields': map '{mapId}' hosts no field layers.");
+
+                if (sessionObject["layers"] is not JsonArray layers)
+                {
+                    throw new InvalidOperationException($"Save domain 'fields': map '{mapId}' is missing its 'layers' array.");
+                }
+
+                foreach (JsonNode? layerNode in layers)
+                {
+                    RestoreLayer(layerNode as JsonObject, mapId, store);
+                }
+            }
+        }
+
+        private static JsonNode CaptureLayer(FieldLayerData layer)
+        {
+            var entry = new JsonObject { ["layer"] = layer.LayerKey };
+            switch (layer)
+            {
+                case DiscreteIdFieldLayerData discrete:
+                    var regions = new JsonArray();
+                    for (int id = 1; id <= discrete.Regions.Count; id++)
+                    {
+                        regions.Add(discrete.Regions.GetName(id));
+                    }
+
+                    entry["regions"] = regions;
+                    var cells = new JsonArray();
+                    foreach (FieldCellValue2D<int> cell in SnapshotCells(discrete.Field))
+                    {
+                        cells.Add(new JsonArray { cell.Cell.X, cell.Cell.Y, cell.Value });
+                    }
+
+                    entry["cells"] = cells;
+                    break;
+
+                case Scalar32FieldLayerData scalar:
+                    entry["values"] = CaptureFloatCells(SnapshotCells(scalar.Field));
+                    break;
+
+                case Vector2FieldLayerData vector2:
+                    entry["values"] = CaptureVector2Cells(SnapshotCells(vector2.Field));
+                    break;
+
+                case Vector3FieldLayerData vector3:
+                    entry["values"] = CaptureVector3Cells(SnapshotCells(vector3.Field));
+                    break;
+            }
+
+            return entry;
+        }
+
+        private static FieldCellValue2D<T>[] SnapshotCells<T>(Ludots.Core.Fields.ChunkedField2D<T> field)
+            where T : struct
+        {
+            var buffer = new FieldCellValue2D<T>[field.NonDefaultCount];
+            field.CopyNonDefaultCells(buffer);
+            return buffer;
+        }
+
+        private static JsonArray CaptureFloatCells(FieldCellValue2D<float>[] cells)
+        {
+            var values = new JsonArray();
+            foreach (FieldCellValue2D<float> cell in cells)
+            {
+                values.Add(new JsonArray { cell.Cell.X, cell.Cell.Y, cell.Value });
+            }
+
+            return values;
+        }
+
+        private static JsonArray CaptureVector2Cells(FieldCellValue2D<System.Numerics.Vector2>[] cells)
+        {
+            var values = new JsonArray();
+            foreach (FieldCellValue2D<System.Numerics.Vector2> cell in cells)
+            {
+                values.Add(new JsonArray { cell.Cell.X, cell.Cell.Y, new JsonArray { cell.Value.X, cell.Value.Y } });
+            }
+
+            return values;
+        }
+
+        private static JsonArray CaptureVector3Cells(FieldCellValue2D<System.Numerics.Vector3>[] cells)
+        {
+            var values = new JsonArray();
+            foreach (FieldCellValue2D<System.Numerics.Vector3> cell in cells)
+            {
+                values.Add(new JsonArray { cell.Cell.X, cell.Cell.Y, new JsonArray { cell.Value.X, cell.Value.Y, cell.Value.Z } });
+            }
+
+            return values;
+        }
+
+        private static void RestoreLayer(JsonObject? entry, string mapId, FieldSessionStore store)
+        {
+            if (entry == null)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': map '{mapId}' has a malformed layer entry.");
+            }
+
+            string layerKey = entry["layer"]?.GetValue<string>()
+                ?? throw new InvalidOperationException($"Save domain 'fields': map '{mapId}' has a layer entry without 'layer'.");
+            if (!store.TryGetByKey(layerKey, out FieldLayerData layer))
+            {
+                throw new InvalidOperationException(
+                    $"Save domain 'fields' references layer '{layerKey}' which is not enabled on map '{mapId}'.");
+            }
+
+            switch (layer)
+            {
+                case DiscreteIdFieldLayerData discrete:
+                    RestoreDiscrete(discrete, entry, layerKey, mapId);
+                    break;
+                case Scalar32FieldLayerData scalar:
+                    RestoreFloat(scalar.Field, entry["values"], layerKey, mapId);
+                    break;
+                case Vector2FieldLayerData vector2:
+                    RestoreVector2(vector2.Field, entry["values"], layerKey, mapId);
+                    break;
+                case Vector3FieldLayerData vector3:
+                    RestoreVector3(vector3.Field, entry["values"], layerKey, mapId);
+                    break;
+            }
+        }
+
+        private static void RestoreDiscrete(DiscreteIdFieldLayerData discrete, JsonObject entry, string layerKey, string mapId)
+        {
+            if (entry["regions"] is not JsonArray regions)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'regions'.");
+            }
+
+            var keys = new string[regions.Count];
+            for (int i = 0; i < regions.Count; i++)
+            {
+                keys[i] = regions[i]?.GetValue<string>()
+                    ?? throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a blank region key at index {i}.");
+                discrete.Regions.Register(keys[i]);
+            }
+
+            if (entry["cells"] is not JsonArray cells)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'cells'.");
+            }
+
+            discrete.Field.Clear();
+            foreach (JsonNode? cellNode in cells)
+            {
+                if (cellNode is not JsonArray triple || triple.Count != 3)
+                {
+                    throw new InvalidOperationException(
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a malformed cell entry.");
+                }
+
+                int x = triple[0]!.GetValue<int>();
+                int y = triple[1]!.GetValue<int>();
+                int regionIndex = triple[2]!.GetValue<int>();
+                if (regionIndex < 1 || regionIndex > keys.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' cell ({x},{y}) references region index {regionIndex} outside 'regions'.");
+                }
+
+                int regionId = discrete.Regions.GetId(keys[regionIndex - 1]);
+                discrete.Field.Set(new FieldCell2D(x, y), regionId);
+            }
+        }
+
+        private static void RestoreFloat(Ludots.Core.Fields.ChunkedField2D<float> field, JsonNode? valuesNode, string layerKey, string mapId)
+        {
+            if (valuesNode is not JsonArray values)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'values'.");
+            }
+
+            field.Clear();
+            foreach (JsonNode? valueNode in values)
+            {
+                if (valueNode is not JsonArray triple || triple.Count != 3)
+                {
+                    throw new InvalidOperationException(
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a malformed value entry.");
+                }
+
+                field.Set(new FieldCell2D(triple[0]!.GetValue<int>(), triple[1]!.GetValue<int>()), triple[2]!.GetValue<float>());
+            }
+        }
+
+        private static void RestoreVector2(Ludots.Core.Fields.ChunkedField2D<System.Numerics.Vector2> field, JsonNode? valuesNode, string layerKey, string mapId)
+        {
+            if (valuesNode is not JsonArray values)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'values'.");
+            }
+
+            field.Clear();
+            foreach (JsonNode? valueNode in values)
+            {
+                System.Numerics.Vector2 value = ReadVector2(valueNode, layerKey, mapId);
+                field.Set(new FieldCell2D(ReadVectorX(valueNode, layerKey, mapId), ReadVectorY(valueNode, layerKey, mapId)), value);
+            }
+        }
+
+        private static void RestoreVector3(Ludots.Core.Fields.ChunkedField2D<System.Numerics.Vector3> field, JsonNode? valuesNode, string layerKey, string mapId)
+        {
+            if (valuesNode is not JsonArray values)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'values'.");
+            }
+
+            field.Clear();
+            foreach (JsonNode? valueNode in values)
+            {
+                System.Numerics.Vector3 value = ReadVector3(valueNode, layerKey, mapId);
+                field.Set(new FieldCell2D(ReadVectorX(valueNode, layerKey, mapId), ReadVectorY(valueNode, layerKey, mapId)), value);
+            }
+        }
+
+        private static int ReadVectorX(JsonNode? node, string layerKey, string mapId)
+        {
+            return (node as JsonArray)?[0]?.GetValue<int>()
+                ?? throw MalformedVector(layerKey, mapId);
+        }
+
+        private static int ReadVectorY(JsonNode? node, string layerKey, string mapId)
+        {
+            return (node as JsonArray)?[1]?.GetValue<int>()
+                ?? throw MalformedVector(layerKey, mapId);
+        }
+
+        private static System.Numerics.Vector2 ReadVector2(JsonNode? node, string layerKey, string mapId)
+        {
+            if (node is JsonArray triple && triple[2] is JsonArray components && components.Count == 2)
+            {
+                return new System.Numerics.Vector2(components[0]!.GetValue<float>(), components[1]!.GetValue<float>());
+            }
+
+            throw MalformedVector(layerKey, mapId);
+        }
+
+        private static System.Numerics.Vector3 ReadVector3(JsonNode? node, string layerKey, string mapId)
+        {
+            if (node is JsonArray triple && triple[2] is JsonArray components && components.Count == 3)
+            {
+                return new System.Numerics.Vector3(
+                    components[0]!.GetValue<float>(), components[1]!.GetValue<float>(), components[2]!.GetValue<float>());
+            }
+
+            throw MalformedVector(layerKey, mapId);
+        }
+
+        private static InvalidOperationException MalformedVector(string layerKey, string mapId)
+        {
+            return new InvalidOperationException(
+                $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a malformed vector value entry.");
+        }
         }
     }
 }

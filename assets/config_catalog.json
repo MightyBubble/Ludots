@@ -205,6 +205,11 @@
     "IdField": "id"
   },
   {
+    "Path": "Fields/layers.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
     "Path": "Progression/scopes.json",
     "Policy": "ArrayById",
     "IdField": "id"
