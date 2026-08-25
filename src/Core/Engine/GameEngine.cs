@@ -1862,15 +1862,18 @@ namespace Ludots.Core.Engine
             new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
                 .Load(ConfigCatalog, ConfigConflictReport);
             var activityPresentation = new ActivityPresentationBuffer();
+            var activityLifecycle = new ActivityLifecycleBuffer();
             var activityRuntime = new ActivityRuntimeService(
                 World,
                 activityDefinitions,
                 providerServices,
                 activityPresentation,
                 clock,
-                rngPickService);
+                rngPickService,
+                activityLifecycle);
             SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
             SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
+            SetService(CoreServiceKeys.ActivityLifecycleBuffer, activityLifecycle);
             SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
             var taskDefinitions = new TaskDefinitionRegistry();
             new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
