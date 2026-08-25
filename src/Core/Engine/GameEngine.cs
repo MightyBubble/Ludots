@@ -369,6 +369,7 @@ namespace Ludots.Core.Engine
         public RegistrationConflictReport ConflictReport { get; private set; }
         public Ludots.Core.Config.ConfigConflictReport ConfigConflictReport { get; private set; }
         public Ludots.Core.Config.ConfigCatalog ConfigCatalog { get; private set; }
+        public Ludots.Core.Config.DataSchemaRegistry DataSchemaRegistry { get; private set; }
         public Ludots.Core.Gameplay.AI.Config.AiCompiledRuntime AiRuntime { get; private set; }
 
         public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot)
@@ -484,6 +485,7 @@ namespace Ludots.Core.Engine
 
                 ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
                 ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+                DataSchemaRegistry = new DataSchemaConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
                 LoadAgentProfiles();
                 AiRuntime = default;
                 Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null!);
@@ -498,6 +500,8 @@ namespace Ludots.Core.Engine
                 SetService(CoreServiceKeys.GameConfig, MergedConfig);
                 SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
                 SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
+                SetService(CoreServiceKeys.DataSchemaCatalog, DataSchemaRegistry.Catalog);
+                SetService(CoreServiceKeys.DataSchemaRegistry, DataSchemaRegistry);
             }
             catch
             {
@@ -1118,7 +1122,7 @@ namespace Ludots.Core.Engine
                 graphOutputValueStore);
             var panelHost = new PanelHost(
                 panelTemplates,
-                new PanelProjectionReader(World, graphOutputValueStore),
+                new PanelProjectionReader(World, graphOutputValueStore, DataSchemaRegistry),
                 new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi));
             gasGraphApi.BindPanelHost(panelHost);
             var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
@@ -3975,6 +3979,7 @@ namespace Ludots.Core.Engine
             MergedConfig = null;
             ConfigPipeline = null;
             ConfigCatalog = null;
+            DataSchemaRegistry = null;
         }
 
         public void Tick(float platformDeltaTime)

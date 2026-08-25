@@ -92,3 +92,41 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 - 帧统计表摘自当前验收工件（`engine_gallery_all/*.json` 等），证据重跑后数值会变化；页面已标注工件路径供对账。
 - 侧栏 Playwright 自动化点击在粘性滚动容器内偶发超时（人工路径不受影响；哈希路由 `#scene/<id>` 等价可达，实测正常）。
 - 本次操作事故记录：在他人工作树 `.worktrees/audit-raylib-main` 做 stash 验证时，因多工作树共享 stash 栈弹入了他人 stash 造成冲突残留；已 `git reset --hard` 恢复至该分支干净 HEAD（`a4b594a118`），他人 stash（wip-nr）完好保留。教训：不在共享仓库的他人工作树执行 stash/pop。
+
+### P2-02（已修复）gallery wiki 命名漂移 + quickstart 反引号路径违规
+- Problem: `engine-gallery-wiki/{lighting,material_binding}.md` 写 `Presentation/materials.json`（实际 `material_assets.json`）；quickstart 初版两处 mod 相对路径带反引号被 `validate-docs.ps1` 判 missing-backtick-target。
+- Fix: 前者改名对齐；后者去反引号（仓库根 `assets/` 只放权威示例，作者面 mod 相对路径不入反引号）。校验器现全绿。
+
+### P3-01（存量上报，明确不修）已知边界
+- `presenter-param-blackboard.md` 正文主体仍是已删除 API 的旧设计（首行有诚实注记，SSOT 以代码为准）——需专门重写，不在本轮。
+- schema 覆盖边界：5 份覆盖 mesh/host/material/presenters/particle_vfx；animation 链（`animation_clips.json`/`animation_profiles.json`/`animator_controllers.json`）暂无 schema，待作者面稳定后补。
+
+## Fix Order（剩余项）
+1. 上游修 `raylib_platform_meshes` fixture JSON（P2-01）。
+2. 重写 `presenter-param-blackboard.md`（P3-01）。
+3. animation 链 schema + 决定是否挂流水线校验（对齐 mod-editor-prd TODO I10 的口径）。
+
+---
+
+# Documentation Governance Report — Configurable Data Schema
+
+Date: 2026-08-26
+Scope: `gitbook/architecture/configurable-data-schema.md`, `gitbook/SUMMARY.md`, and feature acceptance artifacts
+Ruleset: Ludots doc governance checklist, link validation, and repository SSOT rules
+
+## Summary
+- Total findings: 0
+- P0: 0
+- P1: 0
+- P2: 0
+- P3: 0
+
+## Findings
+
+None. The new architecture document has the required overview, structure, details, scenarios, boundaries, and Cucumber UAT sections. Its catalog, source, and test references resolve inside the repository.
+
+## Fix Order
+1. No corrective action required for this change.
+
+## Residual Risks
+- The documentation describes the supported first version; map/union/recursive schema support remains explicitly out of scope.
