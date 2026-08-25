@@ -1410,7 +1410,9 @@ namespace Ludots.Core.Engine
                 instancedBatchAssets.GetId,
                 entityCollectionKeyRegistry.Register,
                 presenterCommandKinds,
-                presenterBehaviorKinds).Load(ConfigCatalog, ConfigConflictReport);
+                presenterBehaviorKinds,
+                resolveGraphProgramKind: graphId =>
+                    graphProgramRegistry.TryGetKind(graphId, out GraphKind kind) ? kind : GraphKind.None).Load(ConfigCatalog, ConfigConflictReport);
             presenterDefinitions.RebuildCompiledViews();
 
             int ResolveVfxAssetId(string key)

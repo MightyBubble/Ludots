@@ -5,7 +5,9 @@ using System.Text;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -163,6 +165,71 @@ namespace Ludots.Tests.Presentation
             Assert.That(commands.Count, Is.EqualTo(0), "无 activationCondition 的槽位不得产生编译规则命令");
             Assert.That(fixture.World.Get<PresenterState>(presenter).BehaviorActiveMask & (1u << ConditionedSlot), Is.Not.EqualTo(0u), "activeByDefault 行为保持原样");
             Assert.That(CountPlayRequests(sounds), Is.EqualTo(1), "activeByDefault 输出保持原样");
+        }
+
+        [Test]
+        public void GraphCondition_TrueProgram_ActivatesSlot()
+        {
+            using var fixture = CreateConfigFixture(
+                """
+                [
+                  {
+                    "id": "accept.activation.graph.true",
+                    "behaviors": [
+                      {
+                        "slot": "sound",
+                        "kind": "Sound",
+                        "activeByDefault": false,
+                        "activationCondition": { "graphProgramId": 9001 },
+                        "sound": { "soundAssetId": "sfx_cond", "loop": false, "volume": 1.0 }
+                      }
+                    ]
+                  }
+                ]
+                """);
+            fixture.RegisterValidationProgram(graphProgramId: 9001, result: true);
+            int defId = fixture.Definitions.GetId("accept.activation.graph.true");
+
+            Entity owner = fixture.World.Create();
+            var (presenter, commands, sounds) = fixture.CreateAndDecide(defId, owner, scopeTag: 1);
+
+            Assert.That(commands.Count, Is.EqualTo(2));
+            Assert.That(commands[0].CommandKind, Is.EqualTo(PresenterCommandKind.DeactivateBehavior));
+            Assert.That(commands[1].CommandKind, Is.EqualTo(PresenterCommandKind.ActivateBehavior));
+            Assert.That(fixture.World.Get<PresenterState>(presenter).BehaviorActiveMask & (1u << ConditionedSlot), Is.Not.EqualTo(0u), "graph 条件 true 时槽位必须激活");
+            Assert.That(CountPlayRequests(sounds), Is.EqualTo(1), "graph 条件 true 时输出必须出现");
+        }
+
+        [Test]
+        public void GraphCondition_FalseProgram_KeepsSlotInactive()
+        {
+            using var fixture = CreateConfigFixture(
+                """
+                [
+                  {
+                    "id": "accept.activation.graph.false",
+                    "behaviors": [
+                      {
+                        "slot": "sound",
+                        "kind": "Sound",
+                        "activeByDefault": false,
+                        "activationCondition": { "graphProgramId": 9002 },
+                        "sound": { "soundAssetId": "sfx_cond", "loop": false, "volume": 1.0 }
+                      }
+                    ]
+                  }
+                ]
+                """);
+            fixture.RegisterValidationProgram(graphProgramId: 9002, result: false);
+            int defId = fixture.Definitions.GetId("accept.activation.graph.false");
+
+            Entity owner = fixture.World.Create();
+            var (presenter, commands, sounds) = fixture.CreateAndDecide(defId, owner, scopeTag: 1);
+
+            Assert.That(commands.Count, Is.EqualTo(1));
+            Assert.That(commands[0].CommandKind, Is.EqualTo(PresenterCommandKind.DeactivateBehavior));
+            Assert.That(fixture.World.Get<PresenterState>(presenter).BehaviorActiveMask & (1u << ConditionedSlot), Is.EqualTo(0u), "graph 条件 false 时槽位必须保持不激活");
+            Assert.That(CountPlayRequests(sounds), Is.EqualTo(0), "graph 条件 false 时不得有输出");
         }
 
         [Test]
@@ -456,6 +523,7 @@ namespace Ludots.Tests.Presentation
             public readonly PresenterBehaviorSystem Behavior;
             public readonly PresenterRuntimeSystem Runtime;
             public readonly PresenterRuleSystem Rules;
+            public readonly GraphProgramRegistry Graphs;
 
             public ActivationFixture(PresenterDefinitionRegistry definitions)
             {
@@ -465,6 +533,7 @@ namespace Ludots.Tests.Presentation
                 Instances = new PresenterEntityRuntime(World);
                 Definitions = definitions;
                 SoundRequests = new SoundRequestBuffer();
+                Graphs = new GraphProgramRegistry();
                 var ownerChanges = new PresentationOwnerChangeBuffer(64);
                 Runtime = new PresenterRuntimeSystem(
                     World,
@@ -481,10 +550,23 @@ namespace Ludots.Tests.Presentation
                     Commands,
                     Definitions,
                     Instances,
-                    new Ludots.Core.GraphRuntime.GraphProgramRegistry(),
+                    Graphs,
                     new Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null),
                     new Dictionary<string, object>());
                 Behavior = new PresenterBehaviorSystem(World, Instances, Definitions, Events, ownerChanges, SoundRequests);
+            }
+
+            /// <summary>注册一个 Validation 图：B[0] = result，然后停机。与 PresenterRuleSystem.EvaluateGraph 的求值契约一致。</summary>
+            public void RegisterValidationProgram(int graphProgramId, bool result)
+            {
+                Graphs.Register(
+                    graphProgramId,
+                    new[]
+                    {
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = result ? 1 : 0 },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                    },
+                    GraphKind.Validation);
             }
 
             /// <summary>生产序：Runtime 建实例并发 PresenterCreated → Rules 求值条件发命令 → Runtime 应用 mask → Behavior 输出。</summary>
