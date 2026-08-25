@@ -21,6 +21,8 @@ namespace Ludots.Core.Gameplay.Activities
         PendingDedupe = 1,
         Repeatable = 2,
         Unique = 3,
+        Cooldown = 4,
+        Mutex = 5,
     }
 
     public struct ActivityInstanceCm
@@ -31,5 +33,6 @@ namespace Ludots.Core.Gameplay.Activities
         public Entity ScopeHost;
         public int SelectedOptionIndex;
         public int Revision;
+        public int DispatchTick;
     }
 }

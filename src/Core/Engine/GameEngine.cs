@@ -1866,7 +1866,8 @@ namespace Ludots.Core.Engine
                 World,
                 activityDefinitions,
                 providerServices,
-                activityPresentation);
+                activityPresentation,
+                clock);
             SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
             SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
             SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);

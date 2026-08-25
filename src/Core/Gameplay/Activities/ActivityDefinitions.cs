@@ -2,9 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
 
 namespace Ludots.Core.Gameplay.Activities
 {
+    public sealed class ActivityRepeatCooldown
+    {
+        [JsonPropertyName("duration_ticks")]
+        public int DurationTicks { get; set; }
+
+        [JsonPropertyName("clock_domain")]
+        public ClockDomainId ClockDomain { get; set; } = ClockDomainId.Step;
+    }
+
     public sealed class ActivityConditionRef
     {
         [JsonPropertyName("condition_key")]
@@ -72,6 +82,12 @@ namespace Ludots.Core.Gameplay.Activities
 
         [JsonPropertyName("repeat_policy")]
         public ActivityRepeatPolicy RepeatPolicy { get; set; } = ActivityRepeatPolicy.PendingDedupe;
+
+        [JsonPropertyName("repeat_cooldown")]
+        public ActivityRepeatCooldown? RepeatCooldown { get; set; }
+
+        [JsonPropertyName("mutex_group")]
+        public string MutexGroup { get; set; } = string.Empty;
 
         [JsonPropertyName("trigger_condition")]
         public ActivityConditionRef? TriggerCondition { get; set; }
@@ -177,6 +193,46 @@ namespace Ludots.Core.Gameplay.Activities
             {
                 throw new InvalidOperationException(
                     $"Activity '{definition.Id}' has unknown repeat_policy value '{(int)definition.RepeatPolicy}'.");
+            }
+
+            if (definition.RepeatPolicy == ActivityRepeatPolicy.Cooldown)
+            {
+                if (definition.RepeatCooldown == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' uses cooldown repeat_policy and requires repeat_cooldown.");
+                }
+
+                if (definition.RepeatCooldown.DurationTicks <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' repeat_cooldown.duration_ticks must be positive.");
+                }
+
+                if (!Enum.IsDefined(typeof(ClockDomainId), definition.RepeatCooldown.ClockDomain))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' repeat_cooldown.clock_domain is unknown.");
+                }
+            }
+            else if (definition.RepeatCooldown != null)
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' declares repeat_cooldown but repeat_policy is not cooldown.");
+            }
+
+            if (definition.RepeatPolicy == ActivityRepeatPolicy.Mutex)
+            {
+                if (string.IsNullOrWhiteSpace(definition.MutexGroup))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' uses mutex repeat_policy and requires mutex_group.");
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(definition.MutexGroup))
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' declares mutex_group but repeat_policy is not mutex.");
             }
 
             if (definition.DispatchPolicy == ActivityDispatchPolicy.Automatic)

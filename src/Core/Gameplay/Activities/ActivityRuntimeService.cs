@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Providers;
 
 namespace Ludots.Core.Gameplay.Activities
@@ -29,6 +30,8 @@ namespace Ludots.Core.Gameplay.Activities
     {
         public const string UniqueAlreadyResolved = "admission.unique_already_resolved";
         public const string TriggerConditionFailed = "admission.trigger_condition_failed";
+        public const string CooldownActive = "admission.cooldown_active";
+        public const string MutexOccupied = "admission.mutex_occupied";
     }
 
     public readonly record struct ActivityAdmissionResult(Entity Instance, string? RejectionCode)
@@ -45,24 +48,33 @@ namespace Ludots.Core.Gameplay.Activities
         private readonly ActivityDefinitionRegistry _definitions;
         private readonly ProviderServices _providers;
         private readonly ActivityPresentationBuffer _presentation;
+        private readonly IClock? _clock;
         private readonly Dictionary<(int DefinitionId, int ScopeKey), Entity> _index = new();
         private readonly List<Entity> _scratch = new(64);
         private readonly ForEachWithEntity<ActivityInstanceCm> _resolvedInstanceCollector;
+        private readonly ForEachWithEntity<ActivityInstanceCm> _dispatchTickCollector;
+        private readonly ForEachWithEntity<ActivityInstanceCm> _mutexOccupantCollector;
         private int _collectDefinitionId;
         private int _collectScopeKey;
+        private int _collectMaxDispatchTick;
+        private string _collectMutexGroup = string.Empty;
         private int _nextInstanceId = 1;
 
         public ActivityRuntimeService(
             World world,
             ActivityDefinitionRegistry definitions,
             ProviderServices providers,
-            ActivityPresentationBuffer presentation)
+            ActivityPresentationBuffer presentation,
+            IClock? clock = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _providers = providers ?? throw new ArgumentNullException(nameof(providers));
             _presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
+            _clock = clock;
             _resolvedInstanceCollector = CollectResolvedInstance;
+            _dispatchTickCollector = CollectDispatchTick;
+            _mutexOccupantCollector = CollectMutexOccupant;
             RebuildIndexFromWorld();
         }
 
@@ -118,7 +130,7 @@ namespace Ludots.Core.Gameplay.Activities
                 }
 
                 if (_definitions.TryGet(activity.DefinitionId, out ActivityDefinition definition) &&
-                    definition.RepeatPolicy == ActivityRepeatPolicy.Repeatable)
+                    !TracksPendingInstance(definition.RepeatPolicy))
                 {
                     return;
                 }
@@ -169,6 +181,20 @@ namespace Ludots.Core.Gameplay.Activities
                     }
 
                     break;
+                case ActivityRepeatPolicy.Cooldown:
+                    if (!TryCooldownAdmit(definition, scopeHost, out ActivityAdmissionResult cooldownResult))
+                    {
+                        return cooldownResult;
+                    }
+
+                    break;
+                case ActivityRepeatPolicy.Mutex:
+                    if (TryGetMutexOccupantGroup(definition.MutexGroup, ScopeKey(scopeHost), out string occupantGroup))
+                    {
+                        return Reject(definition, scopeHost, $"{ActivityAdmissionRejections.MutexOccupied}:{occupantGroup}");
+                    }
+
+                    break;
                 case ActivityRepeatPolicy.Repeatable:
                     break;
                 default:
@@ -185,18 +211,23 @@ namespace Ludots.Core.Gameplay.Activities
             }
 
             int instanceId = _nextInstanceId++;
-            Entity entity = _world.Create(
-                new ActivityInstanceCm
-                {
-                    DefinitionId = definitionId,
-                    InstanceId = instanceId,
-                    State = ActivityInstanceState.Pending,
-                    ScopeHost = scopeHost,
-                    SelectedOptionIndex = -1,
-                    Revision = 1,
-                });
+            var component = new ActivityInstanceCm
+            {
+                DefinitionId = definitionId,
+                InstanceId = instanceId,
+                State = ActivityInstanceState.Pending,
+                ScopeHost = scopeHost,
+                SelectedOptionIndex = -1,
+                Revision = 1,
+            };
+            if (definition.RepeatPolicy == ActivityRepeatPolicy.Cooldown)
+            {
+                component.DispatchTick = _clock!.Now(definition.RepeatCooldown!.ClockDomain);
+            }
 
-            if (definition.RepeatPolicy != ActivityRepeatPolicy.Repeatable)
+            Entity entity = _world.Create(component);
+
+            if (TracksPendingInstance(definition.RepeatPolicy))
             {
                 _index[key] = entity;
             }
@@ -465,6 +496,33 @@ namespace Ludots.Core.Gameplay.Activities
             return false;
         }
 
+        private bool TryCooldownAdmit(
+            ActivityDefinition definition,
+            Entity scopeHost,
+            out ActivityAdmissionResult result)
+        {
+            if (_clock == null)
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' uses cooldown repeat_policy but ActivityRuntimeService has no clock.");
+            }
+
+            ActivityRepeatCooldown cooldown = definition.RepeatCooldown!;
+            int scopeKey = ScopeKey(scopeHost);
+            if (TryGetLastDispatchTick(_definitions.GetId(definition.Id), scopeKey, out int lastDispatchTick))
+            {
+                int elapsed = _clock.Now(cooldown.ClockDomain) - lastDispatchTick;
+                if (elapsed < cooldown.DurationTicks)
+                {
+                    result = Reject(definition, scopeHost, ActivityAdmissionRejections.CooldownActive);
+                    return false;
+                }
+            }
+
+            result = default;
+            return true;
+        }
+
         private ActivityAdmissionResult Reject(ActivityDefinition definition, Entity scopeHost, string reasonCode)
         {
             _presentation.Add(new ActivityPresentationCue(
@@ -487,6 +545,34 @@ namespace Ludots.Core.Gameplay.Activities
             }
         }
 
+        private void CollectDispatchTick(Entity entity, ref ActivityInstanceCm activity)
+        {
+            if (activity.DefinitionId == _collectDefinitionId &&
+                ScopeKey(activity.ScopeHost) == _collectScopeKey)
+            {
+                _scratch.Add(entity);
+                if (activity.DispatchTick > _collectMaxDispatchTick)
+                {
+                    _collectMaxDispatchTick = activity.DispatchTick;
+                }
+            }
+        }
+
+        private void CollectMutexOccupant(Entity entity, ref ActivityInstanceCm activity)
+        {
+            if (activity.State == ActivityInstanceState.Resolved ||
+                ScopeKey(activity.ScopeHost) != _collectScopeKey)
+            {
+                return;
+            }
+
+            if (_definitions.TryGet(activity.DefinitionId, out ActivityDefinition definition) &&
+                string.Equals(definition.MutexGroup, _collectMutexGroup, StringComparison.OrdinalIgnoreCase))
+            {
+                _scratch.Add(entity);
+            }
+        }
+
         private bool HasResolvedInstance(int definitionId, int scopeKey)
         {
             _collectDefinitionId = definitionId;
@@ -495,6 +581,30 @@ namespace Ludots.Core.Gameplay.Activities
             _world.Query(in ActivityQuery, _resolvedInstanceCollector);
             return _scratch.Count > 0;
         }
+
+        private bool TryGetLastDispatchTick(int definitionId, int scopeKey, out int tick)
+        {
+            _collectDefinitionId = definitionId;
+            _collectScopeKey = scopeKey;
+            _collectMaxDispatchTick = 0;
+            _scratch.Clear();
+            _world.Query(in ActivityQuery, _dispatchTickCollector);
+            tick = _collectMaxDispatchTick;
+            return _scratch.Count > 0;
+        }
+
+        private bool TryGetMutexOccupantGroup(string mutexGroup, int scopeKey, out string occupantGroup)
+        {
+            _collectMutexGroup = mutexGroup;
+            _collectScopeKey = scopeKey;
+            _scratch.Clear();
+            _world.Query(in ActivityQuery, _mutexOccupantCollector);
+            occupantGroup = _scratch.Count > 0 ? _collectMutexGroup : string.Empty;
+            return _scratch.Count > 0;
+        }
+
+        private static bool TracksPendingInstance(ActivityRepeatPolicy policy) =>
+            policy is ActivityRepeatPolicy.PendingDedupe or ActivityRepeatPolicy.Unique;
 
         private static int ScopeKey(Entity scopeHost) =>
             scopeHost == Entity.Null ? 0 : scopeHost.Id;
