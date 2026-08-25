@@ -102,6 +102,19 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public static readonly EventKey RegionExited = new EventKey("RegionExited");
 
+        /// <summary>
+        /// Map-scoped: fired by the field membership system when a tracked entity's
+        /// discrete-id field ownership changes to a new region. Payload: SourceEntity,
+        /// RegionId, FieldLayer. Independent from the circle/rect trigger line above.
+        /// </summary>
+        public static readonly EventKey FieldRegionEntered = new EventKey("FieldRegionEntered");
+
+        /// <summary>
+        /// Map-scoped: fired by the field membership system when a tracked entity leaves
+        /// its discrete-id field region. Payload: SourceEntity, RegionId, FieldLayer.
+        /// </summary>
+        public static readonly EventKey FieldRegionExited = new EventKey("FieldRegionExited");
+
         public static bool IsMapScoped(string eventName)
         {
             return eventName == MapLoaded.Value ||
@@ -114,7 +127,9 @@ namespace Ludots.Core.Scripting
                 eventName == EntityAliveCountChanged.Value ||
                 eventName == InputActionFired.Value ||
                 eventName == RegionEntered.Value ||
-                eventName == RegionExited.Value;
+                eventName == RegionExited.Value ||
+                eventName == FieldRegionEntered.Value ||
+                eventName == FieldRegionExited.Value;
         }
     }
 }
