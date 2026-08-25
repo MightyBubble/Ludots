@@ -48,7 +48,8 @@
 - `RequireId(name)` 找不到时抛异常并点名该属性名。
 - `GetCurrent` / `SetCurrent` / `SetBase` / `GetCap` 遇到非法或越界 id 抛 `ArgumentOutOfRangeException`。禁止静默返回 `0` 或丢掉写入。
 
-容量常量只在 `AttributeRegistry.MaxAttributes` 定义一处；`AttributeBuffer` 与 `DirtyFlags` 引用它。
+容量常量只在 `AttributeRegistry.MaxAttributes` 定义一处；`AttributeBuffer` 与 `DirtyFlags` 引用它。  
+把编译期 64/256 硬顶改成「装载期按本局内容定容」是提案 [RFC-0067](../../docs/rfcs/RFC-0067-gas-loadtime-capacity-world-store.md)，接受并回写本页之前，实现仍以本页的 64 槽合同为准。
 
 ## 注册表约定与 Freeze
 
