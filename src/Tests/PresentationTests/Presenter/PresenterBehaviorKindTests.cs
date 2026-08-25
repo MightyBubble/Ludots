@@ -2070,18 +2070,21 @@ namespace Ludots.Tests.Presentation
             int definitionId,
             out PresentationVisualProxy proxy)
         {
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            for (int i = 0; i < span.Length; i++)
+            ReadOnlySpan<PresentationRequestOp> ops = requests.Ops;
+            for (int i = 0; i < ops.Length; i++)
             {
-                ref readonly PresentationRequest request = ref span[i];
-                if (request.Kind != PresentationRequestKind.VisualProxy ||
-                    request.Owner != owner ||
-                    request.VisualProxy.TemplateId != definitionId)
+                if (ops[i].Channel != PresentationRequestChannel.VisualProxy)
                 {
                     continue;
                 }
 
-                proxy = request.VisualProxy;
+                ref readonly VisualProxyChannelItem item = ref requests.VisualProxyAt(ops[i].Slot);
+                if (item.Owner != owner || item.VisualProxy.TemplateId != definitionId)
+                {
+                    continue;
+                }
+
+                proxy = item.VisualProxy;
                 return true;
             }
 

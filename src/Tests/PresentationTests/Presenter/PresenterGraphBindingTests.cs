@@ -260,7 +260,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(blackboardAfterBehavior, Is.EqualTo(2.5f).Within(0.0001f));
             Assert.That(requests.Count, Is.EqualTo(1));
             Assert.That(
-                requests.GetSpan()[0].VisualProxy.Scale,
+                requests.VisualProxyAt(0).VisualProxy.Scale,
                 Is.EqualTo(new Vector3(2.5f, 2.5f, 2.5f)),
                 "AssetBinding must read the graph result from the blackboard in the same frame, with exact value equality.");
         }

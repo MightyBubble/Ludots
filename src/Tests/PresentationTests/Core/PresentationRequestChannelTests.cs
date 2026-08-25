@@ -92,7 +92,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void CompatibilityFacade_PreservesOwnerPayloadAndOrderAcrossAllLanes()
+        public void TypedLanes_PreserveOwnerPayloadAndOrderAcrossAllChannels()
         {
             World world = World.Create();
             try
@@ -120,25 +120,32 @@ namespace Ludots.Tests.Presentation
                 requests.RemoveWorldHud(removalOwner, 106);
                 requests.ClearTransientVisualProjection(clearOwner);
 
-                ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-                Assert.That(span.Length, Is.EqualTo(7));
-                Assert.That(span[0].Owner, Is.EqualTo(visualOwner));
-                Assert.That(span[0].VisualProxy.StableId, Is.EqualTo(101));
-                Assert.That(span[1].Owner, Is.EqualTo(overlayOwner));
-                Assert.That(span[1].GroundOverlay.Radius, Is.EqualTo(2.5f).Within(0.001f));
-                Assert.That(span[2].Owner, Is.EqualTo(hudOwner));
-                Assert.That(span[2].WorldHud.Id0, Is.EqualTo(17));
-                Assert.That(span[3].Owner, Is.EqualTo(splineOwner));
-                Assert.That(span[3].SplineRibbon.Width, Is.EqualTo(3f).Within(0.001f));
-                Assert.That(span[4].Owner, Is.EqualTo(surfaceOwner));
-                Assert.That(span[4].SurfaceSource.ScopeId, Is.EqualTo(19));
-                Assert.That(span[5].Owner, Is.EqualTo(removalOwner));
-                Assert.That(span[5].StableId, Is.EqualTo(106));
-                Assert.That(span[6].Owner, Is.EqualTo(clearOwner));
-                Assert.That(span[6].Kind, Is.EqualTo(PresentationRequestKind.ClearTransientVisualProjection));
-
-                Assert.That(requests.Get(4).Owner, Is.EqualTo(surfaceOwner));
-                Assert.That(requests.Get(4).SurfaceSource.StableId, Is.EqualTo(105));
+                ReadOnlySpan<PresentationRequestOp> ops = requests.Ops;
+                Assert.That(ops.Length, Is.EqualTo(7));
+                Assert.That(ops[0].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+                ref readonly VisualProxyChannelItem visualItem = ref requests.VisualProxyAt(ops[0].Slot);
+                Assert.That(visualItem.Owner, Is.EqualTo(visualOwner));
+                Assert.That(visualItem.VisualProxy.StableId, Is.EqualTo(101));
+                Assert.That(ops[1].Channel, Is.EqualTo(PresentationRequestChannel.GroundOverlay));
+                Assert.That(requests.GroundOverlayAt(ops[1].Slot).Owner, Is.EqualTo(overlayOwner));
+                Assert.That(requests.GroundOverlayAt(ops[1].Slot).Item.Radius, Is.EqualTo(2.5f).Within(0.001f));
+                Assert.That(ops[2].Channel, Is.EqualTo(PresentationRequestChannel.WorldHud));
+                Assert.That(requests.WorldHudAt(ops[2].Slot).Owner, Is.EqualTo(hudOwner));
+                Assert.That(requests.WorldHudAt(ops[2].Slot).Item.Id0, Is.EqualTo(17));
+                Assert.That(ops[3].Channel, Is.EqualTo(PresentationRequestChannel.SplineRibbon));
+                Assert.That(requests.SplineRibbonAt(ops[3].Slot).Owner, Is.EqualTo(splineOwner));
+                Assert.That(requests.SplineRibbonAt(ops[3].Slot).Item.Width, Is.EqualTo(3f).Within(0.001f));
+                Assert.That(ops[4].Channel, Is.EqualTo(PresentationRequestChannel.SurfaceSource));
+                ref readonly SurfaceSourceChannelItem surfaceItem = ref requests.SurfaceSourceAt(ops[4].Slot);
+                Assert.That(surfaceItem.Owner, Is.EqualTo(surfaceOwner));
+                Assert.That(surfaceItem.Item.ScopeId, Is.EqualTo(19));
+                Assert.That(surfaceItem.Item.StableId, Is.EqualTo(105));
+                Assert.That(ops[5].Channel, Is.EqualTo(PresentationRequestChannel.Removal));
+                ref readonly PresentationRemovalRequest removal = ref requests.RemovalAt(ops[5].Slot);
+                Assert.That(removal.Owner, Is.EqualTo(removalOwner));
+                Assert.That(removal.StableId, Is.EqualTo(106));
+                Assert.That(ops[6].Channel, Is.EqualTo(PresentationRequestChannel.ClearTransient));
+                Assert.That(requests.ClearTransientAt(ops[6].Slot), Is.EqualTo(clearOwner));
             }
             finally
             {
@@ -189,7 +196,49 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void GetSpan_ReconstructsMixedKindsInEnqueueOrder()
+        [Category("benchmark")]
+        public void RealScaleConsumePath_Flushes130kRequests_WithoutSteadyStateAllocation()
+        {
+            const int visualCount = BlacksmithStaticPresenterPeak;
+            const int hudCount = BlacksmithHudPeak;
+            const int totalCount = visualCount + hudCount;
+            var capacities = new PresentationRequestChannelCapacities(
+                visualProxy: visualCount,
+                groundOverlay: 1,
+                worldHud: hudCount,
+                splineRibbon: 1,
+                surfaceSource: 1,
+                removal: 1,
+                clearTransient: 1,
+                totalOperationCapacity: totalCount);
+            var requests = new PresentationRequestBuffer(in capacities);
+
+            using var world = World.Create();
+            using var flush = CreateTrueScaleFlush(world, requests);
+
+            AddRealScaleFrame(requests, visualCount, hudCount);
+            flush.Update(0.016f);
+            AddRealScaleFrame(requests, visualCount, hudCount);
+            flush.Update(0.016f);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            AddRealScaleFrame(requests, visualCount, hudCount);
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            flush.Update(0.016f);
+            long consumePathAllocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+            TestContext.Out.WriteLine(
+                $"consumePathRequests={totalCount}; consumePathAllocatedBytes={consumePathAllocated}");
+
+            Assert.That(requests.Count, Is.Zero, "Flush must drain the typed lanes.");
+            Assert.That(consumePathAllocated, Is.EqualTo(0),
+                "Typed lane consume (Ops + *At) must be allocation-free at true scale.");
+        }
+
+        [Test]
+        public void TypedOps_PreserveMixedKindEnqueueOrder()
         {
             var requests = new PresentationRequestBuffer(8);
             requests.Add(PresentationRequest.RemoveGroundOverlay(Entity.Null, 7));
@@ -207,14 +256,17 @@ namespace Ludots.Tests.Presentation
                 }));
 
             Assert.That(requests.Count, Is.EqualTo(3));
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.RemoveGroundOverlay));
-            Assert.That(span[0].StableId, Is.EqualTo(7));
-            Assert.That(span[1].Kind, Is.EqualTo(PresentationRequestKind.GroundOverlay));
-            Assert.That(span[1].GroundOverlay.Radius, Is.EqualTo(1.5f).Within(0.001f));
-            Assert.That(span[2].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(span[2].VisualProxy.MeshAssetId, Is.EqualTo(11));
-            Assert.That(requests.Get(2).VisualProxy.StableId, Is.EqualTo(90));
+            ReadOnlySpan<PresentationRequestOp> ops = requests.Ops;
+            Assert.That(ops[0].Channel, Is.EqualTo(PresentationRequestChannel.Removal));
+            ref readonly PresentationRemovalRequest removal = ref requests.RemovalAt(ops[0].Slot);
+            Assert.That(removal.Kind, Is.EqualTo(PresentationRequestKind.RemoveGroundOverlay));
+            Assert.That(removal.StableId, Is.EqualTo(7));
+            Assert.That(ops[1].Channel, Is.EqualTo(PresentationRequestChannel.GroundOverlay));
+            Assert.That(requests.GroundOverlayAt(ops[1].Slot).Item.Radius, Is.EqualTo(1.5f).Within(0.001f));
+            Assert.That(ops[2].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            ref readonly VisualProxyChannelItem visual = ref requests.VisualProxyAt(ops[2].Slot);
+            Assert.That(visual.VisualProxy.MeshAssetId, Is.EqualTo(11));
+            Assert.That(visual.VisualProxy.StableId, Is.EqualTo(90));
         }
 
         [Test]
@@ -244,7 +296,8 @@ namespace Ludots.Tests.Presentation
                 new GroundOverlayItem { StableId = 8 },
                 LODLevel.High));
             Assert.That(requests.Count, Is.EqualTo(2));
-            Assert.That(requests.GetSpan()[1].Kind, Is.EqualTo(PresentationRequestKind.GroundOverlay));
+            Assert.That(requests.Ops[1].Channel, Is.EqualTo(PresentationRequestChannel.GroundOverlay));
+            Assert.That(requests.GroundOverlayAt(0).Item.StableId, Is.EqualTo(8));
         }
 
         [Test]
@@ -389,6 +442,24 @@ namespace Ludots.Tests.Presentation
                 new SplineRibbonBuffer(8),
                 new PrimitiveDrawBuffer(),
                 new PresentationVisualProxyBuffer(8),
+                new SkinnedVisualBatchBuffer(8));
+        }
+
+        private static PresentationRequestFlushSystem CreateTrueScaleFlush(
+            World world,
+            PresentationRequestBuffer requests)
+        {
+            return new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new MeshAssetRegistry(),
+                new StableDrawCache(40_000),
+                new PrimitiveDrawBuffer(40_000),
+                new GroundOverlayBuffer(8),
+                new WorldHudBatchBuffer(110_000),
+                new SplineRibbonBuffer(8),
+                new PrimitiveDrawBuffer(40_000),
+                new PresentationVisualProxyBuffer(40_000),
                 new SkinnedVisualBatchBuffer(8));
         }
 

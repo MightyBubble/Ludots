@@ -261,20 +261,24 @@ namespace Ludots.Tests.Presentation
                 PresenterState state = World.Get<PresenterState>(presenter);
                 int slotStableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
                     state.StableId, 0, AssetKind.Mesh, state.DefId);
-                ReadOnlySpan<PresentationRequest> span = Requests.GetSpan();
+                ReadOnlySpan<PresentationRequestOp> ops = Requests.Ops;
                 int count = 0;
-                for (int i = _seenRequestCount; i < span.Length; i++)
+                for (int i = _seenRequestCount; i < ops.Length; i++)
                 {
-                    ref readonly PresentationRequest request = ref span[i];
-                    if (request.Kind == PresentationRequestKind.VisualProxy &&
-                        request.VisualProxy.StableId == slotStableId &&
-                        request.VisualProxy.Visibility == VisualVisibility.Visible)
+                    if (ops[i].Channel != PresentationRequestChannel.VisualProxy)
+                    {
+                        continue;
+                    }
+
+                    ref readonly VisualProxyChannelItem item = ref Requests.VisualProxyAt(ops[i].Slot);
+                    if (item.VisualProxy.StableId == slotStableId &&
+                        item.VisualProxy.Visibility == VisualVisibility.Visible)
                     {
                         count++;
                     }
                 }
 
-                _seenRequestCount = span.Length;
+                _seenRequestCount = ops.Length;
                 return count;
             }
 

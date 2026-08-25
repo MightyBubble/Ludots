@@ -17,7 +17,6 @@ namespace Ludots.Core.Presentation.Requests
         private readonly PresentationRemovalRequest[] _removals;
         private readonly Entity[] _clearTransients;
         private readonly PresentationRequestOp[] _ops;
-        private PresentationRequest[]? _spanScratch;
         private int _visualProxyCount;
         private int _groundOverlayCount;
         private int _worldHudCount;
@@ -292,36 +291,6 @@ namespace Ludots.Core.Presentation.Requests
             }
         }
 
-        public ReadOnlySpan<PresentationRequest> GetSpan()
-        {
-            if (_opCount == 0)
-            {
-                return ReadOnlySpan<PresentationRequest>.Empty;
-            }
-
-            if (_spanScratch == null || _spanScratch.Length < _opCount)
-            {
-                _spanScratch = new PresentationRequest[_opCount];
-            }
-
-            for (int i = 0; i < _opCount; i++)
-            {
-                _spanScratch[i] = Reconstruct(i);
-            }
-
-            return _spanScratch.AsSpan(0, _opCount);
-        }
-
-        public PresentationRequest Get(int index)
-        {
-            if ((uint)index >= (uint)_opCount)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
-
-            return Reconstruct(index);
-        }
-
         public void Clear()
         {
             _visualProxyCount = 0;
@@ -392,86 +361,6 @@ namespace Ludots.Core.Presentation.Requests
             }
         }
 
-        private PresentationRequest Reconstruct(int opIndex)
-        {
-            PresentationRequestOp op = _ops[opIndex];
-            switch (op.Channel)
-            {
-                case PresentationRequestChannel.VisualProxy:
-                {
-                    ref readonly VisualProxyChannelItem item = ref _visualProxies[op.Slot];
-                    return new PresentationRequest
-                    {
-                        Kind = PresentationRequestKind.VisualProxy,
-                        Owner = item.Owner,
-                        LOD = item.VisualProxy.LOD,
-                        VisualProxy = item.VisualProxy,
-                    };
-                }
-                case PresentationRequestChannel.GroundOverlay:
-                {
-                    ref readonly GroundOverlayChannelItem item = ref _groundOverlays[op.Slot];
-                    return new PresentationRequest
-                    {
-                        Kind = PresentationRequestKind.GroundOverlay,
-                        Owner = item.Owner,
-                        LOD = item.LOD,
-                        GroundOverlay = item.Item,
-                    };
-                }
-                case PresentationRequestChannel.WorldHud:
-                {
-                    ref readonly WorldHudChannelItem item = ref _worldHud[op.Slot];
-                    return new PresentationRequest
-                    {
-                        Kind = PresentationRequestKind.WorldHud,
-                        Owner = item.Owner,
-                        LOD = item.LOD,
-                        WorldHud = item.Item,
-                    };
-                }
-                case PresentationRequestChannel.SplineRibbon:
-                {
-                    ref readonly SplineRibbonChannelItem item = ref _splineRibbons[op.Slot];
-                    return new PresentationRequest
-                    {
-                        Kind = PresentationRequestKind.SplineRibbon,
-                        Owner = item.Owner,
-                        LOD = item.LOD,
-                        SplineRibbon = item.Item,
-                    };
-                }
-                case PresentationRequestChannel.SurfaceSource:
-                {
-                    ref readonly SurfaceSourceChannelItem item = ref _surfaceSources[op.Slot];
-                    return new PresentationRequest
-                    {
-                        Kind = PresentationRequestKind.SurfaceSource,
-                        Owner = item.Owner,
-                        LOD = item.LOD,
-                        StableId = item.Item.StableId,
-                        SurfaceSource = item.Item,
-                    };
-                }
-                case PresentationRequestChannel.Removal:
-                {
-                    ref readonly PresentationRemovalRequest item = ref _removals[op.Slot];
-                    return new PresentationRequest
-                    {
-                        Kind = item.Kind,
-                        Owner = item.Owner,
-                        StableId = item.StableId,
-                    };
-                }
-                case PresentationRequestChannel.ClearTransient:
-                    return new PresentationRequest
-                    {
-                        Kind = PresentationRequestKind.ClearTransientVisualProjection,
-                        Owner = _clearTransients[op.Slot],
-                    };
-                default:
-                    throw new InvalidOperationException($"Unknown PresentationRequestChannel '{op.Channel}'.");
-            }
-        }
+        internal ref readonly Entity ClearTransientAt(int slot) => ref _clearTransients[slot];
     }
 }
