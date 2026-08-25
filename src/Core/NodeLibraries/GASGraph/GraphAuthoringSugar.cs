@@ -16,6 +16,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string While = "While";
         public const string Until = "Until";
         public const string Break = "Break";
+        public const string BtSequence = "BtSequence";
+        public const string BtSelector = "BtSelector";
+        public const string BtDecorator = "BtDecorator";
 
         public static bool IsScriptOnlySugar(string? opName)
         {
@@ -32,7 +35,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                    string.Equals(opName, Break, StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// Behavior-tree composition sugar. Strictly Script-kind: the whole tree compiles into one
+        /// Script program (Call/Return + CompareEqInt + JumpIfFalse; status channel 0/1/2 in an int
+        /// register) driven by GraphBehaviorTreeHost. Never becomes a GraphNodeOp value.
+        /// </summary>
+        public static bool IsBtSugar(string? opName)
+        {
+            if (string.IsNullOrWhiteSpace(opName))
+            {
+                return false;
+            }
+
+            return string.Equals(opName, BtSequence, StringComparison.Ordinal) ||
+                   string.Equals(opName, BtSelector, StringComparison.Ordinal) ||
+                   string.Equals(opName, BtDecorator, StringComparison.Ordinal);
+        }
+
         public static string DescribeScriptOnlySugar()
             => $"{BranchBool}, {SwitchInt}, {Wait}, {While}, {Until}, {Break}";
+
+        public static string DescribeBtSugar()
+            => $"{BtSequence}, {BtSelector}, {BtDecorator}";
     }
 }

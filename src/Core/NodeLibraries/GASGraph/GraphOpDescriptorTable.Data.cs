@@ -17,6 +17,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         // TriggerGraph mirrors the Script authorable set, including Yield (host resumption is the host's contract).
         private const GraphKindMask ScriptAndTriggerGraph = GraphKindMask.Script | GraphKindMask.TriggerGraph;
+        private const GraphKindMask TriggerGraphOnly = GraphKindMask.TriggerGraph;
         private const GraphKindMask ScriptTriggerQuery = ScriptAndTriggerGraph | GraphKindMask.Query;
 
         private const GraphKindMask LinearAndQuery = LinearAll | GraphKindMask.Query;
@@ -201,6 +202,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadViewer, LinearAll, GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadEventPayloadInt, LinearAll, GraphValueType.Int, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.LoadEventPayloadFloat, LinearAll, GraphValueType.Float, imm: GraphOperandRole.Immediate);
+            Add(rows, GraphNodeOp.LoadEntryPayloadEntity, TriggerGraphOnly, GraphValueType.Entity, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.LoadEntryPayloadInt, TriggerGraphOnly, GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.LoadEntryPayloadFloat, TriggerGraphOnly, GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.LoadPlacedEntity, TriggerGraphOnly, GraphValueType.Entity, imm: GraphOperandRole.SymbolImm);
+            // InvokeGraph Imm is a compile-time graph id literal (not a symbol); Flags bit 0 marks
+            // an authored entry label whose symbol index is packed as B | (C << 8).
+            Add(rows, GraphNodeOp.InvokeGraph, TriggerGraphOnly, GraphValueType.Int, scriptPorts: noPorts, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.StoreArgInt, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.StoreArgFloat, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.StoreArgEntity, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm);
+            // DispatchMapEvent payload ports are dynamic (one per non-String schema parameter,
+            // named after the parameter); the static table intentionally declares none.
+            Add(rows, GraphNodeOp.DispatchMapEvent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ControlDomainResolve, LinearAll, GraphValueType.Entity, portSource);
             Add(rows, GraphNodeOp.ControlDomainControls, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.KnowledgeHasProjection, LinearAll, GraphValueType.Bool, portAB);

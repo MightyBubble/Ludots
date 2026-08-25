@@ -49,6 +49,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Entity Viewer;
         /// <summary>Event payload slots read by LoadEventPayloadInt/Float ops.</summary>
         public GraphEventPayload EventPayload;
+        /// <summary>Named payload values captured at TriggerGraph entry start; read by LoadEntryPayload* ops.</summary>
+        public GraphEntryPayloadTable? EntryPayload;
+        /// <summary>
+        /// Per-run StoreArg* staging written ahead of InvokeGraph/DispatchMapEvent and consumed
+        /// (cleared) by them. InvokeGraph passes this table to the child frame as its
+        /// EntryPayload so subgraphs read arguments with the existing LoadEntryPayload* ops.
+        /// </summary>
+        public GraphEntryPayloadTable? InvokeArgs;
         /// <summary>Target position in world centimeters.</summary>
         public IntVector2 TargetPosCm;
         public uint RandomSeed;

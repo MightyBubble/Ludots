@@ -21,8 +21,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly GasGraphOpRegistry? _opRegistry;
         private readonly BuiltinHandlerRegistry? _builtinHandlers;
+        private readonly Ludots.Core.Scripting.EventSchemaRegistry? _eventSchemas;
         private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, GraphInstructionSourceMap> _pendingSourceMaps = new(StringComparer.OrdinalIgnoreCase);
+        // #1124 hook weaving source: the authored documents in compile order, consumed by
+        // the weave pass after registration (WeaveHooks) and cleared afterwards.
+        private readonly List<KeyValuePair<string, GraphControlFlowDocument>> _pendingDocuments = new();
 
         public GraphProgramConfigLoader(
             ConfigPipeline pipeline,
@@ -32,7 +36,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             StringIntRegistry? outputValueKeys = null,
             EntityCollectionStore? entityCollections = null,
             GasGraphOpRegistry? opRegistry = null,
-            BuiltinHandlerRegistry? builtinHandlers = null)
+            BuiltinHandlerRegistry? builtinHandlers = null,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -42,6 +47,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _entityCollections = entityCollections;
             _opRegistry = opRegistry;
             _builtinHandlers = builtinHandlers;
+            _eventSchemas = eventSchemas;
         }
 
         public List<GraphProgramPackage> LoadIdsAndCompile(
@@ -53,6 +59,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ModRegistryAmbient.Current.RequireGraphIdsEmptyAndUnfrozen();
             _pendingOutputSchemas.Clear();
             _pendingSourceMaps.Clear();
+            _pendingDocuments.Clear();
             _outputSchemas?.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
@@ -74,7 +81,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 {
                     GraphIdRegistry.Register(id);
                     GraphControlFlowCompileResult compiled =
-                        GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options);
+                        GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options, _eventSchemas);
                     GraphProgramPackage? pkg = compiled.Package;
                     GraphOutputSchema outputSchema = compiled.OutputSchema;
                     List<GraphDiagnostic> diags = compiled.Diagnostics;
@@ -90,6 +97,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         packages.Add(pkg.Value);
                         _pendingOutputSchemas[id] = outputSchema;
                         _pendingSourceMaps[id] = compiled.SourceMap;
+                        _pendingDocuments.Add(new KeyValuePair<string, GraphControlFlowDocument>(id, compiled.Document));
                     }
                 }
                 catch (Exception ex)
@@ -143,6 +151,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             GraphIdRegistry.Freeze();
+            WeaveHooks();
+        }
+
+        /// <summary>
+        /// #1124 Route A weave pass: runs once every graph is registered (and ids are
+        /// frozen), before any map mounts. Hook-bearing TriggerGraph entries are spliced
+        /// into their targets and the merged programs land via ReplaceProgram, which
+        /// re-validates op policy, invoke targets, and cycles with rollback on failure.
+        /// </summary>
+        private void WeaveHooks()
+        {
+            TriggerGraphHookWeaver.Weave(
+                _registry,
+                _pendingDocuments,
+                _symbolResolver,
+                _eventSchemas,
+                _entityCollections,
+                _builtinHandlers);
+            _pendingDocuments.Clear();
         }
 
         /// <summary>

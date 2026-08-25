@@ -70,6 +70,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Entity _scope;
         private readonly TriggerGraphMountDomain _domain;
         private readonly TriggerGraphRefirePolicy _refirePolicy;
+        private readonly EventScope _subscriptionScope;
         private readonly bool _entryIsResumeEvent;
         private readonly int[] _vmIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
         private readonly int[] _previousIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
@@ -86,6 +87,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private Entity _runCaster;
         private MapId? _mapScope;
         private bool _mapScopeResolved;
+        private readonly GraphEntryPayloadTable _entryPayload = new();
+        private readonly GraphEntryPayloadTable _invokeArgs = new();
         private bool _runActive;
         private bool _ranToHaltOnce;
         private bool _lifecycleDispatch;
@@ -96,7 +99,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             TriggerGraphEntry entry,
             Entity scope,
             TriggerGraphRefirePolicy refirePolicy = TriggerGraphRefirePolicy.Ignore,
-            TriggerGraphMountDomain domain = TriggerGraphMountDomain.Map)
+            TriggerGraphMountDomain domain = TriggerGraphMountDomain.Map,
+            EventScope subscriptionScope = EventScope.Map)
         {
             if (graphId <= 0)
             {
@@ -125,21 +129,34 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 throw new ArgumentOutOfRangeException(nameof(domain));
             }
 
+            if (!Enum.IsDefined(typeof(EventScope), subscriptionScope))
+            {
+                throw new ArgumentOutOfRangeException(nameof(subscriptionScope));
+            }
+
             _graphId = graphId;
             _graphName = graphName;
             _entry = entry;
             _scope = scope;
             _domain = domain;
             _refirePolicy = refirePolicy;
+            _subscriptionScope = subscriptionScope;
             _entryIsResumeEvent = new EventKey(entry.EventName) == GameEvents.MapHeartbeat;
             _runCaster = scope;
             EventKey = new EventKey(entry.EventName);
-            Priority = 0;
+            Priority = entry.Priority;
         }
 
         public override string Name => $"TriggerGraph:{_graphName}:{_entry.Label}";
 
         public TriggerGraphMountDomain Domain => _domain;
+
+        /// <summary>
+        /// Which dispatch table this entry's subscription routes to (#1123): derived from
+        /// the event schema scope at mount time — Global goes to the TriggerManager global
+        /// table, everything else stays map-scoped.
+        /// </summary>
+        public EventScope SubscriptionScope => _subscriptionScope;
 
         public int GraphId => _graphId;
 
@@ -272,6 +289,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _cursor = new GraphExecutionCursor(_entry.StartPc);
             _runCaster = ResolveRunCaster(context);
             SeedEntryRegisters(context);
+            CaptureEntryPayload(context, ResolveDependencies(context).EventSchemas);
+            _invokeArgs.Clear();
             RunSlice(context);
         }
 
@@ -303,7 +322,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 GraphKind.Script,
                 _debugTrace,
                 _graphId,
-                mapScope);
+                mapScope,
+                _entryPayload,
+                _invokeArgs);
             LastSliceResult = result;
 
             RecordDebugTrace(result);
@@ -399,13 +420,60 @@ namespace Ludots.Core.Gameplay.MapTriggers
         {
             if (!_mapScopeResolved)
             {
-                _mapScope = dependencies.Engine.World.TryGet<MapEntity>(_scope, out MapEntity anchor)
+                // Entity.Null scopes (unit-test mounts, map-domain mounts) must never
+                // reach the world lookup: Arch's slot access faults on the null target.
+                _mapScope = _scope != Entity.Null &&
+                    dependencies.Engine.World.TryGet<MapEntity>(_scope, out MapEntity anchor)
                     ? anchor.MapId
                     : null;
                 _mapScopeResolved = true;
             }
 
             return _mapScope;
+        }
+
+        /// <summary>
+        /// Captures the named payload values this entry's event schema declares, keyed by
+        /// payload key string, so LoadEntryPayload* ops read stable values even though
+        /// slices may run ticks after the firing context is gone. Events without a schema
+        /// capture nothing and named reads from them fail closed at first use.
+        /// </summary>
+        private void CaptureEntryPayload(ScriptContext context, EventSchemaRegistry? schemas)
+        {
+            _entryPayload.Clear();
+            if (schemas == null || !schemas.TryGet(_entry.EventName, out EventSchema schema))
+            {
+                return;
+            }
+
+            for (int i = 0; i < schema.Params.Count; i++)
+            {
+                EventParamSchema param = schema.Params[i];
+                if (!context.Contains(param.PayloadKey))
+                {
+                    continue;
+                }
+
+                object raw = context.Get<object>(param.PayloadKey);
+                switch (param.Type)
+                {
+                    case EventParamType.Entity:
+                        _entryPayload.SetEntity(param.PayloadKey, (Entity)raw);
+                        break;
+                    case EventParamType.Int:
+                        _entryPayload.SetInt(param.PayloadKey, (int)raw);
+                        break;
+                    case EventParamType.Float:
+                        _entryPayload.SetFloat(param.PayloadKey, (float)raw);
+                        break;
+                    case EventParamType.String:
+                        // No string register contract yet; string params stay un-captured.
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"TriggerGraph '{_graphName}' entry '{_entry.Label}' payload key '{param.PayloadKey}' has unsupported type {param.Type}.");
+                }
+            }
         }
 
         private static TriggerGraphTriggerDependencies ResolveDependencies(ScriptContext context)
@@ -416,8 +484,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GraphProgramRegistry.");
             GasGraphRuntimeApi graphApi = engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
                 ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GasGraphRuntimeApi.");
+            engine.TryGetService(CoreServiceKeys.EventSchemaRegistry, out EventSchemaRegistry? eventSchemas);
 
-            return new TriggerGraphTriggerDependencies(engine, programs, graphApi);
+            return new TriggerGraphTriggerDependencies(engine, programs, graphApi, eventSchemas);
         }
 
         private static Ludots.Platform.Abstractions.IntVector2 ResolveTargetPosCm(ScriptContext context)
@@ -481,7 +550,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly record struct TriggerGraphTriggerDependencies(
             GameEngine Engine,
             GraphProgramRegistry Programs,
-            GasGraphRuntimeApi GraphApi);
+            GasGraphRuntimeApi GraphApi,
+            EventSchemaRegistry? EventSchemas);
     }
 
     /// <summary>
@@ -500,7 +570,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
             EventKey = GameEvents.MapHeartbeat;
-            Priority = 0;
+            Priority = owner.Priority;
         }
 
         public override string Name => $"{_owner.Name}:Resume";

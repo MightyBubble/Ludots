@@ -180,7 +180,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"{ownerLabel} cannot mount TriggerGraph '{graph}' on a dead scope entity.");
             }
 
-            List<Trigger> triggers = TriggerGraphMounting.BuildEntityMountTriggers(programs, scope, graph, ownerLabel);
+            List<Trigger> triggers = TriggerGraphMounting.BuildEntityMountTriggers(
+                programs, scope, graph, ownerLabel, session.EntityIndex, _triggerManager.EventSchemas);
             Track(session.MapId, scope, triggers);
 
             TriggerDecoratorRegistry? decorators = _decorators();
@@ -296,6 +297,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 context.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? new List<string>());
                 context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
                 context.Set(MapTriggerEventPayloadKeys.SourceTeamId, ResolveTeamId(scope));
+                _triggerManager.EventSchemas?.ValidateFirePayload(eventKey, context);
                 _ = mount.ExecuteLifecycleDispatch(context);
             }
         }

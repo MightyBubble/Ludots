@@ -58,8 +58,9 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(mount.LastSliceResult.BudgetSuspended, Is.True);
             Assert.That(mount.DroppedCount, Is.EqualTo(0));
 
-            engine.TriggerManager.FireMapEvent(
-                new MapId(MapId), GameEvents.MapHeartbeat, engine.CreateContext());
+            var heartbeatContext = engine.CreateContext();
+            heartbeatContext.Set(MapTriggerEventPayloadKeys.HeartbeatIndex, 1);
+            engine.TriggerManager.FireMapEvent(new MapId(MapId), GameEvents.MapHeartbeat, heartbeatContext);
 
             Assert.That(mount.IsSuspended, Is.False, "The think wave must resume the suspended run.");
             Assert.That(mount.LastSliceResult.Halted, Is.True);
@@ -229,7 +230,9 @@ namespace Ludots.Tests.Gas.Graph
             var waveKey = GameEvents.MapHeartbeat;
             for (int wave = 0; wave < 200 && engine.TriggerManager.Errors.Count == 0; wave++)
             {
-                engine.TriggerManager.FireMapEvent(new MapId(MapId), waveKey, engine.CreateContext());
+                var waveContext = engine.CreateContext();
+                waveContext.Set(MapTriggerEventPayloadKeys.HeartbeatIndex, wave + 1);
+                engine.TriggerManager.FireMapEvent(new MapId(MapId), waveKey, waveContext);
             }
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.GreaterThan(0),
