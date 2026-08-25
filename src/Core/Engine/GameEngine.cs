@@ -539,7 +539,8 @@ namespace Ludots.Core.Engine
                     TriggerManager,
                     CreateContext,
                     () => TriggerDecoratorRegistry,
-                    () => GetService(CoreServiceKeys.GraphProgramRegistry));
+                    () => GetService(CoreServiceKeys.GraphProgramRegistry),
+                    () => GetService(CoreServiceKeys.CustomEventNameRegistry));
                 MapLoader.SetEntityTriggerGraphMounts(EntityTriggerGraphMounts);
                 MapLoader.LoadTemplates(ConfigCatalog, ConfigConflictReport);
                 SetService(CoreServiceKeys.EntityTemplateKeyRegistry, MapLoader.EntityTemplateKeys);
@@ -3317,7 +3318,11 @@ namespace Ludots.Core.Engine
             for (int i = 0; i < ModLoader.LoadedManifests.Count; i++)
             {
                 var manifest = ModLoader.LoadedManifests[i];
-                List<Trigger> triggers = TriggerGraphMounting.BuildModMountTriggers(programs, manifest);
+                List<Trigger> triggers = TriggerGraphMounting.BuildModMountTriggers(
+                    programs,
+                    manifest,
+                    GetService(CoreServiceKeys.CustomEventNameRegistry)
+                        ?? throw new InvalidOperationException("Mod TriggerGraph installation requires CustomEventNameRegistry."));
                 ApplyTriggerDecorators(triggers);
                 TriggerManager.RegisterModTriggers(manifest.Name, triggers);
 

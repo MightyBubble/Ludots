@@ -89,8 +89,9 @@ namespace Ludots.Tests.Gas.Graph
             engine.LoadMap(MapId);
 
             IReadOnlyList<Trigger> triggers = engine.CurrentMapSession?.Triggers ?? Array.Empty<Trigger>();
-            int probeIndex = FindTriggerIndex(triggers, ProbeGraphName, "on_spawn");
-            int watcherIndex = FindTriggerIndex(triggers, WatcherGraphName, "watcher_spawn");
+            Entity probe = RequireEntity(engine.World, "EntityDomainProbe");
+            int probeIndex = FindTriggerIndex(triggers, ProbeGraphName, "on_spawn", probe);
+            int watcherIndex = FindTriggerIndex(triggers, WatcherGraphName, "watcher_spawn", probe);
             Assert.Multiple(() =>
             {
                 Assert.That(probeIndex, Is.GreaterThanOrEqualTo(0));
@@ -290,12 +291,17 @@ namespace Ludots.Tests.Gas.Graph
             return null;
         }
 
-        private static int FindTriggerIndex(IReadOnlyList<Trigger> triggers, string graphName, string entryLabel)
+        private static int FindTriggerIndex(
+            IReadOnlyList<Trigger> triggers,
+            string graphName,
+            string entryLabel,
+            Entity? scope = null)
         {
             for (int i = 0; i < triggers.Count; i++)
             {
                 if (triggers[i] is TriggerGraphMountTrigger mount &&
-                    string.Equals(mount.Name, $"TriggerGraph:{graphName}:{entryLabel}", StringComparison.Ordinal))
+                    string.Equals(mount.Name, $"TriggerGraph:{graphName}:{entryLabel}", StringComparison.Ordinal) &&
+                    (!scope.HasValue || mount.Scope == scope.Value))
                 {
                     return i;
                 }
@@ -345,6 +351,7 @@ namespace Ludots.Tests.Gas.Graph
                 Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "Entities"));
                 Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "Maps"));
                 Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "Events"));
 
                 File.WriteAllText(
                     Path.Combine(root, ModId, "mod.json"),
@@ -559,6 +566,22 @@ namespace Ludots.Tests.Gas.Graph
                       }
                     ]
                     """);
+                File.WriteAllText(
+                    Path.Combine(root, ModId, "assets", "Events", "custom_events.json"),
+                    $$"""
+                    [
+                      { "id": "{{SettlementPulseEvent}}" }
+                    ]
+                    """
+                );
+                File.WriteAllText(
+                    Path.Combine(root, ModId, "assets", "config_catalog.json"),
+                    """
+                    [
+                      { "Path": "Events/custom_events.json", "Policy": "ArrayById", "IdField": "id" }
+                    ]
+                    """
+                );
                 File.WriteAllText(
                     Path.Combine(root, ModId, "assets", "Maps", $"{MapId}.json"),
                     $$"""

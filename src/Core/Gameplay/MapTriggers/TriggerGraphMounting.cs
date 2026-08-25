@@ -65,7 +65,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             if (abilityDefinitions != null && programs != null)
             {
-                triggers.AddRange(BuildAbilityMountTriggers(programs, abilityDefinitions, $"Map '{mapId}'"));
+                triggers.AddRange(BuildAbilityMountTriggers(
+                    programs,
+                    abilityDefinitions,
+                    customEvents ?? throw new InvalidOperationException(
+                        $"Map '{mapId}' requires CustomEventNameRegistry for ability TriggerGraph validation."),
+                    $"Map '{mapId}'"));
             }
 
             return triggers;
@@ -80,10 +85,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             GraphProgramRegistry programs,
             Entity scope,
             string graph,
-            string ownerLabel)
+            string ownerLabel,
+            CustomEventNameRegistry customEvents)
         {
+            if (customEvents == null) throw new ArgumentNullException(nameof(customEvents));
             var triggers = new List<Trigger>();
-            AppendEntityMountTriggers(triggers, programs, scope, graph, ownerLabel);
+            AppendEntityMountTriggers(triggers, programs, scope, graph, ownerLabel, customEvents);
             return triggers;
         }
 
@@ -125,7 +132,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             GraphProgramRegistry programs,
             Entity scope,
             string graph,
-            string ownerLabel)
+            string ownerLabel,
+            CustomEventNameRegistry customEvents)
         {
             GraphProgramRegistration registration = RequireGraphRegistration(
                 programs,
@@ -141,16 +149,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 TriggerGraphMountRoute.Local,
                 0,
                 TriggerGraphMount.FieldName,
-                ownerLabel);
+                ownerLabel,
+                customEvents);
         }
 
         public static List<Trigger> BuildAbilityMountTriggers(
             GraphProgramRegistry programs,
             AbilityDefinitionRegistry abilityDefinitions,
+            CustomEventNameRegistry customEvents,
             string ownerLabel)
         {
             if (programs == null) throw new ArgumentNullException(nameof(programs));
             if (abilityDefinitions == null) throw new ArgumentNullException(nameof(abilityDefinitions));
+            if (customEvents == null) throw new ArgumentNullException(nameof(customEvents));
 
             var triggers = new List<Trigger>();
             IReadOnlyList<int> abilityIds = abilityDefinitions.RegisteredAbilityIds;
@@ -175,7 +186,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         TriggerGraphMountRoute.Local,
                         abilityId,
                         TriggerGraphMount.FieldName,
-                        $"{ownerLabel} ability '{abilityId}'");
+                        $"{ownerLabel} ability '{abilityId}'",
+                        customEvents);
                 }
             }
 
@@ -184,10 +196,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public static List<Trigger> BuildModMountTriggers(
             GraphProgramRegistry programs,
-            ModManifest manifest)
+            ModManifest manifest,
+            CustomEventNameRegistry customEvents)
         {
             if (programs == null) throw new ArgumentNullException(nameof(programs));
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
+            if (customEvents == null) throw new ArgumentNullException(nameof(customEvents));
 
             var triggers = new List<Trigger>();
             if (manifest.TriggerGraphs == null || manifest.TriggerGraphs.Count == 0)
@@ -198,9 +212,26 @@ namespace Ludots.Core.Gameplay.MapTriggers
             for (int g = 0; g < manifest.TriggerGraphs.Count; g++)
             {
                 string graph = manifest.TriggerGraphs[g];
+                GraphProgramRegistration registration = RequireGraphRegistration(
+                    programs,
+                    graph,
+                    "triggerGraphs",
+                    $"Mod '{manifest.Name}'");
+                for (int e = 0; e < registration.TriggerGraphEntries.Count; e++)
+                {
+                    string eventName = registration.TriggerGraphEntries[e].EventName;
+                    if (GameEvents.IsMapScoped(eventName) ||
+                        eventName.StartsWith(CustomEventNameRegistry.GasEventPrefix, StringComparison.Ordinal) ||
+                        customEvents.IsDeclaredCustom(eventName))
+                    {
+                        throw new InvalidOperationException(
+                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{registration.TriggerGraphEntries[e].Label}' names map-scoped event '{eventName}'; Mod TriggerGraphs accept global events only.");
+                    }
+                }
+
                 AppendEntryTriggers(
                     triggers,
-                    RequireGraphRegistration(programs, graph, "triggerGraphs", $"Mod '{manifest.Name}'"),
+                    registration,
                     graph,
                     Entity.Null,
                     TriggerGraphMountDomain.Mod,
@@ -208,6 +239,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     0,
                     "triggerGraphs",
                     $"Mod '{manifest.Name}'",
+                    customEvents,
                     modIdFilter: manifest.Name);
             }
 

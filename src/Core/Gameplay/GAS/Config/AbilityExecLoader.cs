@@ -36,6 +36,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "input",
             "useRequirement",
             "showRequirement",
+            "triggerGraphs",
         };
 
         private static readonly string[] RemovedAimVisualFieldNames =

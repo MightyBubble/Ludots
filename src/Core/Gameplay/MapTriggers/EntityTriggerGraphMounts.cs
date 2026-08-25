@@ -47,6 +47,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<ScriptContext> _contextFactory;
         private readonly Func<TriggerDecoratorRegistry?> _decorators;
         private readonly Func<GraphProgramRegistry?> _programs;
+        private readonly Func<CustomEventNameRegistry?> _customEvents;
         private readonly Dictionary<MapId, List<EntityMountSet>> _mapMounts = new();
         private readonly List<MapLoadSpawn> _mapLoadBuffer = new();
         private readonly List<EntityMountSet> _sweepScratch = new();
@@ -57,7 +58,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             TriggerManager triggerManager,
             Func<ScriptContext> contextFactory,
             Func<TriggerDecoratorRegistry?> decorators,
-            Func<GraphProgramRegistry?> programs)
+            Func<GraphProgramRegistry?> programs,
+            Func<CustomEventNameRegistry?> customEvents)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
@@ -65,6 +67,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
             _decorators = decorators ?? throw new ArgumentNullException(nameof(decorators));
             _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+            _customEvents = customEvents ?? throw new ArgumentNullException(nameof(customEvents));
             _world.SubscribeEntityDestroyed(OnEntityDestroyed);
             _triggerManager.RegisterEventHandler(GameEvents.MapHeartbeat, OnMapHeartbeat);
         }
@@ -194,6 +197,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         {
             GraphProgramRegistry programs = _programs()
                 ?? throw new InvalidOperationException($"{ownerLabel} requires GraphProgramRegistry to mount TriggerGraphs.");
+            CustomEventNameRegistry customEvents = _customEvents()
+                ?? throw new InvalidOperationException($"{ownerLabel} requires CustomEventNameRegistry to validate TriggerGraphs.");
             var triggers = new List<Trigger>(graphNames.Count);
             for (int g = 0; g < graphNames.Count; g++)
             {
@@ -203,7 +208,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     programs,
                     scope,
                     graphNames[g],
-                    ownerLabel));
+                    ownerLabel,
+                    customEvents));
             }
 
             return triggers;

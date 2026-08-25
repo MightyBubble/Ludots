@@ -94,5 +94,20 @@ namespace Ludots.Core.Scripting
         /// Payload: SourceEntity, RegionId.
         /// </summary>
         public static readonly EventKey RegionExited = new EventKey("RegionExited");
+
+        public static bool IsMapScoped(string eventName)
+        {
+            return eventName == MapLoaded.Value ||
+                eventName == MapUnloaded.Value ||
+                eventName == MapSuspended.Value ||
+                eventName == MapResumed.Value ||
+                eventName == MapHeartbeat.Value ||
+                eventName == EntitySpawned.Value ||
+                eventName == EntityDied.Value ||
+                eventName == EntityAliveCountChanged.Value ||
+                eventName == InputActionFired.Value ||
+                eventName == RegionEntered.Value ||
+                eventName == RegionExited.Value;
+        }
     }
 }
