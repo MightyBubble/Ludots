@@ -10,322 +10,11 @@
   ],
   "bindings": [
     {
-      "name": "camera_acceptance",
+      "name": "agent_bridge",
       "target": {
         "type": "path",
-        "value": "mods/fixtures/camera/CameraAcceptanceMod",
-        "projectPath": "CameraAcceptanceMod.csproj"
-      }
-    },
-    {
-      "name": "camera_acceptance_hotpath",
-      "target": {
-        "type": "path",
-        "value": "mods/fixtures/camera/CameraAcceptanceHotpathEntryMod",
-        "projectPath": "CameraAcceptanceHotpathEntryMod.csproj"
-      }
-    },
-    {
-      "name": "clash_of_clones",
-      "target": {
-        "type": "path",
-        "value": "mods/games/coc/ClashOfClonesMod",
-        "projectPath": "ClashOfClonesMod.csproj"
-      }
-    },
-    {
-      "name": "champion_skill_stress",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/champion_skill_stress_entry/ChampionSkillStressEntryMod",
-        "projectPath": "ChampionSkillStressEntryMod.csproj"
-      }
-    },
-    {
-      "name": "progression_scope",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/progression_scope/ProgressionScopeShowcaseMod",
-        "projectPath": "ProgressionScopeShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "spatial_bounds_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/spatial_bounds/SpatialBoundsShowcaseMod",
-        "projectPath": "SpatialBoundsShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "road_network_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/road_network/RoadNetworkShowcaseMod",
-        "projectPath": "RoadNetworkShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "chunk_streaming_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod",
-        "projectPath": "ChunkStreamingShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "presenter_blacksmith_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod",
-        "projectPath": "PresenterBlacksmithShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "presenter_blacksmith_large_world",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/presenter_blacksmith_large_world_entry/PresenterBlacksmithLargeWorldEntryMod",
-        "projectPath": "PresenterBlacksmithLargeWorldEntryMod.csproj"
-      }
-    },
-    {
-      "name": "presenter_blacksmith_large_world_nohud",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/presenter_blacksmith_large_world_nohud_entry/PresenterBlacksmithLargeWorldNoHudEntryMod",
-        "projectPath": "PresenterBlacksmithLargeWorldNoHudEntryMod.csproj"
-      }
-    },
-    {
-      "name": "mass_navigation",
-      "target": {
-        "type": "path",
-        "value": "mods/capabilities/navigation/MassNavigationMod",
-        "projectPath": "MassNavigationMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_static_presenter_30k",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardStaticPresenter30kMod",
-        "projectPath": "CapabilityStandardStaticPresenter30kMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_mass_navigation_large_world_10k",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
-        "projectPath": "CapabilityStandardMassNavigationLargeWorld10kMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_crowd_physics_arena",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod",
-        "projectPath": "CapabilityStandardCrowdPhysicsArenaMod.csproj"
-      }
-    },
-    {
-      "name": "formation_capability_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/formation_capability/FormationCapabilityShowcaseMod",
-        "projectPath": "FormationCapabilityShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_participant_views",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod",
-        "projectPath": "CapabilityStandardParticipantViewsMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_physics2d",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DMod",
-        "projectPath": "CapabilityStandardPhysics2DMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_physics2d_stress",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DStressMod",
-        "projectPath": "CapabilityStandardPhysics2DStressMod.csproj"
-      }
-    },
-    {
-      "name": "entity_query_tactics",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/entity_query_tactics/EntityQueryTacticsShowcaseMod",
-        "projectPath": "EntityQueryTacticsShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "control_plane_projection_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod",
-        "projectPath": "ControlPlaneProjectionShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "entity_command_panel_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod",
-        "projectPath": "EntityCommandPanelShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "superweapon_context_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/superweapon_context/SuperweaponContextShowcaseMod",
-        "projectPath": "SuperweaponContextShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "interaction_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/interaction/InteractionShowcaseMod",
-        "projectPath": "InteractionShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "vfx_forge_raylib",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/vfx_forge_raylib/VfxForgeRaylibShowcaseMod"
-      }
-    },
-    {
-      "name": "browser_ui_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/browser_ui/BrowserUiShowcaseMod",
-        "projectPath": "BrowserUiShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "ui_nineslice_panel_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod",
-        "projectPath": "UiNineSlicePanelShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "browser_react_flow_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/browser_react_flow/BrowserReactFlowShowcaseMod",
-        "projectPath": "BrowserReactFlowShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "browser_minimap_composited_overlay_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/browser_minimap_composited_overlay/BrowserMinimapCompositedOverlayShowcaseMod",
-        "projectPath": "BrowserMinimapCompositedOverlayShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "ui_player_aggregate_graph_mvp",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/ui_player_aggregate_graph_mvp/UiPlayerAggregateGraphMvpShowcaseMod",
-        "projectPath": "UiPlayerAggregateGraphMvpShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "utility_autocast_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod",
-        "projectPath": "UtilityAutocastShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "combat_stance_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/combat_stance/CombatStanceShowcaseMod",
-        "projectPath": "CombatStanceShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_physics2d_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod",
-        "projectPath": "CapabilityStandardPhysics2DShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_time_flow_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod",
-        "projectPath": "CapabilityStandardTimeFlowShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_config_shards_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardConfigShardsShowcaseMod",
-        "projectPath": "CapabilityStandardConfigShardsShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_effect_preset_type_code_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardEffectPresetTypeCodeShowcaseMod",
-        "projectPath": "CapabilityStandardEffectPresetTypeCodeShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_performer_behavior_extension_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerBehaviorExtensionShowcaseMod",
-        "projectPath": "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_performer_command_extension_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod",
-        "projectPath": "CapabilityStandardPerformerCommandExtensionShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_transport_network",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
-        "projectPath": "CapabilityStandardTransportNetworkMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_virtual_camera_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardVirtualCameraShowcaseMod",
-        "projectPath": "CapabilityStandardVirtualCameraShowcaseMod.csproj"
+        "value": "mods/AgentBridgeMod",
+        "projectPath": "AgentBridgeMod.csproj"
       }
     },
     {
@@ -344,82 +33,43 @@
       }
     },
     {
-      "name": "fog_of_war",
+      "name": "browser_minimap_composited_overlay_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/fog_of_war/FogOfWarShowcaseMod",
-        "projectPath": "FogOfWarShowcaseMod.csproj"
+        "value": "mods/showcases/browser_minimap_composited_overlay/BrowserMinimapCompositedOverlayShowcaseMod",
+        "projectPath": "BrowserMinimapCompositedOverlayShowcaseMod.csproj"
       }
     },
     {
-      "name": "fog_vision_decay",
+      "name": "browser_react_flow_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/fog_vision_decay/FogVisionDecayShowcaseMod",
-        "projectPath": "FogVisionDecayShowcaseMod.csproj"
+        "value": "mods/showcases/browser_react_flow/BrowserReactFlowShowcaseMod",
+        "projectPath": "BrowserReactFlowShowcaseMod.csproj"
       }
     },
     {
-      "name": "item_system",
+      "name": "browser_ui_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/item_system/ItemSystemShowcaseMod",
-        "projectPath": "ItemSystemShowcaseMod.csproj"
+        "value": "mods/showcases/browser_ui/BrowserUiShowcaseMod",
+        "projectPath": "BrowserUiShowcaseMod.csproj"
       }
     },
     {
-      "name": "forge_socket",
+      "name": "camera_acceptance",
       "target": {
         "type": "path",
-        "value": "mods/showcases/item_system/ForgeSocketShowcaseMod",
-        "projectPath": "ForgeSocketShowcaseMod.csproj"
+        "value": "mods/fixtures/camera/CameraAcceptanceMod",
+        "projectPath": "CameraAcceptanceMod.csproj"
       }
     },
     {
-      "name": "item_loadout",
+      "name": "camera_acceptance_hotpath",
       "target": {
         "type": "path",
-        "value": "mods/showcases/item_system/ItemLoadoutShowcaseMod",
-        "projectPath": "ItemLoadoutShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "raid_loop",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/item_system/RaidLoopShowcaseMod",
-        "projectPath": "RaidLoopShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "weapon_bench",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
-        "projectPath": "WeaponBenchShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_behavior_tree_arena",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
-        "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_hfsm_sentry_arena",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
-        "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj"
-      }
-    },
-    {
-      "name": "map_trigger_night_raid",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod"
+        "value": "mods/fixtures/camera/CameraAcceptanceHotpathEntryMod",
+        "projectPath": "CameraAcceptanceHotpathEntryMod.csproj"
       }
     },
     {
@@ -431,19 +81,35 @@
       }
     },
     {
-      "name": "capability_standard_script_flow_sandbox",
+      "name": "capability_standard_behavior_tree_arena",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod",
-        "projectPath": "CapabilityStandardScriptFlowSandboxMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
+        "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj"
       }
     },
     {
-      "name": "capability_standard_live_skill_workbench",
+      "name": "capability_standard_config_shards_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardLiveSkillWorkbenchShowcaseMod",
-        "projectPath": "CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardConfigShardsShowcaseMod",
+        "projectPath": "CapabilityStandardConfigShardsShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_crowd_physics_arena",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod",
+        "projectPath": "CapabilityStandardCrowdPhysicsArenaMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_effect_preset_type_code_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardEffectPresetTypeCodeShowcaseMod",
+        "projectPath": "CapabilityStandardEffectPresetTypeCodeShowcaseMod.csproj"
       }
     },
     {
@@ -452,30 +118,6 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
         "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_score",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod",
-        "projectPath": "CapabilityStandardGraphScoreShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "raylib_client_parity",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/raylib_client_parity/RaylibClientParityShowcaseMod",
-        "projectPath": "RaylibClientParityShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "raylib_visual_atmosphere",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/raylib_visual_atmosphere/RaylibVisualAtmosphereShowcaseMod",
-        "projectPath": "RaylibVisualAtmosphereShowcaseMod.csproj"
       }
     },
     {
@@ -687,6 +329,22 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_CreatePanel",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCreatePanelEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCreatePanelEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DestroyPanel",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDestroyPanelEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDestroyPanelEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_DivFloat",
       "target": {
         "type": "path",
@@ -740,6 +398,14 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHasTagEntryMod",
         "projectPath": "CapabilityStandardGraphOpHasTagEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_HidePanel",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHidePanelEntryMod",
+        "projectPath": "CapabilityStandardGraphOpHidePanelEntryMod.csproj"
       }
     },
     {
@@ -1151,6 +817,22 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_ReadMapVarFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadMapVarFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadMapVarInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadMapVarIntEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_RelationshipAddMetric",
       "target": {
         "type": "path",
@@ -1327,6 +1009,14 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_ResolveTableRow",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpResolveTableRowEntryMod",
+        "projectPath": "CapabilityStandardGraphOpResolveTableRowEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_Return",
       "target": {
         "type": "path",
@@ -1351,6 +1041,22 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_SetWorldPosition",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetWorldPositionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetWorldPositionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ShowPanel",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpShowPanelEntryMod",
+        "projectPath": "CapabilityStandardGraphOpShowPanelEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_SnapToNearestGraphEdge",
       "target": {
         "type": "path",
@@ -1367,6 +1073,14 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_SpawnTemplate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_SubFloat",
       "target": {
         "type": "path",
@@ -1375,11 +1089,35 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_TableReadFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTableReadFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpTableReadFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_TableReadInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTableReadIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpTableReadIntEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_TargetListGet",
       "target": {
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTargetListGetEntryMod",
         "projectPath": "CapabilityStandardGraphOpTargetListGetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WeightedPick",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj"
       }
     },
     {
@@ -1407,6 +1145,22 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_WriteMapVarFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteMapVarFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteMapVarInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteMapVarIntEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_WriteSelfAttribute",
       "target": {
         "type": "path",
@@ -1423,27 +1177,163 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_ResolveTableRow",
+      "name": "capability_standard_graph_score",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpResolveTableRowEntryMod",
-        "projectPath": "CapabilityStandardGraphOpResolveTableRowEntryMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod",
+        "projectPath": "CapabilityStandardGraphScoreShowcaseMod.csproj"
       }
     },
     {
-      "name": "capability_standard_graph_op_TableReadFloat",
+      "name": "capability_standard_hfsm_sentry_arena",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTableReadFloatEntryMod",
-        "projectPath": "CapabilityStandardGraphOpTableReadFloatEntryMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
+        "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj"
       }
     },
     {
-      "name": "capability_standard_graph_op_TableReadInt",
+      "name": "capability_standard_live_skill_workbench",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTableReadIntEntryMod",
-        "projectPath": "CapabilityStandardGraphOpTableReadIntEntryMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardLiveSkillWorkbenchShowcaseMod",
+        "projectPath": "CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_mass_navigation_large_world_10k",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
+        "projectPath": "CapabilityStandardMassNavigationLargeWorld10kMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_participant_views",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod",
+        "projectPath": "CapabilityStandardParticipantViewsMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_performer_behavior_extension_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerBehaviorExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_performer_command_extension_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardPerformerCommandExtensionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_physics2d",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DMod",
+        "projectPath": "CapabilityStandardPhysics2DMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_physics2d_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod",
+        "projectPath": "CapabilityStandardPhysics2DShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_physics2d_stress",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DStressMod",
+        "projectPath": "CapabilityStandardPhysics2DStressMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_script_flow_sandbox",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod",
+        "projectPath": "CapabilityStandardScriptFlowSandboxMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_static_presenter_30k",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardStaticPresenter30kMod",
+        "projectPath": "CapabilityStandardStaticPresenter30kMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_time_flow_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod",
+        "projectPath": "CapabilityStandardTimeFlowShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_transport_network",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
+        "projectPath": "CapabilityStandardTransportNetworkMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_virtual_camera_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardVirtualCameraShowcaseMod",
+        "projectPath": "CapabilityStandardVirtualCameraShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "champion_skill_stress",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/champion_skill_stress_entry/ChampionSkillStressEntryMod",
+        "projectPath": "ChampionSkillStressEntryMod.csproj"
+      }
+    },
+    {
+      "name": "chunk_streaming_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod",
+        "projectPath": "ChunkStreamingShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "clash_of_clones",
+      "target": {
+        "type": "path",
+        "value": "mods/games/coc/ClashOfClonesMod",
+        "projectPath": "ClashOfClonesMod.csproj"
+      }
+    },
+    {
+      "name": "combat_stance_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/combat_stance/CombatStanceShowcaseMod",
+        "projectPath": "CombatStanceShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "control_plane_projection_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod",
+        "projectPath": "ControlPlaneProjectionShowcaseMod.csproj"
       }
     },
     {
@@ -1454,42 +1344,113 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_HidePanel",
+      "name": "entity_command_panel_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHidePanelEntryMod",
-        "projectPath": "CapabilityStandardGraphOpHidePanelEntryMod.csproj"
+        "value": "mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod",
+        "projectPath": "EntityCommandPanelShowcaseMod.csproj"
       }
     },
     {
-      "name": "capability_standard_graph_op_ShowPanel",
+      "name": "entity_query_tactics",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpShowPanelEntryMod",
-        "projectPath": "CapabilityStandardGraphOpShowPanelEntryMod.csproj"
+        "value": "mods/showcases/entity_query_tactics/EntityQueryTacticsShowcaseMod",
+        "projectPath": "EntityQueryTacticsShowcaseMod.csproj"
       }
     },
     {
-      "name": "capability_standard_graph_op_CreatePanel",
+      "name": "fog_of_war",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCreatePanelEntryMod",
-        "projectPath": "CapabilityStandardGraphOpCreatePanelEntryMod.csproj"
+        "value": "mods/showcases/fog_of_war/FogOfWarShowcaseMod",
+        "projectPath": "FogOfWarShowcaseMod.csproj"
       }
     },
     {
-      "name": "capability_standard_graph_op_DestroyPanel",
+      "name": "fog_vision_decay",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDestroyPanelEntryMod",
-        "projectPath": "CapabilityStandardGraphOpDestroyPanelEntryMod.csproj"
+        "value": "mods/showcases/fog_vision_decay/FogVisionDecayShowcaseMod",
+        "projectPath": "FogVisionDecayShowcaseMod.csproj"
       }
     },
     {
-      "name": "panel_skin_markup",
+      "name": "forge_socket",
       "target": {
         "type": "path",
-        "value": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod"
+        "value": "mods/showcases/item_system/ForgeSocketShowcaseMod",
+        "projectPath": "ForgeSocketShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "formation_capability_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/formation_capability/FormationCapabilityShowcaseMod",
+        "projectPath": "FormationCapabilityShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "interaction_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/interaction/InteractionShowcaseMod",
+        "projectPath": "InteractionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "item_loadout",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/ItemLoadoutShowcaseMod",
+        "projectPath": "ItemLoadoutShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "item_system",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/ItemSystemShowcaseMod",
+        "projectPath": "ItemSystemShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "map_trigger_night_raid",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod"
+      }
+    },
+    {
+      "name": "mass_navigation",
+      "target": {
+        "type": "path",
+        "value": "mods/capabilities/navigation/MassNavigationMod",
+        "projectPath": "MassNavigationMod.csproj"
+      }
+    },
+    {
+      "name": "narrative_chain",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_chain/NarrativeChainShowcaseMod",
+        "projectPath": "NarrativeChainShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "night_raid_override",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/map_trigger_night_raid_override/NightRaidOverrideMod"
+      }
+    },
+    {
+      "name": "night_raid_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
+        "projectPath": "NightRaidShowcaseMod.csproj"
       }
     },
     {
@@ -1497,6 +1458,13 @@
       "target": {
         "type": "path",
         "value": "mods/showcases/panel_skin_compose/PanelSkinComposeMod"
+      }
+    },
+    {
+      "name": "panel_skin_markup",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod"
       }
     },
     {
@@ -1514,65 +1482,17 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_ReadMapVarFloat",
+      "name": "panel_theme_fantasy",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarFloatEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadMapVarFloatEntryMod.csproj"
+        "value": "mods/showcases/panel_theme_fantasy/PanelThemeFantasyMod"
       }
     },
     {
-      "name": "capability_standard_graph_op_ReadMapVarInt",
+      "name": "panel_theme_fantasy_web",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarIntEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadMapVarIntEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_WriteMapVarFloat",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarFloatEntryMod",
-        "projectPath": "CapabilityStandardGraphOpWriteMapVarFloatEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_WriteMapVarInt",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarIntEntryMod",
-        "projectPath": "CapabilityStandardGraphOpWriteMapVarIntEntryMod.csproj"
-      }
-    },
-    {
-      "name": "night_raid_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
-        "projectPath": "NightRaidShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "night_raid_override",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/map_trigger_night_raid_override/NightRaidOverrideMod"
-      }
-    },
-    {
-      "name": "agent_bridge",
-      "target": {
-        "type": "path",
-        "value": "mods/AgentBridgeMod",
-        "projectPath": "AgentBridgeMod.csproj"
-      }
-    },
-    {
-      "name": "panel_theme_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/panel_theme_showcase/PanelThemeShowcaseMod"
+        "value": "mods/showcases/panel_theme_fantasy_web/PanelThemeFantasyWebMod"
       }
     },
     {
@@ -1590,20 +1510,6 @@
       }
     },
     {
-      "name": "panel_theme_fantasy",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/panel_theme_fantasy/PanelThemeFantasyMod"
-      }
-    },
-    {
-      "name": "panel_theme_fantasy_web",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/panel_theme_fantasy_web/PanelThemeFantasyWebMod"
-      }
-    },
-    {
       "name": "panel_theme_minimal",
       "target": {
         "type": "path",
@@ -1618,19 +1524,66 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_SpawnTemplate",
+      "name": "panel_theme_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj"
+        "value": "mods/showcases/panel_theme_showcase/PanelThemeShowcaseMod"
       }
     },
     {
-      "name": "capability_standard_graph_op_SetWorldPosition",
+      "name": "presenter_blacksmith_large_world",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetWorldPositionEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSetWorldPositionEntryMod.csproj"
+        "value": "mods/showcases/presenter_blacksmith_large_world_entry/PresenterBlacksmithLargeWorldEntryMod",
+        "projectPath": "PresenterBlacksmithLargeWorldEntryMod.csproj"
+      }
+    },
+    {
+      "name": "presenter_blacksmith_large_world_nohud",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/presenter_blacksmith_large_world_nohud_entry/PresenterBlacksmithLargeWorldNoHudEntryMod",
+        "projectPath": "PresenterBlacksmithLargeWorldNoHudEntryMod.csproj"
+      }
+    },
+    {
+      "name": "presenter_blacksmith_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod",
+        "projectPath": "PresenterBlacksmithShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "progression_scope",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/progression_scope/ProgressionScopeShowcaseMod",
+        "projectPath": "ProgressionScopeShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "raid_loop",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/RaidLoopShowcaseMod",
+        "projectPath": "RaidLoopShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "raylib_client_parity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/raylib_client_parity/RaylibClientParityShowcaseMod",
+        "projectPath": "RaylibClientParityShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "raylib_visual_atmosphere",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/raylib_visual_atmosphere/RaylibVisualAtmosphereShowcaseMod",
+        "projectPath": "RaylibVisualAtmosphereShowcaseMod.csproj"
       }
     },
     {
@@ -1642,11 +1595,66 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_WeightedPick",
+      "name": "road_network_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
-        "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj"
+        "value": "mods/showcases/road_network/RoadNetworkShowcaseMod",
+        "projectPath": "RoadNetworkShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "spatial_bounds_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/spatial_bounds/SpatialBoundsShowcaseMod",
+        "projectPath": "SpatialBoundsShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "superweapon_context_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/superweapon_context/SuperweaponContextShowcaseMod",
+        "projectPath": "SuperweaponContextShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "ui_nineslice_panel_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod",
+        "projectPath": "UiNineSlicePanelShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "ui_player_aggregate_graph_mvp",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/ui_player_aggregate_graph_mvp/UiPlayerAggregateGraphMvpShowcaseMod",
+        "projectPath": "UiPlayerAggregateGraphMvpShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "utility_autocast_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod",
+        "projectPath": "UtilityAutocastShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "vfx_forge_raylib",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/vfx_forge_raylib/VfxForgeRaylibShowcaseMod"
+      }
+    },
+    {
+      "name": "weapon_bench",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
+        "projectPath": "WeaponBenchShowcaseMod.csproj"
       }
     }
   ],

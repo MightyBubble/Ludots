@@ -2,190 +2,29 @@
   "schemaVersion": 1,
   "presets": [
     {
-      "id": "camera_acceptance_raylib",
-      "name": "Camera Acceptance Raylib",
+      "id": "animation_acceptance_raylib",
+      "name": "Animation Acceptance Raylib",
       "selectors": [
-        "$camera_acceptance"
+        "$animation_acceptance"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "camera_acceptance_web",
-      "name": "Camera Acceptance Web",
+      "id": "blacksmith_test_raylib",
+      "name": "Blacksmith Test Raylib",
       "selectors": [
-        "$camera_acceptance"
-      ],
-      "adapterId": "web",
-      "buildMode": "auto"
-    },
-    {
-      "id": "camera_acceptance_hotpath_raylib",
-      "name": "Camera Acceptance Hotpath Raylib",
-      "selectors": [
-        "$camera_acceptance_hotpath"
+        "$blacksmith_test"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "champion_skill_stress_raylib",
-      "name": "Champion Skill Stress Raylib",
+      "id": "browser_minimap_composited_overlay_cef_raylib",
+      "name": "Browser Minimap Composited Overlay CEF Raylib",
       "selectors": [
-        "$champion_skill_stress"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "progression_scope_raylib",
-      "name": "Progression Scope Raylib",
-      "selectors": [
-        "$progression_scope"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "spatial_bounds_showcase_raylib",
-      "name": "Spatial Bounds Showcase Raylib",
-      "selectors": [
-        "$spatial_bounds_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "presenter_blacksmith_showcase_raylib",
-      "name": "Presenter Blacksmith Showcase Raylib",
-      "selectors": [
-        "$presenter_blacksmith_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "presenter_blacksmith_large_world_raylib",
-      "name": "Presenter Blacksmith Large World Raylib",
-      "selectors": [
-        "$presenter_blacksmith_large_world"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "presenter_blacksmith_large_world_nohud_raylib",
-      "name": "Presenter Blacksmith Large World No HUD/GAS Raylib",
-      "selectors": [
-        "$presenter_blacksmith_large_world_nohud"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "mass_navigation_raylib",
-      "name": "Mass Navigation Raylib",
-      "selectors": [
-        "$mass_navigation"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_static_presenter_30k_raylib",
-      "name": "Capability Standard Static Presenter 30K Raylib",
-      "selectors": [
-        "$capability_standard_static_presenter_30k"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_mass_navigation_large_world_10k_raylib",
-      "name": "Capability Standard Mass Navigation Large World 10K Raylib",
-      "selectors": [
-        "$capability_standard_mass_navigation_large_world_10k"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_crowd_physics_arena_raylib",
-      "name": "Capability Standard Crowd Physics Arena Raylib",
-      "selectors": [
-        "$capability_standard_crowd_physics_arena"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "formation_capability_showcase_raylib",
-      "name": "Formation Capability Showcase Raylib",
-      "selectors": [
-        "$formation_capability_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_participant_views_raylib",
-      "name": "Capability Standard Participant Views Raylib",
-      "selectors": [
-        "$capability_standard_participant_views"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_physics2d_raylib",
-      "name": "Capability Standard Physics2D Raylib",
-      "selectors": [
-        "$capability_standard_physics2d"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_physics2d_stress_raylib",
-      "name": "Capability Standard Physics2D Stress Raylib",
-      "selectors": [
-        "$capability_standard_physics2d_stress"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "entity_query_tactics_raylib",
-      "name": "Entity Query Tactics Raylib",
-      "selectors": [
-        "$entity_query_tactics"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "browser_ui_showcase_raylib",
-      "name": "Browser UI Showcase Raylib",
-      "selectors": [
-        "$browser_ui_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "ui_nineslice_panel_raylib",
-      "name": "UI Nine-Slice Panel Raylib",
-      "selectors": [
-        "$ui_nineslice_panel_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "browser_ui_cef_raylib",
-      "name": "Browser UI CEF Raylib",
-      "selectors": [
-        "$browser_ui_showcase"
+        "$presenter_blacksmith_large_world_nohud",
+        "$browser_minimap_composited_overlay_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto",
@@ -210,11 +49,10 @@
       }
     },
     {
-      "id": "browser_minimap_composited_overlay_cef_raylib",
-      "name": "Browser Minimap Composited Overlay CEF Raylib",
+      "id": "browser_ui_cef_raylib",
+      "name": "Browser UI CEF Raylib",
       "selectors": [
-        "$presenter_blacksmith_large_world_nohud",
-        "$browser_minimap_composited_overlay_showcase"
+        "$browser_ui_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto",
@@ -225,217 +63,46 @@
       }
     },
     {
-      "id": "ui_player_aggregate_graph_mvp_raylib",
-      "name": "Player Aggregate Graph MVP Raylib",
+      "id": "browser_ui_showcase_raylib",
+      "name": "Browser UI Showcase Raylib",
       "selectors": [
-        "$ui_player_aggregate_graph_mvp"
+        "$browser_ui_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "utility_autocast_showcase_raylib",
-      "name": "Utility Autocast Showcase Raylib",
+      "id": "camera_acceptance_hotpath_raylib",
+      "name": "Camera Acceptance Hotpath Raylib",
       "selectors": [
-        "$utility_autocast_showcase"
+        "$camera_acceptance_hotpath"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "combat_stance_showcase_raylib",
-      "name": "Combat Stance Showcase Raylib",
+      "id": "camera_acceptance_raylib",
+      "name": "Camera Acceptance Raylib",
       "selectors": [
-        "$combat_stance_showcase"
+        "$camera_acceptance"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_physics2d_showcase_raylib",
-      "name": "Capability Standard Physics2D Raylib",
+      "id": "camera_acceptance_web",
+      "name": "Camera Acceptance Web",
       "selectors": [
-        "$capability_standard_physics2d_showcase"
+        "$camera_acceptance"
       ],
-      "adapterId": "raylib",
+      "adapterId": "web",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_time_flow_showcase_raylib",
-      "name": "Capability Standard TimeFlow Raylib",
+      "id": "capability_standard_ability_graph_sandbox_raylib",
+      "name": "Capability Standard Ability Graph Sandbox Raylib",
       "selectors": [
-        "$capability_standard_time_flow_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_config_shards_showcase_raylib",
-      "name": "Capability Standard Config Shards Raylib",
-      "selectors": [
-        "$capability_standard_config_shards_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_effect_preset_type_code_showcase_raylib",
-      "name": "Capability Standard Effect Preset Type Code Raylib",
-      "selectors": [
-        "$capability_standard_effect_preset_type_code_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_performer_behavior_extension_showcase_raylib",
-      "name": "Capability Standard Performer Behavior Extension Raylib",
-      "selectors": [
-        "$capability_standard_performer_behavior_extension_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_performer_command_extension_showcase_raylib",
-      "name": "Capability Standard Performer Command Extension Raylib",
-      "selectors": [
-        "$capability_standard_performer_command_extension_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_transport_network_raylib",
-      "name": "Capability Standard Transport Network Raylib",
-      "selectors": [
-        "$capability_standard_transport_network"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_virtual_camera_showcase_raylib",
-      "name": "Capability Standard Virtual Camera Raylib",
-      "selectors": [
-        "$capability_standard_virtual_camera_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "animation_acceptance_raylib",
-      "name": "Animation Acceptance Raylib",
-      "selectors": [
-        "$animation_acceptance"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "blacksmith_test_raylib",
-      "name": "Blacksmith Test Raylib",
-      "selectors": [
-        "$blacksmith_test"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "fog_of_war_raylib",
-      "name": "Fog Of War Raylib",
-      "selectors": [
-        "$fog_of_war"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "fog_vision_decay_raylib",
-      "name": "Fog Vision Decay Raylib",
-      "selectors": [
-        "$fog_vision_decay"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "item_system_raylib",
-      "name": "Item System Raylib",
-      "selectors": [
-        "$item_system"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "forge_socket_raylib",
-      "name": "Forge Socket Raylib",
-      "selectors": [
-        "$forge_socket"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "item_loadout_raylib",
-      "name": "Item Loadout Raylib",
-      "selectors": [
-        "$item_loadout"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "raid_loop_raylib",
-      "name": "Raid Loop Raylib",
-      "selectors": [
-        "$raid_loop"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "weapon_bench_raylib",
-      "name": "Weapon Bench Raylib",
-      "selectors": [
-        "$weapon_bench"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "entity_command_panel_raylib",
-      "name": "Entity Command Panel Raylib",
-      "selectors": [
-        "$entity_command_panel_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "interaction_raylib",
-      "name": "Interaction Raylib",
-      "selectors": [
-        "$interaction_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "superweapon_context_raylib",
-      "name": "Superweapon Context Raylib",
-      "selectors": [
-        "$superweapon_context_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "control_plane_projection_raylib",
-      "name": "Control Plane Projection Raylib",
-      "selectors": [
-        "$control_plane_projection_showcase"
+        "$capability_standard_ability_graph_sandbox"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -450,48 +117,28 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_hfsm_sentry_arena_raylib",
-      "name": "Capability Standard HFSM Sentry Arena Raylib",
+      "id": "capability_standard_config_shards_showcase_raylib",
+      "name": "Capability Standard Config Shards Raylib",
       "selectors": [
-        "$capability_standard_hfsm_sentry_arena"
+        "$capability_standard_config_shards_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "map_trigger_night_raid_raylib",
-      "name": "Map Trigger Night Raid Raylib",
+      "id": "capability_standard_crowd_physics_arena_raylib",
+      "name": "Capability Standard Crowd Physics Arena Raylib",
       "selectors": [
-        "$map_trigger_night_raid",
-        "$night_raid_showcase",
-        "$agent_bridge"
+        "$capability_standard_crowd_physics_arena"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_ability_graph_sandbox_raylib",
-      "name": "Capability Standard Ability Graph Sandbox Raylib",
+      "id": "capability_standard_effect_preset_type_code_showcase_raylib",
+      "name": "Capability Standard Effect Preset Type Code Raylib",
       "selectors": [
-        "$capability_standard_ability_graph_sandbox"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_script_flow_sandbox_raylib",
-      "name": "Capability Standard Script Flow Sandbox Raylib",
-      "selectors": [
-        "$capability_standard_script_flow_sandbox"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_live_skill_workbench_raylib",
-      "name": "Capability Standard Live Skill Workbench Raylib",
-      "selectors": [
-        "$capability_standard_live_skill_workbench"
+        "$capability_standard_effect_preset_type_code_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -501,42 +148,6 @@
       "name": "Capability Standard Graph Behavior Integration Raylib",
       "selectors": [
         "$capability_standard_graph_behavior_integration"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_score_raylib",
-      "name": "残血的分更高",
-      "selectors": [
-        "$capability_standard_graph_score"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "raylib_client_parity_raylib",
-      "name": "Raylib Client Parity",
-      "selectors": [
-        "$raylib_client_parity"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "raylib_visual_atmosphere_raylib",
-      "name": "Raylib Visual Atmosphere",
-      "selectors": [
-        "$raylib_visual_atmosphere"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "vfx_forge_raylib",
-      "name": "Raylib VFX Forge",
-      "selectors": [
-        "$vfx_forge_raylib"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -776,19 +387,28 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_DivFloat_raylib",
-      "name": "Graph Op DivFloat Raylib",
+      "id": "capability_standard_graph_op_CreatePanel_raylib",
+      "name": "Graph Op CreatePanel Raylib",
       "selectors": [
-        "$capability_standard_graph_op_DivFloat"
+        "$capability_standard_graph_op_CreatePanel"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_FanOutApplyEffect_raylib",
-      "name": "Graph Op FanOutApplyEffect Raylib",
+      "id": "capability_standard_graph_op_DestroyPanel_raylib",
+      "name": "Graph Op DestroyPanel Raylib",
       "selectors": [
-        "$capability_standard_graph_op_FanOutApplyEffect"
+        "$capability_standard_graph_op_DestroyPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DivFloat_raylib",
+      "name": "Graph Op DivFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DivFloat"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -803,10 +423,10 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_FanOutDispatchEffect_raylib",
-      "name": "Graph Op FanOutDispatchEffect Raylib",
+      "id": "capability_standard_graph_op_FanOutApplyEffect_raylib",
+      "name": "Graph Op FanOutApplyEffect Raylib",
       "selectors": [
-        "$capability_standard_graph_op_FanOutDispatchEffect"
+        "$capability_standard_graph_op_FanOutApplyEffect"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -816,6 +436,15 @@
       "name": "Graph Op FanOutDispatchEffectDynamic Raylib",
       "selectors": [
         "$capability_standard_graph_op_FanOutDispatchEffectDynamic"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FanOutDispatchEffect_raylib",
+      "name": "Graph Op FanOutDispatchEffect Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FanOutDispatchEffect"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -834,6 +463,15 @@
       "name": "Graph Op HasTag Raylib",
       "selectors": [
         "$capability_standard_graph_op_HasTag"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_HidePanel_raylib",
+      "name": "Graph Op HidePanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_HidePanel"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -866,19 +504,19 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_Jump_raylib",
-      "name": "Graph Op Jump Raylib",
+      "id": "capability_standard_graph_op_JumpIfFalse_raylib",
+      "name": "Graph Op JumpIfFalse Raylib",
       "selectors": [
-        "$capability_standard_graph_op_Jump"
+        "$capability_standard_graph_op_JumpIfFalse"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_JumpIfFalse_raylib",
-      "name": "Graph Op JumpIfFalse Raylib",
+      "id": "capability_standard_graph_op_Jump_raylib",
+      "name": "Graph Op Jump Raylib",
       "selectors": [
-        "$capability_standard_graph_op_JumpIfFalse"
+        "$capability_standard_graph_op_Jump"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -947,19 +585,19 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_LoadContextTarget_raylib",
-      "name": "Graph Op LoadContextTarget Raylib",
+      "id": "capability_standard_graph_op_LoadContextTargetContext_raylib",
+      "name": "Graph Op LoadContextTargetContext Raylib",
       "selectors": [
-        "$capability_standard_graph_op_LoadContextTarget"
+        "$capability_standard_graph_op_LoadContextTargetContext"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_LoadContextTargetContext_raylib",
-      "name": "Graph Op LoadContextTargetContext Raylib",
+      "id": "capability_standard_graph_op_LoadContextTarget_raylib",
+      "name": "Graph Op LoadContextTarget Raylib",
       "selectors": [
-        "$capability_standard_graph_op_LoadContextTargetContext"
+        "$capability_standard_graph_op_LoadContextTarget"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -1298,6 +936,24 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_ReadMapVarFloat_raylib",
+      "name": "Graph Op ReadMapVarFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadMapVarFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadMapVarInt_raylib",
+      "name": "Graph Op ReadMapVarInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadMapVarInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_RelationshipAddMetric_raylib",
       "name": "Graph Op RelationshipAddMetric Raylib",
       "selectors": [
@@ -1496,6 +1152,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_ResolveTableRow_raylib",
+      "name": "Graph Op ResolveTableRow Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ResolveTableRow"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_Return_raylib",
       "name": "Graph Op Return Raylib",
       "selectors": [
@@ -1523,6 +1188,24 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_SetWorldPosition_raylib",
+      "name": "Graph Op SetWorldPosition Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetWorldPosition"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ShowPanel_raylib",
+      "name": "Graph Op ShowPanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ShowPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_SnapToNearestGraphEdge_raylib",
       "name": "Graph Op SnapToNearestGraphEdge Raylib",
       "selectors": [
@@ -1541,6 +1224,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_SpawnTemplate_raylib",
+      "name": "Graph Op SpawnTemplate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SpawnTemplate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_SubFloat_raylib",
       "name": "Graph Op SubFloat Raylib",
       "selectors": [
@@ -1550,10 +1242,37 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_TableReadFloat_raylib",
+      "name": "Graph Op TableReadFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_TableReadFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_TableReadInt_raylib",
+      "name": "Graph Op TableReadInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_TableReadInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_TargetListGet_raylib",
       "name": "Graph Op TargetListGet Raylib",
       "selectors": [
         "$capability_standard_graph_op_TargetListGet"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WeightedPick_raylib",
+      "name": "Graph Op WeightedPick Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WeightedPick"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -1586,6 +1305,24 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_WriteMapVarFloat_raylib",
+      "name": "Graph Op WriteMapVarFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteMapVarFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteMapVarInt_raylib",
+      "name": "Graph Op WriteMapVarInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteMapVarInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_WriteSelfAttribute_raylib",
       "name": "Graph Op WriteSelfAttribute Raylib",
       "selectors": [
@@ -1604,28 +1341,163 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_ResolveTableRow_raylib",
-      "name": "Graph Op ResolveTableRow Raylib",
+      "id": "capability_standard_graph_score_raylib",
+      "name": "残血的分更高",
       "selectors": [
-        "$capability_standard_graph_op_ResolveTableRow"
+        "$capability_standard_graph_score"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_TableReadFloat_raylib",
-      "name": "Graph Op TableReadFloat Raylib",
+      "id": "capability_standard_hfsm_sentry_arena_raylib",
+      "name": "Capability Standard HFSM Sentry Arena Raylib",
       "selectors": [
-        "$capability_standard_graph_op_TableReadFloat"
+        "$capability_standard_hfsm_sentry_arena"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_TableReadInt_raylib",
-      "name": "Graph Op TableReadInt Raylib",
+      "id": "capability_standard_live_skill_workbench_raylib",
+      "name": "Capability Standard Live Skill Workbench Raylib",
       "selectors": [
-        "$capability_standard_graph_op_TableReadInt"
+        "$capability_standard_live_skill_workbench"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_mass_navigation_large_world_10k_raylib",
+      "name": "Capability Standard Mass Navigation Large World 10K Raylib",
+      "selectors": [
+        "$capability_standard_mass_navigation_large_world_10k"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_participant_views_raylib",
+      "name": "Capability Standard Participant Views Raylib",
+      "selectors": [
+        "$capability_standard_participant_views"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_performer_behavior_extension_showcase_raylib",
+      "name": "Capability Standard Performer Behavior Extension Raylib",
+      "selectors": [
+        "$capability_standard_performer_behavior_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_performer_command_extension_showcase_raylib",
+      "name": "Capability Standard Performer Command Extension Raylib",
+      "selectors": [
+        "$capability_standard_performer_command_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_physics2d_raylib",
+      "name": "Capability Standard Physics2D Raylib",
+      "selectors": [
+        "$capability_standard_physics2d"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_physics2d_showcase_raylib",
+      "name": "Capability Standard Physics2D Raylib",
+      "selectors": [
+        "$capability_standard_physics2d_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_physics2d_stress_raylib",
+      "name": "Capability Standard Physics2D Stress Raylib",
+      "selectors": [
+        "$capability_standard_physics2d_stress"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_script_flow_sandbox_raylib",
+      "name": "Capability Standard Script Flow Sandbox Raylib",
+      "selectors": [
+        "$capability_standard_script_flow_sandbox"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_static_presenter_30k_raylib",
+      "name": "Capability Standard Static Presenter 30K Raylib",
+      "selectors": [
+        "$capability_standard_static_presenter_30k"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_time_flow_showcase_raylib",
+      "name": "Capability Standard TimeFlow Raylib",
+      "selectors": [
+        "$capability_standard_time_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_transport_network_raylib",
+      "name": "Capability Standard Transport Network Raylib",
+      "selectors": [
+        "$capability_standard_transport_network"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_virtual_camera_showcase_raylib",
+      "name": "Capability Standard Virtual Camera Raylib",
+      "selectors": [
+        "$capability_standard_virtual_camera_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "champion_skill_stress_raylib",
+      "name": "Champion Skill Stress Raylib",
+      "selectors": [
+        "$champion_skill_stress"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "combat_stance_showcase_raylib",
+      "name": "Combat Stance Showcase Raylib",
+      "selectors": [
+        "$combat_stance_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "control_plane_projection_raylib",
+      "name": "Control Plane Projection Raylib",
+      "selectors": [
+        "$control_plane_projection_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -1638,96 +1510,6 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
-    },
-    {
-      "id": "engine_raylib_skybox",
-      "name": "引擎画廊·skybox",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--scene",
-        "skybox",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_skybox/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_skybox/stats.json"
-      ]
-    },
-    {
-      "id": "engine_raylib_sky_daynight",
-      "name": "引擎画廊·sky_daynight",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--scene",
-        "sky_daynight",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_sky_daynight/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_sky_daynight/stats.json"
-      ]
-    },
-    {
-      "id": "engine_raylib_water",
-      "name": "引擎画廊·water",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--scene",
-        "water",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_water/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_water/stats.json"
-      ]
-    },
-    {
-      "id": "engine_raylib_terrain_surface",
-      "name": "引擎画廊·terrain_surface",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--scene",
-        "terrain_surface",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_terrain_surface/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_terrain_surface/stats.json"
-      ]
-    },
-    {
-      "id": "engine_raylib_terrain_heightmap",
-      "name": "引擎画廊·terrain_heightmap",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--scene",
-        "terrain_heightmap",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_terrain_heightmap/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_terrain_heightmap/stats.json"
-      ]
     },
     {
       "id": "engine_raylib_atmosphere_fog",
@@ -1748,6 +1530,60 @@
       ]
     },
     {
+      "id": "engine_raylib_crowd_anim",
+      "name": "引擎画廊·大量动画实例合批",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "crowd_anim",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_crowd_anim/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_crowd_anim/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_debug_draw",
+      "name": "引擎画廊·debug_draw",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "debug_draw",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_debug_draw/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_debug_draw/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_decal_projection",
+      "name": "引擎画廊·decal_projection",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "decal_projection",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_decal_projection/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_decal_projection/stats.json"
+      ]
+    },
+    {
       "id": "engine_raylib_frame_lighting",
       "name": "引擎画廊·frame_lighting",
       "selectors": [
@@ -1763,24 +1599,6 @@
         "artifacts/acceptance/engine_raylib_frame_lighting/screen.png",
         "--json",
         "artifacts/acceptance/engine_raylib_frame_lighting/stats.json"
-      ]
-    },
-    {
-      "id": "engine_raylib_postprocess",
-      "name": "引擎画廊·postprocess",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--scene",
-        "postprocess",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_postprocess/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_postprocess/stats.json"
       ]
     },
     {
@@ -1820,57 +1638,21 @@
       ]
     },
     {
-      "id": "engine_raylib_particles",
-      "name": "引擎画廊·particles",
+      "id": "engine_raylib_lighting",
+      "name": "引擎画廊·光照全效",
       "selectors": [
         "$engine_gallery"
       ],
       "adapterId": "raylib",
       "args": [
         "--scene",
-        "particles",
+        "lighting",
         "--frames",
         "120",
         "--screenshot",
-        "artifacts/acceptance/engine_raylib_particles/screen.png",
+        "artifacts/acceptance/engine_raylib_lighting/screen.png",
         "--json",
-        "artifacts/acceptance/engine_raylib_particles/stats.json"
-      ]
-    },
-    {
-      "id": "engine_raylib_decal_projection",
-      "name": "引擎画廊·decal_projection",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--scene",
-        "decal_projection",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_decal_projection/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_decal_projection/stats.json"
-      ]
-    },
-    {
-      "id": "engine_raylib_vegetation_cutout",
-      "name": "引擎画廊·vegetation_cutout",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--scene",
-        "vegetation_cutout",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_vegetation_cutout/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_vegetation_cutout/stats.json"
+        "artifacts/acceptance/engine_raylib_lighting/stats.json"
       ]
     },
     {
@@ -1889,6 +1671,60 @@
         "artifacts/acceptance/engine_raylib_material_binding/screen.png",
         "--json",
         "artifacts/acceptance/engine_raylib_material_binding/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_particles",
+      "name": "引擎画廊·particles",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "particles",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_particles/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_particles/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_postprocess",
+      "name": "引擎画廊·postprocess",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "postprocess",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_postprocess/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_postprocess/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_primitives",
+      "name": "引擎画廊·primitives",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "primitives",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_primitives/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_primitives/stats.json"
       ]
     },
     {
@@ -1928,118 +1764,231 @@
       ]
     },
     {
-      "id": "engine_raylib_debug_draw",
-      "name": "引擎画廊·debug_draw",
+      "id": "engine_raylib_sky_daynight",
+      "name": "引擎画廊·sky_daynight",
       "selectors": [
         "$engine_gallery"
       ],
       "adapterId": "raylib",
       "args": [
         "--scene",
-        "debug_draw",
+        "sky_daynight",
         "--frames",
         "120",
         "--screenshot",
-        "artifacts/acceptance/engine_raylib_debug_draw/screen.png",
+        "artifacts/acceptance/engine_raylib_sky_daynight/screen.png",
         "--json",
-        "artifacts/acceptance/engine_raylib_debug_draw/stats.json"
+        "artifacts/acceptance/engine_raylib_sky_daynight/stats.json"
       ]
     },
     {
-      "id": "engine_raylib_primitives",
-      "name": "引擎画廊·primitives",
+      "id": "engine_raylib_skybox",
+      "name": "引擎画廊·skybox",
       "selectors": [
         "$engine_gallery"
       ],
       "adapterId": "raylib",
       "args": [
         "--scene",
-        "primitives",
+        "skybox",
         "--frames",
         "120",
         "--screenshot",
-        "artifacts/acceptance/engine_raylib_primitives/screen.png",
+        "artifacts/acceptance/engine_raylib_skybox/screen.png",
         "--json",
-        "artifacts/acceptance/engine_raylib_primitives/stats.json"
+        "artifacts/acceptance/engine_raylib_skybox/stats.json"
       ]
     },
     {
-      "id": "engine_raylib_lighting",
-      "name": "引擎画廊·光照全效",
+      "id": "engine_raylib_terrain_heightmap",
+      "name": "引擎画廊·terrain_heightmap",
       "selectors": [
         "$engine_gallery"
       ],
       "adapterId": "raylib",
       "args": [
         "--scene",
-        "lighting",
+        "terrain_heightmap",
         "--frames",
         "120",
         "--screenshot",
-        "artifacts/acceptance/engine_raylib_lighting/screen.png",
+        "artifacts/acceptance/engine_raylib_terrain_heightmap/screen.png",
         "--json",
-        "artifacts/acceptance/engine_raylib_lighting/stats.json"
+        "artifacts/acceptance/engine_raylib_terrain_heightmap/stats.json"
       ]
     },
     {
-      "id": "engine_raylib_crowd_anim",
-      "name": "引擎画廊·大量动画实例合批",
+      "id": "engine_raylib_terrain_surface",
+      "name": "引擎画廊·terrain_surface",
       "selectors": [
         "$engine_gallery"
       ],
       "adapterId": "raylib",
       "args": [
         "--scene",
-        "crowd_anim",
+        "terrain_surface",
         "--frames",
         "120",
         "--screenshot",
-        "artifacts/acceptance/engine_raylib_crowd_anim/screen.png",
+        "artifacts/acceptance/engine_raylib_terrain_surface/screen.png",
         "--json",
-        "artifacts/acceptance/engine_raylib_crowd_anim/stats.json"
+        "artifacts/acceptance/engine_raylib_terrain_surface/stats.json"
       ]
     },
     {
-      "id": "capability_standard_graph_op_HidePanel_raylib",
-      "name": "Graph Op HidePanel Raylib",
+      "id": "engine_raylib_vegetation_cutout",
+      "name": "引擎画廊·vegetation_cutout",
       "selectors": [
-        "$capability_standard_graph_op_HidePanel"
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "vegetation_cutout",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_vegetation_cutout/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_vegetation_cutout/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_water",
+      "name": "引擎画廊·water",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "water",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_water/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_water/stats.json"
+      ]
+    },
+    {
+      "id": "entity_command_panel_raylib",
+      "name": "Entity Command Panel Raylib",
+      "selectors": [
+        "$entity_command_panel_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_ShowPanel_raylib",
-      "name": "Graph Op ShowPanel Raylib",
+      "id": "entity_query_tactics_raylib",
+      "name": "Entity Query Tactics Raylib",
       "selectors": [
-        "$capability_standard_graph_op_ShowPanel"
+        "$entity_query_tactics"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_CreatePanel_raylib",
-      "name": "Graph Op CreatePanel Raylib",
+      "id": "fog_of_war_raylib",
+      "name": "Fog Of War Raylib",
       "selectors": [
-        "$capability_standard_graph_op_CreatePanel"
+        "$fog_of_war"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_DestroyPanel_raylib",
-      "name": "Graph Op DestroyPanel Raylib",
+      "id": "fog_vision_decay_raylib",
+      "name": "Fog Vision Decay Raylib",
       "selectors": [
-        "$capability_standard_graph_op_DestroyPanel"
+        "$fog_vision_decay"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "panel_skin_markup_raylib",
-      "name": "Panel Markup Skin Raylib",
+      "id": "forge_socket_raylib",
+      "name": "Forge Socket Raylib",
       "selectors": [
-        "$panel_skin_markup"
+        "$forge_socket"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "formation_capability_showcase_raylib",
+      "name": "Formation Capability Showcase Raylib",
+      "selectors": [
+        "$formation_capability_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "interaction_raylib",
+      "name": "Interaction Raylib",
+      "selectors": [
+        "$interaction_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "item_loadout_raylib",
+      "name": "Item Loadout Raylib",
+      "selectors": [
+        "$item_loadout"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "item_system_raylib",
+      "name": "Item System Raylib",
+      "selectors": [
+        "$item_system"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "map_trigger_night_raid_override_raylib",
+      "name": "Map Trigger Night Raid Override Raylib",
+      "selectors": [
+        "$map_trigger_night_raid",
+        "$night_raid_showcase",
+        "$night_raid_override",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "map_trigger_night_raid_raylib",
+      "name": "Map Trigger Night Raid Raylib",
+      "selectors": [
+        "$map_trigger_night_raid",
+        "$night_raid_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "mass_navigation_raylib",
+      "name": "Mass Navigation Raylib",
+      "selectors": [
+        "$mass_navigation"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_chain_showcase_raylib",
+      "name": "Narrative Chain Showcase Raylib",
+      "selectors": [
+        "$narrative_chain"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2049,6 +1998,15 @@
       "name": "Panel Compose Skin Raylib",
       "selectors": [
         "$panel_skin_compose"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_markup_raylib",
+      "name": "Panel Markup Skin Raylib",
+      "selectors": [
+        "$panel_skin_markup"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2072,49 +2030,19 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_ReadMapVarFloat_raylib",
-      "name": "Graph Op ReadMapVarFloat Raylib",
+      "id": "panel_theme_fantasy_raylib",
+      "name": "Panel Theme Fantasy Raylib",
       "selectors": [
-        "$capability_standard_graph_op_ReadMapVarFloat"
+        "$panel_theme_fantasy"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_ReadMapVarInt_raylib",
-      "name": "Graph Op ReadMapVarInt Raylib",
+      "id": "panel_theme_fantasy_web_raylib",
+      "name": "Panel Theme Fantasy Web Raylib",
       "selectors": [
-        "$capability_standard_graph_op_ReadMapVarInt"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_WriteMapVarFloat_raylib",
-      "name": "Graph Op WriteMapVarFloat Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_WriteMapVarFloat"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_WriteMapVarInt_raylib",
-      "name": "Graph Op WriteMapVarInt Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_WriteMapVarInt"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "map_trigger_night_raid_override_raylib",
-      "name": "Map Trigger Night Raid Override Raylib",
-      "selectors": [
-        "$map_trigger_night_raid",
-        "$night_raid_showcase",
-        "$night_raid_override",
-        "$agent_bridge"
+        "$panel_theme_fantasy_web"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2138,24 +2066,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "panel_theme_fantasy_raylib",
-      "name": "Panel Theme Fantasy Raylib",
-      "selectors": [
-        "$panel_theme_fantasy"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "panel_theme_fantasy_web_raylib",
-      "name": "Panel Theme Fantasy Web Raylib",
-      "selectors": [
-        "$panel_theme_fantasy_web"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
       "id": "panel_theme_minimal_raylib",
       "name": "Panel Theme Minimal Raylib",
       "selectors": [
@@ -2174,28 +2084,127 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_SpawnTemplate_raylib",
-      "name": "Graph Op SpawnTemplate Raylib",
+      "id": "presenter_blacksmith_large_world_nohud_raylib",
+      "name": "Presenter Blacksmith Large World No HUD/GAS Raylib",
       "selectors": [
-        "$capability_standard_graph_op_SpawnTemplate"
+        "$presenter_blacksmith_large_world_nohud"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_SetWorldPosition_raylib",
-      "name": "Graph Op SetWorldPosition Raylib",
+      "id": "presenter_blacksmith_large_world_raylib",
+      "name": "Presenter Blacksmith Large World Raylib",
       "selectors": [
-        "$capability_standard_graph_op_SetWorldPosition"
+        "$presenter_blacksmith_large_world"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_WeightedPick_raylib",
-      "name": "Graph Op WeightedPick Raylib",
+      "id": "presenter_blacksmith_showcase_raylib",
+      "name": "Presenter Blacksmith Showcase Raylib",
       "selectors": [
-        "$capability_standard_graph_op_WeightedPick"
+        "$presenter_blacksmith_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "progression_scope_raylib",
+      "name": "Progression Scope Raylib",
+      "selectors": [
+        "$progression_scope"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "raid_loop_raylib",
+      "name": "Raid Loop Raylib",
+      "selectors": [
+        "$raid_loop"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "raylib_client_parity_raylib",
+      "name": "Raylib Client Parity",
+      "selectors": [
+        "$raylib_client_parity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "raylib_visual_atmosphere_raylib",
+      "name": "Raylib Visual Atmosphere",
+      "selectors": [
+        "$raylib_visual_atmosphere"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "spatial_bounds_showcase_raylib",
+      "name": "Spatial Bounds Showcase Raylib",
+      "selectors": [
+        "$spatial_bounds_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "superweapon_context_raylib",
+      "name": "Superweapon Context Raylib",
+      "selectors": [
+        "$superweapon_context_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "ui_nineslice_panel_raylib",
+      "name": "UI Nine-Slice Panel Raylib",
+      "selectors": [
+        "$ui_nineslice_panel_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "ui_player_aggregate_graph_mvp_raylib",
+      "name": "Player Aggregate Graph MVP Raylib",
+      "selectors": [
+        "$ui_player_aggregate_graph_mvp"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "utility_autocast_showcase_raylib",
+      "name": "Utility Autocast Showcase Raylib",
+      "selectors": [
+        "$utility_autocast_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "vfx_forge_raylib",
+      "name": "Raylib VFX Forge",
+      "selectors": [
+        "$vfx_forge_raylib"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "weapon_bench_raylib",
+      "name": "Weapon Bench Raylib",
+      "selectors": [
+        "$weapon_bench"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

@@ -1,7 +1,7 @@
 # 叙事线 Showcase 唯一入口
 
 **叙事线（对话 / 演出 / 活动 / 任务 / 触发）的 showcase 进度、验收证据、配置写法，只认本页。**
-不要另写交接，不要从旧审计开工。玩家文案的可读性基线以双通道交叉审计（pi@opus + 独立评审）通过版为准。
+不要另写交接，不要从旧审计开工。能力合同在这三页，不在本页改：[叙事内容合同](narrative-content-contract.md)、[任务与活动合同](task-activity-contract.md)、[管线与表现合同](narrative-pipeline-presentation.md)。玩家文案的可读性基线以双通道交叉审计（pi@opus + 独立评审）通过版为准。
 
 验收证据在 `artifacts/acceptance/` 下，每个场景一个目录（battle-report / trace / path）。测试在 `src/Tests/GasTests/Production/`。和本页打架的旧文档，听本页的。
 

@@ -5059,7 +5059,7 @@
         "activity",
         "chain"
       ],
-      "binding": null,
+      "binding": "narrative_chain",
       "preset": null,
       "docsPath": null,
       "readmePath": null,
