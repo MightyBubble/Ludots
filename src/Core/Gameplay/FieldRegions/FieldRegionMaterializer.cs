@@ -48,7 +48,7 @@ namespace Ludots.Core.Gameplay.FieldRegions
                     cellCounts.TryGetValue(regionId, out int cellCount);
                     Entity entity = world.Create(
                         mapTag,
-                        new RegionCm { LayerId = discrete.LayerId, RegionId = regionId },
+                        new RegionCm { LayerId = discrete.LayerId, RegionId = regionId, RegionKey = regionKey },
                         new RegionFootprintCm { CellCount = cellCount });
                     index.Put(discrete.LayerId, regionId, entity);
                 }

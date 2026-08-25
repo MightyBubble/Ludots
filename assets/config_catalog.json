@@ -217,6 +217,11 @@
     "IdField": "id"
   },
   {
+    "Path": "Fields/hierarchies.json",
+    "Policy": "ArrayById",
+    "IdField": "parent"
+  },
+  {
     "Path": "Progression/scopes.json",
     "Policy": "ArrayById",
     "IdField": "id"

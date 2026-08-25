@@ -10,6 +10,17 @@ namespace Ludots.Core.Components
     {
         public FieldLayerId LayerId;
         public int RegionId;
+        public string RegionKey;
+    }
+
+    /// <summary>
+    /// A hierarchy group entity materialized from a roster parent that owns no cells of
+    /// its own (e.g. a coarse grouping above the finest layer). Groups exist through the
+    /// ChildOf edges of their members, not through a grid of their own.
+    /// </summary>
+    public struct RegionGroupCm
+    {
+        public string GroupKey;
     }
 
     /// <summary>Cell count of a materialized region, tallied at materialization time.</summary>

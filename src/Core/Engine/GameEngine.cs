@@ -3003,12 +3003,9 @@ namespace Ludots.Core.Engine
             session.Fields = Ludots.Core.Fields.FieldSessionStore.Create(
                 registry, mapConfig?.Fields?.Layers, cellsLoader);
             session.RegionIndex = Ludots.Core.Gameplay.FieldRegions.FieldRegionMaterializer.Materialize(World, session);
-<<<<<<< HEAD
             var rosters = new Ludots.Core.Fields.Config.FieldHierarchyConfigLoader(ConfigPipeline)
                 .Load(ConfigCatalog, ConfigConflictReport);
             session.RegionGroups = Ludots.Core.Gameplay.FieldRegions.RegionHierarchyBuilder.Build(World, session, rosters);
-=======
->>>>>>> c08c84f3a6 (feat(fields): #1177 区域物化 + 归属差分 + FieldRegion 过境事件（与圆/矩形触发器分线）)
         }
 
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
