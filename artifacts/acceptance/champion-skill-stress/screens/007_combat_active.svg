@@ -2,13 +2,13 @@
   <rect width="1600" height="900" fill="#0c1218" />
   <rect x="40" y="40" width="1520" height="820" rx="18" fill="#14212e" stroke="#5ca6d6" stroke-width="2" />
   <text x="72" y="104" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">Champion Stress | combat_active</text>
-  <text x="72" y="148" fill="#ffffff" font-size="24" font-family="Consolas, monospace">View Command Snapshot | A 48/48 | B 48/48 | Proj 4 peak 21 | HUD BTF</text>
+  <text x="72" y="148" fill="#ffffff" font-size="24" font-family="Consolas, monospace">View Command Snapshot | A 48/48 | B 48/48 | Proj 6 peak 21 | HUD BTF</text>
   <text x="72" y="204" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Viewed primary: StressLaserMageA</text>
   <text x="72" y="244" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Viewed selection (1): StressLaserMageA</text>
   <text x="72" y="308" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Team A=48  Team B=48</text>
   <text x="72" y="348" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Roles A W/F/L/P = 19/11/10/8</text>
   <text x="72" y="388" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Roles B W/F/L/P = 19/11/10/8</text>
-  <text x="72" y="448" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Injured A/B = 22/20  Projectiles = 2</text>
-  <text x="72" y="488" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Primitive feedback = 96  World text = 396</text>
+  <text x="72" y="448" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Injured A/B = 22/20  Projectiles = 3</text>
+  <text x="72" y="488" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Primitive feedback = 106  World text = 377</text>
   <text x="72" y="560" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Selection evidence is sourced from container/view SSOT, not a compat SelectedEntity mirror.</text>
 </svg>
