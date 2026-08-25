@@ -27,9 +27,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         /// <summary>Declared initial value. Required; for <see cref="MapVariableType.Int"/> it must be integral.</summary>
         public double? Initial { get; set; }
-
-        /// <summary>When true, an int variable whose value changes fires the map-scoped PhaseChanged event.</summary>
-        public bool Phase { get; set; }
     }
 
     /// <summary>One variable in a save snapshot; only the field matching <see cref="Type"/> carries a live value.</summary>
@@ -44,7 +41,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
     public static class MapVariableDeclarations
     {
-        private const string AllowedFields = "name, type, initial, phase";
+        private const string AllowedFields = "name, type, initial";
 
         /// <summary>
         /// Strict parse of the optional map JSON <c>Variables</c> array. Rejects unknown fields,
@@ -90,7 +87,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             MapVariableType type = MapVariableType.Int;
             bool hasType = false;
             double? initial = null;
-            bool phase = false;
             foreach (KeyValuePair<string, JsonNode?> field in obj)
             {
                 switch (field.Key)
@@ -122,15 +118,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         }
 
                         initial = initialNumber;
-                        break;
-                    case "phase":
-                        if (field.Value is not JsonValue phaseValue || !phaseValue.TryGetValue<bool>(out bool phaseFlag))
-                        {
-                            throw new InvalidOperationException(
-                                $"Map '{context}' Variables[{index}] field 'phase' must be a boolean.");
-                        }
-
-                        phase = phaseFlag;
                         break;
                     default:
                         throw new InvalidOperationException(
@@ -173,8 +160,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 Name = trimmed,
                 Type = type,
-                Initial = initial.Value,
-                Phase = phase
+                Initial = initial.Value
             };
         }
 
@@ -200,15 +186,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <summary>
     /// Map-scoped variable table owned by a <see cref="MapSession"/>. One slot per declared
     /// variable; reads and writes of undeclared names fail closed. Every successful write
-    /// bumps that variable's revision; phase int variables fire the map-scoped
-    /// <see cref="PhaseChangedEventName"/> event through the bound dispatcher when the value changes.
+    /// bumps that variable's revision; a value change fires the map-scoped
+    /// <see cref="GameEvents.MapVariableChanged"/> event through the bound dispatcher.
     /// </summary>
     public sealed class MapVariableStore
     {
-        public const string PhaseChangedEventName = "PhaseChanged";
         public const string PayloadKeyVarName = MapTriggerEventPayloadKeys.VarName;
-        public const string PayloadKeyPhase = MapTriggerEventPayloadKeys.Phase;
-        public const string PayloadKeyVarValueInt = MapTriggerEventPayloadKeys.VarValueInt;
+        public const string PayloadKeyNewValueInt = MapTriggerEventPayloadKeys.VarValueInt;
+        public const string PayloadKeyNewValueFloat = MapTriggerEventPayloadKeys.VarValueFloat;
+        public const string PayloadKeyOldValueInt = MapTriggerEventPayloadKeys.OldValueInt;
+        public const string PayloadKeyOldValueFloat = MapTriggerEventPayloadKeys.OldValueFloat;
 
         private sealed class Slot
         {
@@ -216,7 +203,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             public int IntValue;
             public float FloatValue;
             public uint Revision;
-            public bool Phase;
         }
 
         private readonly Dictionary<string, Slot> _slots;
@@ -228,10 +214,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Dispatches a phase change (var name + new value) for the owning map; the engine
-        /// binds this to TriggerManager.FireMapEventAsync with the payload keys above.
+        /// Dispatches a value change (var name + typed old/new pair) for the owning map;
+        /// the engine binds this to TriggerManager.FireMapEventAsync with the payload
+        /// keys above, skipping the fire entirely while no subscriber is registered.
         /// </summary>
-        public MapVariablePhaseChangeHandler? PhaseChangedDispatcher { get; set; }
+        public MapVariableChangedHandler? VariableChangedDispatcher { get; set; }
 
         public MapId MapId { get; }
 
@@ -285,8 +272,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     {
                         Type = declaration.Type,
                         IntValue = declaration.Type == MapVariableType.Int ? checked((int)initial) : 0,
-                        FloatValue = declaration.Type == MapVariableType.Float ? (float)initial : 0f,
-                        Phase = declaration.Phase
+                        FloatValue = declaration.Type == MapVariableType.Float ? (float)initial : 0f
                     };
                 }
             }
@@ -391,12 +377,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 throw WrongType(name, slot.Type, MapVariableType.Int);
             }
 
-            bool changed = slot.IntValue != value;
+            int oldValue = slot.IntValue;
+            bool changed = oldValue != value;
             slot.IntValue = value;
             slot.Revision++;
-            if (slot.Phase && changed)
+            if (changed)
             {
-                PhaseChangedDispatcher?.Invoke(MapId, name, value);
+                VariableChangedDispatcher?.Invoke(MapId, name, MapVariableType.Int, oldValue, value, 0f, 0f);
             }
         }
 
@@ -408,8 +395,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 throw WrongType(name, slot.Type, MapVariableType.Float);
             }
 
+            float oldValue = slot.FloatValue;
+            bool changed = oldValue != value;
             slot.FloatValue = value;
             slot.Revision++;
+            if (changed)
+            {
+                VariableChangedDispatcher?.Invoke(MapId, name, MapVariableType.Float, 0, 0, oldValue, value);
+            }
         }
 
         private Slot RequireSlot(string name)
@@ -428,5 +421,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 $"Map '{MapId.Value}' variable '{name}' is declared as {actual}; {requested} access is not allowed.");
     }
 
-    public delegate void MapVariablePhaseChangeHandler(MapId mapId, string varName, int newValue);
+    /// <summary>
+    /// One notification per changed variable write. Exactly one old/new pair is
+    /// meaningful per call, selected by <paramref name="type"/>; the other pair is zero.
+    /// </summary>
+    public delegate void MapVariableChangedHandler(
+        MapId mapId,
+        string varName,
+        MapVariableType type,
+        int oldInt,
+        int newInt,
+        float oldFloat,
+        float newFloat);
 }
