@@ -30,7 +30,7 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create();
             TrailMeshConfig config = DefaultConfig;
 
-            runtime.Sample(entity, stableId: 42, in config, Vector3.Zero, Vector3.UnitZ, now: 1.0f);
+            runtime.Sample(world, entity, stableId: 42, in config, Vector3.Zero, Vector3.UnitZ, now: 1.0f);
             runtime.Advance(world, now: 1.0f);
 
             Assert.That(buffer.Count, Is.EqualTo(1));
@@ -52,8 +52,8 @@ namespace Ludots.Tests.Presentation
             TrailMeshConfig config = DefaultConfig;
             config.SampleIntervalSeconds = 0.1f;
 
-            runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
-            runtime.Sample(entity, 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.05f);
+            runtime.Sample(world, entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, entity, 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.05f);
             runtime.Advance(world, now: 0.05f);
 
             ReadOnlySpan<TrailMeshSample> samples = buffer.GetSamples(0);
@@ -70,8 +70,8 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create();
             TrailMeshConfig config = DefaultConfig;
 
-            runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
-            runtime.Sample(entity, 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.25f);
+            runtime.Sample(world, entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, entity, 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.25f);
             runtime.Advance(world, now: 0.25f);
 
             ReadOnlySpan<TrailMeshSample> samples = buffer.GetSamples(0);
@@ -90,7 +90,7 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create();
             TrailMeshConfig config = DefaultConfig;
 
-            runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
             runtime.Advance(world, now: 0.2f);
             Assert.That(buffer.Count, Is.EqualTo(1));
 
@@ -108,7 +108,7 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create();
             TrailMeshConfig config = DefaultConfig;
 
-            runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
             runtime.Advance(world, now: 0f);
             Assert.That(buffer.Count, Is.EqualTo(1));
 
@@ -134,6 +134,60 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Sample_DeadOwnerReleasesClaim_NewPresenterReusesStableIdInSameFrame()
+        {
+            using var world = World.Create();
+            var buffer = new TrailMeshBuffer(capacity: 4);
+            var runtime = new TrailMeshRuntime(buffer);
+            Entity first = world.Create();
+            Entity second = world.Create();
+            TrailMeshConfig config = DefaultConfig;
+
+            runtime.Sample(world, first, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            world.Destroy(first);
+
+            // 旧属主同帧内死亡、Advance 尚未清扫：新 presenter 复用同一 stableId 是合法回收，
+            // 不得误报重复声明。
+            Assert.DoesNotThrow(
+                () => runtime.Sample(world, second, stableId: 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.05f));
+
+            runtime.Advance(world, now: 0.05f);
+
+            Assert.That(runtime.ActiveCount, Is.EqualTo(1));
+            Assert.That(buffer.Count, Is.EqualTo(1));
+            Assert.That(buffer.GetStableId(0), Is.EqualTo(7));
+            ReadOnlySpan<TrailMeshSample> samples = buffer.GetSamples(0);
+            Assert.That(samples.Length, Is.EqualTo(1));
+            Assert.That(samples[0].Base, Is.EqualTo(Vector3.UnitX), "释放旧属主声明后，新属主的条带接管缓冲槽位");
+        }
+
+        [Test]
+        public void Sample_RecycledEntityIdWithinSameFrame_ResamplesCleanly()
+        {
+            using var world = World.Create();
+            var buffer = new TrailMeshBuffer(capacity: 4);
+            var runtime = new TrailMeshRuntime(buffer);
+            Entity first = world.Create();
+            TrailMeshConfig config = DefaultConfig;
+
+            runtime.Sample(world, first, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            world.Destroy(first);
+
+            // Arch 可能在同一帧复用刚销毁的 entity id：新实体带着同一 stableId 采样，
+            // 必须从全新轨迹开始而不是撞上残留声明。
+            Entity recycled = world.Create();
+            Assert.DoesNotThrow(
+                () => runtime.Sample(world, recycled, stableId: 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.05f));
+
+            runtime.Advance(world, now: 0.05f);
+
+            Assert.That(runtime.ActiveCount, Is.EqualTo(1));
+            Assert.That(buffer.Count, Is.EqualTo(1));
+            ReadOnlySpan<TrailMeshSample> samples = buffer.GetSamples(0);
+            Assert.That(samples[0].Base, Is.EqualTo(Vector3.UnitX));
+        }
+
+        [Test]
         public void Sample_TwoLivePresentersWithSameStableId_Throws()
         {
             using var world = World.Create();
@@ -143,10 +197,10 @@ namespace Ludots.Tests.Presentation
             Entity second = world.Create();
             TrailMeshConfig config = DefaultConfig;
 
-            runtime.Sample(first, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, first, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
 
             Assert.Throws<InvalidOperationException>(
-                () => runtime.Sample(second, stableId: 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0f),
+                () => runtime.Sample(world, second, stableId: 7, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0f),
                 "two live samplers sharing a stableId must fail fast instead of silently overwriting one buffer slot");
         }
 
@@ -159,8 +213,8 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create();
             TrailMeshConfig config = DefaultConfig;
 
-            runtime.Sample(entity, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
-            runtime.Sample(entity, stableId: 8, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.1f);
+            runtime.Sample(world, entity, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, entity, stableId: 8, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.1f);
             runtime.Advance(world, now: 0.1f);
 
             Assert.That(buffer.Count, Is.EqualTo(1));
@@ -180,11 +234,11 @@ namespace Ludots.Tests.Presentation
             Entity second = world.Create();
             TrailMeshConfig config = DefaultConfig;
 
-            runtime.Sample(first, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
-            runtime.Sample(second, stableId: 8, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, first, stableId: 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, second, stableId: 8, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
 
             Assert.Throws<InvalidOperationException>(
-                () => runtime.Sample(first, stableId: 8, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.1f));
+                () => runtime.Sample(world, first, stableId: 8, in config, Vector3.UnitX, Vector3.UnitX + Vector3.UnitZ, now: 0.1f));
         }
 
         [Test]
@@ -204,12 +258,12 @@ namespace Ludots.Tests.Presentation
 
             for (int i = 0; i < 8; i++)
             {
-                runtime.Sample(entities[i], stableId: i + 1, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+                runtime.Sample(world, entities[i], stableId: i + 1, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
             }
 
             Assert.That(runtime.ActiveCount, Is.EqualTo(8));
             Assert.Throws<InvalidOperationException>(
-                () => runtime.Sample(entities[8], stableId: 9, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+                () => runtime.Sample(world, entities[8], stableId: 9, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
         }
 
         [Test]
@@ -223,7 +277,7 @@ namespace Ludots.Tests.Presentation
             config.MaxSamples = 1;
 
             Assert.Throws<InvalidOperationException>(
-                () => runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+                () => runtime.Sample(world, entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
         }
 
         [Test]
@@ -237,7 +291,7 @@ namespace Ludots.Tests.Presentation
             config.SampleIntervalSeconds = -0.1f;
 
             Assert.Throws<InvalidOperationException>(
-                () => runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+                () => runtime.Sample(world, entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
         }
 
         [Test]
@@ -251,7 +305,7 @@ namespace Ludots.Tests.Presentation
             config.SampleLifetimeSeconds = 0f;
 
             Assert.Throws<InvalidOperationException>(
-                () => runtime.Sample(entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+                () => runtime.Sample(world, entity, 7, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
         }
 
         [Test]
@@ -264,7 +318,7 @@ namespace Ludots.Tests.Presentation
             TrailMeshConfig config = DefaultConfig;
 
             Assert.Throws<InvalidOperationException>(
-                () => runtime.Sample(entity, 0, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
+                () => runtime.Sample(world, entity, 0, in config, Vector3.Zero, Vector3.UnitZ, now: 0f));
         }
 
         [Test]
@@ -275,7 +329,7 @@ namespace Ludots.Tests.Presentation
             var runtime = new TrailMeshRuntime(buffer);
             Entity entity = world.Create();
             TrailMeshConfig config = DefaultConfig;
-            runtime.Sample(entity, 1, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
+            runtime.Sample(world, entity, 1, in config, Vector3.Zero, Vector3.UnitZ, now: 0f);
 
             // A writer outside this runtime fills every remaining slot after the last
             // drain; the emit pass must fail at the configured boundary, not admit

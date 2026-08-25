@@ -76,7 +76,7 @@ namespace Ludots.Tests.Presentation
             {
                 float angle = now * 2f + i;
                 Vector3 baseWorld = new(MathF.Cos(angle), 0f, MathF.Sin(angle));
-                runtime.Sample(entities[i], stableId: i + 1, in config, baseWorld, baseWorld + Vector3.UnitZ, now);
+                runtime.Sample(world, entities[i], stableId: i + 1, in config, baseWorld, baseWorld + Vector3.UnitZ, now);
             }
 
             runtime.Advance(world, now);
