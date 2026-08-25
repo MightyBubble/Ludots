@@ -27,7 +27,8 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             int defaultChildIndex,
             int onEnterGraphId = 0,
             int onTickGraphId = 0,
-            int onExitGraphId = 0)
+            int onExitGraphId = 0,
+            string name = "")
         {
             Kind = kind;
             ParentIndex = parentIndex;
@@ -37,6 +38,7 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             OnEnterGraphId = onEnterGraphId;
             OnTickGraphId = onTickGraphId;
             OnExitGraphId = onExitGraphId;
+            Name = name;
         }
 
         public HfsmStateKind Kind { get; }
@@ -46,10 +48,12 @@ namespace Ludots.Core.Gameplay.AI.Fsm
         public int DefaultChildIndex { get; }
         /// <summary>Script graph id run on enter (0 = none). Configured on the state node.</summary>
         public int OnEnterGraphId { get; }
-        /// <summary>Script graph id run each think wave while active (0 = none).</summary>
+        /// <summary>Script graph id run each think wave while active (0 = none). Configured on the state node.</summary>
         public int OnTickGraphId { get; }
-        /// <summary>Script graph id run on exit (0 = none).</summary>
+        /// <summary>Script graph id run on exit (0 = none). Configured on the state node.</summary>
         public int OnExitGraphId { get; }
+        /// <summary>Authored state id from AI/hfsm.json; consumers key off the name, never the packed index.</summary>
+        public string Name { get; }
     }
 
     public readonly struct HfsmTransition
