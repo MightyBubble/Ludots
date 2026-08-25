@@ -1,8 +1,8 @@
 [
-  { "id": "blacksmith.building.north.intact.raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_blacksmith_blue.gltf"  { "id": "blacksmith.worker.knight.raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/Knight.glb"] }
-] },
-  { "id": "blacksmith.building.south.intact.raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_blacksmith_red.gltf"] },
-  { "id": "blacksmith.building.damaged.raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_scaffolding.gltf"] },
-  { "id": "blacksmith.building.ruined.raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_destroyed.gltf"] },
-  { "id": "blacksmith.furnace.raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_mine_blue.gltf"] }
+  { "id": "blacksmith.building.north.intact.raylib", "assetKind": "Mesh", "assetId": "blacksmith.building.north.intact", "backendId": "raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_blacksmith_blue.gltf"] },
+  { "id": "blacksmith.building.south.intact.raylib", "assetKind": "Mesh", "assetId": "blacksmith.building.south.intact", "backendId": "raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_blacksmith_red.gltf"] },
+  { "id": "blacksmith.building.damaged.raylib", "assetKind": "Mesh", "assetId": "blacksmith.building.damaged", "backendId": "raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_scaffolding.gltf"] },
+  { "id": "blacksmith.building.ruined.raylib", "assetKind": "Mesh", "assetId": "blacksmith.building.ruined", "backendId": "raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_destroyed.gltf"] },
+  { "id": "blacksmith.furnace.raylib", "assetKind": "Mesh", "assetId": "blacksmith.furnace", "backendId": "raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_mine_blue.gltf"] },
+  { "id": "blacksmith.worker.knight.raylib", "assetKind": "Mesh", "assetId": "blacksmith.worker.knight", "backendId": "raylib", "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/Knight.glb"] }
 ]
