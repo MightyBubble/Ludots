@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
@@ -34,6 +35,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
         private readonly Func<string, int> _resolveEntityCollectionKeyId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
+        private readonly Func<int, GraphKind>? _resolveGraphProgramKind;
         private readonly PresenterCommandKindRegistry? _commandKinds;
         private readonly PresenterBehaviorKindRegistry? _behaviorKinds;
 
@@ -52,7 +54,8 @@ namespace Ludots.Core.Presentation.Config
             Func<string, int> resolveInstancedBatchAssetId = null,
             Func<string, int> resolveEntityCollectionKeyId = null,
             PresenterCommandKindRegistry? commandKinds = null,
-            PresenterBehaviorKindRegistry? behaviorKinds = null)
+            PresenterBehaviorKindRegistry? behaviorKinds = null,
+            Func<int, GraphKind>? resolveGraphProgramKind = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -67,6 +70,7 @@ namespace Ludots.Core.Presentation.Config
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
             _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
+            _resolveGraphProgramKind = resolveGraphProgramKind;
             _commandKinds = commandKinds;
             _behaviorKinds = behaviorKinds;
         }
@@ -1238,7 +1242,8 @@ namespace Ludots.Core.Presentation.Config
         /// the SSOT pattern; wildcard re-evaluation against unrelated events is
         /// intentionally not compiled. activationCondition is a root-presenter
         /// contract: child creation bypasses PresenterCreated, enforced by
-        /// ValidateChildGraph.
+        /// ValidateChildGraph over children[] and
+        /// PresenterChildInstanceOverride.InstanceChildren payloads.
         /// </summary>
         private static void AppendCompiledActivationConditionRules(PresenterDefinition def)
         {
@@ -2540,65 +2545,107 @@ namespace Ludots.Core.Presentation.Config
 
             try
             {
-                ChildPresenterRef[] children = definition.Children;
-                if (children == null || children.Length == 0)
-                {
-                    return;
-                }
-
-                for (int i = 0; i < children.Length; i++)
-                {
-                    int childDefinitionId = children[i].DefinitionId;
-                    if (childDefinitionId <= 0)
-                    {
-                        throw new InvalidOperationException($"Presenter '{key}' child[{i}] references an unknown definition.");
-                    }
-
-                    string childKey = definition.Key;
-                    childKey = string.Empty;
-                    foreach ((string parsedKey, PresenterDefinition parsedDefinition) in parsedByKey)
-                    {
-                        if (parsedDefinition.Id == childDefinitionId)
-                        {
-                            childKey = parsedKey;
-                            break;
-                        }
-                    }
-
-                    if (parsedByKey[childKey].DefaultLifetime > 0f)
-                    {
-                        throw new InvalidOperationException(
-                            $"Presenter '{key}' child[{i}] references duration-authored definition '{childKey}'. "
-                            + "lifecycle.durationSeconds is a root-presenter contract: child creation bypasses PresenterCreated, so its duration timer could never arm.");
-                    }
-
-                    if (HasActivationConditionedBehaviors(parsedByKey[childKey]))
-                    {
-                        throw new InvalidOperationException(
-                            $"Presenter '{key}' child[{i}] references activation-conditioned definition '{childKey}'. "
-                            + "behavior activationCondition is a root-presenter contract: child creation bypasses PresenterCreated, so its condition could never be evaluated.");
-                    }
-
-                    if (string.IsNullOrWhiteSpace(childKey))
-                    {
-                        throw new InvalidOperationException($"Presenter '{key}' child[{i}] references definition id={childDefinitionId} that failed to load.");
-                    }
-
-                    if (pathIds.Contains(childDefinitionId))
-                    {
-                        var cyclePath = new List<string>(path.Count + 1);
-                        cyclePath.AddRange(path);
-                        cyclePath.Add(childKey);
-                        throw new InvalidOperationException($"Circular child reference detected: {string.Join("->", cyclePath)}");
-                    }
-
-                    ValidateChildGraph(childKey, parsedByKey, pathIds, path);
-                }
+                ValidateChildArray(key, definition.Children, "children", parsedByKey, pathIds, path);
             }
             finally
             {
                 path.RemoveAt(path.Count - 1);
                 pathIds.Remove(definition.Id);
+            }
+        }
+
+        /// <summary>
+        /// Walks one child array (authored children[] or an instanceChildren payload) and
+        /// enforces the root-presenter contracts on every referenced definition: no
+        /// lifecycle.durationSeconds, no behavior activationCondition, no cycles. Entries in
+        /// both arrays are instantiated without a PresenterCreated event (child creation
+        /// bypasses the event stream), so the compiled PresenterCreated duration/condition
+        /// rule plans could never arm for them. A child id that still resolves in the
+        /// registry but is absent from this load's parsed graph fails with an authoring
+        /// error, never a KeyNotFoundException.
+        /// </summary>
+        private static void ValidateChildArray(
+            string ownerKey,
+            ChildPresenterRef[] children,
+            string segmentName,
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey,
+            HashSet<int> pathIds,
+            List<string> path)
+        {
+            if (children == null || children.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                ref readonly ChildPresenterRef child = ref children[i];
+                string entryContext = $"{segmentName}[{i}]";
+                int childDefinitionId = child.DefinitionId;
+                if (childDefinitionId <= 0)
+                {
+                    throw new InvalidOperationException($"Presenter '{ownerKey}' {entryContext} references an unknown definition.");
+                }
+
+                if (!TryGetDefinitionById(parsedByKey, childDefinitionId, out PresenterDefinition childDefinition))
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{ownerKey}' {entryContext} references definition id={childDefinitionId} that failed to load.");
+                }
+
+                if (childDefinition.DefaultLifetime > 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{ownerKey}' {entryContext} references duration-authored definition '{childDefinition.Key}'. "
+                        + "lifecycle.durationSeconds is a root-presenter contract: child creation bypasses PresenterCreated, so its duration timer could never arm.");
+                }
+
+                if (HasActivationConditionedBehaviors(childDefinition))
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{ownerKey}' {entryContext} references activation-conditioned definition '{childDefinition.Key}'. "
+                        + "behavior activationCondition is a root-presenter contract: child creation bypasses PresenterCreated, so its condition could never be evaluated.");
+                }
+
+                if (pathIds.Contains(childDefinitionId))
+                {
+                    var cyclePath = new List<string>(path.Count + 1);
+                    cyclePath.AddRange(path);
+                    cyclePath.Add(childDefinition.Key);
+                    throw new InvalidOperationException($"Circular child reference detected: {string.Join("->", cyclePath)}");
+                }
+
+                pathIds.Add(childDefinitionId);
+                try
+                {
+                    PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+                    if (instanceOverride != null && instanceOverride.ChildrenMode == PresenterChildrenMode.Instance)
+                    {
+                        ValidateChildArray(
+                            ownerKey,
+                            instanceOverride.InstanceChildren,
+                            $"{entryContext}.instanceChildren",
+                            parsedByKey,
+                            pathIds,
+                            path);
+                    }
+                    else
+                    {
+                        path.Add(childDefinition.Key);
+                        try
+                        {
+                            ValidateChildArray(childDefinition.Key, childDefinition.Children, "children", parsedByKey, pathIds, path);
+                        }
+                        finally
+                        {
+                            path.RemoveAt(path.Count - 1);
+                        }
+                    }
+                }
+                finally
+                {
+                    pathIds.Remove(childDefinitionId);
+                }
             }
         }
 
@@ -4277,7 +4324,7 @@ namespace Ludots.Core.Presentation.Config
             return cond;
         }
 
-        private static ConditionRef ParseBehaviorActivationCondition(JsonNode? node, string context)
+        private ConditionRef ParseBehaviorActivationCondition(JsonNode? node, string context)
         {
             if (node == null)
             {
@@ -4289,6 +4336,22 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException(
                     $"{context} must declare a condition contract: author 'inline' or a positive 'graphProgramId'. An empty activationCondition is authoring noise; omit the field or use activeByDefault.");
+            }
+
+            if (cond.GraphProgramId > 0 && _resolveGraphProgramKind != null)
+            {
+                GraphKind graphKind = _resolveGraphProgramKind(cond.GraphProgramId);
+                if (graphKind == GraphKind.None)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.graphProgramId={cond.GraphProgramId} references an unknown graph program; register it before loading presenters.");
+                }
+
+                if (graphKind != GraphKind.Validation)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.graphProgramId={cond.GraphProgramId} references graph kind '{graphKind}', but behavior activationCondition requires kind '{GraphKind.Validation}' (the kind PresenterRuleSystem evaluates).");
+                }
             }
 
             return cond;

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
@@ -2938,7 +2939,8 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
-                resolveBehaviorAssetId: (_, _) => 5);
+                resolveBehaviorAssetId: (_, _) => 5,
+                resolveGraphProgramKind: graphId => graphId == 42 ? GraphKind.Validation : GraphKind.None);
 
             loader.Load(catalog);
 
@@ -3133,6 +3135,245 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("activationCondition"));
             Assert.That(ex.Message, Does.Contain("root-presenter contract"));
         }
+
+        [Test]
+        public void Load_RejectsActivationConditionOnDefinitionReferencedViaInstanceChildren()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_cond_leaf",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": { "inline": "SourceHasVisualTransform" },
+                        "sound": { "soundAssetId": "sfx_cond" }
+                      }
+                    ]
+                  },
+                  { "id": "child_a" },
+                  {
+                    "id": "activation_root_inst",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [ { "definitionId": "activation_cond_leaf" } ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 4);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("instanceChildren[0]"));
+            Assert.That(ex.Message, Does.Contain("activation-conditioned definition"));
+            Assert.That(ex.Message, Does.Contain("activationCondition"));
+            Assert.That(ex.Message, Does.Contain("root-presenter contract"));
+        }
+
+        [Test]
+        public void Load_RejectsActivationConditionOnDefinitionReferencedViaNestedInstanceChildren()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_cond_nested",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": { "inline": "SourceHasVisualTransform" },
+                        "sound": { "soundAssetId": "sfx_cond" }
+                      }
+                    ]
+                  },
+                  { "id": "leaf_a" },
+                  { "id": "child_b" },
+                  {
+                    "id": "activation_root_nested",
+                    "children": [
+                      {
+                        "definitionId": "child_b",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "leaf_a",
+                            "childrenMode": "Instance",
+                            "instanceChildren": [ { "definitionId": "activation_cond_nested" } ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 4);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("instanceChildren[0].instanceChildren[0]"));
+            Assert.That(ex.Message, Does.Contain("activation-conditioned definition"));
+            Assert.That(ex.Message, Does.Contain("root-presenter contract"));
+        }
+
+        [Test]
+        public void Load_RejectsDurationAuthoredDefinitionViaInstanceChildren()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "duration_leaf", "lifecycle": { "durationSeconds": 1.5 } },
+                  { "id": "child_c" },
+                  {
+                    "id": "activation_root_duration",
+                    "children": [
+                      {
+                        "definitionId": "child_c",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [ { "definitionId": "duration_leaf" } ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("instanceChildren[0]"));
+            Assert.That(ex.Message, Does.Contain("duration-authored definition"));
+            Assert.That(ex.Message, Does.Contain("root-presenter contract"));
+        }
+
+        [Test]
+        public void Load_RejectsStaleChildReferenceAsAuthoringErrorNotKeyNotFound()
+        {
+            // 同一 loader/registry 两次 Load：第一次注册 "ghost"，第二次配置删掉该定义但 children[]
+            // 仍按 key 引用它。registry 保留旧 id，所以解析通过，但本轮的 parsedByKey 没有它。
+            // 校验必须报 authoring 错误（failed to load），而不是 KeyNotFoundException。
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "ghost" },
+                  {
+                    "id": "stale_root",
+                    "children": [ { "definitionId": "ghost" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+            loader.Load(catalog);
+
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "stale_root",
+                    "children": [ { "definitionId": "ghost" } ]
+                  }
+                ]
+                """);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("failed to load"));
+            Assert.That(ex.Message, Does.Not.Contain("ghost"), "错误信息必须引用 definition id，而不是残留 key。");
+        }
+
+        [Test]
+        public void Load_RejectsUnknownGraphProgramActivationConditionAtLoad()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_graph_missing",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": { "graphProgramId": 777 },
+                        "sound": { "soundAssetId": "sfx_graph" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 5,
+                resolveGraphProgramKind: _ => GraphKind.None);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("activationCondition"));
+            Assert.That(ex.Message, Does.Contain("777"));
+            Assert.That(ex.Message, Does.Contain("unknown graph program"));
+        }
+
+        [Test]
+        public void Load_RejectsNonValidationGraphKindActivationConditionAtLoad()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_graph_kind",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": { "graphProgramId": 42 },
+                        "sound": { "soundAssetId": "sfx_graph" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 5,
+                resolveGraphProgramKind: _ => GraphKind.Score);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("activationCondition"));
+            Assert.That(ex.Message, Does.Contain("Score"));
+            Assert.That(ex.Message, Does.Contain("Validation"));
+        }
+
 
         [Test]
         public void Load_RejectsRemovedDefaultTextIdField()
