@@ -41,12 +41,16 @@ namespace Ludots.Core.UI.PanelHosting
             registry.Freeze();
             foreach (PanelTemplate template in registry.Snapshot())
             {
-                // Unregistered graph is a data-plane miss, not a structural error: pins stay
-                // on their defaults (no error, no empty) until the graph ships.
-                int graphId = NodeLibraries.GASGraph.Host.GraphIdRegistry.GetId(template.Graph);
-                if (graphId == NodeLibraries.GASGraph.Host.GraphIdRegistry.InvalidId)
+                // Graph pins retain their existing default behavior when a graph is not bound;
+                // data pins are resolved by DataSchemaRegistry through PanelProjectionReader.
+                int graphId = -1;
+                if (template.Graph != null)
                 {
-                    graphId = -1;
+                    graphId = NodeLibraries.GASGraph.Host.GraphIdRegistry.GetId(template.Graph);
+                    if (graphId == NodeLibraries.GASGraph.Host.GraphIdRegistry.InvalidId)
+                    {
+                        graphId = -1;
+                    }
                 }
 
                 template.GraphId = graphId;

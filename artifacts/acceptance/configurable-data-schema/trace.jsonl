@@ -1,0 +1,5 @@
+{"id":"schema.load","phase":"config","action":"load nested struct/array/enum catalog","result":"accepted"}
+{"id":"record.validate","phase":"config","action":"load unit.scout record","result":"accepted"}
+{"id":"panel.project.data","phase":"panel","action":"read unit.scout.position.x","result":"12.5"}
+{"id":"panel.project.graph","phase":"panel","action":"read panel.score from graph store","result":"42"}
+{"id":"panel.guard.unknown-path","phase":"panel","action":"read missing.value","result":"rejected with context"}

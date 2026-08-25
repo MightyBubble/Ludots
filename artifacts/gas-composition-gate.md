@@ -117,3 +117,58 @@ Behavior remains in existing map/entity/ability/mod TriggerGraph declarations an
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
+
+## Configurable Data Schema Gate — 2026-08-26
+
+- **Task / Issue**: Configurable data schemas and orthogonal panel data projection
+- **Date**: 2026-08-26
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（面板数据源扩展与配置 catalog 能力，不是 lifecycle profile）
+
+结论: PASS
+
+一句话理由: 配置 schema 只描述数据并进入 registry，面板通过已有投影边界读取；没有新增实体生命周期 profile、inherit 开关或平行物化管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Schema catalog parsing and validation | 0 | `DataSchemaCatalog` |
+| Immutable record loading and path projection | 1 | `DataSchemaRegistry` |
+| Panel source selection | 2 | `PanelProjectionReader` / `PanelPin` |
+| Rendering skin consumption | 3 | Existing panel skins via `PanelVariableSet` |
+
+### 3. Reuse list
+
+- Handlers: N/A
+- Queues / Systems: Existing `ConfigPipeline`, `PanelHost`, `GraphOutputValueStore`
+- Resolvers / Registries: Existing panel template registry; new schema catalog is the missing shared config registry
+- Existing presets / graphs: Existing panel graph source remains unchanged
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+Schema catalog and record loading are atomic: invalid definitions or records reject the complete load. No ECS mutation occurs.
+
+### 6. Config SSOT
+
+行为配置落在: catalog (`DataSchemaCatalog`) and records (`DataSchemaRegistry`).
+
+是否新增 JSON schema: YES — this is data shape metadata, not a gameplay profile; it cannot be expressed as an effect/graph composition.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤（面板数据 schema 变体只改 catalog，不改变生命周期行为）

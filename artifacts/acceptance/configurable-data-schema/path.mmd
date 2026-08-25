@@ -1,0 +1,14 @@
+flowchart TD
+    A[作者提交 JSON schema] --> B[ConfigPipeline 合并]
+    B --> C{schema/record 校验}
+    C -->|通过| D[DataSchemaRegistry]
+    C -->|失败| E[启动失败并报告字段路径]
+    D --> F[PanelProjectionReader]
+    G[GraphOutputValueStore] --> F
+    F --> H{pin source}
+    H -->|data| I[JsonNode 结构化值]
+    H -->|graph| J[float/int/bool 图输出]
+    I --> K[PanelVariableSet]
+    J --> K
+    K --> L[Native/Web skin]
+    H -->|缺失 data path| M[明确报错]

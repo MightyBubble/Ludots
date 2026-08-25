@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.UI.PanelProjection;
 
@@ -139,7 +140,7 @@ namespace Ludots.Core.UI.PanelHosting
                     uint previous = entry.Revisions[pin.Name];
                     if (previous != value.Revision)
                     {
-                        entry.Values[pin.Name] = value.FloatValue;
+                        SetValue(entry, pin, value);
                         entry.Revisions[pin.Name] = value.Revision;
                         entry.Revision = (entry.Revision ^ previous ^ value.Revision) * 16777619;
                         changed = true;
@@ -257,7 +258,7 @@ namespace Ludots.Core.UI.PanelHosting
             foreach (PanelPin pin in entry.Template.Pins)
             {
                 PanelProjectionValue value = _reader.Resolve(entry.Scope, pin);
-                entry.Values[pin.Name] = value.FloatValue;
+                SetValue(entry, pin, value);
                 revision = (revision ^ value.Revision) * 16777619;
                 entry.Revisions[pin.Name] = value.Revision;
                 entry.HasRealtime |= pin.Realtime;
@@ -306,7 +307,29 @@ namespace Ludots.Core.UI.PanelHosting
             return new PanelVariableSet(
                 entry.Template.Id,
                 new Dictionary<string, float>(entry.Values, StringComparer.Ordinal),
-                entry.Revision);
+                entry.Revision,
+                new Dictionary<string, JsonNode>(entry.Nodes, StringComparer.Ordinal));
+        }
+
+        private static void SetValue(Entry entry, PanelPin pin, PanelProjectionValue value)
+        {
+            if (value.Node != null)
+            {
+                entry.Nodes[pin.Name] = value.Node;
+                if (!value.FromData || value.Node is JsonValue)
+                {
+                    entry.Values[pin.Name] = value.FloatValue;
+                }
+                else
+                {
+                    entry.Values.Remove(pin.Name);
+                }
+            }
+            else
+            {
+                entry.Nodes.Remove(pin.Name);
+                entry.Values[pin.Name] = value.FloatValue;
+            }
         }
 
         private Entry RequireEntry(PanelInstanceHandle handle)
@@ -339,6 +362,7 @@ namespace Ludots.Core.UI.PanelHosting
                 Skin = skin;
                 ZOrder = zOrder;
                 Values = new Dictionary<string, float>(template.Pins.Count, StringComparer.Ordinal);
+                Nodes = new Dictionary<string, JsonNode>(template.Pins.Count, StringComparer.Ordinal);
                 Revisions = new Dictionary<string, uint>(template.Pins.Count, StringComparer.Ordinal);
             }
 
@@ -348,6 +372,7 @@ namespace Ludots.Core.UI.PanelHosting
             public string? Skin { get; }
             public int ZOrder { get; }
             public Dictionary<string, float> Values { get; }
+            public Dictionary<string, JsonNode> Nodes { get; }
             public Dictionary<string, uint> Revisions { get; }
             public uint Revision { get; set; }
             public int Generation { get; set; }
