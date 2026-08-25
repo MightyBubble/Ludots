@@ -1867,7 +1867,8 @@ namespace Ludots.Core.Engine
                 activityDefinitions,
                 providerServices,
                 activityPresentation,
-                clock);
+                clock,
+                rngPickService);
             SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
             SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
             SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
