@@ -23,7 +23,7 @@ namespace Ludots.Tests.GAS
                 WriteCatalog(root, withShards: false);
                 WriteLayers(root, """
                 [
-                  { "id": "layerX", "kind": "scalar32", "cellSizeCm": 100, "chunkSizeCells": 8, "default": 5.5, "updateHz": 0, "persistent": false, "writerDomain": "test.writer" },
+                  { "id": "layerX", "kind": "scalar32", "cellSizeCm": 100, "chunkSizeCells": 8, "default": 5.5, "persistent": false, "writerDomain": "test.writer" },
                   { "id": "layerY", "kind": "vector2", "cellSizeCm": 50, "chunkSizeCells": 4, "default": [1, 2], "writerDomain": "test.writer" },
                   { "id": "layerZ", "kind": "discreteId", "cellSizeCm": 25, "chunkSizeCells": 16, "default": 0, "writerDomain": "test.writer", "maxRegionIds": 64 }
                 ]
@@ -41,7 +41,6 @@ namespace Ludots.Tests.GAS
                 Assert.That(scalar.CellSizeCm, Is.EqualTo(100));
                 Assert.That(scalar.ChunkSizeCells, Is.EqualTo(8));
                 Assert.That(scalar.DefaultValue.Scalar, Is.EqualTo(5.5f));
-                Assert.That(scalar.UpdateHz, Is.EqualTo(0));
                 Assert.That(scalar.Persistent, Is.False);
                 Assert.That(scalar.WriterDomain, Is.EqualTo("test.writer"));
                 Assert.That(scalar.MaxRegionIds, Is.EqualTo(0), "non-discreteId layers carry no region capacity");
@@ -49,7 +48,6 @@ namespace Ludots.Tests.GAS
                 FieldLayerDefinition vector = registry.Get(registry.GetId("layerY"));
                 Assert.That(vector.Kind, Is.EqualTo(FieldLayerKind.Vector2));
                 Assert.That(vector.DefaultValue.Vector2, Is.EqualTo(new Vector2(1f, 2f)));
-                Assert.That(vector.UpdateHz, Is.EqualTo(0), "omitted updateHz means no tick simulation");
                 Assert.That(vector.Persistent, Is.True, "omitted persistent defaults to true");
 
                 FieldLayerDefinition discrete = registry.Get(registry.GetId("layerZ"));
@@ -109,7 +107,6 @@ namespace Ludots.Tests.GAS
                 Assert.That(registry.Get(registry.GetId("layerX")).DefaultValue.Scalar, Is.EqualTo(0f), "omitted scalar32 default is zero");
                 FieldLayerDefinition vector = registry.Get(registry.GetId("layerY"));
                 Assert.That(vector.DefaultValue.Vector3, Is.EqualTo(new Vector3(1f, 2f, 3f)));
-                Assert.That(vector.UpdateHz, Is.EqualTo(0));
                 FieldLayerDefinition discrete = registry.Get(registry.GetId("layerZ"));
                 Assert.That(discrete.MaxRegionIds, Is.EqualTo(256), "omitted maxRegionIds defaults to 256");
                 Assert.That(discrete.DefaultValue.Scalar, Is.EqualTo(0f), "discreteId default is region id 0");
@@ -175,7 +172,7 @@ namespace Ludots.Tests.GAS
                 """);
                 File.WriteAllText(Path.Combine(root, "Fields", "layers_shards", "override.json"), """
                 [
-                  { "id": "layerX", "cellSizeCm": 250, "updateHz": 3 }
+                  { "id": "layerX", "cellSizeCm": 250 }
                 ]
                 """);
 
@@ -187,7 +184,6 @@ namespace Ludots.Tests.GAS
                 Assert.That(registry.Count, Is.EqualTo(1));
                 FieldLayerDefinition layer = registry.Get(registry.GetId("layerX"));
                 Assert.That(layer.CellSizeCm, Is.EqualTo(250), "the later fragment overwrites field-wise");
-                Assert.That(layer.UpdateHz, Is.EqualTo(3));
                 Assert.That(layer.Kind, Is.EqualTo(FieldLayerKind.Scalar32), "fields absent from the later fragment are kept");
                 Assert.That(layer.ChunkSizeCells, Is.EqualTo(8));
                 Assert.That(layer.WriterDomain, Is.EqualTo("test.writer"));
@@ -231,6 +227,7 @@ namespace Ludots.Tests.GAS
         [TestCase("""{ "id": "layerX", "kind": "scalar32", "cellSizeCm": 100, "chunkSizeCells": 6, "writerDomain": "test.writer" }""", "layerX", "chunkSizeCells")]
         [TestCase("""{ "id": "layerX", "kind": "scalar32", "cellSizeCm": 100, "chunkSizeCells": 2.5, "writerDomain": "test.writer" }""", "layerX", "chunkSizeCells")]
         [TestCase("""{ "id": "layerX", "kind": "scalar32", "cellSizeCm": 100, "chunkSizeCells": 8, "updateHz": -1, "writerDomain": "test.writer" }""", "layerX", "updateHz")]
+        [TestCase("""{ "id": "layerX", "kind": "scalar32", "cellSizeCm": 100, "chunkSizeCells": 8, "updateHz": 2, "writerDomain": "test.writer" }""", "layerX", "updateHz")]
         [TestCase("""{ "id": "layerX", "kind": "discreteId", "cellSizeCm": 100, "chunkSizeCells": 8, "writerDomain": "test.writer", "maxRegionIds": 0 }""", "layerX", "maxRegionIds")]
         [TestCase("""{ "id": "layerX", "kind": "discreteId", "cellSizeCm": 100, "chunkSizeCells": 8, "writerDomain": "test.writer", "maxRegionIds": -4 }""", "layerX", "maxRegionIds")]
         [TestCase("""{ "id": "layerX", "kind": "scalar32", "cellSizeCm": 100, "chunkSizeCells": 8, "writerDomain": "test.writer", "maxRegionIds": 8 }""", "layerX", "maxRegionIds")]

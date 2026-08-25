@@ -12,9 +12,9 @@ namespace Ludots.Tests.GAS
         {
             var registry = new FieldLayerRegistry();
             FieldLayerId first = registry.Register(
-                "layerX", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(1f), 0, true, "test.writer", 0);
+                "layerX", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(1f), true, "test.writer", 0);
             FieldLayerId second = registry.Register(
-                "layerY", FieldLayerKind.DiscreteId, 50, 4, FieldLayerDefaultValue.None, 0, true, "test.writer", 256);
+                "layerY", FieldLayerKind.DiscreteId, 50, 4, FieldLayerDefaultValue.None, true, "test.writer", 256);
 
             Assert.That(first.Value, Is.EqualTo(1));
             Assert.That(second.Value, Is.EqualTo(2));
@@ -22,7 +22,7 @@ namespace Ludots.Tests.GAS
             Assert.That(registry.GetId("layerY"), Is.EqualTo(second));
 
             FieldLayerId duplicate = registry.Register(
-                "layerX", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(1f), 0, true, "test.writer", 0);
+                "layerX", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(1f), true, "test.writer", 0);
             Assert.That(duplicate, Is.EqualTo(first), "re-registering a known key returns the existing id");
             Assert.That(registry.Count, Is.EqualTo(2));
         }
@@ -32,7 +32,7 @@ namespace Ludots.Tests.GAS
         {
             var registry = new FieldLayerRegistry();
             FieldLayerId id = registry.Register(
-                "layerX", FieldLayerKind.DiscreteId, 100, 8, FieldLayerDefaultValue.None, 3, persistent: false, "test.writer", 128);
+                "layerX", FieldLayerKind.DiscreteId, 100, 8, FieldLayerDefaultValue.None, persistent: false, "test.writer", 128);
 
             Assert.That(registry.TryGet(id, out FieldLayerDefinition definition), Is.True);
             Assert.That(definition.Id, Is.EqualTo(id));
@@ -40,7 +40,6 @@ namespace Ludots.Tests.GAS
             Assert.That(definition.Kind, Is.EqualTo(FieldLayerKind.DiscreteId));
             Assert.That(definition.CellSizeCm, Is.EqualTo(100));
             Assert.That(definition.ChunkSizeCells, Is.EqualTo(8));
-            Assert.That(definition.UpdateHz, Is.EqualTo(3));
             Assert.That(definition.Persistent, Is.False);
             Assert.That(definition.WriterDomain, Is.EqualTo("test.writer"));
             Assert.That(definition.MaxRegionIds, Is.EqualTo(128));
@@ -53,7 +52,7 @@ namespace Ludots.Tests.GAS
             Assert.That(registry.GetId("missing").Value, Is.EqualTo(0), "unregistered keys resolve to the invalid id");
 
             FieldLayerId registered = registry.Register(
-                "layerX", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(0f), 0, true, "test.writer", 0);
+                "layerX", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(0f), true, "test.writer", 0);
             Assert.That(registered.Value, Is.GreaterThan(0), "registered keys never map to id 0");
             Assert.That(registry.TryGet(registry.GetId("missing"), out _), Is.False);
         }
@@ -63,11 +62,11 @@ namespace Ludots.Tests.GAS
         {
             var registry = new FieldLayerRegistry();
             FieldLayerId existing = registry.Register(
-                "layerX", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(0f), 0, true, "test.writer", 0);
+                "layerX", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(0f), true, "test.writer", 0);
             registry.Freeze();
 
             Assert.Throws<InvalidOperationException>(() => registry.Register(
-                "layerY", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(0f), 0, true, "test.writer", 0));
+                "layerY", FieldLayerKind.Scalar32, 100, 8, FieldLayerDefaultValue.Scalar32(0f), true, "test.writer", 0));
             Assert.That(registry.GetId("layerY").Value, Is.EqualTo(0), "the rejected key stays unregistered");
             Assert.That(registry.Count, Is.EqualTo(1));
             Assert.That(registry.GetId("layerX"), Is.EqualTo(existing));

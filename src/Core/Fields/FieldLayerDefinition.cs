@@ -11,7 +11,6 @@ namespace Ludots.Core.Fields
             int cellSizeCm,
             int chunkSizeCells,
             FieldLayerDefaultValue defaultValue,
-            int updateHz,
             bool persistent,
             string writerDomain,
             int maxRegionIds)
@@ -31,11 +30,6 @@ namespace Ludots.Core.Fields
                 throw new ArgumentException("Field layer chunk size must be a positive power of two.", nameof(chunkSizeCells));
             }
 
-            if (updateHz < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(updateHz), "Field layer update frequency must be non-negative.");
-            }
-
             if (string.IsNullOrWhiteSpace(writerDomain))
             {
                 throw new ArgumentException("Field layer writer domain is required.", nameof(writerDomain));
@@ -52,7 +46,6 @@ namespace Ludots.Core.Fields
             CellSizeCm = cellSizeCm;
             ChunkSizeCells = chunkSizeCells;
             DefaultValue = defaultValue;
-            UpdateHz = updateHz;
             Persistent = persistent;
             WriterDomain = writerDomain;
             MaxRegionIds = maxRegionIds;
@@ -64,7 +57,6 @@ namespace Ludots.Core.Fields
         public readonly int CellSizeCm;
         public readonly int ChunkSizeCells;
         public readonly FieldLayerDefaultValue DefaultValue;
-        public readonly int UpdateHz;
         public readonly bool Persistent;
         public readonly string WriterDomain;
         public readonly int MaxRegionIds;

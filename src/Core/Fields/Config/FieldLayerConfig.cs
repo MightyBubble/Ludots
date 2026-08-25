@@ -15,7 +15,6 @@ namespace Ludots.Core.Fields.Config
         [JsonPropertyName("default")]
         public JsonNode? Default { get; set; }
 
-        public int? UpdateHz { get; set; }
         public bool? Persistent { get; set; }
         public string WriterDomain { get; set; } = string.Empty;
         public int? MaxRegionIds { get; set; }

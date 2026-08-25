@@ -54,13 +54,14 @@ namespace Ludots.Core.Fields.Config
                 int cellSizeCm = RequirePositive(cfg.CellSizeCm, id, relativePath, "cellSizeCm");
                 int chunkSizeCells = RequirePowerOfTwo(cfg.ChunkSizeCells, id, relativePath);
                 FieldLayerDefaultValue defaultValue = RequireDefault(cfg.Default, kind, id, relativePath);
-                int updateHz = RequireNonNegative(cfg.UpdateHz, id, relativePath, "updateHz");
                 bool persistent = cfg.Persistent ?? true;
                 string writerDomain = RequireNonEmpty(cfg.WriterDomain, id, relativePath, "writerDomain");
                 int maxRegionIds = RequireMaxRegionIds(cfg.MaxRegionIds, kind, id, relativePath);
 
-                _registry.Register(id, kind, cellSizeCm, chunkSizeCells, defaultValue, updateHz, persistent, writerDomain, maxRegionIds);
+                _registry.Register(id, kind, cellSizeCm, chunkSizeCells, defaultValue, persistent, writerDomain, maxRegionIds);
             }
+
+            _registry.Freeze();
         }
 
         private static string RequireCanonicalId(string value, string relativePath)
@@ -141,21 +142,6 @@ namespace Ludots.Core.Fields.Config
             }
 
             return resolved;
-        }
-
-        private static int RequireNonNegative(int? value, string id, string relativePath, string fieldPath)
-        {
-            if (!value.HasValue)
-            {
-                return 0;
-            }
-
-            if (value.Value < 0)
-            {
-                throw new InvalidOperationException($"Field layer '{id}' in {relativePath}: field '{fieldPath}' must be >= 0.");
-            }
-
-            return value.Value;
         }
 
         private static string RequireNonEmpty(string? value, string id, string relativePath, string fieldPath)
