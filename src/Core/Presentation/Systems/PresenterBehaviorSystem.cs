@@ -288,7 +288,7 @@ namespace Ludots.Core.Presentation.Systems
                         if (instanceBehaviors[slot].Kind == BehaviorKind.TrailMesh)
                         {
                             throw new InvalidOperationException(
-                                $"Presenter child '{child.Key}' contains a TrailMesh instance behavior, but no TrailMeshBuffer is wired into PresenterBehaviorSystem.");
+                                $"Presenter child definition {child.DefinitionId} contains a TrailMesh instance behavior, but no TrailMeshBuffer is wired into PresenterBehaviorSystem.");
                         }
                     }
                 }
