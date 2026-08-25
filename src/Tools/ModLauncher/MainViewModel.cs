@@ -485,16 +485,6 @@ namespace Ludots.ModLauncher
 
         private static string ResolveDotnetCommand()
         {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (!string.IsNullOrWhiteSpace(localAppData))
-            {
-                var bundledDotnet = Path.Combine(localAppData, "X28L", "sdk", "Game", "Plugins", "UnrealMono", "dotnet", "sdk", "dotnet.bat");
-                if (File.Exists(bundledDotnet))
-                {
-                    return bundledDotnet;
-                }
-            }
-
             return "dotnet";
         }
 

@@ -44,5 +44,4 @@
 ## 3 边界与后续
 
 - 发行脚本当前只打 Raylib 平台；Web 平台仍依赖 Node（开发向）。
-- `dotnet-host.ps1` 的 X28L/UnrealMono 内置 SDK 探测为遗留死路径，由代号清洗另行处理。
 - 更进一步的「启动器内嵌 Roslyn 进程内编译」（玩家机连 BinaryOnly 都不用预编）见 epic #1190 族 E 可选项。

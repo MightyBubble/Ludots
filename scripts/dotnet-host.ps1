@@ -1,14 +1,6 @@
 Set-StrictMode -Version Latest
 
 function Get-DotnetCommand {
-    $localAppData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
-    if (-not [string]::IsNullOrWhiteSpace($localAppData)) {
-        $bundledDotnet = Join-Path $localAppData 'X28L\sdk\Game\Plugins\UnrealMono\dotnet\sdk\dotnet.bat'
-        if (Test-Path $bundledDotnet) {
-            return $bundledDotnet
-        }
-    }
-
     return 'dotnet'
 }
 
