@@ -10,13 +10,21 @@ namespace Ludots.Core.Presentation.Config
     /// <summary>
     /// Loads and strictly validates external factorized instanced transform sources
     /// (format <c>ludots.instanced_transform_factorized.v1</c>) through the VFS. Core owns the
-    /// authored instance counts and SoA transform data; adapters only consume what this loader
-    /// produced. Unknown fields, missing sets, malformed arrays, unsupported formats and
-    /// authored-count mismatches fail fast and never yield a partial source.
+    /// authored instance counts and factorized component arrays; adapters only consume what this
+    /// loader produced. Unknown fields, missing sets, malformed arrays, unsupported formats,
+    /// authored-count mismatches and instance counts above <see cref="MaxInstanceCount"/> fail
+    /// fast and never yield a partial source.
     /// </summary>
     public sealed class InstancedBatchFactorizedSourceLoader
     {
         public const string SupportedFormat = "ludots.instanced_transform_factorized.v1";
+
+        /// <summary>
+        /// Hard upper bound on authored instance counts. Enforced before any per-instance array
+        /// allocation so malformed authored counts fail as authoring errors instead of driving
+        /// oversized allocations; the documented 50k-scale usage sits far below this bound.
+        /// </summary>
+        public const int MaxInstanceCount = 1_000_000;
 
         private readonly IVirtualFileSystem _vfs;
 
@@ -65,6 +73,12 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{setContext} instanceCount must be positive.");
             }
 
+            if (instanceCount > MaxInstanceCount)
+            {
+                throw new InvalidOperationException(
+                    $"{setContext} instanceCount {instanceCount} exceeds the documented maximum {MaxInstanceCount}.");
+            }
+
             if (instanceCount != source.InstanceCount)
             {
                 throw new InvalidOperationException(
@@ -77,21 +91,14 @@ namespace Ludots.Core.Presentation.Config
             }
 
             ValidateObjectFields(positionCmNode, $"{setContext} positionCm", "x", "y", "z");
-            var positions = new Vector3[instanceCount];
-            float[] positionX = ParseComponentArray(positionCmNode["x"], instanceCount, $"{setContext} positionCm.x");
-            float[] positionY = ParseComponentArray(positionCmNode["y"], instanceCount, $"{setContext} positionCm.y");
-            float[] positionZ = ParseComponentArray(positionCmNode["z"], instanceCount, $"{setContext} positionCm.z");
-            for (int i = 0; i < instanceCount; i++)
-            {
-                positions[i] = new Vector3(positionX[i], positionY[i], positionZ[i]);
-            }
 
-            var rotations = new Quaternion[instanceCount];
-            for (int i = 0; i < instanceCount; i++)
-            {
-                rotations[i] = Quaternion.Identity;
-            }
+            // Every component array length is validated before any per-instance allocation so a
+            // malformed authored count can never drive a huge allocation.
+            JsonArray positionX = RequireComponentArray(positionCmNode["x"], instanceCount, $"{setContext} positionCm.x");
+            JsonArray positionY = RequireComponentArray(positionCmNode["y"], instanceCount, $"{setContext} positionCm.y");
+            JsonArray positionZ = RequireComponentArray(positionCmNode["z"], instanceCount, $"{setContext} positionCm.z");
 
+            JsonArray? rotationX = null, rotationY = null, rotationZ = null, rotationW = null;
             if (set["rotation"] != null)
             {
                 if (set["rotation"] is not JsonObject rotationNode)
@@ -100,22 +107,13 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 ValidateObjectFields(rotationNode, $"{setContext} rotation", "x", "y", "z", "w");
-                float[] rotationX = ParseComponentArray(rotationNode["x"], instanceCount, $"{setContext} rotation.x");
-                float[] rotationY = ParseComponentArray(rotationNode["y"], instanceCount, $"{setContext} rotation.y");
-                float[] rotationZ = ParseComponentArray(rotationNode["z"], instanceCount, $"{setContext} rotation.z");
-                float[] rotationW = ParseComponentArray(rotationNode["w"], instanceCount, $"{setContext} rotation.w");
-                for (int i = 0; i < instanceCount; i++)
-                {
-                    rotations[i] = new Quaternion(rotationX[i], rotationY[i], rotationZ[i], rotationW[i]);
-                }
+                rotationX = RequireComponentArray(rotationNode["x"], instanceCount, $"{setContext} rotation.x");
+                rotationY = RequireComponentArray(rotationNode["y"], instanceCount, $"{setContext} rotation.y");
+                rotationZ = RequireComponentArray(rotationNode["z"], instanceCount, $"{setContext} rotation.z");
+                rotationW = RequireComponentArray(rotationNode["w"], instanceCount, $"{setContext} rotation.w");
             }
 
-            var scales = new Vector3[instanceCount];
-            for (int i = 0; i < instanceCount; i++)
-            {
-                scales[i] = Vector3.One;
-            }
-
+            JsonArray? scaleX = null, scaleY = null, scaleZ = null;
             if (set["scale"] != null)
             {
                 if (set["scale"] is not JsonObject scaleNode)
@@ -124,12 +122,56 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 ValidateObjectFields(scaleNode, $"{setContext} scale", "x", "y", "z");
-                float[] scaleX = ParseComponentArray(scaleNode["x"], instanceCount, $"{setContext} scale.x");
-                float[] scaleY = ParseComponentArray(scaleNode["y"], instanceCount, $"{setContext} scale.y");
-                float[] scaleZ = ParseComponentArray(scaleNode["z"], instanceCount, $"{setContext} scale.z");
+                scaleX = RequireComponentArray(scaleNode["x"], instanceCount, $"{setContext} scale.x");
+                scaleY = RequireComponentArray(scaleNode["y"], instanceCount, $"{setContext} scale.y");
+                scaleZ = RequireComponentArray(scaleNode["z"], instanceCount, $"{setContext} scale.z");
+            }
+
+            var positions = new Vector3[instanceCount];
+            for (int i = 0; i < instanceCount; i++)
+            {
+                positions[i] = new Vector3(
+                    ReadComponentValue(positionX[i], $"{setContext} positionCm.x[{i}]"),
+                    ReadComponentValue(positionY[i], $"{setContext} positionCm.y[{i}]"),
+                    ReadComponentValue(positionZ[i], $"{setContext} positionCm.z[{i}]"));
+            }
+
+            var rotations = new Quaternion[instanceCount];
+            if (rotationX != null)
+            {
                 for (int i = 0; i < instanceCount; i++)
                 {
-                    scales[i] = new Vector3(scaleX[i], scaleY[i], scaleZ[i]);
+                    rotations[i] = new Quaternion(
+                        ReadComponentValue(rotationX[i], $"{setContext} rotation.x[{i}]"),
+                        ReadComponentValue(rotationY[i], $"{setContext} rotation.y[{i}]"),
+                        ReadComponentValue(rotationZ[i], $"{setContext} rotation.z[{i}]"),
+                        ReadComponentValue(rotationW[i], $"{setContext} rotation.w[{i}]"));
+                }
+            }
+            else
+            {
+                for (int i = 0; i < instanceCount; i++)
+                {
+                    rotations[i] = Quaternion.Identity;
+                }
+            }
+
+            var scales = new Vector3[instanceCount];
+            if (scaleX != null)
+            {
+                for (int i = 0; i < instanceCount; i++)
+                {
+                    scales[i] = new Vector3(
+                        ReadComponentValue(scaleX[i], $"{setContext} scale.x[{i}]"),
+                        ReadComponentValue(scaleY[i], $"{setContext} scale.y[{i}]"),
+                        ReadComponentValue(scaleZ[i], $"{setContext} scale.z[{i}]"));
+                }
+            }
+            else
+            {
+                for (int i = 0; i < instanceCount; i++)
+                {
+                    scales[i] = Vector3.One;
                 }
             }
 
@@ -176,7 +218,7 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private static float[] ParseComponentArray(JsonNode? node, int expectedCount, string context)
+        private static JsonArray RequireComponentArray(JsonNode? node, int expectedCount, string context)
         {
             if (node is not JsonArray arr)
             {
@@ -189,18 +231,17 @@ namespace Ludots.Core.Presentation.Config
                     $"{context} must contain exactly {expectedCount} entries, but contains {arr.Count}.");
             }
 
-            var values = new float[expectedCount];
-            for (int i = 0; i < arr.Count; i++)
-            {
-                if (arr[i] is not JsonValue value || !value.TryGetValue<float>(out float parsed) || !float.IsFinite(parsed))
-                {
-                    throw new InvalidOperationException($"{context}[{i}] must be a finite number.");
-                }
+            return arr;
+        }
 
-                values[i] = parsed;
+        private static float ReadComponentValue(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value || !value.TryGetValue<float>(out float parsed) || !float.IsFinite(parsed))
+            {
+                throw new InvalidOperationException($"{context} must be a finite number.");
             }
 
-            return values;
+            return parsed;
         }
 
         private static int ParseRequiredInt(JsonNode? node, string context)

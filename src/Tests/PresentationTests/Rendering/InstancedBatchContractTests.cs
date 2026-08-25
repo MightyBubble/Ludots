@@ -443,6 +443,95 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.ParamName, Is.EqualTo("uri"));
         }
 
+        [Test]
+        public void Load_RejectsInstanceCountAboveDocumentedMaximumAsAuthoringError()
+        {
+            int huge = InstancedBatchFactorizedSourceLoader.MaxInstanceCount + 1;
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root,
+                $$"""
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": {{huge}},
+                      "positionCm": {
+                        "x": [1, 2],
+                        "y": [3, 4],
+                        "z": [5, 6]
+                      }
+                    }
+                  }
+                }
+                """);
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(huge)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain(
+                $"instanceCount {huge} exceeds the documented maximum {InstancedBatchFactorizedSourceLoader.MaxInstanceCount}"));
+        }
+
+        [Test]
+        public void Load_RejectsMalformedRotationComponentArrayLength()
+        {
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root,
+                """
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": 3,
+                      "positionCm": {
+                        "x": [1, 4, 7],
+                        "y": [2, 5, 8],
+                        "z": [3, 6, 9]
+                      },
+                      "rotation": {
+                        "x": [0, 0],
+                        "y": [0, 0, 0],
+                        "z": [0, 0, 0],
+                        "w": [1, 1, 1]
+                      }
+                    }
+                  }
+                }
+                """);
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(3)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("rotation.x must contain exactly 3 entries, but contains 2"));
+        }
+
+        [Test]
+        public void Load_PreservesFiftyThousandInstanceScaleLoading()
+        {
+            const int instanceCount = 50_000;
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root, ExampleFactorizedSourceJson(instanceCount));
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(instanceCount)));
+
+            var loader = BuildLoader(root, out InstancedBatchAssetRegistry registry, mountExampleMod: true);
+            loader.Load(BuildCatalog());
+
+            Assert.That(registry.TryGet(registry.GetId("batch.source"), out InstancedBatchAsset asset), Is.True);
+            InstancedBatchFactorizedSource factorized = asset.Groups[0].FactorizedSource!;
+            Assert.That(factorized, Is.Not.Null);
+            Assert.That(factorized.InstanceCount, Is.EqualTo(instanceCount));
+            Assert.That(factorized.PositionCm.Length, Is.EqualTo(instanceCount));
+            Assert.That(factorized.Rotation.Length, Is.EqualTo(instanceCount));
+            Assert.That(factorized.Scale.Length, Is.EqualTo(instanceCount));
+            Assert.That(factorized.PositionCm[0], Is.EqualTo(new Vector3(0f, 0f, 0f)));
+            Assert.That(factorized.PositionCm[instanceCount - 1], Is.EqualTo(new Vector3((instanceCount - 1) * 100f, 0f, 0f)));
+            for (int i = 0; i < instanceCount; i++)
+            {
+                Assert.That(factorized.Rotation[i], Is.EqualTo(Quaternion.Identity));
+                Assert.That(factorized.Scale[i], Is.EqualTo(Vector3.One));
+            }
+        }
+
         private static string SourceBatchJson(string groupJson)
         {
             return $$"""
