@@ -24,19 +24,22 @@ namespace Ludots.Tests.Presentation
         private const int BlacksmithHudPeak = 100_000;
         private const int BlacksmithInstancedBatchCapacity = 32_768;
 
+        // SSOT: the pre-refactor fat PresentationRequest struct was exactly 688 bytes.
+        // The <=1/10 true-scale gate must stay pinned to this literal so it cannot move
+        // with future struct layout changes; the aggregate type itself no longer exists.
+        private const int LegacyFatPresentationRequestBytes = 688;
+
         [Test]
         public void ChannelElementSizes_AreEachNarrowerThanFatPresentationRequest()
         {
-            int fat = Unsafe.SizeOf<PresentationRequest>();
-            Assert.That(fat, Is.LessThan(688), "The compatibility snapshot must not retain the legacy 688-byte padding fields.");
-            Assert.That(Unsafe.SizeOf<VisualProxyChannelItem>(), Is.LessThan(fat));
-            Assert.That(Unsafe.SizeOf<GroundOverlayChannelItem>(), Is.LessThan(fat));
-            Assert.That(Unsafe.SizeOf<WorldHudChannelItem>(), Is.LessThan(fat));
-            Assert.That(Unsafe.SizeOf<SplineRibbonChannelItem>(), Is.LessThan(fat));
-            Assert.That(Unsafe.SizeOf<SurfaceSourceChannelItem>(), Is.LessThan(fat));
-            Assert.That(Unsafe.SizeOf<PresentationRemovalRequest>(), Is.LessThan(fat));
-            Assert.That(Unsafe.SizeOf<PresentationRequestOp>(), Is.LessThan(fat));
-            Assert.That(Unsafe.SizeOf<Entity>(), Is.LessThan(fat));
+            Assert.That(Unsafe.SizeOf<VisualProxyChannelItem>(), Is.LessThan(LegacyFatPresentationRequestBytes));
+            Assert.That(Unsafe.SizeOf<GroundOverlayChannelItem>(), Is.LessThan(LegacyFatPresentationRequestBytes));
+            Assert.That(Unsafe.SizeOf<WorldHudChannelItem>(), Is.LessThan(LegacyFatPresentationRequestBytes));
+            Assert.That(Unsafe.SizeOf<SplineRibbonChannelItem>(), Is.LessThan(LegacyFatPresentationRequestBytes));
+            Assert.That(Unsafe.SizeOf<SurfaceSourceChannelItem>(), Is.LessThan(LegacyFatPresentationRequestBytes));
+            Assert.That(Unsafe.SizeOf<PresentationRemovalRequest>(), Is.LessThan(LegacyFatPresentationRequestBytes));
+            Assert.That(Unsafe.SizeOf<PresentationRequestOp>(), Is.LessThan(LegacyFatPresentationRequestBytes));
+            Assert.That(Unsafe.SizeOf<Entity>(), Is.LessThan(LegacyFatPresentationRequestBytes));
         }
 
         [Test]
@@ -47,7 +50,7 @@ namespace Ludots.Tests.Presentation
 
             long typedBytes = RequestChannelBytes(in capacities);
             long instancedBatchBytes = InstancedBatchBytes(presentationConfig);
-            long legacyLaneBytes = (long)Unsafe.SizeOf<PresentationRequest>() * LegacyBlacksmithPresentationLaneCapacity;
+            long legacyLaneBytes = (long)LegacyFatPresentationRequestBytes * LegacyBlacksmithPresentationLaneCapacity;
 
             TestContext.Out.WriteLine(
                 $"requestStorageBytes={typedBytes}; instancedBatchStorageBytes={instancedBatchBytes}; " +
@@ -67,24 +70,24 @@ namespace Ludots.Tests.Presentation
 
             for (int i = 0; i < BlacksmithStaticPresenterPeak; i++)
             {
-                requests.Add(PresentationRequest.FromVisualProxy(
+                requests.AddVisualProxy(
                     Entity.Null,
                     new PresentationVisualProxy
                     {
                         StableId = i + 1,
                         MeshAssetId = 1,
-                    }));
+                    });
             }
 
             for (int i = 0; i < BlacksmithHudPeak; i++)
             {
-                requests.Add(PresentationRequest.FromWorldHud(
+                requests.AddWorldHud(
                     Entity.Null,
                     new WorldHudItem
                     {
                         StableId = BlacksmithStaticPresenterPeak + i + 1,
                     },
-                    LODLevel.High));
+                    LODLevel.High);
             }
 
             Assert.That(requests.Count, Is.EqualTo(BlacksmithStaticPresenterPeak + BlacksmithHudPeak));
@@ -184,7 +187,7 @@ namespace Ludots.Tests.Presentation
             long steadyStateAllocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
 
             long requestStorageBytes = RequestChannelBytes(in capacities);
-            long legacyRequestStorageBytes = (long)Unsafe.SizeOf<PresentationRequest>() * LegacyBlacksmithPresentationLaneCapacity;
+            long legacyRequestStorageBytes = (long)LegacyFatPresentationRequestBytes * LegacyBlacksmithPresentationLaneCapacity;
             TestContext.Out.WriteLine(
                 $"realScaleRequests={requests.Count}; requestStorageBytes={requestStorageBytes}; " +
                 $"legacyRequestStorageBytes={legacyRequestStorageBytes}; requestRatio={requestStorageBytes / (double)legacyRequestStorageBytes:F4}; " +
@@ -241,19 +244,19 @@ namespace Ludots.Tests.Presentation
         public void TypedOps_PreserveMixedKindEnqueueOrder()
         {
             var requests = new PresentationRequestBuffer(8);
-            requests.Add(PresentationRequest.RemoveGroundOverlay(Entity.Null, 7));
-            requests.Add(PresentationRequest.FromGroundOverlay(
+            requests.RemoveGroundOverlay(Entity.Null, 7);
+            requests.AddGroundOverlay(
                 Entity.Null,
                 new GroundOverlayItem { StableId = 7, Radius = 1.5f },
-                LODLevel.High));
-            requests.Add(PresentationRequest.FromVisualProxy(
+                LODLevel.High);
+            requests.AddVisualProxy(
                 Entity.Null,
                 new PresentationVisualProxy
                 {
                     MeshAssetId = 11,
                     StableId = 90,
                     LOD = LODLevel.Medium,
-                }));
+                });
 
             Assert.That(requests.Count, Is.EqualTo(3));
             ReadOnlySpan<PresentationRequestOp> ops = requests.Ops;
@@ -281,20 +284,20 @@ namespace Ludots.Tests.Presentation
                 removal: 1,
                 clearTransient: 1));
 
-            requests.Add(PresentationRequest.FromVisualProxy(
+            requests.AddVisualProxy(
                 Entity.Null,
-                new PresentationVisualProxy { StableId = 1, MeshAssetId = 4 }));
+                new PresentationVisualProxy { StableId = 1, MeshAssetId = 4 });
 
             InvalidOperationException overflow = Assert.Throws<InvalidOperationException>(() =>
-                requests.Add(PresentationRequest.FromVisualProxy(
+                requests.AddVisualProxy(
                     Entity.Null,
-                    new PresentationVisualProxy { StableId = 2, MeshAssetId = 5 })));
+                    new PresentationVisualProxy { StableId = 2, MeshAssetId = 5 }));
             Assert.That(overflow.Message, Does.Contain("kind=VisualProxy"));
 
-            requests.Add(PresentationRequest.FromGroundOverlay(
+            requests.AddGroundOverlay(
                 Entity.Null,
                 new GroundOverlayItem { StableId = 8 },
-                LODLevel.High));
+                LODLevel.High);
             Assert.That(requests.Count, Is.EqualTo(2));
             Assert.That(requests.Ops[1].Channel, Is.EqualTo(PresentationRequestChannel.GroundOverlay));
             Assert.That(requests.GroundOverlayAt(0).Item.StableId, Is.EqualTo(8));
@@ -313,19 +316,19 @@ namespace Ludots.Tests.Presentation
                 clearTransient: 4,
                 totalOperationCapacity: 2));
 
-            requests.Add(PresentationRequest.FromVisualProxy(
+            requests.AddVisualProxy(
                 Entity.Null,
-                new PresentationVisualProxy { StableId = 1, MeshAssetId = 4 }));
-            requests.Add(PresentationRequest.FromGroundOverlay(
+                new PresentationVisualProxy { StableId = 1, MeshAssetId = 4 });
+            requests.AddGroundOverlay(
                 Entity.Null,
                 new GroundOverlayItem { StableId = 8 },
-                LODLevel.High));
+                LODLevel.High);
 
             InvalidOperationException overflow = Assert.Throws<InvalidOperationException>(() =>
-                requests.Add(PresentationRequest.FromWorldHud(
+                requests.AddWorldHud(
                     Entity.Null,
                     new WorldHudItem { StableId = 9 },
-                    LODLevel.High)));
+                    LODLevel.High));
             Assert.That(overflow.Message, Does.Contain("kind=WorldHud"));
             Assert.That(requests.Count, Is.EqualTo(2));
             Assert.That(requests.WorldHudAt(0).Item.StableId, Is.EqualTo(0));
@@ -377,18 +380,18 @@ namespace Ludots.Tests.Presentation
                 var overlays = new GroundOverlayBuffer(8);
                 using var flush = CreateFlush(world, requests, overlays);
 
-                requests.Add(PresentationRequest.FromGroundOverlay(
+                requests.AddGroundOverlay(
                     Entity.Null,
                     new GroundOverlayItem { StableId = 7, Radius = 2f },
-                    LODLevel.High));
+                    LODLevel.High);
                 flush.Update(0.016f);
                 Assert.That(overlays.Count, Is.EqualTo(1));
 
-                requests.Add(PresentationRequest.RemoveGroundOverlay(Entity.Null, 7));
-                requests.Add(PresentationRequest.FromGroundOverlay(
+                requests.RemoveGroundOverlay(Entity.Null, 7);
+                requests.AddGroundOverlay(
                     Entity.Null,
                     new GroundOverlayItem { StableId = 7, Radius = 9f },
-                    LODLevel.High));
+                    LODLevel.High);
                 flush.Update(0.016f);
 
                 Assert.That(overlays.Count, Is.EqualTo(1),
@@ -411,11 +414,11 @@ namespace Ludots.Tests.Presentation
                 var overlays = new GroundOverlayBuffer(8);
                 using var flush = CreateFlush(world, requests, overlays);
 
-                requests.Add(PresentationRequest.FromGroundOverlay(
+                requests.AddGroundOverlay(
                     Entity.Null,
                     new GroundOverlayItem { StableId = 7, Radius = 2f },
-                    LODLevel.High));
-                requests.Add(PresentationRequest.RemoveGroundOverlay(Entity.Null, 7));
+                    LODLevel.High);
+                requests.RemoveGroundOverlay(Entity.Null, 7);
                 flush.Update(0.016f);
 
                 Assert.That(overlays.Count, Is.EqualTo(0));

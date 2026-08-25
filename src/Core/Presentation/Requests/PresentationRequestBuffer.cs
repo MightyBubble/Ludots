@@ -53,39 +53,6 @@ namespace Ludots.Core.Presentation.Requests
 
         internal ReadOnlySpan<VisualProxyChannelItem> VisualProxies => _visualProxies.AsSpan(0, _visualProxyCount);
 
-        public void Add(in PresentationRequest request)
-        {
-            switch (request.Kind)
-            {
-                case PresentationRequestKind.VisualProxy:
-                    AddVisualProxy(request.Owner, in request.VisualProxy);
-                    break;
-                case PresentationRequestKind.GroundOverlay:
-                    AddGroundOverlay(request.Owner, in request.GroundOverlay, request.LOD);
-                    break;
-                case PresentationRequestKind.WorldHud:
-                    AddWorldHud(request.Owner, in request.WorldHud, request.LOD);
-                    break;
-                case PresentationRequestKind.SplineRibbon:
-                    AddSplineRibbon(request.Owner, in request.SplineRibbon, request.LOD);
-                    break;
-                case PresentationRequestKind.SurfaceSource:
-                    AddSurfaceSource(request.Owner, in request.SurfaceSource, request.LOD);
-                    break;
-                case PresentationRequestKind.RemoveGroundOverlay:
-                case PresentationRequestKind.RemoveWorldHud:
-                case PresentationRequestKind.RemoveSplineRibbon:
-                case PresentationRequestKind.RemoveSurfaceSource:
-                    AddRemoval(request.Owner, request.Kind, request.StableId);
-                    break;
-                case PresentationRequestKind.ClearTransientVisualProjection:
-                    AddClearTransient(request.Owner);
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unknown PresentationRequestKind '{request.Kind}'.");
-            }
-        }
-
         public void AddVisualProxy(Entity owner, in PresentationVisualProxy proxy)
         {
             EnsureOperationRoom(PresentationRequestKind.VisualProxy, proxy.StableId);

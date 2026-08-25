@@ -2187,7 +2187,7 @@ namespace Ludots.Tests.Presentation
             var skinnedBatchBuffer = new SkinnedVisualBatchBuffer();
             var stableDrawCache = new StableDrawCache();
 
-            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            requests.AddVisualProxy(Entity.Null, new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = 10,
@@ -2201,8 +2201,8 @@ namespace Ludots.Tests.Presentation
                 RenderPath = VisualRenderPath.StaticMesh,
                 Visibility = VisualVisibility.Visible,
                 LOD = LODLevel.High,
-            }));
-            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            });
+            requests.AddVisualProxy(Entity.Null, new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = 11,
@@ -2216,7 +2216,7 @@ namespace Ludots.Tests.Presentation
                 RenderPath = VisualRenderPath.StaticMesh,
                 Visibility = VisualVisibility.Visible,
                 LOD = LODLevel.Medium,
-            }));
+            });
 
             using var flush = new PresentationRequestFlushSystem(
                 world,
@@ -2269,7 +2269,7 @@ namespace Ludots.Tests.Presentation
                 new PresentationVisualProxyBuffer(),
                 new SkinnedVisualBatchBuffer());
 
-            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            requests.AddVisualProxy(Entity.Null, new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = 10,
@@ -2283,7 +2283,7 @@ namespace Ludots.Tests.Presentation
                 RenderPath = VisualRenderPath.InstancedStaticMesh,
                 Visibility = VisualVisibility.Visible,
                 LOD = LODLevel.High,
-            }));
+            });
 
             flush.Update(0.016f);
             int firstRevision = snapshotBuffer.Revision;
@@ -2296,7 +2296,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(drawBuffer.Count, Is.EqualTo(1), "Stable visuals should stay projected when content revision is unchanged.");
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1), "Snapshot buffer must not be cleared on unchanged stable content.");
 
-            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            requests.AddVisualProxy(Entity.Null, new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = 10,
@@ -2310,7 +2310,7 @@ namespace Ludots.Tests.Presentation
                 RenderPath = VisualRenderPath.InstancedStaticMesh,
                 Visibility = VisualVisibility.Visible,
                 LOD = LODLevel.High,
-            }));
+            });
 
             flush.Update(0.016f);
             Assert.That(snapshotBuffer.Revision, Is.GreaterThan(firstRevision));
@@ -2340,7 +2340,7 @@ namespace Ludots.Tests.Presentation
                 new SkinnedVisualBatchBuffer(),
                 targetGeneration: targetGeneration);
 
-            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            requests.AddVisualProxy(Entity.Null, new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = 10,
@@ -2355,7 +2355,7 @@ namespace Ludots.Tests.Presentation
                 Mobility = VisualMobility.Static,
                 Visibility = VisualVisibility.Visible,
                 LOD = LODLevel.High,
-            }));
+            });
 
             flush.Update(0.016f);
             int contentRevision = stableDrawCache.ContentRevision;
@@ -2432,7 +2432,7 @@ namespace Ludots.Tests.Presentation
                 proxyBuffer,
                 new SkinnedVisualBatchBuffer());
 
-            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            requests.AddVisualProxy(Entity.Null, new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = 10,
@@ -2447,7 +2447,7 @@ namespace Ludots.Tests.Presentation
                 Mobility = VisualMobility.Movable,
                 Visibility = VisualVisibility.Visible,
                 LOD = LODLevel.High,
-            }));
+            });
 
             flush.Update(0.016f);
             Assert.That(drawBuffer.Count, Is.EqualTo(1));
