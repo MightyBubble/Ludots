@@ -1,0 +1,209 @@
+using System;
+using System.Numerics;
+using Arch.Core;
+using Ludots.Core.Components;
+using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Requests;
+using Ludots.Core.Presentation.Systems;
+using Ludots.Platform.Abstractions;
+using NUnit.Framework;
+
+namespace Ludots.Tests.Presentation
+{
+    [TestFixture]
+    public sealed class PresenterTrailMeshBehaviorTests
+    {
+        private const float Dt = 1f / 60f;
+
+        [Test]
+        public void TrailMesh_CueActivatesSampling_WeaponSwingWeavesArc_DeactivateFadesOut()
+        {
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int parentDefId = definitions.Register("trail.parent", new PresenterDefinition());
+            int childDefId = definitions.Register("trail.blade", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(0f, 1.4f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 17,
+                        Kind = BehaviorKind.TrailMesh,
+                        ActiveByDefault = false,
+                        TrailMesh = new TrailMeshConfig
+                        {
+                            BaseOffset = Vector3.Zero,
+                            TipOffset = new Vector3(0f, 0f, 1.2f),
+                            MaxSamples = 8,
+                            SampleIntervalSeconds = 0f,
+                            SampleLifetimeSeconds = 0.3f,
+                            HeadColor = Vector4.One,
+                            TailColor = new Vector4(1f, 1f, 1f, 0f),
+                        },
+                    },
+                ],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            var commands = new PresenterCommandBuffer();
+            var events = new PresentationEventStream(64);
+            var buffer = new TrailMeshBuffer(capacity: 8);
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            Entity parent = runtime.CreateHierarchy(
+                definitions, parentDefId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                worldPosition: Vector3.Zero, stableId: 7100, parent: Entity.Null,
+                definitions.Get(parentDefId));
+            Entity child = runtime.CreateHierarchy(
+                definitions, childDefId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                worldPosition: Vector3.Zero, stableId: 7101, parent,
+                definitions.Get(childDefId));
+
+            using var commandRuntime = new PresenterRuntimeSystem(
+                world, commands, events, new TransientMarkerBuffer(), new PresentationRequestBuffer(),
+                runtime, new PresentationStableIdAllocator(), definitions);
+            using var syncSystem = new PresenterEntityTransformSyncSystem(world, runtime, definitions);
+            using var behaviorSystem = new PresenterBehaviorSystem(
+                world, runtime, definitions, events, new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer(), trailMeshBuffer: buffer);
+
+            syncSystem.Update(Dt);
+            behaviorSystem.Update(Dt);
+            AssertVec3(
+                world.Get<PresenterWorldPosition>(child).Value,
+                new Vector3(10f, 1.4f, 20f), 0.001f);
+            Assert.That(buffer.Count, Is.EqualTo(0), "trail slot starts inactive; no sampling before the cue");
+
+            var activate = new PresenterCommand
+            {
+                CommandKind = PresenterCommandKind.ActivateBehavior,
+                PresenterEntity = child,
+                TargetBehaviorSlot = 17,
+            };
+            Assert.That(commands.TryAdd(in activate), Is.True);
+            commandRuntime.Update(Dt);
+            behaviorSystem.Update(Dt);
+            // 激活帧只做 re-bootstrap（同 Spline）；首个采样落在下一帧 tick-driven pass。
+            behaviorSystem.Update(Dt);
+
+            Assert.That(buffer.Count, Is.EqualTo(1), "ActivateBehavior cue must start trail sampling");
+            ReadOnlySpan<TrailMeshSample> first = buffer.GetSamples(0);
+            Assert.That(buffer.GetStableId(0), Is.EqualTo(7101));
+            Assert.That(first.Length, Is.EqualTo(1));
+            AssertVec3(first[0].Base, new Vector3(10f, 1.4f, 20f), 0.001f);
+            AssertVec3(first[0].Tip, new Vector3(10f, 1.4f, 21.2f), 0.001f);
+
+            world.Get<VisualTransform>(owner).Rotation =
+                Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2f);
+            syncSystem.Update(Dt);
+            behaviorSystem.Update(Dt);
+
+            ReadOnlySpan<TrailMeshSample> swung = buffer.GetSamples(0);
+            Assert.That(swung.Length, Is.EqualTo(2), "weapon swing must append a new arc segment");
+            AssertVec3(
+                swung[0].Tip,
+                new Vector3(11.2f, 1.4f, 20f), 0.01f);
+            Assert.That(swung[0].Age01, Is.EqualTo(0f));
+            Assert.That(swung[1].Age01, Is.GreaterThan(0f).And.LessThan(0.2f));
+
+            var deactivate = new PresenterCommand
+            {
+                CommandKind = PresenterCommandKind.DeactivateBehavior,
+                PresenterEntity = child,
+                TargetBehaviorSlot = 17,
+            };
+            Assert.That(commands.TryAdd(in deactivate), Is.True);
+            commandRuntime.Update(Dt);
+
+            for (int i = 0; i < 30; i++)
+            {
+                behaviorSystem.Update(Dt);
+            }
+
+            Assert.That(buffer.Count, Is.EqualTo(0), "after the cue ends, retained samples must age out and the trail must leave the buffer");
+        }
+
+        [Test]
+        public void TrailMesh_WithoutWiredBuffer_Throws()
+        {
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int defId = definitions.Register("trail.unwired", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 17,
+                        Kind = BehaviorKind.TrailMesh,
+                        ActiveByDefault = true,
+                        TrailMesh = new TrailMeshConfig
+                        {
+                            BaseOffset = Vector3.Zero,
+                            TipOffset = Vector3.UnitZ,
+                            MaxSamples = 4,
+                            SampleIntervalSeconds = 0f,
+                            SampleLifetimeSeconds = 0.3f,
+                            HeadColor = Vector4.One,
+                            TailColor = Vector4.Zero,
+                        },
+                    },
+                ],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = Vector3.Zero,
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            runtime.CreateHierarchy(
+                definitions, defId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                worldPosition: Vector3.Zero, stableId: 7102, parent: Entity.Null,
+                definitions.Get(defId));
+
+            using var behaviorSystem = new PresenterBehaviorSystem(
+                world, runtime, definitions, new PresentationEventStream(64),
+                new PresentationOwnerChangeBuffer(8), new SoundRequestBuffer());
+
+            Assert.Throws<InvalidOperationException>(() => behaviorSystem.Update(Dt));
+        }
+
+        private static void AssertVec3(Vector3 actual, Vector3 expected, float tolerance)
+        {
+            Assert.That(actual.X, Is.EqualTo(expected.X).Within(tolerance));
+            Assert.That(actual.Y, Is.EqualTo(expected.Y).Within(tolerance));
+            Assert.That(actual.Z, Is.EqualTo(expected.Z).Within(tolerance));
+        }
+    }
+}
