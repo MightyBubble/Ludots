@@ -23,7 +23,7 @@
 - 证据: `artifacts/evidence/presenter-1093/trace.jsonl`（平台/业务分栏）。
 
 ## Summary Stats
-- targeted: PresenterVisibilityConvergenceTests + PresenterDefinitionConfigLoaderTests = 158 passed, 0 failed
-- targeted: GasTests (Ludots.Tests.Presentation) = 80 passed, 0 failed
-- full: PresentationTests = 785 passed / 11 failed；失败均为 main 既有：4 个 loader 临时目录用例在干净基线 c497ea5e29 复现，其余为 showcase 输入模拟 flakes（两轮 20/11 波动）
+- targeted (merged tree): PresenterVisibilityConvergenceTests + PresenterDefinitionConfigLoaderTests + MassNavigationPresenterContractTests = 174 passed, 0 failed
+- targeted (merged tree): GasTests (Ludots.Tests.Presentation) = 80 passed, 0 failed
+- full: PresentationTests 多轮运行（merge 前 20/11 失败波动、merge 后 11 失败）失败集合一致，均为 main 既有：4 个 loader 临时目录用例在干净基线 c497ea5e29 复现（与 presenters.json 无关的独立 VFS 夹具），7 个 showcase 输入/物理/队伍解析 flakes（堆栈均不在 presenter 路径）
 - benchmark: presenter-timer 30k×1 emit 均值 0.6746ms -> 0.3047ms（删除每帧业务求值后自然收益）
