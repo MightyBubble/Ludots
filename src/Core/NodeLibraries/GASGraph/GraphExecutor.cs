@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 
@@ -332,7 +333,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ref GraphExecutionCursor cursor,
             int budgetSteps,
             GraphKind kind = GraphKind.Script,
-            GraphDebugTrace? debugTrace = null)
+            GraphDebugTrace? debugTrace = null,
+            MapId? mapScope = null)
         {
             RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
             GraphFrame frame = GraphFrame.Bind(
@@ -351,7 +353,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 targets,
                 callStack,
                 cursor,
-                debugTrace: debugTrace);
+                debugTrace: debugTrace,
+                mapScope: mapScope);
             GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps);
             cursor = frame.Cursor;
             return result;

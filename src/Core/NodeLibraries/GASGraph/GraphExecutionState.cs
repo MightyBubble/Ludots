@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 
@@ -30,6 +31,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public World World;
         public Entity Caster;
         public Entity ExplicitTarget;
+        public MapId? MapScope;
         /// <summary>
         /// Additional context entity (e.g. AOE center, original target for chained effects).
         /// Set from EffectContext.TargetContext when executing phase graphs.

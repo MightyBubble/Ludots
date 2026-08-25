@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
@@ -82,6 +84,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly GraphDebugTrace _debugTrace = new();
         private GraphExecutionCursor _cursor;
         private Entity _runCaster;
+        private MapId? _mapScope;
+        private bool _mapScopeResolved;
         private bool _runActive;
         private bool _ranToHaltOnce;
         private bool _lifecycleDispatch;
@@ -296,7 +300,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 ref _cursor,
                 TriggerGraphLimits.SliceBudgetSteps,
                 GraphKind.Script,
-                _debugTrace);
+                _debugTrace,
+                ResolveMapScopeOnce(dependencies));
             LastSliceResult = result;
 
             RecordDebugTrace(result);
@@ -380,6 +385,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     _previousEntityRegisters[i] = _vmEntityRegisters[i];
                 }
             }
+        }
+
+        private MapId? ResolveMapScopeOnce(TriggerGraphTriggerDependencies dependencies)
+        {
+            if (!_mapScopeResolved)
+            {
+                _mapScope = dependencies.Engine.World.TryGet<MapEntity>(_scope, out MapEntity anchor)
+                    ? anchor.MapId
+                    : null;
+                _mapScopeResolved = true;
+            }
+
+            return _mapScope;
         }
 
         private static TriggerGraphTriggerDependencies ResolveDependencies(ScriptContext context)

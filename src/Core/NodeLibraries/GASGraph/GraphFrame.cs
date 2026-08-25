@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 
@@ -66,6 +67,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Span<int> CallStack;
         public GraphExecutionCursor Cursor;
         public GraphDebugTrace? DebugTrace;
+        public MapId? MapScope;
 
         public static GraphFrame Bind(
             GraphKind kind,
@@ -85,7 +87,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphExecutionCursor cursor = default,
             uint randomSeed = 0,
             GraphEventPayload eventPayload = default,
-            GraphDebugTrace? debugTrace = null)
+            GraphDebugTrace? debugTrace = null,
+            MapId? mapScope = null)
         {
             if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
             {
@@ -145,7 +148,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 TargetList = new GraphTargetList(targets),
                 CallStack = callStack,
                 Cursor = cursor,
-                DebugTrace = debugTrace
+                DebugTrace = debugTrace,
+                MapScope = mapScope
             };
         }
 
@@ -174,7 +178,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 ReturnInt = Cursor.ReturnInt,
                 InvokeDepth = Cursor.InvokeDepth,
                 Status = GraphExecutionStatus.Running,
-                DebugTrace = DebugTrace
+                DebugTrace = DebugTrace,
+                MapScope = MapScope
             };
         }
     }
