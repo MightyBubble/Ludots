@@ -259,6 +259,21 @@ namespace Raylib_cs
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct BoundingBox
+    {
+        public Vector3 min;
+        public Vector3 max;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct FilePathList
+    {
+        public uint capacity;
+        public uint count;
+        public IntPtr paths;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public struct MaterialMap
     {
         public Texture2D texture;
@@ -464,6 +479,16 @@ namespace Raylib_cs
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool IsWindowFocused();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsFileDropped();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern FilePathList LoadDroppedFiles();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadDroppedFiles(FilePathList files);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern Vector2 GetWindowPosition();
@@ -746,6 +771,9 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void UnloadModel(Model model);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern BoundingBox GetModelBoundingBox(Model model);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe ModelAnimation* LoadModelAnimations(string fileName, out int animCount);
