@@ -28,6 +28,7 @@ namespace Ludots.Tests.Presentation
         public void ChannelElementSizes_AreEachNarrowerThanFatPresentationRequest()
         {
             int fat = Unsafe.SizeOf<PresentationRequest>();
+            Assert.That(fat, Is.LessThan(688), "The compatibility snapshot must not retain the legacy 688-byte padding fields.");
             Assert.That(Unsafe.SizeOf<VisualProxyChannelItem>(), Is.LessThan(fat));
             Assert.That(Unsafe.SizeOf<GroundOverlayChannelItem>(), Is.LessThan(fat));
             Assert.That(Unsafe.SizeOf<WorldHudChannelItem>(), Is.LessThan(fat));
@@ -173,6 +174,42 @@ namespace Ludots.Tests.Presentation
             Assert.That(overflow.Message, Does.Contain("kind=WorldHud"));
             Assert.That(requests.Count, Is.EqualTo(2));
             Assert.That(requests.WorldHudAt(0).Item.StableId, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Replay_CapturesAndReplaysTypedChannelWithoutReconstructingFacade()
+        {
+            World world = World.Create();
+            try
+            {
+                Entity owner = world.Create();
+                var source = new PresentationRequestBuffer(4);
+                var proxy = new PresentationVisualProxy
+                {
+                    StableId = 42,
+                    MeshAssetId = 9,
+                    Position = new Vector3(3f, 4f, 5f),
+                    LOD = LODLevel.Medium,
+                };
+                source.AddVisualProxy(owner, in proxy);
+
+                PresentationRequestReplay replay = source.CaptureReplay(0);
+                Assert.That(replay.Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
+                Assert.That(replay.Owner, Is.EqualTo(owner));
+                Assert.That(replay.VisualProxy.StableId, Is.EqualTo(42));
+
+                var target = new PresentationRequestBuffer(4);
+                target.Replay(in replay);
+
+                Assert.That(target.Count, Is.EqualTo(1));
+                Assert.That(target.VisualProxyAt(0).Owner, Is.EqualTo(owner));
+                Assert.That(target.VisualProxyAt(0).VisualProxy.Position, Is.EqualTo(proxy.Position));
+                Assert.That(target.VisualProxyAt(0).VisualProxy.MeshAssetId, Is.EqualTo(9));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
         }
 
         [Test]
