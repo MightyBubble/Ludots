@@ -214,6 +214,62 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                     return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
 
+                case GraphNodeOp.InvokeGraph:
+                {
+                    if ((ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
+                    {
+                        if (!TryResolveSymbol(symbols, ins.Imm, out string graphKey))
+                        {
+                            return Fail(walk.Path, $"InvokeGraph.functionName@pc={pc} cannot resolve symbol index {ins.Imm}", out diagnostic);
+                        }
+
+                        int namedGraphId = GraphIdRegistry.GetId(graphKey);
+                        if (namedGraphId <= 0)
+                        {
+                            if (walk.AllowMissingTargets)
+                            {
+                                return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
+                            }
+
+                            return Fail(walk.Path, $"InvokeGraph.functionName '{graphKey}'@pc={pc} is not a registered graph key", out diagnostic);
+                        }
+
+                        walk.Path.Add($"InvokeGraph.functionName '{graphKey}'@pc={pc}");
+                        bool namedFound = FindInGraph(
+                            walk,
+                            namedGraphId,
+                            GraphYieldPurityTarget.DescribeGraph(namedGraphId),
+                            out diagnostic);
+                        walk.Path.RemoveAt(walk.Path.Count - 1);
+                        if (namedFound)
+                        {
+                            return true;
+                        }
+
+                        return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
+                    }
+
+                    int invokeGraphTarget = ins.Imm;
+                    if (invokeGraphTarget <= 0)
+                    {
+                        return Fail(walk.Path, $"InvokeGraph.graphId@pc={pc} requires a positive graph id", out diagnostic);
+                    }
+
+                    walk.Path.Add($"InvokeGraph.graphId={invokeGraphTarget}@pc={pc}");
+                    bool invokeGraphFound = FindInGraph(
+                        walk,
+                        invokeGraphTarget,
+                        GraphYieldPurityTarget.DescribeGraph(invokeGraphTarget),
+                        out diagnostic);
+                    walk.Path.RemoveAt(walk.Path.Count - 1);
+                    if (invokeGraphFound)
+                    {
+                        return true;
+                    }
+
+                    return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
+                }
+
                 case GraphNodeOp.Call:
                 {
                     int target = ins.Imm;
