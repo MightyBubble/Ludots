@@ -350,6 +350,15 @@ namespace Ludots.Core.GraphRuntime
             {
                 EnsureNoInvokeCycle(graphId, allowMissingTargets: false);
             }
+
+            foreach (KeyValuePair<int, GraphProgramRegistration> pair in _programs)
+            {
+                ValidateProgramInvokeGraphTargets(
+                    pair.Key,
+                    pair.Value,
+                    allowMissingTargets: false,
+                    allowUnpatchedGraphKeys: false);
+            }
         }
 
         private void EnsureInvokeTargetsAreScript(bool allowMissingTargets, bool allowUnpatchedFuncLibNames)
@@ -361,6 +370,12 @@ namespace Ludots.Core.GraphRuntime
                     pair.Value,
                     allowMissingTargets,
                     allowUnpatchedFuncLibNames);
+
+                ValidateProgramInvokeGraphTargets(
+                    pair.Key,
+                    pair.Value,
+                    allowMissingTargets,
+                    allowUnpatchedGraphKeys: allowUnpatchedFuncLibNames);
             }
         }
 
@@ -429,6 +444,106 @@ namespace Ludots.Core.GraphRuntime
                     nameof(program),
                     program.Length,
                     $"Graph program length {program.Length} exceeds max {GraphVmRuntimeLimits.MaxInstructions}.");
+            }
+        }
+
+        /// <summary>
+        /// InvokeGraph (#1116): Imm must name a registered TriggerGraph; an authored entry
+        /// label (Flags bit 1, symbol index B | C &lt;&lt; 8 into the caller's symbol table)
+        /// must exist in the target's entry table — on first validation the instruction is
+        /// rewritten in place to A = entry ordinal + 1 (B/C cleared) so the runtime reads a
+        /// plain ordinal. FunctionName-mode instructions (Flags bit 0) are skipped while the
+        /// graph key is still unresolved, same as InvokeScript. Missing targets are tolerated
+        /// while mods are still registering (allowMissingTargets).
+        /// </summary>
+        private void ValidateProgramInvokeGraphTargets(
+            int graphId,
+            GraphProgramRegistration registration,
+            bool allowMissingTargets,
+            bool allowUnpatchedGraphKeys = false)
+        {
+            GraphInstruction[] program = registration.Program;
+            for (int i = 0; i < program.Length; i++)
+            {
+                GraphInstruction ins = program[i];
+                if (ins.Op != (ushort)GraphNodeOp.InvokeGraph)
+                {
+                    continue;
+                }
+
+                if ((ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
+                {
+                    if (allowUnpatchedGraphKeys)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"InvokeGraph.functionName remains unresolved in graph id {graphId} at pc={i}.");
+                }
+
+                int targetGraphId = ins.Imm;
+                if (targetGraphId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeGraph.graphId in graph id {graphId} at pc={i} requires a positive graph id.");
+                }
+
+                if (!_programs.TryGetValue(targetGraphId, out GraphProgramRegistration target))
+                {
+                    if (allowMissingTargets)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"InvokeGraph target graph id {targetGraphId} is not registered.");
+                }
+
+                if (target.Kind != GraphKind.TriggerGraph)
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeGraph target graph id {targetGraphId} must be TriggerGraph, but is '{target.Kind}'.");
+                }
+
+                if ((ins.Flags & 2) == 0)
+                {
+                    continue;
+                }
+
+                if (ins.A != 0)
+                {
+                    // Already rewritten to entry ordinal + 1 by an earlier validation pass.
+                    continue;
+                }
+
+                int symbolIndex = ins.B | (ins.C << 8);
+                string[] symbols = registration.Symbols;
+                if ((uint)symbolIndex >= (uint)symbols.Length || string.IsNullOrWhiteSpace(symbols[symbolIndex]))
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeGraph.entryLabel in graph id {graphId} at pc={i} has an unresolvable symbol index {symbolIndex}.");
+                }
+
+                string label = symbols[symbolIndex]!.Trim();
+                for (int e = 0; e < target.TriggerGraphEntries.Count; e++)
+                {
+                    if (string.Equals((target.TriggerGraphEntries[e].Label ?? string.Empty).Trim(), label, StringComparison.Ordinal))
+                    {
+                        ins.A = (byte)(e + 1);
+                        ins.B = 0;
+                        ins.C = 0;
+                        program[i] = ins;
+                        label = string.Empty;
+                        break;
+                    }
+                }
+
+                if (label.Length > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.InvokeGraphEntryNotFound: InvokeGraph.entryLabel '{label}' in graph id {graphId} at pc={i} is not an entry of TriggerGraph id {targetGraphId}.");
+                }
             }
         }
 

@@ -7,6 +7,7 @@ namespace Ludots.Core.Systems
     public sealed class MapLoadEntityIndex
     {
         private readonly Dictionary<string, Entity> _byInstanceId = new(StringComparer.Ordinal);
+        private readonly Dictionary<Entity, string> _instanceIdByEntity = new();
 
         public int Count => _byInstanceId.Count;
 
@@ -39,6 +40,14 @@ namespace Ludots.Core.Systems
             }
 
             _byInstanceId.Add(normalized, entity);
+            _instanceIdByEntity[entity] = normalized;
+        }
+
+        /// <summary>Reverse lookup for exact-instance event filtering: the placed
+        /// InstanceId an entity was registered under, if any.</summary>
+        public bool TryGetInstanceId(Entity entity, out string instanceId)
+        {
+            return _instanceIdByEntity.TryGetValue(entity, out instanceId!);
         }
 
         public bool TryGet(string instanceId, out Entity entity)

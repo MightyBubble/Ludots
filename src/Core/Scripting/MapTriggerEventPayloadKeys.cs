@@ -15,6 +15,8 @@ namespace Ludots.Core.Scripting
         public const string VarName = "MapTrigger.VarName";                // string
         public const string VarValueFloat = "MapTrigger.VarValueFloat";    // float
         public const string VarValueInt = "MapTrigger.VarValueInt";        // int
+        public const string OldValueFloat = "MapTrigger.OldValueFloat";    // float
+        public const string OldValueInt = "MapTrigger.OldValueInt";        // int
         public const string Phase = "MapTrigger.Phase";                    // int
         public const string HeartbeatIndex = "MapTrigger.HeartbeatIndex";            // int
         public const string TargetEntity = "MapTrigger.TargetEntity";      // Entity

@@ -216,6 +216,32 @@ namespace Ludots.Core.Systems
             LoadEntitiesAndIndex(mapConfig);
         }
 
+        /// <summary>
+        /// #1108 placed-instance exposure policy. "all" is the default open catalog; the
+        /// "declared" branch only narrows variable materialization (never #1106 event
+        /// subscription) and fails closed here until the HITL threshold decision lands.
+        /// </summary>
+        private static void ValidateInstanceExposure(MapConfig mapConfig)
+        {
+            string exposure = (mapConfig.InstanceExposure ?? string.Empty).Trim();
+            if (exposure.Length == 0)
+            {
+                exposure = "all";
+            }
+
+            if (exposure == "declared")
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig.Id}' InstanceExposure 'declared' 等 HITL 拍板阈值，装载期 fail closed (#1108)；当前只支持 \"all\"。");
+            }
+
+            if (exposure != "all")
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig.Id}' InstanceExposure '{exposure}' must be \"all\" or \"declared\".");
+            }
+        }
+
         public MapLoadEntityIndex LoadEntitiesAndIndex(MapConfig mapConfig)
         {
             if (mapConfig == null)
@@ -227,6 +253,8 @@ namespace Ludots.Core.Systems
             {
                 throw new InvalidOperationException($"Map '{mapConfig.Id}' requires an explicit entities list.");
             }
+
+            ValidateInstanceExposure(mapConfig);
 
             // We need to extract the dictionary from the registry to pass to EntityBuilder
             // Or better, update EntityBuilder to accept DataRegistry or just the Interface.

@@ -102,7 +102,13 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public static readonly EventKey RegionExited = new EventKey("RegionExited");
 
-<<<<<<< HEAD
+        /// <summary>
+        /// Map-scoped: fired whenever any declared map variable's value changes
+        /// (int and float alike). Payload: VarName plus the old/new pair matching
+        /// the variable's type (VarValueInt/OldValueInt or VarValueFloat/OldValueFloat).
+        /// </summary>
+        public static readonly EventKey MapVariableChanged = new EventKey("MapVariableChanged");
+
         public static bool IsMapScoped(string eventName)
         {
             return eventName == MapLoaded.Value ||
@@ -115,15 +121,8 @@ namespace Ludots.Core.Scripting
                 eventName == EntityAliveCountChanged.Value ||
                 eventName == InputActionFired.Value ||
                 eventName == RegionEntered.Value ||
-                eventName == RegionExited.Value;
+                eventName == RegionExited.Value ||
+                eventName == MapVariableChanged.Value;
         }
-=======
-        /// <summary>
-        /// Map-scoped: fired whenever any declared map variable's value changes
-        /// (int and float alike). Payload: VarName plus the old/new pair matching
-        /// the variable's type (VarValueInt/OldValueInt or VarValueFloat/OldValueFloat).
-        /// </summary>
-        public static readonly EventKey MapVariableChanged = new EventKey("MapVariableChanged");
->>>>>>> cafdf0ab8 (feat(scripting): MapVariableChanged as a first-class engine event (#1113))
     }
 }

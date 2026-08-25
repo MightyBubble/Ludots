@@ -335,7 +335,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind kind = GraphKind.Script,
             GraphDebugTrace? debugTrace = null,
             MapId? mapScope = null,
-            int graphId = 0)
+            int graphId = 0,
+            GraphEntryPayloadTable? entryPayload = null,
+            GraphEntryPayloadTable? invokeArgs = null)
         {
             RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
             GraphFrame frame = GraphFrame.Bind(
@@ -355,7 +357,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 callStack,
                 cursor,
                 debugTrace: debugTrace,
-                mapScope: mapScope);
+                mapScope: mapScope,
+                entryPayload: entryPayload,
+                invokeArgs: invokeArgs);
             frame.GraphId = graphId;
             GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps);
             cursor = frame.Cursor;

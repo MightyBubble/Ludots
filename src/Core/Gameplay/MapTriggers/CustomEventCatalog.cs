@@ -144,6 +144,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 names.Register(name);
                 if (CustomEventSchemaParser.TryParse(node, name, $"{CustomEventNameRegistry.ConfigPath} entry '{name}'") is { } schema)
                 {
+                    if (schema.Params.Count > Ludots.Core.NodeLibraries.GASGraph.GraphEntryPayloadTable.Capacity)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CustomEventNameRegistry.ConfigPath} entry '{name}' declares {schema.Params.Count} params; " +
+                            $"TriggerGraph entry payload capture supports at most {Ludots.Core.NodeLibraries.GASGraph.GraphEntryPayloadTable.Capacity}.");
+                    }
+
                     schemas.RegisterCustom(schema);
                 }
             }
@@ -157,7 +164,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <c>scope</c> ("map" default / "entity" / "global") and <c>params[]</c> of
     /// <c>{ name, type, key, optional? }</c>. Unknown fields, out-of-whitelist types
     /// (bool / region / team wait on the map variable type contract), and malformed
-    /// shapes fail closed. Entries without <c>params</c> stay parameterless (null).
+    /// shapes fail closed. Entries without <c>params</c> yield a parameterless schema
+    /// that still carries the authored scope.
     /// </summary>
     public static class CustomEventSchemaParser
     {
@@ -183,7 +191,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             if (!node.ContainsKey("params"))
             {
-                return null;
+                // Parameterless entries still carry their scope; dropping it here would
+                // silently re-route Global-scope events into the map table (#1123).
+                return new EventSchema(eventName, scope, Array.Empty<EventParamSchema>());
             }
 
             if (node["params"] is not JsonArray paramsArray)
