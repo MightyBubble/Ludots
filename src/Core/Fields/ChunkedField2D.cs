@@ -15,7 +15,11 @@ namespace Ludots.Core.Fields
         private int _dirtyCount;
         private int _nonDefaultCount;
 
-        public ChunkedField2D(FieldGridSpec2D grid, T defaultValue = default, int initialChunkCapacity = 8)
+        public ChunkedField2D(
+            FieldGridSpec2D grid,
+            T defaultValue = default,
+            int initialChunkCapacity = 8,
+            IFieldValueCodec<T>? codec = null)
         {
             if (initialChunkCapacity <= 0)
             {
@@ -24,7 +28,7 @@ namespace Ludots.Core.Fields
 
             Grid = grid;
             _defaultValue = defaultValue;
-            _codec = FieldValueCodec<T>.Instance;
+            _codec = codec ?? FieldValueCodec<T>.Instance;
             _chunks = new FieldChunk2D<T>[initialChunkCapacity];
             _chunkIndexByKey = new Dictionary<long, int>(initialChunkCapacity);
         }
