@@ -49,6 +49,11 @@ namespace Ludots.Tests.Presentation
             long instancedBatchBytes = InstancedBatchBytes(presentationConfig);
             long legacyLaneBytes = (long)Unsafe.SizeOf<PresentationRequest>() * LegacyBlacksmithPresentationLaneCapacity;
 
+            TestContext.Out.WriteLine(
+                $"requestStorageBytes={typedBytes}; instancedBatchStorageBytes={instancedBatchBytes}; " +
+                $"legacyRequestStorageBytes={legacyLaneBytes}; requestRatio={typedBytes / (double)legacyLaneBytes:F4}; " +
+                $"combinedRatio={(typedBytes + instancedBatchBytes) / (double)legacyLaneBytes:F4}");
+
             Assert.That(capacities.TotalOperationCapacity, Is.EqualTo(BlacksmithRequestPeakCapacity));
             Assert.That(typedBytes + instancedBatchBytes, Is.LessThanOrEqualTo(legacyLaneBytes / 10));
         }
@@ -84,6 +89,103 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(requests.Count, Is.EqualTo(BlacksmithStaticPresenterPeak + BlacksmithHudPeak));
             Assert.That(requests.Capacity, Is.EqualTo(BlacksmithRequestPeakCapacity));
+        }
+
+        [Test]
+        public void CompatibilityFacade_PreservesOwnerPayloadAndOrderAcrossAllLanes()
+        {
+            World world = World.Create();
+            try
+            {
+                Entity visualOwner = world.Create();
+                Entity overlayOwner = world.Create();
+                Entity hudOwner = world.Create();
+                Entity splineOwner = world.Create();
+                Entity surfaceOwner = world.Create();
+                Entity removalOwner = world.Create();
+                Entity clearOwner = world.Create();
+                var requests = new PresentationRequestBuffer(16);
+
+                var visual = new PresentationVisualProxy { StableId = 101, MeshAssetId = 11, LOD = LODLevel.Medium };
+                var overlay = new GroundOverlayItem { StableId = 102, Radius = 2.5f };
+                var hud = new WorldHudItem { StableId = 103, Id0 = 17 };
+                var spline = new SplineRibbonRequest { StableId = 104, Width = 3f };
+                var surface = new SurfaceSourceRequest { StableId = 105, ScopeId = 19 };
+
+                requests.AddVisualProxy(visualOwner, in visual);
+                requests.AddGroundOverlay(overlayOwner, in overlay, LODLevel.High);
+                requests.AddWorldHud(hudOwner, in hud, LODLevel.Low);
+                requests.AddSplineRibbon(splineOwner, in spline, LODLevel.Medium);
+                requests.AddSurfaceSource(surfaceOwner, in surface, LODLevel.High);
+                requests.RemoveWorldHud(removalOwner, 106);
+                requests.ClearTransientVisualProjection(clearOwner);
+
+                ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
+                Assert.That(span.Length, Is.EqualTo(7));
+                Assert.That(span[0].Owner, Is.EqualTo(visualOwner));
+                Assert.That(span[0].VisualProxy.StableId, Is.EqualTo(101));
+                Assert.That(span[1].Owner, Is.EqualTo(overlayOwner));
+                Assert.That(span[1].GroundOverlay.Radius, Is.EqualTo(2.5f).Within(0.001f));
+                Assert.That(span[2].Owner, Is.EqualTo(hudOwner));
+                Assert.That(span[2].WorldHud.Id0, Is.EqualTo(17));
+                Assert.That(span[3].Owner, Is.EqualTo(splineOwner));
+                Assert.That(span[3].SplineRibbon.Width, Is.EqualTo(3f).Within(0.001f));
+                Assert.That(span[4].Owner, Is.EqualTo(surfaceOwner));
+                Assert.That(span[4].SurfaceSource.ScopeId, Is.EqualTo(19));
+                Assert.That(span[5].Owner, Is.EqualTo(removalOwner));
+                Assert.That(span[5].StableId, Is.EqualTo(106));
+                Assert.That(span[6].Owner, Is.EqualTo(clearOwner));
+                Assert.That(span[6].Kind, Is.EqualTo(PresentationRequestKind.ClearTransientVisualProjection));
+
+                Assert.That(requests.Get(4).Owner, Is.EqualTo(surfaceOwner));
+                Assert.That(requests.Get(4).SurfaceSource.StableId, Is.EqualTo(105));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        [Category("benchmark")]
+        public void RealScaleTypedLanes_Reach130kRequestsWithoutSteadyStateAllocation()
+        {
+            const int visualCount = BlacksmithStaticPresenterPeak;
+            const int hudCount = BlacksmithHudPeak;
+            const int totalCount = visualCount + hudCount;
+            var capacities = new PresentationRequestChannelCapacities(
+                visualProxy: visualCount,
+                groundOverlay: 1,
+                worldHud: hudCount,
+                splineRibbon: 1,
+                surfaceSource: 1,
+                removal: 1,
+                clearTransient: 1,
+                totalOperationCapacity: totalCount);
+            var requests = new PresentationRequestBuffer(in capacities);
+
+            AddRealScaleFrame(requests, visualCount, hudCount);
+            requests.Clear();
+            AddRealScaleFrame(requests, visualCount, hudCount);
+            requests.Clear();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            AddRealScaleFrame(requests, visualCount, hudCount);
+            long steadyStateAllocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+            long requestStorageBytes = RequestChannelBytes(in capacities);
+            long legacyRequestStorageBytes = (long)Unsafe.SizeOf<PresentationRequest>() * LegacyBlacksmithPresentationLaneCapacity;
+            TestContext.Out.WriteLine(
+                $"realScaleRequests={requests.Count}; requestStorageBytes={requestStorageBytes}; " +
+                $"legacyRequestStorageBytes={legacyRequestStorageBytes}; requestRatio={requestStorageBytes / (double)legacyRequestStorageBytes:F4}; " +
+                $"steadyStateAllocatedBytes={steadyStateAllocated}");
+
+            Assert.That(requests.Count, Is.EqualTo(totalCount));
+            Assert.That(requestStorageBytes, Is.LessThanOrEqualTo(legacyRequestStorageBytes / 10));
+            Assert.That(steadyStateAllocated, Is.EqualTo(0), "Typed lane emission must not allocate after warmup.");
         }
 
         [Test]
@@ -322,6 +424,21 @@ namespace Ludots.Tests.Presentation
         {
             return (long)Unsafe.SizeOf<InstancedBatchRequest>() * config.InstancedBatchRequestCapacity
                 + (long)Unsafe.SizeOf<InstancedBatchOperation>() * config.InstancedBatchOperationCapacity;
+        }
+
+        private static void AddRealScaleFrame(PresentationRequestBuffer requests, int visualCount, int hudCount)
+        {
+            for (int i = 0; i < visualCount; i++)
+            {
+                var visual = new PresentationVisualProxy { StableId = i + 1, MeshAssetId = 1, LOD = LODLevel.High };
+                requests.AddVisualProxy(Entity.Null, in visual);
+            }
+
+            for (int i = 0; i < hudCount; i++)
+            {
+                var hud = new WorldHudItem { StableId = visualCount + i + 1, Id0 = 1 };
+                requests.AddWorldHud(Entity.Null, in hud, LODLevel.High);
+            }
         }
     }
 }
