@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
@@ -28,9 +29,61 @@ namespace Ludots.Core.Persistence
             NormalizeTeamEntityRef(world, canonicalWorldId);
             NormalizeActivityInstances(world, canonicalWorldId);
             NormalizeTaskInstances(world, canonicalWorldId);
+            NormalizeOrderBuffers(world, canonicalWorldId);
             NormalizeRelationshipInstances(world, canonicalWorldId);
             NormalizeRelationshipKeys<RelationshipEdgeSet>(world, canonicalWorldId);
             NormalizeRelationshipKeys<InRelationship>(world, canonicalWorldId);
+        }
+
+        private static void NormalizeOrderBuffers(World world, int worldId)
+        {
+            var orderQuery = new QueryDescription().WithAll<OrderBuffer>();
+            world.Query(in orderQuery, (ref OrderBuffer orders) =>
+            {
+                if (orders.HasActive)
+                {
+                    orders.ActiveOrder.Order = NormalizeOrderReferences(orders.ActiveOrder.Order, worldId);
+                }
+
+                if (orders.HasPending)
+                {
+                    orders.PendingOrder.Order = NormalizeOrderReferences(orders.PendingOrder.Order, worldId);
+                }
+
+                for (int i = 0; i < orders.QueuedCount; i++)
+                {
+                    QueuedOrder queued = orders.GetQueued(i);
+                    queued.Order = NormalizeOrderReferences(queued.Order, worldId);
+                    orders.SetQueued(i, queued);
+                }
+            });
+
+            var continuationQuery = new QueryDescription().WithAll<OrderContinuationBuffer>();
+            world.Query(in continuationQuery, (ref OrderContinuationBuffer continuations) =>
+            {
+                for (int i = 0; i < continuations.Count; i++)
+                {
+                    OrderContinuationEntry entry = continuations.GetEntry(i);
+                    entry.Order = NormalizeOrderReferences(entry.Order, worldId);
+                    continuations.SetEntry(i, entry);
+                }
+            });
+        }
+
+        private static Order NormalizeOrderReferences(Order order, int worldId)
+        {
+            order.Actor = NormalizeReference(order.Actor, worldId);
+            order.Target = NormalizeReference(order.Target, worldId);
+            order.TargetContext = NormalizeReference(order.TargetContext, worldId);
+            order.CommandSource = NormalizeReference(order.CommandSource, worldId);
+            return order;
+        }
+
+        private static Entity NormalizeReference(Entity entity, int worldId)
+        {
+            return entity == Entity.Null
+                ? entity
+                : EntityUtil.Reconstruct(entity.Id, worldId, entity.Version);
         }
 
         private static void NormalizeBlackboardEntityBuffer(World world, int worldId)
