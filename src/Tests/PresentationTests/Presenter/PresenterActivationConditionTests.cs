@@ -125,6 +125,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(commandsA[0].CommandKind, Is.EqualTo(PresenterCommandKind.DeactivateBehavior));
             Assert.That(fixture.World.Get<PresenterState>(presenterA).BehaviorActiveMask & (1u << ConditionedSlot), Is.EqualTo(0u));
             Assert.That(CountPlayRequests(soundsA), Is.EqualTo(0));
+            uint maskA = fixture.World.Get<PresenterState>(presenterA).BehaviorActiveMask;
 
             Entity ownerB = fixture.World.Create(new VisualTransform { Position = new System.Numerics.Vector3(5f, 0f, 5f) });
             var (presenterB, commandsB, soundsB) = fixture.CreateAndDecide(defId, ownerB, scopeTag: 11);
@@ -136,6 +137,12 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(fixture.World.Get<PresenterState>(presenterA).OwnerEntity, Is.EqualTo(ownerA));
             Assert.That(fixture.World.Get<PresenterState>(presenterB).OwnerEntity, Is.EqualTo(ownerB));
+            Assert.That(
+                fixture.World.Get<PresenterState>(presenterA).BehaviorActiveMask,
+                Is.EqualTo(maskA),
+                "创建 presenter B 后，presenter A 的 BehaviorActiveMask 必须保持不变："
+                + "编译的 PresenterCreated 规则只路由到刚创建的实例（PresenterRuleSystem 对 PresenterCreated 事件 "
+                + "解析事件携带的 presenter 实体），不得扇出到同一 definition 的姐妹实例。");
         }
 
         [Test]
@@ -186,8 +193,8 @@ namespace Ludots.Tests.Presentation
                     ]
                   }
                 ]
-                """);
-            fixture.RegisterValidationProgram(graphProgramId: 9001, result: true);
+                """,
+                graphs => graphs.Register(9001, ValidationProgramInstructions(result: true), GraphKind.Validation));
             int defId = fixture.Definitions.GetId("accept.activation.graph.true");
 
             Entity owner = fixture.World.Create();
@@ -219,8 +226,8 @@ namespace Ludots.Tests.Presentation
                     ]
                   }
                 ]
-                """);
-            fixture.RegisterValidationProgram(graphProgramId: 9002, result: false);
+                """,
+                graphs => graphs.Register(9002, ValidationProgramInstructions(result: false), GraphKind.Validation));
             int defId = fixture.Definitions.GetId("accept.activation.graph.false");
 
             Entity owner = fixture.World.Create();
@@ -233,13 +240,14 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void GraphCondition_UnknownProgram_FailsFastAtRuntime()
+        public void GraphCondition_WithoutResolver_IsRejectedAtLoad()
         {
-            using var fixture = CreateConfigFixture(
+            WriteCatalog();
+            WritePresenters(
                 """
                 [
                   {
-                    "id": "accept.activation.graph",
+                    "id": "accept.activation.graph.noresolver",
                     "behaviors": [
                       {
                         "slot": "sound",
@@ -252,26 +260,24 @@ namespace Ludots.Tests.Presentation
                   }
                 ]
                 """);
-            int defId = fixture.Definitions.GetId("accept.activation.graph");
 
-            Entity owner = fixture.World.Create(new VisualTransform { Position = default });
-            Assert.That(fixture.Commands.TryAdd(new PresenterCommand
-            {
-                CommandKind = PresenterCommandKind.CreatePresenter,
-                CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
-                RouteStrategy = PresenterCommandRouteStrategy.CreatePresenter,
-                PresenterDefinitionId = defId,
-                ParentEntity = Entity.Null,
-                ScopeTag = 1,
-                AnchorKind = PresentationAnchorKind.Entity,
-                Source = owner,
-                Target = owner,
-            }), Is.True);
-            fixture.Runtime.Update(0.016f);
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(_root, "Core"));
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, key) => string.Equals(key, "sfx_cond", StringComparison.Ordinal)
+                    ? ConditionedSoundAssetId
+                    : 1);
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Rules.Update(0.016f))!;
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("graphProgramId"));
             Assert.That(ex.Message, Does.Contain("777"));
+            Assert.That(ex.Message, Does.Contain("resolveGraphProgramKind"), "缺 resolver 时错误信息必须给出可行动的修复指引。");
         }
 
         [Test]
@@ -474,7 +480,17 @@ namespace Ludots.Tests.Presentation
             return count;
         }
 
-        private ActivationFixture CreateConfigFixture(string presentersJson)
+        /// <summary>Validation 图：B[0] = result，然后停机。与 PresenterRuleSystem.EvaluateGraph 的求值契约一致。</summary>
+        private static GraphInstruction[] ValidationProgramInstructions(bool result)
+        {
+            return new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = result ? 1 : 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+        }
+
+        private ActivationFixture CreateConfigFixture(string presentersJson, Action<GraphProgramRegistry> registerPrograms = null)
         {
             WriteCatalog();
             WritePresenters(presentersJson);
@@ -484,14 +500,17 @@ namespace Ludots.Tests.Presentation
             var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
             var pipeline = new ConfigPipeline(vfs, modLoader);
             var catalog = ConfigCatalogLoader.Load(pipeline);
+            var graphs = new GraphProgramRegistry();
+            registerPrograms?.Invoke(graphs);
             var registry = new PresenterDefinitionRegistry();
             new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
                 resolveBehaviorAssetId: (_, key) => string.Equals(key, "sfx_cond", StringComparison.Ordinal)
                     ? ConditionedSoundAssetId
-                    : 1).Load(catalog);
-            return new ActivationFixture(registry);
+                    : 1,
+                resolveGraphProgramKind: graphId => graphs.TryGetKind(graphId, out GraphKind kind) ? kind : GraphKind.None).Load(catalog);
+            return new ActivationFixture(registry, graphs);
         }
 
         private void WriteCatalog()
@@ -525,7 +544,7 @@ namespace Ludots.Tests.Presentation
             public readonly PresenterRuleSystem Rules;
             public readonly GraphProgramRegistry Graphs;
 
-            public ActivationFixture(PresenterDefinitionRegistry definitions)
+            public ActivationFixture(PresenterDefinitionRegistry definitions, GraphProgramRegistry graphs)
             {
                 World = World.Create();
                 Commands = new PresenterCommandBuffer();
@@ -533,7 +552,7 @@ namespace Ludots.Tests.Presentation
                 Instances = new PresenterEntityRuntime(World);
                 Definitions = definitions;
                 SoundRequests = new SoundRequestBuffer();
-                Graphs = new GraphProgramRegistry();
+                Graphs = graphs;
                 var ownerChanges = new PresentationOwnerChangeBuffer(64);
                 Runtime = new PresenterRuntimeSystem(
                     World,
@@ -554,19 +573,6 @@ namespace Ludots.Tests.Presentation
                     new Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null),
                     new Dictionary<string, object>());
                 Behavior = new PresenterBehaviorSystem(World, Instances, Definitions, Events, ownerChanges, SoundRequests);
-            }
-
-            /// <summary>注册一个 Validation 图：B[0] = result，然后停机。与 PresenterRuleSystem.EvaluateGraph 的求值契约一致。</summary>
-            public void RegisterValidationProgram(int graphProgramId, bool result)
-            {
-                Graphs.Register(
-                    graphProgramId,
-                    new[]
-                    {
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = result ? 1 : 0 },
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
-                    },
-                    GraphKind.Validation);
             }
 
             /// <summary>生产序：Runtime 建实例并发 PresenterCreated → Rules 求值条件发命令 → Runtime 应用 mask → Behavior 输出。</summary>

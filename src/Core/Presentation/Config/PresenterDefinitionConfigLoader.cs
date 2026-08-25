@@ -2616,6 +2616,7 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 pathIds.Add(childDefinitionId);
+                path.Add(childDefinition.Key);
                 try
                 {
                     PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
@@ -2631,19 +2632,12 @@ namespace Ludots.Core.Presentation.Config
                     }
                     else
                     {
-                        path.Add(childDefinition.Key);
-                        try
-                        {
-                            ValidateChildArray(childDefinition.Key, childDefinition.Children, "children", parsedByKey, pathIds, path);
-                        }
-                        finally
-                        {
-                            path.RemoveAt(path.Count - 1);
-                        }
+                        ValidateChildArray(childDefinition.Key, childDefinition.Children, "children", parsedByKey, pathIds, path);
                     }
                 }
                 finally
                 {
+                    path.RemoveAt(path.Count - 1);
                     pathIds.Remove(childDefinitionId);
                 }
             }
@@ -4338,8 +4332,15 @@ namespace Ludots.Core.Presentation.Config
                     $"{context} must declare a condition contract: author 'inline' or a positive 'graphProgramId'. An empty activationCondition is authoring noise; omit the field or use activeByDefault.");
             }
 
-            if (cond.GraphProgramId > 0 && _resolveGraphProgramKind != null)
+            if (cond.GraphProgramId > 0)
             {
+                if (_resolveGraphProgramKind == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.graphProgramId={cond.GraphProgramId} requires a graph-program kind resolver, but none was supplied to PresenterDefinitionConfigLoader. "
+                        + "Wire resolveGraphProgramKind, e.g. GraphProgramRegistry.TryGetKind (the graph registry SSOT), so activationCondition graph references are validated at load.");
+                }
+
                 GraphKind graphKind = _resolveGraphProgramKind(cond.GraphProgramId);
                 if (graphKind == GraphKind.None)
                 {
