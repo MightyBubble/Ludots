@@ -98,6 +98,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private bool _ranToHaltOnce;
         private bool _lifecycleDispatch;
 
+        public TriggerGraphMountDomain Domain => _domain;
+
         public TriggerGraphMountTrigger(
             int graphId,
             string graphName,
@@ -170,15 +172,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _abilityIdFilter = abilityIdFilter;
             _modIdFilter = modIdFilter;
             _refirePolicy = refirePolicy;
-            _entryIsResumeEvent = new EventKey(entry.EventName) == GameEvents.MapHeartbeat;
+            _entryIsResumeEvent = new EventKey(entry.EventName) == ResumeEventKey;
             _runCaster = scope;
             EventKey = new EventKey(entry.EventName);
             Priority = 0;
         }
 
         public override string Name => $"TriggerGraph:{_graphName}:{_entry.Label}";
-
-        public TriggerGraphMountDomain Domain => _domain;
 
         public int GraphId => _graphId;
 
@@ -344,6 +344,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
             StartRun(context);
             return Task.CompletedTask;
         }
+
+        private EventKey ResumeEventKey => _domain == TriggerGraphMountDomain.Mod
+            ? GameEvents.ModTriggerResume
+            : GameEvents.MapHeartbeat;
 
         /// <summary>
         /// Mount-pipeline dispatch for entity-domain lifecycle events. The lifecycle
@@ -623,18 +627,22 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// owners whose scope entity died stay parked forever (the dead mount is
     /// swept by the entity mount pipeline instead).
     /// </summary>
-    public sealed class TriggerGraphResumeTrigger : Trigger
+    public sealed class TriggerGraphResumeTrigger : Trigger, ITriggerResumeProbe
     {
         private readonly TriggerGraphMountTrigger _owner;
 
         public TriggerGraphResumeTrigger(TriggerGraphMountTrigger owner)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            EventKey = GameEvents.MapHeartbeat;
+            EventKey = owner.Domain == TriggerGraphMountDomain.Mod
+                ? GameEvents.ModTriggerResume
+                : GameEvents.MapHeartbeat;
             Priority = 0;
         }
 
         public override string Name => $"{_owner.Name}:Resume";
+
+        public bool IsSuspended => _owner.IsSuspended;
 
         public override bool CheckConditions(ScriptContext context)
             => _owner.IsSuspended && _owner.IsScopeDispatchable(context);

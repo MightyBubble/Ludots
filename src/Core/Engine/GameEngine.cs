@@ -4035,6 +4035,11 @@ namespace Ludots.Core.Engine
                 }
             }
 
+            if (TriggerManager.HasSuspendedModTriggers)
+            {
+                TriggerManager.FireEvent(GameEvents.ModTriggerResume, CreateContext());
+            }
+
             // 2. Visual Loop (Rendering, UI, Animation) - Always runs
             long presentationStart = System.Diagnostics.Stopwatch.GetTimestamp();
             Update(dt);

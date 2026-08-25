@@ -7,6 +7,11 @@ using Ludots.Core.Map;
 
 namespace Ludots.Core.Scripting
 {
+    internal interface ITriggerResumeProbe
+    {
+        bool IsSuspended { get; }
+    }
+
     public interface IMapTriggerRoute
     {
         bool IsGlobalRoute { get; }
@@ -68,6 +73,25 @@ namespace Ludots.Core.Scripting
 
         public TriggerManager()
         {
+        }
+
+        public bool HasSuspendedModTriggers
+        {
+            get
+            {
+                foreach (List<Trigger> triggers in _modTriggers.Values)
+                {
+                    for (int i = 0; i < triggers.Count; i++)
+                    {
+                        if (triggers[i] is ITriggerResumeProbe probe && probe.IsSuspended)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
         }
 
         public void RegisterTrigger(Trigger trigger)

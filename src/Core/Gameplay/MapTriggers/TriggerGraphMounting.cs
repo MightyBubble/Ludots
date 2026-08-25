@@ -225,7 +225,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         customEvents.IsDeclaredCustom(eventName))
                     {
                         throw new InvalidOperationException(
-                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{registration.TriggerGraphEntries[e].Label}' names map-scoped event '{eventName}'; Mod TriggerGraphs accept global events only.");
+                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{registration.TriggerGraphEntries[e].Label}' names unsupported event '{eventName}'; Mod TriggerGraphs accept global engine events only.");
                     }
                 }
 

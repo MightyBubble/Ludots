@@ -28,6 +28,13 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public static readonly EventKey ModLoaded = new EventKey("ModLoaded");
 
+        /// <summary>
+        /// Internal global pulse used to resume suspended Mod-domain TriggerGraph
+        /// entries. Mod graphs are not registered in a map event index, so they
+        /// cannot use the map heartbeat as their continuation clock.
+        /// </summary>
+        public static readonly EventKey ModTriggerResume = new EventKey("ModTriggerResume");
+
         public static readonly EventKey SimulationBudgetFused = new EventKey("SimulationBudgetFused");
 
         public static readonly EventKey Physics2DEnabled = new EventKey("Physics2DEnabled");

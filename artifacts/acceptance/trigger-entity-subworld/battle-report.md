@@ -1,7 +1,7 @@
 # Entity TriggerGraph 聚落作用域验收报告
 
-Status: BLOCKED - target test execution not completed
-Date: 2026-08-24
+Status: PASS - targeted TriggerGraph regression suite completed
+Date: 2026-08-26
 
 ## Scenario
 
@@ -18,12 +18,10 @@ Date: 2026-08-24
 - `src/Core/Config/ComponentRegistry.cs`
 - `src/Tests/GasTests/Graph/TriggerGraphEntityDomainTests.cs`
 
-## Verification attempt
+## Verification
 
-Command: `dotnet build src/Tests/GasTests/GasTests.csproj --no-restore`
+Command: `dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~TriggerGraphMountTests|FullyQualifiedName~TriggerGraphEntityDomainTests"`
 
-Result: blocked because this clean worktree has no generated `project.assets.json`. A restore attempt also hit the repository's known worktree NuGet `path1` failure in unrelated project references. No test pass is claimed.
+Result: 68/68 passed on the rebased branch. The suite covers entity aggregate scope, ordered multi-graph mounts, ability allowlists, ModId isolation, and global route registration.
 
-## Required next evidence
-
-Run the three added tests in `TriggerGraphEntityDomainTests` from an environment with the repository dependency assets available, then replace this report with the actual NUnit result, battle trace, and runtime Agent Bridge evidence.
+Runtime AgentBridge evidence is intentionally not claimed here; the showcase remains pending the separate runtime gate.

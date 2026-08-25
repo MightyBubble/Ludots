@@ -1,1 +1,1 @@
-{"status":"blocked","reason":"target GasTests build could not restore clean worktree dependencies","command":"dotnet build src/Tests/GasTests/GasTests.csproj --no-restore"}
+{"status":"passed","scope":"targeted-trigger-regression","command":"dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~TriggerGraphMountTests|FullyQualifiedName~TriggerGraphEntityDomainTests","result":"68/68"}
