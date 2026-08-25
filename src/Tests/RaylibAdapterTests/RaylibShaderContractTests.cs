@@ -163,7 +163,7 @@ public sealed class RaylibShaderContractTests
         Assert.That(include, Does.Contain("uniform float uShadowMapTexel"));
         Assert.That(include, Does.Not.Contain("1.0 / 2048.0"));
 
-        foreach (string receiver in new[] { "model_lit.fs", "instancing.fs", "skinning_instanced.fs", "terrain.fs" })
+        foreach (string receiver in new[] { "model_lit.fs", "model_file_lit.fs", "instancing.fs", "skinning_instanced.fs", "terrain.fs" })
         {
             string fragment = File.ReadAllText(Path.Combine(shaderRoot, receiver));
             Assert.That(fragment, Does.Contain("// ludo:include shadow_sampling.glsl.inc"), receiver);

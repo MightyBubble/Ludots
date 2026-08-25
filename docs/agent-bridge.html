@@ -55,6 +55,10 @@
   .md-body code { font-family: var(--mono); font-size: 0.92em; background: var(--bg-soft); border-radius: 4px; padding: 1px 5px; }
   .md-body pre code { background: none; padding: 0; }
   .md-body img { max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); margin: 14px 0; }
+  .md-body video {
+    display: block; width: 100%; max-width: 900px; margin: 18px 0;
+    border: 1px solid var(--border); border-radius: var(--radius-sm); background: #000;
+  }
   .md-body hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
   .docs-loading { color: var(--faint); padding: 40px 0; text-align: center; }
 
@@ -75,6 +79,7 @@
       <a data-doc="manual" href="#doc/manual">使用手册 · 17 工具速查</a>
       <a data-doc="rfc" href="#doc/rfc">RFC-0066 · 设计 SSOT</a>
       <a data-doc="demo" href="#doc/demo">运行演示 · 怎么起、怎么连</a>
+      <a data-doc="asset" href="#doc/asset">教程 · Raylib 资产验收台</a>
     </aside>
     <article class="docs-view">
       <div class="doc-path" id="doc-path"></div>
@@ -101,7 +106,8 @@
 
   var DOCS = {
     manual: { path: "gitbook/architecture/agent-debug-bridge.md", label: "gitbook/architecture/agent-debug-bridge.md" },
-    rfc: { path: "rfcs/RFC-0066-agent-debug-bridge.md", label: "docs/rfcs/RFC-0066-agent-debug-bridge.md" }
+    rfc: { path: "rfcs/RFC-0066-agent-debug-bridge.md", label: "docs/rfcs/RFC-0066-agent-debug-bridge.md" },
+    asset: { path: "gitbook/raylib-asset-acceptance.md", label: "gitbook/raylib-asset-acceptance.md" }
   };
   var DEMO_HTML = "" +
     "<h1>运行演示</h1>" +

@@ -2504,7 +2504,7 @@ namespace Ludots.Core.Presentation.Systems
             PresenterDefinition definition,
             Chunk chunk)
         {
-            AssetBindingConfig assetBinding = ResolvePrimaryAssetBinding(definition, states[0].BehaviorActiveMask);
+            Vector3 anchorOffset = definition.PositionOffset;
             ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
@@ -2550,7 +2550,7 @@ namespace Ludots.Core.Presentation.Systems
                     hasParent,
                     ownerTransform,
                     hasOwnerTransform,
-                    assetBinding,
+                    anchorOffset,
                     ReadInstanceOverride(Unsafe.Add(ref entityFirst, index)));
 
                 positions[index].Value = resolved.Position;
@@ -2559,35 +2559,6 @@ namespace Ludots.Core.Presentation.Systems
                 facings[index] = resolved.Facing;
                 scales[index].Value = resolved.Scale;
             }
-        }
-
-        private static AssetBindingConfig ResolvePrimaryAssetBinding(
-            PresenterDefinition definition,
-            uint activeBehaviorMask)
-        {
-            BehaviorSlot[] behaviors = definition.Behaviors;
-            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
-            if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
-            {
-                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
-                if (IsAssetOutputBehavior(primarySlot.Kind) &&
-                    IsBehaviorActive(activeBehaviorMask, primarySlot.SlotIndex))
-                {
-                    return primarySlot.AssetBinding;
-                }
-            }
-
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (IsAssetOutputBehavior(slot.Kind) &&
-                    IsBehaviorActive(activeBehaviorMask, slot.SlotIndex))
-                {
-                    return slot.AssetBinding;
-                }
-            }
-
-            return new AssetBindingConfig { LocalScale = Vector3.One };
         }
 
         private static bool CanProcessBootstrapChunkFast(PresenterDefinition definition)
@@ -2778,42 +2749,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ResolveTransform(Entity entity, ref PresenterState state, PresenterDefinition definition, BehaviorSlot[] behaviors)
         {
-            AssetBindingConfig assetBinding = new AssetBindingConfig { LocalScale = Vector3.One };
-            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
-            if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
-            {
-                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
-                if (IsAssetOutputBehavior(primarySlot.Kind) &&
-                    IsBehaviorActive(state.BehaviorActiveMask, primarySlot.SlotIndex))
-                {
-                    assetBinding = primarySlot.AssetBinding;
-                }
-                else
-                {
-                    for (int i = 0; i < behaviors.Length; i++)
-                    {
-                        ref readonly BehaviorSlot slot = ref behaviors[i];
-                        if (IsAssetOutputBehavior(slot.Kind) && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                        {
-                            assetBinding = slot.AssetBinding;
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < behaviors.Length; i++)
-                {
-                    ref readonly BehaviorSlot slot = ref behaviors[i];
-                    if (IsAssetOutputBehavior(slot.Kind) && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                    {
-                        assetBinding = slot.AssetBinding;
-                        break;
-                    }
-                }
-            }
-
+            Vector3 anchorOffset = definition.PositionOffset;
             Entity parentEntity = World.Has<PresenterParent>(entity) ? World.Get<PresenterParent>(entity).Parent : Entity.Null;
             bool hasParent = parentEntity != Entity.Null && World.IsAlive(parentEntity) && World.Has<PresenterState>(parentEntity);
             PresenterTransformSnapshot parentSnapshot = default;
@@ -2836,7 +2772,7 @@ namespace Ludots.Core.Presentation.Systems
             presenterSnapshot.TransformSource = World.Has<PresenterTransformSource>(entity) ? World.Get<PresenterTransformSource>(entity).Value : TransformSource.EntityTransform;
 
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
-                presenterSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, assetBinding,
+                presenterSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, anchorOffset,
                 ReadInstanceOverride(entity));
 
             if (World.Has<PresenterWorldPosition>(entity))

@@ -83,7 +83,11 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                Model model = Rl.LoadModel(fullPath);
+                // 统一经装载入口（glTF native / OBJ、FBX、DAE 先转 GLB）——OBJ 直走
+                // native LoadModel 是 #1050 的 AccessViolation 路径。
+                string loadablePath = RaylibModelFileLoader.PrepareNativeLoadable(fullPath);
+
+                Model model = Rl.LoadModel(loadablePath);
                 if (model.meshCount <= 0)
                 {
                     Rl.UnloadModel(model);
@@ -107,7 +111,7 @@ namespace Ludots.Raylib.Render
                 }
 
                 int animCount;
-                ModelAnimation* animations = Rl.LoadModelAnimations(fullPath, out animCount);
+                ModelAnimation* animations = Rl.LoadModelAnimations(loadablePath, out animCount);
                 if (animations == null || animCount <= 0)
                 {
                     if (animations != null)

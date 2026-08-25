@@ -1535,7 +1535,19 @@ namespace Ludots.Raylib.Render
                 if (!_vfs.TryResolveFullPath(uri, out string fullPath)) continue;
                 if (!File.Exists(fullPath)) continue;
 
-                var model = Rl.LoadModel(fullPath);
+                // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
+                // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
+                Model model;
+                try
+                {
+                    model = RaylibModelFileLoader.LoadModel(fullPath);
+                }
+                catch (Exception ex)
+                {
+                    RenderDiagnostics.Warn($"RaylibPrimitiveRenderer meshAssetId={meshAssetId} 模型装载失败（'{fullPath}'）：{ex.Message}");
+                    continue;
+                }
+
                 if (model.meshCount > 0)
                 {
                     cached = new CachedModel { Model = model, Loaded = true };
