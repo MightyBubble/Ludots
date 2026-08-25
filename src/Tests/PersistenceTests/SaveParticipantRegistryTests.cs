@@ -87,6 +87,7 @@ public sealed class SaveParticipantRegistryTests
             "activities",
             "clock",
             "dialogue",
+            "fields",
             "gameSession",
             "inventory",
             "mapSessions",
