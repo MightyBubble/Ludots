@@ -61,7 +61,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationOwnerChangeBuffer _ownerChanges;
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
-        private readonly IBoneTransformProvider? _boneTransformProvider;
+        private readonly Func<IBoneTransformProvider?> _boneTransformProvider;
         private readonly PresenterBehaviorKindRegistry? _extensionBehaviors;
         private readonly PresenterBehaviorOps _extensionBehaviorOps;
         private readonly GraphProgramRegistry? _graphPrograms;
@@ -129,7 +129,7 @@ namespace Ludots.Core.Presentation.Systems
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null)
             : this(world, runtime, definitions, events, ownerChanges, soundRequests,
-                () => heightmap, boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi)
+                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi)
         {
         }
 
@@ -141,7 +141,7 @@ namespace Ludots.Core.Presentation.Systems
             PresentationOwnerChangeBuffer ownerChanges,
             SoundRequestBuffer soundRequests,
             Func<IVisualHeightmap?> heightmapProvider,
-            IBoneTransformProvider? boneTransformProvider = null,
+            Func<IBoneTransformProvider?>? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
@@ -154,7 +154,7 @@ namespace Ludots.Core.Presentation.Systems
             _ownerChanges = ownerChanges ?? throw new ArgumentNullException(nameof(ownerChanges));
             _soundRequests = soundRequests ?? throw new ArgumentNullException(nameof(soundRequests));
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
-            _boneTransformProvider = boneTransformProvider;
+            _boneTransformProvider = boneTransformProvider ?? (static () => null);
             _extensionBehaviors = extensionBehaviors;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
@@ -1769,7 +1769,8 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ApplyBoneAttachment(Entity entity, int parentStableId, in AttachmentConfig config)
         {
-            if (_boneTransformProvider == null)
+            IBoneTransformProvider? boneTransformProvider = _boneTransformProvider();
+            if (boneTransformProvider == null)
             {
                 WarnBoneAttachment(entity, _warnedBoneAttachmentProviderMissing, $"bone provider is not registered for parentStableId={parentStableId}, boneId={config.BoneId}");
                 return;
@@ -1781,7 +1782,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            if (!_boneTransformProvider.TryGetBoneWorldTransform(parentStableId, config.BoneId,
+            if (!boneTransformProvider.TryGetBoneWorldTransform(parentStableId, config.BoneId,
                     out Vector3 bonePosition, out Quaternion boneRotation, out Vector3 boneScale))
             {
                 WarnBoneAttachment(entity, _warnedBoneAttachmentResolveFailed, $"bone transform could not be resolved for parentStableId={parentStableId}, boneId={config.BoneId}");
