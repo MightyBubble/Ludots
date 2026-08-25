@@ -120,10 +120,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             int workerCount = _baseContext.Config?.RuntimeIncremental?.BakeWorkerCount ?? 1;
-            if (workerCount <= 0)
+            if (workerCount <= 0 || workerCount > MaxOutstandingBakeRequests)
             {
                 throw new InvalidOperationException(
-                    $"RuntimeIncrementalNavMeshRebuildQueue requires bake worker count > 0, got {workerCount}.");
+                    $"RuntimeIncrementalNavMeshRebuildQueue requires bake worker count in [1, {MaxOutstandingBakeRequests}], got {workerCount}.");
             }
 
             _bakeRequests = new BlockingCollection<BakeRequest>(MaxOutstandingBakeRequests);
