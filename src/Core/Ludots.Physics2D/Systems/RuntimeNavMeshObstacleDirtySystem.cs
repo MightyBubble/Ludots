@@ -49,9 +49,10 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             if (!_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, out RuntimeIncrementalNavMeshRebuildQueue queue) ||
-                !_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshObstacles, out NavObstacleSet obstacleSet))
+                !_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshObstacles, out NavObstacleSet obstacleSet) ||
+                !_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles, out NavObstacleSet authoredObstacles))
             {
-                throw new InvalidOperationException("Runtime-incremental navmesh mode requires runtime obstacle and rebuild queue services.");
+                throw new InvalidOperationException("Runtime-incremental navmesh mode requires authored obstacles, runtime obstacles, and a rebuild queue.");
             }
 
             if (bakeConfig.RuntimeIncremental == null)
@@ -62,6 +63,7 @@ namespace Ludots.Core.Physics2D.Systems
             string layerId = RequireSingleLayerId(bakeConfig);
             _seen.Clear();
             obstacleSet.Obstacles.Clear();
+            obstacleSet.Obstacles.AddRange(authoredObstacles.Obstacles);
             CaptureSingles(obstacleSet, queue, layerId, bakeConfig.RuntimeIncremental.IncludeNeighborTiles);
             CaptureCompounds(obstacleSet, queue, layerId, bakeConfig.RuntimeIncremental.IncludeNeighborTiles);
             RemoveMissingTracked(queue, bakeConfig.RuntimeIncremental.IncludeNeighborTiles);

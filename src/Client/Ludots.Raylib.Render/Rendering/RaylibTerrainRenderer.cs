@@ -11,7 +11,7 @@ using Ludots.Raylib.Render;
 
 namespace Ludots.Raylib.Render
 {
-    public sealed unsafe class RaylibTerrainRenderer : IDisposable
+    public sealed unsafe class RaylibTerrainRenderer : IDisposable, IRaylibReceiverMeshProjector
     {
         private readonly Dictionary<long, ChunkGpu> _chunks = new Dictionary<long, ChunkGpu>(1024);
         private readonly VertexMapChunkMeshData _meshData = new VertexMapChunkMeshData();
@@ -41,6 +41,7 @@ namespace Ludots.Raylib.Render
         private int _frameIndex;
         private Mesh _oceanPlaneMesh;
         private bool _oceanPlaneReady;
+        private IVisualHeightmap? _stampHeightSampleSource;
 
         public int DrawnChunkCountLastFrame { get; private set; }
         public int BuiltChunkCountLastFrame { get; private set; }
@@ -466,6 +467,14 @@ namespace Ludots.Raylib.Render
             gpu.SimplifiedCliffs = simplifiedCliffs;
             gpu.TerrainMesh = CreateMesh(_meshData.Terrain);
             gpu.WaterMesh = _meshData.Water.VertexCount > 0 ? CreateMesh(_meshData.Water) : default;
+            ComputeTerrainAabbMeters(
+                _meshData.Terrain,
+                out gpu.MinX,
+                out gpu.MinY,
+                out gpu.MinZ,
+                out gpu.MaxX,
+                out gpu.MaxY,
+                out gpu.MaxZ);
             gpu.LastUsedFrame = _frameIndex;
             BuiltChunkCountLastFrame++;
             ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000.0 / Stopwatch.Frequency;
@@ -562,6 +571,12 @@ namespace Ludots.Raylib.Render
             public Mesh WaterMesh;
             public int LastUsedFrame;
             public bool SimplifiedCliffs;
+            public float MinX;
+            public float MinY;
+            public float MinZ;
+            public float MaxX;
+            public float MaxY;
+            public float MaxZ;
 
             public void Dispose()
             {
@@ -570,6 +585,110 @@ namespace Ludots.Raylib.Render
                 TerrainMesh = default;
                 WaterMesh = default;
             }
+        }
+
+        internal static void ComputeTerrainAabbMeters(
+            ChunkMeshWriteBuffer terrain,
+            out float minX,
+            out float minY,
+            out float minZ,
+            out float maxX,
+            out float maxY,
+            out float maxZ)
+        {
+            minX = minY = minZ = float.PositiveInfinity;
+            maxX = maxY = maxZ = float.NegativeInfinity;
+            ReadOnlySpan<float> vertices = terrain.Vertices.AsSpan(0, terrain.VertexCount * 3);
+            for (int i = 0; i < vertices.Length; i += 3)
+            {
+                float x = vertices[i];
+                float y = vertices[i + 1];
+                float z = vertices[i + 2];
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (z < minZ) minZ = z;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+                if (z > maxZ) maxZ = z;
+            }
+        }
+
+        public int DrawMeshesOverlappingAabbMeters(
+            float minX,
+            float minY,
+            float minZ,
+            float maxX,
+            float maxY,
+            float maxZ,
+            Material material)
+        {
+            if (!float.IsFinite(minX) || !float.IsFinite(minY) || !float.IsFinite(minZ) ||
+                !float.IsFinite(maxX) || !float.IsFinite(maxY) || !float.IsFinite(maxZ))
+            {
+                throw new ArgumentException(
+                    $"{nameof(RaylibTerrainRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} requires finite AABB bounds.");
+            }
+
+            if (minX > maxX || minY > maxY || minZ > maxZ)
+            {
+                throw new ArgumentException(
+                    $"{nameof(RaylibTerrainRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} AABB min must be <= max.");
+            }
+
+            EnsureShadersInitialized();
+            if (_chunks.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibTerrainRenderer)} has no cached terrain meshes for projected Decals. Render the VertexMap terrain before drawing Decals.");
+            }
+
+            int drawn = 0;
+            RaylibMatrix identity = RaylibMatrix.Identity;
+            foreach (ChunkGpu gpu in _chunks.Values)
+            {
+                if (gpu.TerrainMesh.vertexCount == 0)
+                {
+                    continue;
+                }
+
+                if (gpu.MaxX < minX || gpu.MinX > maxX ||
+                    gpu.MaxY < minY || gpu.MinY > maxY ||
+                    gpu.MaxZ < minZ || gpu.MinZ > maxZ)
+                {
+                    continue;
+                }
+
+                Rl.rlDisableBackfaceCulling();
+                Rl.DrawMesh(gpu.TerrainMesh, material, identity);
+                Rl.rlEnableBackfaceCulling();
+                drawn++;
+            }
+
+            return drawn;
+        }
+
+        public void BindStampHeightSampleSource(IVisualHeightmap heightmap)
+        {
+            _stampHeightSampleSource = heightmap ?? throw new ArgumentNullException(nameof(heightmap));
+        }
+
+        public Vector3 FitYawedStampProjectorCenter(
+            in Vector3 stampCenter,
+            float yawRad,
+            in Vector2 stampSizeMeters,
+            int stableId)
+        {
+            IVisualHeightmap heightmap = _stampHeightSampleSource
+                ?? throw new InvalidOperationException(
+                    $"{nameof(RaylibTerrainRenderer)} Decal stableId={stableId} has no stamp height sample source. Call {nameof(BindStampHeightSampleSource)} before projecting Decals.");
+
+            return RaylibDecalStampFit.FitCenter(
+                in stampCenter,
+                yawRad,
+                in stampSizeMeters,
+                stableId,
+                heightmap,
+                nameof(RaylibTerrainRenderer));
         }
     }
 }

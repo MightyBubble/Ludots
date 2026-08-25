@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace Ludots.AgentBridge
 {
     /// <summary>
@@ -15,12 +17,16 @@ namespace Ludots.AgentBridge
 
     public sealed class AgentToolException : Exception
     {
-        public AgentToolException(string code, string message)
+        public AgentToolException(string code, string message, JsonObject? data = null)
             : base(message)
         {
             Code = code;
+            Data = data;
         }
 
         public string Code { get; }
+
+        /// <summary>Structured diagnostics merged into the JSON-RPC error.data object.</summary>
+        public JsonObject? Data { get; }
     }
 }

@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Map.Hex;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -25,7 +26,7 @@ namespace Ludots.Tests.Presentation
     public sealed class PresenterGroundingAndGlobalEventTests
     {
         [Test]
-        public void ResolveTransform_InheritParent_ComposesOffsetRotationScale()
+        public void ResolveTransform_InheritParent_ResolvesRootWithoutAssetLocalOffset()
         {
             var parent = new PresenterTransformSnapshot
             {
@@ -40,11 +41,32 @@ namespace Ludots.Tests.Presentation
                 TransformSource = TransformSource.InheritParent,
             };
 
-            var asset = new AssetBindingConfig
+            PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
+                child,
+                parent,
+                hasParent: true,
+                ownerTransform: default,
+                hasOwnerTransform: false,
+                anchorOffset: Vector3.Zero);
+
+            Assert.That(resolved.Position, Is.EqualTo(new Vector3(10f, 2f, 20f)));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(2f, 2f, 2f)), "Root scale is the parent scale; AssetBinding.localScale composes at the asset emit stage only.");
+        }
+
+        [Test]
+        public void ResolveTransform_InheritParent_AppliesChildAnchorOffsetOnce()
+        {
+            var parent = new PresenterTransformSnapshot
             {
-                LocalOffset = new Vector3(1f, 0f, 0f),
-                LocalRotation = Quaternion.Identity,
-                LocalScale = new Vector3(0.5f, 0.5f, 0.5f),
+                WorldPosition = new Vector3(10f, 2f, 20f),
+                WorldRotation = Quaternion.Identity,
+                WorldScale = Vector3.One,
+                TransformSource = TransformSource.EntityTransform,
+            };
+
+            var child = new PresenterTransformSnapshot
+            {
+                TransformSource = TransformSource.InheritParent,
             };
 
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
@@ -53,11 +75,9 @@ namespace Ludots.Tests.Presentation
                 hasParent: true,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset);
+                anchorOffset: new Vector3(0f, 2.5f, 0f));
 
-            Assert.That(resolved.Position.X, Is.EqualTo(10f).Within(0.001f));
-            Assert.That(resolved.Position.Z, Is.EqualTo(18f).Within(0.001f));
-            Assert.That(resolved.Scale, Is.EqualTo(Vector3.One));
+            Assert.That(resolved.Position, Is.EqualTo(new Vector3(10f, 4.5f, 20f)));
         }
 
         [Test]
@@ -76,13 +96,6 @@ namespace Ludots.Tests.Presentation
                 TransformSource = TransformSource.InheritParent,
             };
 
-            var asset = new AssetBindingConfig
-            {
-                LocalOffset = new Vector3(1f, 0f, 0f),
-                LocalRotation = Quaternion.Identity,
-                LocalScale = new Vector3(0.5f, 0.5f, 0.5f),
-            };
-
             var instanceOverride = new PresenterInstanceTransformOverride
             {
                 LocalPosition = new Vector3(1f, 0f, 0f),
@@ -97,16 +110,16 @@ namespace Ludots.Tests.Presentation
                 hasParent: true,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset,
+                anchorOffset: Vector3.Zero,
                 instanceOverride);
 
             Assert.That(resolved.Position.X, Is.EqualTo(10f).Within(0.001f));
-            Assert.That(resolved.Position.Z, Is.EqualTo(16f).Within(0.001f));
-            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(2f, 2f, 2f)));
+            Assert.That(resolved.Position.Z, Is.EqualTo(18f).Within(0.001f));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(4f, 4f, 4f)));
         }
 
         [Test]
-        public void ResolveTransform_EntityTransform_ComposesOwnerTransformAndAssetLocalTransform()
+        public void ResolveTransform_EntityTransform_AppliesAnchorOffsetOnceAndKeepsAssetLocalOutOfRoot()
         {
             var instance = new PresenterTransformSnapshot
             {
@@ -122,31 +135,22 @@ namespace Ludots.Tests.Presentation
                 Scale = new Vector3(9f, 9f, 9f),
             };
 
-            var asset = new AssetBindingConfig
-            {
-                LocalOffset = new Vector3(1f, 0f, 0f),
-                LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.25f),
-                LocalScale = new Vector3(2f, 3f, 4f),
-            };
-
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
                 instance,
                 default,
                 hasParent: false,
                 ownerTransform,
                 hasOwnerTransform: true,
-                asset);
+                anchorOffset: new Vector3(0f, 1f, 0f));
 
             Assert.That(resolved.Position.X, Is.EqualTo(10f).Within(0.001f));
-            Assert.That(resolved.Position.Y, Is.EqualTo(2f).Within(0.001f));
-            Assert.That(resolved.Position.Z, Is.EqualTo(11f).Within(0.001f));
-            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(18f, 27f, 36f)));
-            Vector3 forward = Vector3.Transform(Vector3.UnitZ, resolved.Rotation);
-            Assert.That(MathF.Abs(forward.X), Is.GreaterThan(0.6f));
+            Assert.That(resolved.Position.Y, Is.EqualTo(3f).Within(0.001f));
+            Assert.That(resolved.Position.Z, Is.EqualTo(20f).Within(0.001f));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(9f, 9f, 9f)), "AssetBinding.localScale composes at the asset emit stage only.");
         }
 
         [Test]
-        public void ResolveTransform_SplineDriven_UsesInstanceTransformAndAssetLocalTransform()
+        public void ResolveTransform_SplineDriven_ResolvesRootWithoutAssetLocalTransform()
         {
             var instance = new PresenterTransformSnapshot
             {
@@ -155,25 +159,16 @@ namespace Ludots.Tests.Presentation
                 WorldRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.5f),
             };
 
-            var asset = new AssetBindingConfig
-            {
-                LocalOffset = new Vector3(0f, 1f, 2f),
-                LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f),
-                LocalScale = new Vector3(1.5f, 2f, 2.5f),
-            };
-
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
                 instance,
                 default,
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset);
+                anchorOffset: Vector3.Zero);
 
-            Assert.That(resolved.Position.X, Is.EqualTo(5f).Within(0.001f));
-            Assert.That(resolved.Position.Y, Is.EqualTo(5f).Within(0.001f));
-            Assert.That(resolved.Position.Z, Is.EqualTo(5f).Within(0.001f));
-            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(1.5f, 2f, 2.5f)));
+            Assert.That(resolved.Position, Is.EqualTo(new Vector3(3f, 4f, 5f)));
+            Assert.That(resolved.Scale, Is.EqualTo(Vector3.One));
         }
 
         [Test]
@@ -186,18 +181,13 @@ namespace Ludots.Tests.Presentation
                 WorldRotation = Quaternion.Identity,
             };
 
-            var asset = new AssetBindingConfig
-            {
-                LocalScale = Vector3.One,
-            };
-
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
                 instance,
                 default,
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset);
+                anchorOffset: Vector3.Zero);
 
             Assert.That(resolved.Position.Y, Is.EqualTo(9f).Within(0.001f));
         }
@@ -212,18 +202,13 @@ namespace Ludots.Tests.Presentation
                 WorldRotation = Quaternion.Identity,
             };
 
-            var asset = new AssetBindingConfig
-            {
-                LocalScale = Vector3.One,
-            };
-
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
                 instance,
                 default,
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset);
+                anchorOffset: Vector3.Zero);
 
             Assert.That(resolved.Position, Is.EqualTo(new Vector3(7f, 8f, 9f)));
         }
@@ -327,6 +312,97 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VertexMapHeightSource_SamplesNearestVertexHeightInCm_UsingNavHeightScale()
+        {
+            var map = new VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            map.SetHeight(5, 2, 3);
+            map.SetHeight(8, 3, 7);
+            var heightmap = new VertexMapVisualHeightmap(() => map);
+
+            float evenRowVertexXCm = HexCoordinates.HexWidth * 5f * WorldUnits.CmPerMeter;
+            float evenRowVertexZCm = HexCoordinates.RowSpacing * 2f * WorldUnits.CmPerMeter;
+            Assert.That(
+                heightmap.TrySampleHeightCm(evenRowVertexXCm, evenRowVertexZCm, out float evenHeightCm),
+                Is.True);
+            Assert.That(evenHeightCm, Is.EqualTo(3 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter).Within(0.001f));
+
+            // 奇数行顶点右移半列；偏移采样必须仍落回同一顶点
+            float oddRowVertexXCm = HexCoordinates.HexWidth * (8f + 0.5f) * WorldUnits.CmPerMeter;
+            float oddRowVertexZCm = HexCoordinates.RowSpacing * 3f * WorldUnits.CmPerMeter;
+            Assert.That(
+                heightmap.TrySampleHeightCm(oddRowVertexXCm + 40f, oddRowVertexZCm - 25f, out float oddHeightCm),
+                Is.True);
+            Assert.That(oddHeightCm, Is.EqualTo(7 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter).Within(0.001f));
+        }
+
+        [Test]
+        public void VertexMapHeightSource_RejectsOutOfLatticeAndNonZeroLayer()
+        {
+            var map = new VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            map.SetHeight(0, 0, 4);
+            var heightmap = new VertexMapVisualHeightmap(() => map);
+
+            float latticeMaxXCm = HexCoordinates.HexWidth * (63f + 0.5f) * WorldUnits.CmPerMeter;
+            Assert.That(
+                heightmap.TrySampleHeightCm(latticeMaxXCm + HexCoordinates.HexWidth * WorldUnits.CmPerMeter, 0f, out _),
+                Is.False,
+                "Samples past the last vertex column must fail instead of clamping.");
+            Assert.That(
+                heightmap.TrySampleHeightCm(0f, HexCoordinates.RowSpacing * 64f * WorldUnits.CmPerMeter, out _),
+                Is.False,
+                "Samples past the last vertex row must fail instead of clamping.");
+            Assert.That(
+                heightmap.TrySampleHeightCm(0f, 0f, out _, layerIndex: 1),
+                Is.False,
+                "VertexMap exposes a single implicit layer; only -1 and 0 resolve.");
+        }
+
+        [Test]
+        public void VertexMapHeightSource_GroundsSnapToGroundOntoVertexPlateau()
+        {
+            var map = new VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            map.SetHeight(10, 4, 5);
+            var heightmap = new VertexMapVisualHeightmap(() => map);
+
+            float vertexXCm = HexCoordinates.HexWidth * 10f * WorldUnits.CmPerMeter;
+            float vertexZCm = HexCoordinates.RowSpacing * 4f * WorldUnits.CmPerMeter;
+            Vector3[] positions = [new Vector3(vertexXCm * 0.01f, 42f, vertexZCm * 0.01f)];
+            GroundingMode[] modes = [GroundingMode.SnapToGround];
+            float[] offsets = [0.75f];
+
+            PresenterGroundingUtility.ResolveBatch(positions, modes, offsets, heightmap);
+
+            Assert.That(positions[0].X, Is.EqualTo(vertexXCm * 0.01f).Within(0.001f));
+            Assert.That(positions[0].Z, Is.EqualTo(vertexZCm * 0.01f).Within(0.001f));
+            Assert.That(positions[0].Y, Is.EqualTo((5 * VertexMapVisualHeightmap.DefaultHeightScaleMeters) + 0.75f).Within(0.001f));
+        }
+
+        [Test]
+        public void VertexMapHeightSource_VerticalRaycastHitsVertexPlateauHeight()
+        {
+            var map = new VertexMap();
+            map.Initialize(widthInChunks: 1, heightInChunks: 1);
+            map.SetHeight(6, 6, 4);
+            var heightmap = new VertexMapVisualHeightmap(() => map);
+
+            float vertexXCm = HexCoordinates.HexWidth * 6f * WorldUnits.CmPerMeter;
+            float vertexZCm = HexCoordinates.RowSpacing * 6f * WorldUnits.CmPerMeter;
+            float expectedHeightCm = 4 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter;
+            var ray = new ScreenRay(
+                new Vector3(vertexXCm * 0.01f, 500f, vertexZCm * 0.01f),
+                new Vector3(0f, -1f, 0f));
+
+            Assert.That(heightmap.TryRaycastGround(in ray, out VisualGroundHit hit), Is.True);
+            Assert.That(hit.HeightCm, Is.EqualTo(expectedHeightCm).Within(0.001f));
+            Assert.That(hit.WorldXCm, Is.EqualTo(vertexXCm).Within(0.001f));
+            Assert.That(hit.WorldYCm, Is.EqualTo(vertexZCm).Within(0.001f));
+            Assert.That(hit.DistanceMeters, Is.EqualTo(500f - (expectedHeightCm * 0.01f)).Within(0.001f));
+        }
+
+        [Test]
         public void ResolveTransform_BoneAttached_ComposesAssetAndInstanceScale()
         {
             var instance = new PresenterTransformSnapshot
@@ -335,11 +411,6 @@ namespace Ludots.Tests.Presentation
                 WorldPosition = new Vector3(5f, 6f, 7f),
                 WorldRotation = Quaternion.Identity,
                 WorldScale = new Vector3(1.5f, 2f, 2.5f),
-            };
-
-            var asset = new AssetBindingConfig
-            {
-                LocalScale = new Vector3(2f, 3f, 4f),
             };
 
             var instanceOverride = new PresenterInstanceTransformOverride
@@ -354,15 +425,15 @@ namespace Ludots.Tests.Presentation
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset,
+                anchorOffset: Vector3.Zero,
                 instanceOverride);
 
             Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
-            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(1.5f, 12f, 10f)));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(0.75f, 4f, 2.5f)));
         }
 
         [Test]
-        public void ResolveTransform_AttachedToParent_ComposesAttachmentAndAssetScale()
+        public void ResolveTransform_AttachedToParent_KeepsAttachmentScaleOnly()
         {
             var instance = new PresenterTransformSnapshot
             {
@@ -372,21 +443,16 @@ namespace Ludots.Tests.Presentation
                 WorldScale = new Vector3(1.5f, 2f, 2.5f),
             };
 
-            var asset = new AssetBindingConfig
-            {
-                LocalScale = new Vector3(2f, 3f, 4f),
-            };
-
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
                 instance,
                 default,
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset);
+                anchorOffset: Vector3.Zero);
 
             Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
-            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(3f, 6f, 10f)));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(1.5f, 2f, 2.5f)), "AssetBinding.localScale composes at the asset emit stage only.");
         }
 
         [Test]

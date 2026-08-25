@@ -25,6 +25,7 @@ Ludots GitHub Pages 门户站点组装脚本（纯标准库，无第三方依赖
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import re
 import shutil
@@ -56,6 +57,7 @@ PRD_TODO_DIR = GITBOOK_DIR / "reference" / "mod-editor-prd" / "todo"
 ACCEPTANCE_DIR = REPO_ROOT / "artifacts" / "acceptance"
 GRAPH_OP_EVIDENCE_GLOB = "capability_standard_graph_op_*"
 ENGINE_EVIDENCE_GLOB = "engine_raylib_*"
+ASSET_ACCEPTANCE_EVIDENCE_GLOB = "raylib_asset_acceptance_*"
 EVIDENCE_DIR = REPO_ROOT / "artifacts" / "evidence"
 REGISTRY_JSON = REPO_ROOT / "showcase.registry.json"
 
@@ -454,10 +456,14 @@ def copy_graph_op_media(src: Path, dst: Path) -> int:
         return 0
 
     count = 0
-    globs = (GRAPH_OP_EVIDENCE_GLOB, ENGINE_EVIDENCE_GLOB)
+    globs = (GRAPH_OP_EVIDENCE_GLOB, ENGINE_EVIDENCE_GLOB, ASSET_ACCEPTANCE_EVIDENCE_GLOB)
     children = sorted(p for g in globs for p in src.glob(g) if p.is_dir())
     for child in children:
-        for name in GRAPH_OP_MEDIA_NAMES:
+        # 资产验收台证据族额外携带教程用截图（顶层 *.png，与 play/poster 去重）。
+        names = list(GRAPH_OP_MEDIA_NAMES)
+        if fnmatch.fnmatch(child.name, ASSET_ACCEPTANCE_EVIDENCE_GLOB):
+            names += [p.name for p in sorted(child.glob("*.png")) if p.name not in names]
+        for name in names:
             file = child / name
             if not file.is_file():
                 warn(f"画廊录像媒体缺失：{file.relative_to(REPO_ROOT)}")

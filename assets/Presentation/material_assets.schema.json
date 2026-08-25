@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ludots://presentation/material_assets.schema.json",
+  "title": "Ludots presentation material assets",
+  "type": "array",
+  "description": "Mod-side Presentation/material_assets.json. Texture URIs belong in host_assets.json. Instances (rows with parent) must not declare shaderKey/flags; roughness/metalness must not also appear in params.floats.",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "domain"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "domain": { "enum": ["Surface"] },
+      "parent": { "type": "string", "minLength": 1 },
+      "shaderKey": { "type": "string", "minLength": 1 },
+      "flags": {
+        "type": "array",
+        "items": {
+          "enum": ["Opaque", "AlphaBlend", "DoubleSided", "Unlit", "Cutout", "Additive", "Transparent"]
+        }
+      },
+      "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
+      "metalness": { "type": "number", "minimum": 0, "maximum": 1 },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "floats": {
+            "type": "object",
+            "additionalProperties": { "type": "number" }
+          },
+          "colors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array", "minItems": 4, "maxItems": 4,
+              "items": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

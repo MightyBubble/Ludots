@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ludots://presentation/particle_vfx.schema.json",
+  "title": "Ludots Quarks particle effects",
+  "type": "array",
+  "description": "Mod-side Presentation/particle_vfx.json, schema quarks.ludots.v1. Field semantics and fail-loud boundaries: gitbook/architecture/quarks-particle-schema.md.",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "version"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "version": { "const": "quarks.ludots.v1" },
+      "maxParticles": { "type": "integer", "minimum": 1 },
+      "spawnMode": { "enum": ["Loop"] },
+      "renderMode": { "enum": ["Billboard", "StretchedBillboard", "Primitive", "Trail"] },
+      "blendMode": { "enum": ["Alpha", "Additive", "Multiply", "PremultipliedAlpha"] },
+      "primitive": { "enum": ["Cube", "Sphere"] },
+      "shape": { "enum": ["Point", "Circle", "Cone", "Sphere", "Hemisphere"] },
+      "shapeRadius": { "type": "number", "minimum": 0 },
+      "shapeAngleRadians": { "type": "number", "minimum": 0 },
+      "shapeThickness": { "type": "number", "minimum": 0 },
+      "emissionRatePerSecond": { "type": "integer", "minimum": 0 },
+      "burstCount": { "type": "integer", "minimum": 0 },
+      "durationSeconds": { "type": "number", "exclusiveMinimum": 0 },
+      "startLife": { "$ref": "#/$defs/range2" },
+      "startSpeed": { "$ref": "#/$defs/range2" },
+      "startSize": { "$ref": "#/$defs/range2" },
+      "startColor": { "$ref": "#/$defs/color4" },
+      "gravity": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+      "drag": { "type": "number", "minimum": 0 },
+      "worldSpace": { "type": "boolean" },
+      "seed": { "type": "integer" },
+      "sizeOverLife": {
+        "type": "array",
+        "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["position", "value"],
+          "properties": { "position": { "type": "number" }, "value": { "type": "number" } }
+        }
+      },
+      "colorOverLife": {
+        "type": "array",
+        "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["position", "color"],
+          "properties": { "position": { "type": "number" }, "color": { "$ref": "#/$defs/color4" } }
+        }
+      },
+      "stretchedLengthScale": { "type": "number", "exclusiveMinimum": 0 },
+      "trailLengthSeconds": { "type": "number", "exclusiveMinimum": 0 },
+      "textureSheet": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["textureAssetId", "columns", "rows", "frameCount"],
+        "properties": {
+          "textureAssetId": { "type": "string", "minLength": 1 },
+          "columns": { "type": "integer", "minimum": 1 },
+          "rows": { "type": "integer", "minimum": 1 },
+          "frameCount": { "type": "integer", "minimum": 1 },
+          "framesPerSecond": { "type": "number", "exclusiveMinimum": 0 },
+          "startFrame": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "integer" } },
+          "playbackMode": { "enum": ["Loop", "Clamp"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "range2": {
+      "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" }
+    },
+    "color4": {
+      "type": "array", "minItems": 4, "maxItems": 4, "items": { "type": "number" }
+    }
+  }
+}

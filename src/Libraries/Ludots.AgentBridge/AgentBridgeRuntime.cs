@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Engine;
+using Ludots.Core.Scripting;
 
 namespace Ludots.AgentBridge
 {
@@ -22,6 +23,9 @@ namespace Ludots.AgentBridge
 
         private readonly ConcurrentQueue<PendingRequest> _queue = new();
         private readonly AgentToolContext _context;
+        private readonly object _inputEventLock = new();
+        private readonly Queue<JsonObject> _inputEvents = new();
+        private const int InputEventLogCapacity = 32;
 
         public AgentBridgeRuntime(GameEngine engine, AgentToolRegistry tools)
         {
@@ -35,6 +39,14 @@ namespace Ludots.AgentBridge
 
         public long PumpCount { get; private set; }
         public DateTime LastPumpUtc { get; private set; } = DateTime.MinValue;
+
+        /// <summary>Latest map id seen by the game-thread pump; null before first pump or map load.</summary>
+        public string? MapId => _mapId;
+        private volatile string? _mapId;
+
+        /// <summary>Latest simulation tick seen by the game-thread pump; readable while the loop is stalled.</summary>
+        public long LastTick => System.Threading.Interlocked.Read(ref _lastTick);
+        private long _lastTick;
 
         /// <summary>Artifacts root for tool-produced files (shots/recordings). Set by the host mod.</summary>
         public string ArtifactsRoot { get; set; } = Path.Combine("artifacts", "agent-bridge");
@@ -68,7 +80,8 @@ namespace Ludots.AgentBridge
                 {
                     throw new AgentToolException(
                         AgentBridgeErrorCodes.Timeout,
-                        $"Tool '{method}' did not execute within {timeout.TotalSeconds:F0}s. Is the game loop running (not paused without a presentation pump)?");
+                        $"Tool '{method}' did not execute within {timeout.TotalSeconds:F0}s. {DescribeLoopHealth(out JsonObject data)}",
+                        data);
                 }
             }
         }
@@ -78,6 +91,7 @@ namespace Ludots.AgentBridge
         {
             PumpCount++;
             LastPumpUtc = DateTime.UtcNow;
+            PublishVitals();
             int executed = 0;
             while (executed < maxPerFrame && _queue.TryDequeue(out PendingRequest? request))
             {
@@ -120,6 +134,76 @@ namespace Ludots.AgentBridge
 
             FrameTick?.Invoke();
             return executed;
+        }
+
+        private void PublishVitals()
+        {
+            // Vitals are best-effort telemetry: the pump must never crash on a
+            // partially booted engine (GameSession exists only after startup).
+            if (_context.Engine.GameSession is { } session)
+            {
+                System.Threading.Interlocked.Exchange(ref _lastTick, session.CurrentTick);
+            }
+
+            if (_context.Engine.GlobalContext.TryGetValue(CoreServiceKeys.MapId.Name, out object? mapId) && mapId != null)
+            {
+                _mapId = mapId.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Loop health readable from any thread; distinguishes a stalled game
+        /// loop (pump not advancing) from a slow frame-bound tool (pump alive).
+        /// </summary>
+        public string DescribeLoopHealth(out JsonObject data)
+        {
+            double loopAgeMs = LastPumpUtc == DateTime.MinValue
+                ? -1
+                : (DateTime.UtcNow - LastPumpUtc).TotalMilliseconds;
+            data = new JsonObject
+            {
+                ["loopAgeMs"] = Math.Round(loopAgeMs, 0),
+                ["pumpCount"] = PumpCount,
+                ["pendingRequests"] = _queue.Count,
+                ["lastTick"] = _lastTick,
+            };
+
+            return loopAgeMs >= 0 && loopAgeMs < 2000
+                ? $"Game loop is pumping (pump #{PumpCount}); the tool itself is long-running or frame-bound."
+                : $"Game loop has not pumped for {(int)loopAgeMs}ms (pump #{PumpCount}, tick {_lastTick}) — stalled or paused; tools cannot execute until it resumes.";
+        }
+
+        public void RecordInputEvent(string eventId, string actionId, string mode)
+        {
+            lock (_inputEventLock)
+            {
+                _inputEvents.Enqueue(new JsonObject
+                {
+                    ["eventId"] = eventId,
+                    ["actionId"] = actionId,
+                    ["mode"] = mode,
+                    ["pumpCount"] = PumpCount,
+                    ["tick"] = _lastTick,
+                });
+                while (_inputEvents.Count > InputEventLogCapacity)
+                {
+                    _inputEvents.Dequeue();
+                }
+            }
+        }
+
+        public JsonArray InputEventLog()
+        {
+            lock (_inputEventLock)
+            {
+                var snapshot = new JsonArray();
+                foreach (JsonObject entry in _inputEvents)
+                {
+                    snapshot.Add(entry.DeepClone());
+                }
+
+                return snapshot;
+            }
         }
 
         private static void SettleCompletion(TaskCompletionSource<JsonNode?> completion, Task<JsonNode?> call)

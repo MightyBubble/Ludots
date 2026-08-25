@@ -9,7 +9,9 @@ using Arch.System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Components;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -60,8 +62,17 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly IBoneTransformProvider? _boneTransformProvider;
-        private readonly PerformerBehaviorKindRegistry? _extensionBehaviors;
-        private readonly PerformerBehaviorOps _extensionBehaviorOps;
+        private readonly PresenterBehaviorKindRegistry? _extensionBehaviors;
+        private readonly PresenterBehaviorOps _extensionBehaviorOps;
+        private readonly GraphProgramRegistry? _graphPrograms;
+        private readonly IGraphRuntimeApi? _graphApi;
+        private readonly float[] _graphFloatRegs = new float[GraphVmLimits.MaxFloatRegisters];
+        private readonly int[] _graphIntRegs = new int[GraphVmLimits.MaxIntRegisters];
+        private readonly byte[] _graphBoolRegs = new byte[GraphVmLimits.MaxBoolRegisters];
+        private readonly Entity[] _graphEntityRegs = new Entity[GraphVmLimits.MaxEntityRegisters];
+        private readonly Entity[] _graphTargets = new Entity[GraphVmLimits.MaxTargets];
+        private readonly int[] _graphCallStack = new int[GraphVmLimits.MaxCallStackDepth];
+        private readonly HashSet<long> _warnedGraphBindings = new();
         private readonly PresentPhaseResolver _phaseResolver = new();
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
         private Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
@@ -72,7 +83,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasExtensionBehavior>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasExtensionBehavior>()
             .WithNone<PresenterBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PresenterState, PerfMaterialDirty>()
@@ -114,9 +125,11 @@ namespace Ludots.Core.Presentation.Systems
             IVisualHeightmap? heightmap = null,
             IBoneTransformProvider? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
-            PerformerBehaviorKindRegistry? extensionBehaviors = null)
+            PresenterBehaviorKindRegistry? extensionBehaviors = null,
+            GraphProgramRegistry? graphPrograms = null,
+            IGraphRuntimeApi? graphApi = null)
             : this(world, runtime, definitions, events, ownerChanges, soundRequests,
-                () => heightmap, boneTransformProvider, timingDiagnostics, extensionBehaviors)
+                () => heightmap, boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi)
         {
         }
 
@@ -130,7 +143,9 @@ namespace Ludots.Core.Presentation.Systems
             Func<IVisualHeightmap?> heightmapProvider,
             IBoneTransformProvider? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
-            PerformerBehaviorKindRegistry? extensionBehaviors = null)
+            PresenterBehaviorKindRegistry? extensionBehaviors = null,
+            GraphProgramRegistry? graphPrograms = null,
+            IGraphRuntimeApi? graphApi = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -141,7 +156,9 @@ namespace Ludots.Core.Presentation.Systems
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
             _boneTransformProvider = boneTransformProvider;
             _extensionBehaviors = extensionBehaviors;
-            _extensionBehaviorOps = new PerformerBehaviorOps(_runtime);
+            _graphPrograms = graphPrograms;
+            _graphApi = graphApi;
+            _extensionBehaviorOps = new PresenterBehaviorOps(_runtime);
             RefreshDefinitionIndexes();
             _timingDiagnostics = timingDiagnostics;
             _runtime.BindDefinitions(_definitions);
@@ -221,6 +238,11 @@ namespace Ludots.Core.Presentation.Systems
                     Span<PresenterState> states = chunk.GetSpan<PresenterState>();
                     bool processedChunk = false;
                     bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
+                    if (singleDefinitionChunk && chunk.Has<PresenterInstanceBehaviors>())
+                    {
+                        singleDefinitionChunk = false;
+                    }
+
                     if (singleDefinitionChunk &&
                         _definitions.TryGet(chunkDefId, out PresenterDefinition chunkDefinition))
                     {
@@ -454,7 +476,7 @@ namespace Ludots.Core.Presentation.Systems
                     definition,
                     definition.Behaviors,
                     extensionWork.BehaviorIndices,
-                    PerformerBehaviorExecutionLane.OwnerAttributeDirty,
+                    PresenterBehaviorExecutionLane.OwnerAttributeDirty,
                     firstFrame: false,
                     tickDt: 0f);
             }
@@ -486,7 +508,7 @@ namespace Ludots.Core.Presentation.Systems
                     definition,
                     definition.Behaviors,
                     extensionWork.BehaviorIndices,
-                    PerformerBehaviorExecutionLane.OwnerTagDirty,
+                    PresenterBehaviorExecutionLane.OwnerTagDirty,
                     firstFrame: false,
                     tickDt: 0f);
             }
@@ -502,7 +524,7 @@ namespace Ludots.Core.Presentation.Systems
                 Span<PresenterWorldPlanePosition> planePositions = chunk.GetSpan<PresenterWorldPlanePosition>();
                 PresenterDefinition? chunkDefinition = null;
                 bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
-                if (singleDefinitionChunk && !_definitions.TryGet(chunkDefId, out chunkDefinition))
+                if (singleDefinitionChunk && (chunk.Has<PresenterInstanceBehaviors>() || !_definitions.TryGet(chunkDefId, out chunkDefinition)))
                 {
                     singleDefinitionChunk = false;
                 }
@@ -515,7 +537,8 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (batchGrounding &&
                     chunkDefinition!.TickBehaviorsAreGroundingOnly &&
-                    !chunkDefinition.HasOwnerFacingBindingWork)
+                    !chunkDefinition.HasOwnerFacingBindingWork &&
+                    !chunkDefinition.HasGraphParamBindingWork)
                 {
                     if (TrySkipOwnerBackedSnapToGroundBatch(
                             states,
@@ -556,6 +579,7 @@ namespace Ludots.Core.Presentation.Systems
                 if (singleDefinitionChunk &&
                     chunkDefinition != null &&
                     !chunkDefinition.HasOwnerFacingBindingWork &&
+                    !chunkDefinition.HasGraphParamBindingWork &&
                     TryResolveParentAttachmentOnly(chunkDefinition, out AttachmentConfig attachmentConfig, out int attachmentSlot))
                 {
                     Span<PresenterParent> parents = chunk.GetSpan<PresenterParent>();
@@ -648,6 +672,11 @@ namespace Ludots.Core.Presentation.Systems
                         ProcessMaterialBehaviors(entity, in state, definition);
                     }
 
+                    if (World.Has<PresenterInstanceBehaviors>(entity))
+                    {
+                        ApplyInstanceMaterialBehaviors(entity, in state);
+                    }
+
                     _materialDirtyClearList.Add(entity);
                 }
             }
@@ -673,44 +702,44 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private sealed class PerformerBehaviorOps : IPerformerBehaviorOps
+        private sealed class PresenterBehaviorOps : IPresenterBehaviorOps
         {
             private readonly PresenterEntityRuntime _runtime;
-            private Entity _performer;
+            private Entity _presenter;
 
-            public PerformerBehaviorOps(PresenterEntityRuntime runtime)
+            public PresenterBehaviorOps(PresenterEntityRuntime runtime)
             {
                 _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             }
 
-            public void Bind(Entity performer)
+            public void Bind(Entity presenter)
             {
-                _performer = performer;
+                _presenter = presenter;
             }
 
             public bool TryResolveFloat(int paramKey, out float value)
             {
-                return _runtime.TryResolveFloat(_performer, paramKey, out value);
+                return _runtime.TryResolveFloat(_presenter, paramKey, out value);
             }
 
             public bool TryResolveInt(int paramKey, out int value)
             {
-                return _runtime.TryResolveInt(_performer, paramKey, out value);
+                return _runtime.TryResolveInt(_presenter, paramKey, out value);
             }
 
             public bool TryResolveVector(int paramKey, out Vector4 value)
             {
-                return _runtime.TryResolveVector(_performer, paramKey, out value);
+                return _runtime.TryResolveVector(_presenter, paramKey, out value);
             }
 
             public void SetParam(int paramKey, ParamLane lane, float floatValue = 0f, int intValue = 0, Vector4 vectorValue = default)
             {
-                _runtime.SetParamAndPropagateToAffectedChildren(_performer, paramKey, lane, floatValue, intValue, vectorValue);
+                _runtime.SetParamAndPropagateToAffectedChildren(_presenter, paramKey, lane, floatValue, intValue, vectorValue);
             }
 
             public void ClearParam(int paramKey, ParamLane lane)
             {
-                _runtime.ClearParamAndPropagateToAffectedChildren(_performer, paramKey, lane);
+                _runtime.ClearParamAndPropagateToAffectedChildren(_presenter, paramKey, lane);
             }
         }
 
@@ -742,6 +771,10 @@ namespace Ludots.Core.Presentation.Systems
 
             Entity owner = state.OwnerEntity;
             BehaviorSlot[] behaviors = definition.Behaviors;
+            bool hasInstanceBehaviors = World.Has<PresenterInstanceBehaviors>(entity);
+            PresenterInstanceBehaviors instanceBehaviors = hasInstanceBehaviors
+                ? World.Get<PresenterInstanceBehaviors>(entity)
+                : default;
             ResolveDefaultTransformSource(entity, ref state);
             if (!tickDrivenOnly)
             {
@@ -754,12 +787,13 @@ namespace Ludots.Core.Presentation.Systems
                     applyAttributes: firstFrame || updateAttributeBindings,
                     applyTags: firstFrame || updateTagBindings);
             }
-            else if (definition.HasOwnerFacingBindingWork)
+            else if (definition.HasOwnerFacingBindingWork || definition.HasGraphParamBindingWork)
             {
                 ApplyOwnerFacingBindings(entity, owner, definition);
+                ApplyGraphParamBindings(entity, owner, definition);
             }
 
-            bool hasSoundBehavior = definition.HasSoundBehavior;
+            bool hasSoundBehavior = definition.HasSoundBehavior || (hasInstanceBehaviors && instanceBehaviors.HasSound);
             if (hasSoundBehavior)
             {
                 HandleReusedSoundSlot(entity, in state, behaviors);
@@ -832,9 +866,72 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
+            if (hasInstanceBehaviors)
+            {
+                BehaviorSlot[] instanceSlots = instanceBehaviors.Slots;
+                for (int i = 0; i < instanceSlots.Length; i++)
+                {
+                    ref readonly BehaviorSlot slot = ref instanceSlots[i];
+                    if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                        continue;
+                    if (tickDrivenOnly)
+                    {
+                        switch (slot.Kind)
+                        {
+                            case BehaviorKind.Attachment:
+                                ApplyAttachment(entity, in slot.Attachment);
+                                break;
+                            case BehaviorKind.Grounding:
+                                if (!skipGroundingBehaviors)
+                                {
+                                    ApplyGrounding(entity, in slot.Grounding);
+                                }
+                                break;
+                            case BehaviorKind.Sound:
+                                ApplySound(entity, in state, slot);
+                                currentSoundMask |= 1u << slot.SlotIndex;
+                                break;
+                            case BehaviorKind.Spline:
+                                ApplySpline(entity, ref state, slot.Spline, tickDt);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (slot.Kind)
+                        {
+                            case BehaviorKind.Material:
+                                ApplyMaterialBinding(entity, slot.Material);
+                                break;
+                            case BehaviorKind.Attachment:
+                                ApplyAttachment(entity, in slot.Attachment);
+                                break;
+                            case BehaviorKind.Grounding:
+                                if (!skipGroundingBehaviors)
+                                {
+                                    ApplyGrounding(entity, in slot.Grounding);
+                                }
+                                break;
+                            case BehaviorKind.Sound:
+                                ApplySound(entity, in state, slot);
+                                currentSoundMask |= 1u << slot.SlotIndex;
+                                break;
+                            case BehaviorKind.Spline:
+                                ApplySpline(entity, ref state, slot.Spline, tickDt);
+                                break;
+                        }
+                    }
+                }
+            }
+
             if (hasSoundBehavior)
             {
                 StopInactiveSounds(entity, in state, behaviors, currentSoundMask);
+                if (hasInstanceBehaviors)
+                {
+                    StopInactiveSounds(entity, in state, instanceBehaviors.Slots, currentSoundMask);
+                }
+
                 if (currentSoundMask != 0u)
                 {
                     _soundTracking[entity.Id] = new SoundTrackingState
@@ -858,9 +955,21 @@ namespace Ludots.Core.Presentation.Systems
                     definition,
                     behaviors,
                     definition.ExtensionTickBehaviorIndices,
-                    PerformerBehaviorExecutionLane.ContinuousTick,
+                    PresenterBehaviorExecutionLane.ContinuousTick,
                     firstFrame: false,
                     tickDt);
+                if (hasInstanceBehaviors)
+                {
+                    ProcessExtensionBehaviors(
+                        entity,
+                        in state,
+                        definition,
+                        instanceBehaviors.Slots,
+                        instanceBehaviors.ExtensionTickIndices,
+                        PresenterBehaviorExecutionLane.ContinuousTick,
+                        firstFrame: false,
+                        tickDt);
+                }
             }
             else if (firstFrame)
             {
@@ -870,9 +979,21 @@ namespace Ludots.Core.Presentation.Systems
                     definition,
                     behaviors,
                     definition.ExtensionBootstrapBehaviorIndices,
-                    PerformerBehaviorExecutionLane.Bootstrap,
+                    PresenterBehaviorExecutionLane.Bootstrap,
                     firstFrame: true,
                     tickDt);
+                if (hasInstanceBehaviors)
+                {
+                    ProcessExtensionBehaviors(
+                        entity,
+                        in state,
+                        definition,
+                        instanceBehaviors.Slots,
+                        instanceBehaviors.ExtensionBootstrapIndices,
+                        PresenterBehaviorExecutionLane.Bootstrap,
+                        firstFrame: true,
+                        tickDt);
+                }
             }
         }
 
@@ -882,11 +1003,11 @@ namespace Ludots.Core.Presentation.Systems
             PresenterDefinition definition,
             BehaviorSlot[] behaviors,
             int[] indices,
-            PerformerBehaviorExecutionLane lane,
+            PresenterBehaviorExecutionLane lane,
             bool firstFrame,
             float tickDt)
         {
-            if (!definition.HasExtensionBehavior || behaviors == null || indices == null || indices.Length == 0)
+            if (behaviors == null || indices == null || indices.Length == 0)
             {
                 return;
             }
@@ -894,7 +1015,7 @@ namespace Ludots.Core.Presentation.Systems
             if (_extensionBehaviors == null)
             {
                 throw new InvalidOperationException(
-                    $"Performer definition '{definition.Key}' has extension behaviors, but performer behavior extension registry is not configured.");
+                    $"Presenter definition '{definition.Key}' has extension behaviors, but presenter behavior extension registry is not configured.");
             }
 
             for (int i = 0; i < indices.Length; i++)
@@ -909,7 +1030,7 @@ namespace Ludots.Core.Presentation.Systems
                 if (slot.ExtensionLane != lane)
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} is compiled for lane {slot.ExtensionLane}, but runtime lane is {lane}.");
+                        $"Presenter definition '{definition.Key}' behavior slot {slot.SlotIndex} is compiled for lane {slot.ExtensionLane}, but runtime lane is {lane}.");
                 }
 
                 if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
@@ -918,20 +1039,20 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 int kindId = slot.KindId;
-                if (kindId <= 0 || !_extensionBehaviors.TryGetDescriptor(kindId, out PerformerBehaviorExtensionDescriptor descriptor))
+                if (kindId <= 0 || !_extensionBehaviors.TryGetDescriptor(kindId, out PresenterBehaviorExtensionDescriptor descriptor))
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} references unregistered extension behavior id {kindId}.");
+                        $"Presenter definition '{definition.Key}' behavior slot {slot.SlotIndex} references unregistered extension behavior id {kindId}.");
                 }
 
                 if (descriptor.Lane != lane)
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} runtime lane {lane} does not match registered lane {descriptor.Lane}.");
+                        $"Presenter definition '{definition.Key}' behavior slot {slot.SlotIndex} runtime lane {lane} does not match registered lane {descriptor.Lane}.");
                 }
 
                 _extensionBehaviorOps.Bind(entity);
-                var view = new PerformerBehaviorView(
+                var view = new PresenterBehaviorView(
                     entity,
                     state.OwnerEntity,
                     state.DefId,
@@ -940,7 +1061,7 @@ namespace Ludots.Core.Presentation.Systems
                     lane,
                     firstFrame,
                     tickDt);
-                var context = new PerformerBehaviorExecutionContext(in view, _extensionBehaviorOps);
+                var context = new PresenterBehaviorExecutionContext(in view, _extensionBehaviorOps);
                 descriptor.Handler(in context);
             }
         }
@@ -964,6 +1085,19 @@ namespace Ludots.Core.Presentation.Systems
 
                 ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
                 if (IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    ApplyMaterialBinding(entity, slot.Material);
+                }
+            }
+        }
+
+        private void ApplyInstanceMaterialBehaviors(Entity entity, in PresenterState state)
+        {
+            BehaviorSlot[] instanceSlots = World.Get<PresenterInstanceBehaviors>(entity).Slots;
+            for (int i = 0; i < instanceSlots.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref instanceSlots[i];
+                if (slot.Kind == BehaviorKind.Material && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                 {
                     ApplyMaterialBinding(entity, slot.Material);
                 }
@@ -996,9 +1130,185 @@ namespace Ludots.Core.Presentation.Systems
                         SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.Graph:
+                        EvaluateGraphParamBinding(entity, owner, definition, i, in binding);
                         break;
                 }
             }
+        }
+
+        /// <summary>
+        /// Evaluates every source=graph <see cref="PresenterParamBinding"/> of a definition in binding order.
+        /// Each evaluation seeds the graph input registers from the current Param Blackboard, so a later
+        /// binding observes the value an earlier binding wrote in the same pass.
+        /// </summary>
+        private void ApplyGraphParamBindings(Entity entity, Entity owner, PresenterDefinition definition)
+        {
+            int[] graphBindingIndices = definition.GraphParamBindingIndices;
+            for (int i = 0; i < graphBindingIndices.Length; i++)
+            {
+                int bindingIndex = graphBindingIndices[i];
+                ref readonly PresenterParamBinding binding = ref definition.Bindings[bindingIndex];
+                EvaluateGraphParamBinding(entity, owner, definition, bindingIndex, in binding);
+            }
+        }
+
+        /// <summary>
+        /// Input contract for a source=graph binding's program (<see cref="ValueSourceKind.Graph"/>):
+        /// E[0]=owner, E[1]=presenter; F[k] for k&gt;=1 is seeded from the presenter Param Blackboard
+        /// float lane key k (resolver order: override, default, parent chain); F[0] is the float result
+        /// register written back to <see cref="PresenterParamBinding.ParamKey"/> on the Float lane.
+        /// Unseeded registers hold a NaN sentinel so an incomplete input surfaces as a NaN result.
+        /// </summary>
+        private void EvaluateGraphParamBinding(
+            Entity entity,
+            Entity owner,
+            PresenterDefinition definition,
+            int bindingIndex,
+            in PresenterParamBinding binding)
+        {
+            if (_graphPrograms == null || _graphApi == null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{definition.Key}' bindings[{bindingIndex}] uses source=graph, but the presenter behavior system is not configured with a graph program registry and graph runtime API.");
+            }
+
+            int graphProgramId = binding.Value.SourceId;
+            string bindingPath = $"presenter '{definition.Key}' bindings[{bindingIndex}] paramKey={binding.ParamKey} source=graph sourceId={graphProgramId}";
+            if (!_graphPrograms.TryGetProgram(graphProgramId, out ReadOnlySpan<GraphInstruction> program) ||
+                program.Length == 0)
+            {
+                WarnGraphBinding(entity, bindingIndex, $"{bindingPath}: graph program id {graphProgramId} is not registered; the blackboard value is left unchanged.");
+                return;
+            }
+
+            float result;
+            try
+            {
+                _graphPrograms.RequireKind(graphProgramId, GraphKind.Score);
+                if (!ProgramWritesFloatResultRegister(program))
+                {
+                    WarnGraphBinding(entity, bindingIndex, $"{bindingPath}: graph program id {graphProgramId} never writes the float result register F[0]; the blackboard value is left unchanged.");
+                    return;
+                }
+
+                SeedGraphInputRegisters(entity);
+                GraphFrame frame = GraphFrame.Bind(
+                    GraphKind.Score,
+                    GraphEntityPreset.None,
+                    World,
+                    owner,
+                    entity,
+                    IntVector2.Zero,
+                    _graphApi,
+                    _graphPrograms,
+                    _graphFloatRegs,
+                    _graphIntRegs,
+                    _graphBoolRegs,
+                    _graphEntityRegs,
+                    _graphTargets,
+                    _graphCallStack);
+                GraphExecutor.Execute(ref frame, program);
+                result = _graphFloatRegs[0];
+            }
+            catch (InvalidOperationException exception)
+            {
+                WarnGraphBinding(entity, bindingIndex, $"{bindingPath}: graph evaluation failed ({exception.Message}); the blackboard value is left unchanged.");
+                return;
+            }
+
+            if (float.IsNaN(result))
+            {
+                WarnGraphBinding(entity, bindingIndex, $"{bindingPath}: graph input incomplete (an input register F[k] has no Param Blackboard key k); the blackboard value is left unchanged.");
+                return;
+            }
+
+            SetParam(entity, binding.ParamKey, ParamLane.Float, result, 0, Vector4.Zero);
+        }
+
+        private unsafe void SeedGraphInputRegisters(Entity entity)
+        {
+            for (int i = 0; i < _graphFloatRegs.Length; i++)
+            {
+                _graphFloatRegs[i] = float.NaN;
+            }
+
+            Array.Clear(_graphIntRegs, 0, _graphIntRegs.Length);
+            Array.Clear(_graphBoolRegs, 0, _graphBoolRegs.Length);
+            Array.Clear(_graphEntityRegs, 0, _graphEntityRegs.Length);
+            Array.Clear(_graphCallStack, 0, _graphCallStack.Length);
+
+            Entity current = entity;
+            while (World.IsAlive(current))
+            {
+                if (World.Has<PresenterFloatParams>(current))
+                {
+                    ref var overrides = ref World.Get<PresenterFloatParams>(current);
+                    fixed (int* keys = overrides.Keys)
+                    fixed (float* values = overrides.Values)
+                    {
+                        SeedGraphInputRegisterEntries(overrides.Count, keys, values);
+                    }
+                }
+
+                if (World.Has<PresenterFloatDefaults>(current))
+                {
+                    ref var defaults = ref World.Get<PresenterFloatDefaults>(current);
+                    fixed (int* keys = defaults.Keys)
+                    fixed (float* values = defaults.Values)
+                    {
+                        SeedGraphInputRegisterEntries(defaults.Count, keys, values);
+                    }
+                }
+
+                if (!World.Has<PresenterParent>(current))
+                {
+                    break;
+                }
+
+                current = World.Get<PresenterParent>(current).Parent;
+            }
+        }
+
+        private unsafe void SeedGraphInputRegisterEntries(int count, int* keys, float* values)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                int key = keys[i];
+                if (key >= 1 && key < _graphFloatRegs.Length && float.IsNaN(_graphFloatRegs[key]))
+                {
+                    _graphFloatRegs[key] = values[i];
+                }
+            }
+        }
+
+        private static bool ProgramWritesFloatResultRegister(ReadOnlySpan<GraphInstruction> program)
+        {
+            for (int i = 0; i < program.Length; i++)
+            {
+                ref readonly GraphInstruction instruction = ref program[i];
+                if (instruction.Dst != 0)
+                {
+                    continue;
+                }
+
+                if (!GraphOpDescriptorTable.TryGet((GraphNodeOp)instruction.Op, out GraphOpDescriptor descriptor) ||
+                    descriptor.LinearOutputType == GraphValueType.Float)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void WarnGraphBinding(Entity entity, int bindingIndex, string reason)
+        {
+            if (!_warnedGraphBindings.Add(((long)entity.Id << 32) | (uint)bindingIndex))
+            {
+                return;
+            }
+
+            Log.Warn(in LogChannels.Presentation, reason);
         }
 
         private void ApplyOwnerFacingBindings(Entity entity, Entity owner, PresenterDefinition definition)
@@ -2194,7 +2504,7 @@ namespace Ludots.Core.Presentation.Systems
             PresenterDefinition definition,
             Chunk chunk)
         {
-            AssetBindingConfig assetBinding = ResolvePrimaryAssetBinding(definition, states[0].BehaviorActiveMask);
+            Vector3 anchorOffset = definition.PositionOffset;
             ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
@@ -2240,7 +2550,7 @@ namespace Ludots.Core.Presentation.Systems
                     hasParent,
                     ownerTransform,
                     hasOwnerTransform,
-                    assetBinding,
+                    anchorOffset,
                     ReadInstanceOverride(Unsafe.Add(ref entityFirst, index)));
 
                 positions[index].Value = resolved.Position;
@@ -2249,35 +2559,6 @@ namespace Ludots.Core.Presentation.Systems
                 facings[index] = resolved.Facing;
                 scales[index].Value = resolved.Scale;
             }
-        }
-
-        private static AssetBindingConfig ResolvePrimaryAssetBinding(
-            PresenterDefinition definition,
-            uint activeBehaviorMask)
-        {
-            BehaviorSlot[] behaviors = definition.Behaviors;
-            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
-            if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
-            {
-                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
-                if (IsAssetOutputBehavior(primarySlot.Kind) &&
-                    IsBehaviorActive(activeBehaviorMask, primarySlot.SlotIndex))
-                {
-                    return primarySlot.AssetBinding;
-                }
-            }
-
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (IsAssetOutputBehavior(slot.Kind) &&
-                    IsBehaviorActive(activeBehaviorMask, slot.SlotIndex))
-                {
-                    return slot.AssetBinding;
-                }
-            }
-
-            return new AssetBindingConfig { LocalScale = Vector3.One };
         }
 
         private static bool CanProcessBootstrapChunkFast(PresenterDefinition definition)
@@ -2468,42 +2749,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ResolveTransform(Entity entity, ref PresenterState state, PresenterDefinition definition, BehaviorSlot[] behaviors)
         {
-            AssetBindingConfig assetBinding = new AssetBindingConfig { LocalScale = Vector3.One };
-            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
-            if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
-            {
-                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
-                if (IsAssetOutputBehavior(primarySlot.Kind) &&
-                    IsBehaviorActive(state.BehaviorActiveMask, primarySlot.SlotIndex))
-                {
-                    assetBinding = primarySlot.AssetBinding;
-                }
-                else
-                {
-                    for (int i = 0; i < behaviors.Length; i++)
-                    {
-                        ref readonly BehaviorSlot slot = ref behaviors[i];
-                        if (IsAssetOutputBehavior(slot.Kind) && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                        {
-                            assetBinding = slot.AssetBinding;
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < behaviors.Length; i++)
-                {
-                    ref readonly BehaviorSlot slot = ref behaviors[i];
-                    if (IsAssetOutputBehavior(slot.Kind) && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                    {
-                        assetBinding = slot.AssetBinding;
-                        break;
-                    }
-                }
-            }
-
+            Vector3 anchorOffset = definition.PositionOffset;
             Entity parentEntity = World.Has<PresenterParent>(entity) ? World.Get<PresenterParent>(entity).Parent : Entity.Null;
             bool hasParent = parentEntity != Entity.Null && World.IsAlive(parentEntity) && World.Has<PresenterState>(parentEntity);
             PresenterTransformSnapshot parentSnapshot = default;
@@ -2526,7 +2772,7 @@ namespace Ludots.Core.Presentation.Systems
             presenterSnapshot.TransformSource = World.Has<PresenterTransformSource>(entity) ? World.Get<PresenterTransformSource>(entity).Value : TransformSource.EntityTransform;
 
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
-                presenterSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, assetBinding,
+                presenterSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, anchorOffset,
                 ReadInstanceOverride(entity));
 
             if (World.Has<PresenterWorldPosition>(entity))

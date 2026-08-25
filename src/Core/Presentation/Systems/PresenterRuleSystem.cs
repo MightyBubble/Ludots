@@ -284,7 +284,7 @@ namespace Ludots.Core.Presentation.Systems
         private bool TryGetConditionTargetDefinition(in IndexedRule rule, out PresenterDefinition definition)
         {
             definition = null!;
-            int definitionId = ResolveRouteStrategy(in rule.Command) == PerformerCommandRouteStrategy.CreatePerformer
+            int definitionId = ResolveRouteStrategy(in rule.Command) == PresenterCommandRouteStrategy.CreatePresenter
                 ? rule.Command.PresenterDefinitionId
                 : rule.OwnerDefinitionId;
             if (definitionId > 0)
@@ -644,37 +644,37 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool CommandTargetsExistingPresenterInstances(in PresenterCommand command)
         {
-            return ResolveRouteStrategy(in command) == PerformerCommandRouteStrategy.ExistingInstances;
+            return ResolveRouteStrategy(in command) == PresenterCommandRouteStrategy.ExistingInstances;
         }
 
-        private static bool CommandTargetsScopedPresenter(PerformerCommandRouteStrategy route)
+        private static bool CommandTargetsScopedPresenter(PresenterCommandRouteStrategy route)
         {
-            return route is PerformerCommandRouteStrategy.CreatePerformer
-                or PerformerCommandRouteStrategy.DestroyScope
-                or PerformerCommandRouteStrategy.ScopedInstance;
+            return route is PresenterCommandRouteStrategy.CreatePresenter
+                or PresenterCommandRouteStrategy.DestroyScope
+                or PresenterCommandRouteStrategy.ScopedInstance;
         }
 
-        private static PerformerCommandRouteStrategy ResolveRouteStrategy(in PresenterCommand command)
+        private static PresenterCommandRouteStrategy ResolveRouteStrategy(in PresenterCommand command)
         {
-            if (command.RouteStrategy != PerformerCommandRouteStrategy.None)
+            if (command.RouteStrategy != PresenterCommandRouteStrategy.None)
             {
                 return command.RouteStrategy;
             }
 
             return command.CommandKind switch
             {
-                PresenterCommandKind.CreatePresenter => PerformerCommandRouteStrategy.CreatePerformer,
-                PresenterCommandKind.DestroyPresenterScope => PerformerCommandRouteStrategy.DestroyScope,
-                PresenterCommandKind.DestroyScopedPresenter => PerformerCommandRouteStrategy.ScopedInstance,
-                PresenterCommandKind.SetParam when command.PresenterDefinitionId > 0 => PerformerCommandRouteStrategy.ScopedInstance,
-                PresenterCommandKind.SetParam => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.ActivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.DeactivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.InitializeTransform => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.DestroyPresenter => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.TimerSet => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.TimerKill => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.SinkParamToAsset => PerformerCommandRouteStrategy.SingleRuntime,
+                PresenterCommandKind.CreatePresenter => PresenterCommandRouteStrategy.CreatePresenter,
+                PresenterCommandKind.DestroyPresenterScope => PresenterCommandRouteStrategy.DestroyScope,
+                PresenterCommandKind.DestroyScopedPresenter => PresenterCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam when command.PresenterDefinitionId > 0 => PresenterCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.ActivateBehavior => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DeactivateBehavior => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.InitializeTransform => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DestroyPresenter => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.TimerSet => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.TimerKill => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.SinkParamToAsset => PresenterCommandRouteStrategy.SingleRuntime,
                 PresenterCommandKind.Extension => throw new InvalidOperationException(
                     $"Extension presenter command id {command.CommandKindId} must declare routeStrategy before rule routing."),
                 _ => throw new InvalidOperationException($"Unsupported presenter command kind '{command.CommandKind}'."),

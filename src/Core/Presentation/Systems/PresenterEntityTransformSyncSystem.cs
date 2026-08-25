@@ -30,20 +30,20 @@ namespace Ludots.Core.Presentation.Systems
 
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PresenterEntityRuntime _runtime;
-        private readonly PresenterDefinitionRegistry? _definitions;
+        private readonly PresenterDefinitionRegistry _definitions;
 
         public bool DebugSyncPathAssertionsEnabled { get; set; }
 
         public PresenterEntityTransformSyncSystem(
             World world,
             PresenterEntityRuntime runtime,
-            PresenterDefinitionRegistry? definitions = null,
+            PresenterDefinitionRegistry definitions,
             PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
             _timingDiagnostics = timingDiagnostics;
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _definitions = definitions;
+            _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         }
 
         public override void Update(in float dt)
@@ -70,13 +70,14 @@ namespace Ludots.Core.Presentation.Systems
                     if (state.AnchorKind != PresentationAnchorKind.Entity ||
                         sources[index].Value != TransformSource.EntityTransform ||
                         !World.IsAlive(state.OwnerEntity) ||
-                        !World.Has<VisualTransform>(state.OwnerEntity))
+                        !World.Has<VisualTransform>(state.OwnerEntity) ||
+                        !_definitions.TryGet(state.DefId, out PresenterDefinition definition))
                     {
                         continue;
                     }
 
                     VisualTransform ownerTransform = World.Get<VisualTransform>(state.OwnerEntity);
-                    Vector3 newPosition = ownerTransform.Position;
+                    Vector3 newPosition = ownerTransform.Position + definition.PositionOffset;
                     Vector2 newPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in newPosition);
                     Quaternion newRotation = VisualMath.NormalizeOrIdentity(ownerTransform.Rotation);
                     PresenterWorldFacing newFacing = ResolveOwnerFacing(state.OwnerEntity);
@@ -154,7 +155,13 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
-                    Vector3 ownerPosition = World.Get<VisualTransform>(state.OwnerEntity).Position;
+                    VisualTransform ownerTransform = World.Get<VisualTransform>(state.OwnerEntity);
+                    if (!_definitions.TryGet(state.DefId, out PresenterDefinition assertionDefinition))
+                    {
+                        continue;
+                    }
+
+                    Vector3 ownerPosition = ownerTransform.Position + assertionDefinition.PositionOffset;
                     Vector3 presenterPosition = positions[index].Value;
                     System.Diagnostics.Debug.Assert(
                         Math.Abs(presenterPosition.X - ownerPosition.X) <= 0.001f &&
@@ -204,6 +211,12 @@ namespace Ludots.Core.Presentation.Systems
                         }
                         : default;
                     Vector3 newScale = VisualMath.NormalizeScale(ownerTransform.Scale);
+                    if (World.Has<PresenterState>(payload.SingleRootPresenter) &&
+                        _definitions.TryGet(World.Get<PresenterState>(payload.SingleRootPresenter).DefId, out PresenterDefinition singleRootDefinition))
+                    {
+                        newPosition += singleRootDefinition.PositionOffset;
+                        newPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in newPosition);
+                    }
 
                     ref PresenterWorldPosition position = ref World.Get<PresenterWorldPosition>(payload.SingleRootPresenter);
                     ref PresenterWorldPlanePosition planePosition = ref World.Get<PresenterWorldPlanePosition>(payload.SingleRootPresenter);

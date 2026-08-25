@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "evidence_id": "raylib_asset_acceptance_obj",
+  "subject": {
+    "kind": "tool",
+    "key": "raylib_asset_acceptance",
+    "scenario_id": "obj_conversion_regression",
+    "branch": "codex/arch-wiki",
+    "commit": "f507584eb610a7935016d3aeb9b23d561479f33b"
+  },
+  "capture": {
+    "kind": "mixed",
+    "tool": "scripts/record-raylib-asset-acceptance.py（宿主静帧合同 + ffmpeg 拼接）+ --screenshot 单帧通道",
+    "requested_by": "用户：录屏证明 + 教程素材；场景对应 issue #1050 回归",
+    "started_at_utc": "2026-08-24T17:01:00Z",
+    "completed_at_utc": "2026-08-24T17:03:00Z",
+    "notes": "mass_navigation_blocker_rock.obj 是 #1050 的原生崩溃资产（无 vt/vn 纯顶点面片，裸 LoadModel 即 AccessViolation）；本录像证明经引擎 Assimp→GLB 转换后正常装载渲染。blocker_rock.png / error-panel.png 为同版本真实运行截图。"
+  },
+  "artifacts": [
+    {
+      "kind": "video",
+      "path": "artifacts/evidence/raylib_asset_acceptance_obj/play.mp4",
+      "media_type": "video/mp4",
+      "description": "#1050 崩溃资产 blocker_rock.obj 经转换装载的完整运行录像（转台 + 昼夜太阳）"
+    },
+    {
+      "kind": "screenshot",
+      "path": "artifacts/evidence/raylib_asset_acceptance_obj/poster.png",
+      "media_type": "image/png",
+      "description": "录像封面帧"
+    },
+    {
+      "kind": "screenshot",
+      "path": "artifacts/evidence/raylib_asset_acceptance_obj/blocker_rock.png",
+      "media_type": "image/png",
+      "description": "崩溃资产渲染成功截图（HUD 显示 OBJ → GLB 经 Assimp 转换缓存路径）"
+    },
+    {
+      "kind": "screenshot",
+      "path": "artifacts/evidence/raylib_asset_acceptance_obj/error-panel.png",
+      "media_type": "image/png",
+      "description": "装载失败路径：红色错误面板 + 拖入重试提示，场景不崩溃（故障可读）"
+    }
+  ]
+}

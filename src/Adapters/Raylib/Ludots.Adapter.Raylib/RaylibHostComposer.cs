@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Scripting;
@@ -100,6 +101,13 @@ namespace Ludots.Adapter.Raylib
             engine.SetService(CoreServiceKeys.InputBackend, (Core.Input.Runtime.IInputBackend)inputBackend);
             engine.SetService(CoreServiceKeys.SyntheticInput, syntheticInput);
             engine.SetService(CoreServiceKeys.HostFrameCapture, (IHostFrameCapture)new Services.RaylibFrameCaptureService());
+
+            engine.RegisterPresentationAdapterCapabilities(
+                new PresentationAdapterCapabilities(
+                    PresentationVisualCapabilities.Decal |
+                    PresentationVisualCapabilities.Vfx |
+                    PresentationVisualCapabilities.Surface |
+                    PresentationVisualCapabilities.NavMeshTileGeometry));
 
             ValidateRequiredContextBeforeStart(engine);
 

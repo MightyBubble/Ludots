@@ -6943,6 +6943,103 @@
       "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     },
     {
+      "id": "navmesh_debug_grid_showcase",
+      "path": "mods/showcases/navmesh_debug_grid/NavMeshDebugGridLaunchMod",
+      "title": "NavMesh 脏更新·Grid 地图",
+      "summary": "Grid 地图上的运行时改路展示：按 P 放下一座结构墙，导航覆盖层会在脏 tile 重建后挖出不可走区域；按 O 清墙后路线区域恢复。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "navmesh_debug_grid_launch",
+      "preset": "navmesh_debug_grid_raylib",
+      "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
+      "acceptanceTest": "NavMeshDebugShowcaseLauncherTests",
+      "status": "active",
+      "tags": [
+        "navmesh",
+        "runtime-dirty",
+        "grid",
+        "navigation"
+      ]
+    },
+    {
+      "id": "navmesh_debug_hex_showcase",
+      "path": "mods/showcases/navmesh_debug_hex/NavMeshDebugHexLaunchMod",
+      "title": "NavMesh 脏更新·Hex 地图",
+      "summary": "Hex VertexMap 地图上的运行时改路展示：同一套 P/O 操作把结构墙写进导航脏队列，覆盖层能看到局部 tile 重建结果。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "navmesh_debug_hex_launch",
+      "preset": "navmesh_debug_raylib",
+      "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
+      "acceptanceTest": "NavMeshDebugShowcaseLauncherTests",
+      "status": "active",
+      "tags": [
+        "navmesh",
+        "runtime-dirty",
+        "hex",
+        "navigation"
+      ]
+    },
+    {
+      "id": "navmesh_debug_showcase",
+      "path": "mods/showcases/navmesh_debug/NavMeshDebugLaunchMod",
+      "title": "NavMesh 脏更新控制器",
+      "summary": "三张地图共用的操作层：N 切换覆盖层，P 放结构墙，O 清墙；地图选择由 Hex/Grid/VisualHeightmap 入口负责。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "navmesh_debug",
+      "preset": null,
+      "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
+      "acceptanceTest": "NavMeshDebugShowcaseLauncherTests",
+      "status": "active",
+      "tags": [
+        "navmesh",
+        "runtime-dirty",
+        "navigation",
+        "raylib"
+      ]
+    },
+    {
+      "id": "navmesh_debug_vhtm_showcase",
+      "path": "mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod",
+      "title": "NavMesh 脏更新·VisualHeightmap 地图",
+      "summary": "VisualHeightmap 地形上的运行时改路展示：.vhtm 起伏先投影为逻辑地形，再用同一套 P/O 操作演示结构墙如何触发局部导航重建。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "navmesh_debug_vhtm_launch",
+      "preset": "navmesh_debug_vhtm_raylib",
+      "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
+      "acceptanceTest": "NavMeshDebugShowcaseLauncherTests",
+      "status": "active",
+      "tags": [
+        "navmesh",
+        "runtime-dirty",
+        "vhtm",
+        "visual-heightmap",
+        "navigation"
+      ]
+    },
+    {
+      "id": "navmesh_runtime_gate_showcase",
+      "path": "mods/showcases/navmesh_runtime_gate/NavGateShowcaseMod",
+      "title": "Navmesh 运行时更新·隘口封锁",
+      "summary": "一支小队穿越山谷隘口，城门落下的瞬间 navmesh 增量重烤并全队改道：绿折线断裂、黄新路径绕山、脏瓦片橙框闪烁；F 键冻结重烤即为消融对照（旧路径直穿城门）。",
+      "tier": "T1",
+      "category": "capability",
+      "binding": "nav_gate",
+      "preset": "nav_gate_raylib",
+      "docsPath": "mods/showcases/navmesh_runtime_gate/NavGateShowcaseMod/README.md",
+      "acceptanceTest": "NavGateShowcaseContractTests",
+      "status": "active",
+      "tags": [
+        "navmesh",
+        "runtime-update",
+        "recast",
+        "vhtm",
+        "showcase"
+      ]
+    },
+    {
       "id": "engine_raylib_primitives",
       "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
       "projectPath": "Ludots.App.RaylibEngineGallery.csproj",

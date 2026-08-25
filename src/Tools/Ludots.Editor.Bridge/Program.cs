@@ -12,7 +12,6 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.NavBake.Recast;
 using Ludots.Tool;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;

@@ -15,15 +15,15 @@ internal static class RaylibVisualAtmosphereShowcaseIds
     public const string DecalCracksTemplateId = "raylib_visual_atmosphere_decal_cracks";
     public const string RockTemplateId = "raylib_visual_atmosphere_rock";
 
-    public const string TreePerformerId = "raylib_visual_atmosphere_tree_actor";
-    public const string BushPerformerId = "raylib_visual_atmosphere_bush_actor";
-    public const string VfxBlendPerformerId = "raylib_visual_atmosphere_vfx_blend_actor";
-    public const string VfxAdditivePerformerId = "raylib_visual_atmosphere_vfx_additive_actor";
-    public const string DecalFootprintsPerformerId = "raylib_visual_atmosphere_decal_footprints_actor";
-    public const string DecalScorchPerformerId = "raylib_visual_atmosphere_decal_scorch_actor";
-    public const string DecalBloodPerformerId = "raylib_visual_atmosphere_decal_blood_actor";
-    public const string DecalCracksPerformerId = "raylib_visual_atmosphere_decal_cracks_actor";
-    public const string RockPerformerId = "raylib_visual_atmosphere_rock_actor";
+    public const string TreePresenterId = "raylib_visual_atmosphere_tree_actor";
+    public const string BushPresenterId = "raylib_visual_atmosphere_bush_actor";
+    public const string VfxBlendPresenterId = "raylib_visual_atmosphere_vfx_blend_actor";
+    public const string VfxAdditivePresenterId = "raylib_visual_atmosphere_vfx_additive_actor";
+    public const string DecalFootprintsPresenterId = "raylib_visual_atmosphere_decal_footprints_actor";
+    public const string DecalScorchPresenterId = "raylib_visual_atmosphere_decal_scorch_actor";
+    public const string DecalBloodPresenterId = "raylib_visual_atmosphere_decal_blood_actor";
+    public const string DecalCracksPresenterId = "raylib_visual_atmosphere_decal_cracks_actor";
+    public const string RockPresenterId = "raylib_visual_atmosphere_rock_actor";
 
     public const string TreeMeshKey = "raylib_visual_atmosphere.palm";
     public const string BushMeshKey = "raylib_visual_atmosphere.bush";
