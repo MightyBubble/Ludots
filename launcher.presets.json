@@ -2284,6 +2284,105 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_performer_behavior_extension_showcase_raylib",
+      "name": "Capability Standard Performer Behavior Extension Raylib",
+      "selectors": [
+        "$capability_standard_performer_behavior_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_performer_command_extension_showcase_raylib",
+      "name": "Capability Standard Performer Command Extension Raylib",
+      "selectors": [
+        "$capability_standard_performer_command_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadEntity_raylib",
+      "name": "Graph Op LoadEntryPayloadEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadFloat_raylib",
+      "name": "Graph Op LoadEntryPayloadFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadInt_raylib",
+      "name": "Graph Op LoadEntryPayloadInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DispatchMapEvent_raylib",
+      "name": "Graph Op DispatchMapEvent Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DispatchMapEvent"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_InvokeGraph_raylib",
+      "name": "Graph Op InvokeGraph Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_InvokeGraph"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgEntity_raylib",
+      "name": "Graph Op StoreArgEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgFloat_raylib",
+      "name": "Graph Op StoreArgFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgInt_raylib",
+      "name": "Graph Op StoreArgInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedEntity_raylib",
+      "name": "Graph Op LoadPlacedEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
