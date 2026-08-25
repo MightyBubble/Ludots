@@ -120,7 +120,11 @@ namespace Ludots.Core.Presentation.Presenters
                 }
 
                 int previousStableId = sampler.StableId;
-                _samplersByStableId.Remove(previousStableId);
+                if (_samplersByStableId.TryGetValue(previousStableId, out TrailSampler? previousClaim) &&
+                    ReferenceEquals(previousClaim, sampler))
+                {
+                    _samplersByStableId.Remove(previousStableId);
+                }
                 sampler.Reset(entity, stableId);
                 _samplersByStableId.Add(stableId, sampler);
             }
@@ -178,7 +182,11 @@ namespace Ludots.Core.Presentation.Presenters
                     int deadKey = _deadKeys[i];
                     if (_samplers.Remove(deadKey, out TrailSampler? sampler))
                     {
-                        _samplersByStableId.Remove(sampler.StableId);
+                        if (_samplersByStableId.TryGetValue(sampler.StableId, out TrailSampler? claim) &&
+                            ReferenceEquals(claim, sampler))
+                        {
+                            _samplersByStableId.Remove(sampler.StableId);
+                        }
                         sampler.Reset();
                         _freeSamplerIndices[_samplers.Count] = sampler.PoolIndex;
                     }
