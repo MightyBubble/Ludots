@@ -2131,6 +2131,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new ModTriggerResumeClockSystem(TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new Ludots.Core.Gameplay.FieldRegions.FieldRegionMembershipSystem(World, () => MapSessions, entityCollectionStore, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
             var inputTriggerActions = new Ludots.Core.Gameplay.MapTriggers.InputTriggerActionCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -3002,9 +3003,12 @@ namespace Ludots.Core.Engine
             session.Fields = Ludots.Core.Fields.FieldSessionStore.Create(
                 registry, mapConfig?.Fields?.Layers, cellsLoader);
             session.RegionIndex = Ludots.Core.Gameplay.FieldRegions.FieldRegionMaterializer.Materialize(World, session);
+<<<<<<< HEAD
             var rosters = new Ludots.Core.Fields.Config.FieldHierarchyConfigLoader(ConfigPipeline)
                 .Load(ConfigCatalog, ConfigConflictReport);
             session.RegionGroups = Ludots.Core.Gameplay.FieldRegions.RegionHierarchyBuilder.Build(World, session, rosters);
+=======
+>>>>>>> c08c84f3a6 (feat(fields): #1177 区域物化 + 归属差分 + FieldRegion 过境事件（与圆/矩形触发器分线）)
         }
 
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
