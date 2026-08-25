@@ -4,7 +4,7 @@ Raylib 桌面端的全部作者面配置文件：每个文件长什么样、字�
 
 所有 mod 侧文件走 ConfigPipeline 的 `ArrayById` 合并（同 id 多 fragment 按装载序合并，冲突进报告）；跨 mod 资产引用用虚拟 URI `"ModName:assets/…"`。装载错误一律抛出终止，没有静默默认。
 
-五类作者面文件均有 JSON Schema（`assets/Presentation/*.schema.json`，字段集镜像各 ConfigLoader 的 allow-list 并经全仓 78 个配置文件实测零误报，`ludots://presentation/…`，随资产分发供编辑器/工具做结构提示）——**schema 不参与流水线校验**，装载期 fail-loud 合同以各 ConfigLoader 为准（与 `assets/AI/*.schema.json` 同约定）。
+八类作者面文件均有 JSON Schema（`assets/Presentation/*.schema.json`，动画链三件 `animation_clips.schema.json`、`animation_profiles.schema.json`、`animator_controllers.schema.json` 随材质/装订/mesh/粒子/presenters 五件入列；字段集镜像各 ConfigLoader 的 allow-list 并经全仓 96 个配置文件实测零误报，`ludots://presentation/…`，随资产分发供编辑器/工具做结构提示）——**schema 不参与流水线校验**，装载期 fail-loud 合同以各 ConfigLoader 为准（与 `assets/AI/*.schema.json` 同约定）。
 
 ## Presentation/material_assets.json — 材质
 
