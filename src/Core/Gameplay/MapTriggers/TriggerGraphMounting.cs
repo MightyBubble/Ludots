@@ -233,6 +233,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                             $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{entry.Label}' names GAS bridge event '{eventName}'; Mod TriggerGraphs accept global engine events only, and {CustomEventNameRegistry.GasEventPrefix}* events fire only inside a map session.");
                     }
 
+                    if (eventName == GameEvents.ModTriggerResume.Value)
+                    {
+                        throw new InvalidOperationException(
+                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{entry.Label}' names internal event '{eventName}'; Mod TriggerGraphs cannot bind the engine continuation pulse.");
+                    }
+
                     if (customEvents.IsDeclaredCustom(eventName))
                     {
                         throw new InvalidOperationException(

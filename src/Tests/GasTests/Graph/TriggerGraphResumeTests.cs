@@ -138,9 +138,9 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(engine.TriggerManager.HasSuspendedModTriggers, Is.True);
             Assert.That(resume.EventKey, Is.EqualTo(GameEvents.ModTriggerResume));
 
-            engine.TriggerManager.FireEventAsync(GameEvents.ModTriggerResume, engine.CreateContext())
-                .GetAwaiter()
-                .GetResult();
+            var resumeClock = new ModTriggerResumeClockSystem(engine.TriggerManager, engine.CreateContext);
+            float dt = 1f / 60f;
+            resumeClock.Update(in dt);
 
             Assert.That(mount.IsSuspended, Is.False,
                 "The engine-level ModTriggerResume pulse must continue a suspended Mod graph.");

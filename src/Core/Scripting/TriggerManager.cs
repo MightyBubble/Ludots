@@ -443,6 +443,25 @@ namespace Ludots.Core.Scripting
             FireEvent(new EventKey(eventKey), context);
         }
 
+        /// <summary>
+        /// Dispatches the engine-owned Mod TriggerGraph continuation pulse through
+        /// the synchronous trigger path. The event has no author-facing handlers,
+        /// so registration order is stable and no snapshot, sort, or Task is needed.
+        /// </summary>
+        public void FireModTriggerResume(ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            if (!_triggers.TryGetValue(GameEvents.ModTriggerResume, out List<Trigger> triggerList))
+            {
+                return;
+            }
+
+            for (int i = 0; i < triggerList.Count; i++)
+            {
+                FireTrigger(triggerList[i], GameEvents.ModTriggerResume, context);
+            }
+        }
+
         public Task FireEventAsync(EventKey eventKey, ScriptContext context)
         {
             var handlerTask = FireEventHandlersAsync(eventKey, context);

@@ -22,6 +22,6 @@ Date: 2026-08-26
 
 Command: `dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~TriggerGraphMountTests|FullyQualifiedName~TriggerGraphEntityDomainTests"`
 
-Result: 68/68 passed on the rebased branch. The suite covers entity aggregate scope, ordered multi-graph mounts, ability allowlists, ModId isolation, and global route registration.
+Result: 77/77 passed on the rebased branch. The suite covers entity aggregate scope, ordered multi-graph mounts, ability allowlists, ModId isolation, global route registration, and fixed-step Mod graph resumption.
 
 Runtime AgentBridge evidence is intentionally not claimed here; the showcase remains pending the separate runtime gate.

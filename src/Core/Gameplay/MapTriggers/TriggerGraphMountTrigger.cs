@@ -24,7 +24,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// (TriggerGraphLimits.SliceBudgetSteps); a Yield or slice-budget
     /// suspension parks the run inside this instance (cursor, registers, call
     /// stack) and the map's think wave ("MapHeartbeat") resumes it one
-    /// slice per wave until Halt. Resume wiring: a companion
+    /// slice per wave until Halt. Mod-domain mounts use the fixed-step
+    /// "ModTriggerResume" pulse instead of the map event index. Resume wiring: a companion
     /// TriggerGraphResumeTrigger is registered per entry unless the entry's
     /// EventName IS the resume event, in which case the entry's own dispatch
     /// resumes the suspended run on that tick (a wave tick on a suspended

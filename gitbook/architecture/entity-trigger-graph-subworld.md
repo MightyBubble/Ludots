@@ -50,7 +50,7 @@ MapSession (唯一模拟世界/事件总线)
 
 ### 4.2 Mod 域
 
-`mod.json` 的 `triggerGraphs` 是 Mod 生命周期图的有序列表。Mod 图注册到同一 `TriggerManager` 的全局事件索引，先注册后发出该 Mod 的 `ModLoaded`（上下文 `MapTriggerEventPayloadKeys.ModId`）；带 `ModId` 的事件只由同名 Mod 图接收，缺少或不匹配 `ModId` 的事件 fail closed。Mod 图不绑定实体或地图；挂起的 Mod 图由引擎级 `ModTriggerResume` 脉冲继续执行，卸载时先移除挂载再调用 Mod 的卸载生命周期。
+`mod.json` 的 `triggerGraphs` 是 Mod 生命周期图的有序列表。Mod 图注册到同一 `TriggerManager` 的全局事件索引，先注册后发出该 Mod 的 `ModLoaded`（上下文 `MapTriggerEventPayloadKeys.ModId`）；带 `ModId` 的事件只由同名 Mod 图接收，缺少或不匹配 `ModId` 的事件 fail closed。Mod 图不绑定实体或地图；挂起的 Mod 图由 `DeferredTriggerCollection` 固定步中的引擎级 `ModTriggerResume` 脉冲继续执行，卸载时先移除挂载再调用 Mod 的卸载生命周期。
 
 ### 4.3 跨地图路由
 

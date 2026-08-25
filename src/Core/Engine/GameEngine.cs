@@ -2079,6 +2079,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new ModTriggerResumeClockSystem(TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
@@ -4032,11 +4033,6 @@ namespace Ludots.Core.Engine
                     ctx.Set("SliceLimit", SimulationMaxSlicesPerLogicFrame);
                     TriggerManager.FireEvent(GameEvents.SimulationBudgetFused, ctx);
                 }
-            }
-
-            if (TriggerManager.HasSuspendedModTriggers)
-            {
-                TriggerManager.FireEvent(GameEvents.ModTriggerResume, CreateContext());
             }
 
             // 2. Visual Loop (Rendering, UI, Animation) - Always runs
