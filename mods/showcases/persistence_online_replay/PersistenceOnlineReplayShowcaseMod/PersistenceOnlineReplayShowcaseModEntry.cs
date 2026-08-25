@@ -15,7 +15,7 @@ public sealed class PersistenceOnlineReplayShowcaseModEntry : IMod
         var runtime = new PersistenceOnlineReplayRuntime(context);
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            if (ctx.GetEngine() is not GameEngine engine ||
+            if (ctx.Get(CoreServiceKeys.Engine) is not GameEngine engine ||
                 (engine.GlobalContext.TryGetValue(PersistenceOnlineReplayShowcaseIds.InstalledKey, out object? value) && value is true))
             {
                 return Task.CompletedTask;

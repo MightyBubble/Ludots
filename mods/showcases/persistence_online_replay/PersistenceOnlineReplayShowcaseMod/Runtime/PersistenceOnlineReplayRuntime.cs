@@ -56,7 +56,7 @@ public sealed class PersistenceOnlineReplayRuntime
 
     public Task HandleMapFocusedAsync(ScriptContext context)
     {
-        if (context.GetEngine() is not GameEngine engine) return Task.CompletedTask;
+        if (context.Get(CoreServiceKeys.Engine) is not GameEngine engine) return Task.CompletedTask;
         if (!PersistenceOnlineReplayShowcaseIds.IsShowcaseMap(engine.CurrentMapSession?.MapId.Value))
         {
             _panel.ClearIfOwned();
@@ -71,7 +71,7 @@ public sealed class PersistenceOnlineReplayRuntime
 
     public Task HandleMapUnloadedAsync(ScriptContext context)
     {
-        if (context.GetEngine() is GameEngine engine)
+        if (context.Get(CoreServiceKeys.Engine) is GameEngine engine)
         {
             engine.GetService(CoreServiceKeys.InputHandler)?.PopContext(PersistenceOnlineReplayShowcaseIds.InputContext);
             _panel.ClearIfOwned();
