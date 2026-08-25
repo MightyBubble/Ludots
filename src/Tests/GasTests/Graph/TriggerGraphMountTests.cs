@@ -371,6 +371,33 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void ExecuteAsync_ScopeLessMount_WithMapVariableOp_FailsClosedNamingOp()
+        {
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: false);
+            using GameEngine engine = fixture.CreateEngine();
+            GraphInstruction[] program =
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.WriteMapVarInt, A = 0, B = byte.MaxValue, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+            int graphId = fixture.RegisterTriggerGraph(engine, program, new[]
+            {
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+            });
+            var trigger = new TriggerGraphMountTrigger(graphId, GraphName,
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+                Entity.Null);
+
+            ScriptContext context = engine.CreateContext();
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => trigger.ExecuteAsync(context));
+
+            Assert.That(ex!.Message, Does.Contain(nameof(GraphNodeOp.WriteMapVarInt)),
+                "A scope-less mount running a map-variable op must fail closed naming the op.");
+            Assert.That(ex.Message, Does.Contain("GAS.GRAPH.ERR.MapVariableScopeEntity"),
+                "The fail-closed error must identify the missing map scope instead of crashing the host.");
+        }
+
+        [Test]
         public void ExecuteAsync_NonHaltingLoop_SuspendsThenFailsAtPerRunInstructionCap()
         {
             using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: false);

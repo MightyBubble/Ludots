@@ -391,16 +391,30 @@ namespace Ludots.Core.Gameplay.MapTriggers
         {
             if (!_mapScopeResolved)
             {
-                _mapScope = _scope != Entity.Null &&
-                    _scope != default &&
-                    dependencies.Engine.World.IsAlive(_scope) &&
-                    dependencies.Engine.World.TryGet<MapEntity>(_scope, out MapEntity anchor)
-                    ? anchor.MapId
-                    : null;
+                _mapScope = ResolveMapScope(dependencies);
                 _mapScopeResolved = true;
             }
 
             return _mapScope;
+        }
+
+        private MapId? ResolveMapScope(TriggerGraphTriggerDependencies dependencies)
+        {
+            // Scope-less map mounts (no scopeInstanceId) must resolve to "no map anchor"
+            // instead of touching Arch with the never-allocated Entity.Null id, which
+            // reads a native bucket out of bounds (AccessViolation). Map-variable ops on
+            // such mounts then fail closed with GAS.GRAPH.ERR.MapVariableScopeEntity.
+            // Do NOT gate on IsAlive: the destroy-tick lifecycle dispatch resolves the
+            // map scope while the scope entity is already destroyed but its components
+            // are still readable — that is the death-event map scope contract.
+            if (_scope == Entity.Null || _scope == default)
+            {
+                return null;
+            }
+
+            return dependencies.Engine.World.TryGet<MapEntity>(_scope, out MapEntity anchor)
+                ? anchor.MapId
+                : null;
         }
 
         private static TriggerGraphTriggerDependencies ResolveDependencies(ScriptContext context)
