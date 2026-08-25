@@ -24,6 +24,23 @@ namespace Ludots.Core.Input.Systems
 
         public void Update(in float dt)
         {
+            if (_snapshot.TryConsumeReplayActions(out var replayActions))
+            {
+                _accumulator.DiscardLiveInput();
+                _snapshot.ClearSnapshot();
+                for (int i = 0; i < replayActions!.Count; i++)
+                {
+                    var action = replayActions[i];
+                    _snapshot.SetActionState(action.ActionId, action.Value, action.IsDown, action.Pressed, action.Released);
+                }
+                return;
+            }
+            if (_snapshot.ReplayInputIsolation)
+            {
+                _accumulator.DiscardLiveInput();
+                _snapshot.ClearSnapshot();
+                return;
+            }
             _accumulator.BuildTickSnapshot(_snapshot);
         }
 

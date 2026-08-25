@@ -16,6 +16,16 @@ namespace Ludots.Core.Persistence
                     $"Save schemaVersion mismatch: expected {SaveContextHeader.CurrentSchemaVersion}, actual {header.SchemaVersion}.");
             }
 
+            string currentMapId = engine.CurrentMapSession?.MapId.Value
+                ?? engine.MergedConfig?.StartupMapId
+                ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(header.MapId) ||
+                !string.Equals(header.MapId, currentMapId, StringComparison.Ordinal))
+            {
+                throw new SaveContextException(
+                    $"Save mapId mismatch: expected {currentMapId}, actual {header.MapId}. Load the corresponding map before loading this save.");
+            }
+
             string currentModSetHash = SaveContextHashes.ComputeModSetHash(engine);
             if (!string.Equals(header.ModSetHash, currentModSetHash, StringComparison.Ordinal))
             {

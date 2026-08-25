@@ -88,6 +88,7 @@ namespace Ludots.Core.Engine
             var registry = new SaveParticipantRegistry();
             CoreSaveParticipants.RegisterCore(this, registry);
             SetService(CoreServiceKeys.SaveParticipants, registry);
+            SetService(CoreServiceKeys.CheckpointCoordinator, new CheckpointCoordinator());
         }
 
         private void SetCurrentMapSession(MapSession session)

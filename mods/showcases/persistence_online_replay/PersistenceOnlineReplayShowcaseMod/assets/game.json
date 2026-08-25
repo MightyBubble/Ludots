@@ -1,0 +1,4 @@
+{
+  "startupMapId": "persistence_online_replay",
+  "startupInputContexts": ["Default_Gameplay", "PersistenceOnlineReplayShowcase.Controls"]
+}

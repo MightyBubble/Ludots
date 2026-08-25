@@ -1,0 +1,39 @@
+{
+  "actions": [
+    { "id": "PersistenceOnlineReplay.RequestCheckpoint", "name": "PersistenceOnlineReplay_RequestCheckpoint", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.SaveSlot", "name": "PersistenceOnlineReplay_SaveSlot", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.RestoreSlot", "name": "PersistenceOnlineReplay_RestoreSlot", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.StartRecording", "name": "PersistenceOnlineReplay_StartRecording", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.StopRecording", "name": "PersistenceOnlineReplay_StopRecording", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.PlayReplay", "name": "PersistenceOnlineReplay_PlayReplay", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.SimulateDisconnect", "name": "PersistenceOnlineReplay_SimulateDisconnect", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.Reconnect", "name": "PersistenceOnlineReplay_Reconnect", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.AblateFrame", "name": "PersistenceOnlineReplay_AblateFrame", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.SwapFrames", "name": "PersistenceOnlineReplay_SwapFrames", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.ToggleReplayPause", "name": "PersistenceOnlineReplay_ToggleReplayPause", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.StepReplay", "name": "PersistenceOnlineReplay_StepReplay", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.ResetReplay", "name": "PersistenceOnlineReplay_ResetReplay", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "PersistenceOnlineReplayShowcase.Controls",
+      "name": "Persistence Online Replay Showcase Controls",
+      "priority": 90,
+      "bindings": [
+        { "actionId": "PersistenceOnlineReplay.RequestCheckpoint", "path": "<Keyboard>/f5" },
+        { "actionId": "PersistenceOnlineReplay.SaveSlot", "path": "<Keyboard>/f6" },
+        { "actionId": "PersistenceOnlineReplay.RestoreSlot", "path": "<Keyboard>/f7" },
+        { "actionId": "PersistenceOnlineReplay.StartRecording", "path": "<Keyboard>/f8" },
+        { "actionId": "PersistenceOnlineReplay.StopRecording", "path": "<Keyboard>/f9" },
+        { "actionId": "PersistenceOnlineReplay.PlayReplay", "path": "<Keyboard>/f10" },
+        { "actionId": "PersistenceOnlineReplay.SimulateDisconnect", "path": "<Keyboard>/f11" },
+        { "actionId": "PersistenceOnlineReplay.Reconnect", "path": "<Keyboard>/f12" },
+        { "actionId": "PersistenceOnlineReplay.AblateFrame", "path": "<Keyboard>/f4" },
+        { "actionId": "PersistenceOnlineReplay.SwapFrames", "path": "<Keyboard>/f13" },
+        { "actionId": "PersistenceOnlineReplay.ToggleReplayPause", "path": "<Keyboard>/f1" },
+        { "actionId": "PersistenceOnlineReplay.StepReplay", "path": "<Keyboard>/f2" },
+        { "actionId": "PersistenceOnlineReplay.ResetReplay", "path": "<Keyboard>/f3" }
+      ]
+    }
+  ]
+}
