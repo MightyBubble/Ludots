@@ -24,6 +24,15 @@ namespace Ludots.Core.Gameplay.Activities
         public Dictionary<string, object?> Parameters { get; set; } = new(StringComparer.Ordinal);
     }
 
+    public sealed class ActivitySourceSubscription
+    {
+        [JsonPropertyName("source_key")]
+        public string SourceKey { get; set; } = string.Empty;
+
+        [JsonPropertyName("match_condition")]
+        public ActivityConditionRef? MatchCondition { get; set; }
+    }
+
     public sealed class ActivityEffectRef
     {
         [JsonPropertyName("effect_key")]
@@ -76,6 +85,9 @@ namespace Ludots.Core.Gameplay.Activities
 
         [JsonPropertyName("source_key")]
         public string SourceKey { get; set; } = string.Empty;
+
+        [JsonPropertyName("source_subscription")]
+        public ActivitySourceSubscription? SourceSubscription { get; set; }
 
         [JsonPropertyName("dispatch_policy")]
         public ActivityDispatchPolicy DispatchPolicy { get; set; } = ActivityDispatchPolicy.Forced;
@@ -190,6 +202,31 @@ namespace Ludots.Core.Gameplay.Activities
             {
                 throw new InvalidOperationException(
                     $"Activity '{definition.Id}' requires source_key.");
+            }
+
+            if (definition.SourceSubscription != null)
+            {
+                if (string.IsNullOrWhiteSpace(definition.SourceSubscription.SourceKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' source_subscription requires source_key.");
+                }
+
+                if (!string.Equals(
+                    definition.SourceKey,
+                    definition.SourceSubscription.SourceKey,
+                    StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' source_subscription.source_key '{definition.SourceSubscription.SourceKey}' differs from source_key '{definition.SourceKey}'.");
+                }
+
+                if (definition.SourceSubscription.MatchCondition != null &&
+                    string.IsNullOrWhiteSpace(definition.SourceSubscription.MatchCondition.ConditionKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' source_subscription.match_condition requires condition_key.");
+                }
             }
 
             if (!Enum.IsDefined(typeof(ActivityRepeatPolicy), definition.RepeatPolicy))

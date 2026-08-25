@@ -57,6 +57,8 @@ namespace Ludots.Core.Gameplay.Activities
         private readonly ForEachWithEntity<ActivityInstanceCm> _resolvedInstanceCollector;
         private readonly ForEachWithEntity<ActivityInstanceCm> _dispatchTickCollector;
         private readonly ForEachWithEntity<ActivityInstanceCm> _mutexOccupantCollector;
+        private readonly List<int> _subscriptionCandidates = new(8);
+        private readonly HashSet<string> _processedSignalIds = new(StringComparer.Ordinal);
         private int _collectDefinitionId;
         private int _collectScopeKey;
         private int _collectMaxDispatchTick;
@@ -155,7 +157,8 @@ namespace Ludots.Core.Gameplay.Activities
         public ActivityAdmissionResult OfferOrActivateChecked(
             string activityId,
             Entity scopeHost,
-            IReadOnlyDictionary<string, object?>? contextBindings = null)
+            IReadOnlyDictionary<string, object?>? contextBindings = null,
+            IReadOnlyDictionary<string, object?>? signalBindings = null)
         {
             if (!_definitions.TryGet(activityId, out ActivityDefinition definition))
             {
@@ -212,7 +215,7 @@ namespace Ludots.Core.Gameplay.Activities
                         $"Activity '{definition.Id}' has unknown repeat_policy value '{(int)definition.RepeatPolicy}'.");
             }
 
-            Dictionary<string, object?> bindings = ProviderContextBinding.CreateBindings(contextBindings);
+            Dictionary<string, object?> bindings = ProviderContextBinding.CreateBindings(contextBindings, signalBindings);
             var context = new ProviderExecutionContext(_world, scopeHost, bindings);
             if (definition.TriggerCondition != null &&
                 !EvaluateCondition(definition.TriggerCondition, context))
@@ -250,6 +253,71 @@ namespace Ludots.Core.Gameplay.Activities
 
             ActivateForPresentation(entity, definition);
             return new ActivityAdmissionResult(entity, null);
+        }
+
+        public ActivitySignalIntakeResult IntakeSignal(ActivitySignal signal)
+        {
+            ArgumentNullException.ThrowIfNull(signal);
+            ValidateSignalCompleteness(signal);
+
+            if (!_providers.Sources.Contains(signal.SourceKey))
+            {
+                throw new InvalidOperationException(
+                    $"{ActivitySignalFailures.UnknownSourceKey}: source '{signal.SourceKey}' is not a registered fact source.");
+            }
+
+            if (!_processedSignalIds.Add(DedupeKey(signal)))
+            {
+                return new ActivitySignalIntakeResult(
+                    true,
+                    Array.Empty<ActivitySignalMatchResult>());
+            }
+
+            _subscriptionCandidates.Clear();
+            CollectSubscriptionCandidates(signal.SourceKey, _subscriptionCandidates);
+            if (_subscriptionCandidates.Count == 0)
+            {
+                return new ActivitySignalIntakeResult(
+                    false,
+                    Array.Empty<ActivitySignalMatchResult>());
+            }
+
+            Dictionary<string, object?> signalValues = BuildSignalValues(signal);
+            var signalContext = new ProviderExecutionContext(
+                _world,
+                signal.ScopeRef,
+                ProviderContextBinding.CreateBindings(null, signalValues));
+            var matches = new List<ActivitySignalMatchResult>(_subscriptionCandidates.Count);
+            for (int i = 0; i < _subscriptionCandidates.Count; i++)
+            {
+                if (!_definitions.TryGet(_subscriptionCandidates[i], out ActivityDefinition definition))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity definition id '{_subscriptionCandidates[i]}' is missing from the registry.");
+                }
+
+                if (definition.SourceSubscription?.MatchCondition != null &&
+                    !EvaluateCondition(definition.SourceSubscription.MatchCondition, signalContext))
+                {
+                    matches.Add(new ActivitySignalMatchResult(
+                        definition.Id,
+                        Entity.Null,
+                        $"{ActivitySignalFailures.MatchConditionFailed}:{definition.SourceSubscription.MatchCondition.ConditionKey}"));
+                    continue;
+                }
+
+                ActivityAdmissionResult admission = OfferOrActivateChecked(
+                    definition.Id,
+                    signal.ScopeRef,
+                    contextBindings: null,
+                    signalBindings: signalValues);
+                matches.Add(new ActivitySignalMatchResult(
+                    definition.Id,
+                    admission.Instance,
+                    admission.RejectionCode));
+            }
+
+            return new ActivitySignalIntakeResult(false, matches);
         }
 
         public bool TryGetActiveOptions(
@@ -538,6 +606,67 @@ namespace Ludots.Core.Gameplay.Activities
             Dictionary<string, object?> parameters = ProviderParameterValues.NormalizeMap(condition.Parameters);
             schema.Validate(parameters, $"activity.condition.{condition.ConditionKey}");
             return ConditionWriteGuard.EvaluateReadOnly(provider, context, parameters);
+        }
+
+        private void CollectSubscriptionCandidates(string sourceKey, List<int> results)
+        {
+            foreach (ActivityDefinition definition in _definitions.Definitions)
+            {
+                string subscribedSource = definition.SourceSubscription?.SourceKey ?? definition.SourceKey;
+                if (string.Equals(subscribedSource, sourceKey, StringComparison.Ordinal))
+                {
+                    results.Add(_definitions.GetId(definition.Id));
+                }
+            }
+        }
+
+        private static void ValidateSignalCompleteness(ActivitySignal signal)
+        {
+            var missing = new List<string>(4);
+            if (string.IsNullOrWhiteSpace(signal.SourceKey))
+            {
+                missing.Add("source_key");
+            }
+
+            if (string.IsNullOrWhiteSpace(signal.SignalId))
+            {
+                missing.Add("signal_id");
+            }
+
+            if (signal.ObjectRefs is null)
+            {
+                missing.Add("object_refs");
+            }
+
+            if (signal.Parameters is null)
+            {
+                missing.Add("parameters");
+            }
+
+            if (missing.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"{ActivitySignalFailures.Malformed}: signal is missing required fields: {string.Join(", ", missing)}.");
+            }
+        }
+
+        private static string DedupeKey(ActivitySignal signal) =>
+            string.Concat(signal.SourceKey, ":", signal.SignalId);
+
+        private static Dictionary<string, object?> BuildSignalValues(ActivitySignal signal)
+        {
+            Dictionary<string, object?> values = new(signal.Parameters!.Count + 4, StringComparer.Ordinal);
+            foreach (KeyValuePair<string, object?> pair in signal.Parameters!)
+            {
+                values[pair.Key] = pair.Value;
+            }
+
+            values["source_key"] = signal.SourceKey;
+            values["signal_id"] = signal.SignalId;
+            values["occurred_at"] = signal.OccurredAt;
+            values["scope_ref"] = signal.ScopeRef;
+            values["object_refs"] = signal.ObjectRefs!;
+            return values;
         }
 
         private bool TryGetPendingInstance((int DefinitionId, int ScopeKey) key, out Entity entity)
