@@ -25,6 +25,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string BtSequence = "BtSequence";
         public const string BtSelector = "BtSelector";
         public const string BtDecorator = "BtDecorator";
+        /// <summary>
+        /// FSM state dispatch container: reads the map variable named by stateVar, then
+        /// SwitchInt-style case:{memberName} arms per enum member (enumType required).
+        /// Lowers to ReadMapVarInt + ConstInt/CompareEqInt/JumpIfFalse/Jump; the running
+        /// VM only ever sees existing ops. Re-evaluation is the author's explicit
+        /// TriggerGraph entry (MapVariableChanged + filters.varName), never a hidden poll.
+        /// </summary>
+        public const string FsmState = "FsmState";
 
         public static bool IsScriptOnlySugar(string? opName)
         {

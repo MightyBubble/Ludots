@@ -1,21 +1,23 @@
 using System;
 using System.Diagnostics;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Fsm;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardHfsmSentryArenaMod.Runtime;
 
-public sealed class HfsmSentryArenaRuntime
+public sealed class HfsmSentryArenaRuntime : IDisposable
 {
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
     private GraphActionCatalog? _actions;
     private GraphBehaviorCatalog? _behavior;
-    private HfsmWorld? _world;
+    private GraphFsmHost? _fsmHost;
     private HfsmWorld? _crowd;
-    private GraphProgramHfsmHost? _host;
+    private DistanceSensorFeed? _feed;
     private float _accum;
     private float _time;
     private float[] _sx = Array.Empty<float>();
@@ -24,7 +26,6 @@ public sealed class HfsmSentryArenaRuntime
     private float _iy;
     private bool _intruderAlive;
 
-    public HfsmWorld? World => _world;
     public float[] SentryX => _sx;
     public float[] SentryY => _sy;
     public int SentryCount => _sx.Length;
@@ -32,6 +33,24 @@ public sealed class HfsmSentryArenaRuntime
     public float IntruderY => _iy;
     public bool IntruderAlive => _intruderAlive;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_hfsm_sentry_arena" };
+
+    /// <summary>Featured band phase source (FSM-1a): per-agent map variable driven by Graph.FSM.Sentry.</summary>
+    public string GetSentryStateName(int agent)
+    {
+        if (_fsmHost == null || agent < 0 || agent >= _fsmHost.Count)
+        {
+            return "unknown";
+        }
+
+        return _fsmHost.PhaseOf(agent) switch
+        {
+            0 => "idle",
+            1 => "alert",
+            2 => "combat",
+            3 => "retreat",
+            _ => "unknown"
+        };
+    }
 
     public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions, GraphBehaviorCatalog behavior)
     {
@@ -42,21 +61,20 @@ public sealed class HfsmSentryArenaRuntime
 
     public void EnsureWorld()
     {
-        if (_world != null) return;
+        if (_fsmHost != null) return;
         if (_programs == null || _actions == null || _behavior == null)
         {
             throw new InvalidOperationException("Bind(Registry, ActionCatalog, BehaviorCatalog) required.");
         }
 
-        HfsmDefinition def = _behavior.RequireHfsm("hfsm.sentry.scripted");
-        _host = new GraphProgramHfsmHost(_programs);
         int n = _config.FeaturedAgentCount;
-        _world = new HfsmWorld(def, n);
+        _fsmHost = new GraphFsmHost(_programs, GraphIdRegistry.GetId("Graph.FSM.Sentry"), n, "sentry.phase");
+        _feed = new DistanceSensorFeed(this);
         _sx = new float[n];
         _sy = new float[n];
         for (int i = 0; i < n; i++)
         {
-            _world.AddAgent(_host);
+            _fsmHost.AddAgent();
             _sx[i] = -6f;
             _sy[i] = -5.5f + i * (11f / Math.Max(1, n - 1));
         }
@@ -68,7 +86,7 @@ public sealed class HfsmSentryArenaRuntime
         }
 
         Metrics.AgentCount = n;
-        Metrics.Detail = "HFSM Scripts from ActionLib";
+        Metrics.Detail = "HFSM sentry FSM graph (FsmState sugar) + no-graph crowd band";
     }
 
     public void Tick(float dt)
@@ -76,28 +94,25 @@ public sealed class HfsmSentryArenaRuntime
         EnsureWorld();
         _time += dt;
         UpdateIntruder();
-        var world = _world!;
-        for (int i = 0; i < world.Count; i++)
-        {
-            float dx = _ix - _sx[i];
-            float dy = _iy - _sy[i];
-            if (_intruderAlive && dx * dx + dy * dy <= _config.AlertRadius * _config.AlertRadius)
-                world.LatchStimulus(i);
-        }
 
         _accum += dt;
         if (_accum < _config.ThinkPeriodSeconds) return;
         _accum = 0f;
 
         var sw = Stopwatch.StartNew();
-        HfsmThinkStats stats = world.TickAll(_host);
+        GraphFsmThinkStats stats = _fsmHost!.ThinkWave(budgetSteps: 128, sensors: _feed);
         _crowd?.TickAll();
         sw.Stop();
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
         Metrics.Detail =
-            $"HFSM vignette taken={stats.TransitionsTaken} last={Metrics.LastThinkMs:F3}ms leaf0={world.GetLeafState(0)}";
+            $"HFSM sentry FSM wave agents={stats.Agents} steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms phase0={GetSentryStateName(0)}";
+    }
+
+    public void Dispose()
+    {
+        _fsmHost?.Dispose();
     }
 
     private void UpdateIntruder()
@@ -114,6 +129,30 @@ public sealed class HfsmSentryArenaRuntime
             _intruderAlive = false;
             _ix = 20f;
             _iy = 0f;
+        }
+    }
+
+    /// <summary>Glue feed: I[0] = intruder distance in cm (dead intruder sits at int.MaxValue).</summary>
+    private sealed class DistanceSensorFeed : IBehaviorTreeSensorFeed
+    {
+        private readonly HfsmSentryArenaRuntime _runtime;
+
+        public DistanceSensorFeed(HfsmSentryArenaRuntime runtime)
+        {
+            _runtime = runtime;
+        }
+
+        public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
+        {
+            if (!_runtime._intruderAlive)
+            {
+                ints[0] = int.MaxValue;
+                return;
+            }
+
+            float dx = _runtime._ix - _runtime._sx[agentIndex];
+            float dy = _runtime._iy - _runtime._sy[agentIndex];
+            ints[0] = (int)(MathF.Sqrt(dx * dx + dy * dy) * 100f);
         }
     }
 }
