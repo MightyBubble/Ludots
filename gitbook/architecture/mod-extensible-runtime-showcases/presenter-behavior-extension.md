@@ -9,16 +9,16 @@
 ## 结构
 
 ```text
-CapabilityStandardPerformerBehaviorExtensionShowcaseMod/
-  CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry.cs
+CapabilityStandardPresenterBehaviorExtensionShowcaseMod/
+  CapabilityStandardPresenterBehaviorExtensionShowcaseModEntry.cs
   assets/
     game.json
     Maps/
-      capability_standard_performer_behavior_extension_showcase.json
+      capability_standard_presenter_behavior_extension_showcase.json
     Configs/
       Presentation/
         presenters/
-          capability_standard.performer_behavior_extension.cloud_banner.json
+          capability_standard.presenter_behavior_extension.cloud_banner.json
 ```
 
 ## 详情
@@ -27,7 +27,7 @@ Mod 启动时注册 behavior key，并声明执行 lane：
 
 ```csharp
 context.Extensions.Presentation.RegisterPresenterBehavior(
-    "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.CloudDrift",
+    "CapabilityStandardPresenterBehaviorExtensionShowcaseMod.CloudDrift",
     new PresenterBehaviorExtensionDescriptor(
         PresenterBehaviorExecutionLane.ContinuousTick,
         RunCloudDrift));
@@ -61,7 +61,7 @@ presenter shard 通过 key 引用 behavior。loader 会把它编译为 `Behavior
 Feature: 玩家看到 CloudDrift 持续运行
 
   Scenario: CloudDrift 在地图加载后自动运行
-    Given 我启动 `capability_standard_performer_behavior_extension_showcase_raylib`
+    Given 我启动 `capability_standard_presenter_behavior_extension_showcase_raylib`
     When 地图加载完成
     Then 我能看到 Presenter Behavior Extension 面板
     And 面板的 Ticks 数量大于 0

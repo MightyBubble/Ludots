@@ -8,14 +8,14 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 
-namespace CapabilityStandardPerformerBehaviorExtensionShowcaseMod;
+namespace CapabilityStandardPresenterBehaviorExtensionShowcaseMod;
 
-public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry : IMod
+public sealed class CapabilityStandardPresenterBehaviorExtensionShowcaseModEntry : IMod
 {
-    public const string BehaviorKey = "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.CloudDrift";
-    public const string PresenterDefinitionKey = "capability_standard.performer_behavior_extension.cloud_banner";
-    private const string MapId = "capability_standard_performer_behavior_extension_showcase";
-    private const string DriftParamKey = "capability_standard.performer_behavior_extension.drift";
+    public const string BehaviorKey = "CapabilityStandardPresenterBehaviorExtensionShowcaseMod.CloudDrift";
+    public const string PresenterDefinitionKey = "capability_standard.presenter_behavior_extension.cloud_banner";
+    private const string MapId = "capability_standard_presenter_behavior_extension_showcase";
+    private const string DriftParamKey = "capability_standard.presenter_behavior_extension.drift";
     private int _registeredBehaviorId;
     private int _driftParamId;
     private int _behaviorTickCount;
@@ -33,9 +33,9 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
         var runtime = new ExtensibleRuntimeShowcaseRuntime(new ExtensibleRuntimeShowcaseScenario
         {
             MapId = MapId,
-            PanelElementId = "capability-standard-performer-behavior-extension-panel",
-            PrimaryButtonElementId = "capability-standard-performer-behavior-extension-focus",
-            SurfaceOwnerId = "Showcase.CapabilityStandardPerformerBehaviorExtension.Panel",
+            PanelElementId = "capability-standard-presenter-behavior-extension-panel",
+            PrimaryButtonElementId = "capability-standard-presenter-behavior-extension-focus",
+            SurfaceOwnerId = "Showcase.CapabilityStandardPresenterBehaviorExtension.Panel",
             Title = "Presenter Behavior Extension",
             FeatureLabel = "Behavior kind",
             PrimaryButtonLabel = "Focus Cloud Drift",
@@ -44,7 +44,7 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
             ProofLines =
             [
                 $"Behavior key: {BehaviorKey}",
-                "Presenter shard: Presentation/performers/capability_standard.performer_behavior_extension.cloud_banner.json",
+                "Presenter shard: Presentation/presenters/capability_standard.presenter_behavior_extension.cloud_banner.json",
                 "The presenter runtime ticks the Mod behavior through the registered dynamic kind."
             ],
             OnActivated = ActivateShowcase,
@@ -52,7 +52,7 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
             OnPrimaryAction = FocusCloudDrift
         });
 
-        ExtensibleRuntimeShowcaseBootstrap.Install(context, runtime, nameof(CapabilityStandardPerformerBehaviorExtensionShowcaseMod));
+        ExtensibleRuntimeShowcaseBootstrap.Install(context, runtime, nameof(CapabilityStandardPresenterBehaviorExtensionShowcaseMod));
     }
 
     public void OnUnload()

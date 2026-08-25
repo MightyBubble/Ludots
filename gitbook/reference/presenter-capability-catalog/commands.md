@@ -27,7 +27,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 }
 ```
 
-路由策略（内建指令按 kind 固定，见 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:1667-1687`；枚举 `src/Core/Presentation/Presenters/PresenterExtensionRegistries.cs:8-16`）：`CreatePerformer` / `DestroyScope` / `ScopedInstance`（按 definition+scope 定位实例）/ `ExistingInstances`（路由到事件命中的现存实例）/ `SingleRuntime`。
+路由策略（内建指令按 kind 固定，见 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:1667-1688`；枚举 `src/Core/Presentation/Presenters/PresenterExtensionRegistries.cs:8-16`）：`CreatePresenter` / `DestroyScope` / `ScopedInstance`（按 definition+scope 定位实例）/ `ExistingInstances`（路由到事件命中的现存实例）/ `SingleRuntime`。
 
 ## 指令逐条
 
@@ -201,22 +201,22 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 
 - **做什么**：Mod 注册一次性表现指令——作者面在 rules[].command.kind 写 **Mod 限定的 command key**（非 11 种内建名），loader 编译为 `PresenterCommandKind.Extension` + 动态 CommandKindId，执行时分发给 Mod 注册的 handler。
 - **authoring**：`kind: "<ModCommandKey>"` + `route`（必填，必须与注册 descriptor 一致，否则装载 fail-loud）+ 常规载荷字段（paramKey/paramLane/valueSource/scopeTag…）。
-- **在哪执行**：PresenterRuntimeSystem → `HandleExtensionCommand`（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:245-274`：descriptor 查找、route 校验、routed performer 校验，然后 `PerformerCommandExecutionContext` 交给 handler）。
-- **现有演示与验收（黄金模板）**：preset `capability_standard_performer_command_extension_showcase_raylib`；mod `mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod/`；文档 [Performer Command Extension](../../architecture/mod-extensible-runtime-showcases/presenter-command-extension.md)。
+- **在哪执行**：PresenterRuntimeSystem → `HandleExtensionCommand`（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:245-274`：descriptor 查找、route 校验、routed presenter 校验，然后 `PresenterCommandExecutionContext` 交给 handler）。
+- **现有演示与验收（黄金模板）**：preset `capability_standard_presenter_command_extension_showcase_raylib`；mod `mods/showcases/capability_standard/CapabilityStandardPresenterCommandExtensionShowcaseMod/`；文档 [Presenter Command Extension](../../architecture/mod-extensible-runtime-showcases/presenter-command-extension.md)。
 - **缺口状态**：无缺口（模板、装载校验、运行时分发、可玩 showcase 全链齐备）。
 
 ```jsonc
 {
-  "event": { "kind": "GameplayEvent", "keyId": "CapabilityStandard.PerformerCommandExtension.Signal" },
+  "event": { "kind": "GameplayEvent", "keyId": "CapabilityStandard.PresenterCommandExtension.Signal" },
   "command": {
-    "kind": "CapabilityStandardPerformerCommandExtensionShowcaseMod.EmitSignalPing",
+    "kind": "CapabilityStandardPresenterCommandExtensionShowcaseMod.EmitSignalPing",
     "route": "ExistingInstances",
-    "scopeTag": "capability_standard.performer_command_extension.signal",
-    "paramKey": "capability_standard.performer_command_extension.signal_count",
+    "scopeTag": "capability_standard.presenter_command_extension.signal",
+    "paramKey": "capability_standard.presenter_command_extension.signal_count",
     "paramLane": "Int",
     "valueSource": "EventPayloadA"
   }
 }
 ```
 
-来源：`mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod/assets/Presentation/presenters/capability_standard.performer_command_extension.signal_rules.json`；handler 注册与校验见同 mod 的 CapabilityStandardPerformerCommandExtensionShowcaseModEntry.cs。
+来源：`mods/showcases/capability_standard/CapabilityStandardPresenterCommandExtensionShowcaseMod/assets/Presentation/presenters/capability_standard.presenter_command_extension.signal_rules.json`；handler 注册与校验见同 mod 的 CapabilityStandardPresenterCommandExtensionShowcaseModEntry.cs。
