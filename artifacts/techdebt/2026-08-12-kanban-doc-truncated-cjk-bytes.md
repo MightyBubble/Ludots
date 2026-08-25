@@ -37,3 +37,8 @@ Scope: Subsystem
 - Immediate containment: keep the original bytes. Rewriting them to U+FFFD looks like normalization but destroys the two surviving bytes that narrow each damaged character to 64 candidates, which is what makes repair possible at all.
 - Permanent fix direction: repair the page against the same recovery model used for the config merge test file, with a Chinese reader confirming each reconstructed character, then normalize the file to UTF-8.
 - Target milestone: next docs governance pass.
+
+## Resolution (2026-08-24)
+- Status: RESOLVED. `gitbook/architecture/presenter-development-kanban.md` is repaired and normalized to UTF-8 (0 U+FFFD, 200 lines restored).
+- Method: instead of per-character guessing, every damaged line was aligned against the last clean git base `fdddb3aff6:gitbook/architecture/performer-development-kanban.md` (18159 chars, 0 damage); each damaged run was refilled with the exact base segment and the performer→presenter rename was re-applied. 145 lines auto-refilled, 53 lines hand-mapped from base rows, 1 post-damage annotation line (§8.4 status note) reconstructed from sentence pattern; adjacent-duplication artifacts rescanned to zero.
+- The same damage in `gitbook/architecture/presenter-as-actor-architecture.md` (339 U+FFFD, not previously tracked by this debt) was repaired the same way against base `942d077cd0` (182 lines restored, 0 artifacts).

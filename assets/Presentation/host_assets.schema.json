@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ludots://presentation/host_assets.schema.json",
+  "title": "Ludots presentation host asset bindings",
+  "type": "array",
+  "description": "Mod-side Presentation/host_assets.json. Binds platform-agnostic asset ids to a concrete backend's sources. Mesh rows use sourceUris; Material rows use texture slots.",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "assetKind", "assetId", "backendId"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "assetKind": { "enum": ["Mesh", "Material"] },
+      "assetId": { "type": "string", "minLength": 1 },
+      "backendId": { "type": "string", "minLength": 1 },
+      "sourceUris": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "type": "string", "minLength": 1 }
+      },
+      "textures": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "albedo": { "type": "string", "minLength": 1 },
+          "roughness": { "type": "string", "minLength": 1 },
+          "metallic": { "type": "string", "minLength": 1 },
+          "normal": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
