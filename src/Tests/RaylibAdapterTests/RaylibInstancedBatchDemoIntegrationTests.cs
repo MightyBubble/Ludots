@@ -50,7 +50,7 @@ namespace Ludots.Tests.RaylibAdapter
             for (int i = 0; i < 12 && store.ResidentLaneCount == 0; i++)
             {
                 Tick(engine);
-                store.ApplyRequests(requests.GetSpan(), batches);
+                store.ApplyRequests(requests.GetSpan(), batches, null);
                 settleFrames++;
             }
 
@@ -77,7 +77,7 @@ namespace Ludots.Tests.RaylibAdapter
             for (int i = 0; i < 3; i++)
             {
                 Tick(engine);
-                store.ApplyRequests(requests.GetSpan(), batches);
+                store.ApplyRequests(requests.GetSpan(), batches, null);
             }
 
             Assert.That(store.LastAppliedRequestCount, Is.EqualTo(0));
