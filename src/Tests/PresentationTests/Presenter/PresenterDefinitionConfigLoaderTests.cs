@@ -2836,7 +2836,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_RejectsBehaviorActivationConditionUntilRuntimeConsumesIt()
+        public void Load_ParsesBehaviorActivationConditionAndCompilesCreationRulePlan()
         {
             WriteCatalog();
             WritePresenters(
@@ -2844,16 +2844,25 @@ namespace Ludots.Tests.Presentation
                 [
                   {
                     "id": "activation_condition",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "ActivationCfg.Flash" },
+                        "command": { "kind": "SetParam", "paramKey": "test.int", "paramLane": "Int", "valueSource": "EventKeyId" }
+                      }
+                    ],
                     "behaviors": [
                       {
                         "slot": "body",
-                        "kind": "WorldText",
+                        "kind": "Sound",
+                        "activeByDefault": false,
+                        "activationCondition": { "inline": "SourceHasVisualTransform" },
+                        "sound": { "soundAssetId": "sfx_cond" }
+                      },
+                      {
+                        "slot": "attachment",
+                        "kind": "Sound",
                         "activeByDefault": true,
-                        "activationCondition": { "inline": "SourceIsAlive" },
-                        "worldText": {
-                          "textToken": "hud.combat.delta",
-                          "mode": "AttributeCurrent"
-                        }
+                        "sound": { "soundAssetId": "sfx_plain" }
                       }
                     ]
                   }
@@ -2865,11 +2874,264 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
-                resolveTextTokenId: key => key == "hud.combat.delta" ? 777 : 0);
+                resolveBehaviorAssetId: (_, key) => key switch
+                {
+                    "sfx_cond" => 11,
+                    "sfx_plain" => 12,
+                    _ => 0,
+                });
+
+            loader.Load(catalog);
+
+            int defId = registry.GetId("activation_condition");
+            Assert.That(defId, Is.GreaterThan(0));
+            PresenterDefinition def = registry.Get(defId);
+
+            Assert.That(def.Behaviors, Has.Length.EqualTo(2));
+            Assert.That(def.Behaviors[0].ActivationCondition.Inline, Is.EqualTo(InlineConditionKind.SourceHasVisualTransform));
+            Assert.That(def.Behaviors[1].ActivationCondition, Is.EqualTo(ConditionRef.AlwaysTrue));
+
+            // authored rules 保留在前，条件槽编译一对 PresenterCreated 的 Deactivate/Activate 规则
+            Assert.That(def.Rules, Has.Length.EqualTo(3));
+            Assert.That(def.Rules[0].Command.CommandKind, Is.EqualTo(PresenterCommandKind.SetParam));
+
+            PresenterRule deactivate = def.Rules[1];
+            Assert.That(deactivate.Event.Kind, Is.EqualTo(PresentationEventKind.PresenterCreated));
+            Assert.That(deactivate.Event.KeyId, Is.EqualTo(defId));
+            Assert.That(deactivate.Condition, Is.EqualTo(ConditionRef.AlwaysTrue));
+            Assert.That(deactivate.Command.CommandKind, Is.EqualTo(PresenterCommandKind.DeactivateBehavior));
+            Assert.That(deactivate.Command.RouteStrategy, Is.EqualTo(PresenterCommandRouteStrategy.ExistingInstances));
+            Assert.That(deactivate.Command.TargetBehaviorSlot, Is.EqualTo(def.Behaviors[0].SlotIndex));
+
+            PresenterRule activate = def.Rules[2];
+            Assert.That(activate.Event.Kind, Is.EqualTo(PresentationEventKind.PresenterCreated));
+            Assert.That(activate.Event.KeyId, Is.EqualTo(defId));
+            Assert.That(activate.Condition.Inline, Is.EqualTo(InlineConditionKind.SourceHasVisualTransform));
+            Assert.That(activate.Command.CommandKind, Is.EqualTo(PresenterCommandKind.ActivateBehavior));
+            Assert.That(activate.Command.RouteStrategy, Is.EqualTo(PresenterCommandRouteStrategy.ExistingInstances));
+            Assert.That(activate.Command.TargetBehaviorSlot, Is.EqualTo(def.Behaviors[0].SlotIndex));
+        }
+
+        [Test]
+        public void Load_ParsesGraphProgramActivationConditionIntoCompiledPlan()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_graph",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": { "graphProgramId": 42 },
+                        "sound": { "soundAssetId": "sfx_graph" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 5);
+
+            loader.Load(catalog);
+
+            int defId = registry.GetId("activation_graph");
+            PresenterDefinition def = registry.Get(defId);
+            Assert.That(def.Behaviors[0].ActivationCondition.GraphProgramId, Is.EqualTo(42));
+            Assert.That(def.Rules, Has.Length.EqualTo(2));
+            Assert.That(def.Rules[0].Command.CommandKind, Is.EqualTo(PresenterCommandKind.DeactivateBehavior));
+            Assert.That(def.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.PresenterCreated));
+            Assert.That(def.Rules[1].Condition.GraphProgramId, Is.EqualTo(42));
+            Assert.That(def.Rules[1].Command.CommandKind, Is.EqualTo(PresenterCommandKind.ActivateBehavior));
+        }
+
+        [Test]
+        public void Load_RejectsEmptyBehaviorActivationCondition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_empty",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": {},
+                        "sound": { "soundAssetId": "sfx_x" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 3);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("activationCondition"));
-            Assert.That(ex.Message, Does.Contain("not wired"));
+            Assert.That(ex.Message, Does.Contain("inline"));
+            Assert.That(ex.Message, Does.Contain("graphProgramId"));
+        }
+
+        [Test]
+        public void Load_RejectsNonPositiveGraphProgramActivationCondition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_bad_graph",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": { "graphProgramId": 0 },
+                        "sound": { "soundAssetId": "sfx_x" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 3);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("activationCondition"));
+            Assert.That(ex.Message, Does.Contain("graphProgramId"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownInlineKindActivationCondition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_bad_inline",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": { "inline": "Bogus" },
+                        "sound": { "soundAssetId": "sfx_x" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 3);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("activationCondition"));
+            Assert.That(ex.Message, Does.Contain("invalid value"));
+            Assert.That(ex.Message, Does.Contain("Bogus"));
+        }
+
+        [Test]
+        public void Load_RejectsActivationConditionOnChildInstanceBehaviors()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "instanceBehaviors": [
+                          {
+                            "slot": "body",
+                            "kind": "Sound",
+                            "activationCondition": { "inline": "SourceHasVisualTransform" },
+                            "sound": { "soundAssetId": "sfx_inst" }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 4);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("activationCondition"));
+            Assert.That(ex.Message, Does.Contain("definition-scoped"));
+        }
+
+        [Test]
+        public void Load_RejectsActivationConditionOnChildReferencedDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "activation_child_cond",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "Sound",
+                        "activationCondition": { "inline": "SourceHasVisualTransform" },
+                        "sound": { "soundAssetId": "sfx_cond" }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "activation_root",
+                    "children": [
+                      {
+                        "definitionId": "activation_child_cond"
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 4);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("activation-conditioned definition"));
+            Assert.That(ex.Message, Does.Contain("activationCondition"));
+            Assert.That(ex.Message, Does.Contain("root-presenter contract"));
         }
 
         [Test]
