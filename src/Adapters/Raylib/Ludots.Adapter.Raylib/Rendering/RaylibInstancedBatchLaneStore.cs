@@ -116,6 +116,12 @@ namespace Ludots.Adapter.Raylib.Rendering
                     $"RaylibInstancedBatchLaneStore received a chunk for external source batch '{asset.Key}' group '{group.Id}' without loaded factorized data; the factorized source loader must run at config time (no fallback to inline or static presentation).");
             }
 
+            if (factorized.InstanceCount != group.Source.InstanceCount)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore external source batch '{asset.Key}' group '{group.Id}' loaded factorized instanceCount {factorized.InstanceCount} diverges from Core-authored instanceCount {group.Source.InstanceCount}; the lane must size from Core-owned counts.");
+            }
+
             bool grounded = factorized.GroundToVisualHeightmap;
             if (grounded && visualHeightmap == null)
             {
@@ -123,7 +129,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                     $"RaylibInstancedBatchLaneStore cannot ground batch '{asset.Key}' group '{group.Id}' because the Core visual heightmap service is unavailable; the adapter must not substitute its own ground height truth.");
             }
 
-            ApplyChunk(asset, in group, in request, factorized.InstanceCount, out ResidentLane? lane);
+            ApplyChunk(asset, in group, in request, group.Source.InstanceCount, out ResidentLane? lane);
             for (int i = 0; i < request.InstanceCount; i++)
             {
                 int index = request.InstanceStart + i;

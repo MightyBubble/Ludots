@@ -209,7 +209,45 @@ namespace Ludots.Tests.RaylibAdapter
         }
 
         [Test]
-        public void ApplyRequests_GroundsExternalSourceThroughCoreVisualHeightmap()
+        public void ApplyRequests_GroundsExternalSourceThroughCoreVisualHeightmapUsingAuthoredXZ()
+        {
+            InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 2));
+            asset.Groups[0].Source = new InstancedBatchInstanceSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 2,
+                groundToVisualHeightmap: true);
+            asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 2,
+                groundToVisualHeightmap: true,
+                positionCm: new[] { new Vector3(200f, 50f, -300f), new Vector3(400f, 0f, 100f) },
+                rotation: new[] { Quaternion.Identity, Quaternion.Identity },
+                scale: new[] { Vector3.One, Vector3.One });
+            InstancedBatchAssetRegistry registry = new();
+            int batchAssetId = registry.Register("demo.batch", asset);
+            CompileAddresses(registry, batchAssetId, asset);
+
+            InstancedBatchRequestBuffer requests = new();
+            var store = new RaylibInstancedBatchLaneStore();
+            requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 2, finalChunk: true));
+            store.ApplyRequests(requests.GetSpan(), registry, new StubVisualHeightmap((x, z) => x + z));
+
+            RaylibInstancedBatchLane lane = store.GetResidentLane(0);
+            Assert.That(lane.Count, Is.EqualTo(2));
+            // Height is a non-constant function of the authored X/Z only: (200 + -300)cm = -1m,
+            // (400 + 100)cm = 5m. A constant stub or a swapped axis could not reproduce both Ys.
+            Matrix4x4 expectedFirst = Matrix4x4.CreateTranslation(new Vector3(2f, -1f, -3f));
+            Matrix4x4 expectedSecond = Matrix4x4.CreateTranslation(new Vector3(4f, 5f, 1f));
+            AssertMatrixNear(lane.Matrices[0], expectedFirst);
+            AssertMatrixNear(lane.Matrices[1], expectedSecond);
+        }
+
+        [Test]
+        public void ApplyRequests_KeepsAuthoredHeightWhenCoreHeightmapSampleIsOutOfBounds()
         {
             InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 1));
             asset.Groups[0].Source = new InstancedBatchInstanceSource(
@@ -234,11 +272,45 @@ namespace Ludots.Tests.RaylibAdapter
             InstancedBatchRequestBuffer requests = new();
             var store = new RaylibInstancedBatchLaneStore();
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 1, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry, new StubVisualHeightmap(123f));
+            store.ApplyRequests(requests.GetSpan(), registry, new StubVisualHeightmap((x, z) => 999f, inBounds: false));
 
+            // Out-of-bounds samples keep the authored Y (50cm -> 0.5m); the adapter never
+            // substitutes its own ground height truth.
             Matrix4x4 actual = store.GetResidentLane(0).Matrices[0];
-            Matrix4x4 expected = Matrix4x4.CreateTranslation(new Vector3(2f, 1.23f, -3f));
+            Matrix4x4 expected = Matrix4x4.CreateTranslation(new Vector3(2f, 0.5f, -3f));
             AssertMatrixNear(actual, expected);
+        }
+
+        [Test]
+        public void ApplyRequests_ThrowsWhenFactorizedSourceCountDivergesFromCoreAuthoredCount()
+        {
+            InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 2));
+            asset.Groups[0].Source = new InstancedBatchInstanceSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 2,
+                groundToVisualHeightmap: false);
+            asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 3,
+                groundToVisualHeightmap: false,
+                positionCm: new[] { Vector3.Zero, Vector3.Zero, Vector3.Zero },
+                rotation: new[] { Quaternion.Identity, Quaternion.Identity, Quaternion.Identity },
+                scale: new[] { Vector3.One, Vector3.One, Vector3.One });
+            InstancedBatchAssetRegistry registry = new();
+            int batchAssetId = registry.Register("demo.batch", asset);
+            CompileAddresses(registry, batchAssetId, asset);
+
+            InstancedBatchRequestBuffer requests = new();
+            var store = new RaylibInstancedBatchLaneStore();
+            requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 2, finalChunk: true));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => store.ApplyRequests(requests.GetSpan(), registry))!;
+            Assert.That(ex.Message, Does.Contain("factorized instanceCount 3 diverges from Core-authored instanceCount 2"));
         }
 
         [Test]
@@ -449,17 +521,19 @@ namespace Ludots.Tests.RaylibAdapter
 
         private sealed class StubVisualHeightmap : IVisualHeightmap
         {
-            private readonly float _heightCm;
+            private readonly Func<float, float, float> _heightCmFor;
+            private readonly bool _inBounds;
 
-            public StubVisualHeightmap(float heightCm)
+            public StubVisualHeightmap(Func<float, float, float> heightCmFor, bool inBounds = true)
             {
-                _heightCm = heightCm;
+                _heightCmFor = heightCmFor;
+                _inBounds = inBounds;
             }
 
             public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
             {
-                heightCm = _heightCm;
-                return true;
+                heightCm = _heightCmFor(worldXCm, worldYCm);
+                return _inBounds;
             }
 
             public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)

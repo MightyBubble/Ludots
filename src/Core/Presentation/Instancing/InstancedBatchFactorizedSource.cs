@@ -4,9 +4,10 @@ using System.Numerics;
 namespace Ludots.Core.Presentation.Instancing
 {
     /// <summary>
-    /// Core-loaded factorized (SoA) transform data for an external instanced batch source.
-    /// Produced once at config load time by InstancedBatchFactorizedSourceLoader and consumed
-    /// by the typed InstancedBatch request path; never re-derived or re-read per frame.
+    /// Core-loaded factorized transform data for an external instanced batch source: per-instance
+    /// struct arrays (<c>Vector3[] positionCm</c>, <c>Quaternion[] rotation</c>, <c>Vector3[] scale</c>)
+    /// owned by Core. Produced once at config load time by InstancedBatchFactorizedSourceLoader and
+    /// consumed by the typed InstancedBatch request path; never re-derived or re-read per frame.
     /// </summary>
     public sealed class InstancedBatchFactorizedSource
     {
