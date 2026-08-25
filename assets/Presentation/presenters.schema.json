@@ -38,8 +38,24 @@
         "behaviors": { "type": "array", "items": { "$ref": "#/$defs/behavior" } },
         "bindings": { "type": "array", "items": { "$ref": "#/$defs/binding" } },
         "children": { "type": "array", "items": { "$ref": "#/$defs/child" } },
+        "bindSpawn": { "$ref": "#/$defs/bindSpawn" },
         "paramDefaults": { "type": "array", "items": { "$ref": "#/$defs/paramDefault" } },
         "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } }
+      }
+    },
+    "bindSpawn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template", "scopeSource"],
+      "properties": {
+        "template": { "type": "string", "minLength": 1 },
+        "spawnedOn": { "const": "EntitySpawned" },
+        "destroyedOn": { "const": "EntityDestroyed" },
+        "condition": { "$ref": "#/$defs/condition" },
+        "scopeTag": { "type": "string", "minLength": 1 },
+        "scopeSource": { "type": "string", "minLength": 1 },
+        "ownerSource": { "type": "string", "minLength": 1 },
+        "useEventPosition": { "type": "boolean" }
       }
     },
     "vec3": {

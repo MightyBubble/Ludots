@@ -1352,6 +1352,257 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_BindSpawn_ExpandsIntoCanonicalCreateAndDestroyRules()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "spawn_bound_actor",
+                    "bindSpawn": {
+                      "template": "unit.tank",
+                      "scopeSource": "EventPayloadA",
+                      "scopeTag": "unit.spawn",
+                      "ownerSource": "EventTarget",
+                      "useEventPosition": true,
+                      "condition": { "inline": "SourceHasVisualTransform" }
+                    }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityTemplateKey: key => string.Equals(key, "unit.tank", StringComparison.Ordinal) ? 55 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("spawn_bound_actor"), out var definition), Is.True);
+            Assert.That(definition.Rules.Length, Is.EqualTo(2));
+
+            PresenterRule createRule = definition.Rules[0];
+            Assert.That(createRule.Event.Kind, Is.EqualTo(PresentationEventKind.EntitySpawned));
+            Assert.That(createRule.Event.KeyId, Is.EqualTo(55));
+            Assert.That(createRule.Condition.Inline, Is.EqualTo(InlineConditionKind.SourceHasVisualTransform));
+            Assert.That(createRule.Command.CommandKind, Is.EqualTo(PresenterCommandKind.CreatePresenter));
+            Assert.That(createRule.Command.PresenterDefinitionId, Is.EqualTo(registry.GetId("spawn_bound_actor")));
+            Assert.That(createRule.Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventPayloadA));
+            Assert.That(createRule.Command.ScopeTag, Is.EqualTo(PresenterScopeTagRegistry.GetId("unit.spawn")));
+            Assert.That(createRule.Command.OwnerSource, Is.EqualTo(PresenterCommandEntitySource.EventTarget));
+            Assert.That(createRule.Command.UseEventPosition, Is.True);
+
+            PresenterRule destroyRule = definition.Rules[1];
+            Assert.That(destroyRule.Event.Kind, Is.EqualTo(PresentationEventKind.EntityDestroyed));
+            Assert.That(destroyRule.Event.KeyId, Is.EqualTo(55));
+            Assert.That(destroyRule.Command.CommandKind, Is.EqualTo(PresenterCommandKind.DestroyPresenterScope));
+            Assert.That(destroyRule.Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventPayloadA));
+            Assert.That(destroyRule.Command.ScopeTag, Is.EqualTo(PresenterScopeTagRegistry.GetId("unit.spawn")));
+            Assert.That(destroyRule.Command.OwnerSource, Is.EqualTo(PresenterCommandEntitySource.EventTarget));
+            Assert.That(destroyRule.Command.UseEventPosition, Is.False);
+
+            Assert.That(registry.BootstrapRegistry.TryGetEntitySpawnCreates(55, out var creates), Is.True);
+            Assert.That(creates.Length, Is.EqualTo(1));
+            Assert.That(creates[0].PresenterDefinitionId, Is.EqualTo(registry.GetId("spawn_bound_actor")));
+            Assert.That(creates[0].ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventPayloadA));
+            Assert.That(creates[0].InlineCondition, Is.EqualTo(InlineConditionKind.SourceHasVisualTransform));
+
+            Assert.That(registry.BootstrapRegistry.TryGetEntityDestroyedDestroys(55, out var destroys), Is.True);
+            Assert.That(destroys.Length, Is.EqualTo(1));
+            Assert.That(destroys[0].ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventPayloadA));
+        }
+
+        [Test]
+        public void Load_BindSpawn_CoexistsWithHandWrittenRules()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "mixed_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "TagEffectiveChanged", "key": "unit.arming" },
+                        "condition": { "inline": "TagGained" },
+                        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": "body" }
+                      }
+                    ],
+                    "bindSpawn": {
+                      "template": "unit.mixed",
+                      "scopeSource": "EventPayloadA"
+                    }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityTemplateKey: key => string.Equals(key, "unit.mixed", StringComparison.Ordinal) ? 61 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("mixed_actor"), out var definition), Is.True);
+            Assert.That(definition.Rules.Length, Is.EqualTo(3));
+            Assert.That(definition.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.TagEffectiveChanged));
+            Assert.That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PresenterCommandKind.ActivateBehavior));
+            Assert.That(definition.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.EntitySpawned));
+            Assert.That(definition.Rules[1].Command.CommandKind, Is.EqualTo(PresenterCommandKind.CreatePresenter));
+            Assert.That(definition.Rules[2].Event.Kind, Is.EqualTo(PresentationEventKind.EntityDestroyed));
+            Assert.That(definition.Rules[2].Command.CommandKind, Is.EqualTo(PresenterCommandKind.DestroyPresenterScope));
+        }
+
+        [Test]
+        public void Load_BindSpawn_InheritedThroughExtends_BindsInheritingDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "bind_base",
+                    "bindSpawn": { "template": "unit.shared", "scopeSource": "EventPayloadA" }
+                  },
+                  { "id": "bind_child", "extends": "bind_base" }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityTemplateKey: key => string.Equals(key, "unit.shared", StringComparison.Ordinal) ? 77 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("bind_child"), out var child), Is.True);
+            Assert.That(child.Rules.Length, Is.EqualTo(2));
+            Assert.That(child.Rules[0].Command.PresenterDefinitionId, Is.EqualTo(registry.GetId("bind_child")));
+            Assert.That(child.Rules[0].Command.CommandKind, Is.EqualTo(PresenterCommandKind.CreatePresenter));
+        }
+
+        [Test]
+        public void Load_BindSpawn_TemplateAlreadyBoundByHandWrittenRule_Throws()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "dup_bind_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "EntitySpawned", "key": "unit.dup" },
+                        "command": { "kind": "CreatePresenter", "definitionId": "dup_bind_actor", "scopeSource": "EventPayloadA" }
+                      }
+                    ],
+                    "bindSpawn": { "template": "unit.dup", "scopeSource": "EventPayloadA" }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityTemplateKey: key => string.Equals(key, "unit.dup", StringComparison.Ordinal) ? 88 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("code=DuplicateBindSpawn"));
+            Assert.That(ex.Message, Does.Contain("presenters.json[dup_bind_actor]"));
+            Assert.That(ex.Message, Does.Contain("unit.dup"));
+        }
+
+        [Test]
+        public void Load_BindSpawn_UnknownField_Throws()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "unknown_bind_actor",
+                    "bindSpawn": { "template": "unit.unknown", "scopeSource": "Fixed", "color": "red" }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityTemplateKey: key => string.Equals(key, "unit.unknown", StringComparison.Ordinal) ? 91 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("code=UnknownField"));
+            Assert.That(ex.Message, Does.Contain("bindSpawn"));
+        }
+
+        [Test]
+        public void Load_BindSpawn_WithoutScopeSource_Throws()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "scopeless_bind_actor",
+                    "bindSpawn": { "template": "unit.scopeless" }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityTemplateKey: key => string.Equals(key, "unit.scopeless", StringComparison.Ordinal) ? 93 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("bindSpawn.scopeSource is required"));
+        }
+
+        [Test]
+        public void Load_BindSpawn_RejectsNonEntityTemplateEventKind()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "projectile_bind_actor",
+                    "bindSpawn": {
+                      "template": "unit.projectile",
+                      "spawnedOn": "ProjectileSpawned",
+                      "scopeSource": "EventPayloadA"
+                    }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityTemplateKey: key => string.Equals(key, "unit.projectile", StringComparison.Ordinal) ? 97 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("bindSpawn.spawnedOn"));
+            Assert.That(ex.Message, Does.Contain("ProjectileSpawned"));
+        }
+
+        [Test]
         public void Load_CreatePresenterCommand_CanCarryInitialParamPayload()
         {
             WriteCatalog();

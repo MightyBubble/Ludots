@@ -2,13 +2,13 @@
 
 指令是 presenter 域的"动词层"：presenter 规则把事件编译成指令，运行时逐条执行。每条回答五件事：**做什么 / authoring 怎么写 / 在哪执行 / 现有演示与验收 / 缺口状态**。总目录见 [README.md](README.md)；参数从指令流到资产属性的机制见 [param-sink.md](param-sink.md)。
 
-语义以代码为准：枚举 `src/Core/Presentation/Presenters/PresenterCommandKind.cs`；执行 switch `src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:89-207`；authoring 字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:778-785`。
+语义以代码为准：枚举 `src/Core/Presentation/Presenters/PresenterCommandKind.cs`；执行 switch `src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:89-207`；authoring 字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:922-935`。
 
 ## 执行管线与 authoring 形态
 
 帧内顺序（注册见 `src/Core/Engine/GameEngine.cs:2131-2137`）：PresenterTimerSystem 先推进命名 timer 并发布 TimerExpired（当帧可被规则消费）→ PresenterRuleSystem 读事件产指令 → PresenterRuntimeSystem 逐条执行指令、管理实例生命周期。
 
-authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*，白名单字段（`src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:778-785`）：
+authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*，白名单字段（`src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:922-935`）：
 
 ```jsonc
 {
@@ -27,7 +27,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 }
 ```
 
-路由策略（内建指令按 kind 固定，见 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:1243-1263`；枚举 `src/Core/Presentation/Presenters/PresenterExtensionRegistries.cs:8-16`）：`CreatePerformer` / `DestroyScope` / `ScopedInstance`（按 definition+scope 定位实例）/ `ExistingInstances`（路由到事件命中的现存实例）/ `SingleRuntime`。
+路由策略（内建指令按 kind 固定，见 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:1667-1687`；枚举 `src/Core/Presentation/Presenters/PresenterExtensionRegistries.cs:8-16`）：`CreatePerformer` / `DestroyScope` / `ScopedInstance`（按 definition+scope 定位实例）/ `ExistingInstances`（路由到事件命中的现存实例）/ `SingleRuntime`。
 
 ## 指令逐条
 
@@ -35,6 +35,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 
 - **做什么**：按 definitionId 创建 presenter 实例（含 children 递归展开、参数默认值、初始变换）；持久 scoped 重复创建幂等（已存在则刷新位置与参数载荷，不重复建树）。
 - **authoring**：`definitionId`（必填）+ `scopeTag`/`scopeSource`/`ownerSource`/`useEventPosition` + 可选参数载荷（paramKey/paramLane/valueSource…）。
+- **bindSpawn 简写**：`EntitySpawned`→`CreatePresenter` + `EntityDestroyed`→`DestroyPresenterScope` 成对出生样板可在定义上用 `bindSpawn` 装载期展开（见 [as-actor §9.11](../../architecture/presenter-as-actor-architecture.md)）。
 - **在哪执行**：PresenterRuntimeSystem → `HandleCreatePresenter` → `CreateHierarchy`（`src/Core/Presentation/Presenters/PresenterEntityRuntime.cs:447`）。
 - **现有演示与验收**：仓库 mods 内 305 处使用、覆盖 36 个 mod；全链演示 = preset `presenter_blacksmith_showcase_raylib`（建筑出生自动展开子树）。
 - **缺口状态**：无缺口。
@@ -65,6 +66,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 
 - **做什么**：按 scopeTag 整组销毁（一个 owner 事件拆除它创建的整棵 presenter 树），要求正 scopeTag，否则装载/执行期 fail-loud。
 - **authoring**：`scopeTag` + `scopeSource`。
+- **bindSpawn 简写**：与 CreatePresenter 的出生成对样板可用 `bindSpawn` 装载期展开（见 [as-actor §9.11](../../architecture/presenter-as-actor-architecture.md)）。
 - **在哪执行**：PresenterRuntimeSystem → `DestroyScope`（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:99-106`）。
 - **现有演示与验收**：191 处 / 30 个 mod；与 CreatePresenter 成对出现在铁匠铺 bootstrap（preset `presenter_blacksmith_showcase_raylib`）。
 - **缺口状态**：无缺口。
