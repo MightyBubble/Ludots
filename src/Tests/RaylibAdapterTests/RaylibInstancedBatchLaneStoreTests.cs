@@ -21,7 +21,7 @@ namespace Ludots.Tests.RaylibAdapter
             InstancedBatchRequest chunk = BuildCreateRequest(registry, presenterStableId: 7, start: 0, count: 4, finalChunk: false);
 
             requests.Add(chunk);
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
             requests.Clear();
 
             Assert.That(store.ResidentLaneCount, Is.EqualTo(1));
@@ -30,7 +30,7 @@ namespace Ludots.Tests.RaylibAdapter
             int revisionAfterFirstChunk = partial.Revision;
 
             requests.Add(BuildCreateRequest(registry, presenterStableId: 7, start: 4, count: 6, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
 
             Assert.That(store.ResidentLaneCount, Is.EqualTo(1));
             RaylibInstancedBatchLane complete = store.GetResidentLane(0);
@@ -59,7 +59,7 @@ namespace Ludots.Tests.RaylibAdapter
             var store = new RaylibInstancedBatchLaneStore();
 
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 1, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
 
             Matrix4x4 expected = Matrix4x4.CreateScale(2f) * Matrix4x4.CreateTranslation(new Vector3(2f, 0.5f, -3f));
             Matrix4x4 actual = store.GetResidentLane(0).Matrices[0];
@@ -76,22 +76,22 @@ namespace Ludots.Tests.RaylibAdapter
             InstancedBatchRequest remove = BuildRemoveRequest(registry, presenterStableId: 9);
 
             requests.Add(remove);
-            Assert.DoesNotThrow(() => store.ApplyRequests(requests.GetSpan(), registry));
+            Assert.DoesNotThrow(() => store.ApplyRequests(requests.GetSpan(), registry, null));
             Assert.That(store.ResidentLaneCount, Is.EqualTo(0));
             requests.Clear();
 
             requests.Add(create);
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
             requests.Clear();
             Assert.That(store.ResidentLaneCount, Is.EqualTo(1));
 
             requests.Add(remove);
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
             requests.Clear();
             Assert.That(store.ResidentLaneCount, Is.EqualTo(0));
 
             requests.Add(remove);
-            Assert.DoesNotThrow(() => store.ApplyRequests(requests.GetSpan(), registry));
+            Assert.DoesNotThrow(() => store.ApplyRequests(requests.GetSpan(), registry, null));
             Assert.That(store.ResidentLaneCount, Is.EqualTo(0));
         }
 
@@ -105,7 +105,7 @@ namespace Ludots.Tests.RaylibAdapter
             requests.Add(BuildCreateRequest(registry, presenterStableId: 3, start: 2, count: 3, finalChunk: false));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => store.ApplyRequests(requests.GetSpan(), registry))!;
+                () => store.ApplyRequests(requests.GetSpan(), registry, null))!;
             Assert.That(ex.Message, Does.Contain("exceeds the declared capacity 4"));
         }
 
@@ -118,7 +118,7 @@ namespace Ludots.Tests.RaylibAdapter
             var store = new RaylibInstancedBatchLaneStore();
 
             requests.Add(BuildCreateRequest(registry, presenterStableId: 5, start: 0, count: 8, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
             requests.Clear();
             Assert.That(store.GetResidentLane(0).Count, Is.EqualTo(8));
 
@@ -128,7 +128,7 @@ namespace Ludots.Tests.RaylibAdapter
             CompileAddresses(registry, batchAssetId, shrunk);
 
             requests.Add(BuildCreateRequest(registry, presenterStableId: 5, start: 0, count: 4, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
 
             RaylibInstancedBatchLane lane = store.GetResidentLane(0);
             Assert.That(lane.Count, Is.EqualTo(4));
@@ -146,7 +146,7 @@ namespace Ludots.Tests.RaylibAdapter
             requests.Add(orphan);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => store.ApplyRequests(requests.GetSpan(), registry))!;
+                () => store.ApplyRequests(requests.GetSpan(), registry, null))!;
             Assert.That(ex.Message, Does.Contain("cannot resolve batchAssetId=4242"));
         }
 
@@ -176,7 +176,7 @@ namespace Ludots.Tests.RaylibAdapter
             InstancedBatchRequestBuffer requests = new();
             var store = new RaylibInstancedBatchLaneStore();
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 2, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
 
             Assert.That(store.ResidentLaneCount, Is.EqualTo(1));
             RaylibInstancedBatchLane lane = store.GetResidentLane(0);
@@ -204,7 +204,7 @@ namespace Ludots.Tests.RaylibAdapter
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 2, finalChunk: true));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => store.ApplyRequests(requests.GetSpan(), registry))!;
+                () => store.ApplyRequests(requests.GetSpan(), registry, null))!;
             Assert.That(ex.Message, Does.Contain("without loaded factorized data"));
         }
 
@@ -309,7 +309,7 @@ namespace Ludots.Tests.RaylibAdapter
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 2, finalChunk: true));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => store.ApplyRequests(requests.GetSpan(), registry))!;
+                () => store.ApplyRequests(requests.GetSpan(), registry, null))!;
             Assert.That(ex.Message, Does.Contain("factorized instanceCount 3 diverges from Core-authored instanceCount 2"));
         }
 
@@ -341,8 +341,42 @@ namespace Ludots.Tests.RaylibAdapter
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 1, finalChunk: true));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => store.ApplyRequests(requests.GetSpan(), registry))!;
+                () => store.ApplyRequests(requests.GetSpan(), registry, null))!;
             Assert.That(ex.Message, Does.Contain("Core visual heightmap service is unavailable"));
+        }
+
+        [Test]
+        public void ApplyRequests_ThrowsWhenFactorizedGroundingFlagDivergesFromCoreAuthoredFlag()
+        {
+            // Core-authored group.Source.GroundToVisualHeightmap is the SSOT; a loaded factorized
+            // copy that contradicts it must fail fast even when a heightmap service is present.
+            InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 1));
+            asset.Groups[0].Source = new InstancedBatchInstanceSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 1,
+                groundToVisualHeightmap: false);
+            asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
+                "ludots.instanced_transform_factorized.v1",
+                "vfs://demo/transforms.json",
+                "set.0",
+                instanceCount: 1,
+                groundToVisualHeightmap: true,
+                positionCm: new[] { Vector3.Zero },
+                rotation: new[] { Quaternion.Identity },
+                scale: new[] { Vector3.One });
+            InstancedBatchAssetRegistry registry = new();
+            int batchAssetId = registry.Register("demo.batch", asset);
+            CompileAddresses(registry, batchAssetId, asset);
+
+            InstancedBatchRequestBuffer requests = new();
+            var store = new RaylibInstancedBatchLaneStore();
+            requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 1, finalChunk: true));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => store.ApplyRequests(requests.GetSpan(), registry, new StubVisualHeightmap((x, z) => 0f)))!;
+            Assert.That(ex.Message, Does.Contain("factorized groundToVisualHeightmap True diverges from Core-authored False"));
         }
 
         [Test]
@@ -354,10 +388,10 @@ namespace Ludots.Tests.RaylibAdapter
             Assert.That(store.LastAppliedRequestCount, Is.EqualTo(0));
 
             requests.Add(BuildCreateRequest(registry, presenterStableId: 2, start: 0, count: 4, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
             Assert.That(store.LastAppliedRequestCount, Is.EqualTo(1));
 
-            store.ApplyRequests(ReadOnlySpan<InstancedBatchRequest>.Empty, registry);
+            store.ApplyRequests(ReadOnlySpan<InstancedBatchRequest>.Empty, registry, null);
             Assert.That(store.LastAppliedRequestCount, Is.EqualTo(0));
         }
 
@@ -377,7 +411,7 @@ namespace Ludots.Tests.RaylibAdapter
 
             requests.Add(BuildCreateRequest(registry, presenterStableId: 11, start: 0, count: 4, finalChunk: true));
             requests.Add(BuildCreateRequest(registry, presenterStableId: 12, start: 0, count: 4, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry);
+            store.ApplyRequests(requests.GetSpan(), registry, null);
 
             Assert.That(store.ResidentLaneCount, Is.EqualTo(2));
             Assert.That(store.GetResidentLane(0).LaneId, Is.Not.EqualTo(store.GetResidentLane(1).LaneId));

@@ -47,7 +47,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                 lane.Visible);
         }
 
-        public void ApplyRequests(ReadOnlySpan<InstancedBatchRequest> requests, InstancedBatchAssetRegistry registry, IVisualHeightmap? visualHeightmap = null)
+        public void ApplyRequests(ReadOnlySpan<InstancedBatchRequest> requests, InstancedBatchAssetRegistry registry, IVisualHeightmap? visualHeightmap)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
 
@@ -93,7 +93,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                     $"RaylibInstancedBatchLaneStore received a chunk for batch '{asset.Key}' group '{group.Id}' without inline transforms.");
             }
 
-            ApplyChunk(asset, in group, in request, declaredInstanceCount, out ResidentLane? lane);
+            ApplyChunk(asset, in group, in request, declaredInstanceCount, out ResidentLane lane);
             for (int i = 0; i < request.InstanceCount; i++)
             {
                 int index = request.InstanceStart + i;
@@ -122,14 +122,21 @@ namespace Ludots.Adapter.Raylib.Rendering
                     $"RaylibInstancedBatchLaneStore external source batch '{asset.Key}' group '{group.Id}' loaded factorized instanceCount {factorized.InstanceCount} diverges from Core-authored instanceCount {group.Source.InstanceCount}; the lane must size from Core-owned counts.");
             }
 
-            bool grounded = factorized.GroundToVisualHeightmap;
+            // Core-authored source flag is the SSOT; the loaded factorized copy must match it.
+            bool grounded = group.Source.GroundToVisualHeightmap;
+            if (grounded != factorized.GroundToVisualHeightmap)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore external source batch '{asset.Key}' group '{group.Id}' factorized groundToVisualHeightmap {factorized.GroundToVisualHeightmap} diverges from Core-authored {group.Source.GroundToVisualHeightmap}; the authored source flag is the SSOT.");
+            }
+
             if (grounded && visualHeightmap == null)
             {
                 throw new InvalidOperationException(
                     $"RaylibInstancedBatchLaneStore cannot ground batch '{asset.Key}' group '{group.Id}' because the Core visual heightmap service is unavailable; the adapter must not substitute its own ground height truth.");
             }
 
-            ApplyChunk(asset, in group, in request, group.Source.InstanceCount, out ResidentLane? lane);
+            ApplyChunk(asset, in group, in request, group.Source.InstanceCount, out ResidentLane lane);
             for (int i = 0; i < request.InstanceCount; i++)
             {
                 int index = request.InstanceStart + i;
