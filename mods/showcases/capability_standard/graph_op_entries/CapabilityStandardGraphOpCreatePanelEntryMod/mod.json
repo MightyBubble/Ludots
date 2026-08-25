@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpCreatePanelEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp CreatePanel player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpCreatePanelEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpCreatePanelEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

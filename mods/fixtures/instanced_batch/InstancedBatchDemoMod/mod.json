@@ -2,7 +2,7 @@
   "name": "InstancedBatchDemoMod",
   "version": "1.0.0",
   "description": "Typed instanced batch lane acceptance fixture: one 8x8 inline-transform grid drawn through the InstancedBatch typed channel.",
-  "main": "bin/net8.0/InstancedBatchDemoMod.dll",
+  "main": "bin/net9.0/InstancedBatchDemoMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

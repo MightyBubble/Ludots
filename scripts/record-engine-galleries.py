@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 GALLERY_PROJECT = "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj"
-GALLERY_EXE = "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/bin/Debug/net8.0/Ludots.App.RaylibEngineGallery.exe"
+GALLERY_EXE = "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/bin/Debug/net9.0/Ludots.App.RaylibEngineGallery.exe"
 EVIDENCE_PREFIX = "engine_raylib_"
 
 # 通用节拍：起手稳 2 张 -> 动作段密集采样 -> 收尾定格。帧号 1 起。

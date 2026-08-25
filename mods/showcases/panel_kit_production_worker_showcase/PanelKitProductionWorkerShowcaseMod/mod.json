@@ -2,7 +2,7 @@
   "name": "PanelKitProductionWorkerShowcaseMod",
   "version": "1.0.0",
   "description": "WPK-10 small showcase for the production-overview panel only. RTS and 4X semantics come from PanelKit profile JSON, not generic PanelKit C#.",
-  "main": "bin/net8.0/PanelKitProductionWorkerShowcaseMod.dll",
+  "main": "bin/net9.0/PanelKitProductionWorkerShowcaseMod.dll",
   "priority": 50,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

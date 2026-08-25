@@ -761,7 +761,7 @@ namespace Ludots.ModLauncher
                 string csprojContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputPath>bin</OutputPath>
@@ -836,7 +836,7 @@ namespace Ludots.ModLauncher
 
         private void InitializePaths()
         {
-            // Assume running from src/Tools/ModLauncher/bin/Debug/net8.0-windows
+            // Assume running from src/Tools/ModLauncher/bin/Debug/net9.0-windows
             // We need to find root (Ludots)
             _rootDir = AppDomain.CurrentDomain.BaseDirectory;
             
@@ -854,7 +854,7 @@ namespace Ludots.ModLauncher
                 _modsDir = Path.Combine(_rootDir, "mods");
                 
                 // Let's find the Raylib app build output
-                _gameExePath = Path.Combine(_rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0", "Ludots.App.Raylib.exe");
+                _gameExePath = Path.Combine(_rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net9.0", "Ludots.App.Raylib.exe");
                 
                 // We will write game.json next to the EXE
                 _gameJsonPath = Path.Combine(Path.GetDirectoryName(_gameExePath), "game.json");

@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpRelationshipAggSumMetricEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp RelationshipAggSumMetric player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpRelationshipAggSumMetricEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpRelationshipAggSumMetricEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

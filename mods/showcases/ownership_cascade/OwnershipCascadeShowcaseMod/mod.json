@@ -2,7 +2,7 @@
   "name": "OwnershipCascadeShowcaseMod",
   "version": "1.0.0",
   "description": "Playable AAC-5 ownership cascade showcase using Owns relationship edges.",
-  "main": "bin/net8.0/OwnershipCascadeShowcaseMod.dll",
+  "main": "bin/net9.0/OwnershipCascadeShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -69,7 +69,7 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 
 ```bash
 # stdio 适配器（零依赖）；桥地址解析顺序：argv > LUDOTS_AGENT_BRIDGE_URL > 发现文件 > 默认端口
-dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
+dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net9.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
 ```
 
 在 MCP 客户端配置中把上述命令注册为 stdio server 即可，`tools/list` 与 HTTP 目录一致。

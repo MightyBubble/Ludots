@@ -2,7 +2,7 @@
   "name": "SplineSurfaceUatMod",
   "version": "1.0.0",
   "description": "UAT showcase for presenter-authored procedural road, river, lake, and raw mesh surfaces.",
-  "main": "bin/net8.0/SplineSurfaceUatMod.dll",
+  "main": "bin/net9.0/SplineSurfaceUatMod.dll",
   "priority": 210,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

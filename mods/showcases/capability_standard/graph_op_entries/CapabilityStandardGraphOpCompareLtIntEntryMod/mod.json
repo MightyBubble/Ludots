@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpCompareLtIntEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp CompareLtInt player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpCompareLtIntEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpCompareLtIntEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

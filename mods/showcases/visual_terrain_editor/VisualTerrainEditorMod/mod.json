@@ -2,7 +2,7 @@
   "name": "VisualTerrainEditorMod",
   "version": "1.0.0",
   "description": "Ludots-native visual terrain erosion editor showcase with runtime 3D mesh rendering and VisualHeightmap output.",
-  "main": "bin/net8.0/VisualTerrainEditorMod.dll",
+  "main": "bin/net9.0/VisualTerrainEditorMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

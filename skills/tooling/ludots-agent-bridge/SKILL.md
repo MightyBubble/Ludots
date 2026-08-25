@@ -65,4 +65,4 @@ curl -s http://127.0.0.1:47921/health
 
 ## MCP 接入（可选）
 
-不想手写 HTTP 时，把 stdio 适配器注册为 MCP server：`dotnet exec <仓库>/src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll`（地址解析：argv > `LUDOTS_AGENT_BRIDGE_URL` > 发现文件 > 47921）。`tools/list` 与 HTTP 目录一致。
+不想手写 HTTP 时，把 stdio 适配器注册为 MCP server：`dotnet exec <仓库>/src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net9.0/Ludots.AgentBridge.Mcp.dll`（地址解析：argv > `LUDOTS_AGENT_BRIDGE_URL` > 发现文件 > 47921）。`tools/list` 与 HTTP 目录一致。

@@ -624,7 +624,7 @@ namespace Ludots.Tests.GAS.Production
                 "entity_query_tactics",
                 "EntityQueryTacticsShowcaseMod",
                 "bin",
-                "net8.0",
+                "net9.0",
                 "EntityQueryTacticsShowcaseMod.dll");
         }
 

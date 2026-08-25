@@ -28,12 +28,10 @@ Ludots is a modern C# game framework designed for high-performance gameplay logi
 > The commands below are the canonical way to build and run. For the full newcomer guide (environment, showcase tour, acceptance evidence), see the [Documentation Portal](https://mightybubble.github.io/Ludots/).
 
 ### Prerequisites
-*   .NET 8.0 SDK
 *   .NET 9.0 SDK
-*   .NET 10.0 preview SDK
 *   Node.js & npm (for Editor)
 
-All three .NET SDKs are required — a missing SDK can cause `dotnet restore` or launcher build failures. See the [Quick Start](gitbook/quick-start.md) for the full contract.
+Only the .NET 9 SDK is required — the whole repo targets `net9.0` (`global.json` pins SDK 9.0.x). A missing SDK can cause `dotnet restore` or launcher build failures. See the [Quick Start](gitbook/quick-start.md) for the full contract.
 
 ### Build & Run
 

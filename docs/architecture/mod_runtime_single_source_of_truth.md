@@ -14,9 +14,9 @@
 
 ### 1.2 统一产物目录
 
-- 内置 Mod 构建产物统一到 `bin/net8.0/`。
+- 内置 Mod 构建产物统一到 `bin/net9.0/`。
 - `mod.json.main` 必须与该目录对齐。
-- 不允许同一 Mod 同时依赖 `bin/Release/net8.0` 与 `bin/net8.0` 两套规则。
+- 不允许同一 Mod 同时依赖 `bin/Release/net9.0` 与 `bin/net9.0` 两套规则。
 
 参考实现：`mods/Directory.Build.props`
 
@@ -130,7 +130,7 @@
 ## 6 主线收束检查清单
 
 - [ ] ModLoader 不存在 DLL 回退分支。
-- [ ] `mod.json.main` 全量指向 `bin/net8.0/*.dll`。
+- [ ] `mod.json.main` 全量指向 `bin/net9.0/*.dll`。
 - [ ] GUI/CLI/Tool 默认目录一致且依赖闭包一致。
 - [x] 项目配置、用户偏好、运行时 bootstrap、内容配置职责边界清晰。
 - [x] launcher graph DTO 由 Core 拥有，launcher 写图与 runtime 读图共享同一合约。

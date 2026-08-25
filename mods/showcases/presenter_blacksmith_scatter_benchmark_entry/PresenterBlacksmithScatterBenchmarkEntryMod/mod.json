@@ -2,7 +2,7 @@
   "name": "PresenterBlacksmithScatterBenchmarkEntryMod",
   "version": "1.0.0",
   "description": "Direct launcher entry for the presenter blacksmith scatter benchmark showcase.",
-  "main": "bin/net8.0/PresenterBlacksmithScatterBenchmarkEntryMod.dll",
+  "main": "bin/net9.0/PresenterBlacksmithScatterBenchmarkEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "PresenterBlacksmithShowcaseMod": "^1.0.0"

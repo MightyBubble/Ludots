@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpHasTagEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp HasTag player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpHasTagEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpHasTagEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

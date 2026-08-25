@@ -2,7 +2,7 @@
   "name": "StealthDetectionShowcaseMod",
   "version": "1.0.0",
   "description": "Detection layer and true-sight showcase root.",
-  "main": "bin/net8.0/StealthDetectionShowcaseMod.dll",
+  "main": "bin/net9.0/StealthDetectionShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

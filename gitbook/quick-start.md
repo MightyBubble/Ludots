@@ -4,12 +4,10 @@
 
 ## 1 环境要求
 
-- .NET 8.0 SDK
-- .NET 9.0 SDK
-- .NET 10.0 preview SDK
+- .NET 9.0 SDK（`global.json` 固定 9.0.x，全仓 target `net9.0`）
 - Node.js + npm
 
-缺少任一必需 SDK 都可能导致 `dotnet restore` 或 launcher 构建失败。
+缺少 .NET 9 SDK 可能导致 `dotnet restore` 或 launcher 构建失败。
 
 ## 2 最常用命令
 

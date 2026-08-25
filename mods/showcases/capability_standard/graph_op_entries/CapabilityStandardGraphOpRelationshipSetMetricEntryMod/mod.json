@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpRelationshipSetMetricEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp RelationshipSetMetric player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpRelationshipSetMetricEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpRelationshipSetMetricEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

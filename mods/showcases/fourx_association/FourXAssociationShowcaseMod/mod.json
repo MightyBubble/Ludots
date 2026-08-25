@@ -2,7 +2,7 @@
   "name": "FourXAssociationShowcaseMod",
   "version": "1.0.0",
   "description": "Integrated 4X Entity Association Core showcase linking fog, diplomacy, trade, shared research, and ownership.",
-  "main": "bin/net8.0/FourXAssociationShowcaseMod.dll",
+  "main": "bin/net9.0/FourXAssociationShowcaseMod.dll",
   "priority": 140,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

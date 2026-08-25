@@ -117,7 +117,7 @@ namespace Ludots.ModLauncher.Cli
                 _rootDir = rootDir;
                 _assetsDir = Path.Combine(_rootDir, "assets");
                 _modsDir = Path.Combine(_rootDir, "mods");
-                _gameExePath = Path.Combine(_rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0", "Ludots.App.Raylib.exe");
+                _gameExePath = Path.Combine(_rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net9.0", "Ludots.App.Raylib.exe");
                 _gameJsonPath = Path.Combine(Path.GetDirectoryName(_gameExePath) ?? _rootDir, "game.json");
                 _config = config ?? new ModLauncherConfig();
             }
@@ -245,7 +245,7 @@ namespace Ludots.ModLauncher.Cli
                 var content = $@"<Project Sdk=""Microsoft.NET.Sdk"">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputPath>bin</OutputPath>

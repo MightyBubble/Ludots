@@ -2,7 +2,7 @@
   "name": "UiNineSlicePanelShowcaseMod",
   "version": "1.0.0",
   "description": "水墨匣切铺与 SVG 动效对照：九宫格、三宫格、二方连续、四方连续、矢量呼吸。",
-  "main": "bin/net8.0/UiNineSlicePanelShowcaseMod.dll",
+  "main": "bin/net9.0/UiNineSlicePanelShowcaseMod.dll",
   "priority": 0,
   "dependencies": {}
 }

@@ -12,6 +12,7 @@ namespace Ludots.Launcher.Backend;
 public sealed class LauncherService
 {
     private const int LaunchGraphSchemaVersion = 1;
+    private const string RuntimeTargetFramework = "net9.0";
     private static readonly JsonSerializerOptions BootstrapJsonWriteOptions = new() { WriteIndented = true };
     private static readonly JsonSerializerOptions GraphJsonWriteOptions = new()
     {
@@ -934,7 +935,7 @@ public sealed class LauncherService
             throw new InvalidOperationException($"Executable project path has no directory: {projectPath}");
         }
 
-        return Path.Combine(projectDirectory, "bin", "Release", "net8.0");
+        return Path.Combine(projectDirectory, "bin", "Release", RuntimeTargetFramework);
     }
 
     private static string ResolveExecutableAssemblyPath(string projectPath, string outputDirectory)
@@ -1403,7 +1404,7 @@ public sealed class LauncherService
                 LauncherPlatformIds.Raylib,
                 "Raylib",
                 Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "Ludots.App.Raylib.csproj"),
-                Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0"),
+                Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", RuntimeTargetFramework),
                 string.Empty,
                 string.Empty,
                 string.Empty,
@@ -1412,7 +1413,7 @@ public sealed class LauncherService
                 LauncherPlatformIds.Web,
                 "Web",
                 Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "Ludots.App.Web.csproj"),
-                Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "bin", "Release", "net8.0"),
+                Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "bin", "Release", RuntimeTargetFramework),
                 Path.Combine(_repoRoot, "src", "Client", "Web"),
                 Path.Combine(_repoRoot, "src", "Client", "Web", "dist"),
                 "http://localhost:5200",
@@ -1990,7 +1991,7 @@ public sealed class LauncherService
         var projectContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>{RuntimeTargetFramework}</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputPath>bin</OutputPath>
@@ -2677,7 +2678,7 @@ public sealed class LauncherService
 
     private string GetLudotsToolAssemblyPath()
     {
-        return Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "bin", "Release", "net8.0", "Ludots.Tool.dll");
+        return Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "bin", "Release", RuntimeTargetFramework, "Ludots.Tool.dll");
     }
 
     private async Task<(int ExitCode, string Output)> RunLudotsToolAsync(string arguments, int timeoutMs)

@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpMulFloatEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp MulFloat player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpMulFloatEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpMulFloatEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

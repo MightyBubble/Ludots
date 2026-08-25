@@ -15,7 +15,7 @@ namespace GasTests
               "name": "ExampleMod",
               "version": "1.0.0",
               "description": "Demo",
-              "main": "bin/Release/net8.0/ExampleMod.dll",
+              "main": "bin/Release/net9.0/ExampleMod.dll",
               "priority": 10,
               "dependencies": {
                 "Core": "1.0.0"
@@ -27,7 +27,7 @@ namespace GasTests
 
             Assert.That(manifest.Name, Is.EqualTo("ExampleMod"));
             Assert.That(manifest.Version, Is.EqualTo("1.0.0"));
-            Assert.That(manifest.Main, Is.EqualTo("bin/Release/net8.0/ExampleMod.dll"));
+            Assert.That(manifest.Main, Is.EqualTo("bin/Release/net9.0/ExampleMod.dll"));
             Assert.That(manifest.Priority, Is.EqualTo(10));
             Assert.That(manifest.Dependencies["Core"], Is.EqualTo("1.0.0"));
         }
@@ -78,7 +78,7 @@ namespace GasTests
                 Name = "CanonMod",
                 Version = "1.2.3",
                 Description = "Canon",
-                Main = "bin/Release/net8.0/CanonMod.dll",
+                Main = "bin/Release/net9.0/CanonMod.dll",
                 Priority = 0
             };
 
