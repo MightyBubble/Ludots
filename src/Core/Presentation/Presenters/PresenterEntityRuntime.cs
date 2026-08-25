@@ -257,7 +257,7 @@ namespace Ludots.Core.Presentation.Presenters
                 BehaviorActiveMask = BuildDefaultBehaviorMask(definition),
                 Elapsed = 0f,
                 Version = 1,
-                DefaultLifetime = definition.DefaultLifetime,
+                Transient = definition.DefaultLifetime > 0f,
             };
 
             var transformSource = parent != Entity.Null
@@ -337,6 +337,14 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             definition = ResolveDefinition(defId, definition);
+            if (definition.DefaultLifetime > 0f)
+            {
+                // Batch creation bypasses PresenterCreated, so the compiled duration
+                // timer chain could never arm; a transient presenter would leak.
+                throw new InvalidOperationException(
+                    $"Presenter '{_definitions?.GetName(defId) ?? defId.ToString()}' declares lifecycle.durationSeconds and cannot be batch-created. Route it through a CreatePresenter rule.");
+            }
+
             ResetLastRootBatchTiming();
             long setupStart = Stopwatch.GetTimestamp();
             ReserveBatchIndexCapacity(owners.Length, definition);
@@ -925,7 +933,7 @@ namespace Ludots.Core.Presentation.Presenters
             if (state.DefId != defId ||
                 state.ScopeId != scopeId ||
                 (requireOwner && state.OwnerEntity != owner) ||
-                state.DefaultLifetime > 0f)
+                state.Transient)
             {
                 return false;
             }
@@ -1284,54 +1292,6 @@ namespace Ludots.Core.Presentation.Presenters
 
             _entityScratch.Clear();
             return released;
-        }
-
-        public int ReleaseExpired(PresenterDefinitionRegistry definitions,
-            Action<Entity, PresenterState>? onReleased = null)
-        {
-            _entityScratch.Clear();
-            foreach (ref Chunk chunk in _world.Query(in _presenterStateQuery))
-            {
-                ref Entity entityFirst = ref chunk.Entity(0);
-                Span<PresenterState> states = chunk.GetSpan<PresenterState>();
-                foreach (int index in chunk)
-                {
-                    ref readonly PresenterState state = ref states[index];
-                    if (state.DefaultLifetime <= 0f || state.Elapsed < state.DefaultLifetime)
-                    {
-                        continue;
-                    }
-
-                    Entity entity = Unsafe.Add(ref entityFirst, index);
-                    _entityScratch.Add(entity);
-                }
-            }
-
-            int released = 0;
-            for (int i = 0; i < _entityScratch.Count; i++)
-            {
-                Entity entity = _entityScratch[i];
-                if (_world.IsAlive(entity))
-                {
-                    Destroy(entity, onReleased);
-                    released++;
-                }
-            }
-
-            _entityScratch.Clear();
-            return released;
-        }
-
-        public void AdvanceElapsed(float dt)
-        {
-            foreach (ref Chunk chunk in _world.Query(in _presenterStateQuery))
-            {
-                Span<PresenterState> states = chunk.GetSpan<PresenterState>();
-                foreach (int index in chunk)
-                {
-                    states[index].Elapsed += dt;
-                }
-            }
         }
 
         public void Clear()
@@ -3103,7 +3063,7 @@ namespace Ludots.Core.Presentation.Presenters
                         BehaviorActiveMask = defaultBehaviorMask,
                         Elapsed = 0f,
                         Version = 1,
-                        DefaultLifetime = definition.DefaultLifetime,
+                        Transient = definition.DefaultLifetime > 0f,
                     };
                     VisualTransform ownerTransform = ownerTransforms[ownerIndex];
                     CullState ownerCull = ownerCulls[ownerIndex];
@@ -3615,7 +3575,7 @@ namespace Ludots.Core.Presentation.Presenters
                 AddToScopeIndex(state.ScopeId, presenter);
             }
 
-            if (state.ScopeId > 0 && state.DefaultLifetime <= 0f)
+            if (state.ScopeId > 0 && !state.Transient)
             {
                 _scopedInstances[new ScopedOwnerKey(
                     state.DefId,
@@ -3636,7 +3596,7 @@ namespace Ludots.Core.Presentation.Presenters
                 RemoveFromScopeIndex(state.ScopeId, presenter);
             }
 
-            if (state.ScopeId > 0 && state.DefaultLifetime <= 0f)
+            if (state.ScopeId > 0 && !state.Transient)
             {
                 _scopedInstances.Remove(new ScopedOwnerKey(
                     state.DefId,

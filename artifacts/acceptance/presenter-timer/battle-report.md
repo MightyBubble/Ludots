@@ -4,7 +4,7 @@
 - scenario name: SC2-style hit-flash sequencing via presenter named timer primitives (TimerSet / TimerExpired / TimerKill)
 - build/version: local PresentationTests, real JSON config pipeline (PresenterDefinitionConfigLoader)
 - seed/map/clock: deterministic fixture / in-memory world / render dt 0.125s per tick
-- execution timestamp: 2026-08-23T13:49:51.1838149+00:00
+- execution timestamp: 2026-08-25T04:24:04.7827415+00:00
 
 ## Timeline
 - [T+001] 单位 A 的受击闪黄 presenter 上线（stable id 1）

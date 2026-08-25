@@ -1,0 +1,9 @@
+{"tick":2,"type":"command","kind":"TimerSet","detail":"timer='presenter.duration' duration=0.5s instance=1"}
+{"tick":6,"type":"event","kind":"TimerExpired","detail":"timer='presenter.duration' instance=1"}
+{"tick":6,"type":"command","kind":"DestroyPresenter","detail":"instance=1"}
+{"tick":6,"type":"event","kind":"PresenterDestroyed","detail":"instance=1"}
+{"tick":8,"type":"command","kind":"TimerSet","detail":"timer='presenter.duration' duration=5.0s instance=1"}
+{"tick":8,"type":"event","kind":"PresenterDestroyed","detail":"instance=1"}
+{"tick":8,"type":"action","kind":"TimerKill","detail":"cancel duration timer -> immediate destroy funnel"}
+{"tick":9,"type":"command","kind":"DestroyPresenter","detail":"instance=1"}
+{"tick":9,"type":"assert","kind":"chain","detail":"TimerSet → TimerExpired → Rule → DestroyPresenter 逐拍成立"}

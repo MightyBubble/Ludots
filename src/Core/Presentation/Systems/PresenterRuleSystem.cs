@@ -464,6 +464,12 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitForMatchingInstances(int ownerDefinitionId, in PresenterCommand command, in PresentationEvent evt)
         {
+            if (TryResolveEventPresenterInstance(ownerDefinitionId, in evt, out Entity eventInstance))
+            {
+                EmitCommand(in command, in evt, eventInstance, ownerDefinitionId);
+                return;
+            }
+
             bool globalEvent = IsGlobalEvent(evt.Kind);
             PresenterCommand localCmd = command;
             PresentationEvent localEvt = evt;
@@ -487,6 +493,33 @@ namespace Ludots.Core.Presentation.Systems
 
                 EmitCommand(in localCmd, in localEvt, entity, ownerDefinitionId);
             }
+        }
+
+        /// <summary>
+        /// PresenterCreated and TimerExpired carry the exact presenter instance they are
+        /// about; commands routed from them must land on that instance alone. Owner-wide
+        /// fan-out would reset sister instances' timers (TimerSet) or destroy the wrong
+        /// sibling (DestroyPresenter) whenever one owner holds several instances.
+        /// </summary>
+        private bool TryResolveEventPresenterInstance(int ownerDefinitionId, in PresentationEvent evt, out Entity presenter)
+        {
+            presenter = Entity.Null;
+            if (evt.Kind is not (PresentationEventKind.PresenterCreated or PresentationEventKind.TimerExpired) ||
+                evt.PresenterEntity == Entity.Null ||
+                !World.IsAlive(evt.PresenterEntity) ||
+                !World.Has<PresenterState>(evt.PresenterEntity))
+            {
+                return false;
+            }
+
+            ref readonly PresenterState state = ref World.Get<PresenterState>(evt.PresenterEntity);
+            if (state.DefId != ownerDefinitionId || state.OwnerEntity != evt.Source)
+            {
+                return false;
+            }
+
+            presenter = evt.PresenterEntity;
+            return true;
         }
 
         private void EmitCommand(in PresenterCommand cmd, in PresentationEvent evt, Entity presenterEntity, int ownerDefinitionId)

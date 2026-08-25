@@ -59,6 +59,8 @@ namespace Ludots.Tests.Presentation
         private PresenterRuntimeSystem _runtimeSystem;
         private PresenterBehaviorSystem _behaviorSystem;
         private PresenterEmitSystem _emitSystem;
+        private PresenterTimerTable _timers;
+        private PresenterTimerSystem _timerSystem;
         private PresentationStableIdAllocator _stableIds;
         private int _healthAttrId;
         private Entity _viewer;
@@ -137,7 +139,9 @@ namespace Ludots.Tests.Presentation
                 _commands);
             _finalizeDestroy = new PresentationEntityFinalizeDestroySystem(_world);
             _ruleSystem = new PresenterRuleSystem(_world, _presEvents, _commands, _defs, _instances, _programs, graphApi, _globals);
-            _runtimeSystem = new PresenterRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
+            _timers = new PresenterTimerTable(capacity: 64);
+            _timerSystem = new PresenterTimerSystem(_world, _timers, _presEvents);
+            _runtimeSystem = new PresenterRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs, timers: _timers);
             _behaviorSystem = new PresenterBehaviorSystem(_world, _instances, _defs, _presEvents, _ownerChanges, _soundRequests);
             _emitSystem = new PresenterEmitSystem(_world, _instances, _defs, _requests, _globals);
             _flush = new PresentationRequestFlushSystem(
@@ -161,6 +165,7 @@ namespace Ludots.Tests.Presentation
             _behaviorSystem?.Dispose();
             _flush?.Dispose();
             _runtimeSystem?.Dispose();
+            _timerSystem?.Dispose();
             _ruleSystem?.Dispose();
             _finalizeDestroy?.Dispose();
             _entityLifecycle?.Dispose();
@@ -178,6 +183,7 @@ namespace Ludots.Tests.Presentation
             _splineRibbons.Clear();
             _entityLifecycle.Update(dt);
             _projection.Update(dt);
+            _timerSystem.Update(dt);
             _ruleSystem.Update(dt);
             _runtimeSystem.Update(dt);
             _behaviorSystem.Update(0f);
@@ -366,6 +372,8 @@ namespace Ludots.Tests.Presentation
             TickPipeline(0.016f);
             Assert.That(_hud.GetSpan().Length, Is.GreaterThan(0));
 
+            // duration 链路：PresenterCreated 下一拍进规则武装 TimerSet，再下一拍到期销毁
+            TickPipeline(0.016f);
             TickPipeline(1.3f);
             Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
         }

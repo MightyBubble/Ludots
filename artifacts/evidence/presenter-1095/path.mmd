@@ -1,0 +1,9 @@
+flowchart TD
+    A[lifecycle.durationSeconds] -->|loader compile| B[Rule: PresenterCreated -> TimerSet presenter.duration]
+    B --> C[timer 武装于新实例]
+    C --> D{渲染 dt 推进}
+    D -->|到时| E[TimerExpired presenter.duration]
+    E --> F[Rule: TimerExpired -> DestroyPresenter]
+    F --> G[销毁漏斗: PresenterDestroyed + KillAll timers]
+    D -->|TimerKill 取消| H[销毁漏斗: 立即销毁 不再到期]
+    G --> I[重复 DestroyPresenter: 幂等 no-op]

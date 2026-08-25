@@ -351,6 +351,11 @@ Presenter 层内置 SC2 actor 式命名 timer，用于实例本地视觉时序�
   之前，到期事件当帧可消费）。事件载荷：`KeyId` = timer 名 id，`Source`/`Target` = owner，
   `PresenterEntity` = 实例，`Magnitude` = stableId。规则事件 `keyId: "*"` 解析为通配（匹配任意到期）。
 - `TimerKill`：按名移除；`"*"` 移除该实例全部 timer。被 Kill 的 timer 不会再到期。
+- 保留名 `"presenter.duration"`：`lifecycle.durationSeconds` 在加载期编译为两条规则——
+  `PresenterCreated`（本定义）→ `TimerSet presenter.duration`，以及
+  `TimerExpired presenter.duration` → `DestroyPresenter`。到期销毁只有这一条链路
+  （EmitSystem 无 lifetime 销毁分支）；配置里 authoring 该保留名会被拒绝；`TimerKill` 取消
+  duration timer 等于取消该实例唯一的销毁计划，实例立即走销毁漏斗而非泄漏。
 - 时钟域：timer 走渲染 dt（表现层时钟），与逻辑时钟无关，亦与输入无关。
 - 销毁单一漏斗：presenter 销毁（DestroyPresenter / DestroyScope / owner 死亡回收）统一 KillAll 清表。
   销毁竞态守卫：owner 已死或已携带 `PresentationDestroyPending` 的实例，到期不发事件（同帧排队的销毁

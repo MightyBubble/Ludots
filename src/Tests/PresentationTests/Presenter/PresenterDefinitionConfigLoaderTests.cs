@@ -3349,7 +3349,8 @@ namespace Ludots.Tests.Presentation
             loader.Load(catalog);
 
             Assert.That(registry.TryGet(registry.GetId("legal_root"), out var definition), Is.True);
-            Assert.That(definition.Rules.Length, Is.EqualTo(1));
+            Assert.That(definition.Rules.Length, Is.EqualTo(3),
+                "1 authored rule + lifecycle.durationSeconds 编译的 TimerSet/DestroyPresenter 规则对");
             Assert.That(definition.Children.Length, Is.EqualTo(1));
             Assert.That(definition.Behaviors.Length, Is.EqualTo(1));
         }
