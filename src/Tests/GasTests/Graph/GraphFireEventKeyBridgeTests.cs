@@ -57,6 +57,31 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FireEventKey_ValidMapScope_DoesNotDispatchToGlobalTrigger()
+        {
+            using World world = World.Create();
+            var mapId = new MapId("fire_map_global_collision");
+            Entity scope = world.Create();
+            world.Add(scope, new MapEntity { MapId = mapId });
+
+            var manager = new TriggerManager();
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager);
+
+            int keyId = ConfigKeyRegistry.Register("Custom.CollisionEvent");
+            var globalTrigger = new RecordingTrigger { EventKey = new EventKey("Custom.CollisionEvent") };
+            manager.RegisterTrigger(globalTrigger);
+            var mapTrigger = new RecordingTrigger { EventKey = new EventKey("Custom.CollisionEvent") };
+            manager.RegisterMapTriggers(mapId, new Trigger[] { mapTrigger });
+
+            api.FireEventKey(scope, keyId);
+
+            Assert.That(mapTrigger.Executed, Is.True, "Map-scoped trigger must run for the scope's map.");
+            Assert.That(globalTrigger.Executed, Is.False,
+                "A globally registered trigger with the same event key must not be dispatched by the map-scoped FireEventKey bridge.");
+        }
+
+        [Test]
         public void FireEventKey_NoMapScope_Throws()
         {
             using World world = World.Create();
