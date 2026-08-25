@@ -1257,8 +1257,7 @@ namespace Ludots.Core.Presentation.Config
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.ActivationCondition.Inline != InlineConditionKind.None ||
-                    slot.ActivationCondition.GraphProgramId > 0)
+                if (HasConditionalActivation(in slot.ActivationCondition))
                 {
                     conditioned.Add(i);
                 }
@@ -2566,7 +2565,7 @@ namespace Ludots.Core.Presentation.Config
         /// </summary>
         private static void ValidateChildArray(
             string ownerKey,
-            ChildPresenterRef[] children,
+            ChildPresenterRef[]? children,
             string segmentName,
             IReadOnlyDictionary<string, PresenterDefinition> parsedByKey,
             HashSet<int> pathIds,
@@ -2612,7 +2611,8 @@ namespace Ludots.Core.Presentation.Config
                     var cyclePath = new List<string>(path.Count + 1);
                     cyclePath.AddRange(path);
                     cyclePath.Add(childDefinition.Key);
-                    throw new InvalidOperationException($"Circular child reference detected: {string.Join("->", cyclePath)}");
+                    throw new InvalidOperationException(
+                        $"{PresenterCreatePlanCompiler.CircularChildReferenceError}: root='{ownerKey}', childSource='{entryContext}' Circular child reference detected on expansion path: {string.Join("->", cyclePath)}");
                 }
 
                 pathIds.Add(childDefinitionId);
@@ -2654,14 +2654,18 @@ namespace Ludots.Core.Presentation.Config
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.ActivationCondition.Inline != InlineConditionKind.None ||
-                    slot.ActivationCondition.GraphProgramId > 0)
+                if (HasConditionalActivation(in slot.ActivationCondition))
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private static bool HasConditionalActivation(in ConditionRef condition)
+        {
+            return condition.Inline != InlineConditionKind.None || condition.GraphProgramId > 0;
         }
 
         private static void ValidateChildInstanceBehaviorSlots(
@@ -2876,6 +2880,7 @@ namespace Ludots.Core.Presentation.Config
                         $"Presenter '{ownerKey}' behavior[{i}] declares activationCondition on child instance behaviors; activation conditions are definition-scoped and compile to PresenterCreated rules targeting definition slots.");
                 }
 
+                ConditionRef activationCondition = ParseBehaviorActivationCondition(obj["activationCondition"], $"{behaviorPath}.activationCondition");
                 var slot = new BehaviorSlot
                 {
                     SlotIndex = slotIndex,
@@ -2883,8 +2888,16 @@ namespace Ludots.Core.Presentation.Config
                     KindId = kindId,
                     ExtensionLane = extensionLane,
                     ExtensionTriggerId = extensionTriggerId,
-                    ActiveByDefault = obj["activeByDefault"]?.GetValue<bool>() ?? false,
-                    ActivationCondition = ParseBehaviorActivationCondition(obj["activationCondition"], $"{behaviorPath}.activationCondition"),
+                    // activationCondition is the sole authority for the slot state at creation: the
+                    // compiled PresenterCreated rule pair (unconditional Deactivate + conditional
+                    // Activate) converges the mask to the condition result, so keeping the slot off
+                    // by default removes the one-frame activation window between presenter creation
+                    // and the first rule pass (PresenterBehaviorSystem runs after PresenterRuntimeSystem
+                    // in the same engine frame).
+                    ActiveByDefault = HasConditionalActivation(in activationCondition)
+                        ? false
+                        : obj["activeByDefault"]?.GetValue<bool>() ?? false,
+                    ActivationCondition = activationCondition,
                 };
 
                 switch (kind)
