@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Providers;
+using Ludots.Core.Gameplay.Rng;
 
 namespace Ludots.Core.Gameplay.Activities
 {
@@ -32,6 +33,7 @@ namespace Ludots.Core.Gameplay.Activities
         public const string TriggerConditionFailed = "admission.trigger_condition_failed";
         public const string CooldownActive = "admission.cooldown_active";
         public const string MutexOccupied = "admission.mutex_occupied";
+        public const string PoolUnavailable = "admission.pool_unavailable";
     }
 
     public readonly record struct ActivityAdmissionResult(Entity Instance, string? RejectionCode)
@@ -49,6 +51,7 @@ namespace Ludots.Core.Gameplay.Activities
         private readonly ProviderServices _providers;
         private readonly ActivityPresentationBuffer _presentation;
         private readonly IClock? _clock;
+        private readonly RngPickService? _rngPickService;
         private readonly Dictionary<(int DefinitionId, int ScopeKey), Entity> _index = new();
         private readonly List<Entity> _scratch = new(64);
         private readonly ForEachWithEntity<ActivityInstanceCm> _resolvedInstanceCollector;
@@ -65,13 +68,15 @@ namespace Ludots.Core.Gameplay.Activities
             ActivityDefinitionRegistry definitions,
             ProviderServices providers,
             ActivityPresentationBuffer presentation,
-            IClock? clock = null)
+            IClock? clock = null,
+            RngPickService? rngPickService = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _providers = providers ?? throw new ArgumentNullException(nameof(providers));
             _presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
             _clock = clock;
+            _rngPickService = rngPickService;
             _resolvedInstanceCollector = CollectResolvedInstance;
             _dispatchTickCollector = CollectDispatchTick;
             _mutexOccupantCollector = CollectMutexOccupant;
@@ -159,6 +164,11 @@ namespace Ludots.Core.Gameplay.Activities
 
             int definitionId = _definitions.GetId(activityId);
             var key = (definitionId, ScopeKey(scopeHost));
+
+            if (definition.DispatchPolicy == ActivityDispatchPolicy.Pooled)
+            {
+                return DispatchPooled(definition, scopeHost, contextBindings);
+            }
 
             switch (definition.RepeatPolicy)
             {
@@ -415,6 +425,54 @@ namespace Ludots.Core.Gameplay.Activities
                     instance.InstanceId));
             });
             return views;
+        }
+
+        private ActivityAdmissionResult DispatchPooled(
+            ActivityDefinition definition,
+            Entity scopeHost,
+            IReadOnlyDictionary<string, object?>? contextBindings)
+        {
+            if (_rngPickService == null)
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' uses pooled dispatch_policy but ActivityRuntimeService has no RngPickService.");
+            }
+
+            if (definition.TriggerCondition != null)
+            {
+                Dictionary<string, object?> bindings = ProviderContextBinding.CreateBindings(contextBindings);
+                var context = new ProviderExecutionContext(_world, scopeHost, bindings);
+                if (!EvaluateCondition(definition.TriggerCondition, context))
+                {
+                    return Reject(definition, scopeHost, ActivityAdmissionRejections.TriggerConditionFailed);
+                }
+            }
+
+            int drawnIndex;
+            try
+            {
+                drawnIndex = _rngPickService.Pick(definition.PoolKey);
+            }
+            catch (InvalidOperationException)
+            {
+                return Reject(definition, scopeHost,
+                    $"{ActivityAdmissionRejections.PoolUnavailable}:{definition.PoolKey}");
+            }
+
+            string drawnId = _rngPickService.GetDistribution(definition.PoolKey).GetEntry(drawnIndex).Id;
+            if (!_definitions.TryGet(drawnId, out ActivityDefinition candidate))
+            {
+                throw new InvalidOperationException(
+                    $"Pool '{definition.PoolKey}' entry '{drawnId}' does not resolve to a registered activity definition.");
+            }
+
+            if (candidate.DispatchPolicy == ActivityDispatchPolicy.Pooled)
+            {
+                throw new InvalidOperationException(
+                    $"Pool '{definition.PoolKey}' entry '{drawnId}' is itself pooled; pools must reference forced or automatic definitions.");
+            }
+
+            return OfferOrActivateChecked(drawnId, scopeHost, contextBindings);
         }
 
         private void ActivateForPresentation(Entity entity, ActivityDefinition definition)

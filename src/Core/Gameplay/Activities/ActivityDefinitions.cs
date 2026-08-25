@@ -80,6 +80,9 @@ namespace Ludots.Core.Gameplay.Activities
         [JsonPropertyName("dispatch_policy")]
         public ActivityDispatchPolicy DispatchPolicy { get; set; } = ActivityDispatchPolicy.Forced;
 
+        [JsonPropertyName("pool_key")]
+        public string PoolKey { get; set; } = string.Empty;
+
         [JsonPropertyName("repeat_policy")]
         public ActivityRepeatPolicy RepeatPolicy { get; set; } = ActivityRepeatPolicy.PendingDedupe;
 
@@ -233,6 +236,36 @@ namespace Ludots.Core.Gameplay.Activities
             {
                 throw new InvalidOperationException(
                     $"Activity '{definition.Id}' declares mutex_group but repeat_policy is not mutex.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(definition.PoolKey) &&
+                definition.DispatchPolicy != ActivityDispatchPolicy.Pooled)
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' declares pool_key but dispatch_policy is not pooled.");
+            }
+
+            if (definition.DispatchPolicy == ActivityDispatchPolicy.Pooled)
+            {
+                if (string.IsNullOrWhiteSpace(definition.PoolKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' uses pooled dispatch_policy and requires pool_key.");
+                }
+
+                if (definition.Options.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' is pooled and must not declare options; the drawn candidate owns options.");
+                }
+
+                if (definition.AutomaticEffects.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' is pooled and must not declare automatic_effects; the drawn candidate settles itself.");
+                }
+
+                return;
             }
 
             if (definition.DispatchPolicy == ActivityDispatchPolicy.Automatic)
