@@ -2,6 +2,8 @@ using System;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map;
@@ -22,7 +24,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// (TriggerGraphLimits.SliceBudgetSteps); a Yield or slice-budget
     /// suspension parks the run inside this instance (cursor, registers, call
     /// stack) and the map's think wave ("MapHeartbeat") resumes it one
-    /// slice per wave until Halt. Resume wiring: a companion
+    /// slice per wave until Halt. Mod-domain mounts use the fixed-step
+    /// "ModTriggerResume" pulse instead of the map event index. Resume wiring: a companion
     /// TriggerGraphResumeTrigger is registered per entry unless the entry's
     /// EventName IS the resume event, in which case the entry's own dispatch
     /// resumes the suspended run on that tick (a wave tick on a suspended
@@ -54,21 +57,27 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// as the spawn; map-domain observers of EntitySpawned keep think-wave
     /// granularity), and an "EntityDied" entry executes on the destroy tick for
     /// that entity's own mounts. Entity mounts may declare entries on any other
-    /// event key; those dispatch through the map's bus registration normally. A
-    /// dead entity's mounts are inert (CheckConditions false) and lazily swept
-    /// at think waves by the mount pipeline.
+    /// event key; those dispatch through the map's bus registration normally and
+    /// are filtered to the mounted entity's source/target. A scope carrying
+    /// EntityTriggerGraphAggregateRoot also accepts attached descendants. A dead
+    /// entity's mounts are inert (CheckConditions false) and lazily swept at think
+    /// waves by the mount pipeline.
     /// </summary>
-    public sealed class TriggerGraphMountTrigger : Trigger
+    public sealed class TriggerGraphMountTrigger : Trigger, IMapTriggerRoute
     {
         private const string TargetEntityPayloadKey = "MapTrigger.TargetEntity";
         private const string TagIdPayloadKey = "MapTrigger.TagId";
         private const string MagnitudePayloadKey = "MapTrigger.Magnitude";
+        private const string ModIdPayloadKey = MapTriggerEventPayloadKeys.ModId;
 
         private readonly int _graphId;
         private readonly string _graphName;
         private readonly TriggerGraphEntry _entry;
         private readonly Entity _scope;
         private readonly TriggerGraphMountDomain _domain;
+        private readonly TriggerGraphMountRoute _route;
+        private readonly int _abilityIdFilter;
+        private readonly string? _modIdFilter;
         private readonly TriggerGraphRefirePolicy _refirePolicy;
         private readonly bool _entryIsResumeEvent;
         private readonly int[] _vmIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
@@ -90,13 +99,18 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private bool _ranToHaltOnce;
         private bool _lifecycleDispatch;
 
+        public TriggerGraphMountDomain Domain => _domain;
+
         public TriggerGraphMountTrigger(
             int graphId,
             string graphName,
             TriggerGraphEntry entry,
             Entity scope,
             TriggerGraphRefirePolicy refirePolicy = TriggerGraphRefirePolicy.Ignore,
-            TriggerGraphMountDomain domain = TriggerGraphMountDomain.Map)
+            TriggerGraphMountDomain domain = TriggerGraphMountDomain.Map,
+            TriggerGraphMountRoute route = TriggerGraphMountRoute.Local,
+            int abilityIdFilter = 0,
+            string? modIdFilter = null)
         {
             if (graphId <= 0)
             {
@@ -125,21 +139,47 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 throw new ArgumentOutOfRangeException(nameof(domain));
             }
 
+            if (!Enum.IsDefined(typeof(TriggerGraphMountRoute), route))
+            {
+                throw new ArgumentOutOfRangeException(nameof(route));
+            }
+
+            if (domain == TriggerGraphMountDomain.Ability && abilityIdFilter <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(abilityIdFilter), "Ability-domain mounts require a positive ability id filter.");
+            }
+
+            if (domain != TriggerGraphMountDomain.Ability && abilityIdFilter != 0)
+            {
+                throw new ArgumentException("Only ability-domain mounts may specify an ability id filter.", nameof(abilityIdFilter));
+            }
+
+            if (domain == TriggerGraphMountDomain.Mod && string.IsNullOrWhiteSpace(modIdFilter))
+            {
+                throw new ArgumentException("Mod-domain mounts require an owning mod id.", nameof(modIdFilter));
+            }
+
+            if (domain != TriggerGraphMountDomain.Mod && modIdFilter != null)
+            {
+                throw new ArgumentException("Only mod-domain mounts may specify an owning mod id.", nameof(modIdFilter));
+            }
+
             _graphId = graphId;
             _graphName = graphName;
             _entry = entry;
             _scope = scope;
             _domain = domain;
+            _route = route;
+            _abilityIdFilter = abilityIdFilter;
+            _modIdFilter = modIdFilter;
             _refirePolicy = refirePolicy;
-            _entryIsResumeEvent = new EventKey(entry.EventName) == GameEvents.MapHeartbeat;
+            _entryIsResumeEvent = new EventKey(entry.EventName) == ResumeEventKey;
             _runCaster = scope;
             EventKey = new EventKey(entry.EventName);
             Priority = 0;
         }
 
         public override string Name => $"TriggerGraph:{_graphName}:{_entry.Label}";
-
-        public TriggerGraphMountDomain Domain => _domain;
 
         public int GraphId => _graphId;
 
@@ -152,6 +192,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public GraphDebugTrace DebugTrace => _debugTrace;
 
         public GraphExecutionCursor Cursor => _cursor;
+
+        public TriggerGraphMountRoute Route => _route;
+
+        public bool IsGlobalRoute => _route == TriggerGraphMountRoute.Global;
+
+        public int AbilityIdFilter => _abilityIdFilter;
+
+        public string? ModIdFilter => _modIdFilter;
 
         public GraphSliceResult LastSliceResult { get; private set; }
 
@@ -182,12 +230,94 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return false;
             }
 
+            if (!MatchesEntityScope(context))
+            {
+                return false;
+            }
+
+            if (_domain == TriggerGraphMountDomain.Ability &&
+                (!context.Contains(MapTriggerEventPayloadKeys.AbilityId) ||
+                 context.Get<int>(MapTriggerEventPayloadKeys.AbilityId) != _abilityIdFilter))
+            {
+                return false;
+            }
+
+            if (_domain == TriggerGraphMountDomain.Mod &&
+                (!context.Contains(ModIdPayloadKey) ||
+                 !string.Equals(context.Get<string>(ModIdPayloadKey), _modIdFilter, StringComparison.Ordinal)))
+            {
+                return false;
+            }
+
             if (!TriggerGraphEntryFiltersEvaluator.Matches(context, _entry.Filters))
             {
                 return false;
             }
 
             return base.CheckConditions(context);
+        }
+
+        private bool MatchesEntityScope(ScriptContext context)
+        {
+            if (_domain != TriggerGraphMountDomain.Entity || _lifecycleDispatch)
+            {
+                return true;
+            }
+
+            bool hasEntityPayload = false;
+            bool matches = false;
+            GameEngine engine = context.Get(CoreServiceKeys.Engine)
+                ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GameEngine for entity scope evaluation.");
+            if (context.Contains(MapTriggerEventPayloadKeys.SourceEntity))
+            {
+                hasEntityPayload = true;
+                Entity source = context.Get<Entity>(MapTriggerEventPayloadKeys.SourceEntity);
+                matches |= IsInScope(source, engine.World);
+            }
+
+            if (context.Contains(MapTriggerEventPayloadKeys.TargetEntity))
+            {
+                hasEntityPayload = true;
+                Entity target = context.Get<Entity>(MapTriggerEventPayloadKeys.TargetEntity);
+                matches |= IsInScope(target, engine.World);
+            }
+
+            return !hasEntityPayload || matches;
+        }
+
+        private bool IsInScope(Entity entity, Arch.Core.World world)
+        {
+            if (entity == Entity.Null || entity == default || !world.IsAlive(entity))
+            {
+                return false;
+            }
+
+            if (entity == _scope)
+            {
+                return true;
+            }
+
+            if (!world.Has<EntityTriggerGraphAggregateRoot>(_scope))
+            {
+                return false;
+            }
+
+            Entity current = entity;
+            for (int depth = 0; depth < 1024 && world.IsAlive(current); depth++)
+            {
+                if (!world.Has<ChildOf>(current))
+                {
+                    return false;
+                }
+
+                current = world.Get<ChildOf>(current).Parent;
+                if (current == _scope)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public override Task ExecuteAsync(ScriptContext context)
@@ -215,6 +345,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
             StartRun(context);
             return Task.CompletedTask;
         }
+
+        private EventKey ResumeEventKey => _domain == TriggerGraphMountDomain.Mod
+            ? GameEvents.ModTriggerResume
+            : GameEvents.MapHeartbeat;
 
         /// <summary>
         /// Mount-pipeline dispatch for entity-domain lifecycle events. The lifecycle
@@ -494,18 +628,22 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// owners whose scope entity died stay parked forever (the dead mount is
     /// swept by the entity mount pipeline instead).
     /// </summary>
-    public sealed class TriggerGraphResumeTrigger : Trigger
+    public sealed class TriggerGraphResumeTrigger : Trigger, ITriggerResumeProbe
     {
         private readonly TriggerGraphMountTrigger _owner;
 
         public TriggerGraphResumeTrigger(TriggerGraphMountTrigger owner)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            EventKey = GameEvents.MapHeartbeat;
+            EventKey = owner.Domain == TriggerGraphMountDomain.Mod
+                ? GameEvents.ModTriggerResume
+                : GameEvents.MapHeartbeat;
             Priority = 0;
         }
 
         public override string Name => $"{_owner.Name}:Resume";
+
+        public bool IsSuspended => _owner.IsSuspended;
 
         public override bool CheckConditions(ScriptContext context)
             => _owner.IsSuspended && _owner.IsScopeDispatchable(context);

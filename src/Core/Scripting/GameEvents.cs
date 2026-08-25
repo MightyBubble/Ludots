@@ -28,6 +28,13 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public static readonly EventKey ModLoaded = new EventKey("ModLoaded");
 
+        /// <summary>
+        /// Internal global pulse used to resume suspended Mod-domain TriggerGraph
+        /// entries. Mod graphs are not registered in a map event index, so they
+        /// cannot use the map heartbeat as their continuation clock.
+        /// </summary>
+        public static readonly EventKey ModTriggerResume = new EventKey("ModTriggerResume");
+
         public static readonly EventKey SimulationBudgetFused = new EventKey("SimulationBudgetFused");
 
         public static readonly EventKey Physics2DEnabled = new EventKey("Physics2DEnabled");
@@ -94,5 +101,20 @@ namespace Ludots.Core.Scripting
         /// Payload: SourceEntity, RegionId.
         /// </summary>
         public static readonly EventKey RegionExited = new EventKey("RegionExited");
+
+        public static bool IsMapScoped(string eventName)
+        {
+            return eventName == MapLoaded.Value ||
+                eventName == MapUnloaded.Value ||
+                eventName == MapSuspended.Value ||
+                eventName == MapResumed.Value ||
+                eventName == MapHeartbeat.Value ||
+                eventName == EntitySpawned.Value ||
+                eventName == EntityDied.Value ||
+                eventName == EntityAliveCountChanged.Value ||
+                eventName == InputActionFired.Value ||
+                eventName == RegionEntered.Value ||
+                eventName == RegionExited.Value;
+        }
     }
 }

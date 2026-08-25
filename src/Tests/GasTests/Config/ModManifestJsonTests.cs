@@ -56,6 +56,26 @@ namespace GasTests
         }
 
         [Test]
+        public void ParseStrict_WithTriggerGraphs_PreservesOrder()
+        {
+            var manifest = ModManifestJson.ParseStrict(
+                """{ "name": "GraphMod", "version": "1.0.0", "triggerGraphs": ["Graph.Mod.Start", "Graph.Mod.End"] }""",
+                "mem://graph.mod.json");
+
+            Assert.That(manifest.TriggerGraphs, Is.EqualTo(new[] { "Graph.Mod.Start", "Graph.Mod.End" }));
+        }
+
+        [Test]
+        public void ParseStrict_WithDuplicateTriggerGraph_Throws()
+        {
+            var ex = Assert.Throws<Exception>(() => ModManifestJson.ParseStrict(
+                """{ "name": "GraphMod", "version": "1.0.0", "triggerGraphs": ["Graph.Mod.Start", "Graph.Mod.Start"] }""",
+                "mem://graph.mod.json"));
+
+            Assert.That(ex!.Message, Does.Contain("repeats graph"));
+        }
+
+        [Test]
         public void ParseStrict_WithLegacyUppercaseFields_Throws()
         {
             string json = """

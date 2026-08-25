@@ -7,6 +7,16 @@ using Ludots.Core.Map;
 
 namespace Ludots.Core.Scripting
 {
+    internal interface ITriggerResumeProbe
+    {
+        bool IsSuspended { get; }
+    }
+
+    public interface IMapTriggerRoute
+    {
+        bool IsGlobalRoute { get; }
+    }
+
     public readonly struct TriggerError
     {
         public readonly EventKey EventKey;
@@ -37,6 +47,12 @@ namespace Ludots.Core.Scripting
         private readonly Dictionary<MapId, Dictionary<EventKey, List<Trigger>>> _mapEventTriggers
             = new Dictionary<MapId, Dictionary<EventKey, List<Trigger>>>();
 
+        private readonly Dictionary<MapId, Dictionary<EventKey, List<Trigger>>> _globalMapEventTriggers
+            = new Dictionary<MapId, Dictionary<EventKey, List<Trigger>>>();
+
+        private readonly Dictionary<string, List<Trigger>> _modTriggers
+            = new Dictionary<string, List<Trigger>>(StringComparer.Ordinal);
+
         // EventHandler storage (non-Trigger, simple callbacks registered by Mods)
         private readonly Dictionary<EventKey, List<Func<ScriptContext, Task>>> _eventHandlers
             = new Dictionary<EventKey, List<Func<ScriptContext, Task>>>();
@@ -57,6 +73,25 @@ namespace Ludots.Core.Scripting
 
         public TriggerManager()
         {
+        }
+
+        public bool HasSuspendedModTriggers
+        {
+            get
+            {
+                foreach (List<Trigger> triggers in _modTriggers.Values)
+                {
+                    for (int i = 0; i < triggers.Count; i++)
+                    {
+                        if (triggers[i] is ITriggerResumeProbe probe && probe.IsSuspended)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
         }
 
         public void RegisterTrigger(Trigger trigger)
@@ -109,6 +144,7 @@ namespace Ludots.Core.Scripting
             var list = new List<Trigger>(triggers.Count);
             _mapTriggers[mapId] = list;
             _mapEventTriggers[mapId] = new Dictionary<EventKey, List<Trigger>>();
+            _globalMapEventTriggers[mapId] = new Dictionary<EventKey, List<Trigger>>();
             RegisterIntoMapList(mapId, triggers, list);
             Log.Info(in LogChannels.Engine, $"Registered {list.Count} triggers for map '{mapId}'.");
         }
@@ -169,7 +205,9 @@ namespace Ludots.Core.Scripting
                 return;
             }
 
-            Dictionary<EventKey, List<Trigger>> eventTriggers = _mapEventTriggers[mapId];
+            Dictionary<EventKey, List<Trigger>> eventTriggers = trigger is IMapTriggerRoute { IsGlobalRoute: true }
+                ? _globalMapEventTriggers[mapId]
+                : _mapEventTriggers[mapId];
             if (!eventTriggers.TryGetValue(trigger.EventKey, out List<Trigger> triggers))
             {
                 triggers = new List<Trigger>();
@@ -188,7 +226,7 @@ namespace Ludots.Core.Scripting
         private void RemoveMapEventTrigger(MapId mapId, Trigger trigger)
         {
             if (string.IsNullOrEmpty(trigger.EventKey.Value) ||
-                !_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>> eventTriggers) ||
+                !TryGetMapEventTriggers(mapId, trigger, out Dictionary<EventKey, List<Trigger>> eventTriggers) ||
                 !eventTriggers.TryGetValue(trigger.EventKey, out List<Trigger> triggers))
             {
                 return;
@@ -227,6 +265,7 @@ namespace Ludots.Core.Scripting
 
             _mapTriggers.Remove(mapId);
             _mapEventTriggers.Remove(mapId);
+            _globalMapEventTriggers.Remove(mapId);
             Log.Info(in LogChannels.Engine, $"Unregistered all triggers for map '{mapId}'.");
         }
 
@@ -261,14 +300,22 @@ namespace Ludots.Core.Scripting
             // EventHandlers (mod callbacks) always fire
             FireEventHandlers(eventKey, context);
 
-            if (!_mapEventTriggers.TryGetValue(mapId, out var eventTriggers) ||
-                !eventTriggers.TryGetValue(eventKey, out var matching) ||
-                matching.Count == 0)
-                return;
-
-            for (int i = 0; i < matching.Count; i++)
+            if (_mapEventTriggers.TryGetValue(mapId, out var eventTriggers) &&
+                eventTriggers.TryGetValue(eventKey, out var matching))
             {
-                FireTrigger(matching[i], eventKey, context);
+                for (int i = 0; i < matching.Count; i++)
+                {
+                    FireTrigger(matching[i], eventKey, context);
+                }
+            }
+
+            foreach (var globalByEvent in _globalMapEventTriggers.Values)
+            {
+                if (!globalByEvent.TryGetValue(eventKey, out var globalMatching)) continue;
+                for (int i = 0; i < globalMatching.Count; i++)
+                {
+                    FireTrigger(globalMatching[i], eventKey, context);
+                }
             }
         }
 
@@ -283,7 +330,9 @@ namespace Ludots.Core.Scripting
             if (!_mapEventTriggers.TryGetValue(mapId, out var eventTriggers) ||
                 !eventTriggers.TryGetValue(eventKey, out var matching) ||
                 matching.Count == 0)
-                return handlerTask;
+            {
+                return FireGlobalMapEventAsync(eventKey, context, handlerTask);
+            }
 
             var tasks = new Task[matching.Count + 1];
             tasks[0] = handlerTask;
@@ -291,7 +340,64 @@ namespace Ludots.Core.Scripting
             {
                 tasks[i + 1] = FireTriggerAsync(matching[i], eventKey, context, propagateExceptions: true);
             }
-            return Task.WhenAll(tasks);
+            return FireGlobalMapEventAsync(eventKey, context, Task.WhenAll(tasks));
+        }
+
+        private Task FireGlobalMapEventAsync(EventKey eventKey, ScriptContext context, Task prior)
+        {
+            var tasks = new List<Task> { prior };
+            foreach (var globalByEvent in _globalMapEventTriggers.Values)
+            {
+                if (!globalByEvent.TryGetValue(eventKey, out var matching)) continue;
+                for (int i = 0; i < matching.Count; i++)
+                {
+                    tasks.Add(FireTriggerAsync(matching[i], eventKey, context, propagateExceptions: true));
+                }
+            }
+
+            return tasks.Count == 1 ? prior : Task.WhenAll(tasks);
+        }
+
+        public void RegisterModTriggers(string modId, IReadOnlyList<Trigger> triggers)
+        {
+            if (string.IsNullOrWhiteSpace(modId)) throw new ArgumentException("Mod id is required.", nameof(modId));
+            if (triggers == null || triggers.Count == 0) return;
+            if (_modTriggers.ContainsKey(modId))
+            {
+                throw new InvalidOperationException($"Mod '{modId}' already owns TriggerGraph mounts.");
+            }
+
+            var owned = new List<Trigger>(triggers.Count);
+            _modTriggers.Add(modId, owned);
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                RegisterTrigger(triggers[i]);
+                owned.Add(triggers[i]);
+            }
+        }
+
+        public void UnregisterModTriggers(string modId)
+        {
+            if (!_modTriggers.TryGetValue(modId, out var triggers)) return;
+            for (int i = 0; i < triggers.Count; i++) UnregisterTrigger(triggers[i]);
+            _modTriggers.Remove(modId);
+        }
+
+        public void UnregisterAllModTriggers()
+        {
+            if (_modTriggers.Count == 0) return;
+            var ids = new List<string>(_modTriggers.Keys);
+            for (int i = 0; i < ids.Count; i++) UnregisterModTriggers(ids[i]);
+        }
+
+        private bool TryGetMapEventTriggers(MapId mapId, Trigger trigger, out Dictionary<EventKey, List<Trigger>> eventTriggers)
+        {
+            if (trigger is IMapTriggerRoute { IsGlobalRoute: true })
+            {
+                return _globalMapEventTriggers.TryGetValue(mapId, out eventTriggers);
+            }
+
+            return _mapEventTriggers.TryGetValue(mapId, out eventTriggers);
         }
 
         private static List<Trigger> CollectSortedMapTriggers(List<Trigger> mapList, EventKey eventKey)
@@ -335,6 +441,25 @@ namespace Ludots.Core.Scripting
         public void FireEvent(string eventKey, ScriptContext context)
         {
             FireEvent(new EventKey(eventKey), context);
+        }
+
+        /// <summary>
+        /// Dispatches the engine-owned Mod TriggerGraph continuation pulse through
+        /// the synchronous trigger path. The event has no author-facing handlers,
+        /// so registration order is stable and no snapshot, sort, or Task is needed.
+        /// </summary>
+        public void FireModTriggerResume(ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            if (!_triggers.TryGetValue(GameEvents.ModTriggerResume, out List<Trigger> triggerList))
+            {
+                return;
+            }
+
+            for (int i = 0; i < triggerList.Count; i++)
+            {
+                FireTrigger(triggerList[i], GameEvents.ModTriggerResume, context);
+            }
         }
 
         public Task FireEventAsync(EventKey eventKey, ScriptContext context)

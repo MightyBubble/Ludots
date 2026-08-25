@@ -66,3 +66,54 @@ N/A — trace 不是执行 op，不改变 Graph program。
 结论: PASS.
 
 一句话理由: Temporary ability lockout is authored as duration Effects that grant tags; abilities read `blockTags`, AI submits typed Orders, and scoring stays read-only.
+
+## GAS Composition Gate - TriggerGraph Domain Expansion - 2026-08-26
+
+- **Task / Issue**: Entity TriggerGraph attachment scope, ability/mod domains, global map route, and fixed-step Mod continuation.
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A**
+
+结论: **PASS**
+
+一句话理由: 本次交付复用现有 TriggerManager、Graph VM、事件桥和 attachment 关系，只增加挂载域/路由数据与固定步恢复脉冲，不新增 profile DSL、生命周期 op、平行物化管线或第二事件总线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Entity attachment scope matching | 2 | `TriggerGraphMountTrigger` + existing `ChildOf`/aggregate marker |
+| Ability/Mod graph mount filters | 2 | existing `TriggerManager` + `AbilityId`/`ModId` payload contracts |
+| Mod suspended-run continuation | 1/2 | `ModTriggerResumeClockSystem` in `DeferredTriggerCollection` + existing VM cursor |
+
+### 3. Reuse list
+
+- Handlers: existing `GasGraphOpHandlerTable` and `GasGraphRuntimeApi`; no new graph op.
+- Queues / Systems: existing `TriggerManager`, `DeferredTriggerCollection`, `MapHeartbeatClockSystem`, and map lifecycle registration.
+- Resolvers / Registries: existing `GraphProgramRegistry`, `AbilityDefinitionRegistry`, `CustomEventNameRegistry`, and `GraphIdRegistry`.
+- Existing presets / graphs: existing TriggerGraph assets and attachment/spawn pipeline.
+
+### 4. New Layer 0 ops
+
+N/A - no atomic gameplay op or effect handler was added.
+
+### 5. Transaction boundary
+
+No new gameplay transaction; mount registration is load-time fail-closed and Mod unload removes all owned triggers before lifecycle teardown.
+
+### 6. Config SSOT
+
+Behavior remains in existing map/entity/ability/mod TriggerGraph declarations and event catalogs. No new JSON schema.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum.
+- [x] No parallel spawn/morph pipeline.
+- [x] No placement validation in lifecycle ops.
+- [x] No silent fallback; unknown, cross-domain, and internal continuation events fail closed.
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。

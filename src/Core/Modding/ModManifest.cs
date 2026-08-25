@@ -37,5 +37,8 @@ namespace Ludots.Core.Modding
 
         [JsonPropertyName("processSharedAssemblies")]
         public List<string> ProcessSharedAssemblies { get; set; }
+
+        [JsonPropertyName("triggerGraphs")]
+        public List<string> TriggerGraphs { get; set; }
     }
 }

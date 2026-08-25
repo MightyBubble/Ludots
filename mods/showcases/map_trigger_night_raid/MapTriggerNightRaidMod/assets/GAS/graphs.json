@@ -1198,5 +1198,28 @@
     "key": "nightraid.panel.killThreshold"
    }
   ]
+ },
+ {
+  "id": "Graph.NightRaid.EntitySettlement",
+  "kind": "TriggerGraph",
+  "entries": [
+   { "label": "settlement_spawned", "event": "EntitySpawned", "start": "caster", "once": true }
+  ],
+  "nodes": [
+   { "id": "caster", "op": "LoadCaster" },
+   { "id": "ready", "op": "ConstInt", "intValue": 1 },
+   { "id": "write", "op": "WriteMapVarInt", "var": "entity_ready" },
+   { "id": "halt", "op": "HaltReturnInt" }
+  ],
+  "controlEdges": [
+   { "from": "caster", "fromPort": "next", "to": "ready" },
+   { "from": "ready", "fromPort": "next", "to": "write" },
+   { "from": "write", "fromPort": "next", "to": "halt" }
+  ],
+  "valueEdges": [
+   { "from": "caster", "fromPort": "value", "to": "write", "toPort": "source" },
+   { "from": "ready", "fromPort": "value", "to": "write", "toPort": "value" },
+   { "from": "ready", "fromPort": "value", "to": "halt", "toPort": "value" }
+  ]
  }
 ]

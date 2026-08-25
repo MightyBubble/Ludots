@@ -119,6 +119,8 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityDefinition
     {
+        /// <summary>Ordered TriggerGraph names owned by this ability definition.</summary>
+        public List<string> TriggerGraphs;
         // 鈹€鈹€ Generic execution model 鈹€鈹€
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
@@ -184,6 +186,7 @@ namespace Ludots.Core.Gameplay.GAS
             System.Array.Clear(_items, 0, _items.Length);
             System.Array.Clear(_has, 0, _has.Length);
             _registrationSource.Clear();
+            _registeredIds = null;
         }
 
         public void Register(int abilityId, in AbilityDefinition definition, string modId = null)
@@ -202,6 +205,7 @@ namespace Ludots.Core.Gameplay.GAS
             _items[abilityId] = definition;
             _has[abilityId] = true;
             _registrationSource[abilityId] = modId ?? "(core)";
+            _registeredIds = null;
         }
 
         public bool TryGet(int abilityId, out AbilityDefinition definition)
@@ -214,6 +218,33 @@ namespace Ludots.Core.Gameplay.GAS
 
             definition = _items[abilityId];
             return true;
+        }
+
+        private List<int>? _registeredIds;
+
+        /// <summary>
+        /// Ascending snapshot of registered ability ids. Cached and invalidated on
+        /// <see cref="Register"/>/<see cref="Clear"/>; the returned list is a stable snapshot
+        /// and never refreshes in place, so callers must re-read after a later registration.
+        /// </summary>
+        public IReadOnlyList<int> RegisteredAbilityIds
+        {
+            get
+            {
+                List<int>? ids = _registeredIds;
+                if (ids == null)
+                {
+                    ids = new List<int>();
+                    for (int i = 1; i < _has.Length; i++)
+                    {
+                        if (_has[i]) ids.Add(i);
+                    }
+
+                    _registeredIds = ids;
+                }
+
+                return ids;
+            }
         }
 
         /// <summary>In-place catalog tag probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>

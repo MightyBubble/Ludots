@@ -104,6 +104,52 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void ModSuspension_ResumesOnEngineModPulse()
+        {
+            using var fixture = TriggerGraphResumeFixture.Create(includeMapMount: false);
+            using GameEngine engine = fixture.CreateEngine();
+            GraphInstruction[] program =
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 1 },
+            };
+            int graphId = fixture.RegisterTriggerGraph(engine, program, new[]
+            {
+                new TriggerGraphEntry("modWait", EntryEventName, startPc: 0, once: false),
+            });
+            var mount = new TriggerGraphMountTrigger(
+                graphId,
+                GraphName,
+                new TriggerGraphEntry("modWait", EntryEventName, startPc: 0, once: false),
+                Entity.Null,
+                domain: TriggerGraphMountDomain.Mod,
+                modIdFilter: "FixtureMod");
+            var resume = new TriggerGraphResumeTrigger(mount);
+
+            engine.TriggerManager.RegisterModTriggers("FixtureMod", new Trigger[] { mount, resume });
+            ScriptContext entryContext = engine.CreateContext();
+            entryContext.Set(MapTriggerEventPayloadKeys.ModId, "FixtureMod");
+            entryContext.Set(MapTriggerEventPayloadKeys.Count, 4242);
+            engine.TriggerManager.FireEventAsync(new EventKey(EntryEventName), entryContext)
+                .GetAwaiter()
+                .GetResult();
+
+            Assert.That(mount.IsSuspended, Is.True);
+            Assert.That(engine.TriggerManager.HasSuspendedModTriggers, Is.True);
+            Assert.That(resume.EventKey, Is.EqualTo(GameEvents.ModTriggerResume));
+
+            var resumeClock = new ModTriggerResumeClockSystem(engine.TriggerManager, engine.CreateContext);
+            float dt = 1f / 60f;
+            resumeClock.Update(in dt);
+
+            Assert.That(mount.IsSuspended, Is.False,
+                "The engine-level ModTriggerResume pulse must continue a suspended Mod graph.");
+            Assert.That(mount.LastSliceResult.Halted, Is.True);
+            Assert.That(mount.LastSliceResult.ReturnInt, Is.EqualTo(4242));
+            Assert.That(engine.TriggerManager.HasSuspendedModTriggers, Is.False);
+        }
+
+        [Test]
         public void RefireIgnore_SecondEventWhileSuspended_DroppedAndOriginalRunCompletes()
         {
             using var fixture = TriggerGraphResumeFixture.Create(includeMapMount: false);
