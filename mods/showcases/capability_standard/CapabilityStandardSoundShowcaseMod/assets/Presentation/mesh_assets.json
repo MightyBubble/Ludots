@@ -1,0 +1,12 @@
+[
+  {
+    "id": "sound_showcase.tone_440",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "sound_showcase.tone_880",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  }
+]

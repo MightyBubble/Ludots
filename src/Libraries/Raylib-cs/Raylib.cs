@@ -363,6 +363,23 @@ namespace Raylib_cs
         public Transform* bindPose;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct AudioStream
+    {
+        public void* buffer;
+        public void* processor;
+        public uint sampleRate;
+        public uint sampleSize;
+        public uint channels;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct Sound
+    {
+        public AudioStream stream;
+        public uint frameCount;
+    }
+
     public static class Raylib
     {
         private const string NativeLib = "raylib";
@@ -802,5 +819,46 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void SetMaterialTexture(ref Material material, int mapType, Texture2D texture);
+
+        // --- Audio APIs ---
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void InitAudioDevice();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void CloseAudioDevice();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsAudioDeviceReady();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Sound LoadSound(string fileName);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Sound LoadSoundAlias(Sound sourceSound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadSound(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadSoundAlias(Sound alias);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsSoundValid(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsSoundPlaying(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void PlaySound(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void StopSound(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetSoundVolume(Sound sound, float volume);
     }
 }

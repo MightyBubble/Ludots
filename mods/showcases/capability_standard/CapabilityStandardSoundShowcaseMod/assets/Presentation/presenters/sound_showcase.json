@@ -1,0 +1,96 @@
+[
+  {
+    "id": "sound_showcase.emitter",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.8, 0.8, 0.8]
+        },
+        "style": {
+          "color": [0.95, 0.55, 0.15, 1.0]
+        }
+      },
+      {
+        "slot": "sound",
+        "kind": "Sound",
+        "activeByDefault": false,
+        "sound": {
+          "soundAssetId": "sound_showcase.tone_440",
+          "loop": true,
+          "volume": 1
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "sound_showcase.emitter.on" },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "sound_showcase.emitter.off" },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      }
+    ]
+  },
+  {
+    "id": "sound_showcase.beacon",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.6, 0.6, 0.6]
+        },
+        "style": {
+          "color": [0.2, 0.75, 0.95, 1.0]
+        }
+      },
+      {
+        "slot": "sound",
+        "kind": "Sound",
+        "activeByDefault": false,
+        "sound": {
+          "soundAssetId": "sound_showcase.tone_880",
+          "loop": false,
+          "volume": 1
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "sound_showcase.beacon.on" },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "sound_showcase.beacon.off" },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      }
+    ]
+  }
+]

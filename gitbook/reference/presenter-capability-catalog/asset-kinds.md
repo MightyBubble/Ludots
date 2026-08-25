@@ -30,11 +30,12 @@ AssetKind 回答"这个 behavior 绑的是什么类别的可视输出"。作者�
 - **跑**：preset `engine_raylib_particles`（三种模式基线）、`vfx_forge_raylib`（九种效果锻造台）。
 - **证据**：`artifacts/acceptance/engine_raylib_particles/screen.png` + `stats.json`；VFX Forge 的验收登记见 `showcase.registry.json` 的 `vfx_forge` 条目。
 
-### Sound — 声音（契约就绪，执行缺口）
+### Sound — 声音（已实现）
 
-- **是什么**：3D 世界位置声音请求（loop/volume/stableId 生命周期），由 `Sound` behavior 产出 `SoundRequestBuffer`。
-- **现状**：Core 契约与行为系统完整，**raylib 适配器尚无音频设备消费**——这是 presentation 域唯一整块缺失的能力面；映射评估与收口清单见治理报告。
-- **学习材料**：契约源 `src/Core/Presentation/Requests/SoundRequest.cs`；[Presenter Raylib UAT](../../architecture/presenter-raylib-uat.md) 声音章节的双视角验收表。
+- **是什么**：3D 世界位置声音请求（loop/volume/stableId 生命周期），由 `Sound` behavior 产出 `SoundRequestBuffer`，raylib 适配器的 `RaylibSoundConsumer` 每帧消费。
+- **怎么写**：behavior kind `Sound`（`soundAssetId` 引用 `mesh_assets.json` 里的 Primitive 占位资产）；平台源文件在 `host_assets.json` 以 `assetKind: "Sound"` + `backendId: "raylib"` 绑 WAV 源 URI。距离衰减为线性 rolloff：监听距离 ≤ 参考距离满音量，≥ 最大距离静音；默认参考 5 m / 最大 45 m，可用环境变量 `LUDOTS_RAYLIB_SOUND_ATTEN_REF_METERS` / `LUDOTS_RAYLIB_SOUND_ATTEN_MAX_METERS` 覆盖。循环音在原生播放结束后自动补触发（raylib Sound 无原生 loop 位）。
+- **跑**：preset `capability_standard_sound_showcase_raylib`（循环音环绕移动声源演示衰减 + 一次性 beacon 音 + 显式 Stop；`assets/Sounds` 为程序生成测试音源，非美术素材）。
+- **验收**：消费器状态机与原生设备路径 `src/Tests/RaylibAdapterTests/RaylibSoundConsumerStateTests.cs` / `RaylibSoundNativeDeviceTests.cs`（无声卡环境显式 skip）；mod 配置与请求合同 `src/Tests/PresentationTests/Showcases/SoundShowcaseAcceptanceTests.cs`。
 
 ### Spline — 样条
 

@@ -13,7 +13,7 @@ public sealed class S14LayeringRatchetTests
     public const int MaxGetEngineCalls = 205;
     public const int MaxUndeclaredModRegisterSystemCalls = 100;
     public const int MaxProductionStaticRegistryClearCalls = 9;
-    public const int MaxModProjectsReferencingFacadeGameEngine = 141;
+    public const int MaxModProjectsReferencingFacadeGameEngine = 142;
     public const int MaxModGraphIdRegistryClearCalls = 5;
 
     private static readonly Regex GetEngineCall = new(@"\.GetEngine\s*\(", RegexOptions.Compiled);

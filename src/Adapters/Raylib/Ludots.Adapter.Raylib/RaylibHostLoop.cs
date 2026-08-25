@@ -16,6 +16,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Systems;
@@ -169,6 +170,7 @@ namespace Ludots.Adapter.Raylib
             var presentationTiming = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             engine.TryGetService(CoreServiceKeys.SyntheticInput, out SyntheticInputDevice? syntheticInput);
             engine.TryGetService(CoreServiceKeys.HostFrameCapture, out IHostFrameCapture? frameCapture);
+            engine.TryGetService(CoreServiceKeys.SoundRequestBuffer, out SoundRequestBuffer? soundRequests);
             ClientLocalSeatDeviceBinding seatDeviceBinding = engine.GetService(CoreServiceKeys.ClientLocalSeatDeviceBinding)
                 ?? throw new InvalidOperationException("ClientLocalSeatDeviceBinding missing.");
             var deviceWatcher = new RaylibInputDeviceWatcher();
@@ -182,6 +184,7 @@ namespace Ludots.Adapter.Raylib
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
+            RaylibSoundConsumer? soundConsumer = null;
 
             var terrainRenderer = new RaylibTerrainRenderer
             {
@@ -214,6 +217,8 @@ namespace Ludots.Adapter.Raylib
                 Rl.SetExitKey(0);
                 Rl.SetTargetFPS(targetFps);
                 IntPtr nativeWindowHandle = Rl.GetWindowHandle();
+
+                soundConsumer = CreateSoundConsumer(engine, soundRequests);
 
                 screenWidth = Math.Max(1, Rl.GetScreenWidth());
                 screenHeight = Math.Max(1, Rl.GetScreenHeight());
@@ -505,6 +510,11 @@ namespace Ludots.Adapter.Raylib
                             {
                                 Yaw = WorldPlane2D.NormalizeDegreesPositive(cameraState.Yaw + (autoOrbitDegPerSecond * dt))
                             });
+                        }
+
+                        if (soundConsumer != null && soundRequests is { Count: > 0 })
+                        {
+                            soundConsumer.Consume(soundRequests.GetSpan(), cameraAdapter.Camera.position);
                         }
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
@@ -1017,11 +1027,35 @@ namespace Ludots.Adapter.Raylib
             }
             finally
             {
+                soundConsumer?.Dispose();
                 if (windowOpened) Rl.CloseWindow();
                 terrainRenderer.Dispose();
                 visualHeightmapRenderer.Dispose();
                 engine.Dispose();
             }
+        }
+
+        private static RaylibSoundConsumer? CreateSoundConsumer(GameEngine engine, SoundRequestBuffer? soundRequests)
+        {
+            if (soundRequests == null)
+            {
+                return null;
+            }
+
+            MeshAssetRegistry? soundAssets = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
+            if (soundAssets == null)
+            {
+                return null;
+            }
+
+            var attenuation = new RaylibSoundAttenuationConfig
+            {
+                ReferenceDistanceMeters = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SOUND_ATTEN_REF_METERS", 5f),
+                MaxDistanceMeters = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SOUND_ATTEN_MAX_METERS", 45f),
+            }.Validate();
+            var consumer = new RaylibSoundConsumer(soundAssets, engine.VFS, attenuation);
+            consumer.InitializeDevice();
+            return consumer;
         }
 
         private static unsafe void BeginCoreMode3D(in Camera3D camera, in CameraRenderState3D cameraState)
