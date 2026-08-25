@@ -208,6 +208,39 @@ namespace Ludots.Tests.GAS.Integration
         }
 
         [Test]
+        public void ResolveOption_RequiresActiveInstance_ToPreserveLifecycleOrder()
+        {
+            using World world = World.Create();
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.pending", new ActivityDefinition
+            {
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                Options = { new ActivityOptionDefinition { Id = "hold", IsBaseline = true } },
+            });
+            var lifecycle = new ActivityLifecycleBuffer();
+            var runtime = new ActivityRuntimeService(
+                world,
+                definitions,
+                CreateServices(),
+                new ActivityPresentationBuffer(),
+                lifecycle: lifecycle);
+
+            Entity activity = runtime.OfferOrActivate("activity.pending", world.Create());
+            world.Get<ActivityInstanceCm>(activity).State = ActivityInstanceState.Pending;
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                runtime.ResolveOption(activity, "hold"));
+
+            Assert.That(error.Message, Does.Contain("is not active"));
+            Assert.That(lifecycle.Events.Select(e => e.Key), Is.EqualTo(new[]
+            {
+                ActivityLifecycleKeys.Started,
+                ActivityLifecycleKeys.Presented,
+            }));
+        }
+
+        [Test]
         public void LifecycleKeyCannotBeUsedAsSignalSubscription()
         {
             var definitions = new ActivityDefinitionRegistry();

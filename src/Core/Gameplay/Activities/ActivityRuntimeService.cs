@@ -404,6 +404,12 @@ namespace Ludots.Core.Gameplay.Activities
                     $"Activity instance {instance.InstanceId} is already resolved.");
             }
 
+            if (instance.State != ActivityInstanceState.Active)
+            {
+                throw new InvalidOperationException(
+                    $"Activity instance {instance.InstanceId} is not active.");
+            }
+
             if (!_definitions.TryGet(instance.DefinitionId, out ActivityDefinition definition))
             {
                 throw new InvalidOperationException(
