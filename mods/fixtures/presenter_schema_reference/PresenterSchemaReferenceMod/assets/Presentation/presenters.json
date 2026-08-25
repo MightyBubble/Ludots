@@ -1,9 +1,6 @@
 [
   {
     "id": "ref_base_definition",
-    "visibility": {
-      "inline": "None"
-    },
     "behaviors": [
       {
         "slot": "body",
@@ -170,6 +167,11 @@
       }
     ],
     "paramDefaults": [
+      {
+        "paramKey": "presenter_schema_reference.asset.visibility",
+        "lane": "Int",
+        "intValue": 1
+      },
       {
         "paramKey": "presenter_schema_reference.asset.scale",
         "lane": "Float",

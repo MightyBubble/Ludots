@@ -682,7 +682,6 @@ namespace Ludots.Tests.Presentation
                         },
                     }
                 },
-                VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
                 PositionOffset = new Vector3(0f, 1.5f, 0f),
             });
         }

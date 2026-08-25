@@ -147,9 +147,6 @@
   {
     "id": "lsw.unit_health_bar",
     "extends": "entity_health_bar",
-    "visibility": {
-      "inline": "None"
-    },
     "bindings": [
       {
         "paramKey": "worldBar.width",
@@ -199,9 +196,6 @@
   {
     "id": "lsw.unit_health_text",
     "extends": "entity_world_text",
-    "visibility": {
-      "inline": "None"
-    },
     "behaviors": [
       {
         "slot": "body",
@@ -234,9 +228,6 @@
   },
   {
     "id": "lsw.unit_chill_bar",
-    "visibility": {
-      "inline": "None"
-    },
     "behaviors": [
       {
         "slot": "body",
@@ -296,9 +287,6 @@
   },
   {
     "id": "lsw.unit_chill_countdown",
-    "visibility": {
-      "inline": "None"
-    },
     "behaviors": [
       {
         "slot": "body",

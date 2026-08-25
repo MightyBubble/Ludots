@@ -1,9 +1,6 @@
 [
   {
     "id": "entity_health_bar",
-    "visibility": {
-      "inline": "OwnerCullVisible"
-    },
     "bindings": [
       {
         "paramKey": "worldBar.width",
@@ -82,9 +79,6 @@
   },
   {
     "id": "entity_world_text",
-    "visibility": {
-      "inline": "OwnerCullVisible"
-    },
     "bindings": [
       {
         "paramKey": "worldText.tokenId",

@@ -519,7 +519,6 @@ namespace Ludots.Core.Presentation.Config
                 Extends = ParseOptionalCanonicalString(node["extends"], $"Presenter '{key}' extends"),
                 DefaultLifetime = ParseLifecycle(node["lifecycle"], key),
                 PositionOffset = ParseAnchorOffset(node["anchor"], key),
-                VisibilityCondition = ParseDefinitionVisibility(node["visibility"], key),
                 Rules = ParseRules(node["rules"], key),
                 Bindings = ParseBindings(node["bindings"], key),
                 Children = children,
@@ -529,8 +528,95 @@ namespace Ludots.Core.Presentation.Config
 
             def.Id = _registry.GetId(key);
 
+            ValidateAssetVisibilityParamProduction(key, def);
             StampRuleOwners(def.Id, def.Rules);
             return (key, def);
+        }
+
+        private static void ValidateAssetVisibilityParamProduction(string key, PresenterDefinition definition)
+        {
+            BehaviorSlot[]? behaviors = definition.Behaviors;
+            if (behaviors == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind != BehaviorKind.AssetBinding || slot.AssetBinding.VisibilityParamKey < 0)
+                {
+                    continue;
+                }
+
+                if (DefinitionProducesIntParam(definition, slot.AssetBinding.VisibilityParamKey))
+                {
+                    continue;
+                }
+
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' behavior slot {slot.SlotIndex} visibilityParamKey {slot.AssetBinding.VisibilityParamKey} " +
+                    "is not produced by this definition. Business visibility must be driven by Param/Behavior/Command: " +
+                    "declare an Int paramDefault, a TagBinding/attribute threshold targeting the key, or a SetParam rule " +
+                    "with paramLane Int.");
+            }
+        }
+
+        private static bool DefinitionProducesIntParam(PresenterDefinition definition, int paramKey)
+        {
+            ParamDefault[] defaults = definition.ParamDefaults;
+            for (int i = 0; i < defaults.Length; i++)
+            {
+                if (defaults[i].ParamKey == paramKey && defaults[i].Lane == ParamLane.Int)
+                {
+                    return true;
+                }
+            }
+
+            PresenterParamBinding[] bindings = definition.Bindings;
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                if (bindings[i].ParamKey == paramKey)
+                {
+                    return true;
+                }
+            }
+
+            PresenterRule[] rules = definition.Rules;
+            for (int i = 0; i < rules.Length; i++)
+            {
+                ref readonly PresenterRule rule = ref rules[i];
+                if (rule.Command.CommandKind == PresenterCommandKind.SetParam &&
+                    rule.Command.ParamKey == paramKey &&
+                    rule.Command.ParamLane == ParamLane.Int)
+                {
+                    return true;
+                }
+            }
+
+            BehaviorSlot[]? behaviors = definition.Behaviors;
+            for (int i = 0; i < behaviors!.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind == BehaviorKind.TagBinding && slot.TagBinding.TargetParamKey == paramKey)
+                {
+                    return true;
+                }
+
+                if (slot.Kind == BehaviorKind.AttributeBinding)
+                {
+                    ThresholdMapping[] thresholds = slot.AttributeBinding.Thresholds;
+                    for (int t = 0; t < thresholds.Length; t++)
+                    {
+                        if (thresholds[t].OutputParamKey == paramKey)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static void ValidateChildrenCapacity(string key, ChildPresenterRef[] children)
@@ -546,6 +632,12 @@ namespace Ludots.Core.Presentation.Config
 
         private static void RejectRemovedFields(JsonNode node, string key)
         {
+            if (node["visibility"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' still uses removed field 'visibility'. Business visibility must be driven by Param/Behavior/Command: author AssetBinding.visibilityParamKey backed by an Int paramDefault, TagBinding, attribute threshold, or SetParam rule, or drive behavior slots with ActivateBehavior/DeactivateBehavior commands. Platform culling keeps applying automatically.");
+            }
+
             if (node["entityScope"] != null)
             {
                 throw new InvalidOperationException(
@@ -613,7 +705,7 @@ namespace Ludots.Core.Presentation.Config
 
         private static readonly string[] DefinitionFields =
         {
-            "id", "extends", "lifecycle", "anchor", "visibility",
+            "id", "extends", "lifecycle", "anchor",
             "rules", "bindings", "paramDefaults", "behaviors", "children",
             "_comment",
         };
@@ -3737,17 +3829,6 @@ namespace Ludots.Core.Presentation.Config
                 Id = obj["id"]?.GetValue<string>() ?? string.Empty,
                 GraphProgramId = obj["graphProgramId"]?.GetValue<int>() ?? 0,
             };
-        }
-
-        private static ConditionRef ParseDefinitionVisibility(JsonNode? node, string key)
-        {
-            if (node != null && node["graphProgramId"] != null)
-            {
-                throw new InvalidOperationException(
-                    $"Presenter '{key}' visibility.graphProgramId is not wired into runtime visibility evaluation and cannot be authored.");
-            }
-
-            return ParseConditionRef(node, $"Presenter '{key}' visibility", allowGraphProgramId: false);
         }
 
         private static ConditionRef ParseConditionRef(JsonNode? node, string context, bool allowGraphProgramId)

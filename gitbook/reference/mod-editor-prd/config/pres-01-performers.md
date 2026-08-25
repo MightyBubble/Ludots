@@ -9,7 +9,6 @@
 ```json
 {
   "id": "entity_health_bar",
-  "visibility": { "inline": "OwnerCullVisible" },
   "bindings": [
     { "paramKey": "worldBar.width", "source": "constant", "constantValue": 50 },
     { "paramKey": "worldBar.height", "source": "constant", "constantValue": 8 }
@@ -47,7 +46,6 @@
 | 字段 | 这样配会产生什么效果 |
 |---|---|
 | `id` | 全局命名；实体模板与其他表按此引用 |
-| `visibility.inline` | 剔除策略内联声明（如 OwnerCullVisible：仅拥有者可见时渲染） |
 | `bindings[].paramKey` | 表现参数键（材质通道、HUD 尺寸等） |
 | `bindings[].source` | 取值来源；`constant` 配 `constantValue` 直供常量 |
 | `behaviors[].slot` | 行为挂载槽位；同槽互斥 |

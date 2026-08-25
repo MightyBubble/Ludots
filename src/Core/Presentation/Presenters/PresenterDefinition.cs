@@ -112,7 +112,6 @@ namespace Ludots.Core.Presentation.Presenters
         public ChildPresenterRef[] Children = System.Array.Empty<ChildPresenterRef>();
         public BehaviorSlot[] Behaviors = System.Array.Empty<BehaviorSlot>();
         public PresenterRule[] Rules = System.Array.Empty<PresenterRule>();
-        public ConditionRef VisibilityCondition;
         public PresenterParamBinding[] Bindings = System.Array.Empty<PresenterParamBinding>();
         public ParamDefault[] ParamDefaults = System.Array.Empty<ParamDefault>();
         public Vector3 PositionOffset;
@@ -418,8 +417,7 @@ namespace Ludots.Core.Presentation.Presenters
                 OwnerTagWork = BuildOwnerTagWork(tagCompiledMap);
                 UsesRetainedPresentationRequest =
                     HasSurfaceAuthoring &&
-                    DefaultLifetime <= 0f &&
-                    VisibilityCondition.GraphProgramId <= 0;
+                    DefaultLifetime <= 0f;
                 NeedsRetainedPresentationRequestLifecycleTick = UsesRetainedPresentationRequest;
                 return;
             }
@@ -707,9 +705,7 @@ namespace Ludots.Core.Presentation.Presenters
                 UsesStableVisualCache &&
                 hasStaticOnlyVisuals &&
                 DefaultLifetime <= 0f &&
-                !HasOutputMotionOrFade &&
-                VisibilityCondition.Inline == InlineConditionKind.None &&
-                VisibilityCondition.GraphProgramId <= 0;
+                !HasOutputMotionOrFade;
             SupportsSingleRequestReplay =
                 AssetBehaviorIndices.Length == 1 &&
                 SupportsReplayableSingleRequest(Behaviors[AssetBehaviorIndices[0]].AssetBinding.AssetKind) &&
@@ -717,8 +713,7 @@ namespace Ludots.Core.Presentation.Presenters
             UsesRetainedPresentationRequest =
                 (SupportsSingleRequestReplay || HasSurfaceAuthoring) &&
                 DefaultLifetime <= 0f &&
-                !HasOutputMotionOrFade &&
-                VisibilityCondition.GraphProgramId <= 0;
+                !HasOutputMotionOrFade;
             NeedsRetainedPresentationRequestLifecycleTick = UsesRetainedPresentationRequest;
             SupportsSingleVisualProxyFastEmit =
                 AssetBehaviorIndices.Length == 1 &&
@@ -834,6 +829,7 @@ namespace Ludots.Core.Presentation.Presenters
 
             return true;
         }
+
 
         private static bool SupportsVisualProxyFastEmitFor(in AssetBindingConfig asset)
         {

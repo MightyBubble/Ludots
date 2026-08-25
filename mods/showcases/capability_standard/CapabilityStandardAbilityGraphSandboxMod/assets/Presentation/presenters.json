@@ -2,7 +2,6 @@
   {
     "id": "graphops.hud.health_bar",
     "extends": "entity_health_bar",
-    "visibility": { "inline": "None" },
     "bindings": [
       { "paramKey": "worldBar.width", "source": "constant", "constantValue": 90 },
       { "paramKey": "worldBar.height", "source": "constant", "constantValue": 12 }
@@ -27,7 +26,6 @@
   {
     "id": "graphops.hud.health_text",
     "extends": "entity_world_text",
-    "visibility": { "inline": "None" },
     "behaviors": [
       {
         "slot": "body",
@@ -47,7 +45,6 @@
   },
   {
     "id": "graphops.visual.caster",
-    "visibility": { "inline": "None" },
     "children": [
       { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
       { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
@@ -82,7 +79,6 @@
   },
   {
     "id": "graphops.visual.ally",
-    "visibility": { "inline": "None" },
     "children": [
       { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
       { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
@@ -117,7 +113,6 @@
   },
   {
     "id": "graphops.visual.enemy",
-    "visibility": { "inline": "None" },
     "children": [
       { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
       { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
@@ -161,7 +156,6 @@
   },
   {
     "id": "graphops.visual.scout",
-    "visibility": { "inline": "None" },
     "children": [
       { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
       { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
