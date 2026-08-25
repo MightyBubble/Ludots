@@ -44,5 +44,11 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public float HeightScaleMeters { get; set; }
         public float MinWalkableUpDot { get; set; }
         public int CliffHeightThreshold { get; set; }
+
+        /// <summary>
+        /// 后台烘焙并发 worker 线程数：脏瓦片按 FIFO 由 N 个 worker 各烤一 tile，发布流式回游戏线程。
+        /// 默认 1 保持既有单 worker 行为；突发脏区（如大地图全图重烤）调高可线性提升排干吞吐。
+        /// </summary>
+        public int BakeWorkerCount { get; set; } = 1;
     }
 }

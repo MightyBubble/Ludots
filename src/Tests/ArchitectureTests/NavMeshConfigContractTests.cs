@@ -261,6 +261,7 @@ namespace Ludots.Tests.Architecture
                   "areas": [],
                   "runtimeIncremental": {
                     "tileBudgetPerFixedTick": 1,
+                    "bakeWorkerCount": 1,
                     "includeNeighborTiles": true,
                     "heightScaleMeters": 1,
                     "minWalkableUpDot": 0.6,
