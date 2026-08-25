@@ -168,18 +168,18 @@ namespace Ludots.Tests.Presentation
             // trailMesh 是 TrailMesh 行为专属字段：出现在其它行为 kind 上必须在配置加载期
             // fail-fast（RejectBehaviorScopedFields），而不是被静默忽略后让运行时缺样采样。
             WritePresenters(
-                $"""
+                $$"""
                 [
-                  {{
+                  {
                     "id": "blade",
                     "behaviors": [
-                      {{
-                        "slot": "gfx",
-                        "kind": "{kind}",
-                        "trailMesh": {{ "tipOffset": [0, 0, 1.2] }}
-                      }}
+                      {
+                        "slot": "trail",
+                        "kind": "{{kind}}",
+                        "trailMesh": { "tipOffset": [0, 0, 1.2] }
+                      }
                     ]
-                  }}
+                  }
                 ]
                 """);
 
