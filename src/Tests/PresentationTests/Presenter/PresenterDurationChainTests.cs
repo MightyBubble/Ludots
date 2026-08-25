@@ -83,7 +83,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(setRule.Event.Kind, Is.EqualTo(PresentationEventKind.PresenterCreated));
             Assert.That(setRule.Event.KeyId, Is.EqualTo(def.Id));
             Assert.That(setRule.Command.CommandKind, Is.EqualTo(PresenterCommandKind.TimerSet));
-            Assert.That(setRule.Command.RouteStrategy, Is.EqualTo(PerformerCommandRouteStrategy.ExistingInstances));
+            Assert.That(setRule.Command.RouteStrategy, Is.EqualTo(PresenterCommandRouteStrategy.ExistingInstances));
             Assert.That(setRule.Command.TimerNameId,
                 Is.EqualTo(PresenterTimerNameRegistry.GetId(PresenterTimerNameRegistry.DurationTimerName)));
             Assert.That(setRule.Command.TimerDurationSeconds, Is.EqualTo(0.4f).Within(0.0001f));
@@ -93,7 +93,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(destroyRule.Event.KeyId,
                 Is.EqualTo(PresenterTimerNameRegistry.GetId(PresenterTimerNameRegistry.DurationTimerName)));
             Assert.That(destroyRule.Command.CommandKind, Is.EqualTo(PresenterCommandKind.DestroyPresenter));
-            Assert.That(destroyRule.Command.RouteStrategy, Is.EqualTo(PerformerCommandRouteStrategy.ExistingInstances));
+            Assert.That(destroyRule.Command.RouteStrategy, Is.EqualTo(PresenterCommandRouteStrategy.ExistingInstances));
 
             Assert.That(registry.HasPresenterCreatedRules, Is.True);
         }
@@ -745,7 +745,7 @@ namespace Ludots.Tests.Presentation
                 {
                     CommandKind = PresenterCommandKind.CreatePresenter,
                     CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
-                    RouteStrategy = PerformerCommandRouteStrategy.CreatePerformer,
+                    RouteStrategy = PresenterCommandRouteStrategy.CreatePresenter,
                     PresenterDefinitionId = defId,
                     ParentEntity = Entity.Null,
                     ScopeTag = scopeTag,
@@ -762,7 +762,7 @@ namespace Ludots.Tests.Presentation
                 {
                     CommandKind = PresenterCommandKind.DestroyPresenter,
                     CommandKindId = (byte)PresenterCommandKind.DestroyPresenter,
-                    RouteStrategy = PerformerCommandRouteStrategy.ExistingInstances,
+                    RouteStrategy = PresenterCommandRouteStrategy.ExistingInstances,
                     PresenterEntity = presenter,
                 });
             }
@@ -773,7 +773,7 @@ namespace Ludots.Tests.Presentation
                 {
                     CommandKind = PresenterCommandKind.TimerKill,
                     CommandKindId = (byte)PresenterCommandKind.TimerKill,
-                    RouteStrategy = PerformerCommandRouteStrategy.ExistingInstances,
+                    RouteStrategy = PresenterCommandRouteStrategy.ExistingInstances,
                     PresenterEntity = presenter,
                     TimerNameId = nameId,
                 });
