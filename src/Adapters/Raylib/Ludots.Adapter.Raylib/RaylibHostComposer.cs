@@ -107,6 +107,11 @@ namespace Ludots.Adapter.Raylib
             var instancedBatchLaneStore = new RaylibInstancedBatchLaneStore();
             engine.SetService(RaylibInstancedBatchLaneStore.LaneStoreServiceKey, instancedBatchLaneStore);
 
+            engine.SetService(
+                CoreServiceKeys.SaveStorage,
+                (Ludots.Platform.Abstractions.ISaveStorage)new Ludots.Platform.Desktop.DesktopSaveStorage(
+                    System.IO.Path.Combine(baseDir, "Saves")));
+
             engine.RegisterPresentationAdapterCapabilities(
                 new PresentationAdapterCapabilities(ComposePresentationVisualCapabilities()));
 

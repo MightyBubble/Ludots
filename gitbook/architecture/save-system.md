@@ -125,6 +125,14 @@ Core 不直接依赖平台文件 API。存储边界是 `ISaveStorage`，定义�
 
 `SaveSlotStore` 只处理槽位语义与容器编解码。槽位 key 固定为 `saves/{kind}/{name}.ldsave`，其中 `kind` 当前包括 `manual` 和 `autosave`。写入先写 temp key，再调用 `CommitTempFile`，失败时保留原槽位。`AutosaveSlotPolicy` 只清理 autosave kind，绝不删除 manual 槽位。
 
+### 落盘归属
+
+生产 `ISaveStorage` adapter 归 Platform 实现层，不归 Core、不归 Mod：
+
+- 桌面：`src/Platform/Ludots.Platform.Desktop` 的 `DesktopSaveStorage`——真实磁盘文件 adapter，key 是相对路径（`/` 分隔），根目录在构造时固定并做越界拒绝；`CommitTempFile` 用 `File.Move(overwrite: true)` 原子替换。Raylib host（`RaylibHostComposer`）以 `{baseDir}/Saves` 为根构造并注册到 `CoreServiceKeys.SaveStorage`，Mod 从引擎解析 `ISaveStorage` 后自建 `SaveSlotStore` 使用，不落文件 API。
+- UE 等外部宿主：在宿主仓库实现同一 port（仓库外，接口即合同）。
+- Web 平台 adapter（OPFS 等）待 Web 存档需求立项时在同一 Platform 层补位，不在 Core 加分支。
+
 ## 验收口径
 
 Core Save/Load 的验收必须覆盖：
@@ -161,4 +169,5 @@ UAT 证据输出到 `artifacts/acceptance/save-system/`。
 - `src/Core/Persistence/SaveContainerCodec.cs`
 - `src/Core/Persistence/SaveSlotStore.cs`
 - `src/Platform/Ludots.Platform.Abstractions/ISaveStorage.cs`
+- `src/Platform/Ludots.Platform.Desktop/DesktopSaveStorage.cs`
 - `src/Tests/PersistenceTests/`
