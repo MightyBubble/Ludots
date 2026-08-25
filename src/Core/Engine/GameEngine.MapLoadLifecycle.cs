@@ -59,6 +59,7 @@ namespace Ludots.Core.Engine
 
             mapSessions = new MapSessionManager();
             MapSessions = mapSessions;
+            TriggerManager.MapSessions = mapSessions;
             BoardIdRegistry = new BoardIdRegistry();
             SetService(CoreServiceKeys.MapSessions, mapSessions);
             SetService(CoreServiceKeys.BoardIdRegistry, BoardIdRegistry);
@@ -220,7 +221,7 @@ namespace Ludots.Core.Engine
             return ctx;
         }
 
-        private void WireMapVariablePhaseDispatcher(MapSession session)
+        private void WireMapVariableChangedDispatcher(MapSession session)
         {
             Gameplay.MapTriggers.MapVariableStore? variables = session?.Variables;
             if (variables == null)
@@ -228,14 +229,31 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            variables.PhaseChangedDispatcher = (mapId, varName, newValue) =>
+            // The closure is bound once per map load; same-value writes never reach it
+            // and the subscriber check below keeps unwatched hot-path writes at zero
+            // cost — no event context is even built.
+            variables.VariableChangedDispatcher = (mapId, varName, type, oldInt, newInt, oldFloat, newFloat) =>
             {
+                if (!TriggerManager.HasMapEventSubscribers(mapId, GameEvents.MapVariableChanged))
+                {
+                    return;
+                }
+
                 ScriptContext ctx = CreateMapEventContext(session!);
                 ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyVarName, varName);
-                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyPhase, newValue);
-                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyVarValueInt, newValue);
+                if (type == Gameplay.MapTriggers.MapVariableType.Int)
+                {
+                    ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyOldValueInt, oldInt);
+                    ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyNewValueInt, newInt);
+                }
+                else
+                {
+                    ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyOldValueFloat, oldFloat);
+                    ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyNewValueFloat, newFloat);
+                }
+
                 CompleteLifecycleEvent(
-                    TriggerManager.FireMapEventAsync(mapId, new EventKey(Gameplay.MapTriggers.MapVariableStore.PhaseChangedEventName), ctx));
+                    TriggerManager.FireMapEventAsync(mapId, GameEvents.MapVariableChanged, ctx));
             };
         }
 

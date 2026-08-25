@@ -38,7 +38,8 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(MapTriggerEventPayloadKeys.VarName, Is.EqualTo("MapTrigger.VarName"));
             Assert.That(MapTriggerEventPayloadKeys.VarValueFloat, Is.EqualTo("MapTrigger.VarValueFloat"));
             Assert.That(MapTriggerEventPayloadKeys.VarValueInt, Is.EqualTo("MapTrigger.VarValueInt"));
-            Assert.That(MapTriggerEventPayloadKeys.Phase, Is.EqualTo("MapTrigger.Phase"));
+            Assert.That(MapTriggerEventPayloadKeys.OldValueInt, Is.EqualTo("MapTrigger.OldValueInt"));
+            Assert.That(MapTriggerEventPayloadKeys.OldValueFloat, Is.EqualTo("MapTrigger.OldValueFloat"));
             Assert.That(MapTriggerEventPayloadKeys.HeartbeatIndex, Is.EqualTo("MapTrigger.HeartbeatIndex"));
         }
 
@@ -51,6 +52,7 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(GameEvents.EntityAliveCountChanged.Value, Is.EqualTo("EntityAliveCountChanged"));
             Assert.That(GameEvents.RegionEntered.Value, Is.EqualTo("RegionEntered"));
             Assert.That(GameEvents.RegionExited.Value, Is.EqualTo("RegionExited"));
+            Assert.That(GameEvents.MapVariableChanged.Value, Is.EqualTo("MapVariableChanged"));
         }
 
         [Test]

@@ -94,5 +94,12 @@ namespace Ludots.Core.Scripting
         /// Payload: SourceEntity, RegionId.
         /// </summary>
         public static readonly EventKey RegionExited = new EventKey("RegionExited");
+
+        /// <summary>
+        /// Map-scoped: fired whenever any declared map variable's value changes
+        /// (int and float alike). Payload: VarName plus the old/new pair matching
+        /// the variable's type (VarValueInt/OldValueInt or VarValueFloat/OldValueFloat).
+        /// </summary>
+        public static readonly EventKey MapVariableChanged = new EventKey("MapVariableChanged");
     }
 }
