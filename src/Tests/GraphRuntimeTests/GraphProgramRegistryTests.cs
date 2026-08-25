@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GraphRuntime
@@ -33,6 +34,7 @@ namespace Ludots.Tests.GraphRuntime
         {
             var registry = new GraphProgramRegistry();
             var atLimit = new GraphInstruction[GraphVmRuntimeLimits.MaxInstructions];
+            atLimit[^1] = new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt };
 
             Assert.That(() => registry.Register(1, atLimit, GraphKind.Effect), Throws.Nothing);
             Assert.That(registry.TryGetProgram(1, out ReadOnlySpan<GraphInstruction> program), Is.True);

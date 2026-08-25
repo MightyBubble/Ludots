@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GraphRuntime
@@ -22,33 +23,42 @@ namespace Ludots.Tests.GraphRuntime
             Assert.That(compiled.Program.Select(i => (GraphVmOpcode)i.Op), Does.Contain(GraphVmOpcode.Yield));
 
             var registry = new GraphProgramRegistry();
-            registry.Register(7, compiled.Program, GraphKind.Effect, compiled.SourceMap);
+            var registeredProgram = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+            };
+            var registeredSourceMap = new GraphInstructionSourceMap(
+                graph.Id,
+                new[] { new GraphInstructionSource(graph.Id, "done", nameof(GraphNodeOp.HaltReturnInt)) });
+            registry.Register(7, registeredProgram, GraphKind.Effect, registeredSourceMap);
 
-            Assert.That(registry.TryGetProgram(7, out var program), Is.True);
+            Assert.That(registry.TryGetProgram(7, out var registeredView), Is.True);
             Assert.That(registry.TryGetKind(7, out GraphKind kind), Is.True);
             Assert.That(kind, Is.EqualTo(GraphKind.Effect));
             Assert.That(registry.RequireKind(7, GraphKind.Effect), Is.EqualTo(GraphKind.Effect));
-            Assert.That(registry.TryGetSourceMap(7, out GraphInstructionSourceMap sourceMap), Is.True);
+            Assert.That(registry.TryGetSourceMap(7, out GraphInstructionSourceMap registeredMap), Is.True);
+            Assert.That(registeredView.Length, Is.EqualTo(registeredProgram.Length));
+            Assert.That(registeredMap.GraphId, Is.EqualTo(graph.Id));
 
             Span<int> ints = stackalloc int[GraphVmRuntimeLimits.MaxIntRegisters];
             Span<byte> bools = stackalloc byte[GraphVmRuntimeLimits.MaxBoolRegisters];
             Span<int> callStack = stackalloc int[GraphVmRuntimeLimits.MaxCallStackDepth];
             var cursor = new GraphVmExecutionCursor();
-            var trace = new RecordingTraceSink(sourceMap);
+            var trace = new RecordingTraceSink(compiled.SourceMap);
 
-            GraphVmExecutionResult first = GraphVmExecutor.ExecuteSlice(program, ints, bools, callStack, ref cursor, 64, trace);
+            GraphVmExecutionResult first = GraphVmExecutor.ExecuteSlice(compiled.Program, ints, bools, callStack, ref cursor, 64, trace);
             Assert.That(first.Yielded, Is.True);
             Assert.That(cursor.CallStackCount, Is.EqualTo(1));
 
-            GraphVmExecutionResult second = GraphVmExecutor.ExecuteSlice(program, ints, bools, callStack, ref cursor, 64, trace);
+            GraphVmExecutionResult second = GraphVmExecutor.ExecuteSlice(compiled.Program, ints, bools, callStack, ref cursor, 64, trace);
             Assert.That(second.Yielded, Is.True);
             Assert.That(cursor.CallStackCount, Is.EqualTo(1));
 
-            GraphVmExecutionResult third = GraphVmExecutor.ExecuteSlice(program, ints, bools, callStack, ref cursor, 64, trace);
+            GraphVmExecutionResult third = GraphVmExecutor.ExecuteSlice(compiled.Program, ints, bools, callStack, ref cursor, 64, trace);
             Assert.That(third.Yielded, Is.True);
             Assert.That(cursor.CallStackCount, Is.EqualTo(1));
 
-            GraphVmExecutionResult fourth = GraphVmExecutor.ExecuteSlice(program, ints, bools, callStack, ref cursor, 64, trace);
+            GraphVmExecutionResult fourth = GraphVmExecutor.ExecuteSlice(compiled.Program, ints, bools, callStack, ref cursor, 64, trace);
 
             Assert.That(fourth.Halted, Is.True);
             Assert.That(fourth.ReturnInt, Is.EqualTo(3));
