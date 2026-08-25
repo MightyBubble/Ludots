@@ -153,10 +153,6 @@ namespace Ludots.Core.Presentation.Systems
                         }
                         break;
 
-                    case PresenterCommandKind.SinkParamToAsset:
-                        HandleSinkParamToAsset(in cmd);
-                        break;
-
                     case PresenterCommandKind.ActivateBehavior:
                         if (World.IsAlive(cmd.PresenterEntity) && World.Has<PresenterState>(cmd.PresenterEntity) && cmd.TargetBehaviorSlot is >= 0 and < 32)
                         {
@@ -617,28 +613,6 @@ namespace Ludots.Core.Presentation.Systems
 
             int capacity = Math.Max(required, _ownerDestroyScratch.Length == 0 ? 8 : _ownerDestroyScratch.Length * 2);
             Array.Resize(ref _ownerDestroyScratch, capacity);
-        }
-
-        private void HandleSinkParamToAsset(in PresenterCommand cmd)
-        {
-            Entity sinkTarget = cmd.PresenterEntity;
-            if ((sinkTarget == Entity.Null || !World.IsAlive(sinkTarget)) &&
-                cmd.PresenterDefinitionId > 0 &&
-                cmd.ScopeTag > 0)
-            {
-                _runtime.TryGetActiveScopedInstance(
-                    cmd.PresenterDefinitionId,
-                    cmd.Source,
-                    cmd.ScopeTag,
-                    cmd.AnchorKind,
-                    cmd.Position,
-                    out sinkTarget);
-            }
-
-            if (World.IsAlive(sinkTarget) && World.Has<PresenterState>(sinkTarget))
-            {
-                _runtime.SinkParamsToAssets(sinkTarget, cmd.HasParamPayload ? cmd.ParamKey : 0, cmd.ParamLane);
-            }
         }
 
         private void HandleInitializeTransform(in PresenterCommand cmd)
