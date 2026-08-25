@@ -135,10 +135,10 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 来源：`mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod/assets/Presentation/presenters.json:370-393`（blacksmith_dynamic_worker_tool_attachment；boneId 骨骼挂点形态见 `mods/fixtures/presenter_schema_reference/PresenterSchemaReferenceMod/assets/Presentation/presenters.json:106-124`）。
 
-### Sound — 声音行为（契约就绪，执行缺口）
+### Sound — 声音行为（已实现）
 
 - **是什么**：按行为激活状态发出 PlayOrUpdate/Stop 声音请求（loop/volume/3D 位置/参数键）。
-- **现状**：与 AssetKind.Sound 同源——`SoundRequestBuffer` 契约在，raylib 侧无音频消费。见 [asset-kinds.md](asset-kinds.md) Sound 条目。**勿在生产 mod 依赖它出声**：以下配置能装载、能随行为激活产出请求，但 raylib 适配器当前不播放。
+- **跑**：行为激活产出 `SoundRequestBuffer` 请求，raylib 适配器 `RaylibSoundConsumer` 播放（距离衰减配置见 [asset-kinds.md](asset-kinds.md) Sound 条目）；preset `capability_standard_sound_showcase_raylib` 可听演示。
 
 契约形态（铁匠铺工人锤打声，由 working tag 的 Activate/DeactivateBehavior 规则驱动）：
 

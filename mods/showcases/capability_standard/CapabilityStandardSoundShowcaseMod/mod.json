@@ -1,0 +1,12 @@
+{
+  "name": "CapabilityStandardSoundShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard showcase for the raylib audio consumer: loop sound with distance attenuation on a moving source, one-shot beacon, and explicit stop.",
+  "main": "bin/net8.0/CapabilityStandardSoundShowcaseMod.dll",
+  "priority": -2000,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "capability-standard", "sound", "audio"]
+}
