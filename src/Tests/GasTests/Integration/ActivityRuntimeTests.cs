@@ -220,6 +220,202 @@ namespace Ludots.Tests.GAS.Integration
                 }));
         }
 
+        [Test]
+        public void DefinitionWithUnknownRepeatPolicy_FailsRegistration()
+        {
+            var definitions = new ActivityDefinitionRegistry();
+            Assert.Throws<InvalidOperationException>(() =>
+                definitions.Register("activity.bad", new ActivityDefinition
+                {
+                    Id = "activity.bad",
+                    SourceKey = "fixture.signal_ping",
+                    DispatchPolicy = ActivityDispatchPolicy.Forced,
+                    RepeatPolicy = (ActivityRepeatPolicy)127,
+                    Options =
+                    {
+                        new ActivityOptionDefinition { Id = "ok", IsBaseline = true },
+                    },
+                }));
+        }
+
+        [Test]
+        public void RepeatableActivity_CreatesTwoInstances()
+        {
+            using World world = World.Create();
+            var services = CreateServices();
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.repeat", new ActivityDefinition
+            {
+                Id = "activity.repeat",
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                RepeatPolicy = ActivityRepeatPolicy.Repeatable,
+                Options =
+                {
+                    new ActivityOptionDefinition { Id = "ok", IsBaseline = true },
+                },
+            });
+
+            var runtime = new ActivityRuntimeService(
+                world,
+                definitions,
+                services,
+                new ActivityPresentationBuffer());
+            Entity scope = world.Create();
+
+            Entity first = runtime.OfferOrActivate("activity.repeat", scope);
+            Entity second = runtime.OfferOrActivate("activity.repeat", scope);
+
+            Assert.That(first, Is.Not.EqualTo(Entity.Null));
+            Assert.That(second, Is.Not.EqualTo(Entity.Null));
+            Assert.That(second, Is.Not.EqualTo(first));
+            Assert.That(world.Get<ActivityInstanceCm>(first).InstanceId,
+                Is.Not.EqualTo(world.Get<ActivityInstanceCm>(second).InstanceId));
+        }
+
+        [Test]
+        public void PendingDedupeActivity_OffersSingleInstanceUntilResolved()
+        {
+            using World world = World.Create();
+            var services = CreateServices();
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.dedupe", new ActivityDefinition
+            {
+                Id = "activity.dedupe",
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                RepeatPolicy = ActivityRepeatPolicy.PendingDedupe,
+                Options =
+                {
+                    new ActivityOptionDefinition { Id = "ok", IsBaseline = true },
+                },
+            });
+
+            var runtime = new ActivityRuntimeService(
+                world,
+                definitions,
+                services,
+                new ActivityPresentationBuffer());
+            Entity scope = world.Create();
+
+            Entity first = runtime.OfferOrActivate("activity.dedupe", scope);
+            Entity second = runtime.OfferOrActivate("activity.dedupe", scope);
+            Assert.That(second, Is.EqualTo(first));
+
+            runtime.ResolveOption(first, "ok");
+            Entity third = runtime.OfferOrActivate("activity.dedupe", scope);
+            Assert.That(third, Is.Not.EqualTo(Entity.Null));
+            Assert.That(third, Is.Not.EqualTo(first));
+        }
+
+        [Test]
+        public void UniqueActivity_RejectsOfferAfterResolution()
+        {
+            using World world = World.Create();
+            var services = CreateServices();
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.unique", new ActivityDefinition
+            {
+                Id = "activity.unique",
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                RepeatPolicy = ActivityRepeatPolicy.Unique,
+                Options =
+                {
+                    new ActivityOptionDefinition { Id = "ok", IsBaseline = true },
+                },
+            });
+
+            var runtime = new ActivityRuntimeService(
+                world,
+                definitions,
+                services,
+                new ActivityPresentationBuffer());
+            Entity scope = world.Create();
+
+            Entity first = runtime.OfferOrActivate("activity.unique", scope);
+            Assert.That(first, Is.Not.EqualTo(Entity.Null));
+            Entity whilePending = runtime.OfferOrActivate("activity.unique", scope);
+            Assert.That(whilePending, Is.EqualTo(first));
+
+            runtime.ResolveOption(first, "ok");
+            Entity rejected = runtime.OfferOrActivate("activity.unique", scope);
+            Assert.That(rejected, Is.EqualTo(Entity.Null));
+            Assert.That(runtime.CaptureViews(), Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void AdmissionRejectionCue_CarriesDefinitionScopeAndReason()
+        {
+            using World world = World.Create();
+            var services = CreateServices();
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.unique", new ActivityDefinition
+            {
+                Id = "activity.unique",
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                RepeatPolicy = ActivityRepeatPolicy.Unique,
+                Options =
+                {
+                    new ActivityOptionDefinition { Id = "ok", IsBaseline = true },
+                },
+            });
+
+            var presentation = new ActivityPresentationBuffer();
+            var runtime = new ActivityRuntimeService(world, definitions, services, presentation);
+            Entity scope = world.Create();
+
+            Entity first = runtime.OfferOrActivate("activity.unique", scope);
+            runtime.ResolveOption(first, "ok");
+            ActivityAdmissionResult result = runtime.OfferOrActivateChecked("activity.unique", scope);
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Instance, Is.EqualTo(Entity.Null));
+            Assert.That(result.RejectionCode, Is.EqualTo(ActivityAdmissionRejections.UniqueAlreadyResolved));
+            Assert.That(presentation.Cues, Has.Some.Matches<ActivityPresentationCue>(c =>
+                c.Kind == ActivityPresentationCueKind.AdmissionRejected &&
+                c.ActivityId == "activity.unique" &&
+                c.ScopeKey == scope.Id &&
+                c.Reason == ActivityAdmissionRejections.UniqueAlreadyResolved));
+        }
+
+        [Test]
+        public void TriggerConditionFailure_EmitsAdmissionRejectionCue()
+        {
+            using World world = World.Create();
+            var services = CreateServices();
+            services.Conditions.Register(
+                "fixture.always_false",
+                new FixtureConditionProvider(false),
+                ProviderParameterSchema.Empty);
+
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.gated", new ActivityDefinition
+            {
+                Id = "activity.gated",
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                TriggerCondition = new ActivityConditionRef { ConditionKey = "fixture.always_false" },
+                Options =
+                {
+                    new ActivityOptionDefinition { Id = "ok", IsBaseline = true },
+                },
+            });
+
+            var presentation = new ActivityPresentationBuffer();
+            var runtime = new ActivityRuntimeService(world, definitions, services, presentation);
+            Entity scope = world.Create();
+
+            Entity offer = runtime.OfferOrActivate("activity.gated", scope);
+            Assert.That(offer, Is.EqualTo(Entity.Null));
+            Assert.That(presentation.Cues, Has.Some.Matches<ActivityPresentationCue>(c =>
+                c.Kind == ActivityPresentationCueKind.AdmissionRejected &&
+                c.ActivityId == "activity.gated" &&
+                c.ScopeKey == scope.Id &&
+                c.Reason == ActivityAdmissionRejections.TriggerConditionFailed));
+        }
+
         private static ProviderServices CreateServices()
         {
             var services = new ProviderServices(allowTestDomainOverride: true);

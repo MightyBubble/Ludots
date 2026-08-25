@@ -45,12 +45,12 @@ SaveSlotStore.ReadSlot / SaveContainerCodec.Decode
 
 ## 组件序列化
 
-Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buffer 组件，所以 Core 显式注册 formatter：
+Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buffer 组件，所以 Core 不允许 persisted component 走 contractless fallback。当前 formatter 入口是 `LudotsCorePersistenceFormatters.CreateFormatters()`：
 
-- unmanaged 组件使用 `UnmanagedComponentFormatter<T>` 做整结构 raw-bytes 序列化。
-- managed 组件必须显式 formatter，目前 `Name` 使用 `NameFormatter`，`MapEntity` 使用 `MapEntityFormatter`。
+- unmanaged 组件使用 `UnmanagedComponentFormatter<T>` 做整结构 raw-bytes 序列化；`AddAutoDiscoveredUnmanagedFormatters()` 扫描已加载的 `Ludots.*` 与 `*Mod` 程序集，自动为不含托管引用的 value type 注册，fixed buffer 组件不需要手写 formatter。
+- 含托管引用的组件必须手写 `IMessagePackFormatter<T>`，实现 `ILudotsPersistenceComponentFormatter`，并在 `CreateFormatters()` 中显式注册。目前 `Name` 使用 `NameFormatter`，`MapEntity` 使用 `MapEntityFormatter`。
+- `LudotsBinaryWorldSerializer.EnsureWorldComponentFormatters()` 在写入前枚举所有纳入存档的实体组件；遇到没有 Ludots formatter 的组件立即抛 `SaveContextException`，不静默降级。
 - formatter 和组件类型集由 `LudotsCorePersistenceFormatters` 静态缓存，`ArchBinarySerializer` 以线程级缓存复用；一次进程内反射发现只应构建一次。
-- 新 unmanaged 组件由 formatter 自动发现覆盖；新 managed 组件必须加入 `LudotsCorePersistenceFormatters`，并补覆盖 fixed buffer、entity-ref 和读回保真度的测试。
 
 `LudotsBinaryWorldSerializer` 在写入前后执行：
 
@@ -59,6 +59,16 @@ Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buff
 - `SaveEntityInclusionPolicy.Default`：排除 `SaveExcludedTag`、`GameplayEvent`、`SimulationBudgetFuseEvent`、`PresentationDestroyPending`。
 
 恢复导入使用消费式 world 转移：`WorldRestoreService` 反序列化得到的 world 由 `LudotsWorldStateImporter.ImportOwnedSnapshotInto` 直接导入目标 world，并在导入后从源 world 解绑已转移的 Arch 内部存储。这样 restore 不再额外执行整世界 serialize/deserialize，也不依赖源 world 后续 `Dispose()` 的内部清理细节。
+
+## 新内容接入存档决策表
+
+| 你新增的内容 | 是否自动进入 `world.bin` | 必须做什么 | 测试要求 |
+|--------------|--------------------------|------------|----------|
+| 纯 unmanaged ECS 组件（含 fixed buffer，不含托管引用） | 是。组件所在程序集被加载后由 `AddAutoDiscoveredUnmanagedFormatters()` 自动注册 formatter | 不手写 formatter。确保组件是 Arch 可挂载的 value type，且实体不被 `SaveEntityInclusionPolicy.Default` 排除 | 组件有 fixed buffer、稀疏槽位或高位索引时，补 Core serializer round-trip 保真测试 |
+| 含托管引用的 ECS 组件（`string`、数组、集合、引用类型字段） | 否。写入闸门 fail-fast | 手写 `IMessagePackFormatter<T>` 并实现 `ILudotsPersistenceComponentFormatter`，在 `LudotsCorePersistenceFormatters.CreateFormatters()` 显式注册 | 补 round-trip 测试与缺 formatter fail-fast 测试，防止回退到 contractless |
+| 含 `Entity` 引用的 ECS 组件或 buffer | formatter 规则同上：unmanaged 自动、managed 显式 | 除 formatter 外，还必须在 `SaveEntityReferenceValidator` 登记有效性校验，并在 `SaveEntityWorldIdNormalizer` 登记读回 WorldId 归一化 | 覆盖引用实体 alive、Id / Version 保真、WorldId 归一化、引用被排除实体时 fail-fast |
+| 非 ECS 域状态（clock、session、registry 外的运行时服务状态） | 否，不进入 `world.bin` | 实现 `ISaveParticipant`，通过 `SaveParticipantRegistry` 贡献 `domains.json`；domain key 必须唯一，不新建平行存档管线 | 补 participant capture / restore 测试，覆盖未知 domain、缺失 domain、重复 domain fail-fast |
+| 不应进入存档的实体或瞬时事件实体 | 否，被策略排除 | 给实体挂 `SaveExcludedTag`，或使用既有排除类型：`GameplayEvent`、`SimulationBudgetFuseEvent`、`PresentationDestroyPending` | 补 inclusion policy 或引用校验测试，确保 persistent 实体不能引用被排除实体 |
 
 ## 非 ECS 域
 
@@ -75,16 +85,19 @@ public interface ISaveParticipant
 
 `SaveParticipantRegistry` 要求 domain key 唯一，读档时拒绝未知 domain，也拒绝缺失已注册 domain。Core 引擎初始化时注册这些 domain：
 
+- `activity`
 - `clock`
 - `gameSession`
 - `inventory`
 - `mapSessions`
 - `narrative`
 - `relationships`
+- `rng`
+- `task`
 - `teams`
 - `timeFlow`
 
-`inventory` 与 `relationships` 当前是空 domain 占位，用来固定存档合同；真正 runtime 状态接入时必须在同一 domain 下深化 participant，不新建平行存档管线。
+`inventory` 是空 domain 占位，用来固定存档合同；`relationships` 的 runtime 索引由 world 里的关系实体在 restore 后重建（`RebuildEntityIndexFromWorld`），capture 为空。真正 runtime 状态接入时必须在同一 domain 下深化 participant，不新建平行存档管线。
 
 ## 容器、槽位与平台边界
 
@@ -122,7 +135,7 @@ Core Save/Load 的验收必须覆盖：
 - 实体纳入/排除策略与 clean tick boundary。
 - Entity Id / WorldId / Version 稳定性和 entity-ref 有效性。
 - Core participant capture / restore。
-- restore 后确定性续跑 trace，必须比较 tick、fixed frame 和稳定 world 状态哈希。
+- restore 后确定性续跑 trace，必须比较 tick、fixed frame 和稳定 world 状态哈希。实体引用的持久身份是 `(Id, Version)`；`WorldId` 是 Arch 进程内计数器分配的实例属性，restore 时由 `SaveEntityWorldIdNormalizer` 归一到目标 world，跨实例比较必须先归一（见 `SaveContinuationTrace` 哈希镜头）。
 - `.ldsave` section hash、header-only listing、原子写入、autosave retention。
 - 既有 showcase UAT：`rts_cnc_training` 存档、变更、读档、续跑一致。
 

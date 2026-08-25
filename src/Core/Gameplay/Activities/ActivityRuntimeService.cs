@@ -25,6 +25,17 @@ namespace Ludots.Core.Gameplay.Activities
 
     public sealed record ActivityRuntimeSnapshot(int NextInstanceId);
 
+    public static class ActivityAdmissionRejections
+    {
+        public const string UniqueAlreadyResolved = "admission.unique_already_resolved";
+        public const string TriggerConditionFailed = "admission.trigger_condition_failed";
+    }
+
+    public readonly record struct ActivityAdmissionResult(Entity Instance, string? RejectionCode)
+    {
+        public bool Accepted => RejectionCode is null;
+    }
+
     public sealed class ActivityRuntimeService
     {
         private static readonly QueryDescription ActivityQuery = new QueryDescription()
@@ -36,6 +47,9 @@ namespace Ludots.Core.Gameplay.Activities
         private readonly ActivityPresentationBuffer _presentation;
         private readonly Dictionary<(int DefinitionId, int ScopeKey), Entity> _index = new();
         private readonly List<Entity> _scratch = new(64);
+        private readonly ForEachWithEntity<ActivityInstanceCm> _resolvedInstanceCollector;
+        private int _collectDefinitionId;
+        private int _collectScopeKey;
         private int _nextInstanceId = 1;
 
         public ActivityRuntimeService(
@@ -48,6 +62,7 @@ namespace Ludots.Core.Gameplay.Activities
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _providers = providers ?? throw new ArgumentNullException(nameof(providers));
             _presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
+            _resolvedInstanceCollector = CollectResolvedInstance;
             RebuildIndexFromWorld();
         }
 
@@ -102,11 +117,25 @@ namespace Ludots.Core.Gameplay.Activities
                     return;
                 }
 
+                if (_definitions.TryGet(activity.DefinitionId, out ActivityDefinition definition) &&
+                    definition.RepeatPolicy == ActivityRepeatPolicy.Repeatable)
+                {
+                    return;
+                }
+
                 _index[(activity.DefinitionId, ScopeKey(activity.ScopeHost))] = entity;
             });
         }
 
         public Entity OfferOrActivate(
+            string activityId,
+            Entity scopeHost,
+            IReadOnlyDictionary<string, object?>? contextBindings = null)
+        {
+            return OfferOrActivateChecked(activityId, scopeHost, contextBindings).Instance;
+        }
+
+        public ActivityAdmissionResult OfferOrActivateChecked(
             string activityId,
             Entity scopeHost,
             IReadOnlyDictionary<string, object?>? contextBindings = null)
@@ -118,15 +147,33 @@ namespace Ludots.Core.Gameplay.Activities
 
             int definitionId = _definitions.GetId(activityId);
             var key = (definitionId, ScopeKey(scopeHost));
-            if (_index.TryGetValue(key, out Entity existing) &&
-                _world.IsAlive(existing) &&
-                _world.Has<ActivityInstanceCm>(existing))
+
+            switch (definition.RepeatPolicy)
             {
-                ref ActivityInstanceCm existingActivity = ref _world.Get<ActivityInstanceCm>(existing);
-                if (existingActivity.State != ActivityInstanceState.Resolved)
-                {
-                    return existing;
-                }
+                case ActivityRepeatPolicy.PendingDedupe:
+                    if (TryGetPendingInstance(key, out Entity pending))
+                    {
+                        return new ActivityAdmissionResult(pending, null);
+                    }
+
+                    break;
+                case ActivityRepeatPolicy.Unique:
+                    if (TryGetPendingInstance(key, out Entity existing))
+                    {
+                        return new ActivityAdmissionResult(existing, null);
+                    }
+
+                    if (HasResolvedInstance(definitionId, ScopeKey(scopeHost)))
+                    {
+                        return Reject(definition, scopeHost, ActivityAdmissionRejections.UniqueAlreadyResolved);
+                    }
+
+                    break;
+                case ActivityRepeatPolicy.Repeatable:
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' has unknown repeat_policy value '{(int)definition.RepeatPolicy}'.");
             }
 
             Dictionary<string, object?> bindings = ProviderContextBinding.CreateBindings(contextBindings);
@@ -134,7 +181,7 @@ namespace Ludots.Core.Gameplay.Activities
             if (definition.TriggerCondition != null &&
                 !EvaluateCondition(definition.TriggerCondition, context))
             {
-                return Entity.Null;
+                return Reject(definition, scopeHost, ActivityAdmissionRejections.TriggerConditionFailed);
             }
 
             int instanceId = _nextInstanceId++;
@@ -149,16 +196,19 @@ namespace Ludots.Core.Gameplay.Activities
                     Revision = 1,
                 });
 
-            _index[key] = entity;
+            if (definition.RepeatPolicy != ActivityRepeatPolicy.Repeatable)
+            {
+                _index[key] = entity;
+            }
 
             if (definition.DispatchPolicy == ActivityDispatchPolicy.Automatic)
             {
                 ResolveAutomatic(entity, definition, context);
-                return entity;
+                return new ActivityAdmissionResult(entity, null);
             }
 
             ActivateForPresentation(entity, definition);
-            return entity;
+            return new ActivityAdmissionResult(entity, null);
         }
 
         public bool TryGetActiveOptions(
@@ -399,6 +449,51 @@ namespace Ludots.Core.Gameplay.Activities
             Dictionary<string, object?> parameters = ProviderParameterValues.NormalizeMap(condition.Parameters);
             schema.Validate(parameters, $"activity.condition.{condition.ConditionKey}");
             return ConditionWriteGuard.EvaluateReadOnly(provider, context, parameters);
+        }
+
+        private bool TryGetPendingInstance((int DefinitionId, int ScopeKey) key, out Entity entity)
+        {
+            if (_index.TryGetValue(key, out entity) &&
+                _world.IsAlive(entity) &&
+                _world.Has<ActivityInstanceCm>(entity) &&
+                _world.Get<ActivityInstanceCm>(entity).State != ActivityInstanceState.Resolved)
+            {
+                return true;
+            }
+
+            entity = Entity.Null;
+            return false;
+        }
+
+        private ActivityAdmissionResult Reject(ActivityDefinition definition, Entity scopeHost, string reasonCode)
+        {
+            _presentation.Add(new ActivityPresentationCue(
+                ActivityPresentationCueKind.AdmissionRejected,
+                definition.Id,
+                InstanceId: 0,
+                OptionId: string.Empty,
+                Reason: reasonCode,
+                ScopeKey: ScopeKey(scopeHost)));
+            return new ActivityAdmissionResult(Entity.Null, reasonCode);
+        }
+
+        private void CollectResolvedInstance(Entity entity, ref ActivityInstanceCm activity)
+        {
+            if (activity.DefinitionId == _collectDefinitionId &&
+                activity.State == ActivityInstanceState.Resolved &&
+                ScopeKey(activity.ScopeHost) == _collectScopeKey)
+            {
+                _scratch.Add(entity);
+            }
+        }
+
+        private bool HasResolvedInstance(int definitionId, int scopeKey)
+        {
+            _collectDefinitionId = definitionId;
+            _collectScopeKey = scopeKey;
+            _scratch.Clear();
+            _world.Query(in ActivityQuery, _resolvedInstanceCollector);
+            return _scratch.Count > 0;
         }
 
         private static int ScopeKey(Entity scopeHost) =>

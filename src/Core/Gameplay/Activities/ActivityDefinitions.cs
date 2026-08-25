@@ -70,6 +70,9 @@ namespace Ludots.Core.Gameplay.Activities
         [JsonPropertyName("dispatch_policy")]
         public ActivityDispatchPolicy DispatchPolicy { get; set; } = ActivityDispatchPolicy.Forced;
 
+        [JsonPropertyName("repeat_policy")]
+        public ActivityRepeatPolicy RepeatPolicy { get; set; } = ActivityRepeatPolicy.PendingDedupe;
+
         [JsonPropertyName("trigger_condition")]
         public ActivityConditionRef? TriggerCondition { get; set; }
 
@@ -168,6 +171,12 @@ namespace Ludots.Core.Gameplay.Activities
             {
                 throw new InvalidOperationException(
                     $"Activity '{definition.Id}' requires source_key.");
+            }
+
+            if (!Enum.IsDefined(typeof(ActivityRepeatPolicy), definition.RepeatPolicy))
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' has unknown repeat_policy value '{(int)definition.RepeatPolicy}'.");
             }
 
             if (definition.DispatchPolicy == ActivityDispatchPolicy.Automatic)
