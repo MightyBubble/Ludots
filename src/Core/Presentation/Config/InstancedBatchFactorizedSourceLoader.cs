@@ -146,6 +146,7 @@ namespace Ludots.Core.Presentation.Config
 
         private JsonObject ReadRoot(string assetUri, string context)
         {
+            ValidateAssetUriShape(assetUri, context);
             try
             {
                 using Stream stream = _vfs.GetStream(assetUri);
@@ -156,10 +157,22 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw;
             }
-            catch (Exception ex) when (ex is FileNotFoundException or ArgumentException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
             {
                 throw new InvalidOperationException(
                     $"{context} references unreadable factorized source asset '{assetUri}': {ex.Message}", ex);
+            }
+        }
+
+        // Shape errors are authoring errors: validate before VFS IO so model/programming
+        // guard exceptions are never relabeled as unreadable assets.
+        private static void ValidateAssetUriShape(string assetUri, string context)
+        {
+            string[] parts = assetUri.Split(new[] { ':' }, 2);
+            if (parts.Length != 2 || parts[0].Length == 0 || parts[1].Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context} declares malformed factorized source assetUri '{assetUri}'. Expected 'ModId:Path/To/File'.");
             }
         }
 
