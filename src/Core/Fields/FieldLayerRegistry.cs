@@ -15,7 +15,6 @@ namespace Ludots.Core.Fields
             int cellSizeCm,
             int chunkSizeCells,
             FieldLayerDefaultValue defaultValue,
-            int updateHz,
             bool persistent,
             string writerDomain,
             int maxRegionIds)
@@ -24,7 +23,7 @@ namespace Ludots.Core.Fields
             EnsureCapacity(id);
             var layerId = new FieldLayerId(id);
             _definitions[id] = new FieldLayerDefinition(
-                layerId, key, kind, cellSizeCm, chunkSizeCells, defaultValue, updateHz, persistent, writerDomain, maxRegionIds);
+                layerId, key, kind, cellSizeCm, chunkSizeCells, defaultValue, persistent, writerDomain, maxRegionIds);
             _registered[id] = true;
             return layerId;
         }

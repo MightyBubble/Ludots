@@ -37,6 +37,12 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CodecConstructor_RejectsNullCodec()
+        {
+            Assert.Throws<ArgumentNullException>(() => new ChunkedField2D<float>(Grid, codec: null!));
+        }
+
+        [Test]
         public void InjectedCodec_IsConsulted_AndMatchesDefaultBehavior()
         {
             var counting = new CountingCodec<float>(FieldValueCodec<float>.Instance);
