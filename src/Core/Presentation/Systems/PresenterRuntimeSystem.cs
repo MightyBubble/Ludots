@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
@@ -30,8 +32,12 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresenterCommandKindRegistry? _extensionCommands;
         private readonly PresenterCommandOps _extensionCommandOps;
         private readonly PresenterTimerTable? _timers;
+        private readonly PresenterAssetEmitRuntime _assetEmitter;
+        private readonly SoundRequestBuffer? _soundRequests;
         private Entity[] _ownerDestroyScratch = Array.Empty<Entity>();
         private int _lastCullSyncStructureVersion = -1;
+
+        public PresenterSinkDiagnostics SinkDiagnostics { get; } = new();
 
         public PresenterRuntimeSystem(
             World world,
@@ -46,7 +52,9 @@ namespace Ludots.Core.Presentation.Systems
             StableDrawCache? stableDrawCache = null,
             PresenterVisualStableIdTable? visualStableIds = null,
             PresenterCommandKindRegistry? extensionCommands = null,
-            PresenterTimerTable? timers = null)
+            PresenterTimerTable? timers = null,
+            Dictionary<string, object>? globals = null,
+            SoundRequestBuffer? soundRequests = null)
             : base(world)
         {
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
@@ -61,7 +69,16 @@ namespace Ludots.Core.Presentation.Systems
             _visualStableIds = visualStableIds;
             _extensionCommands = extensionCommands;
             _timers = timers;
+            _soundRequests = soundRequests;
             _extensionCommandOps = new PresenterCommandOps(World, _runtime, _definitions, MarkHierarchyForBootstrap);
+            _assetEmitter = new PresenterAssetEmitRuntime(
+                World,
+                _runtime,
+                _requests,
+                globals ?? new Dictionary<string, object>(),
+                _animatorStates!,
+                _soundRequests!,
+                _visualStableIds);
             _runtime.BindDefinitions(_definitions);
         }
         public override void Update(in float dt)
@@ -163,6 +180,10 @@ namespace Ludots.Core.Presentation.Systems
                             }
                         }
                         break;
+                    case PresenterCommandKind.SinkParamToAsset:
+                        HandleSinkParamToAsset(in cmd);
+                        break;
+
                     case PresenterCommandKind.InitializeTransform:
                         HandleInitializeTransform(in cmd);
                         break;
@@ -225,6 +246,191 @@ namespace Ludots.Core.Presentation.Systems
         {
             return _timers ?? throw new InvalidOperationException(
                 $"{kind} requires a PresenterTimerTable; this PresenterRuntimeSystem was constructed without one.");
+        }
+
+        private void HandleSinkParamToAsset(in PresenterCommand cmd)
+        {
+            int commandId = ResolveCommandKindId(in cmd);
+
+            Entity target = cmd.PresenterEntity;
+            if ((target == Entity.Null || !World.IsAlive(target) || !World.Has<PresenterState>(target)) &&
+                cmd.PresenterDefinitionId > 0 &&
+                cmd.ScopeTag > 0)
+            {
+                _runtime.TryGetActiveScopedInstance(
+                    cmd.PresenterDefinitionId,
+                    cmd.Source,
+                    cmd.ScopeTag,
+                    cmd.AnchorKind,
+                    cmd.Position,
+                    out target);
+            }
+
+            if (target == Entity.Null || !World.IsAlive(target) || !World.Has<PresenterState>(target))
+            {
+                RejectSinkCommand(in cmd, commandId, Entity.Null, 0, PresenterSinkRejection.TargetPresenterMissing,
+                    "target presenter handle did not resolve to an alive presenter instance");
+                return;
+            }
+
+            ref PresenterState state = ref World.Get<PresenterState>(target);
+            if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition))
+            {
+                RejectSinkCommand(in cmd, commandId, target, state.DefId, PresenterSinkRejection.TargetDefinitionMissing,
+                    $"target presenter definition id={state.DefId} is not registered");
+                return;
+            }
+
+            int slotIndex = cmd.TargetBehaviorSlot;
+            if (slotIndex is < 0 or >= 32)
+            {
+                RejectSinkCommand(in cmd, commandId, target, state.DefId, PresenterSinkRejection.AssetSlotMissing,
+                    $"asset slot index {slotIndex} is outside the valid 0..31 range");
+                return;
+            }
+
+            if ((definition.AssetBindingSlotMask & (1u << slotIndex)) == 0)
+            {
+                RejectSinkCommand(in cmd, commandId, target, state.DefId, PresenterSinkRejection.AssetSlotNotAssetBinding,
+                    $"behavior slot {slotIndex} of definition id={state.DefId} is not an asset slot");
+                return;
+            }
+
+            if (!TryGetBehaviorSlot(definition, slotIndex, out BehaviorSlot slot))
+            {
+                RejectSinkCommand(in cmd, commandId, target, state.DefId, PresenterSinkRejection.AssetSlotMissing,
+                    $"behavior slot {slotIndex} of definition id={state.DefId} is not declared");
+                return;
+            }
+
+            if ((state.BehaviorActiveMask & (1u << slotIndex)) == 0)
+            {
+                RejectSinkCommand(in cmd, commandId, target, state.DefId, PresenterSinkRejection.AssetSlotInactive,
+                    $"behavior slot {slotIndex} of definition id={state.DefId} is deactivated");
+                return;
+            }
+
+            if (!TryReadSinkLaneValue(target, cmd.ParamKey, cmd.ParamLane))
+            {
+                bool presentOnOtherLane =
+                    (cmd.ParamLane != ParamLane.Float && _runtime.TryResolveFloat(target, cmd.ParamKey, out _)) ||
+                    (cmd.ParamLane != ParamLane.Int && _runtime.TryResolveInt(target, cmd.ParamKey, out _)) ||
+                    (cmd.ParamLane != ParamLane.Vector && _runtime.TryResolveVector(target, cmd.ParamKey, out _));
+                RejectSinkCommand(in cmd, commandId, target, state.DefId,
+                    presentOnOtherLane ? PresenterSinkRejection.LaneTypeMismatch : PresenterSinkRejection.LaneMissing,
+                    presentOnOtherLane
+                        ? $"param key {cmd.ParamKey} is present on a different lane than requested {cmd.ParamLane}"
+                        : $"param key {cmd.ParamKey} has no current value on lane {cmd.ParamLane}");
+                return;
+            }
+
+            if (!World.Has<PresenterCullState>(target) ||
+                !World.Has<PresenterWorldPosition>(target) ||
+                !World.Has<PresenterWorldRotation>(target) ||
+                !World.Has<PresenterWorldFacing>(target) ||
+                !World.Has<PresenterWorldScale>(target))
+            {
+                RejectSinkCommand(in cmd, commandId, target, state.DefId, PresenterSinkRejection.TargetEmitComponentsMissing,
+                    $"target presenter is missing emit components required for a synchronous asset write");
+                return;
+            }
+
+            int requestsBefore = _requests.Count;
+            int soundRequestsBefore = _soundRequests?.Count ?? 0;
+            ref readonly PresenterCullState cull = ref World.Get<PresenterCullState>(target);
+            ref readonly PresenterWorldPosition position = ref World.Get<PresenterWorldPosition>(target);
+            ref readonly PresenterWorldRotation rotation = ref World.Get<PresenterWorldRotation>(target);
+            ref readonly PresenterWorldFacing facing = ref World.Get<PresenterWorldFacing>(target);
+            ref readonly PresenterWorldScale scale = ref World.Get<PresenterWorldScale>(target);
+            _assetEmitter.Emit(
+                target,
+                in state,
+                definition,
+                in slot,
+                in slot.AssetBinding,
+                cull.LOD,
+                position.Value,
+                rotation.Value,
+                in facing,
+                scale.Value);
+
+            if (_requests.Count == requestsBefore && (_soundRequests?.Count ?? 0) == soundRequestsBefore)
+            {
+                RejectSinkCommand(in cmd, commandId, target, state.DefId, PresenterSinkRejection.AssetWriteSuppressed,
+                    $"asset kind {slot.AssetBinding.AssetKind} at slot {slotIndex} produced no synchronous write at LOD {cull.LOD}");
+                return;
+            }
+
+            AcceptSinkCommand(in cmd, commandId, target, state.DefId, slotIndex);
+        }
+
+        private static bool TryGetBehaviorSlot(PresenterDefinition definition, int slotIndex, out BehaviorSlot slot)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                if (behaviors[i].SlotIndex == slotIndex)
+                {
+                    slot = behaviors[i];
+                    return true;
+                }
+            }
+
+            slot = default;
+            return false;
+        }
+
+        private bool TryReadSinkLaneValue(Entity target, int paramKey, ParamLane lane)
+        {
+            return lane switch
+            {
+                ParamLane.Float => _runtime.TryResolveFloat(target, paramKey, out _),
+                ParamLane.Int => _runtime.TryResolveInt(target, paramKey, out _),
+                ParamLane.Vector => _runtime.TryResolveVector(target, paramKey, out _),
+                _ => false,
+            };
+        }
+
+        private void AcceptSinkCommand(in PresenterCommand cmd, int commandId, Entity target, int definitionId, int slotIndex)
+        {
+            string message =
+                $"SinkParamToAsset accepted: commandId={commandId} target={target} definitionId={definitionId} " +
+                $"paramKey={cmd.ParamKey} lane={cmd.ParamLane} slot={slotIndex}";
+            SinkDiagnostics.Record(new PresenterSinkOutcome(
+                accepted: true,
+                PresenterSinkRejection.None,
+                commandId,
+                target,
+                definitionId,
+                cmd.ParamKey,
+                cmd.ParamLane,
+                slotIndex,
+                message));
+            Log.Info(LogChannels.Presentation, message);
+        }
+
+        private void RejectSinkCommand(
+            in PresenterCommand cmd,
+            int commandId,
+            Entity target,
+            int definitionId,
+            PresenterSinkRejection rejection,
+            string reason)
+        {
+            string message =
+                $"SinkParamToAsset rejected: reason={rejection} commandId={commandId} target={target} definitionId={definitionId} " +
+                $"paramKey={cmd.ParamKey} lane={cmd.ParamLane} slot={cmd.TargetBehaviorSlot}: {reason}";
+            SinkDiagnostics.Record(new PresenterSinkOutcome(
+                accepted: false,
+                rejection,
+                commandId,
+                target,
+                definitionId,
+                cmd.ParamKey,
+                cmd.ParamLane,
+                cmd.TargetBehaviorSlot,
+                message));
+            Log.Warn(LogChannels.Presentation, message);
         }
 
         private void ReleaseDestroyedOwnerAnchors()

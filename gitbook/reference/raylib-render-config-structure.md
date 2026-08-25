@@ -4,9 +4,11 @@ Raylib 桌面端的全部作者面配置文件：每个文件长什么样、字�
 
 所有 mod 侧文件走 ConfigPipeline 的 `ArrayById` 合并（同 id 多 fragment 按装载序合并，冲突进报告）；跨 mod 资产引用用虚拟 URI `"ModName:assets/…"`。装载错误一律抛出终止，没有静默默认。
 
+五类作者面文件均有 JSON Schema（`assets/Presentation/*.schema.json`，字段集镜像各 ConfigLoader 的 allow-list 并经全仓 78 个配置文件实测零误报，`ludots://presentation/…`，随资产分发供编辑器/工具做结构提示）——**schema 不参与流水线校验**，装载期 fail-loud 合同以各 ConfigLoader 为准（与 `assets/AI/*.schema.json` 同约定）。
+
 ## Presentation/material_assets.json — 材质
 
-装载器：`src/Core/Presentation/Config/PresentationMaterialConfigLoader.cs`（注册进 `PresentationMaterialRegistry`，经 `MaterialAssetResolver` 沿 `parent` 链合并出解析后视图）。
+装载器：`src/Core/Presentation/Config/PresentationMaterialConfigLoader.cs`（注册进 `PresentationMaterialRegistry`，经 `MaterialAssetResolver` 沿 `parent` 链合并出解析后视图）。Schema：`assets/Presentation/material_assets.schema.json`。
 
 ```json
 [
@@ -34,7 +36,7 @@ Raylib 桌面端的全部作者面配置文件：每个文件长什么样、字�
 
 ## Presentation/host_assets.json — 平台资产装订
 
-把平台无关的资产 key 绑到 raylib 后端的实际来源。两种行：
+把平台无关的资产 key 绑到 raylib 后端的实际来源。两种行（Schema：`assets/Presentation/host_assets.schema.json`）：
 
 ```json
 [
@@ -52,12 +54,12 @@ Raylib 桌面端的全部作者面配置文件：每个文件长什么样、字�
 
 ## Presentation/mesh_assets.json — mesh 句柄
 
-装载器：`src/Core/Presentation/Config/MeshAssetConfigLoader.cs`。
+装载器：`src/Core/Presentation/Config/MeshAssetConfigLoader.cs`（Schema：`assets/Presentation/mesh_assets.schema.json`）。
 
 ```json
 [
   { "id": "cube", "type": "Primitive", "primitiveKind": "Cube" },
-  { "id": "demo.soldier", "type": "Model", "sourceUris": ["…"] }
+  { "id": "demo.soldier", "type": "Model" }
 ]
 ```
 
@@ -68,7 +70,11 @@ Raylib 桌面端的全部作者面配置文件：每个文件长什么样、字�
 
 ## Presentation/particle_vfx.json — Quarks 粒子
 
-Quarks schema 的作者面（发射率、生命周期、尺寸区间、`spawnMode` 等），全量字段见 [Quarks Particle Schema](../architecture/quarks-particle-schema.md)。画廊 `particles` 场景是三组效果的活样例（加色火花/贴图烟雾/拉伸火星）。
+Quarks schema 的作者面（发射率、生命周期、尺寸区间、`spawnMode` 等），全量字段见 [Quarks Particle Schema](../architecture/quarks-particle-schema.md)（JSON Schema：`assets/Presentation/particle_vfx.schema.json`）。画廊 `particles` 场景是三组效果的活样例（加色火花/贴图烟雾/拉伸火星）。
+
+## Presentation/presenters.json — 定义与出生规则
+
+定义（组合树：behaviors/children/paramDefaults）与规则（event × condition → command）的完整字段合同见 [Presenter-as-Actor 架构设计](../architecture/presenter-as-actor-architecture.md)与[快速上手](../architecture/presenter-quickstart.md)（JSON Schema：`assets/Presentation/presenters.schema.json`，覆盖 13 种 BehaviorKind、11 种 PresenterCommandKind、36 种 PresentationEventKind，枚举源 `src/Core/Presentation/Presenters/BehaviorSlot.cs`、`src/Core/Presentation/Presenters/PresenterCommandKind.cs`、`src/Platform/Ludots.Platform.Abstractions/PresentationEventKind.cs`）。
 
 ## 环境配置树 — 光照/雾/天空/阴影
 

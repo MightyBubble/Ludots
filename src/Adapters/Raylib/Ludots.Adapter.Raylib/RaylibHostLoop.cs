@@ -304,7 +304,8 @@ namespace Ludots.Adapter.Raylib
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
-                primitiveRenderer.BindReceiverMeshProjector(visualHeightmapRenderer);
+                primitiveRenderer.BindReceiverMeshProjector(
+                    new MapLaneReceiverMeshProjector(engine, visualHeightmapRenderer, terrainRenderer));
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS);
                 skyEnvironment.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
                     engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibSkyEnvironment.DefaultRelativePath));
@@ -577,6 +578,7 @@ namespace Ludots.Adapter.Raylib
                         terrainRenderer.ApplyFrameLighting(frameLighting);
                         visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
                         primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position);
+                        primitiveRenderer.DrawSurfaceWireBoxes = drawDebugDraw;
 
                         bool waterOnVisualHeightmap = waterPass.IsActive &&
                                                       drawTerrain &&
@@ -790,6 +792,7 @@ namespace Ludots.Adapter.Raylib
                             if (visualHeightmap != null)
                             {
                                 visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
+                                terrainRenderer.BindStampHeightSampleSource(visualHeightmap);
                             }
 
                             primitiveRenderer.Draw(
@@ -2258,6 +2261,67 @@ namespace Ludots.Adapter.Raylib
             _terrainSource = new VertexMapTerrainChunkMeshSource(map);
         }
         return _terrainSource;
+    }
+
+    /// <summary>
+    /// 按聚焦地图的车道解析 Decal 接收面：声明 vhtm 渲染源的地图走 visualHeightmapRenderer，
+    /// 只有 VertexMap 的地图走 terrainRenderer，两者皆无则抛错——Decal 没有可退化的占位接收面。
+    /// </summary>
+    private sealed class MapLaneReceiverMeshProjector : Ludots.Raylib.Render.IRaylibReceiverMeshProjector
+    {
+        private readonly GameEngine _engine;
+        private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _visualHeightmapRenderer;
+        private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _terrainRenderer;
+
+        public MapLaneReceiverMeshProjector(
+            GameEngine engine,
+            Ludots.Raylib.Render.IRaylibReceiverMeshProjector visualHeightmapRenderer,
+            Ludots.Raylib.Render.IRaylibReceiverMeshProjector terrainRenderer)
+        {
+            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            _visualHeightmapRenderer = visualHeightmapRenderer ?? throw new ArgumentNullException(nameof(visualHeightmapRenderer));
+            _terrainRenderer = terrainRenderer ?? throw new ArgumentNullException(nameof(terrainRenderer));
+        }
+
+        public int DrawMeshesOverlappingAabbMeters(
+            float minX,
+            float minY,
+            float minZ,
+            float maxX,
+            float maxY,
+            float maxZ,
+            Raylib_cs.Material material)
+        {
+            return ResolveActiveReceiver(nameof(DrawMeshesOverlappingAabbMeters))
+                .DrawMeshesOverlappingAabbMeters(minX, minY, minZ, maxX, maxY, maxZ, material);
+        }
+
+        public System.Numerics.Vector3 FitYawedStampProjectorCenter(
+            in System.Numerics.Vector3 stampCenter,
+            float yawRad,
+            in System.Numerics.Vector2 stampSizeMeters,
+            int stableId)
+        {
+            return ResolveActiveReceiver(nameof(FitYawedStampProjectorCenter))
+                .FitYawedStampProjectorCenter(in stampCenter, yawRad, in stampSizeMeters, stableId);
+        }
+
+        private Ludots.Raylib.Render.IRaylibReceiverMeshProjector ResolveActiveReceiver(string operationName)
+        {
+            if (_engine.TryGetService(CoreServiceKeys.VisualHeightmap, out Ludots.Platform.Abstractions.IVisualHeightmap? heightmap) &&
+                heightmap is Ludots.Platform.Abstractions.IVisualHeightmapRenderSource)
+            {
+                return _visualHeightmapRenderer;
+            }
+
+            if (_engine.VertexMap != null)
+            {
+                return _terrainRenderer;
+            }
+
+            throw new InvalidOperationException(
+                $"Projected Decals require a visual heightmap or VertexMap receiver surface; focused map '{_engine.CurrentMapSession?.MapId.Value ?? "<none>"}' exposes neither ({operationName}).");
+        }
     }
     }
 }
