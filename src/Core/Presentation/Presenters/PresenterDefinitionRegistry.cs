@@ -16,6 +16,9 @@ namespace Ludots.Core.Presentation.Presenters
         private PresenterDefinition[] _items;
         private bool[] _has;
         private readonly CompiledPresenterBootstrapRegistry _bootstrapRegistry = new();
+        private readonly Dictionary<int, PresenterCreatePlan> _createPlans = new();
+        private int _definitionEpoch;
+        private int _compiledCreatePlanEpoch = -1;
         private bool _hasPresenterCreatedRules;
 
         public IReadOnlyList<int> RegisteredIds => _registeredIds;
@@ -54,9 +57,41 @@ namespace Ludots.Core.Presentation.Presenters
                 _registeredIds.Add(id);
             }
             Version++;
+            _definitionEpoch++;
             _bootstrapRegistry.Rebuild(this);
             RebuildPresenterCreatedRuleFlag();
             return id;
+        }
+
+        /// <summary>
+        /// Compiled CreatePresenter command plan for a root definition. Plans flatten the declared
+        /// child subtree (definition children plus instance-children materialization) and are
+        /// cached until any registration change invalidates them.
+        /// </summary>
+        public PresenterCreatePlan GetOrCreateCreatePlan(int definitionId)
+        {
+            if (_compiledCreatePlanEpoch != _definitionEpoch)
+            {
+                _createPlans.Clear();
+                _compiledCreatePlanEpoch = _definitionEpoch;
+            }
+
+            if (!_createPlans.TryGetValue(definitionId, out PresenterCreatePlan? plan))
+            {
+                PresenterDefinition definition = Get(definitionId);
+                plan = PresenterCreatePlanCompiler.Compile(this, definition);
+                _createPlans[definitionId] = plan;
+            }
+
+            return plan;
+        }
+
+        public void CompileAllCreatePlans()
+        {
+            for (int i = 0; i < _registeredIds.Count; i++)
+            {
+                _ = GetOrCreateCreatePlan(_registeredIds[i]);
+            }
         }
 
         public int GetId(string key) => _ids.GetId(key);
@@ -90,6 +125,7 @@ namespace Ludots.Core.Presentation.Presenters
             if (removed)
             {
                 Version++;
+                _definitionEpoch++;
                 _bootstrapRegistry.Rebuild(this);
                 RebuildPresenterCreatedRuleFlag();
             }
