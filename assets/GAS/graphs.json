@@ -200,89 +200,125 @@
   {
     "id": "Graph.BT.Leaf.SeeEnemy",
     "kind": "Script",
-    "entry": "h",
+    "entry": "readDist",
     "nodes": [
-      {
-        "id": "h",
-        "op": "HaltReturnInt"
-      }
+      { "id": "readDist", "op": "MoveInt" },
+      { "id": "sightCm", "op": "ConstInt", "intValue": 551 },
+      { "id": "withinSight", "op": "CompareLtInt" },
+      { "id": "seenBranch", "op": "BranchBool" },
+      { "id": "seenYes", "op": "ConstInt", "intValue": 1 },
+      { "id": "seenNo", "op": "ConstInt", "intValue": 0 },
+      { "id": "haltSeen", "op": "HaltReturnInt" },
+      { "id": "haltNotSeen", "op": "HaltReturnInt" }
     ],
-    "controlEdges": [],
-    "valueEdges": []
+    "controlEdges": [
+      { "from": "readDist", "fromPort": "next", "to": "sightCm" },
+      { "from": "sightCm", "fromPort": "next", "to": "withinSight" },
+      { "from": "withinSight", "fromPort": "next", "to": "seenBranch" },
+      { "from": "seenBranch", "fromPort": "true", "to": "seenYes" },
+      { "from": "seenBranch", "fromPort": "false", "to": "seenNo" },
+      { "from": "seenYes", "fromPort": "next", "to": "haltSeen" },
+      { "from": "seenNo", "fromPort": "next", "to": "haltNotSeen" }
+    ],
+    "valueEdges": [
+      { "from": "readDist", "fromPort": "value", "to": "withinSight", "toPort": "a" },
+      { "from": "sightCm", "fromPort": "value", "to": "withinSight", "toPort": "b" },
+      { "from": "withinSight", "fromPort": "value", "to": "seenBranch", "toPort": "condition" },
+      { "from": "seenYes", "fromPort": "value", "to": "haltSeen", "toPort": "value" },
+      { "from": "seenNo", "fromPort": "value", "to": "haltNotSeen", "toPort": "value" }
+    ]
   },
   {
     "id": "Graph.BT.Leaf.InAttackRange",
     "kind": "Script",
-    "entry": "h",
+    "entry": "readDist",
     "nodes": [
-      {
-        "id": "h",
-        "op": "HaltReturnInt"
-      }
+      { "id": "readDist", "op": "MoveInt" },
+      { "id": "rangeCm", "op": "ConstInt", "intValue": 126 },
+      { "id": "withinRange", "op": "CompareLtInt" },
+      { "id": "rangeBranch", "op": "BranchBool" },
+      { "id": "inRangeYes", "op": "ConstInt", "intValue": 1 },
+      { "id": "inRangeNo", "op": "ConstInt", "intValue": 0 },
+      { "id": "haltInRange", "op": "HaltReturnInt" },
+      { "id": "haltOutOfRange", "op": "HaltReturnInt" }
     ],
-    "controlEdges": [],
-    "valueEdges": []
+    "controlEdges": [
+      { "from": "readDist", "fromPort": "next", "to": "rangeCm" },
+      { "from": "rangeCm", "fromPort": "next", "to": "withinRange" },
+      { "from": "withinRange", "fromPort": "next", "to": "rangeBranch" },
+      { "from": "rangeBranch", "fromPort": "true", "to": "inRangeYes" },
+      { "from": "rangeBranch", "fromPort": "false", "to": "inRangeNo" },
+      { "from": "inRangeYes", "fromPort": "next", "to": "haltInRange" },
+      { "from": "inRangeNo", "fromPort": "next", "to": "haltOutOfRange" }
+    ],
+    "valueEdges": [
+      { "from": "readDist", "fromPort": "value", "to": "withinRange", "toPort": "a" },
+      { "from": "rangeCm", "fromPort": "value", "to": "withinRange", "toPort": "b" },
+      { "from": "withinRange", "fromPort": "value", "to": "rangeBranch", "toPort": "condition" },
+      { "from": "inRangeYes", "fromPort": "value", "to": "haltInRange", "toPort": "value" },
+      { "from": "inRangeNo", "fromPort": "value", "to": "haltOutOfRange", "toPort": "value" }
+    ]
   },
   {
     "id": "Graph.BT.Leaf.Chase",
     "kind": "Script",
-    "entry": "c",
+    "entry": "readDist",
     "nodes": [
-      {
-        "id": "c",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "h",
-        "op": "HaltReturnInt"
-      }
+      { "id": "readDist", "op": "MoveInt" },
+      { "id": "sightCm", "op": "ConstInt", "intValue": 551 },
+      { "id": "targetVisible", "op": "CompareLtInt" },
+      { "id": "visibleBranch", "op": "BranchBool" },
+      { "id": "chaseIntent", "op": "ConstInt", "intValue": 1, "pinRegister": 3 },
+      { "id": "lostIntent", "op": "ConstInt", "intValue": 0, "pinRegister": 3 },
+      { "id": "haltChase", "op": "HaltReturnInt" },
+      { "id": "haltLost", "op": "HaltReturnInt" }
     ],
     "controlEdges": [
-      {
-        "from": "c",
-        "fromPort": "next",
-        "to": "h"
-      }
+      { "from": "readDist", "fromPort": "next", "to": "sightCm" },
+      { "from": "sightCm", "fromPort": "next", "to": "targetVisible" },
+      { "from": "targetVisible", "fromPort": "next", "to": "visibleBranch" },
+      { "from": "visibleBranch", "fromPort": "true", "to": "chaseIntent" },
+      { "from": "visibleBranch", "fromPort": "false", "to": "lostIntent" },
+      { "from": "chaseIntent", "fromPort": "next", "to": "haltChase" },
+      { "from": "lostIntent", "fromPort": "next", "to": "haltLost" }
     ],
     "valueEdges": [
-      {
-        "from": "c",
-        "fromPort": "value",
-        "to": "h",
-        "toPort": "value"
-      }
+      { "from": "readDist", "fromPort": "value", "to": "targetVisible", "toPort": "a" },
+      { "from": "sightCm", "fromPort": "value", "to": "targetVisible", "toPort": "b" },
+      { "from": "targetVisible", "fromPort": "value", "to": "visibleBranch", "toPort": "condition" },
+      { "from": "chaseIntent", "fromPort": "value", "to": "haltChase", "toPort": "value" },
+      { "from": "lostIntent", "fromPort": "value", "to": "haltLost", "toPort": "value" }
     ]
   },
   {
     "id": "Graph.BT.Leaf.Attack",
     "kind": "Script",
-    "entry": "c",
+    "entry": "readDist",
     "nodes": [
-      {
-        "id": "c",
-        "op": "ConstInt",
-        "intValue": 2
-      },
-      {
-        "id": "h",
-        "op": "HaltReturnInt"
-      }
+      { "id": "readDist", "op": "MoveInt" },
+      { "id": "rangeCm", "op": "ConstInt", "intValue": 126 },
+      { "id": "withinRange", "op": "CompareLtInt" },
+      { "id": "rangeBranch", "op": "BranchBool" },
+      { "id": "attackIntent", "op": "ConstInt", "intValue": 2, "pinRegister": 3 },
+      { "id": "holdIntent", "op": "ConstInt", "intValue": 0, "pinRegister": 3 },
+      { "id": "haltAttack", "op": "HaltReturnInt" },
+      { "id": "haltHold", "op": "HaltReturnInt" }
     ],
     "controlEdges": [
-      {
-        "from": "c",
-        "fromPort": "next",
-        "to": "h"
-      }
+      { "from": "readDist", "fromPort": "next", "to": "rangeCm" },
+      { "from": "rangeCm", "fromPort": "next", "to": "withinRange" },
+      { "from": "withinRange", "fromPort": "next", "to": "rangeBranch" },
+      { "from": "rangeBranch", "fromPort": "true", "to": "attackIntent" },
+      { "from": "rangeBranch", "fromPort": "false", "to": "holdIntent" },
+      { "from": "attackIntent", "fromPort": "next", "to": "haltAttack" },
+      { "from": "holdIntent", "fromPort": "next", "to": "haltHold" }
     ],
     "valueEdges": [
-      {
-        "from": "c",
-        "fromPort": "value",
-        "to": "h",
-        "toPort": "value"
-      }
+      { "from": "readDist", "fromPort": "value", "to": "withinRange", "toPort": "a" },
+      { "from": "rangeCm", "fromPort": "value", "to": "withinRange", "toPort": "b" },
+      { "from": "withinRange", "fromPort": "value", "to": "rangeBranch", "toPort": "condition" },
+      { "from": "attackIntent", "fromPort": "value", "to": "haltAttack", "toPort": "value" },
+      { "from": "holdIntent", "fromPort": "value", "to": "haltHold", "toPort": "value" }
     ]
   },
   {
@@ -498,6 +534,122 @@
         "to": "stepAdd",
         "toPort": "b"
       }
+    ]
+  },
+  {
+    "id": "Graph.BT.Tree.PatrolChaseAttack",
+    "kind": "Script",
+    "entry": "root",
+    "nodes": [
+      { "id": "chGo", "op": "ConstInt", "intValue": 1, "pinRegister": 3 },
+      { "id": "chNo", "op": "ConstInt", "intValue": 0, "pinRegister": 3 },
+      { "id": "atGo", "op": "ConstInt", "intValue": 2, "pinRegister": 3 },
+      { "id": "atNo", "op": "ConstInt", "intValue": 0, "pinRegister": 3 },
+      { "id": "patrolIntent", "op": "ConstInt", "intValue": 0, "pinRegister": 3 },
+      { "id": "zeroSteps", "op": "ConstInt", "intValue": 0, "pinRegister": 4 },
+      { "id": "limitSteps", "op": "ConstInt", "intValue": 2, "pinRegister": 5 },
+      { "id": "oneStep", "op": "ConstInt", "intValue": 1, "pinRegister": 6 },
+      { "id": "root", "op": "BtSelector" },
+      { "id": "engage", "op": "BtSequence" },
+      { "id": "engageSelect", "op": "BtSelector" },
+      { "id": "attackSeq", "op": "BtSequence" },
+      { "id": "seRead", "op": "MoveInt" },
+      { "id": "seSight", "op": "ConstInt", "intValue": 551 },
+      { "id": "seCmp", "op": "CompareLtInt" },
+      { "id": "seBranch", "op": "BranchBool" },
+      { "id": "seYes", "op": "ConstInt", "intValue": 1 },
+      { "id": "seNo", "op": "ConstInt", "intValue": 0 },
+      { "id": "irRead", "op": "MoveInt" },
+      { "id": "irRange", "op": "ConstInt", "intValue": 126 },
+      { "id": "irCmp", "op": "CompareLtInt" },
+      { "id": "irBranch", "op": "BranchBool" },
+      { "id": "irYes", "op": "ConstInt", "intValue": 1 },
+      { "id": "irNo", "op": "ConstInt", "intValue": 0 },
+      { "id": "chRead", "op": "MoveInt" },
+      { "id": "chSight", "op": "ConstInt", "intValue": 551 },
+      { "id": "chCmp", "op": "CompareLtInt" },
+      { "id": "chBranch", "op": "BranchBool" },
+      { "id": "atRead", "op": "MoveInt" },
+      { "id": "atRange", "op": "ConstInt", "intValue": 126 },
+      { "id": "atCmp", "op": "CompareLtInt" },
+      { "id": "atBranch", "op": "BranchBool" },
+      { "id": "readStep", "op": "MoveInt" },
+      { "id": "readLimit", "op": "MoveInt" },
+      { "id": "stepBelowLimit", "op": "CompareLtInt" },
+      { "id": "branchNeedStep", "op": "BranchBool" },
+      { "id": "callStep", "op": "Call" },
+      { "id": "patrolDone", "op": "ConstInt", "intValue": 1 },
+      { "id": "stepReadStep", "op": "MoveInt" },
+      { "id": "stepReadOne", "op": "MoveInt" },
+      { "id": "stepYield", "op": "Yield" },
+      { "id": "stepAdd", "op": "AddInt", "pinRegister": 4 }
+    ],
+    "controlEdges": [
+      { "from": "root", "fromPort": "child:0", "to": "engage" },
+      { "from": "root", "fromPort": "child:1", "to": "patrolIntent" },
+      { "from": "engage", "fromPort": "child:0", "to": "seRead" },
+      { "from": "engage", "fromPort": "child:1", "to": "engageSelect" },
+      { "from": "engageSelect", "fromPort": "child:0", "to": "attackSeq" },
+      { "from": "engageSelect", "fromPort": "child:1", "to": "chRead" },
+      { "from": "attackSeq", "fromPort": "child:0", "to": "irRead" },
+      { "from": "attackSeq", "fromPort": "child:1", "to": "atRead" },
+      { "from": "seRead", "fromPort": "next", "to": "seSight" },
+      { "from": "seSight", "fromPort": "next", "to": "seCmp" },
+      { "from": "seCmp", "fromPort": "next", "to": "seBranch" },
+      { "from": "seBranch", "fromPort": "true", "to": "seYes" },
+      { "from": "seBranch", "fromPort": "false", "to": "seNo" },
+      { "from": "irRead", "fromPort": "next", "to": "irRange" },
+      { "from": "irRange", "fromPort": "next", "to": "irCmp" },
+      { "from": "irCmp", "fromPort": "next", "to": "irBranch" },
+      { "from": "irBranch", "fromPort": "true", "to": "irYes" },
+      { "from": "irBranch", "fromPort": "false", "to": "irNo" },
+      { "from": "chRead", "fromPort": "next", "to": "chSight" },
+      { "from": "chSight", "fromPort": "next", "to": "chCmp" },
+      { "from": "chCmp", "fromPort": "next", "to": "chBranch" },
+      { "from": "chBranch", "fromPort": "true", "to": "chGo" },
+      { "from": "chBranch", "fromPort": "false", "to": "chNo" },
+      { "from": "atRead", "fromPort": "next", "to": "atRange" },
+      { "from": "atRange", "fromPort": "next", "to": "atCmp" },
+      { "from": "atCmp", "fromPort": "next", "to": "atBranch" },
+      { "from": "atBranch", "fromPort": "true", "to": "atGo" },
+      { "from": "atBranch", "fromPort": "false", "to": "atNo" },
+      { "from": "patrolIntent", "fromPort": "next", "to": "zeroSteps" },
+      { "from": "zeroSteps", "fromPort": "next", "to": "limitSteps" },
+      { "from": "limitSteps", "fromPort": "next", "to": "oneStep" },
+      { "from": "oneStep", "fromPort": "next", "to": "readStep" },
+      { "from": "readStep", "fromPort": "next", "to": "readLimit" },
+      { "from": "readLimit", "fromPort": "next", "to": "stepBelowLimit" },
+      { "from": "stepBelowLimit", "fromPort": "next", "to": "branchNeedStep" },
+      { "from": "branchNeedStep", "fromPort": "true", "to": "callStep" },
+      { "from": "branchNeedStep", "fromPort": "false", "to": "patrolDone" },
+      { "from": "callStep", "fromPort": "call", "to": "stepReadStep" },
+      { "from": "callStep", "fromPort": "next", "to": "readStep" },
+      { "from": "stepReadStep", "fromPort": "next", "to": "stepReadOne" },
+      { "from": "stepReadOne", "fromPort": "next", "to": "stepYield" },
+      { "from": "stepYield", "fromPort": "next", "to": "stepAdd" }
+    ],
+    "valueEdges": [
+      { "from": "seRead", "fromPort": "value", "to": "seCmp", "toPort": "a" },
+      { "from": "seSight", "fromPort": "value", "to": "seCmp", "toPort": "b" },
+      { "from": "seCmp", "fromPort": "value", "to": "seBranch", "toPort": "condition" },
+      { "from": "irRead", "fromPort": "value", "to": "irCmp", "toPort": "a" },
+      { "from": "irRange", "fromPort": "value", "to": "irCmp", "toPort": "b" },
+      { "from": "irCmp", "fromPort": "value", "to": "irBranch", "toPort": "condition" },
+      { "from": "chRead", "fromPort": "value", "to": "chCmp", "toPort": "a" },
+      { "from": "chSight", "fromPort": "value", "to": "chCmp", "toPort": "b" },
+      { "from": "chCmp", "fromPort": "value", "to": "chBranch", "toPort": "condition" },
+      { "from": "atRead", "fromPort": "value", "to": "atCmp", "toPort": "a" },
+      { "from": "atRange", "fromPort": "value", "to": "atCmp", "toPort": "b" },
+      { "from": "atCmp", "fromPort": "value", "to": "atBranch", "toPort": "condition" },
+      { "from": "zeroSteps", "fromPort": "value", "to": "readStep", "toPort": "value" },
+      { "from": "limitSteps", "fromPort": "value", "to": "readLimit", "toPort": "value" },
+      { "from": "readStep", "fromPort": "value", "to": "stepBelowLimit", "toPort": "a" },
+      { "from": "readLimit", "fromPort": "value", "to": "stepBelowLimit", "toPort": "b" },
+      { "from": "stepBelowLimit", "fromPort": "value", "to": "branchNeedStep", "toPort": "condition" },
+      { "from": "zeroSteps", "fromPort": "value", "to": "stepReadStep", "toPort": "value" },
+      { "from": "oneStep", "fromPort": "value", "to": "stepReadOne", "toPort": "value" },
+      { "from": "stepReadStep", "fromPort": "value", "to": "stepAdd", "toPort": "a" },
+      { "from": "stepReadOne", "fromPort": "value", "to": "stepAdd", "toPort": "b" }
     ]
   },
   {
