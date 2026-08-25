@@ -23,7 +23,7 @@ public sealed class PersistenceOnlineReplayRuntime
     private readonly List<string> _log = new(12);
     private readonly List<AuthoritativeAction> _actionBuffer = new(16);
     private readonly List<ReplayVisualMarker> _checkpointVisuals = new(8);
-    private readonly SaveSlotStore _slots;
+    private SaveSlotStore? _slots;
     private GameEngine? _engine;
     private ReplayRecorder? _recorder;
     private ReplayArchive? _archive;
@@ -49,8 +49,6 @@ public sealed class PersistenceOnlineReplayRuntime
     public PersistenceOnlineReplayRuntime(IModContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ludots", "persistence-online-replay");
-        _slots = new SaveSlotStore(new FileSaveStorage(root));
         _panel = new PersistenceOnlineReplayPanelController(this);
     }
 
@@ -64,6 +62,10 @@ public sealed class PersistenceOnlineReplayRuntime
         }
         Activate(engine.GetService(CoreServiceKeys.InputHandler));
         _engine = engine;
+        if (engine.GetService(CoreServiceKeys.SaveStorage) is { } storage)
+        {
+            _slots = new SaveSlotStore(storage);
+        }
         TryLoadReplayAsset();
         RefreshPanel(engine);
         return Task.CompletedTask;
@@ -113,8 +115,9 @@ public sealed class PersistenceOnlineReplayRuntime
         try
         {
             if (_checkpoint == null) throw new SaveContextException("Capture a checkpoint before saving.");
+            if (_slots == null) throw new SaveContextException("Engine save storage service is not available.");
             _slots.WriteSlot(SaveSlotId.Manual("showcase"), _checkpoint);
-            _status = $"Saved manual/showcase at tick {_checkpoint.Header.Tick}. Cold-start path: {_slotsPath()}";
+            _status = $"Saved manual/showcase at tick {_checkpoint.Header.Tick} into the host Saves root (saves/manual/showcase.ldsave).";
             Log(_status);
         }
         catch (Exception ex) { Fail(ex); }
@@ -126,6 +129,7 @@ public sealed class PersistenceOnlineReplayRuntime
         if (CurrentEngine() is not { } engine) return;
         try
         {
+            if (_slots == null) throw new SaveContextException("Engine save storage service is not available.");
             WorldSaveSnapshot snapshot = _slots.ReadSlot(SaveSlotId.Manual("showcase"));
             new WorldRestoreService().Restore(engine, snapshot);
             _checkpoint = snapshot;
@@ -336,7 +340,6 @@ public sealed class PersistenceOnlineReplayRuntime
 
     private GameEngine? CurrentEngine() => _engine;
     private static void Activate(Ludots.Core.Input.Runtime.PlayerInputHandler? input) => input?.PushContext(PersistenceOnlineReplayShowcaseIds.InputContext);
-    private string _slotsPath() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ludots", "persistence-online-replay", "saves", "manual", "showcase.ldsave");
     private string ReplayPath() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ludots", "persistence-online-replay", "replays", "showcase.ldreplay");
     private void TryLoadReplayAsset()
     {
