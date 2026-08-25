@@ -7,6 +7,13 @@ namespace Ludots.Core.Presentation.Presenters
     {
         public const int AllTimersId = -1;
 
+        /// <summary>
+        /// Reserved name of the engine-compiled lifecycle timer that backs
+        /// lifecycle.durationSeconds. Authoring this name in config is rejected;
+        /// cancelling it tears the transient presenter down immediately.
+        /// </summary>
+        public const string DurationTimerName = "presenter.duration";
+
         private static StringIntRegistry _ids = CreateRegistry();
 
         public static int Register(string name) => _ids.Register(Canonicalize(name));

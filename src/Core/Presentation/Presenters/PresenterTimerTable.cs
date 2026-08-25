@@ -152,6 +152,11 @@ namespace Ludots.Core.Presentation.Presenters
             return true;
         }
 
+        public bool Contains(int ownerStableId, int nameId)
+        {
+            return nameId > 0 && FindIndexSlot(KeyOf(ownerStableId, nameId)) >= 0;
+        }
+
         public int KillAll(int ownerStableId)
         {
             int removed = 0;

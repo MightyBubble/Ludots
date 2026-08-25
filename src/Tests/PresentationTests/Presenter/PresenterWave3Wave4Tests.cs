@@ -1031,7 +1031,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PresenterEmitSystem_OwnerCulled_StillExpiresLifetimeInstances()
+        public void PresenterEmitSystem_OwnerCulled_DoesNotDestroyLifetimeInstances()
         {
             using var world = World.Create();
             Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
@@ -1074,7 +1074,8 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            Assert.That(world.IsAlive(presenter), Is.False);
+            Assert.That(world.IsAlive(presenter), Is.True,
+                "销毁只经 TimerSet → TimerExpired → Rule → DestroyPresenter 链；EmitSystem 不再有 lifetime 销毁分支");
             Assert.That(requests.Count, Is.EqualTo(0));
         }
 

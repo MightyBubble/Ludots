@@ -831,8 +831,7 @@ namespace Ludots.Core.Presentation.Systems
                     }
 
                     bool ownerDead = state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity);
-                    bool lifetimeExpired = state.DefaultLifetime > 0f && state.Elapsed + deltaTime >= state.DefaultLifetime;
-                    if (!ownerDead && !lifetimeExpired)
+                    if (!ownerDead)
                     {
                         continue;
                     }
@@ -840,7 +839,7 @@ namespace Ludots.Core.Presentation.Systems
                     RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
                     RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
                     RemoveReplayCache(entity);
-                    if (ownerDead || lifetimeExpired)
+                    if (ownerDead)
                     {
                         _pendingDestroy.Add(entity);
                     }
@@ -869,17 +868,6 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             if (state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity))
-            {
-                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
-                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
-                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
-                RemoveReplayCache(entity);
-                _pendingDestroy.Add(entity);
-                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
-                return;
-            }
-
-            if (state.DefaultLifetime > 0f && state.Elapsed >= state.DefaultLifetime)
             {
                 RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
                 RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);

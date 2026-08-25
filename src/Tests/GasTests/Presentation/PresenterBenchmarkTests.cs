@@ -62,6 +62,8 @@ namespace Ludots.Tests.Presentation
         private PresenterRuntimeSystem _runtimeSystem;
         private PresenterBehaviorSystem _behaviorSystem;
         private PresenterEmitSystem _emitSystem;
+        private PresenterTimerTable _timers;
+        private PresenterTimerSystem _timerSystem;
         private PresentationStableIdAllocator _stableIds;
         private int _healthAttrId;
         private int _healthBarDefId;
@@ -100,7 +102,9 @@ namespace Ludots.Tests.Presentation
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
             _projection = new GameplayPresentationProjectionSystem(_world, _eventBus, _presEvents, session, _gasEvents, _ownerChanges);
             _ruleSystem = new PresenterRuleSystem(_world, _presEvents, _commands, _defs, _instances, _programs, graphApi, _globals);
-            _runtimeSystem = new PresenterRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
+            _timers = new PresenterTimerTable(16384);
+            _timerSystem = new PresenterTimerSystem(_world, _timers, _presEvents);
+            _runtimeSystem = new PresenterRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs, timers: _timers);
             _behaviorSystem = new PresenterBehaviorSystem(_world, _instances, _defs, _presEvents, _ownerChanges, _soundRequests);
             _emitSystem = new PresenterEmitSystem(_world, _instances, _defs, _requests, _globals);
             _flush = new PresentationRequestFlushSystem(_world, _requests, new MeshAssetRegistry(), stableDrawCache, _primitives, _overlays, _hud, _splineRibbons, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
@@ -113,6 +117,7 @@ namespace Ludots.Tests.Presentation
             _behaviorSystem?.Dispose();
             _flush?.Dispose();
             _runtimeSystem?.Dispose();
+            _timerSystem?.Dispose();
             _ruleSystem?.Dispose();
             _projection?.Dispose();
             _world?.Dispose();
@@ -150,6 +155,7 @@ namespace Ludots.Tests.Presentation
         {
             ClearOutputBuffers();
             _projection.Update(dt);
+            _timerSystem.Update(dt);
             _ruleSystem.Update(dt);
             _runtimeSystem.Update(dt);
             _behaviorSystem.Update(0f);

@@ -14,6 +14,11 @@ namespace Ludots.Core.Presentation.Presenters
         public uint BehaviorActiveMask;
         public float Elapsed;
         public int Version;
-        public float DefaultLifetime;
+
+        /// <summary>
+        /// Instance of a lifecycle.durationSeconds definition: bounded by its compiled
+        /// timer chain, therefore excluded from persistent scoped-instance reuse.
+        /// </summary>
+        public bool Transient;
     }
 }

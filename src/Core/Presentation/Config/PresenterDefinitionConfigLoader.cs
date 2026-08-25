@@ -541,6 +541,7 @@ namespace Ludots.Core.Presentation.Config
 
             def.Id = _registry.GetId(key);
 
+            AppendCompiledDurationRules(def);
             ValidateAssetVisibilityParamProduction(key, def);
             StampRuleOwners(def.Id, def.Rules);
             return (key, def);
@@ -1029,6 +1030,56 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
+        /// <summary>
+        /// lifecycle.durationSeconds compiles into two rules: PresenterCreated arms the
+        /// reserved duration timer on the spawned instance, and its TimerExpired rule is
+        /// the only scheduled destroy entry. The authored duration stays on the definition
+        /// for fade/cue-marker authoring reads; runtime lifetime accounting is timer-only.
+        /// </summary>
+        private static void AppendCompiledDurationRules(PresenterDefinition def)
+        {
+            if (def.DefaultLifetime <= 0f)
+            {
+                return;
+            }
+
+            int durationNameId = PresenterTimerNameRegistry.Register(PresenterTimerNameRegistry.DurationTimerName);
+            PresenterRule[] authored = def.Rules ?? Array.Empty<PresenterRule>();
+            var rules = new PresenterRule[authored.Length + 2];
+            Array.Copy(authored, rules, authored.Length);
+            rules[^2] = new PresenterRule
+            {
+                Event = new EventFilter
+                {
+                    Kind = PresentationEventKind.PresenterCreated,
+                    KeyId = def.Id,
+                },
+                Command = new PresenterCommand
+                {
+                    CommandKind = PresenterCommandKind.TimerSet,
+                    CommandKindId = (byte)PresenterCommandKind.TimerSet,
+                    RouteStrategy = ResolveBuiltinCommandRoute(PresenterCommandKind.TimerSet, presenterDefinitionId: 0),
+                    TimerNameId = durationNameId,
+                    TimerDurationSeconds = def.DefaultLifetime,
+                },
+            };
+            rules[^1] = new PresenterRule
+            {
+                Event = new EventFilter
+                {
+                    Kind = PresentationEventKind.TimerExpired,
+                    KeyId = durationNameId,
+                },
+                Command = new PresenterCommand
+                {
+                    CommandKind = PresenterCommandKind.DestroyPresenter,
+                    CommandKindId = (byte)PresenterCommandKind.DestroyPresenter,
+                    RouteStrategy = ResolveBuiltinCommandRoute(PresenterCommandKind.DestroyPresenter, presenterDefinitionId: 0),
+                },
+            };
+            def.Rules = rules;
+        }
+
         private static float ParseLifecycle(JsonNode? node, string key, string path)
         {
             if (node == null)
@@ -1319,6 +1370,12 @@ namespace Ludots.Core.Presentation.Config
             }
 
             string name = ParseRequiredSemanticString(node, $"{context}.timerName");
+            if (string.Equals(name, PresenterTimerNameRegistry.DurationTimerName, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"{context}.timerName \"{name}\" is reserved for the compiled lifecycle.durationSeconds timer and cannot be authored.");
+            }
+
             if (string.Equals(name, "*", StringComparison.Ordinal))
             {
                 if (commandKind == PresenterCommandKind.TimerKill)
@@ -2279,6 +2336,13 @@ namespace Ludots.Core.Presentation.Config
                             childKey = parsedKey;
                             break;
                         }
+                    }
+
+                    if (parsedByKey[childKey].DefaultLifetime > 0f)
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter '{key}' child[{i}] references duration-authored definition '{childKey}'. "
+                            + "lifecycle.durationSeconds is a root-presenter contract: child creation bypasses PresenterCreated, so its duration timer could never arm.");
                     }
 
                     if (string.IsNullOrWhiteSpace(childKey))

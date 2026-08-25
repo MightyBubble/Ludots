@@ -207,6 +207,16 @@ namespace Ludots.Core.Presentation.Systems
                         {
                             ref readonly PresenterState timerOwner = ref World.Get<PresenterState>(cmd.PresenterEntity);
                             PresenterTimerTable table = RequireTimerTable(PresenterCommandKind.TimerKill);
+                            // Killing the compiled duration timer cancels the instance's only
+                            // scheduled destroy, so the transient presenter is torn down now
+                            // through the destroy funnel instead of leaking.
+                            int durationNameId = PresenterTimerNameRegistry.GetId(PresenterTimerNameRegistry.DurationTimerName);
+                            if (durationNameId > 0 && table.Contains(timerOwner.StableId, durationNameId))
+                            {
+                                _runtime.Destroy(cmd.PresenterEntity, EmitDestroyedEvent);
+                                break;
+                            }
+
                             if (cmd.TimerNameId == PresenterTimerNameRegistry.AllTimersId)
                             {
                                 table.KillAll(timerOwner.StableId);
