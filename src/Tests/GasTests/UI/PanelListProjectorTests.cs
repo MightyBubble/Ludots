@@ -29,7 +29,7 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void Project_FiltersSortsAndProjectsScalars()
+        public void Project_PreservesGraphOrderAndFillsColumns()
         {
             int healthId = AttributeRegistry.Register("Health");
             int stunnedId = TagRegistry.Register("Status.Stunned");
@@ -43,8 +43,6 @@ namespace Ludots.Tests.GasTests.UI
                 {
                   "name": "units",
                   "collectionKey": "tests.roster",
-                  "filter": [ { "kind": "attribute", "attribute": "Health", "op": "gt", "value": 0 } ],
-                  "sort": [ { "attribute": "Health", "descending": true } ],
                   "item": {
                     "fields": [
                       { "name": "displayName", "kind": "name" },
@@ -65,7 +63,6 @@ namespace Ludots.Tests.GasTests.UI
             Entity owner = world.Create();
             Entity high = CreateUnit(world, "A", healthId, 90f, stunnedId, stunned: false);
             Entity mid = CreateUnit(world, "B", healthId, 70f, stunnedId, stunned: true);
-            Entity dead = CreateUnit(world, "C", healthId, 0f, stunnedId, stunned: false);
 
             var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
             var store = new EntityCollectionStore(keyRegistry, 8, 16);
@@ -73,7 +70,8 @@ namespace Ludots.Tests.GasTests.UI
                 "tests.roster",
                 EntityCollectionSourceKind.GasGraphResult,
                 EntityCollectionRoleKind.Display);
-            store.Replace(owner, descriptor, new[] { high, mid, dead });
+            // Graph already sorted / filtered — projector must keep this order.
+            store.Replace(owner, descriptor, new[] { high, mid });
 
             var projector = new PanelListProjector(world, store);
             IReadOnlyList<PanelListProjection> lists = projector.Project(owner, template);

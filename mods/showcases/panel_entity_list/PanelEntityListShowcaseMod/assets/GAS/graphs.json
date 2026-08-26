@@ -30,15 +30,27 @@
     "nodes": [
       { "id": "all", "op": "QueryAllMapEntities" },
       { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
+      { "id": "minHp", "op": "ConstFloat", "floatValue": 0.001 },
+      { "id": "maxHp", "op": "ConstFloat", "floatValue": 999999 },
+      { "id": "alive", "op": "QueryFilterAttributeRange", "attribute": "Health" },
+      { "id": "sorted", "op": "QuerySortByAttribute", "attribute": "Health", "descending": true },
       { "id": "rowCount", "op": "AggCount" }
     ],
     "controlEdges": [
       { "from": "all", "fromPort": "next", "to": "team" },
-      { "from": "team", "fromPort": "next", "to": "rowCount" }
+      { "from": "team", "fromPort": "next", "to": "minHp" },
+      { "from": "minHp", "fromPort": "next", "to": "maxHp" },
+      { "from": "maxHp", "fromPort": "next", "to": "alive" },
+      { "from": "alive", "fromPort": "next", "to": "sorted" },
+      { "from": "sorted", "fromPort": "next", "to": "rowCount" }
     ],
     "valueEdges": [
       { "from": "all", "fromPort": "list", "to": "team", "toPort": "list" },
-      { "from": "team", "fromPort": "list", "to": "rowCount", "toPort": "list" }
+      { "from": "team", "fromPort": "list", "to": "alive", "toPort": "list" },
+      { "from": "minHp", "fromPort": "value", "to": "alive", "toPort": "min" },
+      { "from": "maxHp", "fromPort": "value", "to": "alive", "toPort": "max" },
+      { "from": "alive", "fromPort": "list", "to": "sorted", "toPort": "list" },
+      { "from": "sorted", "fromPort": "list", "to": "rowCount", "toPort": "list" }
     ],
     "outputs": [
       {
@@ -48,7 +60,7 @@
         "collectionKey": "panel.roster.units",
         "role": "Display",
         "title": "Roster Units",
-        "summary": "Team 1 units for the entity list panel."
+        "summary": "Alive team-1 units sorted by Health descending."
       },
       {
         "id": "rowCount",

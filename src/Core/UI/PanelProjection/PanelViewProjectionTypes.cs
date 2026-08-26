@@ -12,49 +12,12 @@ namespace Ludots.Core.UI.PanelProjection
         Name = 3,
     }
 
-    public enum PanelAttributeFilterOp : byte
-    {
-        Gt = 0,
-        Gte = 1,
-        Lt = 2,
-        Lte = 3,
-        Eq = 4,
-    }
-
     public enum PanelLayoutControlType : byte
     {
         Label = 0,
         ProgressBar = 1,
         Badge = 2,
         List = 3,
-    }
-
-    public sealed class PanelListFilter
-    {
-        public PanelListFilter(string attribute, PanelAttributeFilterOp op, float value)
-        {
-            Attribute = attribute;
-            Op = op;
-            Value = value;
-        }
-
-        public string Attribute { get; }
-        public PanelAttributeFilterOp Op { get; }
-        public float Value { get; }
-        public int AttributeId { get; internal set; } = -1;
-    }
-
-    public sealed class PanelListSort
-    {
-        public PanelListSort(string attribute, bool descending)
-        {
-            Attribute = attribute;
-            Descending = descending;
-        }
-
-        public string Attribute { get; }
-        public bool Descending { get; }
-        public int AttributeId { get; internal set; } = -1;
     }
 
     public sealed class PanelItemField
@@ -72,26 +35,24 @@ namespace Ludots.Core.UI.PanelProjection
         public int SymbolId { get; internal set; } = -1;
     }
 
+    /// <summary>
+    /// List declaration: points at a graph EntityCollection and declares row scalar columns.
+    /// Membership and order are owned by the query graph — no filter/sort here.
+    /// </summary>
     public sealed class PanelListDeclaration
     {
         public PanelListDeclaration(
             string name,
             string collectionKey,
-            IReadOnlyList<PanelListFilter> filters,
-            IReadOnlyList<PanelListSort> sorts,
             IReadOnlyList<PanelItemField> fields)
         {
             Name = name;
             CollectionKey = collectionKey;
-            Filters = filters;
-            Sorts = sorts;
             Fields = fields;
         }
 
         public string Name { get; }
         public string CollectionKey { get; }
-        public IReadOnlyList<PanelListFilter> Filters { get; }
-        public IReadOnlyList<PanelListSort> Sorts { get; }
         public IReadOnlyList<PanelItemField> Fields { get; }
     }
 

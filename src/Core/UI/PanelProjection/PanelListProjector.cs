@@ -9,8 +9,8 @@ using Ludots.Core.Gameplay.GAS.Registry;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Projects EntityCollection rows into homogeneous scalar bags per list declaration
-    /// (filter → sort → item field binds). Controls never see Entity handles.
+    /// Binds EntityCollection rows to scalar columns declared by <see cref="PanelListDeclaration"/>.
+    /// Membership and order come from the query graph; this type does not filter or sort.
     /// </summary>
     public sealed class PanelListProjector
     {
@@ -28,16 +28,6 @@ namespace Ludots.Core.UI.PanelProjection
             ArgumentNullException.ThrowIfNull(template);
             foreach (PanelListDeclaration list in template.Lists)
             {
-                foreach (PanelListFilter filter in list.Filters)
-                {
-                    filter.AttributeId = AttributeRegistry.GetId(filter.Attribute);
-                }
-
-                foreach (PanelListSort sort in list.Sorts)
-                {
-                    sort.AttributeId = AttributeRegistry.GetId(sort.Attribute);
-                }
-
                 foreach (PanelItemField field in list.Fields)
                 {
                     field.SymbolId = field.Kind switch
@@ -69,65 +59,24 @@ namespace Ludots.Core.UI.PanelProjection
 
         private PanelListProjection ProjectList(Entity scope, PanelListDeclaration list)
         {
-            var members = new List<Entity>(16);
+            var items = new List<PanelListItemProjection>(16);
             if (_collections.TryGet(scope, list.CollectionKey, out EntityCollectionHandle handle) &&
                 _collections.TryGetView(handle, out EntityCollectionView view))
             {
                 for (int i = 0; i < view.Count; i++)
                 {
-                    if (_collections.TryGetEntityAt(handle, i, out Entity entity) &&
-                        entity != Entity.Null &&
-                        _world.IsAlive(entity) &&
-                        PassesFilters(entity, list.Filters))
+                    if (!_collections.TryGetEntityAt(handle, i, out Entity entity) ||
+                        entity == Entity.Null ||
+                        !_world.IsAlive(entity))
                     {
-                        members.Add(entity);
+                        continue;
                     }
+
+                    items.Add(ProjectItem(entity, list.Fields));
                 }
-            }
-
-            if (list.Sorts.Count > 0)
-            {
-                PanelListSort primary = list.Sorts[0];
-                members.Sort((left, right) =>
-                {
-                    float a = ReadAttribute(left, primary.AttributeId);
-                    float b = ReadAttribute(right, primary.AttributeId);
-                    int cmp = a.CompareTo(b);
-                    return primary.Descending ? -cmp : cmp;
-                });
-            }
-
-            var items = new List<PanelListItemProjection>(members.Count);
-            foreach (Entity entity in members)
-            {
-                items.Add(ProjectItem(entity, list.Fields));
             }
 
             return new PanelListProjection(list.Name, items);
-        }
-
-        private bool PassesFilters(Entity entity, IReadOnlyList<PanelListFilter> filters)
-        {
-            for (int i = 0; i < filters.Count; i++)
-            {
-                PanelListFilter filter = filters[i];
-                float value = ReadAttribute(entity, filter.AttributeId);
-                bool pass = filter.Op switch
-                {
-                    PanelAttributeFilterOp.Gt => value > filter.Value,
-                    PanelAttributeFilterOp.Gte => value >= filter.Value,
-                    PanelAttributeFilterOp.Lt => value < filter.Value,
-                    PanelAttributeFilterOp.Lte => value <= filter.Value,
-                    PanelAttributeFilterOp.Eq => Math.Abs(value - filter.Value) <= 0.0001f,
-                    _ => false,
-                };
-                if (!pass)
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         private PanelListItemProjection ProjectItem(Entity entity, IReadOnlyList<PanelItemField> fields)

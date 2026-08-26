@@ -165,7 +165,7 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void Load_ListsAndLayout_ParsesFilterSortFieldsAndControls()
+        public void Load_ListsAndLayout_ParsesColumnsAndControls()
         {
             const string json = """
             {
@@ -176,8 +176,6 @@ namespace Ludots.Tests.GasTests.UI
                 {
                   "name": "units",
                   "collectionKey": "tests.collection.units",
-                  "filter": [ { "kind": "attribute", "attribute": "Health", "op": "gt", "value": 0 } ],
-                  "sort": [ { "attribute": "Health", "descending": true } ],
                   "item": {
                     "fields": [
                       { "name": "displayName", "kind": "name" },
@@ -205,12 +203,34 @@ namespace Ludots.Tests.GasTests.UI
 
             PanelTemplate template = PanelTemplateLoader.Load(json);
             Assert.That(template.Lists.Count, Is.EqualTo(1));
-            Assert.That(template.Lists[0].Filters[0].Op, Is.EqualTo(PanelAttributeFilterOp.Gt));
-            Assert.That(template.Lists[0].Sorts[0].Descending, Is.True);
             Assert.That(template.Lists[0].Fields[2].Kind, Is.EqualTo(PanelItemFieldKind.Tag));
             Assert.That(template.Layout, Is.Not.Null);
             Assert.That(template.Layout!.Controls[1].Type, Is.EqualTo(PanelLayoutControlType.List));
             Assert.That(template.Layout.Controls[1].ItemControls[1].ShowWhen, Is.True);
+        }
+
+        [Test]
+        public void Load_ListFilterOrSort_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.badfilter",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "lists": [
+                {
+                  "name": "units",
+                  "collectionKey": "c",
+                  "filter": [ { "kind": "attribute", "attribute": "Health", "op": "gt", "value": 0 } ],
+                  "item": { "fields": [ { "name": "health", "kind": "attribute", "attribute": "Health" } ] }
+                }
+              ]
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("filter"));
         }
 
         [Test]

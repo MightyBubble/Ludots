@@ -18,15 +18,7 @@ namespace Ludots.Core.UI.PanelProjection
         private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
         private static readonly HashSet<string> ListFields = new(StringComparer.Ordinal)
         {
-            "name", "collectionKey", "filter", "sort", "item"
-        };
-        private static readonly HashSet<string> FilterFields = new(StringComparer.Ordinal)
-        {
-            "kind", "attribute", "op", "value"
-        };
-        private static readonly HashSet<string> SortFields = new(StringComparer.Ordinal)
-        {
-            "attribute", "descending"
+            "name", "collectionKey", "item"
         };
         private static readonly HashSet<string> ItemFieldFields = new(StringComparer.Ordinal)
         {
@@ -149,76 +141,6 @@ namespace Ludots.Core.UI.PanelProjection
                 string name = RequireString(listObject, "name", $"panel template '{templateId}' list");
                 string collectionKey = RequireString(listObject, "collectionKey", $"panel template '{templateId}' list '{name}'");
 
-                var filters = new List<PanelListFilter>();
-                if (listObject["filter"] is JsonArray filterNode)
-                {
-                    foreach (JsonNode? filterEntry in filterNode)
-                    {
-                        if (filterEntry is not JsonObject filterObject)
-                        {
-                            throw new InvalidOperationException(
-                                $"Panel template '{templateId}' list '{name}' filter entries must be objects.");
-                        }
-
-                        RejectUnknownFields(filterObject, FilterFields, $"panel template '{templateId}' list '{name}' filter");
-                        string kind = OptionalString(filterObject, "kind") ?? "attribute";
-                        if (!string.Equals(kind, "attribute", StringComparison.Ordinal))
-                        {
-                            throw new InvalidOperationException(
-                                $"Panel template '{templateId}' list '{name}' filter kind must be 'attribute'.");
-                        }
-
-                        string attribute = RequireString(filterObject, "attribute", $"panel template '{templateId}' list '{name}' filter");
-                        string opText = RequireString(filterObject, "op", $"panel template '{templateId}' list '{name}' filter");
-                        if (!TryParseFilterOp(opText, out PanelAttributeFilterOp op))
-                        {
-                            throw new InvalidOperationException(
-                                $"Panel template '{templateId}' list '{name}' filter op '{opText}' is unknown (gt/gte/lt/lte/eq).");
-                        }
-
-                        if (filterObject["value"] is not JsonValue valueNode ||
-                            !valueNode.TryGetValue<double>(out double valueRaw))
-                        {
-                            throw new InvalidOperationException(
-                                $"Panel template '{templateId}' list '{name}' filter requires numeric 'value'.");
-                        }
-
-                        filters.Add(new PanelListFilter(attribute, op, (float)valueRaw));
-                    }
-                }
-                else if (listObject["filter"] is not null)
-                {
-                    throw new InvalidOperationException($"Panel template '{templateId}' list '{name}' filter must be an array.");
-                }
-
-                var sorts = new List<PanelListSort>();
-                if (listObject["sort"] is JsonArray sortNode)
-                {
-                    foreach (JsonNode? sortEntry in sortNode)
-                    {
-                        if (sortEntry is not JsonObject sortObject)
-                        {
-                            throw new InvalidOperationException(
-                                $"Panel template '{templateId}' list '{name}' sort entries must be objects.");
-                        }
-
-                        RejectUnknownFields(sortObject, SortFields, $"panel template '{templateId}' list '{name}' sort");
-                        string attribute = RequireString(sortObject, "attribute", $"panel template '{templateId}' list '{name}' sort");
-                        bool descending = false;
-                        if (sortObject["descending"] is JsonValue descNode &&
-                            descNode.TryGetValue<bool>(out bool descValue))
-                        {
-                            descending = descValue;
-                        }
-
-                        sorts.Add(new PanelListSort(attribute, descending));
-                    }
-                }
-                else if (listObject["sort"] is not null)
-                {
-                    throw new InvalidOperationException($"Panel template '{templateId}' list '{name}' sort must be an array.");
-                }
-
                 if (listObject["item"] is not JsonObject itemObject)
                 {
                     throw new InvalidOperationException($"Panel template '{templateId}' list '{name}' requires an 'item' object.");
@@ -271,7 +193,7 @@ namespace Ludots.Core.UI.PanelProjection
                     fields.Add(new PanelItemField(fieldName, kind, symbol));
                 }
 
-                lists.Add(new PanelListDeclaration(name, collectionKey, filters, sorts, fields));
+                lists.Add(new PanelListDeclaration(name, collectionKey, fields));
             }
 
             return lists;
@@ -436,31 +358,6 @@ namespace Ludots.Core.UI.PanelProjection
                     }
 
                     break;
-            }
-        }
-
-        private static bool TryParseFilterOp(string text, out PanelAttributeFilterOp op)
-        {
-            switch (text)
-            {
-                case "gt":
-                    op = PanelAttributeFilterOp.Gt;
-                    return true;
-                case "gte":
-                    op = PanelAttributeFilterOp.Gte;
-                    return true;
-                case "lt":
-                    op = PanelAttributeFilterOp.Lt;
-                    return true;
-                case "lte":
-                    op = PanelAttributeFilterOp.Lte;
-                    return true;
-                case "eq":
-                    op = PanelAttributeFilterOp.Eq;
-                    return true;
-                default:
-                    op = default;
-                    return false;
             }
         }
 

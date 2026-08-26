@@ -47,14 +47,14 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
         Entity commander = FindEntity(engine.World, "指挥官");
         PanelInstanceHandle panel = FindPanel(panelHost, commander);
         Assert.That(panelHost.TryGetValues(panel, out PanelVariableSet values), Is.True);
-        Assert.That(values.Get("rowCount"), Is.EqualTo(5f).Within(0.001f),
-            "Graph team filter keeps five team-1 units including the fallen scout.");
+        Assert.That(values.Get("rowCount"), Is.EqualTo(4f).Within(0.001f),
+            "Graph alive+team filter must make rowCount match the projected list length.");
 
         Assert.That(panelHost.TryGetListProjections(panel, out IReadOnlyList<PanelListProjection> lists), Is.True);
         Assert.That(lists.Count, Is.EqualTo(1));
         PanelListProjection units = lists[0];
         Assert.That(units.Name, Is.EqualTo("units"));
-        Assert.That(units.Items.Count, Is.EqualTo(4), "Template Health>0 filter drops the fallen scout.");
+        Assert.That(units.Items.Count, Is.EqualTo(4), "Graph already dropped the fallen scout.");
 
         string[] expectedOrder = { "指挥官", "医师", "晕眩卫士", "弓手" };
         float[] expectedHealth = { 100f, 97f, 80f, 64f };
@@ -95,8 +95,8 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
             who: "关卡作者 / 玩家",
             what: "左侧名册按血量降序列出存活单位，晕眩卫士带徽标",
             where: "screen.topLeft panel.entity.list",
-            why: "验证 lists/layout 声明式过滤排序与 tag 徽标",
-            how: "图写出 EntityCollection；模板 filter/sort/item.fields；layout list+badge");
+            why: "验证图侧过滤排序 + 面板只绑列与 tag 徽标",
+            how: "查询图 EntityCollection；模板 lists 只声明列；layout list+badge");
     }
 
     private static GameEngine CreateEngine(string repoRoot)
