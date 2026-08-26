@@ -32,6 +32,11 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
     public float IntruderX => _ix;
     public float IntruderY => _iy;
     public bool IntruderAlive => _intruderAlive;
+    /// <summary>Featured band drives Graph.FSM.Sentry through GraphFsmHost (FSM-1a).</summary>
+    public bool FeaturedUsesGraphFsmHost => _fsmHost != null;
+    /// <summary>Crowd band is intentional no-graph pressure (HfsmWorld), not a second graph claim.</summary>
+    public bool CrowdUsesNoGraphHfsmWorld => _crowd != null;
+    public int CrowdAgentCount => _crowd?.Count ?? 0;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_hfsm_sentry_arena" };
 
     /// <summary>Featured band phase source (FSM-1a): per-agent map variable driven by Graph.FSM.Sentry.</summary>

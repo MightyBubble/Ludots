@@ -694,6 +694,8 @@ namespace Ludots.Tests.Gas.Graph
                 GraphNodeOp.StoreArgEntity,
                 GraphNodeOp.DispatchMapEvent,
                 GraphNodeOp.LoadPlacedEntity,
+                GraphNodeOp.LoadPlacedRegion,
+                GraphNodeOp.LoadPlacedAnchor,
             };
             foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(GraphKind.TriggerGraph))
             {

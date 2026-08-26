@@ -206,7 +206,7 @@ namespace Ludots.Core.GraphRuntime
         public int Slot { get; set; }
         /// <summary>Named event payload key (a MapTriggerEventPayloadKeys constant) for LoadEntryPayload* ops.</summary>
         public string? PayloadKey { get; set; }
-        /// <summary>Placed entity InstanceId for LoadPlacedEntity (#1108); validated fail-closed against the mounting map's catalog at mount time.</summary>
+        /// <summary>Placed InstanceId for LoadPlacedEntity / LoadPlacedRegion / LoadPlacedAnchor (#1108); validated fail-closed against the mounting map's catalog at mount time.</summary>
         public string? InstanceId { get; set; }
         /// <summary>Optional TriggerGraph entry label for InvokeGraph; omitted → target entry table [0].</summary>
         public string? EntryLabel { get; set; }

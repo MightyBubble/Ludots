@@ -112,6 +112,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
+        private Func<MapId, IReadOnlySet<string>?>? _regionCatalogResolver;
         private Ludots.Core.Scripting.TriggerManager? _triggerManager;
         private Ludots.Core.GraphRuntime.GraphCallbackService? _graphCallbacks;
         private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
@@ -242,6 +243,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindPlacedInstanceIndexResolver(Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?> resolver)
         {
             _placedInstanceIndexResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
+        /// Resolves a map id to its authored Regions id set (#1108 LoadPlacedRegion).
+        /// Bound next to the placed-instance index; never writes into EntityIndex.
+        /// </summary>
+        public void BindRegionCatalogResolver(Func<MapId, System.Collections.Generic.IReadOnlySet<string>?> resolver)
+        {
+            _regionCatalogResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         }
 
         /// <summary>
@@ -405,6 +415,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 ?? throw new InvalidOperationException(
                     $"GAS.GRAPH.ERR.PlacedInstanceNameUnknown: placed-instance op references unregistered config key id {instanceKeyId}.");
             return index.TryGet(instanceId, out entity);
+        }
+
+        public bool TryHasPlacedRegion(int regionKeyId, MapId mapId)
+        {
+            var resolver = _regionCatalogResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.RegionCatalogUnavailable");
+            IReadOnlySet<string> catalog = resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.RegionCatalogUnavailable: map '{mapId.Value}' has no live region catalog.");
+            string regionId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(regionKeyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.PlacedRegionNameUnknown: LoadPlacedRegion references unregistered config key id {regionKeyId}.");
+            return catalog.Contains(regionId);
         }
 
         /// <summary>

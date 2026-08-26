@@ -142,6 +142,153 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void Compile_LoadPlacedAnchor_RequiresAnchorInInstanceId()
+        {
+            GraphControlFlowCompileResult bad = GraphControlFlowCompiler.Compile(new GraphControlFlowDocument
+            {
+                Id = GraphName,
+                Kind = "TriggerGraph",
+                Entries = new List<TriggerGraphEntryConfig>
+                {
+                    new() { Label = "probe", Event = "EntityDied", Start = "read" },
+                },
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "read", Op = "LoadPlacedAnchor", InstanceId = "boss_camp" },
+                    new() { Id = "halt", Op = "HaltReturnInt" },
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("read", "next", "halt"),
+                },
+            });
+            Assert.That(bad.Diagnostics.Any(d => d.Message.Contains("anchor")), Is.True);
+
+            GraphControlFlowCompileResult good = GraphControlFlowCompiler.Compile(new GraphControlFlowDocument
+            {
+                Id = GraphName,
+                Kind = "TriggerGraph",
+                Entries = new List<TriggerGraphEntryConfig>
+                {
+                    new() { Label = "probe", Event = "EntityDied", Start = "read" },
+                },
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "read", Op = "LoadPlacedAnchor", InstanceId = "camp_anchor" },
+                    new() { Id = "halt", Op = "HaltReturnInt" },
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("read", "next", "halt"),
+                },
+            });
+            Assert.That(good.Diagnostics.Where(d => d.Message.Contains("anchor")).ToList(), Is.Empty);
+            Assert.That(good.Package, Is.Not.Null);
+        }
+
+        [Test]
+        public void Mount_UnknownRegionId_FailsClosed()
+        {
+            using var world = World.Create();
+            MapSession session = CreateSession(world, registeredInstances: Array.Empty<string>(), regionIds: new[] { "yard" });
+            var programs = new GraphProgramRegistry();
+            RegisterTriggerGraphOp(programs, GraphNodeOp.LoadPlacedRegion, "ghost_yard");
+
+            string? message = null;
+            try
+            {
+                Ludots.Core.Gameplay.MapTriggers.TriggerGraphMounting.BuildTriggers(session, programs, entityMounts: null);
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
+
+            Assert.That(message, Is.Not.Null);
+            Assert.That(message, Does.Contain("ghost_yard"));
+            Assert.That(message, Does.Contain("LoadPlacedRegion"));
+        }
+
+        [Test]
+        public void Mount_CataloguedRegionId_BuildsTriggers()
+        {
+            using var world = World.Create();
+            MapSession session = CreateSession(world, registeredInstances: Array.Empty<string>(), regionIds: new[] { "yard" });
+            var programs = new GraphProgramRegistry();
+            RegisterTriggerGraphOp(programs, GraphNodeOp.LoadPlacedRegion, "yard");
+
+            List<Trigger> triggers = Ludots.Core.Gameplay.MapTriggers.TriggerGraphMounting.BuildTriggers(
+                session, programs, entityMounts: null);
+
+            Assert.That(triggers.OfType<Ludots.Core.Gameplay.MapTriggers.TriggerGraphMountTrigger>().Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Mount_LoadPlacedAnchor_NonAnchorInstance_FailsClosed()
+        {
+            using var world = World.Create();
+            MapSession session = CreateSession(world, registeredInstances: new[] { "boss_camp" });
+            var programs = new GraphProgramRegistry();
+            RegisterTriggerGraphOp(programs, GraphNodeOp.LoadPlacedAnchor, "boss_camp");
+
+            string? message = null;
+            try
+            {
+                Ludots.Core.Gameplay.MapTriggers.TriggerGraphMounting.BuildTriggers(session, programs, entityMounts: null);
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
+
+            Assert.That(message, Is.Not.Null);
+            Assert.That(message, Does.Contain("LoadPlacedAnchor"));
+            Assert.That(message, Does.Contain("anchor"));
+        }
+
+        [Test]
+        public void Execute_LoadPlacedRegion_WritesPresenceInt()
+        {
+            using var world = World.Create();
+            var api = new GasGraphRuntimeApi(world);
+            var catalog = new HashSet<string>(StringComparer.Ordinal) { "yard" };
+            api.BindRegionCatalogResolver(mapId => mapId.Value == MapId ? catalog : null);
+
+            GraphInstruction[] hit =
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadPlacedRegion, Dst = 3, Imm = ConfigKeyRegistry.Register("yard") },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+            GraphInstruction[] miss =
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadPlacedRegion, Dst = 3, Imm = ConfigKeyRegistry.Register("missing") },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+
+            Assert.That(Execute(api, world, world.Create(), hit, new MapId(MapId)).I[3], Is.EqualTo(1));
+            Assert.That(Execute(api, world, world.Create(), miss, new MapId(MapId)).I[3], Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Execute_LoadPlacedAnchor_LoadsEntity()
+        {
+            using var world = World.Create();
+            Entity anchor = world.Create();
+            var api = new GasGraphRuntimeApi(world);
+            var index = new MapLoadEntityIndex();
+            index.Register(MapId, "camp_anchor", anchor);
+            api.BindPlacedInstanceIndexResolver(mapId => mapId.Value == MapId ? index : null);
+
+            GraphInstruction[] program =
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadPlacedAnchor, Dst = 2, Imm = ConfigKeyRegistry.Register("camp_anchor") },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+
+            Assert.That(Execute(api, world, world.Create(), program, new MapId(MapId)).E[2], Is.EqualTo(anchor));
+        }
+
+        [Test]
         public void Execute_UnregisteredInstance_WritesEntityNullWithoutThrow()
         {
             using var world = World.Create();
@@ -221,10 +368,21 @@ namespace Ludots.Tests.Gas.Graph
                 Throws.InvalidOperationException.With.Message.Contains("\"all\" or \"declared\""));
         }
 
-        private static MapSession CreateSession(World world, string[] registeredInstances)
+        private static MapSession CreateSession(World world, string[] registeredInstances, string[]? regionIds = null)
         {
             var config = new MapConfig { Id = MapId };
             config.TriggerGraphs = JsonNode.Parse($$"""[ { "graph": "{{GraphName}}" } ]""");
+            if (regionIds != null && regionIds.Length > 0)
+            {
+                var regions = new JsonArray();
+                for (int i = 0; i < regionIds.Length; i++)
+                {
+                    regions.Add(JsonNode.Parse($$"""{ "id": "{{regionIds[i]}}", "shape": "circle", "x": 0, "y": 0, "radiusCm": 100 }"""));
+                }
+
+                config.Regions = regions;
+            }
+
             var session = new MapSession(new MapId(MapId), config);
             var index = new MapLoadEntityIndex();
             for (int i = 0; i < registeredInstances.Length; i++)
@@ -238,11 +396,14 @@ namespace Ludots.Tests.Gas.Graph
 
         private static void RegisterTriggerGraph(GraphProgramRegistry programs, string instanceId)
         {
+            RegisterTriggerGraphOp(programs, GraphNodeOp.LoadPlacedEntity, instanceId);
+        }
+
+        private static void RegisterTriggerGraphOp(GraphProgramRegistry programs, GraphNodeOp op, string instanceId)
+        {
             GraphInstruction[] program =
             {
-                // Mirrors the symbol-patched state the loader produces before mounting:
-                // Imm is a ConfigKeyRegistry id, not a symbol-table index.
-                new() { Op = (ushort)GraphNodeOp.LoadPlacedEntity, Dst = 2, Imm = ConfigKeyRegistry.Register(instanceId) },
+                new() { Op = (ushort)op, Dst = 2, Imm = ConfigKeyRegistry.Register(instanceId) },
                 new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
             int id = GraphIdRegistry.Register(GraphName);

@@ -6,7 +6,21 @@
     { "name": "trust", "type": "int", "initial": 0 },
     { "name": "lore", "type": "int", "initial": 0 },
     { "name": "ending", "type": "int", "initial": 0 },
-    { "name": "trial_phase", "type": "int", "initial": 0 }
+    { "name": "trial_phase", "type": "int", "initial": 0 },
+    { "name": "dialog_await_ack", "type": "int", "initial": 0 },
+    { "name": "signal_ack", "type": "int", "initial": 0 }
+  ],
+  "TriggerGraphs": [
+    { "graph": "Graph.Narrative.Wire.AwaitDialogConfirm", "scopeInstanceId": "narrative_arcweaver" }
+  ],
+  "Regions": [
+    {
+      "id": "narrative_shrine_zone",
+      "shape": "circle",
+      "x": 1740,
+      "y": 960,
+      "radiusCm": 220
+    }
   ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",

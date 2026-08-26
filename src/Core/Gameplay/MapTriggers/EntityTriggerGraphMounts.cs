@@ -212,7 +212,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     ownerLabel,
                     customEvents,
                     session.EntityIndex,
-                    _triggerManager.EventSchemas));
+                    _triggerManager.EventSchemas,
+                    TriggerGraphMounting.CollectRegionIds(session)));
             }
 
             return triggers;

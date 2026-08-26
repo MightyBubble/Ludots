@@ -192,6 +192,7 @@ def write_map(
     camera: dict | None = None,
     template_teams: dict[str, int] | None = None,
     variables: list[dict] | None = None,
+    regions: list | None = None,
 ) -> None:
     if not actors:
         raise SystemExit(f"Map {map_id} has no actors; per-op galleries must spawn people through MapLoader.")
@@ -212,6 +213,10 @@ def write_map(
     }
     if variables:
         payload["Variables"] = variables
+    if regions:
+        if not isinstance(regions, list):
+            raise SystemExit(f"Map {map_id} regions must be an array.")
+        payload["Regions"] = regions
     teams = collect_team_bindings(actors, template_teams or {})
     if teams:
         payload["Teams"] = teams
@@ -480,6 +485,7 @@ def main() -> int:
             scene.get("camera"),
             template_teams,
             map_variables_from_vignette(op, scene),
+            scene.get("regions"),
         )
         write_entry_mod(repo, op, title)
 
