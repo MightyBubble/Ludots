@@ -302,11 +302,13 @@ static int RegionsColor(string[] commandArgs)
 {
     (CellsDocument document, _, string path) = OpenDocument(commandArgs);
     string key = RequireOption(commandArgs, "--key");
+    JsonObject before = PrepareMutation(path, document);
     string color = FieldEditorMetadataStore.SetColor(
         path,
         document,
         key,
         RequireOption(commandArgs, "--color"));
+    HistoryStore.PushSnapshot(path, document.LayerKey, before);
     Console.WriteLine($"{key} = {color}");
     return 0;
 }
@@ -546,8 +548,7 @@ static int Session(string[] commandArgs)
 
 static JsonObject PrepareMutation(string path, CellsDocument document)
 {
-    HistoryStore.GetActiveBrushKey(path, document.LayerKey);
-    return HistoryStore.CaptureSnapshot(document);
+    return HistoryStore.CaptureSnapshot(path, document);
 }
 
 static void CommitMutation(

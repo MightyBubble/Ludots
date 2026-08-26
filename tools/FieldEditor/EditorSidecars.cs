@@ -12,11 +12,22 @@ namespace Ludots.Tools.FieldEditor
 
         public static void Push(string assetPath, CellsDocument snapshot)
         {
-            PushSnapshot(assetPath, snapshot.LayerKey, CaptureSnapshot(snapshot));
+            HistoryState state = Load(assetPath, snapshot.LayerKey);
+            state.Undo.Add(CreateSnapshot(
+                assetPath,
+                snapshot,
+                state.ActiveBrushKey));
+            state.Redo.Clear();
+            Save(assetPath, state);
         }
 
-        internal static JsonObject CaptureSnapshot(CellsDocument document) =>
-            document.ToSnapshotJson();
+        internal static JsonObject CaptureSnapshot(
+            string assetPath,
+            CellsDocument document)
+        {
+            HistoryState state = Load(assetPath, document.LayerKey);
+            return CreateSnapshot(assetPath, document, state.ActiveBrushKey);
+        }
 
         internal static void PushSnapshot(
             string assetPath,
@@ -37,19 +48,24 @@ namespace Ludots.Tools.FieldEditor
                 return null;
             }
 
-            JsonObject previousNode = SnapshotAt(
+            HistoryEntry previousEntry = SnapshotAt(
                 state.Undo,
                 state.Undo.Count - 1,
                 HistoryPath(assetPath));
             CellsDocument previous = CellsDocument.LoadSnapshot(
-                (JsonObject)previousNode.DeepClone(),
+                (JsonObject)previousEntry.Cells.DeepClone(),
                 current.LayerKey,
                 current.Field.Grid.ChunkSizeCells,
                 HistoryPath(assetPath));
 
-            state.Redo.Add(current.ToSnapshotJson());
+            state.Redo.Add(CreateSnapshot(assetPath, current, state.ActiveBrushKey));
             state.Undo.RemoveAt(state.Undo.Count - 1);
             current.RestoreFrom(previous);
+            FieldEditorMetadataStore.RestoreColors(
+                assetPath,
+                current,
+                previousEntry.RegionColors);
+            RestoreActiveBrush(state, current, previousEntry.ActiveBrushKey);
             Save(assetPath, state);
             return current;
         }
@@ -62,19 +78,24 @@ namespace Ludots.Tools.FieldEditor
                 return null;
             }
 
-            JsonObject nextNode = SnapshotAt(
+            HistoryEntry nextEntry = SnapshotAt(
                 state.Redo,
                 state.Redo.Count - 1,
                 HistoryPath(assetPath));
             CellsDocument next = CellsDocument.LoadSnapshot(
-                (JsonObject)nextNode.DeepClone(),
+                (JsonObject)nextEntry.Cells.DeepClone(),
                 current.LayerKey,
                 current.Field.Grid.ChunkSizeCells,
                 HistoryPath(assetPath));
 
-            state.Undo.Add(current.ToSnapshotJson());
+            state.Undo.Add(CreateSnapshot(assetPath, current, state.ActiveBrushKey));
             state.Redo.RemoveAt(state.Redo.Count - 1);
             current.RestoreFrom(next);
+            FieldEditorMetadataStore.RestoreColors(
+                assetPath,
+                current,
+                nextEntry.RegionColors);
+            RestoreActiveBrush(state, current, nextEntry.ActiveBrushKey);
             Save(assetPath, state);
             return current;
         }
@@ -186,11 +207,48 @@ namespace Ludots.Tools.FieldEditor
             EditorSidecarJson.WriteAtomic(HistoryPath(assetPath), root);
         }
 
-        private static JsonObject SnapshotAt(JsonArray snapshots, int index, string path)
+        private static JsonObject CreateSnapshot(
+            string assetPath,
+            CellsDocument document,
+            string? activeBrushKey)
         {
-            return snapshots[index] as JsonObject
+            return new JsonObject
+            {
+                ["cells"] = document.ToSnapshotJson(),
+                ["activeBrushKey"] = activeBrushKey,
+                ["regionColors"] =
+                    FieldEditorMetadataStore.CaptureColors(assetPath, document),
+            };
+        }
+
+        private static HistoryEntry SnapshotAt(
+            JsonArray snapshots,
+            int index,
+            string path)
+        {
+            JsonObject snapshot = snapshots[index] as JsonObject
                 ?? throw new InvalidOperationException(
                     $"'{path}' history entry {index} must be a cells snapshot object.");
+            RequireOnlyProperties(
+                snapshot,
+                $"{path} history entry {index}",
+                "cells",
+                "activeBrushKey",
+                "regionColors");
+            JsonObject cells = snapshot["cells"] as JsonObject
+                ?? throw new InvalidOperationException(
+                    $"'{path}' history entry {index} requires a 'cells' object.");
+            JsonObject regionColors = snapshot["regionColors"] as JsonObject
+                ?? throw new InvalidOperationException(
+                    $"'{path}' history entry {index} requires a 'regionColors' object.");
+            string? activeBrushKey = snapshot["activeBrushKey"]?.GetValue<string>();
+            if (activeBrushKey != null && string.IsNullOrWhiteSpace(activeBrushKey))
+            {
+                throw new InvalidOperationException(
+                    $"'{path}' history entry {index} activeBrushKey must be null or non-blank.");
+            }
+
+            return new HistoryEntry(cells, regionColors, activeBrushKey);
         }
 
         private static void ValidateSnapshotArray(
@@ -200,12 +258,21 @@ namespace Ludots.Tools.FieldEditor
         {
             for (int index = 0; index < snapshots.Count; index++)
             {
-                if (snapshots[index] is not JsonObject)
-                {
-                    throw new InvalidOperationException(
-                        $"'{path}' {stackName} entry {index} must be a cells snapshot object.");
-                }
+                SnapshotAt(snapshots, index, $"{path} {stackName}");
             }
+        }
+
+        private static void RestoreActiveBrush(
+            HistoryState state,
+            CellsDocument document,
+            string? activeBrushKey)
+        {
+            if (activeBrushKey != null)
+            {
+                document.RegionIndex(activeBrushKey);
+            }
+
+            state.ActiveBrushKey = activeBrushKey;
         }
 
         private static JsonObject ParseObject(string path)
@@ -261,6 +328,11 @@ namespace Ludots.Tools.FieldEditor
             public JsonArray Undo { get; }
             public JsonArray Redo { get; }
         }
+
+        private readonly record struct HistoryEntry(
+            JsonObject Cells,
+            JsonObject RegionColors,
+            string? ActiveBrushKey);
     }
 
     public static class FieldEditorMetadataStore
@@ -269,6 +341,28 @@ namespace Ludots.Tools.FieldEditor
 
         public static string MetadataPath(string assetPath) =>
             Path.ChangeExtension(assetPath, ".field-editor-meta.json");
+
+        internal static JsonObject CaptureColors(
+            string assetPath,
+            CellsDocument document)
+        {
+            MetadataState state = Load(assetPath, document.LayerKey);
+            ValidateRegionKeys(state, document);
+            return ToColorsJson(state);
+        }
+
+        internal static void RestoreColors(
+            string assetPath,
+            CellsDocument document,
+            JsonObject regionColors)
+        {
+            MetadataState state = ParseColors(
+                regionColors,
+                document.LayerKey,
+                HistoryStore.HistoryPath(assetPath));
+            ValidateRegionKeys(state, document);
+            Save(assetPath, state);
+        }
 
         public static IReadOnlyDictionary<string, string> GetColors(
             string assetPath,
@@ -376,17 +470,25 @@ namespace Ludots.Tools.FieldEditor
             JsonObject colors = root["regionColors"] as JsonObject
                 ?? throw new InvalidOperationException(
                     $"'{metadataPath}' requires a 'regionColors' object.");
+            return ParseColors(colors, layerKey, metadataPath);
+        }
+
+        private static MetadataState ParseColors(
+            JsonObject colors,
+            string layerKey,
+            string context)
+        {
             var state = new MetadataState(layerKey);
             foreach ((string regionKey, JsonNode? colorNode) in colors)
             {
                 string color = colorNode?.GetValue<string>()
                     ?? throw new InvalidOperationException(
-                        $"'{metadataPath}' color for '{regionKey}' must be a string.");
+                        $"'{context}' color for '{regionKey}' must be a string.");
                 string normalized = NormalizeColor(color);
                 if (!string.Equals(color, normalized, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"'{metadataPath}' color for '{regionKey}' must use canonical #RRGGBB form.");
+                        $"'{context}' color for '{regionKey}' must use canonical #RRGGBB form.");
                 }
 
                 state.RegionColors.Add(regionKey, color);
@@ -397,19 +499,24 @@ namespace Ludots.Tools.FieldEditor
 
         private static void Save(string assetPath, MetadataState state)
         {
+            var root = new JsonObject
+            {
+                ["schemaVersion"] = SupportedSchemaVersion,
+                ["layer"] = state.LayerKey,
+                ["regionColors"] = ToColorsJson(state),
+            };
+            EditorSidecarJson.WriteAtomic(MetadataPath(assetPath), root);
+        }
+
+        private static JsonObject ToColorsJson(MetadataState state)
+        {
             var colors = new JsonObject();
             foreach ((string regionKey, string color) in state.RegionColors)
             {
                 colors[regionKey] = color;
             }
 
-            var root = new JsonObject
-            {
-                ["schemaVersion"] = SupportedSchemaVersion,
-                ["layer"] = state.LayerKey,
-                ["regionColors"] = colors,
-            };
-            EditorSidecarJson.WriteAtomic(MetadataPath(assetPath), root);
+            return colors;
         }
 
         private static void ValidateRegionKeys(
