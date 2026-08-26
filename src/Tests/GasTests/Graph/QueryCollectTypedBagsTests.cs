@@ -20,12 +20,21 @@ namespace Ludots.Tests.GasTests.Graph
             TagRegistry.Clear();
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            EffectTemplateIdRegistry.Clear();
+            AbilityIdRegistry.Clear();
+            TagRegistry.Clear();
+        }
+
         [Test]
-        public void CollectEffectTemplateIds_ReturnsRegisteredIdsSorted()
+        public void QueryCollectEffectTemplates_ReturnsRegisteredIdsSorted()
         {
             int blessing = EffectTemplateIdRegistry.Register("祝福");
             int swift = EffectTemplateIdRegistry.Register("迅捷");
-            var api = new GasGraphRuntimeApi(World.Create());
+            using World world = World.Create();
+            var api = new GasGraphRuntimeApi(world);
 
             Span<int> buffer = stackalloc int[8];
             int count = api.CollectEffectTemplateIds(buffer);
@@ -36,7 +45,7 @@ namespace Ludots.Tests.GasTests.Graph
         }
 
         [Test]
-        public void CollectAbilitySlots_ListsResolvedSlotsInOrder()
+        public void QueryCollectAbilitySlots_ListsResolvedSlotsInOrder()
         {
             using World world = World.Create();
             int fireball = AbilityIdRegistry.Register("火球");
@@ -56,7 +65,7 @@ namespace Ludots.Tests.GasTests.Graph
         }
 
         [Test]
-        public void CollectPresentTags_ReadsTagCountContainer()
+        public void QueryCollectPresentTags_ReadsTagCountContainer()
         {
             using World world = World.Create();
             int buff = TagRegistry.Register("状态.增益");
@@ -74,7 +83,7 @@ namespace Ludots.Tests.GasTests.Graph
         }
 
         [Test]
-        public void CollectAbilityHolders_FiltersCandidatesByAbility()
+        public void QueryCollectAbilityHolders_FiltersCandidatesByAbility()
         {
             using World world = World.Create();
             int fireball = AbilityIdRegistry.Register("火球");
@@ -94,6 +103,56 @@ namespace Ludots.Tests.GasTests.Graph
 
             Assert.That(count, Is.EqualTo(1));
             Assert.That(outBuffer[0], Is.EqualTo(holder));
+        }
+
+        [TestCase("QueryCollectEffectTemplates")]
+        [TestCase("QueryCollectAbilitySlots")]
+        [TestCase("QueryCollectInventoryItems")]
+        [TestCase("QueryCollectItemDefinitions")]
+        [TestCase("QueryCollectPresentTags")]
+        [TestCase("QueryCollectActiveTasks")]
+        [TestCase("QueryCollectProgressionNodes")]
+        [TestCase("QueryCollectAbilityHolders")]
+        public void TypedCollector_CompilesWithRequiredInputs(string op)
+        {
+            var document = new GraphControlFlowDocument
+            {
+                Id = $"Test.{op}",
+                Kind = "Query",
+            };
+            var collect = new GraphControlFlowNode { Id = "collect", Op = op };
+            if (op is "QueryCollectEffectTemplates" or "QueryCollectItemDefinitions")
+            {
+                document.Entry = collect.Id;
+                document.Nodes.Add(collect);
+            }
+            else if (op == "QueryCollectAbilityHolders")
+            {
+                var all = new GraphControlFlowNode { Id = "all", Op = "QueryAllMapEntities" };
+                collect.Ability = "Ability.GraphOps.Gallery";
+                document.Entry = all.Id;
+                document.Nodes.Add(all);
+                document.Nodes.Add(collect);
+                document.ControlEdges.Add(new(all.Id, GraphControlFlowPorts.Next, collect.Id));
+                document.ValueEdges.Add(new(all.Id, GraphControlFlowPorts.Value, collect.Id, GraphControlFlowPorts.List));
+            }
+            else
+            {
+                var caster = new GraphControlFlowNode { Id = "caster", Op = "LoadCaster" };
+                document.Entry = caster.Id;
+                document.Nodes.Add(caster);
+                document.Nodes.Add(collect);
+                document.ControlEdges.Add(new(caster.Id, GraphControlFlowPorts.Next, collect.Id));
+                document.ValueEdges.Add(new(caster.Id, GraphControlFlowPorts.Value, collect.Id, GraphControlFlowPorts.Source));
+            }
+
+            var (package, _, diagnostics) = GraphControlFlowCompiler.CompileWithOutputs(document);
+
+            Assert.That(diagnostics, Is.Empty);
+            Assert.That(package.HasValue, Is.True);
+            Assert.That(
+                Array.Exists(package!.Value.Program, instruction => instruction.Op == (ushort)Enum.Parse<GraphNodeOp>(op)),
+                Is.True);
         }
     }
 }
