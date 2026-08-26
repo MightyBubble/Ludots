@@ -135,4 +135,4 @@ Feature: 玩家通过效果触发实体挂接
 - 单元/事务：`EntityAttachmentTests`、`AttachmentPositionSyncSystemTests`
 - Capability：`EntityAttachmentCapabilityAcceptanceTests` + `artifacts/acceptance/entity-attachment/battle-report.md`
 - 实体域 Trigger：`TriggerGraphEntityDomainTests`
-- 审计矩阵：`artifacts/audits/entity-attachment-closeout-audit.md`
+- 审计矩阵：`artifacts/acceptance/entity-attachment-audit/audit-matrix.md`
