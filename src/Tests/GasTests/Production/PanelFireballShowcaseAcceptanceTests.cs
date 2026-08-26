@@ -212,9 +212,41 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         Ludots.UI.Panels.PanelTheme? theme = Ludots.UI.Panels.PanelThemeCatalog.TryLoad(engine);
         Assert.That(theme, Is.Not.Null);
         Assert.That(theme!.Id, Is.EqualTo("minimal"));
+        Assert.That(theme.HasNineSliceFrame, Is.False, "Minimal theme must stay zero-image.");
+        Assert.That(theme.HasThreeSliceBars, Is.False, "Minimal theme must stay zero-image.");
         UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
             ?? throw new InvalidOperationException("UIRoot missing.");
         Assert.That(root.Scene, Is.Not.Null);
+    }
+
+    [TestCase("PanelThemeCyberMod", "cyber")]
+    [TestCase("PanelThemeBronzeMod", "bronze")]
+    public void PanelFireballThemePack_SliceThemes_MountNineSliceFrameAndThreeSliceBars(string themeMod, string themeId)
+    {
+        using GameEngine engine = CreateEngine(themeMod, out TestInputBackend _, extraMods: new[] { "PanelThemeShowcaseMod" });
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 4);
+
+        Ludots.UI.Panels.PanelTheme? theme = Ludots.UI.Panels.PanelThemeCatalog.TryLoad(engine);
+        Assert.That(theme, Is.Not.Null, $"{themeId} theme pack must load.");
+        Assert.That(theme!.Id, Is.EqualTo(themeId));
+        Assert.That(theme.HasNineSliceFrame, Is.True, $"{themeId} must ship images/panel_frame.png.");
+        Assert.That(theme.HasThreeSliceBars, Is.True, $"{themeId} must ship images/bar_track.png.");
+        Assert.That(System.IO.File.Exists(theme.PanelFrameImagePath!), Is.True);
+        Assert.That(System.IO.File.Exists(theme.BarTrackImagePath!), Is.True);
+        Assert.That(System.IO.File.Exists(theme.BarFillHealthImagePath!), Is.True);
+
+        UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+            ?? throw new InvalidOperationException("UIRoot missing.");
+        Assert.That(root.Scene, Is.Not.Null);
+        Assert.That(FindNodeByClass(root.Scene!.Root!, "panel-frame"), Is.Not.Null,
+            "Auto-layout must mount a nine-slice .panel-frame image node.");
+        Assert.That(FindNodeByClass(root.Scene!.Root!, "bar-track"), Is.Not.Null,
+            "Paired health/mana rows must mount three-slice .bar-track nodes.");
+        Assert.That(FindNodeByClass(root.Scene!.Root!, "bar-fill"), Is.Not.Null,
+            "Paired rows must mount .bar-fill nodes sized by current/base.");
+        Assert.That(FindNodeByClass(root.Scene!.Root!, "row-bar-health"), Is.Not.Null);
     }
 
     private static Ludots.UI.Runtime.UiNode? FindNodeByClass(Ludots.UI.Runtime.UiNode node, string className)

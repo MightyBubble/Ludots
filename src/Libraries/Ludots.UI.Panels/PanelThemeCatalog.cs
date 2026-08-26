@@ -15,14 +15,27 @@ namespace Ludots.UI.Panels;
 /// A loaded visual theme pack (#1011 theme axis): one parsed stylesheet for the native
 /// renderer plus a data-URI variant for browser pages, with theme fonts registered into
 /// the Skia font registry. Themes are orthogonal to skins — any backend renders any theme.
+/// Optional slice assets follow the narrative theme convention under images/:
+/// panel_frame.png (nine-slice chrome), bar_track.png / bar_fill_*.png (three-slice bars).
 /// </summary>
 public sealed class PanelTheme
 {
-    public PanelTheme(string id, UiStyleSheet styleSheet, string webCss)
+    public PanelTheme(
+        string id,
+        UiStyleSheet styleSheet,
+        string webCss,
+        string? panelFrameImagePath = null,
+        string? barTrackImagePath = null,
+        string? barFillHealthImagePath = null,
+        string? barFillManaImagePath = null)
     {
         Id = id;
         StyleSheet = styleSheet;
         WebCss = webCss;
+        PanelFrameImagePath = panelFrameImagePath;
+        BarTrackImagePath = barTrackImagePath;
+        BarFillHealthImagePath = barFillHealthImagePath;
+        BarFillManaImagePath = barFillManaImagePath;
     }
 
     public string Id { get; }
@@ -31,6 +44,30 @@ public sealed class PanelTheme
 
     /// <summary>CSS text with url() rewritten to data: URIs — injectable into browser pages.</summary>
     public string WebCss { get; }
+
+    /// <summary>Absolute path to images/panel_frame.png when present (nine-slice chrome).</summary>
+    public string? PanelFrameImagePath { get; }
+
+    /// <summary>Absolute path to images/bar_track.png when present (three-slice track).</summary>
+    public string? BarTrackImagePath { get; }
+
+    public string? BarFillHealthImagePath { get; }
+
+    public string? BarFillManaImagePath { get; }
+
+    public bool HasNineSliceFrame => !string.IsNullOrWhiteSpace(PanelFrameImagePath);
+
+    public bool HasThreeSliceBars => !string.IsNullOrWhiteSpace(BarTrackImagePath);
+
+    public string? ResolveBarFillImagePath(string variableName)
+    {
+        return variableName switch
+        {
+            "health" => BarFillHealthImagePath ?? BarFillManaImagePath,
+            "mana" => BarFillManaImagePath ?? BarFillHealthImagePath,
+            _ => BarFillHealthImagePath ?? BarFillManaImagePath,
+        };
+    }
 }
 
 /// <summary>
@@ -90,7 +127,20 @@ public static class PanelThemeCatalog
             return $"data:{mediaType};base64,{Convert.ToBase64String(bytes)}";
         });
 
-        return new PanelTheme(entry.Id, styleSheet, webCss);
+        return new PanelTheme(
+            entry.Id,
+            styleSheet,
+            webCss,
+            TryOptionalImage(rootPath, "images/panel_frame.png"),
+            TryOptionalImage(rootPath, "images/bar_track.png"),
+            TryOptionalImage(rootPath, "images/bar_fill_health.png"),
+            TryOptionalImage(rootPath, "images/bar_fill_mana.png"));
+    }
+
+    private static string? TryOptionalImage(string rootPath, string relative)
+    {
+        string combined = Path.GetFullPath(Path.Combine(rootPath, relative.Replace('/', Path.DirectorySeparatorChar)));
+        return File.Exists(combined) ? combined : null;
     }
 
     private static ThemeEntry ResolveEntry(GameEngine engine, string themeId)

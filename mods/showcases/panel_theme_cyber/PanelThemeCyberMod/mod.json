@@ -1,0 +1,10 @@
+{
+  "name": "PanelThemeCyberMod",
+  "version": "1.0.0",
+  "description": "Panel theme showcase variant: cyber (nine-slice frame + three-slice bars)",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0",
+    "PanelThemeShowcaseMod": "^1.0.0"
+  }
+}

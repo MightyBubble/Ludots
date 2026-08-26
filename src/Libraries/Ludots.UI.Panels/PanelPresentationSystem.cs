@@ -17,14 +17,18 @@ namespace Ludots.UI.Panels;
 /// zero mod code. Visibility truth is <see cref="UiPanelActivationStore"/> (contract
 /// five); values flow exclusively through <see cref="PanelHost.TryGetValues"/> — this
 /// system never queries the world.
+/// Optional theme slice assets (panel_frame / bar_track / bar_fill_*) light up nine-slice
+/// chrome and three-slice attribute bars without changing the projection contract.
 /// </summary>
 public sealed class PanelPresentationSystem : ISystem<float>
 {
     private const float AnchorMargin = 24f;
     private const float PanelWidth = 260f;
     private const float RowHeight = 22f;
+    private const float BarRowHeight = 36f;
     private const float PanelChromeHeight = 66f;
     private const float PanelStackGap = 8f;
+    private const float BarHostHeight = 18f;
 
     private readonly PanelHost _panelHost;
     private readonly PanelTemplateRegistry _templates;
@@ -32,7 +36,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly IUiSurfaceHost _surfaceHost;
     private readonly UIRoot _root;
     private readonly string? _globalSkin;
-    private readonly UiStyleSheet? _themeSheet;
+    private readonly PanelTheme? _theme;
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -44,7 +48,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         IUiSurfaceHost surfaceHost,
         UIRoot root,
         string? globalSkin,
-        UiStyleSheet? themeSheet = null)
+        PanelTheme? theme = null)
     {
         _panelHost = panelHost ?? throw new ArgumentNullException(nameof(panelHost));
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
@@ -52,7 +56,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _surfaceHost = surfaceHost ?? throw new ArgumentNullException(nameof(surfaceHost));
         _root = root ?? throw new ArgumentNullException(nameof(root));
         _globalSkin = globalSkin;
-        _themeSheet = themeSheet;
+        _theme = theme;
     }
 
     public void Initialize() { }
@@ -90,14 +94,15 @@ public sealed class PanelPresentationSystem : ISystem<float>
             string key = $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}";
             if (!_mounted.TryGetValue(key, out MountedPanel? mounted))
             {
-                UiRect rect = ResolvePanelRect(anchorKey, stackIndex);
+                UiRect rect = ResolvePanelRect(info.Handle, anchorKey, stackIndex);
                 UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
                     $"panel-skin:{key}",
                     UiSurfaceSegment.Main,
                     priority: info.ZOrder));
+                UiStyleSheet? sheet = _theme?.StyleSheet;
                 _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
                     () => BuildPanel(info.Handle, rect, skin),
-                    styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
+                    styleSheets: sheet == null ? null : new[] { sheet }));
                 mounted = new MountedPanel(lease);
                 _mounted[key] = mounted;
             }
@@ -154,17 +159,17 @@ public sealed class PanelPresentationSystem : ISystem<float>
         PanelTemplate template = _templates.Require(values.TemplateId);
         var accent = new UiColor(skin.AccentR, skin.AccentG, skin.AccentB);
         var dim = new UiColor(136, 136, 136);
+        bool framed = _theme?.HasNineSliceFrame == true;
 
-        var builder = new UiElementBuilder(UiNodeKind.Container).Column()
+        var body = new UiElementBuilder(UiNodeKind.Container).Column()
             .Class("panel")
             .Class(TemplateClassToken(template.Id))
             .Background(new UiColor(20, 20, 35, 220))
-            .Border(2, accent)
-            .Radius(8)
+            .Border(framed ? 0 : 2, accent)
+            .Radius(framed ? 0 : 8)
             .Padding(12)
             .Width(rect.Width)
             .Gap(4)
-            .Absolute(rect.X, rect.Y)
             .Children(
                 new UiElementBuilder(UiNodeKind.Text)
                     .Class("title")
@@ -178,12 +183,32 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     .Text($"[{skin.Label}]")
                     .FontSize(11)
                     .Color(dim));
-        return builder;
+
+        if (!framed)
+        {
+            return body.Absolute(rect.X, rect.Y);
+        }
+
+        // Align with narrative theme frames: nine-slice image overlays hollow center; body keeps padding.
+        return new UiElementBuilder(UiNodeKind.Container).Column()
+            .Class("panel-framed")
+            .Width(rect.Width)
+            .Height(rect.Height)
+            .Absolute(rect.X, rect.Y)
+            .Children(
+                body.Width(rect.Width).Height(rect.Height),
+                Ui.Image(_theme!.PanelFrameImagePath!)
+                    .Class("panel-frame")
+                    .Absolute(0f, 0f)
+                    .WidthPercent(100f)
+                    .HeightPercent(100f)
+                    .ZIndex(40));
     }
 
-    private static UiElementBuilder BuildRows(PanelTemplate template, PanelVariableSet values)
+    private UiElementBuilder BuildRows(PanelTemplate template, PanelVariableSet values)
     {
         var rows = new List<UiElementBuilder>();
+        bool sliceBars = _theme?.HasThreeSliceBars == true;
         foreach (PanelPin pin in template.Pins)
         {
             bool isPairedBase = pin.Name.EndsWith("Base", StringComparison.Ordinal) &&
@@ -193,30 +218,99 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 continue;
             }
 
-            string text;
-            var color = new UiColor(230, 230, 230);
             if (HasPin(template, pin.Name + "Base"))
             {
                 float current = values.Get(pin.Name);
                 float maximum = values.Get(pin.Name + "Base");
-                text = $"{pin.Name.ToUpperInvariant()}  {current:F0} / {maximum:F0}";
-                color = PairRowColor(pin.Name);
+                string text = $"{pin.Name.ToUpperInvariant()}  {current:F0} / {maximum:F0}";
+                var color = PairRowColor(pin.Name);
+                if (sliceBars)
+                {
+                    rows.Add(BuildPairedBarRow(pin.Name, text, color, current, maximum));
+                }
+                else
+                {
+                    rows.Add(new UiElementBuilder(UiNodeKind.Text)
+                        .Class("row")
+                        .Class($"row-{pin.Name}")
+                        .Class("row-paired")
+                        .Text(text)
+                        .FontSize(14)
+                        .Color(color));
+                }
             }
             else
             {
-                text = $"{pin.Name.ToUpperInvariant()}  {values.Get(pin.Name):F0}";
+                rows.Add(new UiElementBuilder(UiNodeKind.Text)
+                    .Class("row")
+                    .Class($"row-{pin.Name}")
+                    .Class("row-single")
+                    .Text($"{pin.Name.ToUpperInvariant()}  {values.Get(pin.Name):F0}")
+                    .FontSize(14)
+                    .Color(new UiColor(230, 230, 230)));
             }
-
-            rows.Add(new UiElementBuilder(UiNodeKind.Text)
-                .Class("row")
-                .Class($"row-{pin.Name}")
-                .Class(HasPin(template, pin.Name + "Base") ? "row-paired" : "row-single")
-                .Text(text)
-                .FontSize(14)
-                .Color(color));
         }
 
         return new UiElementBuilder(UiNodeKind.Container).Column().Class("rows").Gap(4).Children(rows.ToArray());
+    }
+
+    private UiElementBuilder BuildPairedBarRow(
+        string variableName,
+        string label,
+        UiColor color,
+        float current,
+        float maximum)
+    {
+        float ratio = maximum <= 0f ? 0f : Math.Clamp(current / maximum, 0f, 1f);
+        float fillPercent = MathF.Max(8f, ratio * 100f);
+        string? fillSrc = _theme!.ResolveBarFillImagePath(variableName);
+        var children = new List<UiElementBuilder>
+        {
+            new UiElementBuilder(UiNodeKind.Text)
+                .Class("row")
+                .Class($"row-{variableName}")
+                .Class("row-paired")
+                .Text(label)
+                .FontSize(13)
+                .Color(color),
+            new UiElementBuilder(UiNodeKind.Container)
+                .Class("bar-host")
+                .Height(BarHostHeight)
+                .WidthPercent(100f)
+                .Children(BuildBarImages(fillSrc, fillPercent)),
+        };
+
+        return new UiElementBuilder(UiNodeKind.Container).Column()
+            .Class("row-bar")
+            .Class($"row-bar-{variableName}")
+            .Gap(2)
+            .Children(children.ToArray());
+    }
+
+    private UiElementBuilder[] BuildBarImages(string? fillSrc, float fillPercent)
+    {
+        var images = new List<UiElementBuilder>
+        {
+            Ui.Image(_theme!.BarTrackImagePath!)
+                .Class("bar-track")
+                .Absolute(0f, 0f)
+                .WidthPercent(100f)
+                .HeightPercent(100f)
+                .ZIndex(1),
+        };
+
+        if (!string.IsNullOrWhiteSpace(fillSrc))
+        {
+            images.Add(
+                Ui.Image(fillSrc)
+                    .Class("bar-fill")
+                    .Absolute(0f, 0f)
+                    .WidthPercent(fillPercent)
+                    .HeightPercent(100f)
+                    .ZIndex(2));
+        }
+
+        return images.ToArray();
     }
 
     private static bool HasPin(PanelTemplate template, string name)
@@ -300,7 +394,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             : trimmed;
     }
 
-    private UiRect ResolvePanelRect(string anchorKey, int stackIndex)
+    private UiRect ResolvePanelRect(PanelInstanceHandle handle, string anchorKey, int stackIndex)
     {
         bool left = anchorKey.Contains("left", StringComparison.OrdinalIgnoreCase);
         bool right = !left && anchorKey.Contains("right", StringComparison.OrdinalIgnoreCase);
@@ -312,15 +406,45 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 "Supported anchors: screen.topLeft, screen.topCenter, screen.topRight, screen.bottomLeft, screen.bottomCenter, screen.bottomRight.");
         }
 
-        bool top = anchorKey.Contains("top", StringComparison.OrdinalIgnoreCase);
+        int pairedRows = 0;
+        int singleRows = 0;
+        if (_panelHost.TryGetValues(handle, out PanelVariableSet values))
+        {
+            PanelTemplate template = _templates.Require(values.TemplateId);
+            foreach (PanelPin pin in template.Pins)
+            {
+                bool isPairedBase = pin.Name.EndsWith("Base", StringComparison.Ordinal) &&
+                    HasPin(template, pin.Name[..^"Base".Length]);
+                if (isPairedBase)
+                {
+                    continue;
+                }
+
+                if (HasPin(template, pin.Name + "Base"))
+                {
+                    pairedRows++;
+                }
+                else
+                {
+                    singleRows++;
+                }
+            }
+        }
+
+        bool sliceBars = _theme?.HasThreeSliceBars == true;
+        float contentHeight = PanelChromeHeight
+            + (pairedRows * (sliceBars ? BarRowHeight : RowHeight))
+            + (singleRows * RowHeight);
+
         float x = left
             ? AnchorMargin
             : right
                 ? MathF.Max(AnchorMargin, _root.Width - PanelWidth - AnchorMargin)
                 : MathF.Max(AnchorMargin, (_root.Width - PanelWidth) * 0.5f);
-        float stackOffset = stackIndex * (PanelChromeHeight + (3 * RowHeight) + PanelStackGap);
-        float y = top ? AnchorMargin + stackOffset : MathF.Max(AnchorMargin, _root.Height - PanelChromeHeight - (3 * RowHeight) - AnchorMargin - stackOffset);
-        return new UiRect(x, y, PanelWidth, PanelChromeHeight + (3 * RowHeight));
+        float stackOffset = stackIndex * (contentHeight + PanelStackGap);
+        bool top = anchorKey.Contains("top", StringComparison.OrdinalIgnoreCase);
+        float y = top ? AnchorMargin + stackOffset : MathF.Max(AnchorMargin, _root.Height - contentHeight - AnchorMargin - stackOffset);
+        return new UiRect(x, y, PanelWidth, contentHeight);
     }
 
     private sealed record MountedPanel(UiSurfaceLeaseHandle Lease);

@@ -2277,6 +2277,42 @@
       "buildMode": "auto"
     },
     {
+      "id": "panel_theme_cyber_raylib",
+      "name": "Panel Theme Cyber Raylib",
+      "selectors": [
+        "$panel_theme_cyber"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_cyber_web_raylib",
+      "name": "Panel Theme Cyber Web Raylib",
+      "selectors": [
+        "$panel_theme_cyber_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_bronze_raylib",
+      "name": "Panel Theme Bronze Raylib",
+      "selectors": [
+        "$panel_theme_bronze"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_bronze_web_raylib",
+      "name": "Panel Theme Bronze Web Raylib",
+      "selectors": [
+        "$panel_theme_bronze_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_SpawnTemplate_raylib",
       "name": "Graph Op SpawnTemplate Raylib",
       "selectors": [

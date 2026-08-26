@@ -1,7 +1,7 @@
 {
   "name": "PanelThemeShowcaseMod",
   "version": "1.0.0",
-  "description": "Panel visual theme packs: ink-wash / fantasy / minimal (CSS + art + fonts, orthogonal to skins)",
+  "description": "Panel visual theme packs: ink-wash / fantasy / minimal / cyber / bronze (CSS + art + fonts, orthogonal to skins; cyber/bronze ship nine-slice frames + three-slice bars)",
   "priority": 0,
   "dependencies": {
     "FireballSharedMod": "^1.0.0"
