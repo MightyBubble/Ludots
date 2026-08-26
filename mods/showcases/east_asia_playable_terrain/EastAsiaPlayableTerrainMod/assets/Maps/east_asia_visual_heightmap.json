@@ -2,12 +2,13 @@
   "Id": "east_asia_visual_heightmap",
   "VisualHeightmap": {
     "Asset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm",
+    "WorldWidthCm": 6400000,
     "RenderProfile": {
       "OverviewSwitchChunkSpans": 2.5,
       "OverviewVertexLimit": 65536,
       "ChunkLodErrorPx": 240,
       "DisableDistanceFog": true,
-      "DisplayHeightScale": 2000,
+      "DisplayHeightScale": 50,
       "AbsoluteColorPeakSpanCm": 5000
     }
   },
@@ -25,7 +26,9 @@
     "playableSurface": "Continuous VisualHeightmap",
     "projection": "Spherical Albers equal-area conic, sampled from the exported 14336x8192 East Asia canvas.",
     "coverage": "East Asia with complete Vietnam coverage; India is intentionally outside the primary frame.",
-    "sourceVisualTiles": "east_asia_strategy_height_tile_x0_y0_8192x8192_u16.png + east_asia_strategy_height_tile_x1_y0_6144x8192_u16.png"
+    "playableWorldWidthCm": 6400000,
+    "sourceVisualTiles": "east_asia_strategy_height_tile_x0_y0_8192x8192_u16.png + east_asia_strategy_height_tile_x1_y0_6144x8192_u16.png",
+    "note": "Source VHTM keeps continental sample density; WorldWidthCm remaps playable meters to a 64km-wide board (map-scale authoring convention)."
   },
   "Entities": [],
   "TriggerTypes": [],
@@ -35,7 +38,7 @@
     "TargetYCm": 0,
     "Yaw": 225,
     "Pitch": 50,
-    "DistanceCm": 985000000,
+    "DistanceCm": 7000000,
     "FovYDeg": 55
   }
 }

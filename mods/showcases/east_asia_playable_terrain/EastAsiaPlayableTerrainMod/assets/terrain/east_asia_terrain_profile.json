@@ -71,7 +71,8 @@
       "maxX": 5167748.945259842,
       "minY": -3050131.4588675187,
       "maxY": 2855867.3357151584
-    }
+    },
+    "playableMetersPerPixel": 4.464285714285714
   },
   "grid": {
     "widthChunks": 112,
@@ -94,8 +95,8 @@
   "visualHeightmap": {
     "sampleColumns": 7169,
     "sampleRows": 4097,
-    "worldWidthCm": 900652032,
-    "worldHeightCm": 514658304,
+    "worldWidthCm": 6400000,
+    "worldHeightCm": 3657143,
     "seaLevelCm": 0,
     "seaFloorCm": -1200,
     "bathymetry": "continuous_distance_to_coast",
@@ -105,7 +106,10 @@
     "maxLandCm": 4200,
     "landGamma": 0.55,
     "editorDefaultHeight01": 0.3,
-    "editorHeightAmplitudeCm": 6000
+    "editorHeightAmplitudeCm": 6000,
+    "sourceWorldWidthCm": 900652032,
+    "sourceWorldHeightCm": 514658304,
+    "playableWorldWidthOverrideCm": 6400000
   },
   "outputs": {
     "gridReactMapData": {

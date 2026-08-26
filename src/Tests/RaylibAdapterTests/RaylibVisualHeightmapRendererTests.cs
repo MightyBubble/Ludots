@@ -16,12 +16,12 @@ public sealed class RaylibVisualHeightmapRendererTests
     public void ShouldUseOverviewMesh_WhenCameraFramesEastAsiaScaleTerrain()
     {
         var source = new FakeVisualHeightmapRenderSource(
-            new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304),
+            new WorldAabbCm(-3_200_000, -1_828_571, 6_400_000, 3_657_143),
             chunkColumns: 224,
             chunkRows: 128);
         var camera = new Camera3D
         {
-            position = new System.Numerics.Vector3(0f, 6_750_000f, 0f),
+            position = new System.Numerics.Vector3(0f, 70_000f, 0f),
             target = System.Numerics.Vector3.Zero,
             fovy = 55f,
             projection = CameraProjection.CAMERA_PERSPECTIVE
@@ -41,7 +41,7 @@ public sealed class RaylibVisualHeightmapRendererTests
     public void ShouldUseOverviewMesh_WhenCameraIsNearTerrain_ReturnsFalse()
     {
         var source = new FakeVisualHeightmapRenderSource(
-            new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304),
+            new WorldAabbCm(-3_200_000, -1_828_571, 6_400_000, 3_657_143),
             chunkColumns: 224,
             chunkRows: 128);
         var camera = new Camera3D
@@ -117,7 +117,7 @@ public sealed class RaylibVisualHeightmapRendererTests
     public void ResolveOverviewTextureSize_UsesScreenScaledResolutionForEastAsiaEditing()
     {
         RaylibVisualHeightmapRenderer.ResolveOverviewTextureSize(
-            new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304),
+            new WorldAabbCm(-3_200_000, -1_828_571, 6_400_000, 3_657_143),
             screenWidth: 1600,
             screenHeight: 900,
             out int textureWidth,

@@ -2,7 +2,7 @@
   {
     "id": "ownership.east_asia.admin",
     "kind": "discreteId",
-    "cellSizeCm": 1005192,
+    "cellSizeCm": 7143,
     "chunkSizeCells": 8,
     "default": 0,
     "writerDomain": "map.field.ownership.east_asia.admin",

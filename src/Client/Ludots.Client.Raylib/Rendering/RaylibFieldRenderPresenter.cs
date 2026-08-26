@@ -68,7 +68,7 @@ namespace Ludots.Client.Raylib.Rendering
         /// Cell edge at or above this size uses a single textured plane instead of per-cell drapes.
         /// Continental admin cells are kilometers wide; draping each texel draws a square mosaic and hides terrain.
         /// </summary>
-        public int DiscreteOwnershipDrapeMaxCellSizeCm { get; set; } = 100_000;
+        public int DiscreteOwnershipDrapeMaxCellSizeCm { get; set; } = 5_000;
 
         public int LastFieldTextureCount { get; private set; }
         public int LastFieldCellCount { get; private set; }

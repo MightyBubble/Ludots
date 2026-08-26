@@ -188,18 +188,18 @@ namespace Ludots.Tests.GAS
 
             Assert.That(
                 NavObstacleGeometry.IsTriangleBlockedByObstacles(
-                    95021051, -38092782,
-                    95031051, -38082782,
-                    95011051, -38102782,
+                    675216, -270686,
+                    675287, -270615,
+                    675145, -270757,
                     obstacles,
                     "Ground"),
                 Is.True);
 
             Assert.That(
                 NavObstacleGeometry.IsTriangleBlockedByObstacles(
-                    40629961, -49399974,
-                    40639961, -49389974,
-                    40619961, -49409974,
+                    288715, -351034,
+                    288786, -350963,
+                    288644, -351105,
                     obstacles,
                     "Ground"),
                 Is.True);
