@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.GraphRuntime
@@ -6,9 +7,10 @@ namespace Ludots.Core.GraphRuntime
     /// <summary>
     /// Entry-side filter evaluation for mounted TriggerGraph graphs. A declared filter that
     /// is missing from the event payload never matches (fail closed, no throw — the entry
-    /// simply does not fire for that event).
-    /// Tag filtering fails closed while declared: no current map trigger event carries a
-    /// tag payload, so a declared tag filter can never match until tag-bearing events exist.
+    /// simply does not fire for that event). Tag filters match the TagId payload against the
+    /// mount-time-resolved TagId (Gas.Event.* bridge events carry the payload; an unresolved
+    /// tag name never matches). InstanceId filters reverse-resolve the event's SourceEntity
+    /// through the firing map's MapLoadEntityIndex and require an exact match.
     /// </summary>
     public static class TriggerGraphEntryFiltersEvaluator
     {
@@ -35,13 +37,40 @@ namespace Ludots.Core.GraphRuntime
 
             if (filters.Tag != null)
             {
-                return false;
+                if (!filters.TagId.HasValue ||
+                    !TryGetPayloadInt(context, MapTriggerEventPayloadKeys.TagId, out int tagId) ||
+                    tagId != filters.TagId.Value)
+                {
+                    return false;
+                }
+            }
+
+            if (filters.InstanceId != null)
+            {
+                if (!context.Contains(MapTriggerEventPayloadKeys.SourceEntity) ||
+                    context.Get<object>(MapTriggerEventPayloadKeys.SourceEntity) is not Arch.Core.Entity sourceEntity ||
+                    !context.TryGet(CoreServiceKeys.MapSession, out MapSession? session) ||
+                    session?.EntityIndex is not { } index ||
+                    !index.TryGetInstanceId(sourceEntity, out string sourceInstanceId) ||
+                    !string.Equals(sourceInstanceId, filters.InstanceId, StringComparison.Ordinal))
+                {
+                    return false;
+                }
             }
 
             if (filters.Action != null)
             {
                 if (!TryGetPayloadString(context, MapTriggerEventPayloadKeys.InputAction, out string actionId) ||
                     !string.Equals(actionId, filters.Action, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            if (filters.VarName != null)
+            {
+                if (!TryGetPayloadString(context, MapTriggerEventPayloadKeys.VarName, out string varName) ||
+                    !string.Equals(varName, filters.VarName, StringComparison.Ordinal))
                 {
                     return false;
                 }

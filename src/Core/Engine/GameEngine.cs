@@ -926,8 +926,14 @@ namespace Ludots.Core.Engine
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
-            var customEventRegistry = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventRegistry);
+            // Enums load before events (#1125): custom event params may annotate enumType
+            // against this catalog, and graph compilation resolves enum-bound sugar through it.
+            var enumCatalog = new Ludots.Core.Scripting.EnumCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.EnumCatalog, enumCatalog);
+            var customEventCatalog = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport, enumCatalog);
+            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventCatalog.Names);
+            SetService(CoreServiceKeys.EventSchemaRegistry, customEventCatalog.Schemas);
+            TriggerManager.EventSchemas = customEventCatalog.Schemas;
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var scopeResolver = new ScopeResolver(World, progressionScopeKeys, entityCollectionStore, relationshipRuntime);
@@ -987,7 +993,9 @@ namespace Ludots.Core.Engine
                 graphOutputValueKeyRegistry,
                 entityCollectionStore,
                 graphOps,
-                builtinHandlers);
+                builtinHandlers,
+                customEventCatalog.Schemas,
+                enumCatalog);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -1106,6 +1114,9 @@ namespace Ludots.Core.Engine
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
+            var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
+            SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
+            gasGraphApi.BindGraphCallbackService(graphCallbackService);
             gasGraphApi.BindRngPickService(rngPickService);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -1125,6 +1136,7 @@ namespace Ludots.Core.Engine
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
             gasGraphApi.BindPanelActivation(panelActivationApi);
             gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
+            gasGraphApi.BindPlacedInstanceIndexResolver(mapId => MapSessions?.GetSession(mapId)?.EntityIndex);
             var progressionEvaluator = new ProgressionRequirementEvaluator(
                 World,
                 progressionRequirements,
@@ -2103,6 +2115,13 @@ namespace Ludots.Core.Engine
                     inputTriggerActions),
                 SystemGroup.DeferredTriggerCollection);
 
+            // Phase 5.5: Continuation (#1126 AwaitCallback drain — registration order)
+            RegisterSystem(
+                new Ludots.Core.GraphRuntime.GraphCallbackContinuationSystem(
+                    GetService(CoreServiceKeys.GraphCallbackService)
+                    ?? throw new InvalidOperationException("GraphCallbackService missing before Continuation phase registration.")),
+                SystemGroup.Continuation);
+
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
             RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
@@ -2430,7 +2449,7 @@ namespace Ludots.Core.Engine
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
-                WireMapVariablePhaseDispatcher(session);
+                WireMapVariableChangedDispatcher(session);
                 // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
                 session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
                 session.VisualHeightmap = visualHeightmap;
@@ -2479,11 +2498,7 @@ namespace Ludots.Core.Engine
                 var definition = ((MapManager)MapManager).GetDefinition(mid);
                 var triggers = InstantiateMapTriggers(definition, mapConfig, session);
                 ApplyTriggerDecorators(triggers);
-                if (triggers.Count > 0)
-                {
-                    foreach (var t in triggers) session.AddTrigger(t);
-                    TriggerManager.RegisterMapTriggers(mid, triggers);
-                }
+                RegisterSessionTriggers(mid, session, triggers);
 
                 if (pendingMapLoadStarted)
                 {
@@ -2599,7 +2614,7 @@ namespace Ludots.Core.Engine
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = mapSessions.CreateSession(inner, mapConfig, parentCtx);
-            WireMapVariablePhaseDispatcher(session);
+            WireMapVariableChangedDispatcher(session);
             session.VisualHeightmap = visualHeightmap;
             BindStructureCollisionSession(session, visualHeightmap, structureCollision);
 
@@ -2661,11 +2676,7 @@ namespace Ludots.Core.Engine
             var definition = ((MapManager)MapManager).GetDefinition(inner);
             var triggers = InstantiateMapTriggers(definition, mapConfig, session);
             ApplyTriggerDecorators(triggers);
-            if (triggers.Count > 0)
-            {
-                foreach (var t in triggers) session.AddTrigger(t);
-                TriggerManager.RegisterMapTriggers(inner, triggers);
-            }
+            RegisterSessionTriggers(inner, session, triggers);
 
             if (pendingMapLoadStarted)
             {
@@ -2901,8 +2912,64 @@ namespace Ludots.Core.Engine
             }
         }
 
+        /// <summary>
+        /// Registration exit for a loaded map's trigger batch (#1123 scope routing): the
+        /// session owns every instance, while dispatch registration splits by subscription
+        /// scope — schema-declared Global entries go to the TriggerManager global table,
+        /// everything else (legacy triggers, map-domain entries, resume companions,
+        /// entity mounts) goes to the map table.
+        /// </summary>
+        private void RegisterSessionTriggers(MapId mapId, MapSession session, List<Trigger> triggers)
+        {
+            if (triggers.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var t in triggers) session.AddTrigger(t);
+
+            List<Trigger>? globalTriggers = null;
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is Gameplay.MapTriggers.TriggerGraphMountTrigger
+                    {
+                        SubscriptionScope: Ludots.Core.Scripting.EventScope.Global
+                    })
+                {
+                    (globalTriggers ??= new List<Trigger>()).Add(triggers[i]);
+                }
+            }
+
+            if (globalTriggers == null)
+            {
+                TriggerManager.RegisterMapTriggers(mapId, triggers);
+                return;
+            }
+
+            var mapTriggers = new List<Trigger>(triggers.Count - globalTriggers.Count);
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is not Gameplay.MapTriggers.TriggerGraphMountTrigger
+                    {
+                        SubscriptionScope: Ludots.Core.Scripting.EventScope.Global
+                    })
+                {
+                    mapTriggers.Add(triggers[i]);
+                }
+            }
+
+            TriggerManager.RegisterMapTriggers(mapId, mapTriggers);
+            TriggerManager.RegisterGlobalTriggers(mapId, globalTriggers);
+        }
+
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
         {
+            // Same suspension boundary drives global-scope subscriptions (#1123): a
+            // suspended map (lost focus, or still mid-load) detaches its global
+            // subscriptions wholesale so FireGlobalEvent never dispatches into an
+            // inactive map; resume reattaches them in priority order.
+            TriggerManager.SetGlobalTriggersSuspended(mapId, suspended);
+
             var entities = new List<Entity>();
             World.Query(in _mapEntitySuspendQuery, (Entity entity, ref MapEntity mapEntity) =>
             {
@@ -3310,7 +3377,8 @@ namespace Ludots.Core.Engine
                 GetService(CoreServiceKeys.GraphProgramRegistry),
                 EntityTriggerGraphMounts,
                 GetService(CoreServiceKeys.CustomEventNameRegistry),
-                GetService(CoreServiceKeys.AbilityDefinitionRegistry)));
+                GetService(CoreServiceKeys.AbilityDefinitionRegistry),
+                TriggerManager.EventSchemas));
 
             // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));

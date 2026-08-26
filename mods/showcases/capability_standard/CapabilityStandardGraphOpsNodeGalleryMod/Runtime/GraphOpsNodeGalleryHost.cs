@@ -69,6 +69,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public OwnershipResolver? Ownership { get; private set; }
     public KnowledgeProjectionStore Knowledge { get; private set; } = null!;
     public GameplayEventBus EventBus { get; private set; } = null!;
+    public GraphCallbackService GraphCallbacks { get; private set; } = null!;
     public ISpatialCoordinateConverter Coords { get; private set; } = null!;
     public GraphOpsNodeGallerySymbolResolver Resolver { get; private set; } = null!;
 
@@ -167,6 +168,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Collections = Collections,
             TagOps = TagOps,
             EventBus = EventBus,
+            GraphCallbacks = GraphCallbacks,
             Ownership = Ownership,
             Knowledge = Knowledge,
             Coords = Coords,
@@ -227,6 +229,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         spatialQueries.SetCoordinateConverter(Coords);
         EventBus = engine.EventBus
             ?? throw new InvalidOperationException("Node gallery requires engine EventBus.");
+        GraphCallbacks = RequireEngineService(engine, CoreServiceKeys.GraphCallbackService);
         EffectRequests = RequireEngineService(engine, CoreServiceKeys.EffectRequestQueue);
         TagOps = RequireEngineService(engine, CoreServiceKeys.TagOps);
         Relationships = RequireEngineService(engine, CoreServiceKeys.RelationshipRuntime);

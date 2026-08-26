@@ -18,7 +18,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<string, int> nodeIndices,
             GraphValueType[] outputTypes,
             string graphId,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null)
         {
             switch (op.NodeOp)
             {
@@ -405,6 +406,131 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.LoadEntryPayloadEntity:
+                case GraphNodeOp.LoadEntryPayloadInt:
+                case GraphNodeOp.LoadEntryPayloadFloat:
+                    // Built-in event payloads use MapTrigger.* constants (a reserved
+                    // namespace: unknown MapTrigger.* keys are typos and fail closed);
+                    // custom-event schemas and InvokeGraph argument keys use dot-namespaced
+                    // keys (EventSchemaRegistry key shape). Unknown-but-well-shaped keys
+                    // fail closed at run time (EntryPayloadKeyNotCarried).
+                    if (IsInvalidEntryPayloadKey(node.PayloadKey))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}' {op.NodeOp} payloadKey must be a MapTriggerEventPayloadKeys constant or a dot-namespaced key (got '{node.PayloadKey}').",
+                            node.Id));
+                    }
+
+                    break;
+
+                case GraphNodeOp.LoadPlacedEntity:
+                    // The compiler has no map context, so membership in the mounting map's
+                    // placed-instance catalog is validated fail-closed at mount time
+                    // (TriggerGraphMounting); here only the non-empty authoring shape is checked.
+                    RequireNonEmpty(node.InstanceId, "instanceId", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.InvokeGraph:
+                {
+                    bool hasGraphId = node.GraphId > 0;
+                    bool hasName = !string.IsNullOrWhiteSpace(node.FunctionName);
+                    if (hasGraphId && hasName)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"InvokeGraph node '{node.Id}' cannot set both functionName and graphId.", node.Id));
+                    }
+                    else if (!hasGraphId && !hasName)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"InvokeGraph node '{node.Id}' requires functionName (graph key) or graphId.", node.Id));
+                    }
+
+                    break;
+                }
+
+                case GraphNodeOp.StoreArgInt:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.ArgKey, "argKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.StoreArgFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.ArgKey, "argKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.StoreArgEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.ArgKey, "argKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AwaitCallback:
+                    RequireNonEmpty(node.CallbackType, "callbackType", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.DispatchMapEvent:
+                {
+                    if (dispatchSchemas == null || !dispatchSchemas.TryGetValue(node.Id, out Ludots.Core.Scripting.EventSchema schema))
+                    {
+                        break;
+                    }
+
+                    for (int i = 0; i < schema.Params.Count; i++)
+                    {
+                        Ludots.Core.Scripting.EventParamSchema param = schema.Params[i];
+                        if (param.Type == Ludots.Core.Scripting.EventParamType.String)
+                        {
+                            if (valueEdges.ContainsKey(new ValueInputKey(node.Id, param.Name)))
+                            {
+                                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                                    $"DispatchMapEvent node '{node.Id}' parameter '{param.Name}' is a String; String parameters have no register port and ride the schema contract instead.",
+                                    node.Id));
+                            }
+
+                            continue;
+                        }
+
+                        if (valueEdges.ContainsKey(new ValueInputKey(node.Id, param.Name)))
+                        {
+                            RequireValueInput(
+                                node,
+                                param.Name,
+                                ParamPortType(param.Type),
+                                valueEdges,
+                                nodeIndices,
+                                outputTypes,
+                                graphId,
+                                diagnostics);
+                        }
+                    }
+
+                    foreach (GraphControlFlowValueEdge edge in valueEdges.Values)
+                    {
+                        if (!string.Equals(edge.To, node.Id, StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        bool declared = false;
+                        for (int i = 0; i < schema.Params.Count; i++)
+                        {
+                            if (string.Equals(schema.Params[i].Name, edge.ToPort, StringComparison.Ordinal))
+                            {
+                                declared = true;
+                                break;
+                            }
+                        }
+
+                        if (!declared)
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
+                                $"DispatchMapEvent node '{node.Id}' has no schema parameter '{edge.ToPort}' for event '{schema.EventName}'.",
+                                node.Id));
+                        }
+                    }
+
+                    break;
+                }
+
                 case GraphNodeOp.ControlDomainResolve:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -442,6 +568,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
                     $"Node '{node.Id}' requires a non-empty {fieldName}.", node.Id));
             }
+        }
+
+        private static GraphValueType ParamPortType(Ludots.Core.Scripting.EventParamType type)
+        {
+            return type switch
+            {
+                Ludots.Core.Scripting.EventParamType.Entity => GraphValueType.Entity,
+                Ludots.Core.Scripting.EventParamType.Int => GraphValueType.Int,
+                Ludots.Core.Scripting.EventParamType.Float => GraphValueType.Float,
+                _ => GraphValueType.Void,
+            };
+        }
+
+        private static bool IsInvalidEntryPayloadKey(string? payloadKey)
+        {
+            if (string.IsNullOrWhiteSpace(payloadKey))
+            {
+                return true;
+            }
+
+            if (Ludots.Core.Scripting.EventSchemaRegistry.IsReservedPayloadKey(payloadKey))
+            {
+                return !Ludots.Core.Scripting.MapTriggerEventPayloadKeys.IsKnownKey(payloadKey);
+            }
+
+            return !Ludots.Core.Scripting.EventSchemaRegistry.IsNamespacedPayloadKey(payloadKey, out _);
         }
 
         private static void RequireSpatialCapacityPolicy(
@@ -496,9 +648,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<string, int> symbolToIndex,
             List<string> symbols,
             string graphId,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null,
+            BtSugarPlan? btPlan = null,
+            int nodeIndex = -1)
         {
-            int nodeIndex = nodeIndices[node.Id];
+            nodeIndex = nodeIndices[node.Id];
             int bodyIndex = layouts[nodeIndex].BodyIndex;
             var instruction = new GraphInstruction
             {
@@ -1067,6 +1222,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Imm = node.Slot;
                     break;
 
+                case GraphNodeOp.LoadEntryPayloadEntity:
+                case GraphNodeOp.LoadEntryPayloadInt:
+                case GraphNodeOp.LoadEntryPayloadFloat:
+                    instruction.Imm = RequireSymbol(node.PayloadKey, "payloadKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadPlacedEntity:
+                    instruction.Imm = RequireSymbol(node.InstanceId, "instanceId", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.ControlDomainResolve:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
@@ -1097,6 +1262,151 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Imm = RequireSymbol(node.FunctionName, "functionName", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.Flags = GraphInstructionFlags.FuncLibName;
                     break;
+
+                case GraphNodeOp.InvokeGraph:
+                {
+                    bool hasGraphId = node.GraphId > 0;
+                    bool hasName = !string.IsNullOrWhiteSpace(node.FunctionName);
+                    if (hasGraphId && hasName)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"InvokeGraph node '{node.Id}' cannot set both graphId and functionName.", node.Id));
+                        break;
+                    }
+
+                    if (!hasGraphId && !hasName)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"InvokeGraph node '{node.Id}' requires functionName (graph key) or graphId.", node.Id));
+                        break;
+                    }
+
+                    if (hasName)
+                    {
+                        instruction.Imm = Intern(symbolToIndex, symbols, node.FunctionName!.Trim());
+                        instruction.Flags |= GraphInstructionFlags.FuncLibName;
+                    }
+                    else
+                    {
+                        instruction.Imm = node.GraphId;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(node.EntryLabel))
+                    {
+                        int labelSymbol = Intern(symbolToIndex, symbols, node.EntryLabel.Trim());
+                        instruction.Flags |= 2;
+                        instruction.B = (byte)(labelSymbol & 0xFF);
+                        instruction.C = (byte)((labelSymbol >> 8) & 0xFF);
+                    }
+
+                    break;
+                }
+
+                case GraphNodeOp.StoreArgInt:
+                case GraphNodeOp.StoreArgFloat:
+                case GraphNodeOp.StoreArgEntity:
+                    instruction.A = ResolveValueInput(
+                        node,
+                        GraphControlFlowPorts.Value,
+                        ParamPortType(op.NodeOp == GraphNodeOp.StoreArgInt
+                            ? Ludots.Core.Scripting.EventParamType.Int
+                            : op.NodeOp == GraphNodeOp.StoreArgFloat
+                                ? Ludots.Core.Scripting.EventParamType.Float
+                                : Ludots.Core.Scripting.EventParamType.Entity),
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.ArgKey, "argKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AwaitCallback:
+                    instruction.Imm = RequireSymbol(node.CallbackType, "callbackType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.DispatchMapEvent:
+                {
+                    if (dispatchSchemas == null || !dispatchSchemas.TryGetValue(node.Id, out Ludots.Core.Scripting.EventSchema schema))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"DispatchMapEvent node '{node.Id}' has no resolved event schema.", node.Id));
+                        return;
+                    }
+
+                    // One StoreArg* per wired schema parameter (schema order), then the fire.
+                    int emitIndex = bodyIndex;
+                    for (int i = 0; i < schema.Params.Count; i++)
+                    {
+                        Ludots.Core.Scripting.EventParamSchema param = schema.Params[i];
+                        if (param.Type == Ludots.Core.Scripting.EventParamType.String ||
+                            !valueEdges.ContainsKey(new ValueInputKey(node.Id, param.Name)))
+                        {
+                            continue;
+                        }
+
+                        byte sourceRegister = ResolveValueInput(
+                            node,
+                            param.Name,
+                            ParamPortType(param.Type),
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                        GraphNodeOp storeOp = param.Type switch
+                        {
+                            Ludots.Core.Scripting.EventParamType.Entity => GraphNodeOp.StoreArgEntity,
+                            Ludots.Core.Scripting.EventParamType.Int => GraphNodeOp.StoreArgInt,
+                            _ => GraphNodeOp.StoreArgFloat,
+                        };
+                        program[emitIndex] = new GraphInstruction
+                        {
+                            Op = (ushort)storeOp,
+                            A = sourceRegister,
+                            Imm = Intern(symbolToIndex, symbols, param.PayloadKey)
+                        };
+                        SetSource(sources, emitIndex, graphId, node, storeOp.ToString(), GraphControlFlowPorts.Enter);
+                        emitIndex++;
+                    }
+
+                    string dispatchScope = (node.Scope ?? "map").Trim().ToLowerInvariant();
+                    bool selfScope = string.Equals(dispatchScope, "self", StringComparison.Ordinal);
+                    bool globalScope = string.Equals(dispatchScope, "global", StringComparison.Ordinal);
+                    program[emitIndex] = new GraphInstruction
+                    {
+                        Op = (ushort)GraphNodeOp.DispatchMapEvent,
+                        Imm = Intern(symbolToIndex, symbols, schema.EventName),
+                        Flags = (byte)(globalScope ? 2 : selfScope ? 1 : 0)
+                    };
+                    SetSource(sources, emitIndex, graphId, node, nameof(GraphNodeOp.DispatchMapEvent), GraphControlFlowPorts.Enter);
+
+                    if (controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)))
+                    {
+                        EmitRelativeJump(
+                            document,
+                            node,
+                            GraphControlFlowPorts.Next,
+                            emitIndex + 1,
+                            controlEdges,
+                            nodeIndices,
+                            layouts,
+                            program,
+                            sources,
+                            graphId);
+                    }
+                    else if (btPlan != null && nodeIndex >= 0 && btPlan.IsChainTerminal(nodeIndex))
+                    {
+                        EmitBtLeafEpilogue(
+                            btPlan,
+                            node,
+                            nodeIndex,
+                            outputTypes[nodeIndex],
+                            outputRegisters[nodeIndex],
+                            emitIndex + 1,
+                            program,
+                            sources,
+                            graphId);
+                    }
+                    else
+                    {
+                        EmitExplicitHalt(program, sources, emitIndex + 1, graphId, node);
+                    }
+
+                    return;
+                }
 
                 case GraphNodeOp.HaltReturnInt:
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)))
@@ -1148,6 +1458,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     controlEdges,
                     nodeIndices,
                     layouts,
+                    program,
+                    sources,
+                    graphId);
+            }
+            else if (btPlan != null && nodeIndex >= 0 && btPlan.IsChainTerminal(nodeIndex))
+            {
+                EmitBtLeafEpilogue(
+                    btPlan,
+                    node,
+                    nodeIndex,
+                    outputTypes[nodeIndex],
+                    outputRegisters[nodeIndex],
+                    bodyIndex + 1,
                     program,
                     sources,
                     graphId);

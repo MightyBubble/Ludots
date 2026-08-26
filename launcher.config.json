@@ -1636,14 +1636,6 @@
       }
     },
     {
-      "name": "agent_bridge",
-      "target": {
-        "type": "path",
-        "value": "mods/AgentBridgeMod",
-        "projectPath": "AgentBridgeMod.csproj"
-      }
-    },
-    {
       "name": "panel_theme_showcase",
       "target": {
         "type": "path",
@@ -1722,6 +1714,86 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
         "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DispatchMapEvent",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchMapEventEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDispatchMapEventEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_InvokeGraph",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpInvokeGraphEntryMod",
+        "projectPath": "CapabilityStandardGraphOpInvokeGraphEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPlacedEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPlacedEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AwaitCallback",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAwaitCallbackEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAwaitCallbackEntryMod.csproj"
       }
     }
   ],

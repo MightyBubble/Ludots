@@ -1,0 +1,32 @@
+[
+  {
+    "id": "showcase.graph_op.LoadEntryPayloadEntity",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_source_died",
+        "event": "EntityDied",
+        "start": "readSource"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "readSource",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.SourceEntity"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readSource",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": []
+  }
+]

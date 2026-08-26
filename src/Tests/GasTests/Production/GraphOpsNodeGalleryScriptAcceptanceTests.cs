@@ -16,7 +16,7 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
     {
         string[] ops =
         [
-            "Jump", "JumpIfFalse", "Call", "Return", "Yield",
+            "Jump", "JumpIfFalse", "Call", "Return", "Yield", "AwaitCallback",
             "HaltReturnInt", "InvokeScript", "MoveInt"
         ];
         string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();
@@ -52,6 +52,28 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
             {
                 Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), op);
             }
+        }
+    }
+
+    [Test]
+    public void AwaitCallback_ConfirmsAndContinues_WithCaption()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("AwaitCallback");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("等回话再往下走"));
+        Assert.That(runtime.Context.CaptionValues["confirmed"], Is.EqualTo("同意"));
+        Assert.That(int.Parse(runtime.Context.CaptionValues["replies"]), Is.EqualTo(1));
+        Assert.That(runtime.Context.CaptionValues["result"], Is.EqualTo("1"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("确认"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("回话"));
+        Assert.That(runtime.Metrics.Detail, Does.Not.Contain("{"));
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
         }
     }
 

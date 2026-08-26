@@ -147,8 +147,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         // ── Event evaluation context (410-412, RFC-0065 PROV-4b) ──
         LoadViewer           = 410,  // E[Dst] = state.Viewer (fixed register 2)
-        LoadEventPayloadInt  = 411,  // I[Dst] = EventPayload int slot (Imm: 0=PayloadA, 1=PayloadB)
-        LoadEventPayloadFloat = 412, // F[Dst] = EventPayload float slot (Imm: 0..3 = FloatA..FloatD)
+        LoadEventPayloadInt  = 411,  // I[Dst] = presenter EventPayload int slot (Imm: 0=PayloadA, 1=PayloadB)
+        LoadEventPayloadFloat = 412, // F[Dst] = presenter EventPayload float slot (Imm: 0..3 = FloatA..FloatD)
+
+        // ── TriggerGraph entry payload by name (413-415); captured at entry start from the
+        // firing ScriptContext per EventSchemaRegistry params ──
+        LoadEntryPayloadEntity = 413, // E[Dst] = entry payload (Imm: payload key symbol id)
+        LoadEntryPayloadInt    = 414, // I[Dst] = entry payload (Imm: payload key symbol id)
+        LoadEntryPayloadFloat  = 415, // F[Dst] = entry payload (Imm: payload key symbol id)
+
+        // ── Placed-entity variable reads (#1108) ──
+        // E[Dst] = entity registered under the placed InstanceId (Imm: instance id key id)
+        // on the mounted map. Unregistered or destroyed instances write Entity.Null —
+        // unlike LoadEntryPayload*, a miss is a readable value, not a throw. Compile-time
+        // validation is mount-time fail-closed (TriggerGraphMounting) because only the
+        // mounting map knows its placed-instance catalog.
+        LoadPlacedEntity = 416,
 
         // ── Topology predicates (420-422, RFC-0065 DEC-5 viewer-relative semantics) ──
         ControlDomainResolve  = 420, // E[Dst] = control domain rep of E[A], Entity.Null when none
@@ -202,6 +216,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>Pick an integer outcome from a named deterministic distribution. Imm = distribution symbol; I[A] = stream salt.</summary>
         WeightedPick = 449,
+
+        // ── TriggerGraph subgraph reuse + structured event dispatch (#1116/#1115) ──
+        // InvokeGraph encoding: Imm = target graph id at run time; Dst = int register
+        // receiving the child's HaltReturnInt. Authoring has two modes mirroring InvokeScript:
+        // literal graphId (Flags 0) or a graph-key functionName resolved and patched to the id
+        // at load time (Flags bit 0 = GraphInstructionFlags.FuncLibName; stable across mod sets,
+        // since sequential graph ids are load-order dependent). Flags bit 1 = "entry label
+        // authored": compile packs the label's symbol index in the CALLER's symbol table as
+        // B | (C << 8); load-time validation (GraphProgramRegistry) resolves the label against
+        // the target entry table and rewrites A = entry ordinal + 1 with B/C cleared
+        // (A == 0 after validation means never validated and fails closed).
+        // No label → target entry table [0].
+        /// <summary>Run TriggerGraph Imm to halt from the selected entry; I[Dst] = child HaltReturnInt. Child must not Yield; EntryPayload = the caller's InvokeArgs staging.</summary>
+        InvokeGraph = 450,
+        /// <summary>I[A] → InvokeArgs staging (Imm: arg key symbol id). Consumed (cleared) by the next InvokeGraph / DispatchMapEvent.</summary>
+        StoreArgInt = 451,
+        /// <summary>F[A] → InvokeArgs staging (Imm: arg key symbol id).</summary>
+        StoreArgFloat = 452,
+        /// <summary>E[A] → InvokeArgs staging (Imm: arg key symbol id).</summary>
+        StoreArgEntity = 453,
+        /// <summary>Assemble a ScriptContext from the InvokeArgs staging per the event schema (Imm: event name symbol id) and fire it map-scoped; Flags 0 = map domain, 1 = self domain.</summary>
+        DispatchMapEvent = 454,
+        /// <summary>
+        /// #1126 AwaitCallback: register a named callback handle (Imm: callbackType symbol id),
+        /// park the slice (Yielded), and on Complete write confirmed into B[Dst] then resume
+        /// in the Continuation phase (registration order).
+        /// </summary>
+        AwaitCallback = 455,
     }
 
     public static class GraphNodeOpParser
