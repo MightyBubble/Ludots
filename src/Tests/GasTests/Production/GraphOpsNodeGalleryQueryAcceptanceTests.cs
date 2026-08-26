@@ -41,6 +41,26 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
         Assert.That(driver.LastTargetCount, Is.EqualTo(3));
     }
 
+    [TestCase("QueryCollectEffectTemplates", true, "说明书")]
+    [TestCase("QueryCollectAbilitySlots", true, "技能格")]
+    [TestCase("QueryCollectInventoryItems", false, "背包")]
+    [TestCase("QueryCollectItemDefinitions", true, "物品")]
+    [TestCase("QueryCollectPresentTags", true, "印记")]
+    [TestCase("QueryCollectActiveTasks", false, "差事")]
+    [TestCase("QueryCollectProgressionNodes", true, "进度")]
+    [TestCase("QueryCollectAbilityHolders", false, "会这招")]
+    public void TypedCollectors_ExecuteWithNonEmptyBags(string op, bool intIdBag, string expectedCopy)
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play(op);
+        QueryNodeDriver driver = (QueryNodeDriver)runtime.Driver;
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Metrics.Detail, Does.Contain(expectedCopy));
+        Assert.That(
+            intIdBag ? driver.LastIntIdCount : driver.LastTargetCount,
+            Is.GreaterThan(0));
+    }
+
     [Test]
     public void QueryAllMapEntities_CountMatchesSeededMapEntities()
     {

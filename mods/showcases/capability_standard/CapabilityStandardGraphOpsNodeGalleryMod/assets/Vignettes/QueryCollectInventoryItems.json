@@ -1,0 +1,13 @@
+{
+  "op": "QueryCollectInventoryItems",
+  "driver": "query",
+  "title": "翻开背包",
+  "beat": "背包里的物被点名线牵住。",
+  "detailTemplate": "背包里{count}件物。",
+  "assertDetailContains": [
+    "背包"
+  ],
+  "featuredNodeId": "collect",
+  "graphKind": "Query",
+  "field": "query"
+}

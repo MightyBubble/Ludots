@@ -2588,6 +2588,78 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectAbilityHolders_raylib",
+      "name": "Graph Op QueryCollectAbilityHolders Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectAbilityHolders"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectAbilitySlots_raylib",
+      "name": "Graph Op QueryCollectAbilitySlots Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectAbilitySlots"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveTasks_raylib",
+      "name": "Graph Op QueryCollectActiveTasks Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveTasks"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectEffectTemplates_raylib",
+      "name": "Graph Op QueryCollectEffectTemplates Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectEffectTemplates"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectInventoryItems_raylib",
+      "name": "Graph Op QueryCollectInventoryItems Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectInventoryItems"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectItemDefinitions_raylib",
+      "name": "Graph Op QueryCollectItemDefinitions Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectItemDefinitions"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectPresentTags_raylib",
+      "name": "Graph Op QueryCollectPresentTags Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectPresentTags"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectProgressionNodes_raylib",
+      "name": "Graph Op QueryCollectProgressionNodes Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectProgressionNodes"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
