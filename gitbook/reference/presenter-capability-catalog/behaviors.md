@@ -370,3 +370,31 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 ```
 
 来源：装载合同 `src/Tests/PresentationTests/Presenter/PresenterTrailMeshConfigTests.cs`；运行时写入方 `PresenterBehaviorSystem` → `TrailMeshRuntime`。
+
+### activationCondition — 创建时条件激活（行为字段，非独立 Kind）
+
+- **是什么**：写在 BehaviorSlot 上的 `activationCondition`（`{ "inline": "…" }` 或 `{ "graphProgramId": N }`）。loader 编译成 PresenterCreated 上的「无条件 Deactivate + 条件 Activate」规则对；条件为唯一权威（存在时强制 `activeByDefault=false`）。
+- **怎么写**：对象形态走 loader（`inline` / `graphProgramId`），不要写成 schema 里过期的纯 string。
+- **跑/证据**：L1 preset `capability_standard_presenter_activation_condition_showcase_raylib`（左站有 `VisualTransform` 发光球亮，右站无则灭；按 1/2 重生切换）；闭环单测 `PresenterActivationConditionTests`。
+
+标准生产配置（发光球仅在 SourceHasVisualTransform 成立时点亮）：
+
+```jsonc
+{
+  "slot": "body",
+  "kind": "AssetBinding",
+  "activeByDefault": false,
+  "activationCondition": { "inline": "SourceHasVisualTransform" },
+  "assetBinding": {
+    "assetKind": "Mesh",
+    "assetId": "sphere",
+    "materialId": "default_surface",
+    "renderPath": "StaticMesh",
+    "mobility": "Movable",
+    "localScale": [0.9, 0.9, 0.9]
+  },
+  "style": { "color": [1.0, 0.92, 0.35, 1.0] }
+}
+```
+
+来源：`mods/showcases/capability_standard/CapabilityStandardPresenterActivationConditionShowcaseMod/assets/Presentation/presenters/activation_condition_showcase.json`。
