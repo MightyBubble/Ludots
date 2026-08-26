@@ -49,6 +49,7 @@ namespace Ludots.Core.Presentation.Systems
             in BehaviorSlot slot,
             in AssetBindingConfig asset,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -58,10 +59,11 @@ namespace Ludots.Core.Presentation.Systems
             PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
             Vector3 position = ResolvePosition(in state, presenterWorldPosition, slot.Motion.YDriftPerSecond);
             float alpha = ResolveAlpha(in state, in definition, slot.Style.AlphaPolicy);
-            if (lod == LODLevel.Culled || !IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
+            if (!ownerCullVisible || !IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
             {
                 EmitHiddenSnapshotIfVisual(entity, in state, in definition, in slot, in asset, lod, position, presenterWorldRotation, presenterWorldScale, alpha);
                 RemoveHiddenWorldHudIfNeeded(state.DefId, in state, in slot, in asset);
+                RemoveHiddenLaneEntriesIfNeeded(in state, in slot, in asset);
                 return;
             }
 
@@ -105,6 +107,7 @@ namespace Ludots.Core.Presentation.Systems
             in PresenterState state,
             in PresenterDefinition definition,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -124,6 +127,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             bool emitted = false;
+            bool removedAny = false;
             BehaviorSlot[] behaviors = definition.Behaviors;
             uint localOffsetConsumedMask = 0u;
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
@@ -135,12 +139,14 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                if (lod != LODLevel.Culled &&
-                    (!IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset)))
+                if (!ownerCullVisible ||
+                    !IsWithinMaxLod(lod, in asset) ||
+                    !ResolveAssetVisibility(entity, in asset))
                 {
                     if (TryGetVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId, out int removedStableId))
                     {
                         stableDrawCache.Remove(removedStableId);
+                        removedAny = true;
                     }
                     continue;
                 }
@@ -174,7 +180,7 @@ namespace Ludots.Core.Presentation.Systems
                     Flags = VisualRuntimeFlags.Visible,
                     Animator = ResolveAnimator(entity, renderPath),
                     AnimationOverlay = default,
-                    Visibility = lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
+                    Visibility = VisualVisibility.Visible,
                     LOD = lod,
                 };
                 if (addOnly)
@@ -188,7 +194,7 @@ namespace Ludots.Core.Presentation.Systems
                 emitted = true;
             }
 
-            return emitted;
+            return emitted || removedAny;
         }
 
         public void RemoveStaticStableVisuals(
@@ -331,7 +337,7 @@ namespace Ludots.Core.Presentation.Systems
                 presenterWorldRotation,
                 presenterWorldScale,
                 alpha,
-                lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible);
+                VisualVisibility.Visible);
             _requests.AddVisualProxy(state.OwnerEntity, in proxy);
         }
 
@@ -363,8 +369,29 @@ namespace Ludots.Core.Presentation.Systems
                 presenterWorldRotation,
                 presenterWorldScale,
                 alpha,
-                lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Hidden);
+                VisualVisibility.Hidden);
             _requests.AddVisualProxy(state.OwnerEntity, in proxy);
+        }
+
+        private void RemoveHiddenLaneEntriesIfNeeded(
+            in PresenterState state,
+            in BehaviorSlot slot,
+            in AssetBindingConfig asset)
+        {
+            switch (asset.AssetKind)
+            {
+                case AssetKind.Spline:
+                    _requests.RemoveSplineRibbon(
+                        state.OwnerEntity,
+                        PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId));
+                    break;
+
+                case AssetKind.GroundOverlay:
+                    _requests.RemoveGroundOverlay(
+                        state.OwnerEntity,
+                        PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId));
+                    break;
+            }
         }
 
         private void RemoveHiddenWorldHudIfNeeded(
@@ -835,7 +862,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
         {
-            return lod != LODLevel.Culled && (!asset.HasMaxLod || lod <= asset.MaxLod);
+            return !asset.HasMaxLod || lod <= asset.MaxLod;
         }
 
         private PresentationVisualProxy BuildVisualProxy(

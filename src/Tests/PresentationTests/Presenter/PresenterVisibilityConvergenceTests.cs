@@ -251,7 +251,7 @@ namespace Ludots.Tests.Presentation
             {
                 ref PresenterCullState cull = ref World.Get<PresenterCullState>(presenter);
                 cull.OwnerCullVisible = visible;
-                cull.LOD = visible ? LODLevel.High : LODLevel.Culled;
+                cull.LOD = visible ? LODLevel.High : LODLevel.Low;
             }
 
             private int _seenRequestCount;
