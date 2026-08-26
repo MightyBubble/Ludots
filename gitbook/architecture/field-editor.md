@@ -1,6 +1,6 @@
 # Field Editor CLI
 
-`tools/FieldEditor` 是离线作者工具：对 Mod 目录下的 `Fields/layers.json` 与 `Fields/cells/<layerKey>.json` 做声明、区域登记与矩形笔画。写出格式与引擎装载格式一致——**schemaVersion 2 + `regions` + `rects`**（可选 `points`），禁止 v1 的 `cells` 数组。
+`tools/FieldEditor` 是离线作者工具：对 Mod 目录下的 `Fields/layers.json` 与 `Fields/cells/<layerKey>.json` 做声明、区域登记与矩形笔画。写出格式与引擎装载格式一致——**schemaVersion 2 + `regions` + `rects`**（可选 `points`），禁止 v1 的 `cells` 数组。编辑器内存态直接使用 `ChunkedField2D<int>`；读取 rect 时调用 `FillRect`，保存时从场合并 rect，不展开成逐格字典或 point 列表。
 
 运行（在仓库根，已还原 .NET 8）：
 
@@ -18,14 +18,30 @@ dotnet run --project tools/FieldEditor -- <command> --mod <ModAssetsOrModRoot>
 | `new-layer` | 追加一条 discreteId 层到 `layers.json` |
 | `regions` | 列出某层区域 key 及占格数 |
 | `regions-add` / `regions-remove` / `regions-rename` | 增删改区域 key（删区会清其格） |
+| `regions-color` / `colors` | 设置 `#RRGGBB` 区域色 / 列出区域色 |
 | `cell` | 读/写/擦单格（`--at x,y`，写用 `--key`，擦用 `--erase`） |
-| `rect` | 用区域 key 填充闭区间矩形并立刻写出 |
+| `pick` / `eyedrop` | 读取一格并把非空区域设为活动画笔 key |
+| `rect` | 用显式或活动画笔 key 填充闭区间矩形并立刻写出 |
+| `brush` | `--at x,y --radius N` 绘制 cell 空间的 Chebyshev 半径方形画笔 |
 | `erase` | 擦除矩形（回到 default） |
-| `undo` / `redo` | 会话内撤销重做（内存栈，进程级） |
+| `undo` / `redo` | 从磁盘 sidecar 撤销/重做，可跨 CLI 进程 |
 | `render` | ASCII 预览当前笔画 |
 | `save` | 再校验容量并写出（突变命令本身已 atomic 写出） |
+| `session` | 保持进程存活，逐行执行子命令，`quit` 退出 |
 
 `new-layer` 可选 `--map <mapId>`：把层 id 写入 `Maps/<mapId>.json` 的 `Fields.Layers`。
+
+`pick` 选中的活动 key 与 undo/redo 栈保存在同目录的 `<layer>.field-editor-history.json`。进入交互模式后，子命令自动继承 `session --mod ... --layer ...`：
+
+```text
+dotnet run --project tools/FieldEditor -- session --mod %MOD% --layer ownership.paint
+field-editor> pick --at 1,1
+field-editor> brush --at 8,8 --radius 2
+field-editor> undo
+field-editor> quit
+```
+
+`FieldCellsConfig` 使用 fail-strict JSON，不能在引擎 cells JSON 中加入未知字段。因此区域色只写入编辑器 sidecar `<layer>.field-editor-meta.json` 的 `regionColors`，引擎资产保持原 schema。
 
 ## 示例：从空 Mod 画出两色地
 
@@ -73,6 +89,7 @@ dotnet run --project tools/FieldEditor -- save --mod %MOD% --layer ownership.pai
 - 区域 key 与层 key 都是 Mod 明文；引擎不做业务词解释。
 - `maxRegionIds` 超限时 `save` / 突变写出失败关闭。
 - 擦除与重画后磁盘始终是压缩 rect 集，不是百万三元组。
+- history / metadata sidecar 解析失败会显式报错，不会回退为空状态。
 
 ## 相关
 

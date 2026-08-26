@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Fields;
 using Ludots.Core.Fields.Config;
@@ -11,9 +12,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Editor → engine → editor semantic roundtrip for discrete-id cells (schema v2 rects).
-    /// </summary>
     [TestFixture]
     [Category("ci-gate")]
     public sealed class FieldEditorRoundtripTests
@@ -56,25 +54,148 @@ namespace Ludots.Tests.GAS
 
                 CellsDocument reloaded = CellsDocument.LoadOrNew(cellsPath, "layer.demo");
                 Assert.That(reloaded.Regions.Keys.ToArray(), Is.EqualTo(editor.Regions.Keys.ToArray()));
-                Assert.That(reloaded.Cells.Count, Is.EqualTo(editor.Cells.Count));
-                foreach (var pair in editor.Cells)
+                Assert.That(reloaded.CellCount, Is.EqualTo(editor.CellCount));
+                foreach ((FieldCell2D cell, string regionKey) in editor.EnumerateCells())
                 {
-                    Assert.That(reloaded.Cells[pair.Key], Is.EqualTo(pair.Value));
+                    Assert.That(
+                        reloaded.TryGetCellKey(cell.X, cell.Y, out string? reloadedKey),
+                        Is.True);
+                    Assert.That(reloadedKey, Is.EqualTo(regionKey));
                 }
             }
             finally
             {
-                try
+                if (Directory.Exists(root))
                 {
-                    if (Directory.Exists(root))
-                    {
-                        Directory.Delete(root, recursive: true);
-                    }
-                }
-                catch
-                {
+                    Directory.Delete(root, recursive: true);
                 }
             }
+        }
+
+        [Test]
+        public void LoadSave_LargeRect_StaysChunkedAndRectNative()
+        {
+            string root = CreateTempRoot();
+            string path = Path.Combine(root, "layer.large.json");
+            try
+            {
+                File.WriteAllText(
+                    path,
+                    """
+                    {
+                      "schemaVersion": 2,
+                      "layer": "layer.large",
+                      "regions": ["province"],
+                      "rects": [[0, 0, 511, 511, 1]]
+                    }
+                    """);
+
+                CellsDocument document = CellsDocument.LoadOrNew(
+                    path,
+                    "layer.large",
+                    chunkSizeCells: 16);
+
+                Assert.That(document.CellCount, Is.EqualTo(512 * 512));
+                Assert.That(document.Field.ChunkCount, Is.EqualTo(32 * 32));
+                Assert.That(
+                    document.TryGetCellKey(511, 511, out string? regionKey),
+                    Is.True);
+                Assert.That(regionKey, Is.EqualTo("province"));
+
+                document.Save(path, maxRegionIds: 8);
+
+                JsonObject saved = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+                JsonArray rects = saved["rects"]!.AsArray();
+                Assert.That(rects, Has.Count.EqualTo(1));
+                Assert.That(rects[0]!.AsArray().Select(node => node!.GetValue<int>()), Is.EqualTo(
+                    new[] { 0, 0, 511, 511, 1 }));
+                Assert.That(new FileInfo(path).Length, Is.LessThan(512));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void HistoryStore_UndoRedo_AcrossDocumentReload_PersistsOnDisk()
+        {
+            string root = CreateTempRoot();
+            string path = Path.Combine(root, "layer.history.json");
+            try
+            {
+                var document = new CellsDocument("layer.history");
+                document.AddRegion("paint");
+                document.Save(path, maxRegionIds: 8);
+
+                HistoryStore.Push(path, document);
+                document.PaintRect("paint", 10, 20, 13, 23);
+                document.Save(path, maxRegionIds: 8);
+
+                CellsDocument reloaded = CellsDocument.LoadOrNew(path, "layer.history");
+                CellsDocument? undone = HistoryStore.Undo(path, reloaded);
+                Assert.That(undone, Is.Not.Null);
+                undone!.Save(path, maxRegionIds: 8);
+
+                CellsDocument afterUndo = CellsDocument.LoadOrNew(path, "layer.history");
+                Assert.That(afterUndo.CellCount, Is.Zero);
+                Assert.That(File.Exists(HistoryStore.HistoryPath(path)), Is.True);
+
+                CellsDocument? redone = HistoryStore.Redo(path, afterUndo);
+                Assert.That(redone, Is.Not.Null);
+                redone!.Save(path, maxRegionIds: 8);
+
+                CellsDocument afterRedo = CellsDocument.LoadOrNew(path, "layer.history");
+                Assert.That(afterRedo.CellCount, Is.EqualTo(16));
+                Assert.That(afterRedo.TryGetCellKey(12, 22, out string? key), Is.True);
+                Assert.That(key, Is.EqualTo("paint"));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void RegionColors_StayInEditorSidecar_AndEngineAssetRemainsStrict()
+        {
+            string root = CreateTempRoot();
+            string mod = Path.Combine(root, "DemoMod");
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(mod, "assets", "Fields", "cells"));
+                string path = CellsDocument.AssetPath(mod, "layer.colors");
+                var document = new CellsDocument("layer.colors");
+                document.AddRegion("paint");
+                document.PaintCell("paint", 0, 0);
+                document.Save(path, maxRegionIds: 8);
+
+                string color = FieldEditorMetadataStore.SetColor(
+                    path,
+                    document,
+                    "paint",
+                    "#12abEF");
+
+                Assert.That(color, Is.EqualTo("#12ABEF"));
+                JsonObject cells = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+                Assert.That(cells.ContainsKey("regionColors"), Is.False);
+                Assert.That(File.Exists(FieldEditorMetadataStore.MetadataPath(path)), Is.True);
+                Assert.That(LoadAsset(mod, "layer.colors"), Is.Not.Null);
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        private static string CreateTempRoot()
+        {
+            string root = Path.Combine(
+                Path.GetTempPath(),
+                "Ludots_FieldEditorRoundtrip",
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            return root;
         }
 
         private static FieldCellsAsset? LoadAsset(string modRoot, string layerKey)
