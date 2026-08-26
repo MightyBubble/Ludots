@@ -51,7 +51,7 @@
       {
         "id": "return_intro",
         "lineId": "line.warden.return.001",
-        "presentationProfile": "story.dialogue_overlay",
+        "presentationProfile": "story.standing_portrait",
         "cameraId": "Narrative.Return.Close",
         "choices": [
           {

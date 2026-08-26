@@ -483,16 +483,24 @@ namespace NarrativeShowcaseMod.Runtime
                 ? dialogueView.SpeakerId
                 : dialogueView.ResolvedSpeakerName;
             string profile = dialogueView.PresentationProfile ?? string.Empty;
+            bool standingPortrait = string.Equals(
+                profile,
+                NarrativeShowcaseIds.PresentationStandingPortrait,
+                StringComparison.OrdinalIgnoreCase);
             bool worldBubble = string.Equals(profile, NarrativeShowcaseIds.PresentationWorldBubble, StringComparison.OrdinalIgnoreCase);
             bool overlay = string.Equals(profile, NarrativeShowcaseIds.PresentationDialogueOverlay, StringComparison.OrdinalIgnoreCase)
-                || (!worldBubble && dialogueView.Choices.Count > 0);
+                || (!worldBubble && !standingPortrait && dialogueView.Choices.Count > 0);
 
-            NarrativeShowcaseSurfaceConfig config = overlay
-                ? _frontendConfig.OverlayDialogue
-                : _frontendConfig.DialogueBubble;
-            NarrativeFrontendSurfaceKind kind = overlay
-                ? NarrativeFrontendSurfaceKind.OverlayDialogue
-                : NarrativeFrontendSurfaceKind.DialogueBubble;
+            NarrativeShowcaseSurfaceConfig config = standingPortrait
+                ? _frontendConfig.StandingPortrait
+                : overlay
+                    ? _frontendConfig.OverlayDialogue
+                    : _frontendConfig.DialogueBubble;
+            NarrativeFrontendSurfaceKind kind = standingPortrait
+                ? NarrativeFrontendSurfaceKind.StandingPortrait
+                : overlay
+                    ? NarrativeFrontendSurfaceKind.OverlayDialogue
+                    : NarrativeFrontendSurfaceKind.DialogueBubble;
             string footer = dialogueView.AutoAdvance
                 ? _frontendConfig.Hints.AutoAdvancePrompt
                 : config.Footer;
@@ -500,12 +508,26 @@ namespace NarrativeShowcaseMod.Runtime
             float offsetX = config.OffsetX;
             float offsetY = config.OffsetY;
             NarrativeFrontendAnchor anchor = config.ResolveAnchor();
-            if (worldBubble &&
-                TryProjectSpeaker(engine, dialogue, dialogueView.SpeakerId, out float screenX, out float screenY))
+            if (worldBubble)
             {
+                if (!TryProjectSpeaker(engine, dialogue, dialogueView.SpeakerId, out float screenX, out float screenY))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation profile '{NarrativeShowcaseIds.PresentationWorldBubble}' requires IScreenProjector and a bound speaker entity with WorldPositionCm. Speaker '{dialogueView.SpeakerId}' could not be projected.");
+                }
+
                 anchor = NarrativeFrontendAnchor.TopLeft;
                 offsetX = screenX - UiMargin;
                 offsetY = screenY - UiMargin - 96f;
+            }
+
+            string portraitSrc = standingPortrait
+                ? dialogueView.StandingImageSrc
+                : dialogueView.PortraitImageSrc;
+            if (standingPortrait && string.IsNullOrWhiteSpace(portraitSrc))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation profile '{NarrativeShowcaseIds.PresentationStandingPortrait}' requires speaker '{dialogueView.SpeakerId}' to declare standingImageId with a resolvable image asset.");
             }
 
             return new NarrativeFrontendSurfaceModel(
@@ -531,8 +553,8 @@ namespace NarrativeShowcaseMod.Runtime
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
-                PortraitSrc: dialogueView.PortraitImageSrc,
-                PortraitSize: overlay ? 112f : 84f);
+                PortraitSrc: portraitSrc,
+                PortraitSize: standingPortrait ? 980f : overlay ? 112f : 84f);
         }
 
         private NarrativeFrontendSurfaceModel BuildChoiceSurface(DialogueView dialogue)

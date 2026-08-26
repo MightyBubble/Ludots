@@ -72,12 +72,26 @@
     "offsetY": 12,
     "zIndex": 58,
     "eyebrow": "World Bubble",
-    "footer": "This node uses story.world_bubble with optional IScreenProjector head follow.",
+    "footer": "This node uses story.world_bubble; IScreenProjector head follow is required (fail-closed).",
     "backgroundHex": "#0C1622E8",
     "borderHex": "#49FFFFFF",
     "foregroundHex": "#F5F7FA",
     "mutedHex": "#A9B9C9",
     "accentHex": "#F0C36B"
+  },
+  "standingPortrait": {
+    "anchor": "BottomLeft",
+    "width": 1180,
+    "offsetX": 24,
+    "offsetY": 20,
+    "zIndex": 62,
+    "eyebrow": "Standing Portrait",
+    "footer": "Half-screen standing figure from speaker standingImageId | Enter advances | Number keys commit choices",
+    "backgroundHex": "#08111BEF",
+    "borderHex": "#5AD7E9FF",
+    "foregroundHex": "#F8FAFC",
+    "mutedHex": "#C6D3DE",
+    "accentHex": "#F6C56B"
   },
   "subtitleBubble": {
     "anchor": "BottomCenter",
@@ -122,7 +136,7 @@
   "hints": {
     "promptTitle": "Story Showcase",
     "explorePrompt": "Select Arcweaver, move to the shrine with RMB, and press E to wake the trial.",
-    "choicePrompt": "Overlay dialogue is active: use 1/2/3 for choices or Enter to advance non-choice nodes.",
+    "choicePrompt": "A choice-bearing dialogue surface is active: use 1/2/3 for choices or Enter to advance non-choice nodes.",
     "combatPrompt": "The Ashen Beast is loose: right-click to approach, then use Q/W/E/R/Space to engage through ECS + GAS.",
     "returnPrompt": "The trial is resolved: go back to Warden Mirelle and choose the ending branch.",
     "skipPrompt": "Tab skips the current sequence if you already understand the beat.",

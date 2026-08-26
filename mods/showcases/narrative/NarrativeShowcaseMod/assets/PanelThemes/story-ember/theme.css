@@ -27,6 +27,20 @@
   border: 2px solid rgb(246, 197, 107);
 }
 
+.story-standing-portrait-row {
+  align-items: flex-end;
+}
+
+.story-standing-portrait {
+  border-radius: 8px;
+  filter: drop-shadow(0 28px 48px rgba(0, 0, 0, 0.55));
+}
+
+.story-standing-dialogue {
+  border-color: rgba(90, 215, 233, 0.75);
+  min-width: 420px;
+}
+
 .story-title {
   color: rgb(248, 250, 252);
   letter-spacing: 0.4px;

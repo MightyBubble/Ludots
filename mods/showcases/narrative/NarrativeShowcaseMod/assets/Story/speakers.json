@@ -2,12 +2,14 @@
   {
     "id": "speaker.warden",
     "displayNameToken": "story.speaker.warden.name",
-    "portraitImageId": "portrait.speaker.warden"
+    "portraitImageId": "portrait.speaker.warden",
+    "standingImageId": "standing.speaker.warden"
   },
   {
     "id": "speaker.player",
     "displayNameToken": "story.speaker.player.name",
-    "portraitImageId": "portrait.speaker.player"
+    "portraitImageId": "portrait.speaker.player",
+    "standingImageId": "standing.speaker.player"
   },
   {
     "id": "speaker.shrine",

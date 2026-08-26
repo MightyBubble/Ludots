@@ -11,6 +11,7 @@ namespace Ludots.Core.Gameplay.Story
         public string Id { get; set; } = string.Empty;
         public string DisplayNameToken { get; set; } = string.Empty;
         public string PortraitImageId { get; set; } = string.Empty;
+        public string StandingImageId { get; set; } = string.Empty;
     }
 
     public sealed class StoryLineDefinition : IIdentifiable

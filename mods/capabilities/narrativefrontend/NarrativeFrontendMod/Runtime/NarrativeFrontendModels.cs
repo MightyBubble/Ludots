@@ -33,6 +33,7 @@ public enum NarrativeFrontendSurfaceKind
     InspectPanel = 12,
     FlowReview = 13,
     TransmissionOverlay = 14,
+    StandingPortrait = 15,
 }
 
 public sealed record NarrativeFrontendSurfaceItem(

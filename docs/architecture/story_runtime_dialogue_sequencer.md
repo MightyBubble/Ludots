@@ -46,8 +46,9 @@
 | profileId | 后端 | 锚点 | 复用 |
 |-----------|------|------|------|
 | `story.dialogue_overlay` | 屏幕 Skia（UIRoot Overlay segment） | 屏幕锚点（如 BottomCenter） | NarrativeFrontend `OverlayDialogue` + `ChoiceList` |
-| `story.world_bubble` | 世界→屏幕投影后写入同一 Overlay | 说话者实体世界坐标 + 头顶偏移 | `IScreenProjector` + Frontend `DialogueBubble` 动态 Absolute |
-| `story.immersive_subtitle` | 屏幕字幕轨 | 屏幕锚点（如 BottomCenter） | Frontend `SubtitleBubble`；可由 Sequencer SubtitleTrack 驱动 |
+| `story.world_bubble` | 世界→屏幕投影后写入同一 Overlay | 说话者实体世界坐标 + 头顶偏移 | `IScreenProjector` 必填（缺则 fail-closed）+ Frontend `DialogueBubble` 动态 Absolute |
+| `story.immersive_subtitle` | 屏幕字幕轨（Sequencer 宿主，非独立 Subtitle 模块） | 屏幕锚点（如 BottomCenter） | Frontend `SubtitleBubble`；由 Sequencer `SubtitleTrack` 驱动 |
+| `story.standing_portrait` | 半屏全身立绘 + 旁侧台词 | 屏幕锚点（如 BottomLeft） | Frontend `StandingPortrait`；说话者 `standingImageId` 必填 |
 
 不把世界气泡假装成「左下角换皮面板」。WebUI Panel Kit 本阶段不承载故事对话（浏览器面板合同另线）；故事表现留在 Skia Overlay + 世界投影，避免第三真相。
 
@@ -138,9 +139,11 @@ Dialogue / Sequencer 只引用 `lineId`。最终文案经 `PresentationTextCatal
 - 独立 clock：play / pause / rate / seek / skip
 - Section 语义：进入激活、离开停用；Signal 一次性触发
 - CameraTrack → `VirtualCameraRequest`
-- SubtitleTrack → Line + profile → PresentationProjector
+- SubtitleTrack → Line + profile（通常 `story.immersive_subtitle`）→ Frontend `SubtitleBubble` / `TransmissionOverlay`
 - SignalTrack → TriggerGraph（同样单切片 Halt 合同）
 - 不负责 Dialogue 分支
+
+**Subtitle 合同（Epic 三块中的字幕面）**：字幕不是第三套独立 Story 运行时模块。权威宿主是 Sequencer 的 `SubtitleTrack`；台词仍走 Story Line + TextToken；屏幕呈现复用 NarrativeFrontend 既有 surface。禁止平行 SubtitleDirector / 第二套字幕时钟。
 
 红线（Epic 评论）：不复用 GAS AbilityExec；不以 graph yieldable 当时间轴原语；通道插值用 Tweening；演出轨直写相机/Presenter 请求。
 
@@ -162,9 +165,11 @@ Task 字段：`on_enter_dialogue_id` 保留；`on_enter_cinematic_id` 改为 `on
 可操作演示（无外部作品名）：
 
 1. **主对话 overlay**：profile `story.dialogue_overlay`；选项条件来自 Query；确认后 TriggerGraph 改 MapVariable；说话者与肖像走 `Story/speakers.json` + `Presentation/image_assets.json`（[#128](presentation_semantic_text_and_image_assets.md)）
-2. **世界气泡**：profile `story.world_bubble`；头顶跟随实体投影；同一肖像合同
-3. **沉浸字幕序列**：Sequencer 同步 Camera + Subtitle；Signal 触发 TriggerGraph；支持暂停/继续/跳过
-4. **换肤**：`game.json panelTheme` 一行切换对话表面主题包（与数值面板同一主题轴）
+2. **世界气泡**：profile `story.world_bubble`；头顶跟随实体投影（缺投影器或未绑定说话者即失败关闭）；同一肖像合同
+3. **半屏全身立绘**：profile `story.standing_portrait`；说话者 `standingImageId` → `PresentationImageKind.Standing`；Frontend `StandingPortrait`
+4. **沉浸字幕序列**：Sequencer 同步 Camera + Subtitle；Signal 触发 TriggerGraph；支持暂停/继续/跳过
+5. **换肤**：`game.json panelTheme` 一行切换对话表面主题包（与数值面板同一主题轴）
+6. **变量作者面**：地图 `Variables` 经 Editor Bridge CRUD；GasGraphEditor 变量面板拖针脚生成 Read/WriteMapVar*（[#1217](https://github.com/MightyBubble/Ludots/issues/1217) / [#1109](https://github.com/MightyBubble/Ludots/issues/1109)）
 
 前端仍发布到既有 NarrativeFrontend surface kinds（屏幕组合合同已通用化），由 profile 选择 kind 与锚点策略，而不是 showcase 硬编码「有选项就 overlay」。
 
@@ -182,8 +187,10 @@ Task 字段：`on_enter_dialogue_id` 保留；`on_enter_cinematic_id` 改为 `on
 - TextToken 是用户可见文案唯一出口；禁止 String 地图变量拼台词
 - MapVariable 仅 Int/Float；离散结局用 Int 枚举，不用 Narrative String 变量
 - WebUI Panel Kit 本阶段不接入故事对话
-- #128 肖像 2D 正式合同未闭环前，showcase 不伪造第二套肖像系统
-- #1217 变量作者面（编辑器增删改）不在本交付；本交付只保证运行时读 MapVariable/Blackboard + 旧私有变量路径失败关闭
+- 肖像与说话者名走 #128 Presentation 图像/语义合同；禁止 showcase 私有明文 speakerLabels
+- `story.world_bubble` 禁止静默退回固定屏幕角落；投影失败必须抛错
+- `story.standing_portrait` 禁止用 bust 肖像顶替全身立绘；缺 `standingImageId` 必须抛错
+- Sequencer ADR S1 人工过评仍属门禁；本交付不假装 ADR 已签
 
 ## 6. UAT
 
@@ -224,9 +231,31 @@ Feature: 表现 profile 路由
   Scenario: 世界气泡跟随说话者
     Given 节点使用 presentationProfile story.world_bubble
     And 说话者实体已绑定
+    And IScreenProjector 已安装
     When 对话节点进入
     Then 气泡锚在说话者头顶屏幕投影附近
     And 不是固定屏幕角落换皮面板
+
+  Scenario: 半屏全身立绘
+    Given 节点使用 presentationProfile story.standing_portrait
+    And 说话者声明了 standingImageId
+    When 对话节点进入
+    Then 玩家看到半屏高的全身立绘与旁侧台词
+    And 立绘来源是 standing 资产而不是 bust 肖像
+
+  Scenario: 缺少投影器时世界气泡失败关闭
+    Given 节点使用 story.world_bubble
+    And 引擎未安装 IScreenProjector
+    When 对话节点尝试呈现
+    Then 运行失败并指出缺少投影或说话者绑定
+
+Feature: 地图变量作者面
+
+  Scenario: 在图编辑器增删地图变量
+    Given 当前图挂在某张地图的 TriggerGraphs 上
+    When 作者在 Variables 面板新增整数变量并保存
+    Then 地图 JSON 的 Variables 声明写入该变量
+    And 作者可把变量拖到画布选择 Get 或 Set 生成对应节点
 ```
 
 ## 7. 复用清单（开工前）

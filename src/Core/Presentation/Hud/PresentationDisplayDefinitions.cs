@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Hud
         Badge = 1,
         Card = 2,
         Icon = 3,
+        Standing = 4,
     }
 
     public sealed class PresentationSemanticMapDefinition

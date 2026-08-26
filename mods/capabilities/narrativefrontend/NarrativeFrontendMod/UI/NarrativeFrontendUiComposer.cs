@@ -60,6 +60,7 @@ internal static class NarrativeFrontendUiComposer
             NarrativeFrontendSurfaceKind.InspectPanel => BuildCard(surface, "#D9F99D"),
             NarrativeFrontendSurfaceKind.FlowReview => BuildCard(surface, "#C4B5FD"),
             NarrativeFrontendSurfaceKind.TransmissionOverlay => BuildTransmission(surface),
+            NarrativeFrontendSurfaceKind.StandingPortrait => BuildStandingPortrait(surface),
             _ => BuildCard(surface, "#78E3B1"),
         };
 
@@ -96,6 +97,50 @@ internal static class NarrativeFrontendUiComposer
                     .BackdropBlur(10f))
             .Gap(0f)
             .Align(tailRight ? UiAlignItems.End : UiAlignItems.Start);
+    }
+
+    private static UiElementBuilder BuildStandingPortrait(NarrativeFrontendSurfaceModel surface)
+    {
+        string foreground = ColorOrDefault(surface.ForegroundHex, "#F8FAFC");
+        string muted = ColorOrDefault(surface.MutedHex, "#C4D1DD");
+        string accent = ColorOrDefault(surface.AccentHex, "#F6C56B");
+        string background = ColorOrDefault(surface.BackgroundHex, "#0A1220EE");
+        float standingHeight = surface.PortraitSize > 0f ? surface.PortraitSize : 980f;
+        float standingWidth = standingHeight * (1024f / 1536f);
+
+        var dialogueCard = Ui.Card(
+                BuildEyebrow(surface.Subtitle, accent),
+                Ui.Text(surface.Title).Class("story-title").FontSize(24f).Bold().Color(foreground),
+                Ui.Text(surface.Body).Class("story-body").FontSize(16f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
+                BuildItemsColumn(surface, accent, foreground, muted),
+                BuildMetaRow(surface, muted, accent))
+            .Classes("story-standing-dialogue", "story-card")
+            .Gap(12f)
+            .Padding(24f)
+            .Radius(28f)
+            .Background(background)
+            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#5AD7E9FF")))
+            .BoxShadow(0f, 24f, 48f, Color("#55000000"))
+            .BackdropBlur(12f)
+            .Width(Math.Max(420f, surface.Width - standingWidth - 32f));
+
+        if (string.IsNullOrWhiteSpace(surface.PortraitSrc))
+        {
+            throw new InvalidOperationException(
+                $"StandingPortrait surface '{surface.SurfaceId}' requires PortraitSrc (standing image). Author standingImageId on the speaker.");
+        }
+
+        return Ui.Row(
+                Ui.Image(surface.PortraitSrc)
+                    .Class("story-standing-portrait")
+                    .Width(standingWidth)
+                    .Height(standingHeight)
+                    .Radius(8f)
+                    .BoxShadow(0f, 28f, 64f, Color("#66000000")),
+                dialogueCard)
+            .Class("story-standing-portrait-row")
+            .Gap(28f)
+            .Align(UiAlignItems.End);
     }
 
     private static UiElementBuilder BuildOverlayDialogue(NarrativeFrontendSurfaceModel surface)
@@ -433,6 +478,16 @@ internal static class NarrativeFrontendUiComposer
             NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight * 0.5f) - 170f,
             _ => CanvasHeight - 280f,
         };
+
+        if (surface.Kind == NarrativeFrontendSurfaceKind.StandingPortrait)
+        {
+            top = surface.Anchor switch
+            {
+                NarrativeFrontendAnchor.TopLeft or NarrativeFrontendAnchor.TopCenter or NarrativeFrontendAnchor.TopRight => Margin,
+                NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight - 980f) * 0.5f,
+                _ => CanvasHeight - 1000f,
+            };
+        }
 
         return (left + surface.OffsetX, top + surface.OffsetY);
     }

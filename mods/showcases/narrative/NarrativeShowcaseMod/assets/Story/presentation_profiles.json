@@ -40,5 +40,21 @@
     "borderHex": "#31546B",
     "foregroundHex": "#F2F6FA",
     "mutedHex": "#AFC3D4"
+  },
+  {
+    "id": "story.standing_portrait",
+    "backend": "ScreenOverlay",
+    "surfaceKind": "StandingPortrait",
+    "anchor": "BottomLeft",
+    "width": 1180,
+    "offsetX": 24,
+    "offsetY": 20,
+    "waitForInput": true,
+    "dimBackdrop": true,
+    "accentHex": "#F6C56B",
+    "backgroundHex": "#08111BEF",
+    "borderHex": "#5AD7E9FF",
+    "foregroundHex": "#F8FAFC",
+    "mutedHex": "#C6D3DE"
   }
 ]

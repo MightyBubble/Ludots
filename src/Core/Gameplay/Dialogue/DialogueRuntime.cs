@@ -168,7 +168,11 @@ namespace Ludots.Core.Gameplay.Dialogue
                     choice.ActionGraphId));
             }
 
-            ResolveSpeakerPresentation(line.SpeakerId, out string speakerName, out string portraitSrc);
+            ResolveSpeakerPresentation(
+                line.SpeakerId,
+                out string speakerName,
+                out string portraitSrc,
+                out string standingSrc);
             view = new DialogueView(
                 _active.Definition.Id,
                 _active.Definition.DisplayName,
@@ -177,6 +181,7 @@ namespace Ludots.Core.Gameplay.Dialogue
                 line.SpeakerId,
                 speakerName,
                 portraitSrc,
+                standingSrc,
                 line.TextToken,
                 ResolveLineText(node.LineId),
                 node.PresentationProfile,
@@ -187,10 +192,15 @@ namespace Ludots.Core.Gameplay.Dialogue
             return true;
         }
 
-        private void ResolveSpeakerPresentation(string speakerId, out string speakerName, out string portraitSrc)
+        private void ResolveSpeakerPresentation(
+            string speakerId,
+            out string speakerName,
+            out string portraitSrc,
+            out string standingSrc)
         {
             speakerName = speakerId ?? string.Empty;
             portraitSrc = string.Empty;
+            standingSrc = string.Empty;
             if (string.IsNullOrWhiteSpace(speakerId) || !_story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
             {
                 return;
@@ -202,6 +212,11 @@ namespace Ludots.Core.Gameplay.Dialogue
                 if (!string.IsNullOrWhiteSpace(speaker.PortraitImageId))
                 {
                     portraitSrc = _display.ResolveImageSourceOrThrow(speaker.PortraitImageId);
+                }
+
+                if (!string.IsNullOrWhiteSpace(speaker.StandingImageId))
+                {
+                    standingSrc = _display.ResolveImageSourceOrThrow(speaker.StandingImageId);
                 }
 
                 return;

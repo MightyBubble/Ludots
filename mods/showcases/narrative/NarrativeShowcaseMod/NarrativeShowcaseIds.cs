@@ -41,6 +41,7 @@ namespace NarrativeShowcaseMod
         public const string PresentationDialogueOverlay = "story.dialogue_overlay";
         public const string PresentationWorldBubble = "story.world_bubble";
         public const string PresentationImmersiveSubtitle = "story.immersive_subtitle";
+        public const string PresentationStandingPortrait = "story.standing_portrait";
 
         public const string ActiveMapKey = "NarrativeShowcase.ActiveMap";
         public const string BootstrappedKey = "NarrativeShowcase.Bootstrapped";

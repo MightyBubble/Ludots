@@ -16,6 +16,7 @@ namespace NarrativeShowcaseMod.Runtime
         public NarrativeShowcaseSurfaceConfig VariablesPanel { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig OverlayDialogue { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig DialogueBubble { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig StandingPortrait { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig SubtitleBubble { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig ChoiceList { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig TransmissionOverlay { get; set; } = new();

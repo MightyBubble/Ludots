@@ -58,7 +58,7 @@
 }
 ```
 
-`kind`：`portrait` | `badge` | `card` | `icon`。  
+`kind`：`portrait` | `badge` | `card` | `icon` | `standing`。  
 `path` 经 VFS 解析为绝对路径后喂 `Ui.Image`（与 `UiImageSourceCache` 合同一致）。  
 `path` 缺失或文件不存在：若声明了 `glyphFallback` 则生成 data-URI SVG；否则 fail-closed（对话肖像位留空仅当 speaker 未声明 portraitImageId）。
 
@@ -68,11 +68,12 @@
 {
   "id": "speaker.warden",
   "displayNameToken": "story.speaker.warden.name",
-  "portraitImageId": "portrait.speaker.warden"
+  "portraitImageId": "portrait.speaker.warden",
+  "standingImageId": "standing.speaker.warden"
 }
 ```
 
-`DialogueView` 暴露 `ResolvedSpeakerName` 与 `PortraitImageSrc`。展示层禁止再维护 `speakerLabels` 明文表。
+`DialogueView` 暴露 `ResolvedSpeakerName`、`PortraitImageSrc`、`StandingImageSrc`。展示层禁止再维护 `speakerLabels` 明文表。半屏全身立绘 profile（`story.standing_portrait`）必须解析 `standingImageId`，禁止用 bust 肖像顶替。
 
 ### 3.4 换肤（故事表面）
 

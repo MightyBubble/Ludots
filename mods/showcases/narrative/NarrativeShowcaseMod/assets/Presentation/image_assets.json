@@ -16,5 +16,17 @@
     "kind": "Portrait",
     "path": "NarrativeShowcaseMod:assets/Presentation/portraits/shrine.png",
     "glyphFallback": "ES"
+  },
+  {
+    "id": "standing.speaker.warden",
+    "kind": "Standing",
+    "path": "NarrativeShowcaseMod:assets/Presentation/portraits/standing_warden.png",
+    "glyphFallback": "WM"
+  },
+  {
+    "id": "standing.speaker.player",
+    "kind": "Standing",
+    "path": "NarrativeShowcaseMod:assets/Presentation/portraits/standing_arcweaver.png",
+    "glyphFallback": "AW"
   }
 ]
