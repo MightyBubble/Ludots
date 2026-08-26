@@ -287,4 +287,5 @@ Feature: 地图变量作者面
 - #128 语义 TextToken / 肖像 / 立绘 fail-closed：已合入
 - #1217 / #1109 MapVariable 作者面（Bridge + Graph 变量面板）：已合入
 - Epic #1083 剩余 Graph 子树（#1113–#1126）：跟 TriggerGraph PR #1239，不在 Story 交付内自卡
+- Narrative showcase 主图新增地图挂载 `Graph.Narrative.Flow.AwaitStoryConfirm`：`AwaitCallback(DialogConfirm)` 停车，briefing 对话提交 Complete 后写 `story.await_confirmed` 并用 `LoadPlacedEntity` 读取 Arcweaver Health 写入 `narrative.arcweaver_health`；不改 `actionGraphId`，不新增第二套 Promise
 
