@@ -3,9 +3,11 @@ using System;
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
     /// <summary>
-    /// Fixed-capacity UTF-16 text bank for graph Text registers. Cleared at frame bind;
+    /// Fixed-capacity UTF-16 text bank for graph Text registers. Thread-local reuse;
     /// hot-path ops only copy within this heap (no string alloc). Nested InvokeScript /
     /// InvokeGraph push a depth frame so child slot indices do not clobber the parent.
+    /// Producers Write before consumers Read; Bind/Execute do not clear the root frame
+    /// (HFSM/script micro-evals must stay 0Alloc and avoid Array.Clear every tick).
     /// </summary>
     public sealed class GraphTextHeap
     {
@@ -37,11 +39,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public int Frame => _frame;
 
-        public static GraphTextHeap ForCurrentThreadCleared()
+        public static GraphTextHeap ForCurrentThread()
         {
             t_current ??= new GraphTextHeap();
-            t_current.ResetToRoot();
             return t_current;
+        }
+
+        public static GraphTextHeap ForCurrentThreadCleared()
+        {
+            GraphTextHeap heap = ForCurrentThread();
+            heap.ResetToRoot();
+            return heap;
         }
 
         public void ResetToRoot()

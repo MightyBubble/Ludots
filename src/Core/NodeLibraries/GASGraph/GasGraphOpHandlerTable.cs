@@ -408,13 +408,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// Root execution entry binds the thread-local text heap when the caller omitted it.
-        /// Nested Invoke* already pass a non-null heap and must not reset here.
+        /// Does not clear: producers Write before Read; nested Invoke* push their own frame.
         /// </summary>
         private static void EnsureTextHeap(ref GraphExecutionState state)
         {
             if (state.Text == null)
             {
-                state.Text = GraphTextHeap.ForCurrentThreadCleared();
+                state.Text = GraphTextHeap.ForCurrentThread();
             }
         }
 
