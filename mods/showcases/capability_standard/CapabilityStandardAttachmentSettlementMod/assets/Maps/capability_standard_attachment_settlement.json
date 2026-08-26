@@ -15,8 +15,8 @@
     "TargetXCm": 5000,
     "TargetYCm": 5200,
     "Yaw": 45,
-    "Pitch": 42,
-    "DistanceCm": 9000,
+    "Pitch": 50,
+    "DistanceCm": 4200,
     "FovYDeg": 55
   },
   "Entities": [

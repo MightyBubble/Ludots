@@ -12,11 +12,11 @@
     }
   ],
   "DefaultCamera": {
-    "TargetXCm": 1500,
-    "TargetYCm": 0,
+    "TargetXCm": 1600,
+    "TargetYCm": -80,
     "Yaw": 45,
-    "Pitch": 42,
-    "DistanceCm": 7000,
+    "Pitch": 50,
+    "DistanceCm": 3200,
     "FovYDeg": 55
   },
   "Entities": [

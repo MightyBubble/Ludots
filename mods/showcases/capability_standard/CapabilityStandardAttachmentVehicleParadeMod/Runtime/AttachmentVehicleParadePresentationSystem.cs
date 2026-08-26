@@ -32,9 +32,9 @@ internal sealed class AttachmentVehicleParadePresentationSystem : ISystem<float>
         float chassisX = _state.ChassisXCm / 100f;
         float barrelX = _state.BarrelXCm / 100f;
         float barrelY = _state.BarrelYCm / 100f;
-        GraphShowcaseStagePresenter.DrawActor(_debugDraw, chassisX, 0f, 1.1f, DebugDrawColor.Cyan, 0.14f);
-        GraphShowcaseStagePresenter.DrawActor(_debugDraw, chassisX, 0f, 0.55f, DebugDrawColor.Yellow, 0.1f);
-        GraphShowcaseStagePresenter.DrawActor(_debugDraw, barrelX, barrelY, 0.35f, DebugDrawColor.Red, 0.1f);
+        GraphShowcaseStagePresenter.DrawActor(_debugDraw, chassisX, 0f, 2.2f, DebugDrawColor.Cyan, 0.18f);
+        GraphShowcaseStagePresenter.DrawActor(_debugDraw, chassisX, 0f, 1.1f, DebugDrawColor.Yellow, 0.14f);
+        GraphShowcaseStagePresenter.DrawActor(_debugDraw, barrelX, barrelY, 0.7f, DebugDrawColor.Red, 0.14f);
         GraphShowcaseStagePresenter.DrawPlayerCaption(
             _overlay,
             "装甲阅兵",

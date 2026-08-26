@@ -33,16 +33,16 @@ internal sealed class AttachmentMountPresentationSystem : ISystem<float>
             _debugDraw,
             _state.CarrierXCm / 100f,
             0f,
-            1.2f,
+            2.4f,
             DebugDrawColor.Cyan,
-            0.14f);
+            0.18f);
         GraphShowcaseStagePresenter.DrawActor(
             _debugDraw,
             _state.RiderXCm / 100f,
             _state.RiderYCm / 100f,
-            0.55f,
+            1.1f,
             _state.RiderAttached ? DebugDrawColor.Yellow : DebugDrawColor.Green,
-            0.12f);
+            0.14f);
         GraphShowcaseStagePresenter.DrawPlayerCaption(
             _overlay,
             "乘员上下车",
