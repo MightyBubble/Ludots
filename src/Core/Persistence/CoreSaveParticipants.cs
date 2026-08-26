@@ -1345,13 +1345,13 @@ namespace Ludots.Core.Persistence
                     }
 
                     entry["regions"] = regions;
-                    var cells = new JsonArray();
-                    foreach (FieldCellValue2D<int> cell in SnapshotCells(discrete.Field))
+                    var rects = new JsonArray();
+                    foreach (FieldCellRectStroke stroke in FieldRectCodec.CoalesceFromField(discrete.Field))
                     {
-                        cells.Add(new JsonArray { cell.Cell.X, cell.Cell.Y, cell.Value });
+                        rects.Add(new JsonArray { stroke.X0, stroke.Y0, stroke.X1, stroke.Y1, stroke.RegionId });
                     }
 
-                    entry["cells"] = cells;
+                    entry["rects"] = rects;
                     break;
 
                 case Scalar32FieldLayerData scalar:
@@ -1458,31 +1458,45 @@ namespace Ludots.Core.Persistence
                 discrete.Regions.Register(keys[i]);
             }
 
-            if (entry["cells"] is not JsonArray cells)
+            if (entry["cells"] != null)
             {
-                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'cells'.");
+                throw new InvalidOperationException(
+                    $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' uses legacy 'cells'; re-save with 'rects'.");
+            }
+
+            if (entry["rects"] is not JsonArray rects)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'rects'.");
             }
 
             discrete.Field.Clear();
-            foreach (JsonNode? cellNode in cells)
+            foreach (JsonNode? rectNode in rects)
             {
-                if (cellNode is not JsonArray triple || triple.Count != 3)
+                if (rectNode is not JsonArray quintuple || quintuple.Count != 5)
                 {
                     throw new InvalidOperationException(
-                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a malformed cell entry.");
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a malformed rect entry.");
                 }
 
-                int x = triple[0]!.GetValue<int>();
-                int y = triple[1]!.GetValue<int>();
-                int regionIndex = triple[2]!.GetValue<int>();
+                int x0 = quintuple[0]!.GetValue<int>();
+                int y0 = quintuple[1]!.GetValue<int>();
+                int x1 = quintuple[2]!.GetValue<int>();
+                int y1 = quintuple[3]!.GetValue<int>();
+                int regionIndex = quintuple[4]!.GetValue<int>();
                 if (regionIndex < 1 || regionIndex > keys.Length)
                 {
                     throw new InvalidOperationException(
-                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' cell ({x},{y}) references region index {regionIndex} outside 'regions'.");
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' rect references region index {regionIndex} outside 'regions'.");
+                }
+
+                if (x1 < x0 || y1 < y0)
+                {
+                    throw new InvalidOperationException(
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' rect ends precede starts.");
                 }
 
                 int regionId = discrete.Regions.GetId(keys[regionIndex - 1]);
-                discrete.Field.Set(new FieldCell2D(x, y), regionId);
+                discrete.Field.FillRect(x0, y0, x1, y1, regionId);
             }
         }
 

@@ -44,7 +44,7 @@ catch (InvalidOperationException ex)
 static void PrintUsage()
 {
     Console.Error.WriteLine("""
-    field-editor — author discrete-id field layers of a mod (engine format: #1175)
+    field-editor — author discrete-id field layers of a mod (engine format: Fields/cells schema v2 rects)
 
     layers        --mod <dir>
     new-layer     --mod <dir> --id <layerKey> [--cell-size 500] [--chunk 16] [--max-regions 256] [--writer map.field]

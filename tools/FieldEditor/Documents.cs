@@ -11,7 +11,7 @@ namespace Ludots.Tools.FieldEditor
     /// </summary>
     public sealed class CellsDocument
     {
-        public const int SupportedSchemaVersion = 1;
+        public const int SupportedSchemaVersion = 2;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -43,10 +43,12 @@ namespace Ludots.Tools.FieldEditor
 
             JsonObject root = JsonNode.Parse(File.ReadAllText(assetPath)) as JsonObject
                 ?? throw new InvalidOperationException($"'{assetPath}' is not a JSON object.");
-            if (root["schemaVersion"]?.GetValue<int>() != SupportedSchemaVersion)
+            int schemaVersion = root["schemaVersion"]?.GetValue<int>()
+                ?? throw new InvalidOperationException($"'{assetPath}' is missing schemaVersion.");
+            if (schemaVersion != 1 && schemaVersion != SupportedSchemaVersion)
             {
                 throw new InvalidOperationException(
-                    $"'{assetPath}' schemaVersion must be {SupportedSchemaVersion}.");
+                    $"'{assetPath}' schemaVersion must be 1 or {SupportedSchemaVersion}.");
             }
 
             string? layer = root["layer"]?.GetValue<string>();
@@ -61,24 +63,68 @@ namespace Ludots.Tools.FieldEditor
                 document.Regions[RequireCanonicalKey(key, assetPath)] = RequireCanonicalKey(key, assetPath);
             }
 
-            foreach (JsonNode? entry in root["cells"]?.AsArray() ?? new JsonArray())
+            if (schemaVersion == 1)
+            {
+                foreach (JsonNode? entry in root["cells"]?.AsArray() ?? new JsonArray())
+                {
+                    JsonArray triple = entry as JsonArray
+                        ?? throw new InvalidOperationException($"'{assetPath}': each cell must be [x, y, regionIndex].");
+                    int x = triple[0]!.GetValue<int>();
+                    int y = triple[1]!.GetValue<int>();
+                    int index = triple[2]!.GetValue<int>();
+                    document.Cells[(x, y)] = RegionKeyAt(document, index, assetPath, x, y);
+                }
+
+                return document;
+            }
+
+            if (root["cells"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"'{assetPath}': schemaVersion {SupportedSchemaVersion} forbids 'cells'; use 'rects'.");
+            }
+
+            foreach (JsonNode? entry in root["rects"]?.AsArray()
+                ?? throw new InvalidOperationException($"'{assetPath}': schemaVersion {SupportedSchemaVersion} requires 'rects'."))
+            {
+                JsonArray quintuple = entry as JsonArray
+                    ?? throw new InvalidOperationException($"'{assetPath}': each rect must be [x0, y0, x1, y1, regionIndex].");
+                if (quintuple.Count != 5)
+                {
+                    throw new InvalidOperationException($"'{assetPath}': each rect must be [x0, y0, x1, y1, regionIndex].");
+                }
+
+                int x0 = quintuple[0]!.GetValue<int>();
+                int y0 = quintuple[1]!.GetValue<int>();
+                int x1 = quintuple[2]!.GetValue<int>();
+                int y1 = quintuple[3]!.GetValue<int>();
+                int index = quintuple[4]!.GetValue<int>();
+                string regionKey = RegionKeyAt(document, index, assetPath, x0, y0);
+                document.PaintRect(regionKey, x0, y0, x1, y1);
+            }
+
+            foreach (JsonNode? entry in root["points"]?.AsArray() ?? new JsonArray())
             {
                 JsonArray triple = entry as JsonArray
-                    ?? throw new InvalidOperationException($"'{assetPath}': each cell must be [x, y, regionIndex].");
+                    ?? throw new InvalidOperationException($"'{assetPath}': each point must be [x, y, regionIndex].");
                 int x = triple[0]!.GetValue<int>();
                 int y = triple[1]!.GetValue<int>();
                 int index = triple[2]!.GetValue<int>();
-                if (index < 1 || index > document.Regions.Count)
-                {
-                    throw new InvalidOperationException(
-                        $"'{assetPath}': cell ({x},{y}) references region index {index} outside 'regions'.");
-                }
-
-                string regionKey = document.Regions.Keys.ElementAt(index - 1);
-                document.Cells[(x, y)] = regionKey;
+                document.Cells[(x, y)] = RegionKeyAt(document, index, assetPath, x, y);
             }
 
             return document;
+        }
+
+        private static string RegionKeyAt(CellsDocument document, int index, string assetPath, int x, int y)
+        {
+            if (index < 1 || index > document.Regions.Count)
+            {
+                throw new InvalidOperationException(
+                    $"'{assetPath}': cell ({x},{y}) references region index {index} outside 'regions'.");
+            }
+
+            return document.Regions.Keys.ElementAt(index - 1);
         }
 
         public string AddRegion(string key)
@@ -132,16 +178,24 @@ namespace Ludots.Tools.FieldEditor
         public void Save(string assetPath, int maxRegionIds)
         {
             Validate(maxRegionIds);
+            var points = new List<(int X, int Y, int RegionId)>(Cells.Count);
+            foreach (((int x, int y), string key) in Cells)
+            {
+                points.Add((x, y, RegionIndex(key)));
+            }
+
+            var rects = Ludots.Core.Fields.FieldRectCodec.CoalescePoints(points);
             var root = new JsonObject
             {
                 ["schemaVersion"] = SupportedSchemaVersion,
                 ["layer"] = LayerKey,
                 ["regions"] = new JsonArray(Regions.Keys.Select(key => JsonValue.Create(key)).ToArray()),
-                ["cells"] = new JsonArray(Cells
-                    .OrderBy(pair => pair.Key.Y, Comparer<int>.Default)
-                    .ThenBy(pair => pair.Key.X, Comparer<int>.Default)
-                    .Select(pair => (JsonNode)new JsonArray(
-                        pair.Key.X, pair.Key.Y, RegionIndex(pair.Value)))
+                ["rects"] = new JsonArray(rects
+                    .OrderBy(stroke => stroke.Y0)
+                    .ThenBy(stroke => stroke.X0)
+                    .ThenBy(stroke => stroke.RegionId)
+                    .Select(stroke => (JsonNode)new JsonArray(
+                        stroke.X0, stroke.Y0, stroke.X1, stroke.Y1, stroke.RegionId))
                     .ToArray()),
             };
 

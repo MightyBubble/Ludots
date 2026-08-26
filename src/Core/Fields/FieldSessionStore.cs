@@ -116,7 +116,13 @@ namespace Ludots.Core.Fields
                 layer.Regions.Register(regionKey);
             }
 
-            foreach (FieldCellRegionEntry cell in asset.Cells)
+            foreach (FieldCellRectEntry rect in asset.Rects)
+            {
+                int regionId = layer.Regions.GetId(rect.RegionKey);
+                layer.Field.FillRect(rect.X0, rect.Y0, rect.X1, rect.Y1, regionId);
+            }
+
+            foreach (FieldCellRegionEntry cell in asset.Points)
             {
                 layer.Field.Set(new FieldCell2D(cell.X, cell.Y), layer.Regions.GetId(cell.RegionKey));
             }

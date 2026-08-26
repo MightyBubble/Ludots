@@ -8,6 +8,8 @@ namespace Ludots.Core.Fields.Config
 {
     public readonly record struct FieldCellRegionEntry(int X, int Y, string RegionKey);
 
+    public readonly record struct FieldCellRectEntry(int X0, int Y0, int X1, int Y1, string RegionKey);
+
     public sealed class FieldCellsAsset
     {
         /// <summary>Layer key this asset was loaded for; always matches the requested layer.</summary>
@@ -16,7 +18,11 @@ namespace Ludots.Core.Fields.Config
         /// <summary>Region keys in Ordinal order; regionId = index + 1, id 0 reserved for "no region".</summary>
         public required string[] RegionKeys { get; init; }
 
-        public required FieldCellRegionEntry[] Cells { get; init; }
+        /// <summary>Inclusive rect strokes. Preferred authoring form for large provinces.</summary>
+        public required FieldCellRectEntry[] Rects { get; init; }
+
+        /// <summary>Sparse point strokes (schema v1 cells land here; v2 optional leftovers).</summary>
+        public required FieldCellRegionEntry[] Points { get; init; }
     }
 
     /// <summary>
@@ -25,11 +31,14 @@ namespace Ludots.Core.Fields.Config
     /// Region ids are derived from the Ordinal-sorted union of all region keys,
     /// so fragment load order never changes an id. Two fragments assigning the
     /// same cell to different regions fail the load with both keys named.
+    /// schemaVersion 1 uses per-cell <c>cells</c>; schemaVersion 2 uses <c>rects</c>
+    /// (+ optional <c>points</c>) and rejects <c>cells</c>.
     /// </summary>
     public sealed class FieldCellsConfigLoader
     {
         public const string CellsDirectory = "Fields/cells";
-        public const int SupportedSchemaVersion = 1;
+        public const int SchemaVersionCells = 1;
+        public const int SchemaVersionRects = 2;
 
         private readonly ConfigPipeline _pipeline;
 
@@ -52,12 +61,11 @@ namespace Ludots.Core.Fields.Config
                 return null;
             }
 
-            var parsed = new List<(string[] SortedKeys, List<FieldCellRegionEntry> Cells)>(fragments.Count);
+            var parsed = new List<FragmentStrokes>(fragments.Count);
             var allKeys = new HashSet<string>(StringComparer.Ordinal);
             foreach (ConfigFragment fragment in fragments)
             {
-                (string[] SortedKeys, List<FieldCellRegionEntry> Cells) entry =
-                    ParseFragment(fragment, layerKey, path);
+                FragmentStrokes entry = ParseFragment(fragment, layerKey, path);
                 parsed.Add(entry);
                 allKeys.UnionWith(entry.SortedKeys);
             }
@@ -65,32 +73,28 @@ namespace Ludots.Core.Fields.Config
             var sortedUnion = new string[allKeys.Count];
             allKeys.CopyTo(sortedUnion);
             Array.Sort(sortedUnion, StringComparer.Ordinal);
-            var globalIds = new Dictionary<string, int>(sortedUnion.Length, StringComparer.Ordinal);
-            for (int i = 0; i < sortedUnion.Length; i++)
-            {
-                globalIds[sortedUnion[i]] = i + 1;
-            }
 
-            var cells = new List<FieldCellRegionEntry>();
-            var ownerByCell = new Dictionary<long, string>();
-            foreach ((string[] sortedKeys, List<FieldCellRegionEntry> fragmentCells) in parsed)
+            var rects = new List<FieldCellRectEntry>();
+            var points = new List<FieldCellRegionEntry>();
+            var claimedRects = new List<FieldCellRectEntry>();
+            var ownerByPoint = new Dictionary<long, string>();
+            foreach (FragmentStrokes fragment in parsed)
             {
-                foreach (FieldCellRegionEntry cell in fragmentCells)
+                foreach (FieldCellRectEntry rect in fragment.Rects)
                 {
-                    long key = PackCell(cell.X, cell.Y);
-                    if (ownerByCell.TryGetValue(key, out string? existing))
-                    {
-                        if (!string.Equals(existing, cell.RegionKey, StringComparison.Ordinal))
-                        {
-                            throw new InvalidOperationException(
-                                $"Field cells asset '{path}' assigns cell ({cell.X},{cell.Y}) to both '{existing}' and '{cell.RegionKey}'.");
-                        }
+                    ClaimRect(claimedRects, ownerByPoint, rect, path);
+                    claimedRects.Add(rect);
+                    rects.Add(rect);
+                }
 
+                foreach (FieldCellRegionEntry point in fragment.Points)
+                {
+                    if (!ClaimPoint(claimedRects, ownerByPoint, point, path))
+                    {
                         continue;
                     }
 
-                    ownerByCell[key] = cell.RegionKey;
-                    cells.Add(new FieldCellRegionEntry(cell.X, cell.Y, cell.RegionKey));
+                    points.Add(point);
                 }
             }
 
@@ -98,11 +102,12 @@ namespace Ludots.Core.Fields.Config
             {
                 LayerKey = layerKey,
                 RegionKeys = sortedUnion,
-                Cells = cells.ToArray(),
+                Rects = rects.ToArray(),
+                Points = points.ToArray(),
             };
         }
 
-        private static (string[] SortedKeys, List<FieldCellRegionEntry> Cells) ParseFragment(
+        private static FragmentStrokes ParseFragment(
             ConfigFragment fragment, string layerKey, string path)
         {
             FieldCellsConfig cfg;
@@ -116,10 +121,10 @@ namespace Ludots.Core.Fields.Config
                 throw new InvalidOperationException($"Field cells asset '{path}' from {fragment.SourceUri}: {ex.Message}", ex);
             }
 
-            if (cfg.SchemaVersion != SupportedSchemaVersion)
+            if (cfg.SchemaVersion != SchemaVersionCells && cfg.SchemaVersion != SchemaVersionRects)
             {
                 throw new InvalidOperationException(
-                    $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {cfg.SchemaVersion} is not supported; expected {SupportedSchemaVersion}.");
+                    $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {cfg.SchemaVersion} is not supported; expected {SchemaVersionCells} or {SchemaVersionRects}.");
             }
 
             if (!string.Equals(cfg.Layer, layerKey, StringComparison.Ordinal))
@@ -135,8 +140,35 @@ namespace Ludots.Core.Fields.Config
                 keyById[i + 1] = sortedKeys[i];
             }
 
-            List<FieldCellRegionEntry> cells = ParseCells(cfg.Cells, keyById, path, fragment.SourceUri);
-            return (sortedKeys, cells);
+            if (cfg.SchemaVersion == SchemaVersionCells)
+            {
+                if (cfg.Rects != null || cfg.Points != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {SchemaVersionCells} forbids 'rects'/'points'; use schemaVersion {SchemaVersionRects}.");
+                }
+
+                List<FieldCellRegionEntry> cells = ParsePoints(cfg.Cells, keyById, path, fragment.SourceUri, "cells");
+                return new FragmentStrokes(sortedKeys, Array.Empty<FieldCellRectEntry>(), cells.ToArray());
+            }
+
+            if (cfg.Cells != null)
+            {
+                throw new InvalidOperationException(
+                    $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {SchemaVersionRects} forbids 'cells'; use 'rects' and optional 'points'.");
+            }
+
+            if (cfg.Rects == null)
+            {
+                throw new InvalidOperationException(
+                    $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {SchemaVersionRects} requires 'rects' (use an empty array when the layer has no painted area).");
+            }
+
+            FieldCellRectEntry[] rects = ParseRects(cfg.Rects, keyById, path, fragment.SourceUri);
+            FieldCellRegionEntry[] points = cfg.Points == null
+                ? Array.Empty<FieldCellRegionEntry>()
+                : ParsePoints(cfg.Points, keyById, path, fragment.SourceUri, "points").ToArray();
+            return new FragmentStrokes(sortedKeys, rects, points);
         }
 
         private static string[] ParseRegionKeys(List<string> regions, string path, string source)
@@ -174,13 +206,54 @@ namespace Ludots.Core.Fields.Config
             return sorted;
         }
 
-        private static List<FieldCellRegionEntry> ParseCells(
-            JsonNode? cellsNode, Dictionary<int, string> keyById, string path, string source)
+        private static FieldCellRectEntry[] ParseRects(
+            JsonNode rectsNode, Dictionary<int, string> keyById, string path, string source)
+        {
+            if (rectsNode is not JsonArray array)
+            {
+                throw new InvalidOperationException(
+                    $"Field cells asset '{path}' from {source}: 'rects' must be an array of [x0, y0, x1, y1, regionId] entries.");
+            }
+
+            var rects = new FieldCellRectEntry[array.Count];
+            for (int i = 0; i < array.Count; i++)
+            {
+                if (array[i] is not JsonArray quintuple || quintuple.Count != 5)
+                {
+                    throw new InvalidOperationException(
+                        $"Field cells asset '{path}' from {source}: each 'rects' entry must be an array of exactly 5 integers.");
+                }
+
+                int x0 = RequireInt(quintuple[0], path, source);
+                int y0 = RequireInt(quintuple[1], path, source);
+                int x1 = RequireInt(quintuple[2], path, source);
+                int y1 = RequireInt(quintuple[3], path, source);
+                int regionId = RequireInt(quintuple[4], path, source);
+                if (x1 < x0 || y1 < y0)
+                {
+                    throw new InvalidOperationException(
+                        $"Field cells asset '{path}' from {source}: rect [{x0},{y0},{x1},{y1},{regionId}] ends precede starts.");
+                }
+
+                if (regionId < 1 || !keyById.TryGetValue(regionId, out string? regionKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Field cells asset '{path}' from {source}: 'rects' entry references regionId {regionId} which has no key in 'regions'.");
+                }
+
+                rects[i] = new FieldCellRectEntry(x0, y0, x1, y1, regionKey);
+            }
+
+            return rects;
+        }
+
+        private static List<FieldCellRegionEntry> ParsePoints(
+            JsonNode? cellsNode, Dictionary<int, string> keyById, string path, string source, string fieldName)
         {
             if (cellsNode is not JsonArray array)
             {
                 throw new InvalidOperationException(
-                    $"Field cells asset '{path}' from {source}: 'cells' must be an array of [x, y, regionId] entries.");
+                    $"Field cells asset '{path}' from {source}: '{fieldName}' must be an array of [x, y, regionId] entries.");
             }
 
             var cells = new List<FieldCellRegionEntry>(array.Count);
@@ -189,7 +262,7 @@ namespace Ludots.Core.Fields.Config
                 if (entry is not JsonArray triple || triple.Count != 3)
                 {
                     throw new InvalidOperationException(
-                        $"Field cells asset '{path}' from {source}: each 'cells' entry must be an array of exactly 3 integers.");
+                        $"Field cells asset '{path}' from {source}: each '{fieldName}' entry must be an array of exactly 3 integers.");
                 }
 
                 int x = RequireInt(triple[0], path, source);
@@ -198,7 +271,7 @@ namespace Ludots.Core.Fields.Config
                 if (regionId < 1 || !keyById.TryGetValue(regionId, out string? regionKey))
                 {
                     throw new InvalidOperationException(
-                        $"Field cells asset '{path}' from {source}: 'cells' entry [{x},{y},{regionId}] references regionId {regionId} which has no key in 'regions'.");
+                        $"Field cells asset '{path}' from {source}: '{fieldName}' entry [{x},{y},{regionId}] references regionId {regionId} which has no key in 'regions'.");
                 }
 
                 cells.Add(new FieldCellRegionEntry(x, y, regionKey));
@@ -206,6 +279,83 @@ namespace Ludots.Core.Fields.Config
 
             return cells;
         }
+
+        private static void ClaimRect(
+            List<FieldCellRectEntry> claimedRects,
+            Dictionary<long, string> ownerByPoint,
+            FieldCellRectEntry rect,
+            string path)
+        {
+            for (int i = 0; i < claimedRects.Count; i++)
+            {
+                FieldCellRectEntry existing = claimedRects[i];
+                if (!Overlaps(rect, existing))
+                {
+                    continue;
+                }
+
+                if (!string.Equals(existing.RegionKey, rect.RegionKey, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Field cells asset '{path}' assigns overlapping rects to both '{existing.RegionKey}' and '{rect.RegionKey}' near ({rect.X0},{rect.Y0})-({rect.X1},{rect.Y1}).");
+                }
+            }
+
+            foreach (KeyValuePair<long, string> pair in ownerByPoint)
+            {
+                UnpackCell(pair.Key, out int x, out int y);
+                if (Contains(rect, x, y) &&
+                    !string.Equals(pair.Value, rect.RegionKey, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Field cells asset '{path}' assigns cell ({x},{y}) to both '{pair.Value}' and '{rect.RegionKey}'.");
+                }
+            }
+        }
+
+        private static bool ClaimPoint(
+            List<FieldCellRectEntry> claimedRects,
+            Dictionary<long, string> ownerByPoint,
+            FieldCellRegionEntry point,
+            string path)
+        {
+            for (int i = 0; i < claimedRects.Count; i++)
+            {
+                FieldCellRectEntry rect = claimedRects[i];
+                if (Contains(rect, point.X, point.Y) &&
+                    !string.Equals(rect.RegionKey, point.RegionKey, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Field cells asset '{path}' assigns cell ({point.X},{point.Y}) to both '{rect.RegionKey}' and '{point.RegionKey}'.");
+                }
+
+                if (Contains(rect, point.X, point.Y))
+                {
+                    return false;
+                }
+            }
+
+            long key = PackCell(point.X, point.Y);
+            if (ownerByPoint.TryGetValue(key, out string? existing))
+            {
+                if (!string.Equals(existing, point.RegionKey, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Field cells asset '{path}' assigns cell ({point.X},{point.Y}) to both '{existing}' and '{point.RegionKey}'.");
+                }
+
+                return false;
+            }
+
+            ownerByPoint[key] = point.RegionKey;
+            return true;
+        }
+
+        private static bool Overlaps(in FieldCellRectEntry a, in FieldCellRectEntry b) =>
+            !(a.X1 < b.X0 || b.X1 < a.X0 || a.Y1 < b.Y0 || b.Y1 < a.Y0);
+
+        private static bool Contains(in FieldCellRectEntry rect, int x, int y) =>
+            x >= rect.X0 && x <= rect.X1 && y >= rect.Y0 && y <= rect.Y1;
 
         private static int RequireInt(JsonNode? node, string path, string source)
         {
@@ -215,12 +365,23 @@ namespace Ludots.Core.Fields.Config
             }
 
             throw new InvalidOperationException(
-                $"Field cells asset '{path}' from {source}: 'cells' entries must contain integers only.");
+                $"Field cells asset '{path}' from {source}: stroke entries must contain integers only.");
         }
 
         private static long PackCell(int x, int y)
         {
             return ((long)x << 32) ^ (uint)y;
         }
+
+        private static void UnpackCell(long key, out int x, out int y)
+        {
+            x = (int)(key >> 32);
+            y = (int)(key & 0xFFFFFFFF);
+        }
+
+        private readonly record struct FragmentStrokes(
+            string[] SortedKeys,
+            FieldCellRectEntry[] Rects,
+            FieldCellRegionEntry[] Points);
     }
 }

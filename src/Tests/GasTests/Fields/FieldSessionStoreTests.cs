@@ -140,7 +140,7 @@ namespace Ludots.Tests.GAS
 
             ISaveParticipant participant = CoreSaveParticipants.CreateFieldLayersParticipant(manager);
             JsonNode save = JsonNode.Parse("""
-            { "sessions": [ { "mapId": "mapA", "layers": [ { "layer": "layerGone", "regions": [ "r1" ], "cells": [] } ] } ] }
+            { "sessions": [ { "mapId": "mapA", "layers": [ { "layer": "layerGone", "regions": [ "r1" ], "rects": [] } ] } ] }
             """)!;
 
             var exception = Assert.Throws<InvalidOperationException>(() => participant.RestoreState(save));
