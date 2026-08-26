@@ -114,8 +114,8 @@
   "entry": "hp",
   "nodes": [
     { "id": "hp", "op": "LoadSelfAttribute", "attribute": "Health" },
-    { "id": "hpBase", "op": "LoadSelfAttributeBase", "attribute": "Health" },
-    { "id": "self", "op": "LoadSelf" },
+    { "id": "hpMax", "op": "LoadSelfAttribute", "attribute": "Health" },
+    { "id": "caster", "op": "LoadCaster" },
     { "id": "stunned", "op": "HasTag", "tag": "Status.Stunned" }
   ],
   // control/value edges + Summary outputs → unit.roster.*
