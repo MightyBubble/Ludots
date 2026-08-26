@@ -379,6 +379,157 @@ namespace Ludots.Tests.GAS.Story
             Assert.That(signalFired, Is.EqualTo(1), "Signal tracks must fire once per playthrough.");
         }
 
+        [Test]
+        public void SequencerRuntime_PauseBlocksClock_ResumeAndSetRateAdvance_SeekRefiresSignals()
+        {
+            using GameEngine engine = CreateCoreEngine();
+            const string signalActionGraphId = "Graph.Story.Unit.ClockSignalNoOp";
+            RegisterHaltTriggerGraph(engine, signalActionGraphId);
+
+            var sequences = new SequenceDefinitionRegistry();
+            var story = new StoryDefinitionRegistry();
+            SequencerRuntime sequencer = CreateIsolatedSequencerRuntime(engine, sequences, story);
+
+            sequences.Register(new SequenceDefinition
+            {
+                Id = "Sequence.Unit.ClockControls",
+                DisplayName = "Clock Controls",
+                ClearCameraOnComplete = false,
+                Clock = new SequenceClockDefinition { Rate = 1f },
+                Tracks =
+                {
+                    new SequenceTrackDefinition
+                    {
+                        Type = SequenceTrackType.Camera,
+                        Profile = "Camera.Unit.Clock",
+                        Start = 0f,
+                        Duration = 2f
+                    },
+                    new SequenceTrackDefinition
+                    {
+                        Type = SequenceTrackType.Signal,
+                        EventId = "unit.clock.signal",
+                        ActionGraphId = signalActionGraphId,
+                        Start = 0.5f
+                    }
+                }
+            });
+
+            int signalFired = 0;
+            engine.TriggerManager.RegisterEventHandler(SequencerEventKeys.SignalFired, _ =>
+            {
+                signalFired++;
+                return Task.CompletedTask;
+            });
+
+            sequencer.Start("Sequence.Unit.ClockControls");
+            Assert.That(sequencer.TryGetActiveView(out SequenceView started), Is.True);
+            Assert.That(started.Time, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(started.Rate, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(started.Paused, Is.False);
+
+            sequencer.Pause();
+            Assert.That(sequencer.TryGetActiveView(out SequenceView paused), Is.True);
+            Assert.That(paused.Paused, Is.True);
+            sequencer.Update(1f);
+            Assert.That(sequencer.TryGetActiveView(out SequenceView stillPaused), Is.True);
+            Assert.That(stillPaused.Time, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(signalFired, Is.EqualTo(0));
+
+            sequencer.Resume();
+            sequencer.SetRate(2f);
+            Assert.That(sequencer.TryGetActiveView(out SequenceView resumed), Is.True);
+            Assert.That(resumed.Paused, Is.False);
+            Assert.That(resumed.Rate, Is.EqualTo(2f).Within(0.0001f));
+
+            sequencer.Update(0.2f);
+            Assert.That(sequencer.TryGetActiveView(out SequenceView mid), Is.True);
+            Assert.That(mid.Time, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(signalFired, Is.EqualTo(0));
+
+            sequencer.Update(0.1f);
+            Assert.That(signalFired, Is.EqualTo(1));
+
+            sequencer.Seek(0f);
+            Assert.That(sequencer.HasActiveSequence, Is.True);
+            Assert.That(sequencer.TryGetActiveView(out SequenceView seeked), Is.True);
+            Assert.That(seeked.Time, Is.EqualTo(0f).Within(0.0001f));
+
+            sequencer.Seek(0.5f);
+            Assert.That(signalFired, Is.EqualTo(2), "Seek must clear fired signals and allow SignalTrack to fire again.");
+
+            sequencer.Skip();
+            Assert.That(sequencer.HasActiveSequence, Is.False);
+        }
+
+        [Test]
+        public void DialogueRuntime_HidesChoiceWhenConditionGraphReturnsZero()
+        {
+            using GameEngine engine = CreateCoreEngine();
+            const string conditionGraphId = "Graph.Story.Unit.ConditionFalse";
+            RegisterHaltQueryGraphReturning(engine, conditionGraphId, returnValue: 0);
+
+            var dialogues = new DialogueDefinitionRegistry();
+            var story = new StoryDefinitionRegistry();
+            DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
+
+            story.Register(new StoryLineDefinition
+            {
+                Id = "line.unit.gate",
+                SpeakerId = "speaker.guide",
+                TextToken = "story.unit.gate"
+            });
+            story.Register(new StoryLineDefinition
+            {
+                Id = "line.unit.locked",
+                SpeakerId = "speaker.guide",
+                TextToken = "story.unit.locked"
+            });
+            story.Register(new StoryLineDefinition
+            {
+                Id = "line.unit.open",
+                SpeakerId = "speaker.guide",
+                TextToken = "story.unit.open"
+            });
+
+            dialogues.Register(new DialogueDefinition
+            {
+                Id = "dialogue.unit.gated",
+                DisplayName = "Gated",
+                EntryNode = "root",
+                Nodes =
+                {
+                    new DialogueNodeDefinition
+                    {
+                        Id = "root",
+                        LineId = "line.unit.gate",
+                        PresentationProfile = "story.dialogue_overlay",
+                        Choices =
+                        {
+                            new DialogueChoiceDefinition
+                            {
+                                Id = "locked",
+                                LineId = "line.unit.locked",
+                                ConditionGraphId = conditionGraphId,
+                                NextNode = "root"
+                            },
+                            new DialogueChoiceDefinition
+                            {
+                                Id = "always",
+                                LineId = "line.unit.open",
+                                NextNode = "root"
+                            }
+                        }
+                    }
+                }
+            });
+
+            dialogue.StartDialogue("dialogue.unit.gated");
+            Assert.That(dialogue.TryGetActiveView(out DialogueView view), Is.True);
+            Assert.That(view.Choices.Count, Is.EqualTo(1));
+            Assert.That(view.Choices[0].ChoiceId, Is.EqualTo("always"));
+        }
+
         private static GameEngine CreateCoreEngine()
         {
             string repoRoot = FindRepoRoot();
@@ -414,6 +565,19 @@ namespace Ludots.Tests.GAS.Story
         }
 
         private static void RegisterHaltTriggerGraph(GameEngine engine, string graphName)
+            => RegisterHaltGraphReturning(engine, graphName, GraphKind.TriggerGraph, returnValue: 1);
+
+        private static void RegisterHaltQueryGraphReturning(GameEngine engine, string graphName, int returnValue)
+            => RegisterHaltGraphReturning(engine, graphName, GraphKind.Query, returnValue);
+
+        private static void RegisterHaltTriggerGraphReturning(GameEngine engine, string graphName, int returnValue)
+            => RegisterHaltGraphReturning(engine, graphName, GraphKind.TriggerGraph, returnValue);
+
+        private static void RegisterHaltGraphReturning(
+            GameEngine engine,
+            string graphName,
+            GraphKind kind,
+            int returnValue)
         {
             RegistryMapping[] mappings = GraphIdRegistry.SnapshotMappings();
             GraphIdRegistry.Clear();
@@ -426,15 +590,14 @@ namespace Ludots.Tests.GAS.Story
             int graphId = GraphIdRegistry.Register(graphName);
             var program = new[]
             {
-                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = returnValue },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
-            var entries = new[]
-            {
-                new TriggerGraphEntry("story_invoke", "Story.ManualInvoke", startPc: 0, once: true),
-            };
+            TriggerGraphEntry[]? entries = kind == GraphKind.TriggerGraph
+                ? new[] { new TriggerGraphEntry("story_invoke", "Story.ManualInvoke", startPc: 0, once: true) }
+                : null;
             engine.GetService(CoreServiceKeys.GraphProgramRegistry)!
-                .Register(graphId, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, null, entries);
+                .Register(graphId, program, kind, GraphInstructionSourceMap.Empty, null, entries);
         }
 
         private static string CreateTempRoot(out ConfigPipeline pipeline)
