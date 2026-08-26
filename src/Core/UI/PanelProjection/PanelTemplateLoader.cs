@@ -50,7 +50,8 @@ namespace Ludots.Core.UI.PanelProjection
         private static readonly HashSet<string> ControlFields = new(StringComparer.Ordinal)
         {
             "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
-            "viewportHeight", "itemExtent", "virtualize", "overscan", "present"
+            "viewportHeight", "itemExtent", "virtualize", "overscan", "present",
+            "columns", "aggregate"
         };
 
         public static PanelTemplate Load(string json)
@@ -427,18 +428,139 @@ namespace Ludots.Core.UI.PanelProjection
                     "present",
                     $"panel template '{templateId}' list '{bind}'");
                 present = PanelPresentModes.Parse(presentText, $"panel template '{templateId}' list '{bind}'");
-                if (present == PanelPresentMode.Aggregate && virtualize)
+            }
+
+            int? columns = null;
+            if (controlObject["columns"] is not null)
+            {
+                if (type != PanelLayoutControlType.List)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' columns is only valid on list controls.");
+                }
+
+                if (controlObject["columns"] is not JsonValue columnsNode ||
+                    !columnsNode.TryGetValue<int>(out int columnsValue) ||
+                    columnsValue < 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list '{bind}' columns must be an int >= 1.");
+                }
+
+                columns = columnsValue;
+            }
+
+            PanelAggregateCountSpec? aggregateCount = null;
+            if (controlObject["aggregate"] is not null)
+            {
+                if (type != PanelLayoutControlType.List)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' aggregate is only valid on list controls.");
+                }
+
+                aggregateCount = ParseAggregateCount(templateId, bind!, controlObject["aggregate"]);
+            }
+
+            if (present == PanelPresentMode.Grid)
+            {
+                if (!columns.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list '{bind}' present=grid requires columns.");
+                }
+
+                if (virtualize)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list '{bind}' cannot combine present=grid with virtualize.");
+                }
+            }
+            else if (columns.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' list '{bind}' columns is only valid when present=grid.");
+            }
+
+            if (present == PanelPresentMode.Column && virtualize)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' list '{bind}' cannot combine present=column with virtualize.");
+            }
+
+            if (present == PanelPresentMode.Aggregate)
+            {
+                if (virtualize)
                 {
                     throw new InvalidOperationException(
                         $"Panel template '{templateId}' list '{bind}' cannot combine present=aggregate with virtualize.");
                 }
+
+                if (aggregateCount == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list '{bind}' present=aggregate requires aggregate.count.");
+                }
+            }
+            else if (aggregateCount != null)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' list '{bind}' aggregate is only valid when present=aggregate.");
             }
 
             ValidateControlBindings(templateId, type, bind, current, max, pinNames);
 
             return new PanelLayoutControl(
                 type, className, text, bind, prefix, current, max, showWhen,
-                viewportHeight, itemExtent, virtualize, overscan, present);
+                viewportHeight, itemExtent, virtualize, overscan, present, columns, aggregateCount);
+        }
+
+        private static PanelAggregateCountSpec ParseAggregateCount(
+            string templateId,
+            string bind,
+            JsonNode? aggregateNode)
+        {
+            if (aggregateNode is not JsonObject aggregateObject)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' list '{bind}' aggregate must be an object.");
+            }
+
+            RejectUnknownFields(
+                aggregateObject,
+                new HashSet<string>(StringComparer.Ordinal) { "count" },
+                $"panel template '{templateId}' list '{bind}' aggregate");
+
+            if (aggregateObject["count"] is not JsonObject countObject)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' list '{bind}' aggregate.count must be an object.");
+            }
+
+            RejectUnknownFields(
+                countObject,
+                new HashSet<string>(StringComparer.Ordinal) { "from", "prefix" },
+                $"panel template '{templateId}' list '{bind}' aggregate.count");
+
+            string from = RequireString(
+                countObject,
+                "from",
+                $"panel template '{templateId}' list '{bind}' aggregate.count");
+            if (!string.Equals(from, "totalCount", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' list '{bind}' aggregate.count.from '{from}' is unknown (allowed: totalCount).");
+            }
+
+            if (countObject["prefix"] is not JsonValue prefixNode ||
+                !prefixNode.TryGetValue<string>(out string? prefixText) ||
+                prefixText == null)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' list '{bind}' aggregate.count.prefix must be a string (empty allowed).");
+            }
+
+            return new PanelAggregateCountSpec(from, prefixText);
         }
 
         private static float? OptionalPositiveFloat(JsonObject controlObject, string field, string templateId)

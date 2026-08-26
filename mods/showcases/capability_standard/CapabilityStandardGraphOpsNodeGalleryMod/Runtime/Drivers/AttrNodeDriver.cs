@@ -50,6 +50,13 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
+        if (string.Equals(ctx.Vignette.Op, "LoadEffectStack", StringComparison.Ordinal))
+        {
+            SeedEffectStackOnCaster(ctx);
+            GraphOpsNodeActorBinding.BindHud(ctx);
+            return;
+        }
+
         _markTemplateId = EffectTemplateIdRegistry.GetId(MarkEffectId);
         if (_markTemplateId <= 0)
         {
@@ -94,6 +101,27 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         ctx.SimWorld.Add(caster, timing);
     }
 
+    private static void SeedEffectStackOnCaster(GraphOpsNodeDriverContext ctx)
+    {
+        Entity caster = ctx.Caster;
+        var stack = new EffectStack
+        {
+            Count = 3,
+            Limit = 5,
+            Policy = StackPolicy.RefreshDuration,
+            OverflowPolicy = StackOverflowPolicy.RejectNew,
+        };
+
+        if (ctx.SimWorld.Has<EffectStack>(caster))
+        {
+            ref EffectStack existing = ref ctx.SimWorld.Get<EffectStack>(caster);
+            existing = stack;
+            return;
+        }
+
+        ctx.SimWorld.Add(caster, stack);
+    }
+
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
         if (string.Equals(ctx.Vignette.Op, "LoadEffectTiming", StringComparison.Ordinal))
@@ -105,6 +133,20 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             }
 
             ctx.CaptionValues["hp"] = timingResult.FloatValue.ToString("0");
+            ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+            GraphOpsNodeActorBinding.SyncHud(ctx);
+            return;
+        }
+
+        if (string.Equals(ctx.Vignette.Op, "LoadEffectStack", StringComparison.Ordinal))
+        {
+            GraphOpsNodeExecuteResult stackResult = ctx.ExecuteFeaturedGraph();
+            if (stackResult.FloatValue < 1f)
+            {
+                throw new InvalidOperationException("LoadEffectStack gallery read no stacks.");
+            }
+
+            ctx.CaptionValues["hp"] = stackResult.FloatValue.ToString("0");
             ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
             GraphOpsNodeActorBinding.SyncHud(ctx);
             return;
@@ -1044,6 +1086,11 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         if (string.Equals(op, "LoadEffectTiming", StringComparison.Ordinal) && result.FloatValue <= 0f)
         {
             throw new InvalidOperationException("LoadEffectTiming gallery read no remaining ticks.");
+        }
+
+        if (string.Equals(op, "LoadEffectStack", StringComparison.Ordinal) && result.FloatValue < 1f)
+        {
+            throw new InvalidOperationException("LoadEffectStack gallery read no stacks.");
         }
 
         if (string.Equals(op, "CompareLtInt", StringComparison.Ordinal) && !result.BoolValue)

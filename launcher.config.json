@@ -2063,6 +2063,22 @@
         "value": "mods/showcases/panel_collection_bags/entries/PanelProgressionNodesEntryMod",
         "projectPath": "PanelProgressionNodesEntryMod.csproj"
       }
+    },
+    {
+      "name": "panel_author_layout_kit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_author_layout_kit/PanelAuthorLayoutKitShowcaseMod",
+        "projectPath": "PanelAuthorLayoutKitShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEffectStack",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEffectStackEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEffectStackEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

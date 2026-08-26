@@ -42,6 +42,26 @@ namespace Ludots.Core.UI.PanelProjection
     {
         List = 0,
         Aggregate = 1,
+        Grid = 2,
+        Column = 3,
+    }
+
+    /// <summary>
+    /// Aggregate present count text (query-graph-collection-outputs §3.7.3 subset).
+    /// </summary>
+    public sealed class PanelAggregateCountSpec
+    {
+        public PanelAggregateCountSpec(string from, string prefix)
+        {
+            From = from;
+            Prefix = prefix;
+        }
+
+        /// <summary>Only <c>totalCount</c> is supported this slice.</summary>
+        public string From { get; }
+
+        /// <summary>Author-owned prefix; empty string allowed but field required.</summary>
+        public string Prefix { get; }
     }
 
     /// <summary>
@@ -114,7 +134,9 @@ namespace Ludots.Core.UI.PanelProjection
             float? itemExtent = null,
             bool virtualize = false,
             int overscan = 2,
-            PanelPresentMode present = PanelPresentMode.List)
+            PanelPresentMode present = PanelPresentMode.List,
+            int? columns = null,
+            PanelAggregateCountSpec? aggregateCount = null)
         {
             Type = type;
             ClassName = className;
@@ -129,6 +151,8 @@ namespace Ludots.Core.UI.PanelProjection
             Virtualize = virtualize;
             Overscan = overscan;
             Present = present;
+            Columns = columns;
+            AggregateCount = aggregateCount;
         }
 
         public PanelLayoutControlType Type { get; }
@@ -143,7 +167,7 @@ namespace Ludots.Core.UI.PanelProjection
         /// <summary>Fixed scroll viewport height in px; null = grow with content (no scroll).</summary>
         public float? ViewportHeight { get; }
 
-        /// <summary>Fixed row extent for virtualization; required when <see cref="Virtualize"/>.</summary>
+        /// <summary>Fixed row extent for virtualization / grid cell height; required when <see cref="Virtualize"/>.</summary>
         public float? ItemExtent { get; }
 
         /// <summary>Compose only the visible window (+ overscan). Requires <see cref="ViewportHeight"/>.</summary>
@@ -151,8 +175,14 @@ namespace Ludots.Core.UI.PanelProjection
 
         public int Overscan { get; }
 
-        /// <summary>List control presentation: full rows or aggregate head+count.</summary>
+        /// <summary>List control presentation: list / grid / column / aggregate.</summary>
         public PanelPresentMode Present { get; }
+
+        /// <summary>Grid column count; required when <see cref="Present"/> is <see cref="PanelPresentMode.Grid"/>.</summary>
+        public int? Columns { get; }
+
+        /// <summary>Required when <see cref="Present"/> is <see cref="PanelPresentMode.Aggregate"/>.</summary>
+        public PanelAggregateCountSpec? AggregateCount { get; }
     }
 
     public sealed class PanelLayout
@@ -302,8 +332,10 @@ namespace Ludots.Core.UI.PanelProjection
             {
                 "list" => PanelPresentMode.List,
                 "aggregate" => PanelPresentMode.Aggregate,
+                "grid" => PanelPresentMode.Grid,
+                "column" => PanelPresentMode.Column,
                 _ => throw new InvalidOperationException(
-                    $"{context} present '{text}' is unknown (allowed: list, aggregate)."),
+                    $"{context} present '{text}' is unknown (allowed: list, grid, column, aggregate)."),
             };
         }
 
@@ -311,6 +343,8 @@ namespace Ludots.Core.UI.PanelProjection
         {
             PanelPresentMode.List => "list",
             PanelPresentMode.Aggregate => "aggregate",
+            PanelPresentMode.Grid => "grid",
+            PanelPresentMode.Column => "column",
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown panel present mode."),
         };
     }

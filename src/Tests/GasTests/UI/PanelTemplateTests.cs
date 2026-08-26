@@ -215,7 +215,12 @@ namespace Ludots.Tests.GasTests.UI
               ],
               "layout": {
                 "controls": [
-                  { "type": "list", "bind": "effects", "present": "aggregate" }
+                  {
+                    "type": "list",
+                    "bind": "effects",
+                    "present": "aggregate",
+                    "aggregate": { "count": { "from": "totalCount", "prefix": "×" } }
+                  }
                 ]
               }
             }
@@ -224,6 +229,90 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(
                 template.Layout!.Controls[0].Present,
                 Is.EqualTo(PanelPresentMode.Aggregate));
+            Assert.That(template.Layout.Controls[0].AggregateCount, Is.Not.Null);
+            Assert.That(template.Layout.Controls[0].AggregateCount!.Prefix, Is.EqualTo("×"));
+        }
+
+        [Test]
+        public void Load_GridPresent_RequiresColumns()
+        {
+            Assert.That(
+                () => PanelTemplateLoader.Load("""
+                {
+                  "id": "tests.panel.grid",
+                  "graph": "g",
+                  "pins": [ { "name": "n", "key": "k" } ],
+                  "collections": [
+                    {
+                      "name": "effects",
+                      "source": "selfGraph",
+                      "collectionKey": "effects",
+                      "template": "panel.effect.chip"
+                    }
+                  ],
+                  "layout": {
+                    "controls": [
+                      { "type": "list", "bind": "effects", "present": "grid" }
+                    ]
+                  }
+                }
+                """),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains("columns"));
+        }
+
+        [Test]
+        public void Load_GridPresent_ParsesColumns()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.grid.ok",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "effects",
+                  "source": "selfGraph",
+                  "collectionKey": "effects",
+                  "template": "panel.effect.chip"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "effects", "present": "grid", "columns": 3, "itemExtent": 64 }
+                ]
+              }
+            }
+            """);
+
+            Assert.That(template.Layout!.Controls[0].Present, Is.EqualTo(PanelPresentMode.Grid));
+            Assert.That(template.Layout.Controls[0].Columns, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Load_ColumnPresent_Parses()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.column.ok",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "effects",
+                  "source": "selfGraph",
+                  "collectionKey": "effects",
+                  "template": "panel.effect.chip"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "effects", "present": "column", "itemExtent": 48 }
+                ]
+              }
+            }
+            """);
+
+            Assert.That(template.Layout!.Controls[0].Present, Is.EqualTo(PanelPresentMode.Column));
         }
 
         [Test]

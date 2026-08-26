@@ -262,6 +262,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.QueryCollectProgressionNodes or
                 GraphNodeOp.QueryCollectAbilityHolders or
                 GraphNodeOp.LoadEffectTiming or
+                GraphNodeOp.LoadEffectStack or
                 GraphNodeOp.QueryFilterTeam or
                 GraphNodeOp.QueryFilterTemplate or
                 GraphNodeOp.QueryFilterAttributeRange or
@@ -789,6 +790,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.QueryCollectProgressionNodes, HandleQueryCollectProgressionNodes, "QueryCollectProgressionNodes graph opcode.");
             Register(GraphNodeOp.QueryCollectAbilityHolders, HandleQueryCollectAbilityHolders, "QueryCollectAbilityHolders graph opcode.");
             Register(GraphNodeOp.LoadEffectTiming, HandleLoadEffectTiming, "LoadEffectTiming graph opcode.");
+            Register(GraphNodeOp.LoadEffectStack, HandleLoadEffectStack, "LoadEffectStack graph opcode.");
             Register(GraphNodeOp.QueryFilterTeam, HandleQueryFilterTeam, "QueryFilterTeam graph opcode.");
             Register(GraphNodeOp.QueryFilterTemplate, HandleQueryFilterTemplate, "QueryFilterTemplate graph opcode.");
             Register(GraphNodeOp.QueryFilterAttributeRange, HandleQueryFilterAttributeRange, "QueryFilterAttributeRange graph opcode.");
@@ -1937,6 +1939,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             ref GameplayEffect effect = ref s.World.Get<GameplayEffect>(s.Caster);
             s.F[ins.Dst] = ins.Flags == 1 ? effect.TotalTicks : effect.RemainingTicks;
+        }
+
+        private static void HandleLoadEffectStack(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Scope is caster (panel element = effect instance). Missing EffectStack ⇒ single layer.
+            if (!s.World.IsAlive(s.Caster))
+            {
+                s.F[ins.Dst] = 1f;
+                return;
+            }
+
+            if (!s.World.Has<EffectStack>(s.Caster))
+            {
+                s.F[ins.Dst] = 1f;
+                return;
+            }
+
+            s.F[ins.Dst] = s.World.Get<EffectStack>(s.Caster).Count;
         }
 
         private static void HandleQueryFilterTeam(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

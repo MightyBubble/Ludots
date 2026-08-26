@@ -496,6 +496,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         int projectedItemCount = control.Present == PanelPresentMode.Aggregate
             ? Math.Min(1, projection.Items.Count)
             : projection.Items.Count;
+        float cellExtent = control.ItemExtent ?? ListItemHeight;
         for (int i = 0; i < projectedItemCount; i++)
         {
             int absoluteIndex = projection.StartIndex + i;
@@ -513,26 +514,44 @@ public sealed class PanelPresentationSystem : ISystem<float>
             };
             if (control.Present == PanelPresentMode.Aggregate)
             {
+                PanelAggregateCountSpec countSpec = control.AggregateCount
+                    ?? throw new InvalidOperationException(
+                        $"Panel '{template.Id}' list '{control.Bind}' present=aggregate missing aggregate.count.");
                 itemChildren.Add(new UiElementBuilder(UiNodeKind.Text)
                     .Class("aggregate-count")
-                    .Text($"×{projection.TotalCount}")
+                    .Text($"{countSpec.Prefix}{projection.TotalCount}")
                     .FontSize(11)
                     .Bold()
                     .Color(new UiColor(255, 210, 80)));
             }
 
-            rows.Add(new UiElementBuilder(UiNodeKind.Container)
+            string presentClass = control.Present switch
+            {
+                PanelPresentMode.Aggregate => "list-item-aggregate",
+                PanelPresentMode.Grid => "list-item-grid",
+                PanelPresentMode.Column => "list-item-column",
+                _ => "list-item-list",
+            };
+
+            UiElementBuilder cell = new UiElementBuilder(UiNodeKind.Container)
                 .Column()
                 .Id($"{hostId}-row-{absoluteIndex}")
                 .Class("list-item")
                 .Class($"list-item-{absoluteIndex}")
-                .Class(control.Present == PanelPresentMode.Aggregate ? "list-item-aggregate" : "list-item-list")
+                .Class(presentClass)
                 .Gap(2)
                 .Padding(4)
-                .Height(itemExtent)
+                .Height(cellExtent)
                 .Background(new UiColor(28, 28, 48, 180))
                 .Radius(4)
-                .Children(itemChildren.ToArray()));
+                .Children(itemChildren.ToArray());
+
+            if (control.Present == PanelPresentMode.Grid && control.Columns is int gridColumns && gridColumns > 0)
+            {
+                cell = cell.FlexGrow(1f).FlexBasisPercent(100f / gridColumns);
+            }
+
+            rows.Add(cell);
         }
 
         if (trailing > 0.01f)
@@ -540,13 +559,59 @@ public sealed class PanelPresentationSystem : ISystem<float>
             rows.Add(Ui.Spacer(trailing));
         }
 
-        UiElementBuilder listBody = new UiElementBuilder(UiNodeKind.Container)
-            .Column()
-            .Class("control-list")
-            .Class(control.ClassName ?? "list")
-            .Class($"list-{control.Bind}")
-            .Gap(control.Virtualize ? 0f : 4f)
-            .Children(rows.ToArray());
+        UiElementBuilder listBody;
+        if (control.Present == PanelPresentMode.Column)
+        {
+            listBody = new UiElementBuilder(UiNodeKind.Container)
+                .Row()
+                .Class("control-list")
+                .Class("control-list-column")
+                .Class(control.ClassName ?? "list")
+                .Class($"list-{control.Bind}")
+                .Gap(4f)
+                .Children(rows.ToArray());
+        }
+        else if (control.Present == PanelPresentMode.Grid)
+        {
+            int columns = control.Columns
+                ?? throw new InvalidOperationException(
+                    $"Panel '{template.Id}' list '{control.Bind}' present=grid missing columns.");
+            var gridRows = new List<UiElementBuilder>();
+            for (int offset = 0; offset < rows.Count; offset += columns)
+            {
+                int take = Math.Min(columns, rows.Count - offset);
+                var slice = new UiElementBuilder[take];
+                for (int c = 0; c < take; c++)
+                {
+                    slice[c] = rows[offset + c];
+                }
+
+                gridRows.Add(new UiElementBuilder(UiNodeKind.Container)
+                    .Row()
+                    .Class("control-list-grid-row")
+                    .Gap(4f)
+                    .Children(slice));
+            }
+
+            listBody = new UiElementBuilder(UiNodeKind.Container)
+                .Column()
+                .Class("control-list")
+                .Class("control-list-grid")
+                .Class(control.ClassName ?? "list")
+                .Class($"list-{control.Bind}")
+                .Gap(4f)
+                .Children(gridRows.ToArray());
+        }
+        else
+        {
+            listBody = new UiElementBuilder(UiNodeKind.Container)
+                .Column()
+                .Class("control-list")
+                .Class(control.ClassName ?? "list")
+                .Class($"list-{control.Bind}")
+                .Gap(control.Virtualize ? 0f : 4f)
+                .Children(rows.ToArray());
+        }
 
         if (control.ViewportHeight.HasValue)
         {

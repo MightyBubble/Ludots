@@ -242,8 +242,8 @@
 
 | present（示意） | 画面 | 数据 |
 |---|---|---|
-| `list` / `grid` | 逐行/逐格展开成员 | 读窗口或全量成员袋 |
-| `aggregate` | 配置化聚合，例如首位图标 + `count` | 仍绑同一集合；`count` 来自袋 `TotalCount` 或并行 Summary |
+| `list` / `grid` / `column` | 逐行 / 按列折行 / 横向一排 | 读窗口或全量成员袋 |
+| `aggregate` | 配置化聚合（`aggregate.count`） | 仍绑同一集合；`count` 来自袋 `TotalCount` |
 
 `aggregate` **不是** 新的 destination，也 **不是** 「只输出第一个实体」的特殊集合类型。
 

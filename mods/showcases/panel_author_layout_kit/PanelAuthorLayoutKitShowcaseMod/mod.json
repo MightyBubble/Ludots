@@ -1,0 +1,16 @@
+{
+  "name": "PanelAuthorLayoutKitShowcaseMod",
+  "version": "1.0.0",
+  "description": "Author classroom: same effect chip in list/grid/column with remaining time and stacks",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "main": "bin/net8.0/PanelAuthorLayoutKitShowcaseMod.dll",
+  "tags": [
+    "showcase",
+    "panel",
+    "author-kit",
+    "layout"
+  ]
+}

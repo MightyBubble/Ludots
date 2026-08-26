@@ -138,6 +138,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\ControlPlaneProjectionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\panel_entity_list\PanelEntityListShowcaseMod\PanelEntityListShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_effect_list\PanelEffectListShowcaseMod\PanelEffectListShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_author_layout_kit\PanelAuthorLayoutKitShowcaseMod\PanelAuthorLayoutKitShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Panels\Ludots.UI.Panels.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\PanelCollectionBagsShowcaseMod\PanelCollectionBagsShowcaseMod.csproj" />

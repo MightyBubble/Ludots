@@ -2741,6 +2741,24 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "panel_author_layout_kit_raylib",
+      "name": "Panel Author Layout Kit Raylib",
+      "selectors": [
+        "$panel_author_layout_kit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEffectStack_raylib",
+      "name": "Graph Op LoadEffectStack Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEffectStack"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

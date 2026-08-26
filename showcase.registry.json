@@ -8898,6 +8898,57 @@
         "g12",
         "progression_nodes"
       ]
+    },
+    {
+      "id": "panel_author_layout_kit",
+      "path": "mods/showcases/panel_author_layout_kit/PanelAuthorLayoutKitShowcaseMod",
+      "projectPath": "PanelAuthorLayoutKitShowcaseMod.csproj",
+      "title": "面板开箱布局教室",
+      "summary": "同一效果芯片：竖列 / 网格 / 横栏；剩余时间与层数示例数据",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_author_layout_kit",
+      "preset": "panel_author_layout_kit_raylib",
+      "docsPath": "gitbook/architecture/panel-author-layout-kit.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelAuthorLayoutKitAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_author_layout_kit",
+      "screenshot": "artifacts/acceptance/panel_author_layout_kit/screens/001_classroom.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "author-kit",
+        "layout",
+        "g12"
+      ]
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEffectStack",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEffectStackEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadEffectStackEntryMod.csproj",
+      "title": "看效果叠了几层",
+      "summary": "自查线绕回施法者身上的层数，头顶浮出 ×3。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadEffectStack"
+      ],
+      "binding": "capability_standard_graph_op_LoadEffectStack",
+      "preset": "capability_standard_graph_op_LoadEffectStack_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadEffectStack.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadEffectStack",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadEffectStack/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadEffectStack/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

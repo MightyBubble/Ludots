@@ -136,6 +136,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipHasLink = 397,          // B[Dst] = HasLink(E[A], E[B], type=Flags symbol)
         QueryCollectActiveEffects = 398,    // TargetList = active effect instances on E[A]
         LoadEffectTiming = 399,             // F[Dst] = RemainingTicks|TotalTicks on caster (Flags)
+        LoadEffectStack = 429,              // F[Dst] = EffectStack.Count on caster (missing → 1)
 
         // ── Entity lifecycle composition (400-401) ──
         BeginLifecycleTransaction = 400,

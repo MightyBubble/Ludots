@@ -154,6 +154,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireEffectTimingAttribute(node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.LoadEffectStack:
+                    break;
+
                 case GraphNodeOp.WriteSelfAttribute:
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
@@ -865,6 +868,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.LoadEffectTiming:
                     instruction.Flags = ResolveEffectTimingFlags(node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEffectStack:
                     break;
 
                 case GraphNodeOp.WriteSelfAttribute:

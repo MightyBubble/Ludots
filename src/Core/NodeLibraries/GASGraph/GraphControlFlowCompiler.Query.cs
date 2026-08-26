@@ -86,6 +86,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadEffectTiming:
                     RequireEffectTimingAttribute(node, graphId, diagnostics);
                     break;
+                case GraphNodeOp.LoadEffectStack:
+                    break;
                 case GraphNodeOp.QueryFilterTeam:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     bool hasTeamField = node.TeamId != 0;
@@ -397,6 +399,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 case GraphNodeOp.LoadEffectTiming:
                     instruction.Flags = ResolveEffectTimingFlags(node, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.LoadEffectStack:
                     break;
                 case GraphNodeOp.QueryFilterTeam:
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId)))

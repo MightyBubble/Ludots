@@ -114,8 +114,10 @@
 |---|---|
 | `collections[].collectionKey` | 容器图写出的集合 |
 | `collections[].template` | 元素模板 id（必须带匹配的 `subject`） |
-| `list` / 日后 `grid` | 只编排；**禁止** `itemControls` |
-| `present` | 消费形态：`list`（默认）/ `grid` / `aggregate`（见下） |
+| `list` / `grid` / `column` / `aggregate` | 只编排；**禁止** `itemControls` |
+| `present` | 消费形态：`list`（默认）/ `grid`（必填 `columns`）/ `column`（横向）/ `aggregate`（必填 `aggregate.count`） |
+| `columns` | 仅 `present=grid`；每行格数 ≥ 1 |
+| `aggregate.count` | 仅 `present=aggregate`；`from: totalCount` + 作者自有 `prefix` |
 
 #### list 滚动与虚拟窗口
 
