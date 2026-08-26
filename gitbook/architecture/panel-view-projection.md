@@ -164,7 +164,7 @@
 
 - 不做父级拆列与元素自解对等双轨  
 - 父→子额外参数（非成员本身）本切片不做；需要时另立显式 `params` 合同  
-- Task/Ability 集合管线未落地前，配置写了对应 subject/引用 → 装载或绑定 fail-closed  
+- Task/Ability/Effect 等集合类型未接线前，配置写了对应 subject/引用 → 装载或绑定 fail-closed（类型表见[查询图集合输出](query-graph-collection-outputs.md)）  
 - 点击行选中仍属 #1015  
 - 小地图 marker 不进本投影  
 
