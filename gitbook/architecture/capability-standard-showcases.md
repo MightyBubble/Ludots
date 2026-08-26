@@ -24,6 +24,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Graph Op 单节点画廊 | `capability_standard_graph_op_{Op}` | `graph_op_entries/CapabilityStandardGraphOp{Op}EntryMod` | **玩家入口**：每个可执行图节点单独一场短剧 + 单独录像。共用宿主 `CapabilityStandardGraphOpsNodeGalleryMod`。启动器条目由 `scripts/generate-graph-op-node-galleries.py` 从 vignette 生成。没有按家族打包的大杂烩房间。 |
 | Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **单独短剧**：左巡逻 / 右门岗，串一条故事（BT + HFSM 两种宿主；关卡导演已退役，地图级反应式关卡流见「夜袭三波」） |
 | 残血的分更高 | `capability_standard_graph_score` | `mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod` | **打分短剧**：选人走 GraphScore，字幕读决策痕迹，自动打残血木桩 |
+| 拼一句上字幕 | `capability_standard_graph_formal_text` | `mods/showcases/capability_standard/CapabilityStandardGraphFormalTextShowcaseMod` | **正式文字短剧**：进图拼「守卫倒下了」与「击杀 1」，只从 PresentationTextSink 上字幕 |
 
 压力矩阵与 &lt;5ms 思考波报告：`docs/benchmarks/graph-behavior-pressure/`（Showcase 主镜头是剧本，万人在无头测试与灰点带）。
 
@@ -48,6 +49,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_op_AddFloat' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_behavior_integration' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_score' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_formal_text' --adapter raylib
 ```
 
 Preset launch commands:
@@ -71,6 +73,7 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_op_AddFloat_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_behavior_integration_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_score_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_formal_text_raylib'
 ```
 
 ## Dependency Path

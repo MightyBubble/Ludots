@@ -1,6 +1,6 @@
 # 图正式文字合同
 
-作者在蓝图里拼句子、填空，再送到字幕或对话框。进度与边界只认 [图能力唯一入口](graph-capability-status.md)；本页是运行时合同，不另开进度账。
+作者在蓝图里拼句子、填空，再送到字幕或对话框。进度与边界只认 [图能力唯一入口](graph-capability-status.md)；本页是运行时合同，不另开进度账。作者怎么接节点看 [拼句指南](graph-formal-text-authoring-guide.md)；玩家短剧看 [拼一句上字幕](../acceptance/graph-formal-text-subtitle.md)。
 
 ---
 
@@ -110,7 +110,7 @@
 - 不替代 TextToken 配置态文案；不恢复 `TableReadString` / 查表路径字符串聚合。
 - 不在编辑器做「能保存但引擎不认」的假节点。
 - 不把自由字符串地图变量当台词真相。
-- 本页不收 TriggerGraph 旗舰、画廊短剧、叙事换皮；那些另线。
+- 本页不收 TriggerGraph 旗舰、画廊短剧、叙事换皮；那些另线。玩家拼句短剧见 [拼一句上字幕](../acceptance/graph-formal-text-subtitle.md)。
 - 总进度只改 [图能力唯一入口](graph-capability-status.md) 与 [编辑器手册](graph-editor-and-live-debug.md)。
 
 ---
