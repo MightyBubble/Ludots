@@ -415,6 +415,7 @@ namespace Ludots.Tests.Gas.Graph
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 TriggerGraphMounting.BuildEntityMountTriggers(
                     programs, scope, "Graph.Probe.Global.EntityMount", "test entity mount",
+                    new CustomEventNameRegistry(),
                     entityIndex: null, eventSchemas: BuildRegistry()));
             Assert.That(ex!.Message, Does.Contain("entity-domain global subscriptions"));
         }

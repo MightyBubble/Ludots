@@ -33,13 +33,14 @@ namespace Ludots.Core.Scripting
         };
 
         /// <summary>
-        /// Transport metadata stamped by the dispatch machinery itself (FireCrossMapEvent,
-        /// global DispatchMapEvent) rather than authored event parameters: legal on any
-        /// fire regardless of what the schema declares.
+        /// Transport / filter metadata stamped by the dispatch machinery itself
+        /// (FireCrossMapEvent, entity-domain attachment filter stamps) rather than authored
+        /// event parameters: legal on any fire regardless of what the schema declares.
         /// </summary>
         private static readonly string[] TransportMetadataPayloadKeys =
         {
             MapTriggerEventPayloadKeys.SourceMapId,
+            MapTriggerEventPayloadKeys.SourceEntity,
         };
 
         internal static bool IsTransportMetadataPayloadKey(string payloadKey)
@@ -102,6 +103,12 @@ namespace Ludots.Core.Scripting
                 new("newValueFloat", EventParamType.Float, MapTriggerEventPayloadKeys.VarValueFloat, Optional: true),
                 new("oldValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt, Optional: true),
                 new("oldValueFloat", EventParamType.Float, MapTriggerEventPayloadKeys.OldValueFloat, Optional: true),
+            }),
+            // Mod-domain mount pulse (main domain expansion): not MapTrigger.* namespaced —
+            // FireEvent path stamps ModId for filter matching on RegisterModTriggers mounts.
+            new(GameEvents.ModLoaded.Value, EventScope.Global, new EventParamSchema[]
+            {
+                new("modId", EventParamType.String, MapTriggerEventPayloadKeys.ModId),
             }),
         };
 
