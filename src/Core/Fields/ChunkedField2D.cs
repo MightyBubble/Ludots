@@ -14,9 +14,24 @@ namespace Ludots.Core.Fields
         private int _chunkCount;
         private int _dirtyCount;
         private int _nonDefaultCount;
+        private long _changeStamp;
 
         public ChunkedField2D(FieldGridSpec2D grid, T defaultValue = default, int initialChunkCapacity = 8)
+            : this(grid, FieldValueCodec<T>.Instance, defaultValue, initialChunkCapacity)
         {
+        }
+
+        public ChunkedField2D(
+            FieldGridSpec2D grid,
+            IFieldValueCodec<T> codec,
+            T defaultValue = default,
+            int initialChunkCapacity = 8)
+        {
+            if (codec is null)
+            {
+                throw new ArgumentNullException(nameof(codec));
+            }
+
             if (initialChunkCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(initialChunkCapacity));
@@ -24,7 +39,7 @@ namespace Ludots.Core.Fields
 
             Grid = grid;
             _defaultValue = defaultValue;
-            _codec = FieldValueCodec<T>.Instance;
+            _codec = codec;
             _chunks = new FieldChunk2D<T>[initialChunkCapacity];
             _chunkIndexByKey = new Dictionary<long, int>(initialChunkCapacity);
         }
@@ -35,6 +50,9 @@ namespace Ludots.Core.Fields
         public int ChunkCount => _chunkCount;
         public int DirtyCount => _dirtyCount;
         public int NonDefaultCount => _nonDefaultCount;
+        public long ChangeStamp => _changeStamp;
+
+        public FieldDirtyCursor<T> OpenDirtyCursor() => new(this);
 
         public FieldCell2D WorldToCell(WorldCmInt2 world) => Grid.WorldToCell(world);
         public WorldCmInt2 CellCenterToWorld(FieldCell2D cell) => Grid.CellCenterToWorld(cell);
@@ -90,6 +108,7 @@ namespace Ludots.Core.Fields
 
             chunk.Set(local, value);
             MarkDirtyInChunk(chunk, local);
+            MarkChanged(chunk);
             return true;
         }
 
@@ -97,6 +116,7 @@ namespace Ludots.Core.Fields
         {
             FieldChunk2D<T> chunk = GetOrCreateChunk(Grid.ChunkCoord(cell.X), Grid.ChunkCoord(cell.Y));
             MarkDirtyInChunk(chunk, Grid.LocalIndex(cell.X, cell.Y));
+            MarkChanged(chunk);
         }
 
         public void MarkDirtyRegion(IntRect rect)
@@ -150,6 +170,7 @@ namespace Ludots.Core.Fields
 
                     chunk.Set(local, to);
                     MarkDirtyInChunk(chunk, local);
+                    MarkChanged(chunk);
                     replaced++;
                 }
             }
@@ -277,6 +298,12 @@ namespace Ludots.Core.Fields
             {
                 _dirtyCount++;
             }
+        }
+
+        private void MarkChanged(FieldChunk2D<T> chunk)
+        {
+            _changeStamp++;
+            chunk.MarkChanged(_changeStamp);
         }
     }
 }

@@ -27,5 +27,6 @@ namespace Ludots.Core.Scripting
         public const string InputAction = "MapTrigger.InputAction";              // string
         public const string GroundXCm = "MapTrigger.GroundXCm";                  // float
         public const string GroundYCm = "MapTrigger.GroundYCm";                  // float
+        public const string FieldLayer = "MapTrigger.FieldLayer";                // string (field layer key)
     }
 }

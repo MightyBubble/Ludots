@@ -284,6 +284,14 @@
       "hasScreenshotEvidence": false
     },
     {
+      "id": "field_jing_yang_transit",
+      "preset": "field_jing_yang_transit_raylib",
+      "binding": "field_jing_yang_transit",
+      "testFilter": "FieldJingYangTransitAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
       "id": "fog_of_war",
       "preset": "fog_of_war_raylib",
       "binding": "fog_of_war",

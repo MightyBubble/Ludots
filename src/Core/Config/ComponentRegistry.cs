@@ -9,6 +9,7 @@ using Arch.Core.Utils;
 using Arch.Core.Extensions;
 using Ludots.Core.Association;
 using Ludots.Core.Components;
+using Ludots.Core.Fields;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.GAS;
@@ -87,6 +88,7 @@ namespace Ludots.Core.Config
             Register<CommandSourceDragState>("CommandSourceDragState");
             Register("VisionEmitterCm", SetVisionEmitterCm, null, Component<VisionEmitterCm>.ComponentType);
             Register("FogOccupantCm", SetFogOccupantCm, null, Component<FogOccupantCm>.ComponentType);
+            Register("FieldTrackedCm", SetFieldTrackedCm, null, Component<FieldTrackedCm>.ComponentType);
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);
             Register("SpatialFootprint2D", SetSpatialFootprint2D);
@@ -599,6 +601,26 @@ namespace Ludots.Core.Config
                 AltitudeBand = ReadOptionalIntProperty(obj, "altitudeBand"),
                 StealthLevel = ReadOptionalByteProperty(obj, "stealthLevel", "FogOccupantCm.stealthLevel"),
             });
+        }
+
+        private static void SetFieldTrackedCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("FieldTrackedCm requires an object payload.");
+            }
+
+            ValidateProperties(obj, "FieldTrackedCm", "layer");
+            string layerKey = RequireStringProperty(obj, "layer", "FieldTrackedCm");
+            FieldLayerRegistry registry = context.Require<FieldLayerRegistry>(ComponentAuthoringServiceKeys.FieldLayerRegistry);
+            FieldLayerId layerId = registry.GetId(layerKey);
+            if (layerId.Value <= 0 || !registry.TryGet(layerId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"FieldTrackedCm.layer references unknown field layer '{layerKey}'. Declare it in Fields/layers.json.");
+            }
+
+            entity.Add(new FieldTrackedCm { LayerId = layerId });
         }
 
         private static void SetSpatialBounds(Entity entity, JsonNode data)

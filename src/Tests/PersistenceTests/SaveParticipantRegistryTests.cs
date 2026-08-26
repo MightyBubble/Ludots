@@ -84,6 +84,7 @@ public sealed class SaveParticipantRegistryTests
         {
             "activities",
             "clock",
+            "fields",
             "gameSession",
             "inventory",
             "mapSessions",

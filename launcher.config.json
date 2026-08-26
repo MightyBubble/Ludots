@@ -463,6 +463,13 @@
       }
     },
     {
+      "name": "field_jing_yang_transit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod"
+      }
+    },
+    {
       "name": "capability_standard_ability_graph_sandbox",
       "target": {
         "type": "path",
