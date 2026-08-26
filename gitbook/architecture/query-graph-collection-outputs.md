@@ -103,27 +103,59 @@
    输入仍是完整集合袋；画面配置成首位图标 + 总数
 ```
 
-### 2.4 复合数据一律显式接线（强类型）
+### 2.4 复合数据一律显式接线（强类型）· 正表
 
-跨层级的名单/标量 **禁止靠同名 key 猜**。合同要求：
+跨层级的名单/标量 **禁止靠同名 key 猜**。唯一合法数据流：
 
 ```text
-父级空间 graph
-  outputs[]  ──额外写出──►  类型化引脚（Summary 或 Collection*）
+父级空间 graph.outputs[]
+        │  类型化引脚（Summary 或 Collection*）
+        ▼
+子模板 inputs[]     ← 明文 from + type（装载期与父 output 对账）
         │
-        ▼  子模板 inputs[] 明文声明来源 + 期望类型
-子级（元素模板 / 内嵌控件）
-  inputs 满足后 → 再跑子 graph / 绑定 list·聚合
+        ├─► 直接给 list / 聚合控件用（bind 某条 input 名）
+        └─► 喂给子 graph 再计算 → 子 graph.outputs[] → 子 collections（source=selfGraph）
 ```
 
-| 规则 | |
-|---|---|
-| **明文** | 子级必须写 `inputs[]`：从父级哪个 output / 哪个集合键取数 |
-| **类型** | 每条 input 声明期望的集合类型或标量 kind；与父级 output 的 destination/type **装载期强校验** |
-| **方向** | 数据只从「已求值的父级空间输出」流入子级；子级不隐式扫全局 Store 碰运气 |
-| **再输出** | 子 graph 仍可写出自己的集合（如 holders），供自己的 list 绑定；那是子级自己的 output，不是偷父级的 |
+#### 2.4.1 封闭字段（本切片合同名，落地 schema 不得另起同义词）
 
-嵌套与反查在面板 JSON 上都可能长得很像（都有子 `collections`）；差别在 **inputs 从哪来、子图约束是什么**——见 §3.7。
+**子模板 `inputs[]`（消费父级引脚）**
+
+| 字段 | 必填 | 含义 |
+|---|---|---|
+| `name` | 是 | 子空间内逻辑名；供 list `bind` 或子图读入 |
+| `from.space` | 是 | 仅允许 `parent`（本切片）；未知值装载失败 |
+| `from.output` | 是 | 父 graph 的 **output id** 或该 output 的 `collectionKey` / Summary `key`（与 gr-09 写出键对账） |
+| `type` | 是 | 期望类型：`EntityCollection` / `AbilitySlotCollection` / … 或 Summary 的 `Bool|Int|Float|Entity` |
+
+**子/宿主 `collections[]`（名单从哪来）——`source` 二选一，必填**
+
+| `source` | 含义 | 还要写什么 |
+|---|---|---|
+| `selfGraph` | 本模板 `graph` 的某条 Collection output | `collectionKey` = 本图 outputs 中的键；装载期核对本图确有该 output+类型 |
+| `input` | 来自本模板某条已声明的 `inputs` | `input` = inputs[].name；不再另写 collectionKey，或 collectionKey 仅作别名且必须与 input 解析结果一致 |
+
+**list / 聚合控件 `bind`**
+
+只能指向：本模板 `collections[].name`，或（允许直绑时）`inputs[].name`。悬空 → 装载失败。
+
+#### 2.4.2 装载期强校验（缺一即失败）
+
+1. `from.output` 在父模板 `graph` 的 outputs 中存在。  
+2. `inputs[].type` 与父该 output 的 destination / 成员身份一致。  
+3. `source: selfGraph` 时，本模板 graph outputs 含同 `collectionKey` 且类型与消费该袋的元素 `subject` 相容。  
+4. `source: input` 时，`input` 名存在且 `inputs[].type` 为集合类。  
+5. 禁止：未写 `source`；禁止：只写 `collectionKey` 却既不宣称 selfGraph 也不宣称 input（防同名撞袋）。
+
+#### 2.4.3 和「透传成员」的分工
+
+| 东西 | 谁提供 | 配置怎么写 |
+|---|---|---|
+| 当前行解谁（技能槽 / 单位） | 父 list 透传的 **成员** | 元素 `subject`；作子 graph 的 self/scope |
+| 候选部队、焦点技能袋等 | **父 graph 额外 output** | 子 `inputs.from` |
+| 持有者袋、本单位技能袋等 | **本 graph output** 或 **input 直供** | `collections.source` |
+
+成员透传 ≠ 引脚输入：前者是「这一行是谁」，后者是「算名单还需要哪些已类型化的袋/标量」。
 
 ---
 
@@ -223,29 +255,24 @@
 4. **复合查询**：支持「以当前成员为 scope」再写出子集合（嵌套 / 反查）；见 §3.7。  
 5. **禁止**：为写集合而改 Effect/Ability 生命周期规则；禁止模板 id 伪造成假实体。
 
-### 3.7 复合结构详解（配置合同）
+### 3.7 复合结构详解（按 §2.4 正表写满）
 
-下列例子只说明 **形状**；正式字段名以落地 schema 为准。**禁止** 在引擎里写死「EntityInfo」「AbilityIcon」「ItemStack」三类特判控件。
+**禁止** 引擎硬编码 EntityInfo / AbilityIcon / ItemStack。下列 JSON 使用 §2.4 封闭字段；落地 loader 按同名校验。
 
-#### 3.7.1 嵌套：单位详情里挂技能名单
-
-- **作者意图**：一个单位信息面板上，除血条外，还列出该单位可用技能。  
-- **数据路径（显式）**：  
-  - 单位元素 `subject=Entity`；其 graph（或以该实体为 owner 的查询段）**output** `AbilitySlotCollection`；  
-  - 元素 `collections` 绑定该 output 的 key；或父宿主先写出「焦点单位技能袋」再经 `inputs` 传入——**来源必须在配置写明**。  
-- **合同要点**：子袋类型与技能元素 subject 相容；过滤排序仍在图内。
+#### 3.7.1 嵌套：单位详情 → 本单位技能袋（source=selfGraph）
 
 ```jsonc
 {
   "id": "panel.unit.info",
   "subject": "Entity",
   "graph": "Graph.Unit.Info",
-  // Graph.Unit.Info outputs: AbilitySlotCollection key=unit.info.abilities
+  // Graph.Unit.Info 必须 outputs：
+  //   { destination: AbilitySlotCollection, collectionKey: "unit.info.abilities", ... }
   "collections": [
     {
       "name": "abilities",
-      "collectionKey": "unit.info.abilities", // 明文：来自本元素 graph output
-      "source": "selfGraph",                  // 示意判别；与 from.parent 互斥
+      "source": "selfGraph",
+      "collectionKey": "unit.info.abilities",
       "template": "panel.ability.slot"
     }
   ],
@@ -258,55 +285,54 @@
 }
 ```
 
-#### 3.7.2 反查：技能图标上挂「谁会这招」（显式 inputs）
+数据流：`成员=该单位` → 跑 `Graph.Unit.Info` → output 技能槽袋 → list 展开。  
+不需要 `inputs`（没有消费父引脚）。若技能袋改由**宿主**算出再下发，则改为 `source: "input"` + `inputs` 指父 output（字段仍走 §2.4，不得省略 source）。
 
-- **作者意图**：技能图标旁显示「当前候选部队里谁拥有该技能」。  
-- **科学拆法**：  
-  1. **父级空间**（编队/技能板宿主）的 graph **额外 output** 写出候选实体袋（及技能槽袋）；  
-  2. **技能元素**明文 `inputs` 声明：我要消费父级的 `candidates`（类型 = EntityCollection）；  
-  3. **技能元素自己的 graph** 以 `self=当前技能槽` + input `candidates` 为约束，再 **output** `holders`；  
-  4. layout 的 list **只 bind 自己的 holders**（或 bind 某条 input，若父级已算好持有者——两态都须类型吻合）。  
+#### 3.7.2 反查：技能格 → 谁会这招（parent input + selfGraph holders）
 
-没有「Ability 控件内置扫全图」；没有「同名 collectionKey 自动撞上」。
+**主路径（推荐）**：父级多写候选编队；子技能图吃 input + self，再写出 holders。
 
 ```jsonc
-// ① 父级宿主（示意）——多写一袋候选给子级用
+// 父：技能板宿主
 {
   "id": "panel.squad.abilityBoard",
   "graph": "Graph.Squad.AbilityBoard",
-  // Graph outputs（概念）：
-  //   EntityCollection  collectionKey=squad.candidates
-  //   AbilitySlotCollection collectionKey=squad.focus.abilities
+  // 必须 outputs：
+  //   EntityCollection     collectionKey/id: "squad.candidates"
+  //   AbilitySlotCollection collectionKey/id: "squad.focus.abilities"
   "collections": [
     {
       "name": "abilities",
+      "source": "selfGraph",
       "collectionKey": "squad.focus.abilities",
       "template": "panel.ability.slot"
     }
   ],
   "layout": {
-    "controls": [
-      { "type": "list", "bind": "abilities", "present": "grid" }
-    ]
+    "controls": [{ "type": "list", "bind": "abilities", "present": "grid" }]
   }
 }
 
-// ② 技能元素——明文声明父级引脚输入 + 自己再算出 holders
+// 子：单个技能格
 {
   "id": "panel.ability.slot",
   "subject": "AbilitySlot",
   "graph": "Graph.Ability.SlotCard",
+  // Graph.Ability.SlotCard：
+  //   读 input「candidates」+ self 槽 → outputs EntityCollection key=ability.slot.holders
+  //   另可 Summary 冷却等
   "inputs": [
     {
       "name": "candidates",
       "from": { "space": "parent", "output": "squad.candidates" },
-      "type": "EntityCollection"   // 装载期与父 graph output 强校验
+      "type": "EntityCollection"
     }
   ],
   "collections": [
     {
       "name": "holders",
-      "collectionKey": "ability.slot.holders", // 本元素 graph 的 output
+      "source": "selfGraph",
+      "collectionKey": "ability.slot.holders",
       "template": "panel.unit.chip"
     }
   ],
@@ -319,59 +345,65 @@
 }
 ```
 
-**接线表（装载期要对账）**
-
-| 子配置 | 必须对上 | 失败时 |
-|---|---|---|
-| `inputs[].from.space` | 封闭：`parent`（本切片）；日后可扩 `root` | 未知 space → 失败 |
-| `inputs[].from.output` | 父 graph 确有该 collectionKey / Summary key | 找不到 → 失败 |
-| `inputs[].type` | 与父 output 的 destination/成员身份一致 | 类型不合 → 失败 |
-| `collections[].collectionKey` | 若声称来自「本元素 graph output」，则子 graph outputs 必须声明同 key+类型 | 未声明 → 失败 |
-| list `bind` | 只能绑：本模板 `collections` 名，或已声明的 input 名（若允许控件直绑 input） | 悬空 bind → 失败 |
-
-**两种合法数据路径（作者二选一，不可混而不宣）**
-
 ```text
-路径 A · 子图再计算（反查主路径）
-  parent output candidates ──input──► child graph ──output──► holders ──list──► UI
-
-路径 B · 父级已算好持有者（少见，适合「当前焦点技能」单格）
-  parent output holdersForFocus ──input──► child list 直接 bind 该 input
-  （此时子模板可不跑反查图；inputs.type 仍须是 EntityCollection）
+squad.candidates ──inputs.candidates──► SlotCard 图 ──ability.slot.holders──► list
+成员 AbilitySlot  ─────────────────────► SlotCard 图 self
 ```
 
-路径必须在配置上可区分（例如 list `bind` 指向 `collections.holders` vs 指向 `inputs.holders`）；装载期校验唯一来源。
-
-#### 3.7.3 聚合：输入是集合，画面是「首位 + 总数」
-
-- **作者意图**：一堆同类物品只显示一个图标，角标是数量；或一组选中单位只露队长头像 + 「×12」。  
-- **数据**：查询图仍写出 **完整** 类型化集合（必要时另写 Summary `count`，与袋 `TotalCount` 二选一作 SSOT，装载期校验一致）。  
-- **面板**：同一 `bind` 上 `present: "aggregate"`，用配置声明取哪名成员的哪路表面/图标 pin、总数绑哪。  
-- **合同要点**：聚合是 **投影模式**，不是把集合偷偷裁成单元素；虚拟列表窗口化与聚合可并存（聚合通常不需要窗口，但仍可读 TotalCount）。
+**旁路路径（少用）**：父级已为「当前焦点技能」算好持有者，子格不再跑反查图，list 直绑 input：
 
 ```jsonc
 {
-  "type": "collection",
-  "bind": "stacks",
-  "present": "aggregate",
-  "aggregate": {
-    "head": { "from": "first", "icon": "icon", "label": "displayName" },
-    "count": { "from": "totalCount" } // 或 "pin": "stackCount"
+  "id": "panel.ability.focusChip",
+  "subject": "AbilitySlot",
+  "graph": "Graph.Ability.FocusChip",  // 只解图标/名字，不写 holders
+  "inputs": [
+    {
+      "name": "holders",
+      "from": { "space": "parent", "output": "squad.focus.holders" },
+      "type": "EntityCollection"
+    }
+  ],
+  "collections": [
+    {
+      "name": "holders",
+      "source": "input",
+      "input": "holders",
+      "template": "panel.unit.chip"
+    }
+  ],
+  "layout": {
+    "controls": [{ "type": "list", "bind": "holders" }]
   }
 }
 ```
 
-字段名示意；落地时收成封闭 schema。`from: "first"` 指有序袋下标 0；空袋 fail-closed 或作者显式 `empty` 控件——**禁止** 静默画空白当真有货。
+主路径与旁路必须在配置上可区分（`source: selfGraph` vs `source: input`）；禁止同一 `bind` 含糊对应两个来源。
 
-#### 3.7.4 复合与类型轴的关系
+#### 3.7.3 聚合：输入仍是完整集合
 
-| 形态 | 是否新 destination | 图要多做什么 | 面板要多做什么 |
-|---|---|---|---|
-| 嵌套 | 否 | 以成员为 owner **output** 子集合 | 元素 `collections` 明文 `source=selfGraph`（或 parent input） |
-| 反查 | 否 | 父级 **output** 候选袋；子图 ingest + **output** holders | 元素 `inputs[]` 声明父引脚；list bind 自有 holders 或 input |
-| 聚合 | 否 | 可选并行 Summary count | `present: aggregate`；bind 仍指向完整集合 |
+```jsonc
+{
+  "type": "list",
+  "bind": "stacks",
+  "present": "aggregate",
+  "aggregate": {
+    "head": { "from": "first", "icon": "icon", "label": "displayName" },
+    "count": { "from": "totalCount" }
+  }
+}
+```
 
-凡跨层数据：**有 `from` / `source`，有 `type`，装载期对账**；禁止靠 key 重名碰运气。
+`bind` 指向的 collections 条目仍须满足 §2.4（`source` + 类型）。空袋：fail-closed 或作者显式 empty 控件——禁止静默画「有货」。
+
+#### 3.7.4 对照
+
+| 形态 | 典型 source | 要不要 inputs |
+|---|---|---|
+| 嵌套（单位→技能） | 多为 `selfGraph` | 通常不要 |
+| 反查（技能→人）主路径 | holders=`selfGraph`；candidates 来自 input | **要**（候选袋） |
+| 反查旁路 | holders=`input` | **要**（持有者袋） |
+| 聚合 | 同平面名单 | 与复合接线正交 |
 
 ### 3.8 推进顺序（建议）
 
