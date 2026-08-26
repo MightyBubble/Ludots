@@ -53,6 +53,7 @@
   - [实体仿真分层与车道](architecture/entity-simulation-layering.md)
   - [实体仿真工作流拆分](architecture/entity-simulation-workstreams.md)
   - [实体仿真阶段验收](architecture/entity-simulation-uat.md)
+  - [Entity Attachment（实体挂接）](architecture/entity-attachment.md)
   - [能力标准 Showcase](architecture/capability-standard-showcases.md)
   - [UAT 可玩 Showcase 矩阵](architecture/uat-playable-showcase-matrix.md)
   - [Map-Owned Participant Contract](architecture/map-owned-participant-contract.md)

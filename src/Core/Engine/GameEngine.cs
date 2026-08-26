@@ -1936,7 +1936,10 @@ namespace Ludots.Core.Engine
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
             var poseAuthorityArbiter = new PoseAuthorityArbiter();
             SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
-            var attachmentPositionSyncSystem = new Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem(World, poseAuthorityArbiter);
+            var attachmentPositionSyncSystem = new Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem(
+                World,
+                poseAuthorityArbiter,
+                MergedConfig.GasRuntimeCapacity.AttachmentPositionSyncScratchCapacity);
             SetService(CoreServiceKeys.AttachmentPositionSync, attachmentPositionSyncSystem);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);

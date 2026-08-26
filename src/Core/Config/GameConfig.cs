@@ -141,6 +141,7 @@ namespace Ludots.Core.Config
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
         public int CommandIntentScratchCapacity { get; set; }
+        public int AttachmentPositionSyncScratchCapacity { get; set; } = 8192;
 
         public void Validate()
         {
@@ -256,6 +257,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            if (AttachmentPositionSyncScratchCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.attachmentPositionSyncScratchCapacity must be positive.");
             }
         }
 
