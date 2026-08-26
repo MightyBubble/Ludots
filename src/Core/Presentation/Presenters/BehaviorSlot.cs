@@ -30,6 +30,7 @@ namespace Ludots.Core.Presentation.Presenters
         public BehaviorMotionConfig Motion;
         public SurfaceAuthoringBlock? SurfaceSource;
         public InstancedBatchConfig InstancedBatch;
+        public TrailMeshConfig TrailMesh;
 
         public static AssetBindingConfig BuildWorldTextAssetBinding(in WorldTextConfig worldText)
         {
@@ -70,6 +71,7 @@ namespace Ludots.Core.Presentation.Presenters
         WorldText = 11,
         SurfaceSource = 12,
         InstancedBatch = 13,
+        TrailMesh = 14,
         Extension = 255,
     }
 
@@ -89,6 +91,17 @@ namespace Ludots.Core.Presentation.Presenters
         public int ValueParamKey;
         public int SecondaryValueParamKey;
         public int FontSize;
+    }
+
+    public struct TrailMeshConfig
+    {
+        public Vector3 BaseOffset;
+        public Vector3 TipOffset;
+        public int MaxSamples;
+        public float SampleIntervalSeconds;
+        public float SampleLifetimeSeconds;
+        public Vector4 HeadColor;
+        public Vector4 TailColor;
     }
 
     public enum BehaviorAlphaPolicy : byte

@@ -944,6 +944,7 @@ namespace Ludots.Core.Presentation.Config
             "assetBinding", "attributeBinding", "tagBinding", "animator",
             "attachment", "sound", "material", "spline", "grounding",
             "minimapMarker", "worldText", "surfaceSource", "instancedBatch",
+            "trailMesh",
         };
 
         private static readonly string[] ChildFields =
@@ -1072,6 +1073,12 @@ namespace Ludots.Core.Presentation.Config
         {
             "splineAssetId", "usage", "widthParamKey", "colorParamKey",
             "speedParamKey", "progressParamKey", "loop", "pingPong", "waypointEventId",
+        };
+
+        private static readonly string[] TrailMeshFields =
+        {
+            "baseOffset", "tipOffset", "maxSamples", "sampleIntervalSeconds",
+            "sampleLifetimeSeconds", "headColor", "tailColor",
         };
 
         private static readonly string[] GroundingFields =
@@ -2903,59 +2910,63 @@ namespace Ludots.Core.Presentation.Config
                 switch (kind)
                 {
                     case BehaviorKind.AssetBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.AssetBinding = ParseAssetBinding(obj["assetBinding"], $"{behaviorPath}.assetBinding");
                         slot.Style = ParseBehaviorStyle(obj["style"], $"{behaviorPath}.style");
                         slot.Motion = ParseBehaviorMotion(obj["motion"], $"{behaviorPath}.motion");
                         break;
                     case BehaviorKind.AttributeBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.AttributeBinding = ParseAttributeBinding(obj["attributeBinding"], $"{behaviorPath}.attributeBinding");
                         break;
                     case BehaviorKind.TagBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.TagBinding = ParseTagBinding(obj["tagBinding"], $"{behaviorPath}.tagBinding");
                         break;
                     case BehaviorKind.Animator:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Animator = ParseAnimator(obj["animator"], $"{behaviorPath}.animator");
                         break;
                     case BehaviorKind.Attachment:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Attachment = ParseAttachment(obj["attachment"], $"{behaviorPath}.attachment");
                         break;
                     case BehaviorKind.Sound:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Sound = ParseSound(obj["sound"], $"{behaviorPath}.sound");
                         break;
                     case BehaviorKind.Material:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Material = ParseMaterial(obj["material"], $"{behaviorPath}.material");
                         break;
                     case BehaviorKind.Spline:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Spline = ParseSpline(obj["spline"], $"{behaviorPath}.spline");
                         break;
-                    case BehaviorKind.Grounding:
+                    case BehaviorKind.TrailMesh:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        slot.TrailMesh = ParseTrailMesh(obj["trailMesh"], $"{behaviorPath}.trailMesh");
+                        break;
+                    case BehaviorKind.Grounding:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Grounding = ParseGrounding(obj["grounding"], $"{behaviorPath}.grounding");
                         break;
                     case BehaviorKind.MinimapMarker:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.MinimapMarker = ParseMinimapMarker(obj["minimapMarker"], $"{behaviorPath}.minimapMarker");
                         break;
                     case BehaviorKind.WorldText:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.WorldText = ParseWorldText(obj["worldText"], $"{behaviorPath}.worldText");
                         slot.Style = ParseBehaviorStyle(obj["style"], $"{behaviorPath}.style");
                         slot.Motion = ParseBehaviorMotion(obj["motion"], $"{behaviorPath}.motion");
                         break;
                     case BehaviorKind.SurfaceSource:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch", "trailMesh");
                         slot.SurfaceSource = ParseSurface(obj["surfaceSource"], ownerKey, $"{behaviorPath}.surfaceSource");
                         break;
                     case BehaviorKind.InstancedBatch:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource", "trailMesh");
                         slot.InstancedBatch = ParseInstancedBatchBehavior(obj["instancedBatch"], ownerKey, $"{behaviorPath}.instancedBatch");
                         break;
                     case BehaviorKind.Extension:
@@ -3766,6 +3777,58 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
+        private static TrailMeshConfig ParseTrailMesh(JsonNode? node, string path)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("TrailMesh behavior requires object field 'trailMesh'.");
+            }
+
+            RejectUnknownFields(obj, path, TrailMeshFields);
+
+            Vector3 baseOffset = ParseVector3OrDefault(obj["baseOffset"], Vector3.Zero);
+            Vector3 tipOffset = ParseRequiredVector3(obj["tipOffset"], $"{path}.tipOffset", Vector3.Zero, required: true);
+            int maxSamples = obj["maxSamples"]?.GetValue<int>() ?? 24;
+            if (maxSamples < 2 || maxSamples > TrailMeshBuffer.MaxSamplesPerTrail)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.maxSamples must be in [2, {TrailMeshBuffer.MaxSamplesPerTrail}], got {maxSamples}.");
+            }
+
+            float sampleIntervalSeconds = obj["sampleIntervalSeconds"]?.GetValue<float>() ?? 0f;
+            if (!float.IsFinite(sampleIntervalSeconds) || sampleIntervalSeconds < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.sampleIntervalSeconds must be a finite value >= 0, got {sampleIntervalSeconds}.");
+            }
+
+            float sampleLifetimeSeconds = obj["sampleLifetimeSeconds"]?.GetValue<float>() ?? 0.3f;
+            if (!float.IsFinite(sampleLifetimeSeconds) || sampleLifetimeSeconds <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.sampleLifetimeSeconds must be a finite value > 0, got {sampleLifetimeSeconds}.");
+            }
+
+            Vector4 headColor = ParseOptionalFiniteVector4(obj["headColor"], Vector4.One, $"{path}.headColor");
+            Vector4 tailColor = ParseOptionalFiniteVector4(obj["tailColor"], new Vector4(1f, 1f, 1f, 0f), $"{path}.tailColor");
+            if (baseOffset == tipOffset)
+            {
+                throw new InvalidOperationException(
+                    $"{path} requires distinct baseOffset and tipOffset; a zero-length blade segment cannot be sampled.");
+            }
+
+            return new TrailMeshConfig
+            {
+                BaseOffset = baseOffset,
+                TipOffset = tipOffset,
+                MaxSamples = maxSamples,
+                SampleIntervalSeconds = sampleIntervalSeconds,
+                SampleLifetimeSeconds = sampleLifetimeSeconds,
+                HeadColor = headColor,
+                TailColor = tailColor,
+            };
+        }
+
         private static int ParseOptionalParamKey(JsonNode? node, string context)
         {
             return ParseParamKey(node, -1, context, allowMissing: true, allowNone: true);
@@ -3942,6 +4005,7 @@ namespace Ludots.Core.Presentation.Config
                 ["attributeCurrent"] = 14,
                 ["attributeBase"] = 15,
                 ["instancedBatch"] = 16,
+                ["trail"] = 17,
             };
 
             public static int Register(string key)
@@ -4436,6 +4500,33 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return Vector4.Zero;
+        }
+
+        private static Vector4 ParseOptionalFiniteVector4(JsonNode? node, Vector4 defaultValue, string context)
+        {
+            if (node is null)
+            {
+                return defaultValue;
+            }
+
+            if (node is not JsonArray arr || arr.Count != 4)
+            {
+                throw new InvalidOperationException($"{context} requires exactly 4 numeric components.");
+            }
+
+            Vector4 parsed = new(
+                ParseRequiredFloat(arr[0], $"{context}[0]"),
+                ParseRequiredFloat(arr[1], $"{context}[1]"),
+                ParseRequiredFloat(arr[2], $"{context}[2]"),
+                ParseRequiredFloat(arr[3], $"{context}[3]")
+            );
+            if (!float.IsFinite(parsed.X) || !float.IsFinite(parsed.Y) ||
+                !float.IsFinite(parsed.Z) || !float.IsFinite(parsed.W))
+            {
+                throw new InvalidOperationException($"{context} components must be finite.");
+            }
+
+            return parsed;
         }
 
         private static Vector4 ParseRequiredVector4(JsonNode? node, string context)
