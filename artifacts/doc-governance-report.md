@@ -100,3 +100,10 @@ Ruleset：ludots-doc-governance checklist（仓库相对路径、断言带证据
 2. 重写 `presenter-param-blackboard.md`（P3-01）。
 3. animation 链 schema + 决定是否挂流水线校验（对齐 mod-editor-prd TODO I10 的口径）。
 >>>>>>> theirs
+
+# Strategic HUD Panels 本次检查补充（2026-08-26）
+
+- `gitbook/architecture/strategic-hud-panel-showcase.md` 已加入 `gitbook/SUMMARY.md`。
+- 新增的 Mod、launcher preset、运行证据路径均为仓库相对路径且已存在。
+- 本次仅确认 markup/Raylib 的真实运行证据；其余 native skin 的具体截图仍明确列为后续验收，不作为已完成声明。
+- 证据：`artifacts/acceptance/strategic-hud-panels/trace.jsonl`、`artifacts/acceptance/strategic-hud-panels/battle-report.md`、`artifacts/agent-bridge/shots/strategic-hud-panels-first-viewport.png`。

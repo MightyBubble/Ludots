@@ -2130,6 +2130,16 @@
       "buildMode": "auto"
     },
     {
+      "id": "strategic_hud_panels_raylib",
+      "name": "Strategic HUD Panels Raylib",
+      "selectors": [
+        "$strategic_hud_panels",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_skin_compose_raylib",
       "name": "Panel Compose Skin Raylib",
       "selectors": [

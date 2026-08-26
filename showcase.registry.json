@@ -7306,6 +7306,28 @@
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
+      "id": "strategic_hud_panels",
+      "path": "mods/showcases/strategic_hud_panels/StrategicHudPanelsMod",
+      "title": "Strategic HUD 八方面板",
+      "summary": "零 C# 的八方 HUD：同一份 Graph 数据投影到八个屏幕锚点，并可切换四种 panel skin。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "strategic_hud_panels",
+      "preset": "strategic_hud_panels_raylib",
+      "docsPath": "gitbook/architecture/strategic-hud-panel-showcase.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "data-driven",
+        "showcase"
+      ]
+    },
+    {
       "id": "panel_skin_markup",
       "path": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod",
       "title": "Panel Markup Skin",
