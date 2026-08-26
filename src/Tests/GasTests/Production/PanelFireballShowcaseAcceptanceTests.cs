@@ -247,6 +247,17 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         Assert.That(FindNodeByClass(root.Scene!.Root!, "bar-fill"), Is.Not.Null,
             "Paired rows must mount .bar-fill nodes sized by current/base.");
         Assert.That(FindNodeByClass(root.Scene!.Root!, "row-bar-health"), Is.Not.Null);
+
+        string screensDir = System.IO.Path.Combine(
+            FindRepoRoot(),
+            "artifacts",
+            "acceptance",
+            $"panel_theme_{themeId}",
+            "screens");
+        System.IO.Directory.CreateDirectory(screensDir);
+        string shotPath = System.IO.Path.Combine(screensDir, "001_slice_panel.png");
+        AcceptanceUiEvidenceWriter.ExportUiScene(root, shotPath, themeId == "cyber" ? "#06141A" : "#1A1208");
+        Assert.That(System.IO.File.Exists(shotPath), Is.True, $"Expected themed panel screenshot at {shotPath}.");
     }
 
     private static Ludots.UI.Runtime.UiNode? FindNodeByClass(Ludots.UI.Runtime.UiNode node, string className)
