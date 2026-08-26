@@ -1723,6 +1723,28 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
         "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj"
       }
+    },
+    {
+      "name": "configurable_data_schema",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/configurable_data_schema/ConfigurableDataSchemaSharedMod",
+        "projectPath": "ConfigurableDataSchemaSharedMod.csproj"
+      }
+    },
+    {
+      "name": "configurable_data_schema_native",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/configurable_data_schema/ConfigurableDataSchemaNativeMod"
+      }
+    },
+    {
+      "name": "configurable_data_schema_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/configurable_data_schema/ConfigurableDataSchemaWebMod"
+      }
     }
   ],
   "adapters": {

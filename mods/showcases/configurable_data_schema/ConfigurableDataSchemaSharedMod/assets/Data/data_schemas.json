@@ -1,0 +1,28 @@
+[
+  {
+    "id": "rarity",
+    "kind": "enum",
+    "values": [
+      { "name": "Common", "value": 1 },
+      { "name": "Rare", "value": 5 }
+    ]
+  },
+  {
+    "id": "point",
+    "kind": "struct",
+    "fields": [
+      { "name": "x", "type": "float", "required": true },
+      { "name": "y", "type": "float", "required": true }
+    ]
+  },
+  {
+    "id": "unit",
+    "kind": "struct",
+    "fields": [
+      { "name": "name", "type": "string", "required": true },
+      { "name": "position", "type": { "kind": "struct", "ref": "point" }, "required": true },
+      { "name": "rarity", "type": { "kind": "enum", "ref": "rarity" }, "required": true },
+      { "name": "tags", "type": { "kind": "array", "items": "string" }, "required": true }
+    ]
+  }
+]

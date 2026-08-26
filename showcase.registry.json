@@ -7748,6 +7748,67 @@
       "video": "artifacts/evidence/capability_standard_graph_op_WeightedPick/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "configurable_data_schema",
+      "path": "mods/showcases/configurable_data_schema/ConfigurableDataSchemaSharedMod",
+      "projectPath": "ConfigurableDataSchemaSharedMod.csproj",
+      "title": "数据结构工作台",
+      "summary": "作者改 schema/record 草稿后，右侧面板与校验结果实时变化；支持 Graph/Data 消融与 Native/Web 换肤。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "configurable_data_schema",
+      "preset": "configurable_data_schema_raylib",
+      "docsPath": "gitbook/architecture/configurable-data-schema-showcase-design.md",
+      "acceptanceTest": "ConfigurableDataSchemaShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/configurable-data-schema-showcase",
+      "status": "active",
+      "tags": [
+        "panel",
+        "data-schema",
+        "showcase",
+        "workbench"
+      ]
+    },
+    {
+      "id": "configurable_data_schema_native",
+      "path": "mods/showcases/configurable_data_schema/ConfigurableDataSchemaNativeMod",
+      "title": "数据结构工作台 · Native",
+      "summary": "同一工作台内容，Reactive Native skin。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "configurable_data_schema_native",
+      "preset": "configurable_data_schema_native_raylib",
+      "docsPath": "gitbook/architecture/configurable-data-schema-showcase-design.md",
+      "acceptanceTest": "ConfigurableDataSchemaShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/configurable-data-schema-showcase",
+      "status": "active",
+      "tags": [
+        "panel",
+        "data-schema",
+        "native",
+        "showcase"
+      ]
+    },
+    {
+      "id": "configurable_data_schema_web",
+      "path": "mods/showcases/configurable_data_schema/ConfigurableDataSchemaWebMod",
+      "title": "数据结构工作台 · Web",
+      "summary": "同一工作台内容，Web skin + CEF overlay。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "configurable_data_schema_web",
+      "preset": "configurable_data_schema_web_raylib",
+      "docsPath": "gitbook/architecture/configurable-data-schema-showcase-design.md",
+      "acceptanceTest": "ConfigurableDataSchemaShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/configurable-data-schema-showcase",
+      "status": "active",
+      "tags": [
+        "panel",
+        "data-schema",
+        "web",
+        "showcase"
+      ]
     }
   ]
 }

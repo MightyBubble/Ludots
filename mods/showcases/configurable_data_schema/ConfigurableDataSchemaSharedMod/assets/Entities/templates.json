@@ -1,0 +1,12 @@
+[
+  {
+    "id": "data_schema_workbench_owner",
+    "components": {
+      "Name": { "Value": "WorkbenchOwner" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 }
+    }
+  }
+]

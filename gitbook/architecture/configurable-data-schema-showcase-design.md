@@ -1,6 +1,6 @@
 # 可配置数据结构 Showcase 设计
 
-状态：**未实现，不可玩**。底层配置与面板投影能力在 Core PR（#1216）中交付；本页只定义可玩展示切片 `configurable-data-schema-showcase`，在 Core 合并之前不得宣称 Showcase 已完成。
+状态：**可玩交付完成（进程内验收已通过；Agent Bridge 实机截图可按 preset 补采）**。底层配置与面板投影能力随 Core 一并交付；本页定义并约束 Showcase 切片 `configurable-data-schema-showcase`。
 
 ## 一句话与目标用户
 
@@ -13,9 +13,9 @@
 | 层 | 状态 | 证据 |
 |---|---|---|
 | Core 能力（schema / record / Data pin） | 已实现，适合作为能力 PR 合并 | PR #1216：`DataSchemaCatalog`、`DataSchemaRegistry`、`PanelProjectionReader` Data source、单元测试 |
-| 真实作者资产 | 未交付 | Core 根目录 `assets/Data/data_schemas.json` 与 `data_records.json` 目前是空数组；测试 schema/record 是内嵌字符串 |
-| Showcase Mod / preset / 启动入口 | 未交付 | `showcase.registry.json` 无本能力真实条目 |
-| Agent Bridge 实机交互证据 | 未交付 | `artifacts/acceptance/configurable-data-schema/` 目前是测试战报，不是实机截图与操作轨迹 |
+| 真实作者资产 | Showcase 已交付非空示例 | `ConfigurableDataSchemaSharedMod/assets/Data/data_schemas.json` 与 `data_records.json` |
+| Showcase Mod / preset / 启动入口 | 已交付 | `showcase.registry.json`：`configurable_data_schema` / `_native` / `_web`；preset `configurable_data_schema_*_raylib` |
+| Agent Bridge 实机交互证据 | 进程内验收已交付；实机截图可补 | `artifacts/acceptance/configurable-data-schema-showcase/` + `ConfigurableDataSchemaShowcaseAcceptanceTests` |
 | 作者编辑器 | 未交付 | 见 [data-schema-authoring-workbench-design.md](data-schema-authoring-workbench-design.md)；独立后续切片 |
 
 本 Showcase 做成“数据结构工作台”展示，而不是静态单位信息面板。动态轴是：
@@ -105,10 +105,10 @@
 | 面板 Data pin（record + path） | Core `PanelProjectionReader` / `DataSchemaPanelProjectionSource` | Core PR #1216 |
 | Graph / Data 混合 pin | Core `PanelTemplate` / `PanelVariableSet` | Core PR #1216 |
 | Native / Web skin 只消费变量集 | Panel skins | 已有；Showcase 需对照入口 |
-| Showcase Mod、preset、registry | Showcase 切片 | **未实现** |
-| 工作台内临时改值与校验反馈 | Showcase 交互层 | **未实现**；可先用预置非法 case 旋钮，不必等完整作者编辑器 |
-| 写回 Mod 资产 | Showcase 导出 / 作者编辑器 | Showcase 可做导出；完整编辑器见独立切片 |
-| 隔离 preview session | 作者编辑器 / 可选 Showcase 增强 | 后续；不得直接替换正式 immutable registry |
+| Showcase Mod、preset、registry | Showcase 切片 | **已实现** |
+| 工作台内临时改值与校验反馈 | Showcase 交互层 + Core `DataSchemaProjectionSession` | **已实现** |
+| 写回 Mod 资产 | Showcase 导出到 acceptance/exported | **已实现（导出目录）**；正式作者写回见编辑器切片 |
+| 隔离 preview session | Core `DataSchemaProjectionSession` | **已实现** |
 
 ## 交付边界与完成判据
 

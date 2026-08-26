@@ -1,0 +1,12 @@
+{
+  "startupMapId": "configurable_data_schema_workbench",
+  "windowTitle": "Ludots - Data Structure Workbench",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

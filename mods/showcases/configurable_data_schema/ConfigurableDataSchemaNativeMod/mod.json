@@ -1,0 +1,9 @@
+{
+  "name": "ConfigurableDataSchemaNativeMod",
+  "version": "1.0.0",
+  "description": "Native reactive skin overlay for the data structure workbench",
+  "priority": 0,
+  "dependencies": {
+    "ConfigurableDataSchemaSharedMod": "^1.0.0"
+  }
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "panel.data.schema.workbench",
+    "pins": [
+      { "name": "name", "source": "data", "record": "unit.workbench", "path": "name", "mode": "realtime" },
+      { "name": "x", "source": "data", "record": "unit.workbench", "path": "position.x", "mode": "realtime" },
+      { "name": "y", "source": "data", "record": "unit.workbench", "path": "position.y", "mode": "realtime" },
+      { "name": "rarity", "source": "data", "record": "unit.workbench", "path": "rarity", "mode": "realtime" },
+      { "name": "tags", "source": "data", "record": "unit.workbench", "path": "tags", "mode": "realtime" }
+    ]
+  },
+  {
+    "id": "panel.graph.schema.workbench",
+    "graph": "Graph.DataSchema.Panel.Score",
+    "pins": [
+      { "name": "score", "key": "dataschema.panel.score", "mode": "realtime", "default": 0 }
+    ]
+  },
+  {
+    "id": "panel.mixed.schema.workbench",
+    "graph": "Graph.DataSchema.Panel.Score",
+    "pins": [
+      { "name": "score", "key": "dataschema.panel.score", "mode": "realtime", "default": 0 },
+      { "name": "name", "source": "data", "record": "unit.workbench", "path": "name", "mode": "realtime" },
+      { "name": "x", "source": "data", "record": "unit.workbench", "path": "position.x", "mode": "realtime" },
+      { "name": "rarity", "source": "data", "record": "unit.workbench", "path": "rarity", "mode": "realtime" },
+      { "name": "tags", "source": "data", "record": "unit.workbench", "path": "tags", "mode": "realtime" }
+    ]
+  }
+]

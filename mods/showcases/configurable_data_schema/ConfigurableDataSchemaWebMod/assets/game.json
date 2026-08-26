@@ -1,0 +1,10 @@
+{
+  "windowTitle": "Ludots - Data Structure Workbench (Web)",
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  },
+  "panelSkin": "web",
+  "panelWebApp": "PanelSkinWebMod:Assets/overlay-app/index.html"
+}

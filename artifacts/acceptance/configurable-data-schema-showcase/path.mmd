@@ -1,0 +1,7 @@
+flowchart LR
+  author[Author edits draft] --> validate[Schema validate]
+  validate -->|ok| preview[DataSchemaProjectionSession]
+  validate -->|fail| diagnose[Error path + export disabled]
+  preview --> panel[PanelVariableSet]
+  panel --> skin[Native or Web skin]
+  graph[Graph score Query] --> panel

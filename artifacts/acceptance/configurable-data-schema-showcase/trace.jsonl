@@ -1,0 +1,5 @@
+{"event":"showcase_boot","map":"configurable_data_schema_workbench","record":"unit.workbench","schema":"unit"}
+{"event":"draft_nudge_x","from":12.5,"to":13.5,"valid":true}
+{"event":"source_mode","value":"Data"}
+{"event":"invalid_enum","member":"Legendary","exportEnabled":false}
+{"event":"web_skin_headless","name":"Scout","score":42}

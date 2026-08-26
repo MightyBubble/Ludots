@@ -7,7 +7,7 @@
 - [运行时总览](runtime-overview.md)
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [面板目录设计：配置形状与线框](panel-catalog-designs.md) — 总合同（graph-pinned panels）
-- [可配置数据结构 Showcase](configurable-data-schema-showcase-design.md) — **未实现；Core 能力见 PR #1216，勿宣称可玩**
+- [可配置数据结构 Showcase](configurable-data-schema-showcase-design.md) — **可玩；Native/Web preset 已注册**
 - [可配置数据结构作者编辑器](data-schema-authoring-workbench-design.md) — **未实现；独立后续切片**
 - [Mod 架构](mod-architecture.md)
 - [Mod Extensible Runtime](mod-extensible-runtime.md)

@@ -2284,6 +2284,36 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "configurable_data_schema_raylib",
+      "name": "Data Structure Workbench Raylib",
+      "selectors": [
+        "$configurable_data_schema",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "configurable_data_schema_native_raylib",
+      "name": "Data Structure Workbench Native Raylib",
+      "selectors": [
+        "$configurable_data_schema_native",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "configurable_data_schema_web_raylib",
+      "name": "Data Structure Workbench Web Raylib",
+      "selectors": [
+        "$configurable_data_schema_web",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
