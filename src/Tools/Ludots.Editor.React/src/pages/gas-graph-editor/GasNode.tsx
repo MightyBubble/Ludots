@@ -41,6 +41,7 @@ export type GasNodeViewData = {
   floatValue?: number;
   boolValue?: boolean;
   text?: string | null;
+  textKey?: string | null;
   presentationSurface?: string | null;
   var?: string | null;
   template?: string | null;
@@ -61,7 +62,7 @@ export type GasNodeViewData = {
 };
 
 export function isPureValueOp(op: string): boolean {
-  return op === 'ConstInt' || op === 'ConstFloat' || op === 'ConstBool' || op === 'ConstText';
+  return op === 'ConstInt' || op === 'ConstFloat' || op === 'ConstBool' || op === 'ConstText' || op === 'LoadTextKey';
 }
 
 function literalText(data: GasNodeViewData): string | null {
@@ -69,10 +70,12 @@ function literalText(data: GasNodeViewData): string | null {
   if (data.op === 'ConstFloat') return String(data.floatValue ?? 0);
   if (data.op === 'ConstBool') return data.boolValue ? 'true' : 'false';
   if (data.op === 'ConstText' || data.op === 'FormatText') return data.text ?? '';
+  if (data.op === 'LoadTextKey') return data.textKey ?? '';
   return null;
 }
 
 function authoredCaption(data: GasNodeViewData): string | null {
+  if (data.textKey) return data.textKey;
   if (data.var) return data.var;
   if (data.template) return data.template;
   if (data.panelType) return data.panelType;

@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
@@ -110,6 +111,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private GraphPresentationTextSink? _presentationTextSink;
+        private PresentationTextCatalog? _presentationTextCatalog;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
@@ -398,6 +400,40 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindPresentationTextSink(GraphPresentationTextSink sink)
         {
             _presentationTextSink = sink ?? throw new ArgumentNullException(nameof(sink));
+        }
+
+        public void BindPresentationTextCatalog(PresentationTextCatalog catalog)
+        {
+            _presentationTextCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        }
+
+        public ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)
+        {
+            PresentationTextCatalog catalog = _presentationTextCatalog
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PresentationTextCatalogUnavailable");
+
+            if (!catalog.TryGetTokenDefinition(tokenId, out PresentationTextTokenDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey token id {tokenId} is not registered in PresentationTextCatalog.");
+            }
+
+            if (definition.ArgCount != 0)
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey '{definition.Key}' declares argCount={definition.ArgCount}; " +
+                    "this slice only loads zero-argument tokens (FormatTextKey is a later op).");
+            }
+
+            int localeId = catalog.DefaultLocaleId;
+            if (localeId <= 0 ||
+                !catalog.TryGetTemplate(localeId, tokenId, out PresentationTextTemplate template))
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey '{definition.Key}' has no template for DefaultLocaleId={localeId}.");
+            }
+
+            return template.Source.AsSpan();
         }
 
         private string ResolvePanelTypeName(int panelTypeId)

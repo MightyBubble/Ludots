@@ -1,0 +1,11 @@
+{
+  "defaultLocale": "zh-CN",
+  "locales": {
+    "zh-CN": {
+      "gallery.hello": "你好"
+    },
+    "en-US": {
+      "gallery.hello": "Hello"
+    }
+  }
+}

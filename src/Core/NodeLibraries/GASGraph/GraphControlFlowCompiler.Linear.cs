@@ -488,6 +488,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.LoadTextKey:
+                    RequireNonEmpty(node.TextKey, "textKey", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.ConcatText:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Text, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Text, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -1377,6 +1381,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     }
 
                     instruction.Imm = Intern(symbolToIndex, symbols, node.Text);
+                    break;
+
+                case GraphNodeOp.LoadTextKey:
+                    instruction.Imm = RequireSymbol(node.TextKey, "textKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ConcatText:

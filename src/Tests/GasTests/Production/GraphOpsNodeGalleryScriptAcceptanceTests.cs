@@ -18,7 +18,7 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         [
             "Jump", "JumpIfFalse", "Call", "Return", "Yield", "AwaitCallback",
             "HaltReturnInt", "InvokeScript", "MoveInt",
-            "ConstText", "ConcatText", "IntToText", "FloatToText", "SinkPresentationText"
+            "ConstText", "ConcatText", "IntToText", "FloatToText", "SinkPresentationText", "LoadTextKey"
         ];
         string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();
         foreach (string op in ops)
@@ -83,6 +83,7 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
     [TestCase("IntToText")]
     [TestCase("FloatToText")]
     [TestCase("SinkPresentationText")]
+    [TestCase("LoadTextKey")]
     public void FormalTextOp_CompilesFeaturedOpcode(string op)
     {
         string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();

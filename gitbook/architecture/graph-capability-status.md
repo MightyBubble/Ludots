@@ -88,6 +88,8 @@ Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标�
 
 字符串花括号自动引脚、字符串寄存器、组合文本与 `Concat` 的运行时合同已落地：`GraphValueType.Text` + 固定容量 `GraphTextHeap`、`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText`，以及作者糖 `FormatText`（花括号自动引脚，编译期降为原子文字 op）。合同正本见 [图正式文字](graph-formal-text.md)；作者接法见 [拼句指南](graph-formal-text-authoring-guide.md)。玩家短剧「拼一句上字幕」见 [验收](../acceptance/graph-formal-text-subtitle.md)（`capability_standard_graph_formal_text`）。编辑器只从运行时 descriptor / 已登记糖露出可保存节点，不再留假 Concat。
 
+TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面量轨分离：可保存 op `LoadTextKey`、Bridge `/api/graph/text-keys/{modId}`、编辑器 `textKey` 选择器。合同正本见 [图 TextKey 发现糖](graph-textkey.md)。本切片零参；带参 `FormatTextKey`、ActiveLocale 对齐、生产 Dialogue drain sink 另线。
+
 作者面还开着的债，不要当成新发现再审：执行线没下一步就该结束，但先改“必须显式停下”的合同 https://github.com/MightyBubble/Ludots/issues/1107 。蓝图变量面板 MapVariable 作者面已随 Narrative PR #1222 / Bridge 进主干，#1109 只剩关单。#1108 要对齐的是「地图上具体 InstanceId（单位/区域）当变量拖取」——单实体 `LoadPlacedEntity` + 区域 `LoadPlacedRegion` + 锚点 `LoadPlacedAnchor`（InstanceId 含 `anchor`）+ Placed 栏 / Bridge `kind` 已落地；不是数组/映射集合类型。事件入口露出本次载荷（#1106）、放置实体读、地图变量变更事件（#1113）、图互调/跨图派发/全局订阅与 hook（#1115/#1116/#1123/#1124）、纯数据枚举（#1125）、图↔代码 AwaitCallback 续跑（#1126）已随 night-raid 大包进主干（PR #1239）；合入后把对应票改成关单卫生，不要再派实现票。#1126 落地范围：`AwaitCallback=455` + `GraphCallbackService` + `SystemGroup.Continuation` 按注册序 Drain；TriggerGraph 挂载可直接挂起；嵌套 `InvokeScript`/`InvokeGraph` 仍禁 Yield/AwaitCallback（同步函数）。可等待复用走编译期糖 `InlineGraph`（`TriggerGraphInlineWeaver`，虚幻 Macro 风格，Await 落在宿主程序）。Dialogue 宿主 Completer 已接线：玩家确认选项/推进台词时 `TryCompleteByCallbackType(DialogConfirm)`，不另造第二套等待。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
 
 **分层：架子有了，墙没有。**  

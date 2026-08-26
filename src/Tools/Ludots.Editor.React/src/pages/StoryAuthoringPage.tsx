@@ -89,6 +89,7 @@ export const StoryAuthoringPage: React.FC = () => {
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [selectedTrackIndex, setSelectedTrackIndex] = useState(0);
+  const [textKeyCatalog, setTextKeyCatalog] = useState<Array<{ id: string; preview?: string | null }>>([]);
 
   const loadMods = useCallback(async () => {
     const res = await fetch('/api/mods');
@@ -136,6 +137,23 @@ export const StoryAuthoringPage: React.FC = () => {
     if (!modId) return;
     void loadCatalogList(modId);
   }, [modId, loadCatalogList]);
+
+  useEffect(() => {
+    if (!modId) return;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/graph/text-keys/${encodeURIComponent(modId)}`);
+        const json = await res.json();
+        if (!res.ok || !json.ok || !Array.isArray(json.textKeys)) {
+          setTextKeyCatalog([]);
+          return;
+        }
+        setTextKeyCatalog(json.textKeys);
+      } catch {
+        setTextKeyCatalog([]);
+      }
+    })();
+  }, [modId]);
 
   useEffect(() => {
     if (!modId || !catalogId) return;
@@ -251,11 +269,36 @@ export const StoryAuthoringPage: React.FC = () => {
       </label>
       <label className={labelClass}>
         文案词条
-        <input
-          className={fieldClass}
-          value={row.textToken ?? ''}
-          onChange={(e) => replaceSelected({ ...row, textToken: e.target.value })}
-        />
+        {textKeyCatalog.length > 0 ? (
+          <select
+            className={fieldClass}
+            value={row.textToken ?? ''}
+            onChange={(e) => replaceSelected({ ...row, textToken: e.target.value })}
+          >
+            <option value="">选择文案键</option>
+            {(() => {
+              const current = row.textToken ?? '';
+              const ids = textKeyCatalog.map((k) => k.id);
+              const options = current && !ids.includes(current) ? [current, ...ids] : ids;
+              return options.map((id) => {
+                const meta = textKeyCatalog.find((k) => k.id === id);
+                const suffix = meta?.preview ? ` — ${meta.preview}` : '';
+                return (
+                  <option key={id} value={id}>
+                    {id}
+                    {suffix}
+                  </option>
+                );
+              });
+            })()}
+          </select>
+        ) : (
+          <input
+            className={fieldClass}
+            value={row.textToken ?? ''}
+            onChange={(e) => replaceSelected({ ...row, textToken: e.target.value })}
+          />
+        )}
       </label>
       <label className={labelClass}>
         标签（逗号分隔）
@@ -284,11 +327,36 @@ export const StoryAuthoringPage: React.FC = () => {
       </label>
       <label className={labelClass}>
         显示名词条
-        <input
-          className={fieldClass}
-          value={row.displayNameToken ?? ''}
-          onChange={(e) => replaceSelected({ ...row, displayNameToken: e.target.value })}
-        />
+        {textKeyCatalog.length > 0 ? (
+          <select
+            className={fieldClass}
+            value={row.displayNameToken ?? ''}
+            onChange={(e) => replaceSelected({ ...row, displayNameToken: e.target.value })}
+          >
+            <option value="">选择文案键</option>
+            {(() => {
+              const current = row.displayNameToken ?? '';
+              const ids = textKeyCatalog.map((k) => k.id);
+              const options = current && !ids.includes(current) ? [current, ...ids] : ids;
+              return options.map((id) => {
+                const meta = textKeyCatalog.find((k) => k.id === id);
+                const suffix = meta?.preview ? ` — ${meta.preview}` : '';
+                return (
+                  <option key={id} value={id}>
+                    {id}
+                    {suffix}
+                  </option>
+                );
+              });
+            })()}
+          </select>
+        ) : (
+          <input
+            className={fieldClass}
+            value={row.displayNameToken ?? ''}
+            onChange={(e) => replaceSelected({ ...row, displayNameToken: e.target.value })}
+          />
+        )}
       </label>
       <label className={labelClass}>
         半身像资产 ID

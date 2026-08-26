@@ -235,6 +235,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.IntToText, ScriptAndTriggerGraph, GraphValueType.Text, portA, scriptPorts: portA);
             Add(rows, GraphNodeOp.FloatToText, ScriptAndTriggerGraph, GraphValueType.Text, portA, scriptPorts: portA);
             Add(rows, GraphNodeOp.SinkPresentationText, ScriptAndTriggerGraph, GraphValueType.Void, portA, scriptPorts: portA, imm: GraphOperandRole.Immediate);
+            Add(rows, GraphNodeOp.LoadTextKey, ScriptAndTriggerGraph, GraphValueType.Text, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
 
             var table = new GraphOpDescriptor[GraphVmLimits.HandlerTableSize];
             for (int i = 0; i < rows.Count; i++)
