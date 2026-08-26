@@ -19,7 +19,10 @@ using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
-using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Dialogue;
+using Ludots.Core.Gameplay.Sequencer;
+using Ludots.Core.Gameplay.Story;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Tasks;
@@ -616,9 +619,14 @@ namespace Ludots.Core.Engine
 
             if (reloadAi) RebuildAiRuntime();
 
-            bool reloadNarrative = string.IsNullOrWhiteSpace(group)
-                                 || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
-                                 || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
+            bool reloadStory = string.IsNullOrWhiteSpace(group)
+                                 || string.Equals(group, "Story", StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(group, "Dialogue", StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(group, "Sequencer", StringComparison.OrdinalIgnoreCase)
+                                 || (!string.IsNullOrWhiteSpace(relativePath) && (
+                                     relativePath.StartsWith("Story/", StringComparison.OrdinalIgnoreCase)
+                                     || relativePath.StartsWith("Dialogue/", StringComparison.OrdinalIgnoreCase)
+                                     || relativePath.StartsWith("Sequencer/", StringComparison.OrdinalIgnoreCase)));
             bool reloadActivities = string.IsNullOrWhiteSpace(group)
                                  || string.Equals(group, "Activities", StringComparison.OrdinalIgnoreCase)
                                  || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Activities/", StringComparison.OrdinalIgnoreCase));
@@ -646,30 +654,54 @@ namespace Ludots.Core.Engine
                 taskRuntime.ResetState();
             }
 
-            if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
+            if (reloadStory)
             {
-                new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-                if (GetService(CoreServiceKeys.NarrativeDirector) is NarrativeDirector narrativeDirector)
+                Ludots.Core.Gameplay.Story.LegacyNarrativeConfigGuard.RejectIfPresent(ConfigCatalog);
+                if (GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry storyDefinitions)
                 {
-                    narrativeDirector.ResetNarrativeState();
+                    new StoryConfigLoader(ConfigPipeline, storyDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                }
+
+                if (GetService(CoreServiceKeys.DialogueDefinitions) is DialogueDefinitionRegistry dialogueDefinitions)
+                {
+                    new DialogueConfigLoader(ConfigPipeline, dialogueDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                }
+
+                if (GetService(CoreServiceKeys.SequenceDefinitions) is SequenceDefinitionRegistry sequenceDefinitions)
+                {
+                    new SequencerConfigLoader(ConfigPipeline, sequenceDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                }
+
+                if (GetService(CoreServiceKeys.DialogueRuntime) is DialogueRuntime dialogueRuntime)
+                {
+                    dialogueRuntime.ResetState();
+                }
+
+                if (GetService(CoreServiceKeys.SequencerRuntime) is SequencerRuntime sequencerRuntime)
+                {
+                    sequencerRuntime.ResetState();
                 }
             }
 
-            if (GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry loadedNarrativeDefinitions)
-            {
-                ValidateTaskNarrativeReferences(loadedNarrativeDefinitions);
-            }
+            ValidateTaskStoryReferences();
 
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
         }
 
-        private void ValidateTaskNarrativeReferences(NarrativeDefinitionRegistry narrativeDefinitions)
+        private void ValidateTaskStoryReferences()
         {
             if (GetService(CoreServiceKeys.TaskDefinitionRegistry) is not TaskDefinitionRegistry taskDefinitions)
             {
-                throw new InvalidOperationException("Task definition registry is required before validating narrative references.");
+                throw new InvalidOperationException("Task definition registry is required before validating story references.");
+            }
+
+            DialogueDefinitionRegistry? dialogues = GetService(CoreServiceKeys.DialogueDefinitions);
+            SequenceDefinitionRegistry? sequences = GetService(CoreServiceKeys.SequenceDefinitions);
+            if (dialogues == null || sequences == null)
+            {
+                throw new InvalidOperationException("Dialogue and Sequencer definition registries are required before validating story references.");
             }
 
             foreach (TaskDefinition task in taskDefinitions.Definitions)
@@ -681,87 +713,17 @@ namespace Ludots.Core.Engine
                 }
 
                 if (!string.IsNullOrWhiteSpace(task.OnEnterDialogueId) &&
-                    !narrativeDefinitions.TryGetDialogue(task.OnEnterDialogueId, out _))
+                    !dialogues.TryGet(task.OnEnterDialogueId, out _))
                 {
                     throw new InvalidOperationException(
-                        $"Task '{task.Id}' references missing narrative dialogue '{task.OnEnterDialogueId}'.");
+                        $"Task '{task.Id}' references missing dialogue '{task.OnEnterDialogueId}'.");
                 }
 
-                if (!string.IsNullOrWhiteSpace(task.OnEnterCinematicId) &&
-                    !narrativeDefinitions.TryGetCinematic(task.OnEnterCinematicId, out _))
+                if (!string.IsNullOrWhiteSpace(task.OnEnterSequenceId) &&
+                    !sequences.TryGet(task.OnEnterSequenceId, out _))
                 {
                     throw new InvalidOperationException(
-                        $"Task '{task.Id}' references missing narrative cinematic '{task.OnEnterCinematicId}'.");
-                }
-            }
-
-            foreach (NarrativeDialogueDefinition dialogue in narrativeDefinitions.Dialogues)
-            {
-                foreach (NarrativeDialogueNodeDefinition node in dialogue.Nodes)
-                {
-                    ValidateNarrativeActions(dialogue.Id, node.OnEnter, taskDefinitions, narrativeDefinitions);
-                    foreach (NarrativeDialogueChoiceDefinition choice in node.Choices)
-                    {
-                        ValidateNarrativeConditions(dialogue.Id, choice.Conditions, taskDefinitions);
-                        ValidateNarrativeActions(dialogue.Id, choice.Actions, taskDefinitions, narrativeDefinitions);
-                    }
-                }
-            }
-
-            foreach (NarrativeCinematicDefinition cinematic in narrativeDefinitions.Cinematics)
-            {
-                foreach (NarrativeCinematicStepDefinition step in cinematic.Steps)
-                {
-                    ValidateNarrativeActions(cinematic.Id, step.OnEnter, taskDefinitions, narrativeDefinitions);
-                }
-            }
-        }
-
-        private static void ValidateNarrativeConditions(
-            string ownerId,
-            IReadOnlyList<NarrativeConditionDefinition> conditions,
-            TaskDefinitionRegistry taskDefinitions)
-        {
-            foreach (NarrativeConditionDefinition condition in conditions)
-            {
-                if (condition.Kind == NarrativeConditionKind.TaskState &&
-                    !taskDefinitions.TryGet(condition.TaskId, out _))
-                {
-                    throw new InvalidOperationException(
-                        $"Narrative '{ownerId}' references missing task '{condition.TaskId}' in a condition.");
-                }
-            }
-        }
-
-        private static void ValidateNarrativeActions(
-            string ownerId,
-            IReadOnlyList<NarrativeActionDefinition> actions,
-            TaskDefinitionRegistry taskDefinitions,
-            NarrativeDefinitionRegistry narrativeDefinitions)
-        {
-            foreach (NarrativeActionDefinition action in actions)
-            {
-                if (action.Kind is NarrativeActionKind.StartTask or NarrativeActionKind.CompleteTask or NarrativeActionKind.FailTask)
-                {
-                    if (!taskDefinitions.TryGet(action.TaskId, out _))
-                    {
-                        throw new InvalidOperationException(
-                            $"Narrative '{ownerId}' references missing task '{action.TaskId}' in an action.");
-                    }
-                }
-
-                if (action.Kind == NarrativeActionKind.StartDialogue &&
-                    !narrativeDefinitions.TryGetDialogue(action.DialogueId, out _))
-                {
-                    throw new InvalidOperationException(
-                        $"Narrative '{ownerId}' references missing dialogue '{action.DialogueId}' in an action.");
-                }
-
-                if (action.Kind == NarrativeActionKind.StartCinematic &&
-                    !narrativeDefinitions.TryGetCinematic(action.CinematicId, out _))
-                {
-                    throw new InvalidOperationException(
-                        $"Narrative '{ownerId}' references missing cinematic '{action.CinematicId}' in an action.");
+                        $"Task '{task.Id}' references missing sequence '{task.OnEnterSequenceId}'.");
                 }
             }
         }
@@ -1909,12 +1871,24 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
-            var narrativeDefinitions = new NarrativeDefinitionRegistry();
-            new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            ValidateTaskNarrativeReferences(narrativeDefinitions);
-            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, taskRuntime);
-            SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
-            SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
+            LegacyNarrativeConfigGuard.RejectIfPresent(ConfigCatalog);
+            var storyDefinitions = new StoryDefinitionRegistry();
+            new StoryConfigLoader(ConfigPipeline, storyDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            var dialogueDefinitions = new DialogueDefinitionRegistry();
+            new DialogueConfigLoader(ConfigPipeline, dialogueDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            var sequenceDefinitions = new SequenceDefinitionRegistry();
+            new SequencerConfigLoader(ConfigPipeline, sequenceDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.StoryDefinitions, storyDefinitions);
+            SetService(CoreServiceKeys.DialogueDefinitions, dialogueDefinitions);
+            SetService(CoreServiceKeys.SequenceDefinitions, sequenceDefinitions);
+            ValidateTaskStoryReferences();
+            var storyGraphs = new StoryGraphInvoker(this);
+            PresentationTextCatalog? textCatalog = GetService(CoreServiceKeys.PresentationTextCatalog);
+            var dialogueRuntime = new DialogueRuntime(this, dialogueDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog);
+            var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog);
+            SetService(CoreServiceKeys.StoryGraphInvoker, storyGraphs);
+            SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
+            SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
             AttributeRegistry.Freeze();
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
@@ -1936,7 +1910,7 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
-            RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
+            RegisterSystem(new StoryRuntimeSystem(dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);

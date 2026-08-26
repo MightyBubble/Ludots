@@ -81,7 +81,7 @@ namespace Ludots.Core.Engine
                 MapSessions == null ||
                 GetService(CoreServiceKeys.TimeFlow) == null ||
                 GetService(CoreServiceKeys.TaskRuntimeService) == null ||
-                GetService(CoreServiceKeys.NarrativeDirector) == null)
+                GetService(CoreServiceKeys.DialogueRuntime) == null)
             {
                 return;
             }
