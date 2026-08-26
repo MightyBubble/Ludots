@@ -45,11 +45,16 @@ namespace Ludots.Core.UI.PanelProjection
 
     internal sealed class DataSchemaPanelProjectionSource : IPanelProjectionSource
     {
-        private readonly DataSchemaRegistry _registry;
+        private readonly DataSchemaProjectionSession _session;
 
         public DataSchemaPanelProjectionSource(DataSchemaRegistry registry)
+            : this(new DataSchemaProjectionSession(registry))
         {
-            _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        }
+
+        public DataSchemaPanelProjectionSource(DataSchemaProjectionSession session)
+        {
+            _session = session ?? throw new ArgumentNullException(nameof(session));
         }
 
         public PanelPinSourceKind Kind => PanelPinSourceKind.Data;
@@ -57,14 +62,14 @@ namespace Ludots.Core.UI.PanelProjection
         public bool TryResolve(Entity owner, PanelPin pin, out PanelProjectionValue value)
         {
             if (pin.RecordId == null || pin.Path == null ||
-                !_registry.TryGetNode(pin.RecordId, pin.Path, out System.Text.Json.Nodes.JsonNode? node) ||
+                !_session.TryGetNode(pin.RecordId, pin.Path, out System.Text.Json.Nodes.JsonNode? node) ||
                 node == null)
             {
                 value = default;
                 return false;
             }
 
-            value = new PanelProjectionValue(pin.Name, node, _registry.Revision);
+            value = new PanelProjectionValue(pin.Name, node, _session.Revision);
             return true;
         }
     }

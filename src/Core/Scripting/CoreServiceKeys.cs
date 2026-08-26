@@ -431,6 +431,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ConfigConflictReport> ConfigConflictReport = new("ConfigConflictReport");
         public static readonly ServiceKey<DataSchemaCatalog> DataSchemaCatalog = new("DataSchemaCatalog");
         public static readonly ServiceKey<DataSchemaRegistry> DataSchemaRegistry = new("DataSchemaRegistry");
+        public static readonly ServiceKey<DataSchemaProjectionSession> DataSchemaProjectionSession = new("DataSchemaProjectionSession");
         public static readonly ServiceKey<RegistrationConflictReport> RegistrationConflictReport = new("RegistrationConflictReport");
         public static readonly ServiceKey<ResolvedModLoadPlan> ModLoadPlan = new("ModLoadPlan");
         public static readonly ServiceKey<AiCompiledRuntime> AiRuntime = new("AiRuntime");

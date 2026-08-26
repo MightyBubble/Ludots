@@ -21,7 +21,15 @@ namespace Ludots.Core.UI.PanelProjection
         }
 
         public PanelProjectionReader(World world, GraphOutputValueStore values, Ludots.Core.Config.DataSchemaRegistry dataRegistry)
-            : this(world, new GraphPanelProjectionSource(values), new DataSchemaPanelProjectionSource(dataRegistry))
+            : this(world, values, new Ludots.Core.Config.DataSchemaProjectionSession(dataRegistry))
+        {
+        }
+
+        public PanelProjectionReader(
+            World world,
+            GraphOutputValueStore values,
+            Ludots.Core.Config.DataSchemaProjectionSession dataSession)
+            : this(world, new GraphPanelProjectionSource(values), new DataSchemaPanelProjectionSource(dataSession))
         {
         }
 
