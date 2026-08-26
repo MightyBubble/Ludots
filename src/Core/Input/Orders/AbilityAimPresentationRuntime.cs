@@ -815,7 +815,21 @@ namespace Ludots.Core.Input.Orders
 
         private static int ResolveSemanticEventKeyId(in EffectTemplateData effect)
         {
-            return effect.CategoryId > 0 ? effect.CategoryId : 0;
+            if (effect.CategoryId <= 0)
+            {
+                return 0;
+            }
+
+            string categoryName = EffectCategoryRegistry.GetName(effect.CategoryId);
+            if (string.IsNullOrWhiteSpace(categoryName))
+            {
+                throw new InvalidOperationException(
+                    $"Effect category id {effect.CategoryId} has no registered name; cannot publish AbilityAim semantic preview key.");
+            }
+
+            // Presenter AbilityAim* rules register the category *name* into PresentationEventKeyRegistry.
+            // Never publish EffectCategoryRegistry ids as presentation KeyId — different identity tables.
+            return ResolveEventKeyId(categoryName);
         }
 
         private static string ResolveActiveAreaEventKey(in TargetQueryDescriptor query)

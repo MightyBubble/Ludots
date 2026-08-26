@@ -697,14 +697,14 @@ namespace EntityCommandPanelMod.Runtime
                 return fallback;
             }
 
-            string tagName = TagRegistry.GetName((int)(uint)groupKey);
-            if (string.IsNullOrWhiteSpace(tagName))
+            string categoryName = AbilityCategoryRegistry.GetName((int)(uint)groupKey);
+            if (string.IsNullOrWhiteSpace(categoryName))
             {
                 return fallback;
             }
 
-            int dot = tagName.LastIndexOf('.');
-            string leaf = dot >= 0 && dot + 1 < tagName.Length ? tagName[(dot + 1)..] : tagName;
+            int dot = categoryName.LastIndexOf('.');
+            string leaf = dot >= 0 && dot + 1 < categoryName.Length ? categoryName[(dot + 1)..] : categoryName;
             if (leaf.Length == 0)
             {
                 return fallback;
