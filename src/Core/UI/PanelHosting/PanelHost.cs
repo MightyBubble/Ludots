@@ -317,7 +317,59 @@ namespace Ludots.Core.UI.PanelHosting
                 return;
             }
 
+            if (PanelListProjector.TemplateUsesVirtualizedList(entry.Template))
+            {
+                var counts = new List<PanelListProjection>(entry.Template.Collections.Count);
+                foreach (PanelCollectionBinding collection in entry.Template.Collections)
+                {
+                    int total = _listProjector.CountMembers(entry.Scope, collection);
+                    counts.Add(new PanelListProjection(
+                        collection.Name,
+                        Array.Empty<PanelListItemProjection>(),
+                        totalCount: total,
+                        startIndex: 0));
+                }
+
+                entry.ListProjections = counts;
+                return;
+            }
+
             entry.ListProjections = _listProjector.Project(entry.Scope, entry.Template);
+        }
+
+        /// <summary>
+        /// Windowed element projection for virtualized lists. Non-virtual templates may
+        /// also call this; pass <see cref="PanelListViewWindow.All"/> for the full set.
+        /// </summary>
+        public bool TryProjectListWindow(
+            PanelInstanceHandle handle,
+            string collectionName,
+            PanelListViewWindow window,
+            out PanelListProjection projection)
+        {
+            projection = new PanelListProjection(collectionName, Array.Empty<PanelListItemProjection>(), 0);
+            if (_listProjector == null || !TryGetEntry(handle, out Entry? entry) || entry == null)
+            {
+                return false;
+            }
+
+            PanelCollectionBinding? collection = null;
+            for (int i = 0; i < entry.Template.Collections.Count; i++)
+            {
+                if (string.Equals(entry.Template.Collections[i].Name, collectionName, StringComparison.Ordinal))
+                {
+                    collection = entry.Template.Collections[i];
+                    break;
+                }
+            }
+
+            if (collection == null)
+            {
+                return false;
+            }
+
+            projection = _listProjector.ProjectCollectionWindow(entry.Scope, collection, window);
+            return true;
         }
 
         /// <summary>

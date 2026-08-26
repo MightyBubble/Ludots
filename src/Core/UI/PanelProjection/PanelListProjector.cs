@@ -10,7 +10,8 @@ namespace Ludots.Core.UI.PanelProjection
     /// <summary>
     /// For each collection member, evaluates the element template graph with that
     /// member as scope and materializes pin bags. Membership/order come from the
-    /// query graph; this type does not filter or sort.
+    /// query graph; this type does not filter or sort. Supports windowed projection
+    /// for virtualized lists.
     /// </summary>
     public sealed class PanelListProjector
     {
@@ -55,7 +56,35 @@ namespace Ludots.Core.UI.PanelProjection
             }
         }
 
+        public static bool TemplateUsesVirtualizedList(PanelTemplate template)
+        {
+            ArgumentNullException.ThrowIfNull(template);
+            if (template.Layout == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < template.Layout.Controls.Count; i++)
+            {
+                if (template.Layout.Controls[i].Type == PanelLayoutControlType.List &&
+                    template.Layout.Controls[i].Virtualize)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public IReadOnlyList<PanelListProjection> Project(Entity scope, PanelTemplate template)
+        {
+            return Project(scope, template, PanelListViewWindow.All);
+        }
+
+        public IReadOnlyList<PanelListProjection> Project(
+            Entity scope,
+            PanelTemplate template,
+            PanelListViewWindow window)
         {
             if (template.Collections.Count == 0)
             {
@@ -65,36 +94,63 @@ namespace Ludots.Core.UI.PanelProjection
             var result = new List<PanelListProjection>(template.Collections.Count);
             foreach (PanelCollectionBinding collection in template.Collections)
             {
-                result.Add(ProjectCollection(scope, collection));
+                result.Add(ProjectCollection(scope, collection, window));
             }
 
             return result;
         }
 
-        private PanelListProjection ProjectCollection(Entity scope, PanelCollectionBinding collection)
+        public PanelListProjection ProjectCollectionWindow(
+            Entity scope,
+            PanelCollectionBinding collection,
+            PanelListViewWindow window)
+        {
+            return ProjectCollection(scope, collection, window);
+        }
+
+        public int CountMembers(Entity scope, PanelCollectionBinding collection)
+        {
+            if (_collections.TryGet(scope, collection.CollectionKey, out EntityCollectionHandle handle) &&
+                _collections.TryGetView(handle, out EntityCollectionView view))
+            {
+                return view.Count;
+            }
+
+            return 0;
+        }
+
+        private PanelListProjection ProjectCollection(
+            Entity scope,
+            PanelCollectionBinding collection,
+            PanelListViewWindow window)
         {
             PanelTemplate element = collection.Template
                 ?? throw new InvalidOperationException(
                     $"Collection '{collection.Name}' template '{collection.TemplateId}' is not bound.");
 
-            var items = new List<PanelListItemProjection>(16);
-            if (_collections.TryGet(scope, collection.CollectionKey, out EntityCollectionHandle handle) &&
-                _collections.TryGetView(handle, out EntityCollectionView view))
+            if (!_collections.TryGet(scope, collection.CollectionKey, out EntityCollectionHandle handle) ||
+                !_collections.TryGetView(handle, out EntityCollectionView view))
             {
-                for (int i = 0; i < view.Count; i++)
-                {
-                    if (!_collections.TryGetEntityAt(handle, i, out Entity entity) ||
-                        entity == Entity.Null ||
-                        !_world.IsAlive(entity))
-                    {
-                        continue;
-                    }
-
-                    items.Add(ProjectElement(entity, element));
-                }
+                return new PanelListProjection(collection.Name, Array.Empty<PanelListItemProjection>(), totalCount: 0);
             }
 
-            return new PanelListProjection(collection.Name, items);
+            int total = view.Count;
+            int start = Math.Clamp(window.StartIndex, 0, total);
+            int end = Math.Clamp(window.ClampEnd(total), start, total);
+            var items = new List<PanelListItemProjection>(Math.Max(0, end - start));
+            for (int i = start; i < end; i++)
+            {
+                if (!_collections.TryGetEntityAt(handle, i, out Entity entity) ||
+                    entity == Entity.Null ||
+                    !_world.IsAlive(entity))
+                {
+                    continue;
+                }
+
+                items.Add(ProjectElement(entity, element));
+            }
+
+            return new PanelListProjection(collection.Name, items, totalCount: total, startIndex: start);
         }
 
         private PanelListItemProjection ProjectElement(Entity member, PanelTemplate element)

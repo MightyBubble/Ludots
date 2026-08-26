@@ -23,7 +23,8 @@ namespace Ludots.Core.UI.PanelProjection
         };
         private static readonly HashSet<string> ControlFields = new(StringComparer.Ordinal)
         {
-            "type", "class", "text", "bind", "prefix", "current", "max", "showWhen"
+            "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
+            "viewportHeight", "itemExtent", "virtualize", "overscan"
         };
 
         public static PanelTemplate Load(string json)
@@ -263,9 +264,72 @@ namespace Ludots.Core.UI.PanelProjection
                 }
             }
 
+            float? viewportHeight = OptionalPositiveFloat(controlObject, "viewportHeight", templateId);
+            float? itemExtent = OptionalPositiveFloat(controlObject, "itemExtent", templateId);
+            bool virtualize = false;
+            if (controlObject["virtualize"] is JsonValue virtNode && virtNode.TryGetValue<bool>(out bool virtValue))
+            {
+                virtualize = virtValue;
+            }
+
+            int overscan = 2;
+            if (controlObject["overscan"] is JsonValue overscanNode)
+            {
+                if (!overscanNode.TryGetValue<int>(out overscan) || overscan < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list overscan must be a non-negative int.");
+                }
+            }
+
+            if (virtualize)
+            {
+                if (type != PanelLayoutControlType.List)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' virtualize is only valid on list controls.");
+                }
+
+                if (!viewportHeight.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list '{bind}' virtualize requires viewportHeight.");
+                }
+
+                if (!itemExtent.HasValue)
+                {
+                    itemExtent = 56f;
+                }
+            }
+            else if (itemExtent.HasValue && type != PanelLayoutControlType.List)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' itemExtent is only valid on list controls.");
+            }
+
             ValidateControlBindings(templateId, type, bind, current, max, pinNames);
 
-            return new PanelLayoutControl(type, className, text, bind, prefix, current, max, showWhen);
+            return new PanelLayoutControl(
+                type, className, text, bind, prefix, current, max, showWhen,
+                viewportHeight, itemExtent, virtualize, overscan);
+        }
+
+        private static float? OptionalPositiveFloat(JsonObject controlObject, string field, string templateId)
+        {
+            if (controlObject[field] is null)
+            {
+                return null;
+            }
+
+            if (controlObject[field] is not JsonValue valueNode ||
+                !valueNode.TryGetValue<double>(out double raw) ||
+                raw <= 0d)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' {field} must be a positive number.");
+            }
+
+            return (float)raw;
         }
 
         private static void ValidateControlBindings(

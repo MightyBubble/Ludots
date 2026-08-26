@@ -75,7 +75,11 @@
         {
           "type": "list",
           "class": "roster-list",
-          "bind": "units"
+          "bind": "units",
+          "viewportHeight": 120,
+          "itemExtent": 56,
+          "virtualize": true,
+          "overscan": 2
         }
       ]
     }

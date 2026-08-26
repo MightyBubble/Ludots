@@ -55,7 +55,11 @@ namespace Ludots.Core.UI.PanelProjection
             string? prefix,
             string? current,
             string? max,
-            bool? showWhen)
+            bool? showWhen,
+            float? viewportHeight = null,
+            float? itemExtent = null,
+            bool virtualize = false,
+            int overscan = 2)
         {
             Type = type;
             ClassName = className;
@@ -65,6 +69,10 @@ namespace Ludots.Core.UI.PanelProjection
             Current = current;
             Max = max;
             ShowWhen = showWhen;
+            ViewportHeight = viewportHeight;
+            ItemExtent = itemExtent;
+            Virtualize = virtualize;
+            Overscan = overscan;
         }
 
         public PanelLayoutControlType Type { get; }
@@ -75,6 +83,17 @@ namespace Ludots.Core.UI.PanelProjection
         public string? Current { get; }
         public string? Max { get; }
         public bool? ShowWhen { get; }
+
+        /// <summary>Fixed scroll viewport height in px; null = grow with content (no scroll).</summary>
+        public float? ViewportHeight { get; }
+
+        /// <summary>Fixed row extent for virtualization; required when <see cref="Virtualize"/>.</summary>
+        public float? ItemExtent { get; }
+
+        /// <summary>Compose only the visible window (+ overscan). Requires <see cref="ViewportHeight"/>.</summary>
+        public bool Virtualize { get; }
+
+        public int Overscan { get; }
     }
 
     public sealed class PanelLayout
@@ -106,14 +125,33 @@ namespace Ludots.Core.UI.PanelProjection
 
     public sealed class PanelListProjection
     {
-        public PanelListProjection(string name, IReadOnlyList<PanelListItemProjection> items)
+        public PanelListProjection(
+            string name,
+            IReadOnlyList<PanelListItemProjection> items,
+            int totalCount = -1,
+            int startIndex = 0)
         {
             Name = name;
             Items = items;
+            TotalCount = totalCount < 0 ? items.Count : totalCount;
+            StartIndex = startIndex;
         }
 
         public string Name { get; }
         public IReadOnlyList<PanelListItemProjection> Items { get; }
+
+        /// <summary>Full collection size (may exceed <see cref="Items"/> when windowed).</summary>
+        public int TotalCount { get; }
+
+        /// <summary>Absolute index of <see cref="Items"/>[0] in the collection.</summary>
+        public int StartIndex { get; }
+    }
+
+    public readonly record struct PanelListViewWindow(int StartIndex, int EndIndexExclusive)
+    {
+        public static PanelListViewWindow All => new(0, int.MaxValue);
+
+        public int ClampEnd(int totalCount) => Math.Min(EndIndexExclusive, totalCount);
     }
 
     public static class PanelSubjectKinds

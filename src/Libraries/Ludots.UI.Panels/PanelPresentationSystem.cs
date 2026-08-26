@@ -6,6 +6,7 @@ using Ludots.Core.UI.PanelActivation;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
 using Ludots.UI.Compose;
+using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
 
@@ -35,6 +36,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly UIRoot _root;
     private readonly string? _globalSkin;
     private readonly UiStyleSheet? _themeSheet;
+    private readonly IUiTextMeasurer _textMeasurer;
+    private readonly IUiImageSizeProvider _imageSizeProvider;
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -46,7 +49,9 @@ public sealed class PanelPresentationSystem : ISystem<float>
         IUiSurfaceHost surfaceHost,
         UIRoot root,
         string? globalSkin,
-        UiStyleSheet? themeSheet = null)
+        UiStyleSheet? themeSheet = null,
+        IUiTextMeasurer? textMeasurer = null,
+        IUiImageSizeProvider? imageSizeProvider = null)
     {
         _panelHost = panelHost ?? throw new ArgumentNullException(nameof(panelHost));
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
@@ -55,6 +60,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _root = root ?? throw new ArgumentNullException(nameof(root));
         _globalSkin = globalSkin;
         _themeSheet = themeSheet;
+        _textMeasurer = textMeasurer ?? new NullTextMeasurer();
+        _imageSizeProvider = imageSizeProvider ?? new NullImageSizeProvider();
     }
 
     public void Initialize() { }
@@ -92,25 +99,49 @@ public sealed class PanelPresentationSystem : ISystem<float>
             string key = $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}";
             PanelTemplate template = _templates.Require(info.TemplateId);
             bool declaredLayout = template.Layout != null;
+            bool virtualized = PanelListProjector.TemplateUsesVirtualizedList(template);
+            UiRect rect = ResolvePanelRect(info.Handle, anchorKey, stackIndex, template);
             if (!_mounted.TryGetValue(key, out MountedPanel? mounted))
             {
-                UiRect rect = ResolvePanelRect(info.Handle, anchorKey, stackIndex);
                 UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
                     $"panel-skin:{key}",
                     UiSurfaceSegment.Main,
                     priority: info.ZOrder));
-                _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
-                    () => BuildPanel(info.Handle, rect, skin),
-                    styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
-                mounted = new MountedPanel(lease, declaredLayout);
+                if (virtualized)
+                {
+                    var page = CreateVirtualListPage(info.Handle, rect, skin, info.Revision);
+                    _surfaceHost.Publish(lease, UiSurfaceContribution.FromReactivePage(page));
+                    mounted = new MountedPanel(lease, declaredLayout, page, info.Revision);
+                }
+                else
+                {
+                    _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
+                        () => BuildPanel(info.Handle, rect, skin),
+                        styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
+                    mounted = new MountedPanel(lease, declaredLayout, page: null, info.Revision);
+                }
+
                 _mounted[key] = mounted;
+            }
+            else if (mounted.Page != null)
+            {
+                // Virtualized lists window-project on compose. Member pin changes and seed
+                // tags do not bump the host revision, and headless hosts never Render() to
+                // flush a pending Invalidate — republish each tick like declared layouts.
+                PanelSkinDescriptor skinCapture = skin;
+                PanelInstanceHandle handleCapture = info.Handle;
+                uint revisionCapture = info.Revision;
+                mounted.Page.SetState(_ => new PanelUiState(handleCapture, rect, skinCapture, revisionCapture));
+                _surfaceHost.Publish(
+                    mounted.Lease,
+                    UiSurfaceContribution.FromReactivePage(mounted.Page));
+                mounted.LastRevision = info.Revision;
             }
             else if (mounted.DeclaredLayout)
             {
                 // Declared list layouts change row/badge structure when projections move.
                 // Invalidate alone only marks dirty; headless hosts never Render(), so
                 // republish to rebuild the retained scene from current projections.
-                UiRect rect = ResolvePanelRect(info.Handle, anchorKey, stackIndex);
                 _surfaceHost.Publish(mounted.Lease, UiSurfaceContribution.FromBuilder(
                     () => BuildPanel(info.Handle, rect, skin),
                     styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
@@ -160,7 +191,34 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _mounted.Clear();
     }
 
-    private UiElementBuilder BuildPanel(PanelInstanceHandle handle, UiRect rect, PanelSkinDescriptor skin)
+    private ReactivePage<PanelUiState> CreateVirtualListPage(
+        PanelInstanceHandle handle,
+        UiRect rect,
+        PanelSkinDescriptor skin,
+        uint revision)
+    {
+        var initial = new PanelUiState(handle, rect, skin, revision);
+        UiStyleSheet[] sheets = _themeSheet == null ? Array.Empty<UiStyleSheet>() : new[] { _themeSheet };
+        return new ReactivePage<PanelUiState>(
+            _textMeasurer,
+            _imageSizeProvider,
+            initial,
+            ComposeVirtualPanel,
+            theme: null,
+            sheets);
+    }
+
+    private UiElementBuilder ComposeVirtualPanel(ReactiveContext<PanelUiState> context)
+    {
+        PanelUiState state = context.State;
+        return BuildPanel(state.Handle, state.Rect, state.Skin, context);
+    }
+
+    private UiElementBuilder BuildPanel(
+        PanelInstanceHandle handle,
+        UiRect rect,
+        PanelSkinDescriptor skin,
+        ReactiveContext<PanelUiState>? reactiveContext = null)
     {
         if (!_panelHost.TryGetValues(handle, out PanelVariableSet values))
         {
@@ -174,7 +232,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         var dim = new UiColor(136, 136, 136);
 
         UiElementBuilder body = template.Layout != null
-            ? BuildDeclaredControls(template, template.Layout.Controls, values, lists, item: null)
+            ? BuildDeclaredControls(template, template.Layout.Controls, values, lists, item: null, handle, reactiveContext)
             : BuildRows(template, values);
 
         var builder = new UiElementBuilder(UiNodeKind.Container).Column()
@@ -203,18 +261,20 @@ public sealed class PanelPresentationSystem : ISystem<float>
         return builder;
     }
 
-    private static UiElementBuilder BuildDeclaredControls(
+    private UiElementBuilder BuildDeclaredControls(
         PanelTemplate template,
         IReadOnlyList<PanelLayoutControl> controls,
         PanelVariableSet values,
         IReadOnlyList<PanelListProjection> lists,
-        PanelListItemProjection? item)
+        PanelListItemProjection? item,
+        PanelInstanceHandle handle,
+        ReactiveContext<PanelUiState>? reactiveContext)
     {
         var children = new List<UiElementBuilder>(controls.Count);
         for (int i = 0; i < controls.Count; i++)
         {
             PanelLayoutControl control = controls[i];
-            UiElementBuilder? built = BuildControl(template, control, values, lists, item);
+            UiElementBuilder? built = BuildControl(template, control, values, lists, item, handle, reactiveContext);
             if (built != null)
             {
                 children.Add(built);
@@ -228,19 +288,21 @@ public sealed class PanelPresentationSystem : ISystem<float>
             .Children(children.ToArray());
     }
 
-    private static UiElementBuilder? BuildControl(
+    private UiElementBuilder? BuildControl(
         PanelTemplate template,
         PanelLayoutControl control,
         PanelVariableSet values,
         IReadOnlyList<PanelListProjection> lists,
-        PanelListItemProjection? item)
+        PanelListItemProjection? item,
+        PanelInstanceHandle handle,
+        ReactiveContext<PanelUiState>? reactiveContext)
     {
         return control.Type switch
         {
             PanelLayoutControlType.Label => BuildLabel(control, values, item),
             PanelLayoutControlType.ProgressBar => BuildProgressBar(control, values, item),
             PanelLayoutControlType.Badge => BuildBadge(control, values, item),
-            PanelLayoutControlType.List => BuildList(template, control, values, lists),
+            PanelLayoutControlType.List => BuildList(template, control, values, lists, handle, reactiveContext),
             _ => null,
         };
     }
@@ -333,11 +395,13 @@ public sealed class PanelPresentationSystem : ISystem<float>
             .Color(new UiColor(255, 210, 80));
     }
 
-    private static UiElementBuilder BuildList(
+    private UiElementBuilder BuildList(
         PanelTemplate template,
         PanelLayoutControl control,
         PanelVariableSet values,
-        IReadOnlyList<PanelListProjection> lists)
+        IReadOnlyList<PanelListProjection> lists,
+        PanelInstanceHandle handle,
+        ReactiveContext<PanelUiState>? reactiveContext)
     {
         PanelCollectionBinding collection = FindCollection(template, control.Bind!)
             ?? throw new InvalidOperationException(
@@ -351,33 +415,101 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 $"Element template '{elementTemplate.Id}' requires layout.");
         }
 
-        PanelListProjection? projection = FindList(lists, control.Bind!);
-        var rows = new List<UiElementBuilder>();
-        if (projection != null)
+        string hostId = $"panel-list-{template.Id}-{control.Bind}";
+        float itemExtent = control.ItemExtent ?? ListItemHeight;
+        int totalCount = 0;
+        PanelListProjection? countProjection = FindList(lists, control.Bind!);
+        if (countProjection != null)
         {
-            for (int i = 0; i < projection.Items.Count; i++)
-            {
-                PanelListItemProjection item = projection.Items[i];
-                rows.Add(new UiElementBuilder(UiNodeKind.Container)
-                    .Column()
-                    .Class("list-item")
-                    .Class($"list-item-{i}")
-                    .Gap(2)
-                    .Padding(4)
-                    .Background(new UiColor(28, 28, 48, 180))
-                    .Radius(4)
-                    .Children(
-                        BuildDeclaredControls(template, elementTemplate.Layout.Controls, values, lists, item)));
-            }
+            totalCount = countProjection.TotalCount;
         }
 
-        return new UiElementBuilder(UiNodeKind.Container)
+        PanelListViewWindow window = PanelListViewWindow.All;
+        float leading = 0f;
+        float trailing = 0f;
+        if (control.Virtualize)
+        {
+            if (reactiveContext == null)
+            {
+                throw new InvalidOperationException(
+                    $"Panel '{template.Id}' list '{control.Bind}' virtualize requires reactive surface publishing.");
+            }
+
+            float viewportHeight = control.ViewportHeight
+                ?? throw new InvalidOperationException(
+                    $"Panel '{template.Id}' list '{control.Bind}' virtualize requires viewportHeight.");
+            UiVirtualWindow virtualWindow = reactiveContext.GetVerticalVirtualWindow(
+                hostId,
+                totalCount,
+                itemExtent,
+                viewportHeight,
+                control.Overscan);
+            window = new PanelListViewWindow(virtualWindow.StartIndex, virtualWindow.EndIndexExclusive);
+            leading = virtualWindow.LeadingSpacerExtent;
+            trailing = virtualWindow.TrailingSpacerExtent;
+        }
+
+        if (!_panelHost.TryProjectListWindow(handle, control.Bind!, window, out PanelListProjection projection))
+        {
+            throw new InvalidOperationException(
+                $"Panel '{template.Id}' list '{control.Bind}' window projection failed for handle {handle.Id}#{handle.Generation}.");
+        }
+
+        var rows = new List<UiElementBuilder>();
+        if (leading > 0.01f)
+        {
+            rows.Add(Ui.Spacer(leading));
+        }
+
+        for (int i = 0; i < projection.Items.Count; i++)
+        {
+            int absoluteIndex = projection.StartIndex + i;
+            PanelListItemProjection item = projection.Items[i];
+            rows.Add(new UiElementBuilder(UiNodeKind.Container)
+                .Column()
+                .Id($"{hostId}-row-{absoluteIndex}")
+                .Class("list-item")
+                .Class($"list-item-{absoluteIndex}")
+                .Gap(2)
+                .Padding(4)
+                .Height(itemExtent)
+                .Background(new UiColor(28, 28, 48, 180))
+                .Radius(4)
+                .Children(
+                    BuildDeclaredControls(
+                        template,
+                        elementTemplate.Layout.Controls,
+                        values,
+                        lists,
+                        item,
+                        handle,
+                        reactiveContext: null)));
+        }
+
+        if (trailing > 0.01f)
+        {
+            rows.Add(Ui.Spacer(trailing));
+        }
+
+        UiElementBuilder listBody = new UiElementBuilder(UiNodeKind.Container)
             .Column()
             .Class("control-list")
             .Class(control.ClassName ?? "list")
             .Class($"list-{control.Bind}")
-            .Gap(4)
+            .Gap(control.Virtualize ? 0f : 4f)
             .Children(rows.ToArray());
+
+        if (control.ViewportHeight.HasValue)
+        {
+            return Ui.ScrollView(listBody)
+                .Id(hostId)
+                .Class("control-list-scroll")
+                .Class(control.ClassName ?? "list")
+                .Height(control.ViewportHeight.Value)
+                .Padding(2f);
+        }
+
+        return listBody;
     }
 
     private static PanelCollectionBinding? FindCollection(PanelTemplate template, string name)
@@ -563,7 +695,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             : trimmed;
     }
 
-    private UiRect ResolvePanelRect(PanelInstanceHandle handle, string anchorKey, int stackIndex)
+    private UiRect ResolvePanelRect(PanelInstanceHandle handle, string anchorKey, int stackIndex, PanelTemplate template)
     {
         bool left = anchorKey.Contains("left", StringComparison.OrdinalIgnoreCase);
         bool right = !left && anchorKey.Contains("right", StringComparison.OrdinalIgnoreCase);
@@ -575,16 +707,42 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 "Supported anchors: screen.topLeft, screen.topCenter, screen.topRight, screen.bottomLeft, screen.bottomCenter, screen.bottomRight.");
         }
 
-        int itemCount = 3;
-        if (_panelHost.TryGetListProjections(handle, out IReadOnlyList<PanelListProjection> lists))
+        float contentHeight = PanelChromeHeight + 3 * RowHeight;
+        if (template.Layout != null)
         {
-            for (int i = 0; i < lists.Count; i++)
+            float listBudget = 0f;
+            for (int i = 0; i < template.Layout.Controls.Count; i++)
             {
-                itemCount = Math.Max(itemCount, lists[i].Items.Count);
+                PanelLayoutControl control = template.Layout.Controls[i];
+                if (control.Type != PanelLayoutControlType.List)
+                {
+                    continue;
+                }
+
+                if (control.ViewportHeight.HasValue)
+                {
+                    listBudget += control.ViewportHeight.Value + 24f;
+                    continue;
+                }
+
+                int itemCount = 3;
+                if (_panelHost.TryGetListProjections(handle, out IReadOnlyList<PanelListProjection> lists))
+                {
+                    for (int li = 0; li < lists.Count; li++)
+                    {
+                        if (string.Equals(lists[li].Name, control.Bind, StringComparison.Ordinal))
+                        {
+                            itemCount = Math.Max(itemCount, lists[li].TotalCount);
+                        }
+                    }
+                }
+
+                listBudget += itemCount * (control.ItemExtent ?? ListItemHeight);
             }
+
+            contentHeight = PanelChromeHeight + Math.Max(3 * RowHeight, listBudget);
         }
 
-        float contentHeight = PanelChromeHeight + Math.Max(3 * RowHeight, itemCount * ListItemHeight);
         bool top = anchorKey.Contains("top", StringComparison.OrdinalIgnoreCase);
         float x = left
             ? AnchorMargin
@@ -596,5 +754,65 @@ public sealed class PanelPresentationSystem : ISystem<float>
         return new UiRect(x, y, PanelWidth, contentHeight);
     }
 
-    private sealed record MountedPanel(UiSurfaceLeaseHandle Lease, bool DeclaredLayout);
+    private sealed class MountedPanel
+    {
+        public MountedPanel(
+            UiSurfaceLeaseHandle lease,
+            bool declaredLayout,
+            ReactivePage<PanelUiState>? page,
+            uint lastRevision)
+        {
+            Lease = lease;
+            DeclaredLayout = declaredLayout;
+            Page = page;
+            LastRevision = lastRevision;
+        }
+
+        public UiSurfaceLeaseHandle Lease { get; }
+        public bool DeclaredLayout { get; }
+        public ReactivePage<PanelUiState>? Page { get; }
+        public uint LastRevision { get; set; }
+    }
+
+    private sealed class PanelUiState
+    {
+        public PanelUiState(PanelInstanceHandle handle, UiRect rect, PanelSkinDescriptor skin, uint revision)
+        {
+            Handle = handle;
+            Rect = rect;
+            Skin = skin;
+            Revision = revision;
+        }
+
+        public PanelInstanceHandle Handle { get; }
+        public UiRect Rect { get; }
+        public PanelSkinDescriptor Skin { get; }
+        public uint Revision { get; }
+    }
+
+    private sealed class NullTextMeasurer : IUiTextMeasurer
+    {
+        public UiTextLayoutResult Measure(string? text, UiStyle style, float availableWidth, bool constrainWidth)
+        {
+            float width = MeasureWidth(text, style);
+            float height = Math.Max(1f, style.FontSize);
+            return new UiTextLayoutResult(new[] { text ?? string.Empty }, width, height, height);
+        }
+
+        public float MeasureWidth(string? text, UiStyle style)
+        {
+            int length = string.IsNullOrEmpty(text) ? 0 : text.Length;
+            return length * Math.Max(1f, style.FontSize) * 0.55f;
+        }
+    }
+
+    private sealed class NullImageSizeProvider : IUiImageSizeProvider
+    {
+        public bool TryGetSize(string? source, out float width, out float height)
+        {
+            width = 0f;
+            height = 0f;
+            return false;
+        }
+    }
 }
