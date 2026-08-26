@@ -1,7 +1,7 @@
 {
   "name": "SaveLoadShowcaseMod",
   "version": "1.0.0",
-  "description": "Playable save/load showcase: exit and return, world comes back. Reuses SavePanelMod.",
+  "description": "把巡逻兵挪走、存一档、再挪远，读档弹回绿圈。复用 SavePanelMod。",
   "main": "bin/net8.0/SaveLoadShowcaseMod.dll",
   "priority": 132,
   "dependencies": {
