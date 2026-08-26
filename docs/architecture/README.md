@@ -50,8 +50,9 @@
 - [AI Utility Autocast Contract](../../gitbook/architecture/ai-utility-autocast-contract.md)
 - [Order / Navigation / Movement Architecture](order_navigation_movement.md)
 - [Quest Core Infrastructure](quest_core_infra.md)
-- [Narrative Dialogue / Cinematic Integration](narrative_dialogue_cinematic.md)
-- [Narrative Frontend Kit](narrative_frontend_kit.md)
+- [Story Runtime：Dialogue / Sequencer](story_runtime_dialogue_sequencer.md)（#1083 SSOT）
+- [（已废止）Narrative Dialogue / Cinematic](narrative_dialogue_cinematic.md)
+- [（已废止）Narrative Frontend Kit](narrative_frontend_kit.md)
 - [Interaction Architecture](interaction/README.md)
 - [Persistent Static Adapter Sync](persistent_static_adapter_sync.md)
 - [Presentation Presenter](presentation_presenter.md)
