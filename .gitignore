@@ -140,3 +140,4 @@ _site/
 .tmp-logs/
 .dsh-*
 .worktrees/
+dist/

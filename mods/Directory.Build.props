@@ -5,8 +5,9 @@
     （props 阶段取不到 $(TargetFramework)，无法动态拼接）。
   -->
   <PropertyGroup>
-    <BaseOutputPath>$(MSBuildProjectDirectory)\bin\</BaseOutputPath>
-    <OutputPath>$(BaseOutputPath)net9.0\</OutputPath>
+    <!-- 正斜杠：Windows / Linux / macOS 的 MSBuild 均接受 -->
+    <BaseOutputPath>$(MSBuildProjectDirectory)/bin/</BaseOutputPath>
+    <OutputPath>$(BaseOutputPath)net9.0/</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 </Project>

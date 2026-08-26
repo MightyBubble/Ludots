@@ -28,14 +28,25 @@ Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计
 > 下列命令是构建运行的 canonical 方式；完整新人指引（环境配置、Showcase 导览、验收证据）见[门户站点](https://mightybubble.github.io/Ludots/)。
 
 ### 前置要求
-*   .NET 9.0 SDK
-*   Node.js & npm (用于编辑器)
+*   .NET 9.0 SDK（唯一硬前置）
+*   仓库自带离线 NuGet（`external/nuget/`）：规范路径弱网可用，不必访问 nuget.org
+*   Node.js & npm（仅编辑器 / Web；Raylib CLI 一键路径不需要）
 
-全仓统一 target `net9.0`（`global.json` 固定 SDK 9.0.x），仅需 .NET 9 SDK——缺少时 `dotnet restore` 或 launcher 构建可能失败。完整契约见 [快速开始](gitbook/quick-start.md)。
+全仓统一 target `net9.0`（`global.json` 固定 SDK 9.0.x）。弱网一键与包契约见 [快速开始](gitbook/quick-start.md) / [零环境契约](gitbook/reference/zero-env-setup.md)。
 
 ### 构建与运行
 
-**使用脚本（推荐）**
+**弱网一键（推荐，Linux / macOS / Windows）**
+
+```bash
+./scripts/dev-up.sh          # Linux/macOS：离线还原 + 构建 + 启动 ExampleMod
+```
+
+```powershell
+.\scripts\dev-up.ps1         # Windows
+```
+
+**其他脚本**
 
 脚本位于 `scripts/` 目录下：
 

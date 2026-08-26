@@ -531,14 +531,13 @@ public sealed class LauncherService
     }
 
     /// <summary>
-    /// 自包含发布布局下 apphost exe 与应用 DLL 同目录；存在则直接启动 exe，
-    /// 玩家机无需安装 .NET 运行时。否则回退 dotnet exec（开发机布局）；
-    /// 回退前显式校验 dotnet 可用性，避免把配置错误推迟成晦涩的进程启动失败。
+    /// 自包含发布布局下 apphost 与应用 DLL 同目录：Windows 为 .exe，Unix 为无扩展名同名文件。
+    /// 存在则直启（玩家机无需安装 .NET 运行时）；否则要求可用的 dotnet（开发机布局），缺则显式失败。
     /// </summary>
     private static (string FileName, string Arguments) BuildAppRunnerCommand(string appAssemblyPath, string arguments)
     {
-        var appHostPath = Path.ChangeExtension(appAssemblyPath, ".exe");
-        if (File.Exists(appHostPath))
+        var appHostPath = ResolveAppHostPath(appAssemblyPath);
+        if (appHostPath != null)
         {
             return (appHostPath, arguments);
         }
@@ -548,7 +547,8 @@ public sealed class LauncherService
         {
             throw new InvalidOperationException(
                 $"App host executable not found next to '{appAssemblyPath}', and no usable dotnet is available. " +
-                "Prebuilt/player packages must ship the self-contained apphost exe next to the app DLL; " +
+                "Prebuilt/player packages must ship the self-contained apphost next to the app DLL " +
+                "(Windows: *.exe; Linux/macOS: extensionless sibling); " +
                 "dev layouts require a runnable dotnet (launcher must run under dotnet, or dotnet must be on PATH).");
         }
 
@@ -556,6 +556,36 @@ public sealed class LauncherService
             ? $"exec --roll-forward Major \"{appAssemblyPath}\""
             : $"exec --roll-forward Major \"{appAssemblyPath}\" {arguments}";
         return (dotnet, dotnetArguments);
+    }
+
+    private static string? ResolveAppHostPath(string appAssemblyPath)
+    {
+        var directory = Path.GetDirectoryName(appAssemblyPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return null;
+        }
+
+        var baseName = Path.GetFileNameWithoutExtension(appAssemblyPath);
+        if (OperatingSystem.IsWindows())
+        {
+            var windowsHost = Path.Combine(directory, baseName + ".exe");
+            return File.Exists(windowsHost) ? windowsHost : null;
+        }
+
+        // linux-x64 / osx-* self-contained：apphost 与 DLL 同名、无扩展名
+        var unixHost = Path.Combine(directory, baseName);
+        if (!File.Exists(unixHost))
+        {
+            return null;
+        }
+
+        if (string.Equals(Path.GetFullPath(unixHost), Path.GetFullPath(appAssemblyPath), StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return unixHost;
     }
 
     private static bool IsUsableDotnetCommand(string command)
