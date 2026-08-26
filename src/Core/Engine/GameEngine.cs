@@ -1028,7 +1028,7 @@ namespace Ludots.Core.Engine
             new GraphFunctionCatalogLoader(ConfigPipeline, graphFunctionCatalog, graphProgramRegistry)
                 .Load(ConfigCatalog, ConfigConflictReport);
             graphConfigLoader.ResolveFuncLibInvokes(graphPackages, graphFunctionCatalog);
-            BindGraphCodegenBackend(graphProgramRegistry, config);
+            BindGraphCodegenBackend(graphProgramRegistry);
             var graphActionCatalog = new GraphActionCatalog();
             new GraphActionCatalogLoader(
                     ConfigPipeline,
@@ -3411,9 +3411,11 @@ namespace Ludots.Core.Engine
             return triggers;
         }
 
-        private void BindGraphCodegenBackend(GraphProgramRegistry programs, GameConfig config)
+        private void BindGraphCodegenBackend(GraphProgramRegistry programs)
         {
-            GraphCodegenLoadMode mode = GraphCodegenLoadModeParser.Parse(config.GraphExecutionBackend);
+            GraphCodegenBakeConfig bake = new GraphCodegenBakeConfigLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            GraphCodegenLoadMode mode = bake.ParsedMode;
             if (mode == GraphCodegenLoadMode.Interpret)
             {
                 return;
@@ -3459,7 +3461,7 @@ namespace Ludots.Core.Engine
             }
 
             throw new InvalidOperationException(
-                $"graphExecutionBackend={mode} requires Ludots.Graph.Codegen.dll beside the host (fail-closed). " +
+                $"GAS/graph_codegen_bake.json mode={mode} requires Ludots.Graph.Codegen.dll beside the host (fail-closed). " +
                 "Reference Ludots.Graph.Codegen from the launching project.");
         }
 

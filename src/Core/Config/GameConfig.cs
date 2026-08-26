@@ -115,12 +115,6 @@ namespace Ludots.Core.Config
         /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>
         public GameConstants Constants { get; set; } = new GameConstants();
-
-        /// <summary>
-        /// Graph execution backend load mode: interpret | codegen | codegen-prefer.
-        /// Default interpret. codegen fails closed if any registered graph cannot bind generated execute.
-        /// </summary>
-        public string? GraphExecutionBackend { get; set; }
     }
 
     public sealed class Physics2DConfig

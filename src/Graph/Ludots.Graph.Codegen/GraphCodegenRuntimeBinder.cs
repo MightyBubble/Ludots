@@ -55,7 +55,7 @@ namespace Ludots.Graph.Codegen
             if (hardFailures.Count > 0)
             {
                 throw new InvalidOperationException(
-                    "graphExecutionBackend=codegen failed closed:\n" + string.Join("\n", hardFailures));
+                    "GAS/graph_codegen_bake.json mode=codegen failed closed:\n" + string.Join("\n", hardFailures));
             }
         }
 
@@ -92,7 +92,7 @@ namespace Ludots.Graph.Codegen
             }
 
             throw new InvalidOperationException(
-                "Ludots.Graph.Codegen assembly is required when graphExecutionBackend is codegen or codegen-prefer. " +
+                "Ludots.Graph.Codegen assembly is required when GAS/graph_codegen_bake.json mode is codegen or codegen-prefer. " +
                 "Reference Ludots.Graph.Codegen from the host so the DLL is deployed beside Core.");
         }
     }

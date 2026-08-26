@@ -118,7 +118,7 @@ L0 GraphInstruction[] + Symbols + SourceMap
 | `codegen` | 必须编过；失败 → 图装载失败关闭 |
 | `codegen-prefer` | 能编则编；**个别图**因显式 allowlist 回退解释时必须打点名诊断进报告（不得静默）——产品默认不推荐；旗舰应用 `codegen` |
 
-全局/按图策略落在引擎配置或 mod `game.json` 键（路径实现时登记 config_catalog，本页不发明平行 schema 文件名以外的第二套）。
+全局/按图策略落在烘焙配置 `GAS/graph_codegen_bake.json`（`mode`：`interpret` \| `codegen` \| `codegen-prefer`），已登记 `config_catalog`；**禁止**把装载后端塞进玩法用的 `game.json`。
 
 ### 3.5 可视化工具（产品）
 

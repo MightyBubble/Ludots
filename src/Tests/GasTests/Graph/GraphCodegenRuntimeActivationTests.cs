@@ -94,7 +94,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             var ex = Throws<InvalidOperationException>(() =>
                 GraphCodegenLoadModeParser.Parse("magic"));
-            That(ex!.Message, Does.Contain("graphExecutionBackend"));
+            That(ex!.Message, Does.Contain("GAS/graph_codegen_bake.json:mode"));
         }
     }
 }
