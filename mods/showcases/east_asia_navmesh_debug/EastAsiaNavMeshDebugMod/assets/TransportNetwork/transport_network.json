@@ -1,544 +1,264 @@
 {
   "id": "east_asia.waterways",
-  "sampleStepCm": 250000,
+  "sampleStepCm": 5000000,
   "defaultVisualWidthMeters": 6.0,
   "nodes": [
     {
       "id": "yangtze_0",
-      "xcm": -143416769,
-      "ycm": 5918744,
+      "xcm": -139323943,
+      "ycm": 2971703,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_1",
-      "xcm": -130566168,
-      "ycm": 493935,
+      "xcm": -110493325,
+      "ycm": -21594542,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_2",
-      "xcm": -118617708,
-      "ycm": -12591901,
+      "xcm": -83170919,
+      "ycm": -80976284,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_3",
-      "xcm": -106563004,
-      "ycm": -27748586,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_4",
-      "xcm": -96642907,
-      "ycm": -49253753,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_5",
-      "xcm": -85603125,
-      "ycm": -75141829,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_6",
-      "xcm": -73996747,
-      "ycm": -89571944,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_7",
-      "xcm": -64291853,
-      "ycm": -92497199,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_8",
       "xcm": -52084298,
       "ycm": -68546313,
       "kind": "Normal",
       "tags": []
     },
     {
-      "id": "yangtze_9",
-      "xcm": -43359251,
-      "ycm": -67857303,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_10",
+      "id": "yangtze_4",
       "xcm": -33490831,
       "ycm": -61507310,
       "kind": "Normal",
       "tags": []
     },
     {
-      "id": "yangtze_11",
-      "xcm": -23556046,
-      "ycm": -47166270,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_12",
-      "xcm": -10353058,
-      "ycm": -46278341,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_13",
-      "xcm": 4717361,
-      "ycm": -48577867,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_14",
+      "id": "yangtze_5",
       "xcm": 12264841,
       "ycm": -48509460,
       "kind": "Normal",
       "tags": []
     },
     {
-      "id": "yangtze_15",
-      "xcm": 20829649,
-      "ycm": -51738673,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_16",
-      "xcm": 30294906,
-      "ycm": -51481251,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_17",
+      "id": "yangtze_6",
       "xcm": 40629961,
       "ycm": -49399974,
       "kind": "Normal",
       "tags": []
     },
     {
-      "id": "yangtze_18",
-      "xcm": 52363363,
-      "ycm": -56147773,
+      "id": "yangtze_7",
+      "xcm": 67217314,
+      "ycm": -37131322,
       "kind": "Normal",
       "tags": []
     },
     {
-      "id": "yangtze_19",
-      "xcm": 61282172,
-      "ycm": -46583354,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_20",
-      "xcm": 68149217,
-      "ycm": -37063163,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_21",
-      "xcm": 76067648,
-      "ycm": -30783457,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_22",
+      "id": "yangtze_8",
       "xcm": 83367262,
       "ycm": -29016332,
       "kind": "Normal",
       "tags": []
     },
     {
-      "id": "yangtze_23",
-      "xcm": 91565214,
-      "ycm": -27099425,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_24",
-      "xcm": 102323591,
-      "ycm": -31639222,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yangtze_25",
-      "xcm": 110132736,
-      "ycm": -34146173,
+      "id": "yangtze_9",
+      "xcm": 107345444,
+      "ycm": -34474684,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_0",
-      "xcm": -125139996,
-      "ycm": 6571696,
+      "xcm": -120391907,
+      "ycm": 8196214,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_1",
-      "xcm": -111523042,
-      "ycm": 7028477,
+      "xcm": -83229441,
+      "ycm": 20972479,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_2",
-      "xcm": -97948479,
-      "ycm": 7695163,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_3",
-      "xcm": -83554042,
-      "ycm": 17589831,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_4",
-      "xcm": -71400944,
-      "ycm": 25601737,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_5",
-      "xcm": -60651696,
-      "ycm": 29321581,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_6",
       "xcm": -54648474,
       "ycm": 14163933,
       "kind": "Normal",
       "tags": []
     },
     {
+      "id": "yellow_3",
+      "xcm": -25292973,
+      "ycm": 51341351,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_4",
+      "xcm": 0,
+      "ycm": 67917553,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_5",
+      "xcm": 19523541,
+      "ycm": 45527001,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_6",
+      "xcm": 4472705,
+      "ycm": 11260,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
       "id": "yellow_7",
-      "xcm": -45309432,
-      "ycm": 23838640,
+      "xcm": 31382381,
+      "ycm": -1711220,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_8",
-      "xcm": -34312580,
-      "ycm": 36934708,
+      "xcm": 57363153,
+      "ycm": 13202775,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_9",
-      "xcm": -23702946,
-      "ycm": 47898702,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_10",
-      "xcm": -12494184,
-      "ycm": 61232123,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_11",
-      "xcm": -1652299,
-      "ycm": 67919217,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_12",
-      "xcm": 8284111,
-      "ycm": 65699924,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_13",
-      "xcm": 16749501,
-      "ycm": 56783830,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_14",
-      "xcm": 20426940,
-      "ycm": 43283817,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_15",
-      "xcm": 15587689,
-      "ycm": 28456926,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_16",
-      "xcm": 7065048,
-      "ycm": 11353154,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_17",
-      "xcm": 2690471,
-      "ycm": -2260266,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_18",
-      "xcm": 13486064,
-      "ycm": -4426538,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_19",
-      "xcm": 26900661,
-      "ycm": -1857952,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_20",
-      "xcm": 40292033,
-      "ycm": -219096,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_21",
-      "xcm": 51523603,
-      "ycm": 7166925,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_22",
-      "xcm": 59851629,
-      "ycm": 15640123,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_23",
-      "xcm": 66360314,
-      "ycm": 22927183,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_24",
-      "xcm": 73522704,
-      "ycm": 31464252,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "yellow_25",
-      "xcm": 78387541,
-      "ycm": 35307760,
+      "xcm": 77528512,
+      "ycm": 35229254,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_0",
-      "xcm": 99218136,
-      "ycm": -37652671,
+      "xcm": 98751892,
+      "ycm": -37702511,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_1",
-      "xcm": 98975780,
-      "ycm": -36739198,
+      "xcm": 98340171,
+      "ycm": -36531026,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_2",
-      "xcm": 98464770,
-      "ycm": -35918277,
+      "xcm": 97425128,
+      "ycm": -35597527,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_3",
-      "xcm": 97720491,
-      "ycm": -35245475,
+      "xcm": 96146763,
+      "ycm": -35042999,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_4",
-      "xcm": 96793838,
-      "ycm": -34766188,
+      "xcm": 94698785,
+      "ycm": -34950904,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_5",
-      "xcm": 95747697,
-      "ycm": -34512675,
+      "xcm": 93299654,
+      "ycm": -35335030,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_6",
-      "xcm": 94652736,
-      "ycm": -34501957,
+      "xcm": 92160480,
+      "ycm": -36137527,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_7",
-      "xcm": 93582751,
-      "ycm": -34734736,
+      "xcm": 91453997,
+      "ycm": -37237349,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_8",
-      "xcm": 92609858,
-      "ycm": -35195344,
+      "xcm": 91288668,
+      "ycm": -38468022,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_9",
-      "xcm": 91799798,
-      "ycm": -35852766,
+      "xcm": 91691647,
+      "ycm": -39642428,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_10",
-      "xcm": 91207601,
-      "ycm": -36662653,
+      "xcm": 92603480,
+      "ycm": -40581143,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_11",
-      "xcm": 90873883,
-      "ycm": -37570219,
+      "xcm": 93886047,
+      "ycm": -41140126,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_12",
-      "xcm": 90822015,
-      "ycm": -38513870,
+      "xcm": 95343178,
+      "ycm": -41233306,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_13",
-      "xcm": 91056355,
-      "ycm": -39429332,
+      "xcm": 96751051,
+      "ycm": -40846260,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_14",
-      "xcm": 91561734,
-      "ycm": -40254022,
+      "xcm": 97893435,
+      "ycm": -40038547,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_15",
-      "xcm": 92304276,
-      "ycm": -40931362,
+      "xcm": 98595716,
+      "ycm": -38934270,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_16",
-      "xcm": 93233551,
-      "ycm": -41414739,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "taihu_17",
-      "xcm": 94285970,
-      "ycm": -41670800,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "taihu_18",
-      "xcm": 95389184,
-      "ycm": -41681838,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "taihu_19",
-      "xcm": 96467185,
-      "ycm": -41447070,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "taihu_20",
-      "xcm": 97445708,
-      "ycm": -40982693,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "taihu_21",
-      "xcm": 98257505,
-      "ycm": -40320733,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "taihu_22",
-      "xcm": 98847081,
-      "ycm": -39506757,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "taihu_23",
-      "xcm": 99174520,
-      "ycm": -38596644,
-      "kind": "Normal",
-      "tags": []
-    },
-    {
-      "id": "taihu_24",
-      "xcm": 99218136,
-      "ycm": -37652671,
+      "xcm": 98751892,
+      "ycm": -37702511,
       "kind": "Normal",
       "tags": []
     }
@@ -576,54 +296,6 @@
         },
         {
           "nodeId": "yangtze_9"
-        },
-        {
-          "nodeId": "yangtze_10"
-        },
-        {
-          "nodeId": "yangtze_11"
-        },
-        {
-          "nodeId": "yangtze_12"
-        },
-        {
-          "nodeId": "yangtze_13"
-        },
-        {
-          "nodeId": "yangtze_14"
-        },
-        {
-          "nodeId": "yangtze_15"
-        },
-        {
-          "nodeId": "yangtze_16"
-        },
-        {
-          "nodeId": "yangtze_17"
-        },
-        {
-          "nodeId": "yangtze_18"
-        },
-        {
-          "nodeId": "yangtze_19"
-        },
-        {
-          "nodeId": "yangtze_20"
-        },
-        {
-          "nodeId": "yangtze_21"
-        },
-        {
-          "nodeId": "yangtze_22"
-        },
-        {
-          "nodeId": "yangtze_23"
-        },
-        {
-          "nodeId": "yangtze_24"
-        },
-        {
-          "nodeId": "yangtze_25"
         }
       ],
       "sampleStepCm": 0,
@@ -673,54 +345,6 @@
         },
         {
           "nodeId": "yellow_9"
-        },
-        {
-          "nodeId": "yellow_10"
-        },
-        {
-          "nodeId": "yellow_11"
-        },
-        {
-          "nodeId": "yellow_12"
-        },
-        {
-          "nodeId": "yellow_13"
-        },
-        {
-          "nodeId": "yellow_14"
-        },
-        {
-          "nodeId": "yellow_15"
-        },
-        {
-          "nodeId": "yellow_16"
-        },
-        {
-          "nodeId": "yellow_17"
-        },
-        {
-          "nodeId": "yellow_18"
-        },
-        {
-          "nodeId": "yellow_19"
-        },
-        {
-          "nodeId": "yellow_20"
-        },
-        {
-          "nodeId": "yellow_21"
-        },
-        {
-          "nodeId": "yellow_22"
-        },
-        {
-          "nodeId": "yellow_23"
-        },
-        {
-          "nodeId": "yellow_24"
-        },
-        {
-          "nodeId": "yellow_25"
         }
       ],
       "sampleStepCm": 0,
@@ -791,30 +415,6 @@
         },
         {
           "nodeId": "taihu_16"
-        },
-        {
-          "nodeId": "taihu_17"
-        },
-        {
-          "nodeId": "taihu_18"
-        },
-        {
-          "nodeId": "taihu_19"
-        },
-        {
-          "nodeId": "taihu_20"
-        },
-        {
-          "nodeId": "taihu_21"
-        },
-        {
-          "nodeId": "taihu_22"
-        },
-        {
-          "nodeId": "taihu_23"
-        },
-        {
-          "nodeId": "taihu_24"
         }
       ],
       "sampleStepCm": 0,

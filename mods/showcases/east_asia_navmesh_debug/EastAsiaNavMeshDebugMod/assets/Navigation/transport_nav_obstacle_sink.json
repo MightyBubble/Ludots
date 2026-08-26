@@ -10,7 +10,7 @@
       "layerId": "Ground",
       "widthSource": "widthCm",
       "minWidthCm": 1,
-      "sampleStepCm": 500000,
+      "sampleStepCm": 5000000,
       "capEnds": true,
       "geometry": "Corridor"
     },
