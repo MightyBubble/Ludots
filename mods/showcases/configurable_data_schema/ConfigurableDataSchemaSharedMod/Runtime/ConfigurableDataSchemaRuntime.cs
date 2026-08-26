@@ -18,6 +18,8 @@ namespace ConfigurableDataSchemaSharedMod.Runtime;
 public sealed class ConfigurableDataSchemaRuntime
 {
     private readonly ConfigurableDataSchemaWorkbenchController _workbench = new();
+    private readonly DataSchemaAuthoringDocument _authoring = new();
+    private readonly DataSchemaModAssetWriter _assetWriter = new();
     private JsonObject _draft = new();
     private string _presetRecordId = ConfigurableDataSchemaIds.ScoutPresetId;
     private DataSchemaSourceMode _sourceMode = DataSchemaSourceMode.Mixed;
@@ -29,10 +31,11 @@ public sealed class ConfigurableDataSchemaRuntime
     private string _status = "加载数据结构工作台。";
     private string _exportPath = string.Empty;
     private bool _mapReady;
+    private bool _authoringLoaded;
     private Entity _owner = Entity.Null;
 
     public ConfigurableDataSchemaSnapshot Snapshot => BuildSnapshot();
-
+    public DataSchemaAuthoringDocument Authoring => _authoring;
     public Task HandleMapFocusedAsync(ScriptContext context)
     {
         GameEngine? engine = context.GetEngine();
@@ -49,10 +52,11 @@ public sealed class ConfigurableDataSchemaRuntime
 
         EnsureOwner(engine);
         EnsurePanels(engine);
+        EnsureAuthoringLoaded(engine);
         LoadPreset(engine, ConfigurableDataSchemaIds.ScoutPresetId, publish: true);
         ApplySourceMode(engine);
         _mapReady = true;
-        _status = "先改 Scout 的坐标或稀有度，再看右侧面板；故意填错时，导出必须停住并指出字段路径。";
+        _status = "先改 Scout 的坐标或稀有度，再看右侧面板；也可切到 Schema/Record/Binding 作者层写回 Mod。";
         MountWorkbench(engine);
         return Task.CompletedTask;
     }
@@ -187,6 +191,222 @@ public sealed class ConfigurableDataSchemaRuntime
         _exportPath = exportDir;
         _status = $"已导出作者资产到 {exportDir}";
         MountWorkbench(engine);
+    }
+
+    public void SetAuthoringLayer(GameEngine engine, DataSchemaAuthoringLayer layer)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SetLayer(layer);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringAddField(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.AddFieldToSelectedSchema();
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringCycleFieldName(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.CycleNewFieldName();
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringCycleFieldType(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.CycleNewFieldType();
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringToggleRequired(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.ToggleNewFieldRequired();
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringAddEpicEnum(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.AddEnumMember("rarity", "Epic", 9);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringSelectRecord(GameEngine engine, string recordId)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SelectRecord(recordId);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringNudgeX(GameEngine engine, double delta)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.NudgeSelectedRecordFloat("position.x", delta);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringCycleRarity(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        string[] names = _authoring.EnumerateEnumNames("rarity");
+        if (names.Length == 0)
+        {
+            names = new[] { "Common", "Rare" };
+        }
+
+        _authoring.CycleSelectedRecordEnum("rarity", names);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringAddTag(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.AddTag("authored");
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringRemoveTag(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.RemoveLastTag();
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringSelectBindingPath(GameEngine engine, string path)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SelectBindingPath(path);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringSelectPin(GameEngine engine, string pinName)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SelectPin(pinName);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringSetPinSource(GameEngine engine, string source)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SetSelectedPinSource(source);
+        MountWorkbench(engine);
+    }
+
+    public void SaveAuthoringToMod(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        DataSchemaModAssetWriteResult result = _authoring.Save(_assetWriter);
+        if (result.Succeeded)
+        {
+            _status = _authoring.Status;
+            _exportPath = _authoring.SaveTargetRoot;
+            _isValid = true;
+            _errorCount = 0;
+            _firstErrorPath = string.Empty;
+        }
+        else
+        {
+            _status = _authoring.Status;
+            _isValid = false;
+            _errorCount = 1;
+            _firstErrorPath = _authoring.FirstError;
+        }
+
+        MountWorkbench(engine);
+    }
+
+    public void RedirectAuthoringSaveRoot(GameEngine engine, string root)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.RedirectSaveRootForTests(root);
+    }
+
+    private void EnsureAuthoringLoaded(GameEngine engine)
+    {
+        if (_authoringLoaded)
+        {
+            return;
+        }
+
+        DataSchemaRegistry startup = engine.DataSchemaRegistry
+            ?? throw new InvalidOperationException("DataSchemaRegistry missing.");
+        string saveRoot = ResolveShowcaseModRoot(engine);
+        JsonArray panels = LoadPanelTemplatesJson(saveRoot);
+        _authoring.LoadFromStartup(startup, panels, saveRoot);
+        _authoringLoaded = true;
+    }
+
+    private void SyncAuthoringPreview(GameEngine engine)
+    {
+        DataSchemaProjectionSession session = engine.DataSchemaProjectionSession
+            ?? throw new InvalidOperationException("DataSchemaProjectionSession missing.");
+        _authoring.PublishWorkbenchRecord(session);
+        if (!string.IsNullOrEmpty(_authoring.FirstError) && !_authoring.CanSave)
+        {
+            _isValid = false;
+            _errorCount = 1;
+            _firstErrorPath = _authoring.FirstError;
+            _status = _authoring.Status;
+        }
+        else if (_authoring.GetSelectedRecordValue() is JsonObject value)
+        {
+            _draft = value.DeepClone().AsObject();
+            _isValid = true;
+            _errorCount = 0;
+            _firstErrorPath = string.Empty;
+            _status = _authoring.Status;
+        }
+    }
+
+    private static string ResolveShowcaseModRoot(GameEngine engine)
+    {
+        if (engine.VFS.TryResolveFullPath("ConfigurableDataSchemaSharedMod:mod.json", out string modJson) &&
+            !string.IsNullOrWhiteSpace(modJson))
+        {
+            string? root = Path.GetDirectoryName(modJson);
+            if (!string.IsNullOrWhiteSpace(root) && Directory.Exists(root))
+            {
+                return root;
+            }
+        }
+
+        string fallback = Path.Combine(
+            FindRepoRoot(),
+            "mods",
+            "showcases",
+            "configurable_data_schema",
+            "ConfigurableDataSchemaSharedMod");
+        if (!Directory.Exists(fallback))
+        {
+            throw new InvalidOperationException("ConfigurableDataSchemaSharedMod root was not found for authoring save.");
+        }
+
+        return fallback;
+    }
+
+    private static JsonArray LoadPanelTemplatesJson(string modRoot)
+    {
+        string path = Path.Combine(modRoot, "assets", "Panels", "panel_templates.json");
+        if (!File.Exists(path))
+        {
+            throw new InvalidOperationException($"Missing panel templates at {path}");
+        }
+
+        return JsonNode.Parse(File.ReadAllText(path)) as JsonArray
+            ?? throw new InvalidOperationException("panel_templates.json must be an array.");
     }
 
     private void LoadPreset(GameEngine engine, string presetRecordId, bool publish)
@@ -325,12 +545,38 @@ public sealed class ConfigurableDataSchemaRuntime
             ErrorCount: _errorCount,
             FirstErrorPath: _firstErrorPath,
             Status: _status,
-            Guide: "改坐标/稀有度看右侧面板；切换 Graph/Data/Mixed；故意填错后导出必须停住。",
+            Guide: "作者层可改 schema/record/绑定并写回 Mod；演示钮仍可快速消融对照。",
             ExportPath: _exportPath,
             CanExport: _isValid,
             ActivePanelId: ConfigurableDataSchemaDraft.PanelIdFor(_sourceMode),
             PositionX: x,
-            UnitName: unitName);
+            UnitName: unitName,
+            AuthoringLayer: _authoring.Layer,
+            AuthoringStatus: _authoring.Status,
+            AuthoringError: _authoring.FirstError,
+            CanSaveToMod: _authoring.CanSave,
+            SaveTargetRoot: _authoring.SaveTargetRoot,
+            SelectedBindingPath: _authoring.SelectedBindingPath,
+            SelectedPinName: _authoring.SelectedPinName,
+            NewFieldName: _authoring.NewFieldName,
+            NewFieldType: _authoring.NewFieldType,
+            NewFieldRequired: _authoring.NewFieldRequired,
+            AuthoringRecordSummary: BuildAuthoringRecordSummary());
+    }
+
+    private string BuildAuthoringRecordSummary()
+    {
+        JsonObject? value = _authoring.GetSelectedRecordValue();
+        if (value == null)
+        {
+            return "(no record)";
+        }
+
+        string name = value["name"] is JsonValue nameValue && nameValue.TryGetValue<string>(out string? text)
+            ? text ?? "?"
+            : "?";
+        int tags = value["tags"] is JsonArray array ? array.Count : 0;
+        return $"{_authoring.SelectedRecordId} · {name} · tags={tags}";
     }
 
     private void EnsureDraftShape(bool allowMissingName = false)

@@ -1,6 +1,6 @@
 # 可配置数据结构作者编辑器设计
 
-状态：**未实现**。本页是 `data-schema-authoring-workbench` 切片的正式设计；建立在 Core 可配置数据结构能力（PR #1216）与 [Showcase 设计](configurable-data-schema-showcase-design.md) 之上，不替代它们。
+状态：**MVP 已交付（宿主在 Showcase 工作台内）**。四层 Schema / Record / Binding / Preview 可操作；校验失败禁用保存；通过 `DataSchemaModAssetWriter` 写回目标 Mod 的 `Data/*.json` 与 `Panels/panel_templates.json`。完整独立 capability 提取与 EntityRef 实体选择器增强仍可后续加深。
 
 ## 1. 概述
 

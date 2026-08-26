@@ -175,6 +175,69 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
         Assert.That(values.Get("score"), Is.EqualTo(42f).Within(0.001f));
     }
 
+    [Test]
+    public void Authoring_AddFieldBindPathAndSaveToMod()
+    {
+        using GameEngine engine = CreateEngine(null);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 8);
+
+        ConfigurableDataSchemaRuntimeProxy runtime = RequireRuntime(engine);
+        string modRoot = runtime.SaveTargetRoot;
+        Assert.That(Directory.Exists(modRoot), Is.True);
+
+        string tempRoot = Path.Combine(Path.GetTempPath(), "LudotsDataSchemaAuthoring", Guid.NewGuid().ToString("N"));
+        CopyAuthoringAssets(modRoot, tempRoot);
+        runtime.RedirectAuthoringSaveRoot(engine, tempRoot);
+
+        runtime.SetAuthoringLayer(engine, "Schema");
+        runtime.AuthoringAddField(engine);
+        runtime.SetAuthoringLayer(engine, "Binding");
+        runtime.AuthoringSelectPin(engine, "name");
+        runtime.AuthoringSelectBindingPath(engine, "name");
+        runtime.SaveAuthoringToMod(engine);
+        Tick(engine, 2);
+
+        Assert.That(runtime.CanSaveToMod, Is.True);
+        string savedSchemas = File.ReadAllText(Path.Combine(tempRoot, "assets", "Data", "data_schemas.json"));
+        Assert.That(savedSchemas, Does.Contain("notes").Or.Contain("speed").Or.Contain("faction"));
+        Assert.That(File.Exists(Path.Combine(tempRoot, "assets", "Panels", "panel_templates.json")), Is.True);
+
+        try { Directory.Delete(tempRoot, recursive: true); } catch { }
+    }
+
+    private static void CopyAuthoringAssets(string sourceRoot, string targetRoot)
+    {
+        string[] relatives =
+        {
+            Path.Combine("assets", "Data", "data_schemas.json"),
+            Path.Combine("assets", "Data", "data_records.json"),
+            Path.Combine("assets", "Panels", "panel_templates.json"),
+        };
+        foreach (string relative in relatives)
+        {
+            string source = Path.Combine(sourceRoot, relative);
+            string target = Path.Combine(targetRoot, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(source, target, overwrite: true);
+        }
+    }
+
+    [Test]
+    public void Authoring_InvalidBindingKeepsSaveDisabled()
+    {
+        using GameEngine engine = CreateEngine(null);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 8);
+
+        ConfigurableDataSchemaRuntimeProxy runtime = RequireRuntime(engine);
+        runtime.InjectInvalidUnknownEnum(engine);
+        Tick(engine, 2);
+        Assert.That(runtime.CanExport, Is.False);
+    }
+
     private static ConfigurableDataSchemaRuntimeProxy RequireRuntime(GameEngine engine)
     {
         if (!engine.GlobalContext.TryGetValue("ConfigurableDataSchema.Runtime", out object? runtimeObj) ||
@@ -294,5 +357,46 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
 
         public void CycleSourceMode(GameEngine engine) =>
             _type.GetMethod("CycleSourceMode")!.Invoke(_runtime, new object[] { engine });
+
+        public string SaveTargetRoot
+        {
+            get
+            {
+                object snapshot = _type.GetProperty("Snapshot")!.GetValue(_runtime)!;
+                return (string)snapshot.GetType().GetProperty("SaveTargetRoot")!.GetValue(snapshot)!;
+            }
+        }
+
+        public bool CanSaveToMod
+        {
+            get
+            {
+                object snapshot = _type.GetProperty("Snapshot")!.GetValue(_runtime)!;
+                return (bool)snapshot.GetType().GetProperty("CanSaveToMod")!.GetValue(snapshot)!;
+            }
+        }
+
+        public void SetAuthoringLayer(GameEngine engine, string layerName)
+        {
+            Type layerType = _type.Assembly.GetType("ConfigurableDataSchemaSharedMod.Runtime.DataSchemaAuthoringLayer")
+                ?? throw new InvalidOperationException("DataSchemaAuthoringLayer missing.");
+            object layer = Enum.Parse(layerType, layerName);
+            _type.GetMethod("SetAuthoringLayer")!.Invoke(_runtime, new object[] { engine, layer });
+        }
+
+        public void AuthoringAddField(GameEngine engine) =>
+            _type.GetMethod("AuthoringAddField")!.Invoke(_runtime, new object[] { engine });
+
+        public void AuthoringSelectPin(GameEngine engine, string pinName) =>
+            _type.GetMethod("AuthoringSelectPin")!.Invoke(_runtime, new object[] { engine, pinName });
+
+        public void AuthoringSelectBindingPath(GameEngine engine, string path) =>
+            _type.GetMethod("AuthoringSelectBindingPath")!.Invoke(_runtime, new object[] { engine, path });
+
+        public void SaveAuthoringToMod(GameEngine engine) =>
+            _type.GetMethod("SaveAuthoringToMod")!.Invoke(_runtime, new object[] { engine });
+
+        public void RedirectAuthoringSaveRoot(GameEngine engine, string root) =>
+            _type.GetMethod("RedirectAuthoringSaveRoot")!.Invoke(_runtime, new object[] { engine, root });
     }
 }

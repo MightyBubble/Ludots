@@ -16,7 +16,7 @@
 
 ## Result
 
-Showcase Mod、Native/Web 入口、非空 schema/record、预览会话与验收测试均通过。正式启动资产仍经 ConfigPipeline 加载；草稿只进入 `DataSchemaProjectionSession`，不静默改写 immutable startup registry。
+Showcase Mod、Native/Web 入口、非空 schema/record、预览会话、作者四层编辑（Schema/Record/Binding/Preview）与写回目标 Mod 的验收均通过。正式启动资产仍经 ConfigPipeline 加载；草稿只进入 `DataSchemaProjectionSession`，保存经 `DataSchemaModAssetWriter` 校验后写盘。
 
 ## Launch
 

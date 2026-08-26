@@ -46,7 +46,18 @@ public readonly record struct ConfigurableDataSchemaSnapshot(
     bool CanExport,
     string ActivePanelId,
     float PositionX,
-    string UnitName);
+    string UnitName,
+    DataSchemaAuthoringLayer AuthoringLayer,
+    string AuthoringStatus,
+    string AuthoringError,
+    bool CanSaveToMod,
+    string SaveTargetRoot,
+    string SelectedBindingPath,
+    string SelectedPinName,
+    string NewFieldName,
+    string NewFieldType,
+    bool NewFieldRequired,
+    string AuthoringRecordSummary);
 
 internal static class ConfigurableDataSchemaDraft
 {
