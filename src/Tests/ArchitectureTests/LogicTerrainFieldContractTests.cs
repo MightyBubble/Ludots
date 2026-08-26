@@ -79,9 +79,9 @@ namespace Ludots.Tests.Architecture
             var bounds = new WorldAabbCm(-50, -50, 100, 100);
             var asset = VisualHeightmapAsset.CreateSingleLayer(
                 bounds,
-                columns: 2,
-                rows: 2,
-                samplesCm: new short[] { -1, 0, 1, 2 },
+                sampleColumns: 2,
+                sampleRows: 2,
+                heightSamplesCm: new short[] { -1, 0, 1, 2 },
                 interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
             var visual = new VisualHeightmapRuntime(asset);
 

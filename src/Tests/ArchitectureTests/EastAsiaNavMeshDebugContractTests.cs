@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Tool;
 using NUnit.Framework;
