@@ -3,6 +3,7 @@
 - [Ludots 文档](README.md)
 - [快速开始](quick-start.md)
 - [Agent Bridge](agent-bridge.md)
+  - [架构 · Agent 调试桥（人机共用）](architecture/agent-debug-bridge.md)
   - [教程：Raylib 资产验收台](raylib-asset-acceptance.md)
 - [贡献与开发](contributing/README.md)
   - [编码标准](contributing/coding-standards.md)

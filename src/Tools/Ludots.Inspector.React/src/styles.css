@@ -1,0 +1,279 @@
+:root {
+  color-scheme: light;
+  --bg: #f3efe6;
+  --ink: #1c1914;
+  --muted: #6b6458;
+  --panel: #fffdf8;
+  --line: #d7d0c2;
+  --accent: #0f6b5c;
+  --accent-ink: #f4fffb;
+  --danger: #8b2e1f;
+  --ok: #1f6b3a;
+  --mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  --sans: "Source Sans 3", "Segoe UI", sans-serif;
+  --display: "Fraunces", "Iowan Old Style", serif;
+  font-family: var(--sans);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 8%, #efe4c8 0%, transparent 42%),
+    radial-gradient(circle at 88% 0%, #d7e8e2 0%, transparent 36%),
+    var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr auto;
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.brand h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 650;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+.brand p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.connect {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.connect input {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 0.65rem 0.75rem;
+}
+
+.connect button,
+.quick button,
+.actions button,
+.sidebar button {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+}
+
+.connect button:disabled,
+.quick button:disabled,
+.actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.status.ok {
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
+}
+
+.status.bad {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  color: var(--danger);
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.banner {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line));
+  background: #fff6f3;
+  color: var(--danger);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(320px, 1fr) minmax(280px, 0.9fr);
+  gap: 1rem;
+  min-height: 70vh;
+}
+
+.sidebar,
+.panel,
+.result {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 0.9rem;
+}
+
+.sidebar {
+  overflow: auto;
+}
+
+.sidebar .filter {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.65rem;
+  background: #fff;
+}
+
+.sidebar h2 {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar li + li {
+  margin-top: 0.25rem;
+}
+
+.sidebar button {
+  width: 100%;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.sidebar button.active {
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.panel header h2,
+.result h2 {
+  margin: 0 0 0.35rem;
+  font-family: var(--display);
+  font-size: 1.35rem;
+}
+
+.panel header p {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.schema-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.field.checkbox {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.field span {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.field small {
+  color: var(--muted);
+}
+
+.field small.error {
+  color: var(--danger);
+}
+
+.field input,
+.field select,
+.field textarea {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0.55rem 0.65rem;
+}
+
+.actions {
+  margin-top: 1rem;
+}
+
+.actions .primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.result {
+  overflow: auto;
+}
+
+.result pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+@media (max-width: 980px) {
+  .top,
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .layout {
+    min-height: unset;
+  }
+}
