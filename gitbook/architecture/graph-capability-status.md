@@ -81,7 +81,7 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 
 ### 3.3 真正还在做的
 
-**编辑器里程碑（控制流与 live debug 已收口，文本能力未收口）。**
+**编辑器里程碑（控制流与 live debug 已收口；正式文字合同已齐）。**
 节点联想只从运行时 descriptor 获取；Bridge 投影作者糖及其控制/值端口（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；TriggerGraph 另有 `InlineGraph`）。`Jump.target`、`Call.call/next` 等普通控制端口也来自 Bridge descriptor，React 不维护第二份 op 端口表。`Break` 编译时严格降低为带显式 `target` 边的 Jump；`Select` 仍明确是实体选择 `SelectEntity`，不是尚不存在的通用 Select。编辑器连线、删节点后的悬挂边清理、布局数据校验和 live trace source map 校验均走失败关闭。
 
 Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标、引脚和黑板变化；嵌套 `InvokeScript` 继承固定容量 trace 并携带子图 id。当前不伪造 `NodeExit` 生命周期事件。黑板 buffer 缺失仍在运行时明确失败；实体能力在 authoring 阶段的声明和编译校验仍是下一条合同切片，不能把运行时隐式安装路径写成已完成。

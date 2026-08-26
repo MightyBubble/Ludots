@@ -1104,6 +1104,7 @@ namespace Ludots.Core.Engine
             var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
             gasGraphApi.BindPanelActivation(panelActivationApi);
+            gasGraphApi.BindPresentationTextSink(new GraphPresentationTextSink());
             gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             gasGraphApi.BindPlacedInstanceIndexResolver(mapId => MapSessions?.GetSession(mapId)?.EntityIndex);
             gasGraphApi.BindRegionCatalogResolver(mapId =>

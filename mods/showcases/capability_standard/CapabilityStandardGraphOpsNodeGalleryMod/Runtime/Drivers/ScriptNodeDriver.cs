@@ -38,6 +38,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
     private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
     private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
     private readonly GraphProgramRegistry _programs = new();
+    private int _featuredGraphId;
     private readonly List<ScrollRow> _scrollRows = new();
     private readonly Dictionary<string, int> _rowOfNodeId = new(StringComparer.Ordinal);
     private readonly List<ScrollArrow> _scrollArrows = new();
@@ -87,10 +88,11 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
             _originX = ctx.Vignette.Actors[caster].X;
             _originY = ctx.Vignette.Actors[caster].Y;
             ResetSlice();
+            RegisterFeaturedProgram(ctx);
+            ctx.Programs = _programs;
             if (IsInvokeScript(ctx))
             {
                 RegisterConstSevenCallee(ctx);
-                ctx.Programs = _programs;
             }
 
             BuildScroll(ctx);
@@ -976,6 +978,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
             ExplicitTarget = ctx.Target,
             Api = ctx.Api,
             Programs = _programs,
+            CurrentGraphId = RequireFeaturedGraphId(),
             F = _floats,
             I = _ints,
             B = _bools,
@@ -1042,6 +1045,49 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
 
     private bool IsAway(GraphOpsNodeDriverContext ctx)
         => IsPatrolOp(ctx) && _cursor.Status == GraphExecutionStatus.Yielded;
+
+    private void RegisterFeaturedProgram(GraphOpsNodeDriverContext ctx)
+    {
+        if (!ctx.Compiled.Package.HasValue)
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' compile result is missing Package (symbols required for ConstText).");
+        }
+
+        GraphProgramPackage package = ctx.Compiled.Package.Value;
+        string graphKey = string.IsNullOrWhiteSpace(package.GraphName)
+            ? $"showcase.graph_op.{ctx.Vignette.Op}"
+            : package.GraphName;
+        int graphId = GraphIdRegistry.GetId(graphKey);
+        if (graphId <= 0)
+        {
+            graphId = GraphIdRegistry.Register(graphKey);
+        }
+
+        if (!_programs.TryGetProgram(graphId, out _))
+        {
+            _programs.Register(
+                graphId,
+                package.Program,
+                package.Kind == GraphKind.None ? GraphKind.Script : package.Kind,
+                ctx.Compiled.SourceMap,
+                package.Symbols,
+                package.TriggerGraphEntries);
+        }
+
+        _featuredGraphId = graphId;
+    }
+
+    private int RequireFeaturedGraphId()
+    {
+        if (_featuredGraphId <= 0)
+        {
+            throw new InvalidOperationException(
+                "Script gallery featured graph id was not registered before ExecuteSlice.");
+        }
+
+        return _featuredGraphId;
+    }
 
     private void RegisterConstSevenCallee(GraphOpsNodeDriverContext ctx)
     {
