@@ -33,8 +33,8 @@ Showcase 是给**新玩家上手看懂一个功能**的短剧，不是技术探�
 
 每个可玩 Showcase root Mod 必须具备：
 
-1. **`assets/Presentation/presenters.json`**：按模板 id 的 `EntitySpawned` → `CreatePresenter` / `EntityDestroyed` → `DestroyPresenterScope`。
-2. **`assets/config_catalog.json`**：登记 `Presentation/presenters.json`（及本 Mod 实际用到的 mesh/host 目录）。
+1. **Presenter 清单**：在 Mod 资产目录写入 `Presentation/presenters.json`，按模板 id 做 `EntitySpawned` → `CreatePresenter` / `EntityDestroyed` → `DestroyPresenterScope`。
+2. **配置目录登记**：在 Mod 的 `config_catalog.json` 登记 `Presentation/presenters.json`（及本 Mod 实际用到的 mesh/host 目录）。
 3. **实体具备可视变换合同**：模板带 `WorldPositionCm`，并带 `VisualHeightmapSampleState` 或 `PresentationStaticTransform`（与 `SourceHasVisualTransform` 条件一致）。
 4. **主角色网格**：优先复用 Core 内置 `cube`/`sphere` + `default_surface`，或仓库已有正式 mesh/host；颜色与尺度能让人在默认相机下分清角色身份。
 5. **阶段可读**：自动剧本或可操作路径下，字幕/HUD 说出「现在发生什么 / 结束得到什么」。
@@ -52,7 +52,7 @@ Showcase 是给**新玩家上手看懂一个功能**的短剧，不是技术探�
 ### 3.4 参考正例 / 反例
 
 - 正例（Presenter 主画面）：`CapabilityStandardAbilityGraphSandboxMod`、`MapTriggerNightRaidMod`、`CapabilityStandardStaticPresenter30kMod`、`CapabilityStandardCrowdPhysicsArenaMod`。
-- 反例（禁止再交付）：仅 `DebugDraw` 色圈的「可读剧本」、无 `presenters.json` 的 Attachment 探针皮。
+- 反例（禁止再交付）：仅 `DebugDraw` 色圈的「可读剧本」、没有 Presenter 清单的 Attachment 探针皮。
 
 上手路径：`gitbook/architecture/presenter-quickstart.md`。能力标准目录：`gitbook/architecture/capability-standard-showcases.md`。
 
