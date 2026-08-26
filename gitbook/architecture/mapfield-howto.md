@@ -110,9 +110,18 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 | Binding | 焦点 |
 |---------|------|
 | `field_jing_yang_transit` | 两区过境 + 区内名单 + 面板 |
+| `field_east_asia_admin` | 东亚 VisualHeightmap 上的省级归属投影 |
 | `field_layer_table` | 三区表 + MapLoaded 计数面板 |
 | `field_editor_paint` | field-editor 形状资产（paint.a / paint.b）+ 过境 |
 | `field_hierarchy_query` | hierarchies.json + `TryResolveChain` |
+
+### 7.1 东亚省级归属覆盖层
+
+`field_east_asia_admin` 是叠加在 `EastAsiaPlayableTerrainMod` 上的数据-only Mod。它用 `4020768 cm` 格长把 `ownership.east_asia.admin` 挂到 `east_asia_visual_heightmap`，以 schema v2 矩形写入四个占位区域，共 8028 个非默认格。运行时沿标准 `FieldRegionMaterializer` 物化区域，再由 `FieldDiscreteVisualProjector` 发布 `DiscreteOwnership`，不复制地形资产或引入专用代码。
+
+```powershell
+.\scripts\run-mod-launcher.cmd cli launch 'preset:field_east_asia_admin_raylib'
+```
 
 `field_jing_yang_transit` 的“荆域火计”把区域状态投影为地图变量，`activationPrecondition` 的 Validation graph 通过纯 `InvokeScript` 读取 `region_code` 并 fail closed；施放成功后，`EventSignal` 经既有 GAS → TriggerGraph bridge 更新 `fire_cast_count`。这是 `HasTag` scope-effect 组合在当前 TriggerGraph 不允许 `ApplyEffectTemplate` / `RemoveEffectTemplate` 时的无 fallback 数据组合。
 

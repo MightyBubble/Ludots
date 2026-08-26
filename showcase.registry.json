@@ -5053,6 +5053,69 @@
       "notes": "波次 raider 不再预置于地图；RegionEntered 触发 wave1，EntityAliveCountChanged(team 2, cross_below 0) 触发 wave2，累计 kill_threshold=5 后由 SpawnTemplate 图 op（op 447）在 boss_camp 锚点生成 Boss；阶段链与胜利面板全数据驱动。"
     },
     {
+      "id": "east_asia_playable_terrain",
+      "path": "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod",
+      "title": "East Asia Playable Terrain",
+      "summary": "Shared Grid, HexGrid, and continuous VisualHeightmap terrain assets for playable East Asia showcases.",
+      "tier": "T2",
+      "category": "demo",
+      "tags": [
+        "east-asia",
+        "terrain",
+        "visual-heightmap"
+      ],
+      "binding": "east_asia_playable_terrain",
+      "preset": null,
+      "docsPath": null,
+      "readmePath": "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/README.md",
+      "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "east_asia_visual_heightmap_runtime",
+      "path": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapRuntimeEntryMod",
+      "title": "East Asia VisualHeightmap Runtime Entry",
+      "summary": "Pure-runtime launcher entry for the continuous East Asia VisualHeightmap without terrain editing tools.",
+      "tier": "T2",
+      "category": "demo",
+      "tags": [
+        "east-asia",
+        "runtime",
+        "visual-heightmap"
+      ],
+      "binding": "east_asia_visual_heightmap_runtime",
+      "preset": null,
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_east_asia_admin",
+      "path": "mods/showcases/field_east_asia_admin/FieldEastAsiaAdminMod",
+      "title": "East Asia Admin MapField",
+      "summary": "Province-scale placeholder ownership regions materialize and project as DiscreteOwnership over the East Asia VisualHeightmap.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "east-asia",
+        "mapfield",
+        "visual-heightmap"
+      ],
+      "binding": "field_east_asia_admin",
+      "preset": "field_east_asia_admin_raylib",
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldEastAsiaAdminAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "field_jing_yang_transit",
       "path": "mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod",
       "title": "荆扬过境",

@@ -463,6 +463,27 @@
       }
     },
     {
+      "name": "east_asia_playable_terrain",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod"
+      }
+    },
+    {
+      "name": "east_asia_visual_heightmap_runtime",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapRuntimeEntryMod"
+      }
+    },
+    {
+      "name": "field_east_asia_admin",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_east_asia_admin/FieldEastAsiaAdminMod"
+      }
+    },
+    {
       "name": "field_jing_yang_transit",
       "target": {
         "type": "path",

@@ -1,0 +1,132 @@
+{
+  "id": "east_asia_playable_terrain_v1",
+  "source": {
+    "metadataFile": "east_asia_strategy_editor_imports_metadata.json",
+    "metadataSha256": "69B1F9FBB62B8B49EC93BC31092655C9AAA6FACD334A7DEA48F7DD50E6C002A2",
+    "artifact": "east_asia_strategy_height tile set",
+    "purpose": "CK3/EU-style simplified strategic East Asia heightmap tile set, not a scientific DEM.",
+    "tiles": [
+      {
+        "file": "east_asia_strategy_height_tile_x0_y0_8192x8192_u16.png",
+        "sha256": "AB1E01F5567EED5925252B0138ED4BEE466833989CB356C57F92DA55F01CEF4B",
+        "tile_x": 0,
+        "tile_y": 0,
+        "pixel_x": 0,
+        "pixel_y": 0,
+        "width_px": 8192,
+        "height_px": 8192
+      },
+      {
+        "file": "east_asia_strategy_height_tile_x1_y0_6144x8192_u16.png",
+        "sha256": "64E8BA732980D21986026C64817F5C6911A5D3B1300B7E942CA82D16985899EC",
+        "tile_x": 1,
+        "tile_y": 0,
+        "pixel_x": 8192,
+        "pixel_y": 0,
+        "width_px": 6144,
+        "height_px": 8192
+      }
+    ],
+    "editorImports": [
+      {
+        "file": "east_asia_strategy_editor_56x32_chunks_map_data.bin",
+        "sha256": "6BA8D5D173010FB1B0DCA6B1AC97E092C5078880AE09E69ED826D627FBDFE23B",
+        "width_chunks": 56,
+        "height_chunks": 32,
+        "width_cells": 3584,
+        "height_cells": 2048,
+        "bytes": 29360137
+      },
+      {
+        "file": "east_asia_strategy_editor_112x64_chunks_map_data.bin",
+        "sha256": "3C738AE1495E9013BD229851FE365F93C4019A5F0854E8EA0386636245D6C553",
+        "width_chunks": 112,
+        "height_chunks": 64,
+        "width_cells": 7168,
+        "height_cells": 4096,
+        "bytes": 117440521
+      }
+    ],
+    "heightEncoding": {
+      "zero": "sea and flattened low water",
+      "maxValue": 65535,
+      "sourceScaleTopStylizedMeters": 5580.2255859375
+    }
+  },
+  "projection": {
+    "kind": "spherical_albers_equal_area_conic",
+    "centralMeridianDeg": 110,
+    "latitudeOfOriginDeg": 35,
+    "standardParallel1Deg": 25,
+    "standardParallel2Deg": 47,
+    "earthRadiusM": 6371007.181,
+    "note": "Grid, HexGrid, and VisualHeightmap sample the projected Albers canvas directly. They are not stretched lon/lat rectangles."
+  },
+  "sourceRaster": {
+    "widthPx": 14336,
+    "heightPx": 8192,
+    "metersPerPixel": 720.9471184793307,
+    "projectedExtentM": {
+      "minX": -5167748.945259842,
+      "maxX": 5167748.945259842,
+      "minY": -3050131.4588675187,
+      "maxY": 2855867.3357151584
+    }
+  },
+  "grid": {
+    "widthChunks": 112,
+    "heightChunks": 64,
+    "widthCells": 7168,
+    "heightCells": 4096,
+    "chunkSizeCells": 64,
+    "sourcePixelsPerCellX": 2,
+    "sourcePixelsPerCellY": 2
+  },
+  "hex": {
+    "widthChunks": 112,
+    "heightChunks": 64,
+    "widthCells": 7168,
+    "heightCells": 4096,
+    "chunkSizeCells": 64,
+    "sourcePixelsPerCellX": 2,
+    "sourcePixelsPerCellY": 2
+  },
+  "visualHeightmap": {
+    "sampleColumns": 7169,
+    "sampleRows": 4097,
+    "worldWidthCm": 900652032,
+    "worldHeightCm": 514658304,
+    "seaLevelCm": 0,
+    "seaFloorCm": -1200,
+    "bathymetry": "continuous_distance_to_coast",
+    "maxOceanDepthCm": 6000,
+    "oceanShelfSamples": 130,
+    "dryLandMinCm": 40,
+    "maxLandCm": 4200,
+    "landGamma": 0.55,
+    "editorDefaultHeight01": 0.3,
+    "editorHeightAmplitudeCm": 6000
+  },
+  "outputs": {
+    "gridReactMapData": {
+      "file": "assets/Data/Maps/east_asia_grid_map_data.bin",
+      "sha256": "3C738AE1495E9013BD229851FE365F93C4019A5F0854E8EA0386636245D6C553"
+    },
+    "hexReactSourceMapData": {
+      "file": "assets/Data/Maps/east_asia_hex_source_map_data.bin",
+      "sha256": "3C738AE1495E9013BD229851FE365F93C4019A5F0854E8EA0386636245D6C553"
+    },
+    "hexVertexMap": {
+      "file": "assets/Data/Maps/east_asia_hex.vtxm",
+      "sha256": "4FB59C9EEC450D301B405BD336CF37CC2B221532E8DBAD6186DE10AC89FF8293"
+    },
+    "visualHeightmap": {
+      "file": "assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm",
+      "sha256": "537704C2832D5B25C4EBEB4B9F781959E56BADD0D2D5ECD68FF0922D28E94487"
+    },
+    "terrainControlWeights": {
+      "file": "assets/Textures/terrain_control_weights.png",
+      "sha256": "A592FA425BB60221F4A8D666AE6EE51F0EB8F6C8C361969BB99BBF6136030CC0"
+    }
+  }
+}

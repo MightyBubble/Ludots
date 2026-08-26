@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 45,
+    "runnable": 46,
     "testOnly": 0,
-    "total": 45
+    "total": 46
   },
   "runnable": [
     {
@@ -280,6 +280,14 @@
       "preset": "entity_command_panel_raylib",
       "binding": "entity_command_panel_showcase",
       "testFilter": "EntityCommandPanelShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "field_east_asia_admin",
+      "preset": "field_east_asia_admin_raylib",
+      "binding": "field_east_asia_admin",
+      "testFilter": "FieldEastAsiaAdminAcceptanceTests",
       "artifactDir": null,
       "hasScreenshotEvidence": false
     },
