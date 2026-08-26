@@ -204,7 +204,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             }
             else
             {
-                text = $"{pin.Name.ToUpperInvariant()}  {values.Get(pin.Name):F0}";
+                text = $"{pin.Name.ToUpperInvariant()}  {values.GetDisplayText(pin.Name)}";
             }
 
             rows.Add(new UiElementBuilder(UiNodeKind.Text)

@@ -28,6 +28,7 @@
   - [面板快速上手：10 分钟加一个血条](architecture/panel-quickstart.md)
   - [面板目录设计：配置形状与线框](architecture/panel-catalog-designs.md)
   - [面板典型案例全设计](architecture/panel-case-designs.md)
+  - [可配置数据结构与面板投影](architecture/configurable-data-schema.md)
   - [可配置数据结构 Showcase](architecture/configurable-data-schema-showcase-design.md)
   - [可配置数据结构作者编辑器](architecture/data-schema-authoring-workbench-design.md)
   - [Browser Runtime Provider Adapter Guide](architecture/browser-runtime-provider-adapter-guide.md)
