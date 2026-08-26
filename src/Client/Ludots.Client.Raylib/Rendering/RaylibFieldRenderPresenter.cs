@@ -64,6 +64,12 @@ namespace Ludots.Client.Raylib.Rendering
         public float HeightSampleDisplayScale { get; set; } = 1f;
         public float DiscreteOwnershipDrapeOffsetMeters { get; set; } = 2f;
 
+        /// <summary>
+        /// Cell edge at or above this size uses a single textured plane instead of per-cell drapes.
+        /// Continental admin cells are kilometers wide; draping each texel draws a square mosaic and hides terrain.
+        /// </summary>
+        public int DiscreteOwnershipDrapeMaxCellSizeCm { get; set; } = 100_000;
+
         public int LastFieldTextureCount { get; private set; }
         public int LastFieldCellCount { get; private set; }
         public int LastDirtyUploadCount { get; private set; }
@@ -206,7 +212,8 @@ namespace Ludots.Client.Raylib.Rendering
                 FieldTextureState state = _stateById[plan.Id];
                 UploadDirtyRects(state);
                 if (state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership &&
-                    HeightSampleSource is IVisualHeightmap heightSampleSource)
+                    HeightSampleSource is IVisualHeightmap heightSampleSource &&
+                    ShouldDrapeDiscreteOwnership(plan.CellSizeCm, DiscreteOwnershipDrapeMaxCellSizeCm))
                 {
                     DrawDrapedDiscreteOwnership(state, plan.CellSizeCm, heightSampleSource);
                 }
@@ -467,6 +474,21 @@ namespace Ludots.Client.Raylib.Rendering
             return new Vector4(r * scale, g * scale, b * scale, a * scale);
         }
 
+        internal static bool ShouldDrapeDiscreteOwnership(int cellSizeCm, int drapeMaxCellSizeCm)
+        {
+            if (cellSizeCm <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
+            }
+
+            if (drapeMaxCellSizeCm <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(drapeMaxCellSizeCm));
+            }
+
+            return cellSizeCm < drapeMaxCellSizeCm;
+        }
+
         internal static bool TryResolveDiscreteOwnershipDrape(
             IVisualHeightmap heightSampleSource,
             IntRect boundsCells,
@@ -690,7 +712,19 @@ namespace Ludots.Client.Raylib.Rendering
             RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(widthMeters, 1f, heightMeters) *
                 Matrix4x4.CreateTranslation(origin));
+            // Continental ownership sits under elevated heightmap geometry when depth-tested at Y≈0;
+            // composite the tint as an overlay so terrain albedo remains the readable base.
+            bool overlayWithoutDepth = state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership;
+            if (overlayWithoutDepth)
+            {
+                Rl.rlDisableDepthTest();
+            }
+
             Rl.DrawMesh(_quadMesh, _material, transform);
+            if (overlayWithoutDepth)
+            {
+                Rl.rlEnableDepthTest();
+            }
         }
 
         private void DrawDrapedDiscreteOwnership(

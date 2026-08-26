@@ -160,7 +160,8 @@ void main()
             vec2 uv = (worldCm - boundsMin) / max(boundsMax - boundsMin, vec2(1e-5));
             uv.y = 1.0 - uv.y;
             vec4 navTint = texture(uNavWalkabilityMap, clamp(uv, vec2(0.0), vec2(1.0)));
-            albedo = mix(albedo, navTint.rgb, clamp(navTint.a, 0.0, 1.0));
+            // Soften the walkability tint so continental albedo/control maps stay readable.
+            albedo = mix(albedo, navTint.rgb, clamp(navTint.a, 0.0, 1.0) * 0.35);
         }
     }
 

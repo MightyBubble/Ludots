@@ -116,6 +116,26 @@ public sealed class RaylibFieldRenderPresenterTests
     }
 
     [Test]
+    public void ShouldDrapeDiscreteOwnership_UsesTexturePlaneForContinentalCellSizes()
+    {
+        Assert.That(
+            RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
+                cellSizeCm: 250,
+                drapeMaxCellSizeCm: 100_000),
+            Is.True);
+        Assert.That(
+            RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
+                cellSizeCm: 100_000,
+                drapeMaxCellSizeCm: 100_000),
+            Is.False);
+        Assert.That(
+            RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
+                cellSizeCm: 1_005_192,
+                drapeMaxCellSizeCm: 100_000),
+            Is.False);
+    }
+
+    [Test]
     public void TryResolveDiscreteOwnershipDrape_MapsTexelCenterAndScalesSampledHeight()
     {
         var heightmap = new RecordingHeightmap(sampleResult: true, heightCm: 320f);
