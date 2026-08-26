@@ -117,6 +117,38 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(callbacks.HasLiveWaiterForTarget(target), Is.True);
         }
 
+        [Test]
+        public void TryCompleteByCallbackType_CompletesOldestDialogConfirm()
+        {
+            var callbacks = new GraphCallbackService();
+            var first = new RecordingTarget();
+            var second = new RecordingTarget();
+            int firstHandle = BeginAwait(callbacks, first, GraphCallbackTypes.DialogConfirm, resultBoolRegister: 0);
+            int secondHandle = BeginAwait(callbacks, second, GraphCallbackTypes.DialogConfirm, resultBoolRegister: 1);
+
+            Assert.That(callbacks.TryCompleteByCallbackType(GraphCallbackTypes.DialogConfirm, confirmed: true), Is.True);
+            Assert.That(callbacks.TryGetOldestLiveHandleByCallbackType(GraphCallbackTypes.DialogConfirm, out int remaining), Is.True);
+            Assert.That(remaining, Is.EqualTo(secondHandle));
+            Assert.That(firstHandle, Is.Not.EqualTo(secondHandle));
+
+            callbacks.Drain();
+            Assert.That(first.ResumeOrder, Is.EqualTo(1));
+            Assert.That(first.Confirmed, Is.True);
+            Assert.That(second.ResumeOrder, Is.EqualTo(0));
+
+            Assert.That(callbacks.TryCompleteByCallbackType(GraphCallbackTypes.DialogConfirm, confirmed: false), Is.True);
+            callbacks.Drain();
+            Assert.That(second.ResumeOrder, Is.EqualTo(2));
+            Assert.That(second.Confirmed, Is.False);
+        }
+
+        [Test]
+        public void TryCompleteByCallbackType_NoWaiter_ReturnsFalse()
+        {
+            var callbacks = new GraphCallbackService();
+            Assert.That(callbacks.TryCompleteByCallbackType(GraphCallbackTypes.DialogConfirm, true), Is.False);
+        }
+
         private static int BeginAwait(
             GraphCallbackService callbacks,
             IGraphCallbackResumeTarget target,
