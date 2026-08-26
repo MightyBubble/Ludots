@@ -1,0 +1,7 @@
+[
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/attribute_constraints.json", "Policy": "DeepObject" },
+  { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Panels/panel_templates.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "PanelThemes/themes.json", "Policy": "ArrayById", "IdField": "id" }
+]

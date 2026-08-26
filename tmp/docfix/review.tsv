@@ -1,0 +1,39 @@
+14	- C#/JSON 定义双轨、幽灵字段、Graph VM 代码复制等多重真�?	=>	- C#/JSON 定义双轨、幽灵字段、Graph VM 代码复制等多重真相
+64	    public string Extends;                   // 可选：继承父定义（§9.6�?	=>	    public string Extends;                   // 可选：继承父定义（§9.6）
+67	    public PresenterRule[] Rules;             // 事件→命令（复用现有模式�?	=>	    public PresenterRule[] Rules;             // 事件→命令（复用现有模式）
+69	    public ParamDefault[] ParamDefaults;      // 黑板默认�?	=>	    public ParamDefault[] ParamDefaults;      // 黑板默认值
+77	    public int ScopeTag;                     // 用于按组销�?	=>	    public int ScopeTag;                     // 用于按组销毁
+78	    public ParamDefault[] ParamOverrides;    // 父→子参数传�?	=>	    public ParamDefault[] ParamOverrides;    // 父→子参数传递
+103	    public ConditionRef ActivationCondition; // 可选：声明式激活条�?	=>	    public ConditionRef ActivationCondition; // 可选：声明式激活条件
+118	    AssetBinding = 1,      // 绑定资产（mesh/skinned/decal/vfx�?	=>	    AssetBinding = 1,      // 绑定资产（mesh/skinned/decal/vfx）
+121	    Animator = 4,          // 动画控制器（读写 param blackboard�?	=>	    Animator = 4,          // 动画控制器（读写 param blackboard）
+124	    Material = 7,          // 材质切换（param→材质表�?	=>	    Material = 7,          // 材质切换（param→材质表）
+146	    public VisualRenderPath RenderPath;  // 渲染通道（从 VisualRuntimeState 迁入�?	=>	    public VisualRenderPath RenderPath;  // 渲染通道（从 VisualRuntimeState 迁入）
+151	    public int ScaleParamKey;            // -1 = 不绑�?	=>	    public int ScaleParamKey;            // -1 = 不绑定
+190	    public int StateParamKey;            // blackboard 中的状态索引输�?	=>	    public int StateParamKey;            // blackboard 中的状态索引输出
+217	    public int VolumeParamKey;           // -1 = 不绑�?	=>	    public int VolumeParamKey;           // -1 = 不绑定
+239	    public int WidthParamKey;            // -1 = 不绑�?	=>	    public int WidthParamKey;            // -1 = 不绑定
+240	    public int ColorParamKey;            // -1 = 不绑�?	=>	    public int ColorParamKey;            // -1 = 不绑定
+272	    public int ParentHandle;             // -1 = 根节�?	=>	    public int ParentHandle;             // -1 = 根节点
+275	    // 行为激活位�?	=>	    // 行为激活位图
+293	    DestroyPresenter = 2,      // 递归销毁子�?	=>	    DestroyPresenter = 2,      // 递归销毁子树
+391	      �?	=>	      │
+402	  PresenterBehaviorSystem [新]     行为驱动�?	=>	  PresenterBehaviorSystem [新]     行为驱动：
+414	      �?	=>	      ▼
+419	### 5.1 各系统职�?	=>	### 5.1 各系统职责
+430	### 5.2 删除的系�?	=>	### 5.2 删除的系统
+551	### 6.1 JSON Schema 规范字段�?	=>	### 6.1 JSON Schema 规范字段名
+591	## 9 补充设计：第一性原理覆�?	=>	## 9 补充设计：第一性原理覆盖
+602	`DestroyPresenter` 命令支持两种模式�?	=>	`DestroyPresenter` 命令支持两种模式：
+621	Presenter 的可见性由三层控制�?	=>	Presenter 的可见性由三层控制：
+627	选择高亮和队伍着色通过 Material behavior 实现�?	=>	选择高亮和队伍着色通过 Material behavior 实现：
+683	### 9.8 插�?	=>	### 9.8 插值
+687	### 9.9 热重�?	=>	### 9.9 热重载
+690	- 已有 presenter 实例不自动更新（定义是创建时快照�?	=>	- 已有 presenter 实例不自动更新（定义是创建时快照）
+691	- 新创建的 presenter 使用新定�?	=>	- 新创建的 presenter 使用新定义
+692	- 如需强制刷新，销毁并重建 presenter �?	=>	- 如需强制刷新，销毁并重建 presenter 树
+716	// 写法 1：children 语法�?	=>	// 写法 1：children 语法糖
+726	这意味着�?	=>	这意味着：
+727	- 静态子树用 `children` 简�?	=>	- 静态子树用 `children` 简写
+732	## 10 编译式执行分�?	=>	## 10 编译式执行分层
+743	这不改变 Presenter 的语义模型——`BehaviorKind`、`PresenterCommand`、`presenters.json` schema 全部不变。只改变执行模型：从"每帧全量解释"变为"dirty-driven 分层执行"�?	=>	这不改变 Presenter 的语义模型——`BehaviorKind`、`PresenterCommand`、`presenters.json` schema 全部不变。只改变执行模型：从"每帧全量解释"变为"dirty-driven 分层执行"。

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "panel.strategic.time",
+    "graph": "Graph.StrategicHud.Values",
+    "pins": [
+      { "name": "day", "key": "strategic.hud.time.day", "mode": "realtime", "default": 0 },
+      { "name": "speed", "key": "strategic.hud.time.speed", "mode": "realtime", "default": 1 },
+      { "name": "viewMode", "key": "strategic.hud.view.mode", "mode": "realtime", "default": 0 }
+    ]
+  },
+  {
+    "id": "panel.strategic.view",
+    "graph": "Graph.StrategicHud.Values",
+    "pins": [
+      { "name": "cameraX", "key": "strategic.hud.camera.x", "mode": "realtime", "default": 0 },
+      { "name": "cameraY", "key": "strategic.hud.camera.y", "mode": "realtime", "default": 0 },
+      { "name": "zoom", "key": "strategic.hud.camera.zoom", "mode": "realtime", "default": 1 }
+    ]
+  },
+  {
+    "id": "panel.strategic.minimap",
+    "graph": "Graph.StrategicHud.Values",
+    "pins": [
+      { "name": "cameraX", "key": "strategic.hud.camera.x", "mode": "realtime", "default": 0 },
+      { "name": "cameraY", "key": "strategic.hud.camera.y", "mode": "realtime", "default": 0 },
+      { "name": "zoom", "key": "strategic.hud.camera.zoom", "mode": "realtime", "default": 1 }
+    ]
+  },
+  {
+    "id": "panel.strategic.selection",
+    "graph": "Graph.StrategicHud.Values",
+    "pins": [
+      { "name": "selectedHealth", "key": "strategic.hud.selection.health", "mode": "realtime", "default": 0 },
+      { "name": "selectedAttack", "key": "strategic.hud.selection.attack", "mode": "realtime", "default": 0 },
+      { "name": "selectedCount", "key": "strategic.hud.selection.count", "mode": "realtime", "default": 0 }
+    ]
+  },
+  {
+    "id": "panel.strategic.entities",
+    "graph": "Graph.StrategicHud.Values",
+    "pins": [
+      { "name": "entityCount", "key": "strategic.hud.entities.total", "mode": "realtime", "default": 0 },
+      { "name": "allyCount", "key": "strategic.hud.entities.allies", "mode": "realtime", "default": 0 },
+      { "name": "hostileCount", "key": "strategic.hud.entities.hostiles", "mode": "realtime", "default": 0 }
+    ]
+  },
+  {
+    "id": "panel.strategic.events",
+    "graph": "Graph.StrategicHud.Values",
+    "pins": [
+      { "name": "eventCount", "key": "strategic.hud.events.count", "mode": "realtime", "default": 0 },
+      { "name": "alertLevel", "key": "strategic.hud.events.alert", "mode": "realtime", "default": 0 },
+      { "name": "lastEvent", "key": "strategic.hud.events.last", "mode": "realtime", "default": 0 }
+    ]
+  },
+  {
+    "id": "panel.strategic.command",
+    "graph": "Graph.StrategicHud.Values",
+    "pins": [
+      { "name": "commandReady", "key": "strategic.hud.command.ready", "mode": "realtime", "default": 0 },
+      { "name": "selectedUnits", "key": "strategic.hud.command.units", "mode": "realtime", "default": 0 },
+      { "name": "actionPoints", "key": "strategic.hud.command.points", "mode": "realtime", "default": 0 }
+    ]
+  },
+  {
+    "id": "panel.strategic.subsystems",
+    "graph": "Graph.StrategicHud.Values",
+    "pins": [
+      { "name": "diplomacy", "key": "strategic.hud.systems.diplomacy", "mode": "realtime", "default": 0 },
+      { "name": "research", "key": "strategic.hud.systems.research", "mode": "realtime", "default": 0 },
+      { "name": "logistics", "key": "strategic.hud.systems.logistics", "mode": "realtime", "default": 0 }
+    ]
+  }
+]

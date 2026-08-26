@@ -1,0 +1,9 @@
+{
+  "startupMapId": "strategic_hud_panels",
+  "windowTitle": "Ludots - Strategic HUD Panels",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "panelSkin": "markup",
+  "panelTheme": "strategic",
+  "startupInputContexts": ["Default_Gameplay"]
+}

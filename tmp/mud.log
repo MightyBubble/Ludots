@@ -1,0 +1,89 @@
+生成启动时间为 2026/8/24 21:32:37。
+C:\001_AI\LudotsProd\tmp\wt-fix87\src\Tests\GasTests\bin\Debug\net8.0\GasTests.dll (.NETCoreApp,Version=v8.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Tests\GasTests\bin\Debug\net8.0\GasTests.dll
+   NUnit3TestExecutor discovered 5 of 5 NUnit test cases using Current Discovery mode, Non-Explicit run
+[MUD][CONFIG] 配置复用：同一Graph程序，不同参数。
+[MUD][CONFIG] 火球(base=15,mul=2.0): HP 100→70
+[MUD][CONFIG] 冰矢(base=10,mul=1.0): HP 100→90
+[MUD][CONFIG] 同一Graph程序，不同参数 ✓
+
+
+MudPhaseGraph_ConfigReuse_DifferentParamsProduceDifferentResults: Config reuse demo complete
+[MUD][SKIP] 自定义效果：完全覆盖预设，使用自定义公式。
+[MUD][SKIP] Config(baseDamage=25) × 2 = 50伤害
+[MUD][SKIP] HP: 100 → 50.0
+[MUD][SKIP] 预设Main未执行 ✓
+
+
+MudPhaseGraph_SkipMain_CustomDamageFormula: SkipMain custom formula demo complete
+NUnit Adapter 4.6.0.0: Test execution complete
+  失败 MudCombat_AbilityRelease_ChainAndDot_WritesLogFile [133 ms]
+  错误消息:
+   System.InvalidOperationException : GAS.GRAPH.ERR.MissingGasPresentationEventBuffer
+  堆栈跟踪:
+     at Ludots.Core.Gameplay.GAS.EffectPhaseSideEffectTransaction.StagePresentationEvent(GasPresentationEvent& presentationEvent) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\EffectPhaseSideEffectTransaction.cs:line 815
+   at Ludots.Core.Gameplay.GAS.Systems.EffectLifetimeSystem.ProcessExpiration(Entity entity, GameplayEffect& effect, EffectContext& context) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectLifetimeSystem.cs:line 460
+   at Ludots.Core.Gameplay.GAS.Systems.EffectLifetimeSystem.UpdateSliceCore(Single dt, Int32 timeBudgetMs) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectLifetimeSystem.cs:line 227
+   at Ludots.Core.Gameplay.GAS.Systems.EffectLifetimeSystem.UpdateSlice(Single dt, Int32 timeBudgetMs) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectLifetimeSystem.cs:line 178
+   at Ludots.Core.Gameplay.GAS.Systems.EffectProcessingLoopSystem.UpdateSlice(Single dt, Int32 timeBudgetMs) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectProcessingLoopSystem.cs:line 179
+   at Ludots.Core.Gameplay.GAS.Systems.EffectProcessingLoopSystem.Update(Single& dt) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectProcessingLoopSystem.cs:line 96
+   at Ludots.Tests.GAS.MudAbilityChainStressDemoTests.MudCombat_AbilityRelease_ChainAndDot_WritesLogFile() in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Tests\GasTests\Integration\MudAbilityChainStressDemoTests.cs:line 203
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+  失败 MudCombat_Stress_ArcaneVolleyWithBurning_ReportsThroughput [319 ms]
+  错误消息:
+   System.InvalidOperationException : GAS.GRAPH.ERR.MissingGasPresentationEventBuffer
+  堆栈跟踪:
+     at Ludots.Core.Gameplay.GAS.EffectPhaseSideEffectTransaction.StagePresentationEvent(GasPresentationEvent& presentationEvent) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\EffectPhaseSideEffectTransaction.cs:line 815
+   at Ludots.Core.Gameplay.GAS.Systems.EffectLifetimeSystem.ProcessExpiration(Entity entity, GameplayEffect& effect, EffectContext& context) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectLifetimeSystem.cs:line 460
+   at Ludots.Core.Gameplay.GAS.Systems.EffectLifetimeSystem.UpdateSliceCore(Single dt, Int32 timeBudgetMs) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectLifetimeSystem.cs:line 227
+   at Ludots.Core.Gameplay.GAS.Systems.EffectLifetimeSystem.UpdateSlice(Single dt, Int32 timeBudgetMs) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectLifetimeSystem.cs:line 178
+   at Ludots.Core.Gameplay.GAS.Systems.EffectProcessingLoopSystem.UpdateSlice(Single dt, Int32 timeBudgetMs) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectProcessingLoopSystem.cs:line 179
+   at Ludots.Core.Gameplay.GAS.Systems.EffectProcessingLoopSystem.Update(Single& dt) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectProcessingLoopSystem.cs:line 96
+   at Ludots.Tests.GAS.MudAbilityChainStressDemoTests.MudCombat_Stress_ArcaneVolleyWithBurning_ReportsThroughput() in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Tests\GasTests\Integration\MudAbilityChainStressDemoTests.cs:line 389
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+  已通过 MudPhaseGraph_ConfigReuse_DifferentParamsProduceDifferentResults [27 ms]
+  失败 MudPhaseGraph_ImpactSpell_FullLifecycle [7 ms]
+  错误消息:
+   System.InvalidOperationException : GAS.GRAPH.ERR.MissingBlackboard: ReadBlackboardFloat requires a readable blackboard value; entity=1, key=3.
+  堆栈跟踪:
+     at Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable.HandleReadBlackboardFloat(GraphExecutionState& s, GraphInstruction& ins, Int32& pc) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\NodeLibraries\GASGraph\GasGraphOpHandlerTable.cs:line 1786
+   at Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable.ExecuteSliceCore(GraphExecutionState& state, ReadOnlySpan`1 program, GasGraphOpHandlerTable handlers, GraphExecutionCursor& cursor, Int32 budgetSteps) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\NodeLibraries\GASGraph\GasGraphOpHandlerTable.cs:line 601
+   at Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable.Execute(GraphExecutionState& state, ReadOnlySpan`1 program, GasGraphOpHandlerTable handlers) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\NodeLibraries\GASGraph\GasGraphOpHandlerTable.cs:line 339
+   at Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.Execute(GraphFrame& frame, ReadOnlySpan`1 program, Boolean programAlreadyValidated, GasGraphOpHandlerTable handlers) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\NodeLibraries\GASGraph\GraphExecutor.cs:line 156
+   at Ludots.Core.Gameplay.GAS.Systems.EffectPhaseExecutor.ExecuteGraph(World world, IGraphRuntimeApi api, Entity caster, Entity target, Entity targetContext, IntVector2 targetPos, Int32 graphProgramId, Int32 effectTemplateId, EffectPhaseId phase, EffectConfigParams& mergedParams, BuiltinHandlerExecutionContext builtinRuntime, UInt32 randomSeed, Int32 rootId, Boolean trackValidationResult, Byte& validationResult, Boolean requireListenerCompatibility) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectPhaseExecutor.cs:line 884
+   at Ludots.Core.Gameplay.GAS.Systems.EffectPhaseExecutor.ExecutePhaseCore(World world, IGraphRuntimeApi api, Entity caster, Entity target, Entity targetContext, IntVector2 targetPos, EffectPhaseId phase, EffectPhaseGraphBindings& behavior, Int32 presetTypeId, Int32 effectTagId, Int32 effectTemplateId, EffectConfigParams& mergedParams, BuiltinHandlerExecutionContext builtinRuntime, UInt32 randomSeed, Int32 rootId, Boolean trackValidationResult, Byte& validationResult) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectPhaseExecutor.cs:line 301
+   at Ludots.Core.Gameplay.GAS.Systems.EffectPhaseExecutor.ExecutePhaseInConfigScope(World world, IGraphRuntimeApi api, Entity caster, Entity target, Entity targetContext, IntVector2 targetPos, EffectPhaseId phase, EffectPhaseGraphBindings& behavior, Int32 presetTypeId, Int32 effectTagId, Int32 effectTemplateId, EffectConfigParams& mergedParams, BuiltinHandlerExecutionContext builtinRuntime, UInt32 randomSeed, Int32 rootId, Boolean trackValidationResult, Byte& validationResult) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectPhaseExecutor.cs:line 230
+   at Ludots.Core.Gameplay.GAS.Systems.EffectPhaseExecutor.ExecutePhase(World world, IGraphRuntimeApi api, Entity caster, Entity target, Entity targetContext, IntVector2 targetPos, EffectPhaseId phase, EffectPhaseGraphBindings& behavior, Int32 presetTypeId, Int32 effectTagId, Int32 effectTemplateId, EffectConfigParams& mergedParams, BuiltinHandlerExecutionContext builtinRuntime, UInt32 randomSeed, Int32 rootId) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectPhaseExecutor.cs:line 186
+   at Ludots.Core.Gameplay.GAS.Systems.EffectPhaseExecutor.ExecutePhase(World world, IGraphRuntimeApi api, Entity caster, Entity target, Entity targetContext, IntVector2 targetPos, EffectPhaseId phase, EffectPhaseGraphBindings& behavior, EffectPresetType presetType, Int32 effectTagId, Int32 effectTemplateId, EffectConfigParams& mergedParams, BuiltinHandlerExecutionContext builtinRuntime, UInt32 randomSeed, Int32 rootId) in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Core\Gameplay\GAS\Systems\EffectPhaseExecutor.cs:line 150
+   at Ludots.Tests.GAS.MudPhaseGraphDemoTests.MudPhaseGraph_ImpactSpell_FullLifecycle() in C:\001_AI\LudotsProd\tmp\wt-fix87\src\Tests\GasTests\Integration\MudPhaseGraphDemoTests.cs:line 160
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+  已通过 MudPhaseGraph_SkipMain_CustomDamageFormula [2 ms]
+
+测试运行失败。
+测试总数: 5
+     通过数: 2
+     失败数: 3
+总时间: 1.4778 秒
+     1>项目“C:\001_AI\LudotsProd\tmp\wt-fix87\src\Tests\GasTests\GasTests.csproj”在节点 1 上(VSTest 个目标)。
+     1>_VSTestConsole:
+         MSB4181: “VSTestTask”任务返回了 false，但未记录错误。
+     1>已完成生成项目“C:\001_AI\LudotsProd\tmp\wt-fix87\src\Tests\GasTests\GasTests.csproj”(VSTest 个目标)的操作 - 失败。
+
+生成失败。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:02.24
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

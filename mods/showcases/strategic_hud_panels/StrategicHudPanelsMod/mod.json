@@ -1,0 +1,10 @@
+{
+  "name": "StrategicHudPanelsMod",
+  "version": "1.0.0",
+  "description": "Zero-code data-driven eight-anchor HUD panel layout for the four panel skins.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  }
+}

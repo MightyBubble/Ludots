@@ -1,0 +1,30 @@
+{
+  "Id": "strategic_hud_panels",
+  "Tags": ["showcase", "ui", "panel", "strategic-hud"],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.StrategicHud.OpenAll",
+      "scopeInstanceId": "strategic-hud-state"
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "strategic_hud_state",
+      "InstanceId": "strategic-hud-state"
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "strategic-hud-state" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "strategic-hud-state" }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 900,
+    "Pitch": 40,
+    "Yaw": 45,
+    "FovYDeg": 50
+  }
+}
