@@ -96,8 +96,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             Assert.That(
                 AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text =>
-                    text.Contains("Story Showcase", StringComparison.Ordinal) ||
-                    text.Contains("Narrative Showcase", StringComparison.Ordinal)),
+                    text.Contains("灰烬谷", StringComparison.Ordinal) ||
+                    text.Contains("Ashen Valley", StringComparison.Ordinal)),
                 Is.True);
             TickUntil(
                 engine,
@@ -165,7 +165,10 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => sequencer.HasActiveSequence &&
-                      (UiContains(uiRoot, "Immersive Subtitle") || UiContains(uiRoot, "Auto Bubble")),
+                      (UiContains(uiRoot, "旁白") ||
+                       UiContains(uiRoot, "Moment") ||
+                       UiContains(uiRoot, "Immersive Subtitle") ||
+                       UiContains(uiRoot, "Auto Bubble")),
                 40,
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             Assert.That(sequencer.TryGetActiveView(out SequenceView reveal), Is.True);
@@ -662,7 +665,10 @@ namespace Ludots.Tests.GAS.Production
             const float uiMargin = 24f;
             Assert.That(publishedOffsetX, Is.EqualTo(screen.X - uiMargin).Within(48f));
             Assert.That(publishedOffsetY, Is.EqualTo(screen.Y - uiMargin - 96f).Within(64f));
-            Assert.That(UiContains(uiRoot, "World Bubble"), Is.True);
+            Assert.That(
+                UiContains(uiRoot, "附近") || UiContains(uiRoot, "Nearby") || UiContains(uiRoot, "World Bubble"),
+                Is.True,
+                "World bubble eyebrow should be visible.");
         }
 
         private static void TickPresentation(GameEngine engine)
@@ -680,7 +686,10 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AssertStandingPortraitSurface(UIRoot uiRoot, DialogueView view)
         {
-            Assert.That(UiContains(uiRoot, "Standing Portrait"), Is.True, "Standing portrait eyebrow should be visible.");
+            Assert.That(
+                UiContains(uiRoot, "立绘") || UiContains(uiRoot, "Portrait") || UiContains(uiRoot, "Standing Portrait"),
+                Is.True,
+                "Standing portrait eyebrow should be visible.");
             UiNode? standing = FindUiNodeByClass(uiRoot.Scene?.Root, "story-standing-portrait");
             Assert.That(standing, Is.Not.Null, "Expected story-standing-portrait image node.");
             Assert.That(standing!.Attributes["src"], Is.EqualTo(view.StandingImageSrc));
