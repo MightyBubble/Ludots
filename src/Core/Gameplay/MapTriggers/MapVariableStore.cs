@@ -35,7 +35,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <summary>
     /// Save payload for a <see cref="MapVariableStore"/>. Revisions are not persisted: restore
     /// writes values directly onto the freshly declared slots (revisions stay at zero) and does
-    /// not dispatch PhaseChanged, so the first post-restore write diffs against the restored value.
+    /// not dispatch VariableChanged, so the first post-restore write diffs against the restored value.
     /// </summary>
     public sealed record MapVariableStoreSnapshot(IReadOnlyList<MapVariableValueSnapshot> Variables);
 
