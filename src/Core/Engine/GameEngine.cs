@@ -3118,13 +3118,28 @@ namespace Ludots.Core.Engine
                 return null;
             }
 
-            float widthCm = checked(widthCells * cellSizeCm);
-            float heightCm = checked(heightCells * cellSizeCm);
+            int widthCm = checked(widthCells * cellSizeCm);
+            int heightCm = checked(heightCells * cellSizeCm);
+            int originXcm = 0;
+            int originZcm = 0;
+            if (heightmap is IVisualHeightmapRenderSource renderSource)
+            {
+                WorldAabbCm bounds = renderSource.Bounds;
+                if (bounds.Width != widthCm || bounds.Height != heightCm)
+                {
+                    throw new InvalidOperationException(
+                        $"VisualHeightmap bounds {bounds.Width}x{bounds.Height}cm do not match board '{boardName}' extent {widthCm}x{heightCm}cm.");
+                }
+
+                originXcm = bounds.Left;
+                originZcm = bounds.Top;
+            }
+
             bool covers =
-                heightmap.TrySampleHeightCm(0f, 0f, out _) &&
-                heightmap.TrySampleHeightCm(widthCm, 0f, out _) &&
-                heightmap.TrySampleHeightCm(0f, heightCm, out _) &&
-                heightmap.TrySampleHeightCm(widthCm, heightCm, out _);
+                heightmap.TrySampleHeightCm(originXcm, originZcm, out _) &&
+                heightmap.TrySampleHeightCm(checked(originXcm + widthCm), originZcm, out _) &&
+                heightmap.TrySampleHeightCm(originXcm, checked(originZcm + heightCm), out _) &&
+                heightmap.TrySampleHeightCm(checked(originXcm + widthCm), checked(originZcm + heightCm), out _);
             if (!covers)
             {
                 Diagnostics.Log.Info(
@@ -3141,7 +3156,11 @@ namespace Ludots.Core.Engine
                 widthCells,
                 heightCells,
                 cellSizeCm,
-                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(heightStepCm));
+                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
+                    heightStepCm,
+                    blockedAtOrBelowHeightCm: boardConfig.TerrainBlockedAtOrBelowHeightCm,
+                    originXcm: originXcm,
+                    originZcm: originZcm));
         }
 
         private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)

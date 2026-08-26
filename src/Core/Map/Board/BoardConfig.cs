@@ -54,6 +54,8 @@ namespace Ludots.Core.Map.Board
         /// </summary>
         public int TerrainHeightStepCm { get; set; }
 
+        public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
+
         /// <summary>
         /// Clone this config to prevent aliasing during merge operations.
         /// </summary>
@@ -74,7 +76,9 @@ namespace Ludots.Core.Map.Board
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
                 StructureAwareNavigation = StructureAwareNavigation,
-                NavigationEnabled = NavigationEnabled
+                NavigationEnabled = NavigationEnabled,
+                TerrainHeightStepCm = TerrainHeightStepCm,
+                TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm
             };
         }
     }

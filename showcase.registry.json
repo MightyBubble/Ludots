@@ -5095,6 +5095,28 @@
       "status": "active"
     },
     {
+      "id": "east_asia_navmesh_debug",
+      "path": "mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod",
+      "title": "East Asia NavMesh Debug",
+      "summary": "Continental CDT NavMesh tiles and world-aligned walkability texture baked from the continuous East Asia VisualHeightmap.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "east-asia",
+        "navmesh",
+        "walkability-texture",
+        "visual-heightmap"
+      ],
+      "binding": "east_asia_navmesh_debug",
+      "preset": "east_asia_navmesh_debug_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod/README.md",
+      "acceptanceTest": "EastAsiaNavMeshDebugContractTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "field_east_asia_admin",
       "path": "mods/showcases/field_east_asia_admin/FieldEastAsiaAdminMod",
       "title": "East Asia Admin MapField",

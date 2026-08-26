@@ -477,6 +477,13 @@
       }
     },
     {
+      "name": "east_asia_navmesh_debug",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod"
+      }
+    },
+    {
       "name": "field_east_asia_admin",
       "target": {
         "type": "path",

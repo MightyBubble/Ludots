@@ -507,6 +507,16 @@
       "buildMode": "auto"
     },
     {
+      "id": "east_asia_navmesh_debug_raylib",
+      "name": "East Asia NavMesh Debug Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "$east_asia_navmesh_debug"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "field_east_asia_admin_raylib",
       "name": "Field East Asia Admin Raylib",
       "selectors": [

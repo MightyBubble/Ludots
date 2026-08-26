@@ -1,0 +1,33 @@
+{
+  "Id": "east_asia_visual_heightmap",
+  "Tags": [
+    "Feature.NavMesh:On",
+    "navmesh",
+    "walkability-texture"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 7,
+      "HeightInMacroTiles": 4,
+      "GridCellSizeCm": 502596,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 512,
+      "NavigationEnabled": true,
+      "TerrainHeightStepCm": 100,
+      "TerrainBlockedAtOrBelowHeightCm": 0
+    }
+  ],
+  "Metadata": {
+    "navWalkabilityOverlay": {
+      "textureUri": "EastAsiaNavMeshDebugMod:assets/Textures/nav_walkability.png",
+      "boundsCm": {
+        "minX": -450326016,
+        "minZ": -257329152,
+        "maxX": 450326016,
+        "maxZ": 257329152
+      }
+    }
+  }
+}
