@@ -49,7 +49,7 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [1.2, 2.4, 1.2]
+          "localScale": [180, 360, 180]
         },
         "style": { "color": [0.95, 0.82, 0.2, 1] }
       },
@@ -78,7 +78,7 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [3.5, 0.8, 1.4]
+          "localScale": [420, 120, 200]
         },
         "style": { "color": [0.2, 0.55, 0.95, 1] }
       },

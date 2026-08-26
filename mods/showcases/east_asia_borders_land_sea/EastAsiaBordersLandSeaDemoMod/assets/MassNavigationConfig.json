@@ -91,16 +91,16 @@
       {
         "id": "Small",
         "heavy": false,
-        "visualScale": 2.5,
-        "speedCmPerSecond": 25000,
+        "visualScale": 80.0,
+        "speedCmPerSecond": 80000,
         "everyNth": 0,
         "nthOffset": 0
       },
       {
         "id": "Medium",
         "heavy": true,
-        "visualScale": 4.0,
-        "speedCmPerSecond": 30000,
+        "visualScale": 120.0,
+        "speedCmPerSecond": 100000,
         "everyNth": 0,
         "nthOffset": 0
       }
