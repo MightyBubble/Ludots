@@ -207,18 +207,35 @@ namespace Ludots.Core.Presentation.Requests
             RecordOp(PresentationRequestChannel.SurfaceSource, slot, request.Kind, request.SurfaceSource.StableId);
         }
 
+        public void RemoveGroundOverlay(Entity owner, int stableId) =>
+            AddRemoval(owner, PresentationRequestKind.RemoveGroundOverlay, stableId);
+
+        public void RemoveWorldHud(Entity owner, int stableId) =>
+            AddRemoval(owner, PresentationRequestKind.RemoveWorldHud, stableId);
+
+        public void RemoveSplineRibbon(Entity owner, int stableId) =>
+            AddRemoval(owner, PresentationRequestKind.RemoveSplineRibbon, stableId);
+
+        public void RemoveSurfaceSource(Entity owner, int stableId) =>
+            AddRemoval(owner, PresentationRequestKind.RemoveSurfaceSource, stableId);
+
         private void AddRemoval(in PresentationRequest request)
         {
-            EnsureOperationRoom(request.Kind, request.StableId);
-            EnsureChannelRoom(_removalCount, _removals.Length, request.Kind, request.StableId);
+            AddRemoval(request.Owner, request.Kind, request.StableId);
+        }
+
+        private void AddRemoval(Entity owner, PresentationRequestKind kind, int stableId)
+        {
+            EnsureOperationRoom(kind, stableId);
+            EnsureChannelRoom(_removalCount, _removals.Length, kind, stableId);
             int slot = _removalCount++;
             _removals[slot] = new PresentationRemovalRequest
             {
-                Kind = request.Kind,
-                Owner = request.Owner,
-                StableId = request.StableId,
+                Kind = kind,
+                Owner = owner,
+                StableId = stableId,
             };
-            RecordOp(PresentationRequestChannel.Removal, slot, request.Kind, request.StableId);
+            RecordOp(PresentationRequestChannel.Removal, slot, kind, stableId);
         }
 
         private void AddClearTransient(in PresentationRequest request)

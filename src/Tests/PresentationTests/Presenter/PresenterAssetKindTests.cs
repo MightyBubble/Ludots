@@ -1826,7 +1826,7 @@ namespace Ludots.Tests.Presentation
 
             ref CullState ownerCull = ref world.Get<CullState>(owner);
             ownerCull.IsVisible = false;
-            ownerCull.LOD = LODLevel.Culled;
+            ownerCull.LOD = LODLevel.Low;
             instances.SyncCullVisibility();
 
             system.Update(0.016f);
