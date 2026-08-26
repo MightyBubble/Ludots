@@ -332,11 +332,11 @@ T17-F1 ~ F4 进展（2026-04-19 审计，基于未提交改动 + commit 2948d443
 
 | ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
 |----|------|------|---------|---------|------|
-| T19 | Persistent Draw Buffer + Static Freeze | T17 | 新增 `StableDrawCache` + 修改 `PresenterEmitSystem` + `PresenterInstanceBuffer` | Draw buffer 持久化不每帧 clear；静态实体 presenter 创建后 0 cost/帧；动态实体每帧只更新 position lane；dirty 实例全量重算；30K 同屏稳态 < 2ms | L | 基建就绪（`StableDrawCache`、`PresenterEmitCache` 组件已实现），验收标准待验证 |
+| T19 | Persistent Draw Buffer + Static Freeze | T17 | 新增 `StableDrawCache` + 修改 `PresenterEmitSystem` + `PresenterEntityRuntime` | Draw buffer 持久化不每帧 clear；静态实体 presenter 创建后 0 cost/帧；动态实体每帧只更新 position lane；dirty 实例全量重算；30K 同屏稳态 < 2ms | L | 基建就绪（`StableDrawCache`、`PresenterEmitCache` 组件已实现），验收标准待验证 |
 | T20 | Dirty-Driven Behavior | T19 | 修改 `PresenterBehaviorSystem` | 直接读 owner entity 的 `GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`；只对 dirty entity 的 presenter 求值 behavior；稳态下 behavior eval ~0；不自建 DirtyMask，复用 GAS 已有信号 | L | 基建就绪（`DirtyFlags.IsAnyAttributeDirty`、`GameplayTagEffectiveChangedBits.IsAnyBitSet` 已实现），验收标准待验证 |
 | T21 | LOD Children Pruning | T20 | 修改 `PresenterRuntimeSystem` | 读 `CullState.LOD` 控制 children 激活数量；Close=5/Medium=3/Far=2；通过 ActivateBehavior/DeactivateBehavior 控制；150K → ~74K active instances | M |
-| T22 | Culling Gate | T19 | 修改 `PresenterRuntimeSystem` + `PresenterInstanceBuffer` | `ProcessActive` 跳过 `!OwnerCullVisible`；子 presenter 继承父 cull | S |
-| T23 | SoA Instance Buffer + Compiled Binding Table | T20 | 重构 `PresenterInstanceBuffer` 内部 + 修改 `PresenterDefinitionConfigLoader` | AoS→SoA 内部存储；注册时编译 `CompiledBinding[]`；运行时不走 `ResolveParam` | L |
+| T22 | Culling Gate | T19 | 修改 `PresenterRuntimeSystem` + `PresenterEntityRuntime` | `ProcessActive` 跳过 `!OwnerCullVisible`；子 presenter 继承父 cull | S |
+| T23 | Compiled Binding Table（entity runtime） | T20 | 修改 `PresenterDefinitionConfigLoader` + Dirty Sync 消费 | 注册时编译 `CompiledBinding[]`；运行时不走 `ResolveParam`（entity-backed，不再重构已删 `PresenterInstanceBuffer`） | L | `CompiledBinding[]` 已落地；完整零扫描验收仍待收口 |
 | T24 | LOD-Aware Behavior Ticking | T21 | 修改 `PresenterBehaviorSystem` | 按 LOD 分档执行；Medium=Animator 15fps；Far=只 AssetBinding | M |
 
 ## Codex 开发 → 验收流程
