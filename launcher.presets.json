@@ -2286,24 +2286,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_performer_behavior_extension_showcase_raylib",
-      "name": "Capability Standard Performer Behavior Extension Raylib",
-      "selectors": [
-        "$capability_standard_performer_behavior_extension_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_performer_command_extension_showcase_raylib",
-      "name": "Capability Standard Performer Command Extension Raylib",
-      "selectors": [
-        "$capability_standard_performer_command_extension_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
       "id": "capability_standard_graph_op_LoadEntryPayloadEntity_raylib",
       "name": "Graph Op LoadEntryPayloadEntity Raylib",
       "selectors": [

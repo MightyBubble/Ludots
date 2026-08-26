@@ -1717,22 +1717,6 @@
       }
     },
     {
-      "name": "capability_standard_performer_behavior_extension_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerBehaviorExtensionShowcaseMod",
-        "projectPath": "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_performer_command_extension_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod",
-        "projectPath": "CapabilityStandardPerformerCommandExtensionShowcaseMod.csproj"
-      }
-    },
-    {
       "name": "capability_standard_graph_op_LoadEntryPayloadEntity",
       "target": {
         "type": "path",
