@@ -2,7 +2,9 @@
 
 不用预置实体，阈值一到援军从图里长了出来。
 
-运行时证据由画廊验收测试提供；该页面不引用未提交的录像资产。
+<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SpawnTemplate/poster.png" src="artifacts/evidence/capability_standard_graph_op_SpawnTemplate/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_SpawnTemplate/play.mp4。
+</video>
 
 ## 作者写法
 

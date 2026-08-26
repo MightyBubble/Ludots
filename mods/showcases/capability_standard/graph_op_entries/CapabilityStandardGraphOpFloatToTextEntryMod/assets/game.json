@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_FloatToText",
-  "windowTitle": "Ludots - 正式文字：FloatToText",
+  "windowTitle": "Ludots - 把小数念成字",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

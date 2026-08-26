@@ -3,7 +3,7 @@
 小数 1.5 先变成文字，再送进字幕口。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_FloatToText/poster.png" src="artifacts/evidence/capability_standard_graph_op_FloatToText/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_FloatToText/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_FloatToText/play.mp4。
 </video>
 
 ## 作者写法

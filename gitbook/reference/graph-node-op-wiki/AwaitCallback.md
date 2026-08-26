@@ -13,9 +13,9 @@
 | 项 | 值 |
 |----|----|
 | 可用图种 | Script / TriggerGraph |
-| 返回 | Bool（确认结果写入 Dst） |
+| 返回 | Bool → 布尔槽 |
 | 输入端口（值边 toPort） | 无（不收值边，靠 imm/自身上下文） |
-| 特殊写法 | `callbackType` 填具名回调符号（装载期解析） |
+| 特殊写法 | 结果写入 dst 寄存器 |
 
 手册分册（全量字段与语义）：[脚本控制流 · gr-op-14](../mod-editor-prd/config/gr-op-14-control-flow.md)
 
@@ -29,7 +29,7 @@
 
 上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/AwaitCallback.json`，共 6 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
 
-**AwaitCallback**（本篇） → JumpIfFalse → ConstInt → HaltReturnInt（同意） / ConstInt → HaltReturnInt（拒绝）
+**AwaitCallback**（本篇） → JumpIfFalse → ConstInt → HaltReturnInt → ConstInt → HaltReturnInt
 
 图跑完，字幕报出结果：
 
@@ -38,10 +38,8 @@
 ## 边界与更多用法
 
 - 图种边界：可用于 Script / TriggerGraph；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
-- 挂起后由 C# 宿主 `Complete` 句柄；Continuation 相位按注册序 resume，不按完成线程顺序。
-- 嵌套 `InvokeScript` / `InvokeGraph` 仍禁止 Yield / AwaitCallback（同步函数合同，不做运行时穿透）。
-- 可等待的复用片段用编译期糖 `InlineGraph`（虚幻 Macro 风格）：装载前把宏图拼进宿主，Await 落在同一条程序上。
-- 失效句柄、双次完成、死宿主全部失败关闭。
+- 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
+- 同类用法：跨帧等待（读条、喝药回满）、子图复用、循环收口。
 ## 怎么进
 
 ```text

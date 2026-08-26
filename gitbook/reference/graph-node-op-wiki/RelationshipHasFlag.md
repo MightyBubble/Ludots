@@ -3,7 +3,7 @@
 青色链上插着绿旗，旗子闪两下；没链的那位啥也没有。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/play.mp4。
 </video>
 
 ## 作者写法

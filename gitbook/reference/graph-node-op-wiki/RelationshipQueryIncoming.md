@@ -3,7 +3,7 @@
 箭头指着自己的链亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/play.mp4。
 </video>
 
 ## 作者写法

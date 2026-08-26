@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_ConstText",
-  "windowTitle": "Ludots - 正式文字：ConstText",
+  "windowTitle": "Ludots - 写死一句字幕",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,
