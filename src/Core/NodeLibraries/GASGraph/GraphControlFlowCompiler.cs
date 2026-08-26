@@ -983,6 +983,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (string.Equals(node.Op, GraphAuthoringSugar.InlineGraph, StringComparison.Ordinal))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                        $"{GraphAuthoringSugar.InlineGraph} is compile-time sugar that must be expanded by " +
+                        "TriggerGraphInlineWeaver before GraphControlFlowCompiler; leftover sites fail closed.",
+                        node.Id));
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                    continue;
+                }
+
                 if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
                 {
                     if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
