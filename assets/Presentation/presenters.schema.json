@@ -29,12 +29,6 @@
             { "type": "object", "additionalProperties": false, "required": ["persistence"], "properties": { "persistence": { "type": "string", "minLength": 1 } } }
           ]
         },
-        "visibility": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["inline"],
-          "properties": { "inline": { "type": "string", "minLength": 1 } }
-        },
         "behaviors": { "type": "array", "items": { "$ref": "#/$defs/behavior" } },
         "bindings": { "type": "array", "items": { "$ref": "#/$defs/binding" } },
         "children": { "type": "array", "items": { "$ref": "#/$defs/child" } },
@@ -207,7 +201,14 @@
           ]
         },
         "activeByDefault": { "type": "boolean" },
-        "activationCondition": { "type": "string", "minLength": 1 },
+        "activationCondition": {
+          "type": "object",
+          "additionalProperties": false,
+          "oneOf": [
+            { "required": ["inline"], "properties": { "inline": { "type": "string", "minLength": 1 } } },
+            { "required": ["graphProgramId"], "properties": { "graphProgramId": { "type": "integer" } } }
+          ]
+        },
         "execution": { "type": "string", "minLength": 1 },
         "style": {
           "type": "object",
@@ -258,8 +259,6 @@
             "surfaceLayerKey": { "type": "string" },
             "sortId": { "type": "integer" },
             "maxLod": { "type": "integer", "minimum": 0 },
-            "grounding": { "enum": ["None", "SnapToGround", "AlignToSurface"] },
-            "groundingOffset": { "type": "number" },
             "materialCustomData": {
               "type": "array",
               "items": {
@@ -328,7 +327,7 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "target": { "enum": ["Parent"] },
+            "target": { "enum": ["Parent", "Bone"] },
             "boneId": { "type": ["string", "integer"] },
             "offset": { "$ref": "#/$defs/vec3" },
             "rotationOffset": { "$ref": "#/$defs/vec3" },
@@ -403,7 +402,7 @@
             "colorParamKey": { "type": "string" },
             "sizeParamKey": { "type": "string" },
             "visibilityParamKey": { "type": "string" },
-            "orientationMode": { "enum": ["None", "PresenterForward"] },
+            "orientationMode": { "enum": ["None", "PresenterForward", "ParamRadians", "ParamDegrees"] },
             "orientationParamKey": { "type": "string" },
             "orientationOffsetRad": { "type": "number" },
             "orientationLengthPx": { "type": "number" }

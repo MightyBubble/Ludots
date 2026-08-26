@@ -1,6 +1,6 @@
 # 行为 BehaviorKind 逐条
 
-BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者写在 behavior 的 `kind` + 同名小写载荷对象；行为可运行时激活/停用。总目录见 [README.md](README.md)。铁匠铺 showcase（preset `presenter_blacksmith_showcase_raylib`）覆盖其中大部分行为的全链路演示。
+BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者写在 behavior 的 `kind` + 同名小写载荷对象；行为可运行时激活/停用。总目录见 [README.md](README.md)。**逐条学习以 L1 单能力入口为准**；铁匠铺（preset `presenter_blacksmith_showcase_raylib`）只作 L3 故事集成巡演，不得用来勾选「该行为已单独演示」。翻新合同见 [Presenter 能力演示集体翻新](../../../docs/architecture/presenter-capability-showcase-refresh.md)。
 
 每条在"是什么/怎么写/跑/证据"之后附**标准生产配置**：从真实 mod 文件提取的最小生产形态（含必要上下文字段），块后注明来源路径。配置里的资产 id（如 blacksmith.building.north.intact）是 mod 内语义 id，由该 mod 的 mesh_assets.json / host_assets.json / spline 资产目录解析；sink 键的写入→重发链路见 [param-sink.md](param-sink.md)。
 
@@ -161,7 +161,7 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 - **是什么**：黑板参数驱动材质换装表（区域参数 0=北方黑砖、1=南方红砖这类查表切换）。
 - **怎么写**：`material`（`baseMaterialId`/`materialSwapParamKey`/`swapTable`）。
-- **跑/证据**：preset `engine_raylib_material_binding`（材质实例链+自发光）、`blacksmith_test_raylib`（区域砖色查表）。注意：铁匠铺 showcase 的"区域砖色"实际走 AssetBinding 的 assetSwapTable（整资产换装），Material 行为（只换材质不换资产）的生产形态在 blacksmith_test 夹具 mod。
+- **跑/证据**：L1 preset `capability_standard_presenter_material_behavior_showcase_raylib`（Material BehaviorKind 作者路径）；夹具 `blacksmith_test_raylib`。注意：画廊 `engine_raylib_material_binding` 是材质实例/自发光课，**不是**本 BehaviorKind 的作者证明。铁匠铺 showcase 的「区域砖色」实际常走 AssetBinding 的 assetSwapTable（整资产换装），与本行为（只换材质）不同通道。
 
 标准生产配置（区域参数 0=黑砖 1=红砖；同定义 body 槽 AssetBinding 用 materialParamKey 引用同一个 region 参数做实例级材质直推）：
 
@@ -341,4 +341,32 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 }
 ```
 
-来源：字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:753-757`；装载合同测试 `src/Tests/PresentationTests/Rendering/InstancedBatchContractTests.cs`。
+来源：字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:753-757`；装载合同测试 `src/Tests/PresentationTests/Rendering/InstancedBatchContractTests.cs`；作者装载夹具 preset `instanced_batch_demo_raylib`（`InstancedBatchDemoMod`）。引擎画廊 `engine_raylib_instancing` 是合批渲染课，**不是**本 BehaviorKind 的唯一作者证明。
+
+### TrailMesh — 刀光轨迹
+
+- **是什么**：行为激活期间按间隔采样刀刃 base/tip 世界坐标，写入 `TrailMeshBuffer`；停用后存量样本按寿命淡出。采样语义与画廊 `slash_trail` 共用 `TrailSampleHistory`，但**作者路径必须写本 BehaviorKind**。
+- **怎么写**：`trailMesh`（`baseOffset`/`tipOffset`/`maxSamples`/`sampleIntervalSeconds`/`sampleLifetimeSeconds`/`headColor`/`tailColor`）。
+- **跑**：L1 preset `capability_standard_presenter_trailmesh_showcase_raylib`（presenters.json 作者路径）；L4 渲染画廊 `engine_raylib_slash_trail` 只证渲染器，目录不得把它当作本行为的作者证明。
+- **证据**：能力翻新合同见 `docs/architecture/presenter-capability-showcase-refresh.md`；画廊页 [挥砍的刀光弧线](../engine-gallery-wiki/slash_trail.md)。
+
+标准生产配置（行为默认关闭，由 ActivateBehavior / activationCondition 点亮；同定义通常还有 AssetBinding 刀身）：
+
+```jsonc
+{
+  "slot": "trail",
+  "kind": "TrailMesh",
+  "activeByDefault": false,
+  "trailMesh": {
+    "baseOffset": [0, 0, 0.1],
+    "tipOffset": [0, 0, 1.2],
+    "maxSamples": 20,
+    "sampleIntervalSeconds": 0.012,
+    "sampleLifetimeSeconds": 0.35,
+    "headColor": [0.7, 0.9, 1.0, 0.9],
+    "tailColor": [0.2, 0.4, 1.0, 0.0]
+  }
+}
+```
+
+来源：装载合同 `src/Tests/PresentationTests/Presenter/PresenterTrailMeshConfigTests.cs`；运行时写入方 `PresenterBehaviorSystem` → `TrailMeshRuntime`。

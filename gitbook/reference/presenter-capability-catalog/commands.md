@@ -59,8 +59,8 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 - **做什么**：递归销毁单个 presenter 实例（子树先销毁），立即回收。
 - **authoring**：`kind: "DestroyPresenter"`，路由到事件命中的现存实例（ExistingInstances）。
 - **在哪执行**：PresenterRuntimeSystem switch（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:95-97`）直接调 `Destroy`。
-- **现有演示与验收**：**0 个 mod 使用**；仅有单测锁定语义（`src/Tests/PresentationTests/Presenter/PresenterTreeLifecycleTests.cs:488`）。生产代码的按实体/按 scope 销毁走 DestroyPresenterScope 与 DestroyScopedPresenter。
-- **缺口状态**：注意——架构文档 [Presenter-as-Actor](../../architecture/presenter-as-actor-architecture.md) §9.2（:600-617）描述的 Deferred/死亡动画两段式销毁是**未实现的设计稿**；当前实现为立即销毁，无 DestroyMode/PendingDestroy。
+- **现有演示与验收**：preset `capability_standard_presenter_command_showcase_raylib`（含 DestroyPresenter 路由销毁）；单测 `PresenterTreeLifecycleTests`。
+- **缺口状态**：架构文档 [Presenter-as-Actor](../../architecture/presenter-as-actor-architecture.md) §9.2 描述的 Deferred/死亡动画两段式销毁是**未实现的设计稿**；当前实现为立即销毁，无 DestroyMode/PendingDestroy。
 
 ### DestroyPresenterScope
 
@@ -151,16 +151,16 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 - **做什么**：对目标 presenter 的指定**资产槽位**做一次**同步资产写入**——在指令执行内当场重新 emit 该 AssetBinding（不等下一帧 dirty 周期），读取黑板当前值写入资产属性。全程结构化审计：accepted / rejected 各留一条日志，拒绝原因枚举八种（目标实例缺失、定义未注册、槽位越界、槽位非资产槽、槽位已停用、lane 上无当前值、lane 类型不符、emit 组件缺失/写入被抑制）。用途：外部系统改了资产侧状态后让画面立即反映（#1091）。
 - **authoring**：`kind: "SinkParamToAsset"` + `targetBehaviorSlot`（语义字符串槽位名，须是 AssetBinding 槽且处于激活）+ `paramKey`/`paramLane`（读取黑板**当前值**所在的 lane，值必须已存在）；可选 `definitionId`/`scopeTag`/`scopeSource` 定位；路由 SingleRuntime。
 - **在哪执行**：`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs` 的 `HandleSinkParamToAsset`（目标解析 → 槽位/lane 校验 → 同步 emit → 审计日志）。
-- **现有演示与验收**：preset `capability_standard_presenter_command_showcase_raylib` B 站「灯柱参数 sink」第 4 根对照柱（不写值只刷新）；单测 `src/Tests/PresentationTests/Presenter/PresenterSinkParamToAssetTests.cs`。
-- **缺口状态**：无缺口（#1091 实现已合入 main）。
+- **现有演示与验收**：preset `capability_standard_presenter_command_showcase_raylib` B 站「灯柱参数 sink」第 4 根对照柱：按钮只发 `pcmd.lamp.refresh` 事件，`pcmd.field_director` 规则编译为 `SinkParamToAsset`；单测 `PresenterSinkParamToAssetTests.cs`。
+- **缺口状态**：无缺口（#1091 实现已合入；演示为数据规则路径）。
 
 ### InitializeTransform
 
 - **做什么**：把 presenter 世界变换强制重同步为 owner entity 当前 VisualTransform（+定义的 anchor offset）；用于 owner 变更后的强制对齐——常规跟随由 PresenterEntityTransformSyncSystem 每帧自动做，此指令是事件驱动的显式重同步入口。
 - **authoring**：`kind: "InitializeTransform"`，路由 ExistingInstances；无载荷。
 - **在哪执行**：PresenterRuntimeSystem → `HandleInitializeTransform`（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:412-427`）→ `InitializeTransform`（`src/Core/Presentation/Presenters/PresenterEntityRuntime.cs:470-508`，CreateHierarchy 建树时内部自动调用一次）。
-- **现有演示与验收**：0 处 authoring、0 条文档；语义由 CreateHierarchy 内部调用路径与单测锁定。
-- **缺口状态**：纯手动重同步入口，当前无生产作者面用例。
+- **现有演示与验收**：preset `capability_standard_presenter_command_showcase_raylib` D 站传送门；语义亦由 CreateHierarchy 内部调用路径与单测锁定。
+- **缺口状态**：无缺口（可玩作者面已覆盖）。
 
 ### TimerSet
 
@@ -168,7 +168,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 - **authoring**：`timerName` + `durationSeconds`（可选 `durationRangeSeconds`），路由 ExistingInstances。
 - **在哪执行**：PresenterRuntimeSystem → PresenterTimerTable.Set（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:170-182`）；到时发布见 `src/Core/Engine/GameEngine.cs:2131-2133`。
 - **现有演示与验收**：fixture `mods/fixtures/presenter_timer/PresenterTimerTestMod/assets/Presentation/presenters.json` + 验收 `artifacts/acceptance/presenter-timer/battle-report.md`（受击闪黄时序：TimerSet 0.3s → TimerExpired 复原；TimerKill "*" 打断）；可玩 showcase = preset `capability_standard_presenter_command_showcase_raylib` A 站「闪烁广场」。
-- **缺口状态**：契约与验收就绪，尚无可玩 showcase preset。
+- **缺口状态**：无缺口（契约、fixture 验收与可玩 showcase A 站齐备）。
 
 ```jsonc
 {
@@ -185,7 +185,7 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 - **authoring**：`timerName`（`*` 或具体名），路由 ExistingInstances。
 - **在哪执行**：PresenterRuntimeSystem → PresenterTimerTable.Kill/KillAll（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:184-198`）。
 - **现有演示与验收**：与 TimerSet 同 fixture 同验收（Suppressed tag 丢失 → TimerKill "*" 打断闪黄，battle-report 的 taglost_interrupt_no_expiry 断言）。
-- **缺口状态**：同 TimerSet——契约就绪，可玩 showcase = preset `capability_standard_presenter_command_showcase_raylib` A 站「闪烁广场」。
+- **缺口状态**：无缺口（与 TimerSet 同 showcase A 站）。
 
 ```jsonc
 {

@@ -5570,13 +5570,13 @@
       "id": "presenter_blacksmith",
       "path": "mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod",
       "projectPath": "PresenterBlacksmithShowcaseMod.csproj",
-      "title": "铁匠铺演示",
-      "summary": "可玩的一座铁匠铺：左侧开工/昼夜/拆铺。同一场标左右两块金色方块大小不同；干活的烟跟开工走，拆铺整棵一起没。完整诊断用 LUDOTS_BLACKSMITH_FORCE_PANEL。",
+      "title": "铁匠铺集成巡演",
+      "summary": "L3 故事集成巡演：开工/昼夜/拆铺串起多条 presenter 能力。逐条学习请用能力目录的 L1 单能力入口，不要用本演示勾选「某 Behavior/Command 已单独验收」。",
       "tier": "T3",
-      "category": "stress",
+      "category": "integration",
       "binding": "presenter_blacksmith_showcase",
       "preset": "presenter_blacksmith_showcase_raylib",
-      "docsPath": "gitbook/architecture/presenter-raylib-uat.md",
+      "docsPath": "docs/architecture/presenter-capability-showcase-refresh.md",
       "readmePath": null,
       "acceptanceTest": null,
       "artifactDir": null,
@@ -5584,8 +5584,10 @@
       "status": "active",
       "tags": [
         "presenter",
-        "rendering"
-      ]
+        "rendering",
+        "integration-tour"
+      ],
+      "notes": "大杂烩降级为集成巡演；逐条 SSOT 见 presenter-capability-catalog。"
     },
     {
       "id": "presenter_blacksmith_large_world_entry",
