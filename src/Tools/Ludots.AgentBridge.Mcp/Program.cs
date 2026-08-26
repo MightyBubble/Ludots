@@ -1,20 +1,16 @@
-using System.Globalization;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.AgentBridge;
 
 // Ludots Agent Debug Bridge — MCP stdio adapter.
 // Speaks MCP (JSON-RPC 2.0, newline-delimited stdio) on the agent side and
-// forwards to the in-process bridge HTTP endpoint. Zero external dependencies.
+// forwards to the in-process bridge HTTP endpoint.
 //
-// Bridge address resolution order:
-//   1. argv[0] (e.g. http://127.0.0.1:47921)
-//   2. LUDOTS_AGENT_BRIDGE_URL
-//   3. discovery file from LUDOTS_AGENT_BRIDGE_DISCOVERY (path to session.json)
-//   4. http://127.0.0.1:47921 (AgentBridgeConfig.DefaultPort)
+// Bridge address resolution: argv[0] > LUDOTS_AGENT_BRIDGE_URL >
+// LUDOTS_AGENT_BRIDGE_DISCOVERY > http://127.0.0.1:47921
+// (same SSOT as CLI / Inspector via AgentBridgeEndpoint).
 
-string baseUrl = ResolveBaseUrl(args);
+string baseUrl = AgentBridgeEndpoint.Resolve(args.Length > 0 ? args[0] : null);
 using var http = new HttpClient { BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/") };
 http.Timeout = TimeSpan.FromSeconds(30);
 
@@ -31,7 +27,7 @@ while ((line = Console.In.ReadLine()) != null)
     {
         root = JsonNode.Parse(line);
     }
-    catch (JsonException)
+    catch (System.Text.Json.JsonException)
     {
         SendError(null, -32700, "Parse error");
         continue;
@@ -41,8 +37,6 @@ while ((line = Console.In.ReadLine()) != null)
 
     string? method = request["method"] is JsonValue m && m.TryGetValue(out string? ms) ? ms : null;
     JsonNode? id = request["id"]?.DeepClone();
-
-    // Notifications (no id) never get a response.
     bool isNotification = id == null;
 
     try
@@ -175,82 +169,4 @@ static void Log(string message)
 {
     Console.Error.WriteLine($"[ludots-mcp] {message}");
     Console.Error.Flush();
-}
-
-static string ResolveBaseUrl(string[] argv)
-{
-    if (argv.Length > 0 && !string.IsNullOrWhiteSpace(argv[0])) return argv[0];
-
-    string? env = Environment.GetEnvironmentVariable("LUDOTS_AGENT_BRIDGE_URL");
-    if (!string.IsNullOrWhiteSpace(env)) return env;
-
-    string? discovery = Environment.GetEnvironmentVariable("LUDOTS_AGENT_BRIDGE_DISCOVERY");
-    if (!string.IsNullOrWhiteSpace(discovery))
-    {
-        try
-        {
-            string? resolved = ResolveDiscoveryPort(discovery);
-            if (resolved != null)
-            {
-                return resolved;
-            }
-        }
-        catch
-        {
-            // fall through to default
-        }
-    }
-
-    return "http://127.0.0.1:47921";
-}
-
-// Discovery accepts either a session file or a directory: a directory is scanned
-// for per-pid session files (sessions/<pid>.json), newest start wins. Per-pid
-// files are the multi-instance format; a stale single session.json is ignored
-// when the directory form is present.
-static string? ResolveDiscoveryPort(string path)
-{
-    if (File.Exists(path))
-    {
-        return ReadPort(File.ReadAllText(path));
-    }
-
-    if (!Directory.Exists(path))
-    {
-        return null;
-    }
-
-    string sessionsDir = Path.Combine(path, "sessions");
-    string[] candidates = Directory.Exists(sessionsDir)
-        ? Directory.GetFiles(sessionsDir, "*.json")
-        : Directory.GetFiles(path, "*.json");
-    string? best = null;
-    DateTime bestStart = DateTime.MinValue;
-    foreach (string file in candidates)
-    {
-        try
-        {
-            var session = JsonNode.Parse(File.ReadAllText(file)) as JsonObject;
-            string? started = session?["startedAtUtc"]?.GetValue<string>();
-            if (started != null && DateTime.TryParse(started, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime when) && when > bestStart)
-            {
-                bestStart = when;
-                best = ReadPort(File.ReadAllText(file));
-            }
-        }
-        catch
-        {
-            // unreadable candidate: skip
-        }
-    }
-
-    return best;
-}
-
-static string? ReadPort(string json)
-{
-    var session = JsonNode.Parse(json) as JsonObject;
-    return session?["port"] is JsonValue port && port.TryGetValue(out int p)
-        ? $"http://127.0.0.1:{p}"
-        : null;
 }
