@@ -20,6 +20,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Behavior Tree Arena | `capability_standard_behavior_tree_arena` | `mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod` | **可读剧本**：绿卫兵沿黄线巡逻；红敌人出现就追打（追击线）；消失后归位。灰点带=后台万人思考；思考波 &lt;5ms |
 | HFSM Sentry Arena | `capability_standard_hfsm_sentry_arena` | `mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod` | **可读剧本**：门岗线哨兵 Idle→警戒→交战→撤退；入侵者来回走；交战生命周期 Script |
 | Night Raid 夜袭三波 | `map_trigger_night_raid` | `mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod` | **可读剧本**：英雄走进夜袭圈开袭（wave=1）→清完第一波跨思考波进第二波（wave=2）→Boss 阵亡翻阶段（phase=2）并开出胜利面板。关卡流全部在地图 JSON + 一张 TriggerGraph 里，mod 只带表现；袭击队由地图数据预置（触发图方言只放行纯算子，还没有刷怪算子） |
+| 荆扬过境 | `field_jing_yang_transit` | `mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod` | **可读剧本**：西荆东扬两色地；英雄从扬走入荆，字幕/面板报 `FieldRegion` 进出；区内名单同拍对调。层/区域 key 全是 mod 明文，引擎无业务词 |
 | Ability Graph Sandbox | `capability_standard_ability_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod` | **可读剧本**：巡逻查一圈找范围目标，给命中对象挂状态、加好感，并把状态牌读成面板 token |
 | Graph Op 单节点画廊 | `capability_standard_graph_op_{Op}` | `graph_op_entries/CapabilityStandardGraphOp{Op}EntryMod` | **玩家入口**：每个可执行图节点单独一场短剧 + 单独录像。共用宿主 `CapabilityStandardGraphOpsNodeGalleryMod`。启动器条目由 `scripts/generate-graph-op-node-galleries.py` 从 vignette 生成。没有按家族打包的大杂烩房间。 |
 | Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **单独短剧**：左巡逻 / 右门岗，串一条故事（BT + HFSM 两种宿主；关卡导演已退役，地图级反应式关卡流见「夜袭三波」） |
@@ -45,6 +46,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_behavior_tree_arena' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_hfsm_sentry_arena' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$map_trigger_night_raid' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$field_jing_yang_transit' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_ability_graph_sandbox' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_op_AddFloat' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_behavior_integration' --adapter raylib
@@ -69,6 +71,7 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_behavior_tree_arena_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_hfsm_sentry_arena_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:map_trigger_night_raid_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:field_jing_yang_transit_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_ability_graph_sandbox_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_op_AddFloat_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_behavior_integration_raylib'

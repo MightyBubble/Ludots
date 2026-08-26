@@ -581,6 +581,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "field_jing_yang_transit_raylib",
+      "name": "Field Jing Yang Transit Raylib",
+      "selectors": [
+        "$field_jing_yang_transit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_ability_graph_sandbox_raylib",
       "name": "Capability Standard Ability Graph Sandbox Raylib",
       "selectors": [

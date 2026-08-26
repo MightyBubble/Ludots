@@ -5083,6 +5083,27 @@
       "notes": "波次 raider 不再预置于地图；RegionEntered 触发 wave1，EntityAliveCountChanged(team 2, cross_below 0) 触发 wave2，累计 kill_threshold=5 后由 SpawnTemplate 图 op（op 447）在 boss_camp 锚点生成 Boss；阶段链与胜利面板全数据驱动。"
     },
     {
+      "id": "field_jing_yang_transit",
+      "path": "mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod",
+      "title": "荆扬过境",
+      "summary": "西荆东扬两色地；英雄从扬走入荆，字幕/面板报 FieldRegion 进出；区内名单同拍对调。层/区域 key 全是 mod 明文，引擎无业务词。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-region",
+        "showcase"
+      ],
+      "binding": "field_jing_yang_transit",
+      "preset": "field_jing_yang_transit_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "FieldJingYangTransitAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "night_raid_showcase",
       "path": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
       "projectPath": "NightRaidShowcaseMod.csproj",

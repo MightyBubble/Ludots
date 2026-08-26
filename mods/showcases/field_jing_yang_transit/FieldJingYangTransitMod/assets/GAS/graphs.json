@@ -1,0 +1,207 @@
+[
+  {
+    "id": "Graph.FieldJingYang.Flow",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "load_scope",
+        "once": true
+      },
+      {
+        "label": "on_enter_yang",
+        "event": "FieldRegionEntered",
+        "start": "enter_yang_scope",
+        "refire": "restart",
+        "filters": { "region": "yang" }
+      },
+      {
+        "label": "on_enter_jing",
+        "event": "FieldRegionEntered",
+        "start": "enter_jing_scope",
+        "refire": "restart",
+        "filters": { "region": "jing" }
+      },
+      {
+        "label": "on_exit_yang",
+        "event": "FieldRegionExited",
+        "start": "exit_yang_scope",
+        "refire": "restart",
+        "filters": { "region": "yang" }
+      },
+      {
+        "label": "on_exit_jing",
+        "event": "FieldRegionExited",
+        "start": "exit_jing_scope",
+        "refire": "restart",
+        "filters": { "region": "jing" }
+      }
+    ],
+    "nodes": [
+      { "id": "load_scope", "op": "LoadExplicitTarget" },
+      { "id": "load_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "write_stage_one", "op": "WriteMapVarInt", "var": "stage" },
+      {
+        "id": "progress_panel",
+        "op": "CreatePanel",
+        "panelType": "panel.field_jing_yang.progress",
+        "panelAnchor": "screen.topLeft"
+      },
+      { "id": "progress_show", "op": "ShowPanel", "panelType": "panel.field_jing_yang.progress" },
+      { "id": "load_ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "load_done", "op": "HaltReturnInt" },
+
+      { "id": "enter_yang_scope", "op": "LoadExplicitTarget" },
+      { "id": "enter_yang_code", "op": "ConstInt", "intValue": 2 },
+      { "id": "write_region_yang", "op": "WriteMapVarInt", "var": "region_code" },
+      { "id": "write_last_enter_yang", "op": "WriteMapVarInt", "var": "last_enter_code" },
+      { "id": "enter_yang_inc_src", "op": "ReadMapVarInt", "var": "enter_count" },
+      { "id": "enter_yang_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "enter_yang_sum", "op": "AddInt" },
+      { "id": "write_enter_yang", "op": "WriteMapVarInt", "var": "enter_count" },
+      { "id": "stage_yang", "op": "ConstInt", "intValue": 2 },
+      { "id": "write_stage_yang", "op": "WriteMapVarInt", "var": "stage" },
+      { "id": "enter_yang_ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "enter_yang_done", "op": "HaltReturnInt" },
+
+      { "id": "enter_jing_scope", "op": "LoadExplicitTarget" },
+      { "id": "enter_jing_code", "op": "ConstInt", "intValue": 1 },
+      { "id": "write_region_jing", "op": "WriteMapVarInt", "var": "region_code" },
+      { "id": "write_last_enter_jing", "op": "WriteMapVarInt", "var": "last_enter_code" },
+      { "id": "enter_jing_inc_src", "op": "ReadMapVarInt", "var": "enter_count" },
+      { "id": "enter_jing_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "enter_jing_sum", "op": "AddInt" },
+      { "id": "write_enter_jing", "op": "WriteMapVarInt", "var": "enter_count" },
+      { "id": "stage_jing", "op": "ConstInt", "intValue": 3 },
+      { "id": "write_stage_jing", "op": "WriteMapVarInt", "var": "stage" },
+      { "id": "enter_jing_ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "enter_jing_done", "op": "HaltReturnInt" },
+
+      { "id": "exit_yang_scope", "op": "LoadExplicitTarget" },
+      { "id": "exit_yang_code", "op": "ConstInt", "intValue": 2 },
+      { "id": "write_last_exit_yang", "op": "WriteMapVarInt", "var": "last_exit_code" },
+      { "id": "exit_yang_inc_src", "op": "ReadMapVarInt", "var": "exit_count" },
+      { "id": "exit_yang_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "exit_yang_sum", "op": "AddInt" },
+      { "id": "write_exit_yang", "op": "WriteMapVarInt", "var": "exit_count" },
+      { "id": "exit_yang_ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "exit_yang_done", "op": "HaltReturnInt" },
+
+      { "id": "exit_jing_scope", "op": "LoadExplicitTarget" },
+      { "id": "exit_jing_code", "op": "ConstInt", "intValue": 1 },
+      { "id": "write_last_exit_jing", "op": "WriteMapVarInt", "var": "last_exit_code" },
+      { "id": "exit_jing_inc_src", "op": "ReadMapVarInt", "var": "exit_count" },
+      { "id": "exit_jing_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "exit_jing_sum", "op": "AddInt" },
+      { "id": "write_exit_jing", "op": "WriteMapVarInt", "var": "exit_count" },
+      { "id": "exit_jing_ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "exit_jing_done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "load_scope", "fromPort": "next", "to": "load_one" },
+      { "from": "load_one", "fromPort": "next", "to": "write_stage_one" },
+      { "from": "write_stage_one", "fromPort": "next", "to": "progress_panel" },
+      { "from": "progress_panel", "fromPort": "next", "to": "progress_show" },
+      { "from": "progress_show", "fromPort": "next", "to": "load_ok" },
+      { "from": "load_ok", "fromPort": "next", "to": "load_done" },
+
+      { "from": "enter_yang_scope", "fromPort": "next", "to": "enter_yang_code" },
+      { "from": "enter_yang_code", "fromPort": "next", "to": "write_region_yang" },
+      { "from": "write_region_yang", "fromPort": "next", "to": "write_last_enter_yang" },
+      { "from": "write_last_enter_yang", "fromPort": "next", "to": "enter_yang_inc_src" },
+      { "from": "enter_yang_inc_src", "fromPort": "next", "to": "enter_yang_one" },
+      { "from": "enter_yang_one", "fromPort": "next", "to": "enter_yang_sum" },
+      { "from": "enter_yang_sum", "fromPort": "next", "to": "write_enter_yang" },
+      { "from": "write_enter_yang", "fromPort": "next", "to": "stage_yang" },
+      { "from": "stage_yang", "fromPort": "next", "to": "write_stage_yang" },
+      { "from": "write_stage_yang", "fromPort": "next", "to": "enter_yang_ok" },
+      { "from": "enter_yang_ok", "fromPort": "next", "to": "enter_yang_done" },
+
+      { "from": "enter_jing_scope", "fromPort": "next", "to": "enter_jing_code" },
+      { "from": "enter_jing_code", "fromPort": "next", "to": "write_region_jing" },
+      { "from": "write_region_jing", "fromPort": "next", "to": "write_last_enter_jing" },
+      { "from": "write_last_enter_jing", "fromPort": "next", "to": "enter_jing_inc_src" },
+      { "from": "enter_jing_inc_src", "fromPort": "next", "to": "enter_jing_one" },
+      { "from": "enter_jing_one", "fromPort": "next", "to": "enter_jing_sum" },
+      { "from": "enter_jing_sum", "fromPort": "next", "to": "write_enter_jing" },
+      { "from": "write_enter_jing", "fromPort": "next", "to": "stage_jing" },
+      { "from": "stage_jing", "fromPort": "next", "to": "write_stage_jing" },
+      { "from": "write_stage_jing", "fromPort": "next", "to": "enter_jing_ok" },
+      { "from": "enter_jing_ok", "fromPort": "next", "to": "enter_jing_done" },
+
+      { "from": "exit_yang_scope", "fromPort": "next", "to": "exit_yang_code" },
+      { "from": "exit_yang_code", "fromPort": "next", "to": "write_last_exit_yang" },
+      { "from": "write_last_exit_yang", "fromPort": "next", "to": "exit_yang_inc_src" },
+      { "from": "exit_yang_inc_src", "fromPort": "next", "to": "exit_yang_one" },
+      { "from": "exit_yang_one", "fromPort": "next", "to": "exit_yang_sum" },
+      { "from": "exit_yang_sum", "fromPort": "next", "to": "write_exit_yang" },
+      { "from": "write_exit_yang", "fromPort": "next", "to": "exit_yang_ok" },
+      { "from": "exit_yang_ok", "fromPort": "next", "to": "exit_yang_done" },
+
+      { "from": "exit_jing_scope", "fromPort": "next", "to": "exit_jing_code" },
+      { "from": "exit_jing_code", "fromPort": "next", "to": "write_last_exit_jing" },
+      { "from": "write_last_exit_jing", "fromPort": "next", "to": "exit_jing_inc_src" },
+      { "from": "exit_jing_inc_src", "fromPort": "next", "to": "exit_jing_one" },
+      { "from": "exit_jing_one", "fromPort": "next", "to": "exit_jing_sum" },
+      { "from": "exit_jing_sum", "fromPort": "next", "to": "write_exit_jing" },
+      { "from": "write_exit_jing", "fromPort": "next", "to": "exit_jing_ok" },
+      { "from": "exit_jing_ok", "fromPort": "next", "to": "exit_jing_done" }
+    ],
+    "valueEdges": [
+      { "from": "load_one", "fromPort": "value", "to": "write_stage_one", "toPort": "value" },
+      { "from": "load_ok", "fromPort": "value", "to": "load_done", "toPort": "value" },
+
+      { "from": "enter_yang_code", "fromPort": "value", "to": "write_region_yang", "toPort": "value" },
+      { "from": "enter_yang_code", "fromPort": "value", "to": "write_last_enter_yang", "toPort": "value" },
+      { "from": "enter_yang_inc_src", "fromPort": "value", "to": "enter_yang_sum", "toPort": "a" },
+      { "from": "enter_yang_one", "fromPort": "value", "to": "enter_yang_sum", "toPort": "b" },
+      { "from": "enter_yang_sum", "fromPort": "value", "to": "write_enter_yang", "toPort": "value" },
+      { "from": "stage_yang", "fromPort": "value", "to": "write_stage_yang", "toPort": "value" },
+      { "from": "enter_yang_ok", "fromPort": "value", "to": "enter_yang_done", "toPort": "value" },
+
+      { "from": "enter_jing_code", "fromPort": "value", "to": "write_region_jing", "toPort": "value" },
+      { "from": "enter_jing_code", "fromPort": "value", "to": "write_last_enter_jing", "toPort": "value" },
+      { "from": "enter_jing_inc_src", "fromPort": "value", "to": "enter_jing_sum", "toPort": "a" },
+      { "from": "enter_jing_one", "fromPort": "value", "to": "enter_jing_sum", "toPort": "b" },
+      { "from": "enter_jing_sum", "fromPort": "value", "to": "write_enter_jing", "toPort": "value" },
+      { "from": "stage_jing", "fromPort": "value", "to": "write_stage_jing", "toPort": "value" },
+      { "from": "enter_jing_ok", "fromPort": "value", "to": "enter_jing_done", "toPort": "value" },
+
+      { "from": "exit_yang_code", "fromPort": "value", "to": "write_last_exit_yang", "toPort": "value" },
+      { "from": "exit_yang_inc_src", "fromPort": "value", "to": "exit_yang_sum", "toPort": "a" },
+      { "from": "exit_yang_one", "fromPort": "value", "to": "exit_yang_sum", "toPort": "b" },
+      { "from": "exit_yang_sum", "fromPort": "value", "to": "write_exit_yang", "toPort": "value" },
+      { "from": "exit_yang_ok", "fromPort": "value", "to": "exit_yang_done", "toPort": "value" },
+
+      { "from": "exit_jing_code", "fromPort": "value", "to": "write_last_exit_jing", "toPort": "value" },
+      { "from": "exit_jing_inc_src", "fromPort": "value", "to": "exit_jing_sum", "toPort": "a" },
+      { "from": "exit_jing_one", "fromPort": "value", "to": "exit_jing_sum", "toPort": "b" },
+      { "from": "exit_jing_sum", "fromPort": "value", "to": "write_exit_jing", "toPort": "value" },
+      { "from": "exit_jing_ok", "fromPort": "value", "to": "exit_jing_done", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.FieldJingYang.Panel.Values",
+    "kind": "Query",
+    "entry": "stage_rd",
+    "nodes": [
+      { "id": "stage_rd", "op": "ReadMapVarInt", "var": "stage" },
+      { "id": "region_rd", "op": "ReadMapVarInt", "var": "region_code" },
+      { "id": "enter_rd", "op": "ReadMapVarInt", "var": "enter_count" },
+      { "id": "exit_rd", "op": "ReadMapVarInt", "var": "exit_count" }
+    ],
+    "controlEdges": [
+      { "from": "stage_rd", "fromPort": "next", "to": "region_rd" },
+      { "from": "region_rd", "fromPort": "next", "to": "enter_rd" },
+      { "from": "enter_rd", "fromPort": "next", "to": "exit_rd" }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      { "id": "stage", "destination": "Summary", "type": "Int", "source": "stage_rd", "key": "field.jingyang.panel.stage" },
+      { "id": "regionCode", "destination": "Summary", "type": "Int", "source": "region_rd", "key": "field.jingyang.panel.regionCode" },
+      { "id": "enterCount", "destination": "Summary", "type": "Int", "source": "enter_rd", "key": "field.jingyang.panel.enterCount" },
+      { "id": "exitCount", "destination": "Summary", "type": "Int", "source": "exit_rd", "key": "field.jingyang.panel.exitCount" }
+    ]
+  }
+]
