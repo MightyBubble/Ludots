@@ -429,5 +429,52 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<ChildOf>(child).Parent, Is.EqualTo(parent));
             Assert.That(world.Has<AttachedLocalPose>(child), Is.True);
         }
+
+        [Test]
+        public void GasEffectPath_AttachThenDetach_CommitsRealRelationPoseAndAuthority()
+        {
+            // Cucumber: 玩家通过效果触发上车/下车——断言真实关系与位姿，不是日志。
+            using World world = World.Create();
+            Entity vehicle = world.Create(
+                WorldPositionCm.FromCm(2000, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(2000, 0) },
+                new FacingDirection { AngleRad = 0f });
+            Entity rider = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.Zero },
+                new PoseAuthority { Value = PoseAuthorityKind.Nav });
+            var arbiter = new PoseAuthorityArbiter();
+            using var commitSystem = new PoseAuthorityCommitSystem(world, arbiter);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world, null, null, null, null, attributeEntityCapacity: 4, poseAuthorityArbiter: arbiter);
+
+            AttachedLocalPose seat = OffsetPose(0, -140);
+            transaction.Begin();
+            transaction.StageAttach(rider, vehicle, seat);
+            transaction.Commit();
+            commitSystem.Update(1f / 60f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<ChildOf>(rider).Parent, Is.EqualTo(vehicle));
+                Assert.That(world.Get<AttachedLocalPose>(rider).OffsetCm, Is.EqualTo(Fix64Vec2.FromInt(0, -140)));
+                Assert.That(world.Get<WorldPositionCm>(rider).Value, Is.EqualTo(Fix64Vec2.FromInt(2000, -140)));
+                Assert.That(world.Get<PoseAuthority>(rider).Value, Is.EqualTo(PoseAuthorityKind.Attached));
+            });
+
+            transaction.Begin();
+            transaction.StageDetach(rider, DetachPlacement.ParentPerimeterRing, 260);
+            transaction.Commit();
+            commitSystem.Update(1f / 60f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Has<ChildOf>(rider), Is.False);
+                Assert.That(world.Has<AttachedLocalPose>(rider), Is.False);
+                Assert.That(world.Get<PoseAuthority>(rider).Value, Is.EqualTo(PoseAuthorityKind.Nav));
+                Assert.That(world.Get<WorldPositionCm>(rider).Value.X.ToFloat(), Is.EqualTo(2260f).Within(1f));
+                Assert.That(world.Get<WorldPositionCm>(rider).Value.Y.ToFloat(), Is.EqualTo(0f).Within(1f));
+            });
+        }
     }
 }
