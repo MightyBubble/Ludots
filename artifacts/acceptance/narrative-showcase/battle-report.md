@@ -3,7 +3,7 @@
 ## Header
 - scenario: `narrative-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-08-26T01:28:58.9763842+00:00`
+- execution_timestamp_utc: `2026-08-26T02:13:47.6756554+00:00`
 - map: `narrative_showcase_hub`
 - clock: `fixed 1/60s`
 
@@ -38,22 +38,26 @@
 - `artifacts/acceptance/narrative-showcase/5w1h.md`
 - `artifacts/acceptance/narrative-showcase/screens/001_map_loaded.png`
 - `artifacts/acceptance/narrative-showcase/screens/002_intro_complete.png`
-- `artifacts/acceptance/narrative-showcase/screens/003_briefing_branch_complete.png`
-- `artifacts/acceptance/narrative-showcase/screens/004_shrine_interacted.png`
-- `artifacts/acceptance/narrative-showcase/screens/005_beast_spawned.png`
-- `artifacts/acceptance/narrative-showcase/screens/006_beast_pressured.png`
-- `artifacts/acceptance/narrative-showcase/screens/007_beast_defeated.png`
-- `artifacts/acceptance/narrative-showcase/screens/008_mercy_ending.png`
+- `artifacts/acceptance/narrative-showcase/screens/003_world_bubble_projected.png`
+- `artifacts/acceptance/narrative-showcase/screens/004_briefing_branch_complete.png`
+- `artifacts/acceptance/narrative-showcase/screens/005_shrine_interacted.png`
+- `artifacts/acceptance/narrative-showcase/screens/006_beast_spawned.png`
+- `artifacts/acceptance/narrative-showcase/screens/007_beast_pressured.png`
+- `artifacts/acceptance/narrative-showcase/screens/008_beast_defeated.png`
+- `artifacts/acceptance/narrative-showcase/screens/009_standing_portrait_return.png`
+- `artifacts/acceptance/narrative-showcase/screens/010_mercy_ending.png`
 - `artifacts/acceptance/narrative-showcase/screens/timeline.png`
 
 ## Timeline
 - [T+001] Loaded the narrative showcase hub; HUD mounted and TaskRuntime entered the briefing beat.
 - [T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.
+- [T+003a] World bubble lore reply projected onto the speaker head via IScreenProjector (not a fixed corner panel).
 - [T+003] Took the lore branch via StoryChoice1, wrote MapVariableStore trust/lore, and advanced TaskRuntime into the trial beat.
 - [T+004] Placed Arcweaver near the shrine and started TrialReveal through SequencerRuntime via StoryInteract.
 - [T+005] Skipped the reveal sequence, let the completed callback emit the spawn signal, and observed the beast arrive through the runtime entity queue.
 - [T+006] SkillQ probe did not land in headless (HP stayed 220); continuing with deterministic GAS finisher.
 - [T+007] Finished the encounter through GAS effects; TaskRuntime advanced into the return beat via signal tracking.
+- [T+007a] Return beat opened on story.standing_portrait with a half-screen standing figure for the warden.
 - [T+008] Returned to the elder, unlocked Mercy through lore-gated StoryChoice2, completed TaskRuntime, and received the trigger-driven GAS blessing reward.
 
 ## Outcome
@@ -64,8 +68,8 @@
 - reason: the showcase stayed on `ConfigPipeline`, `DialogueRuntime`, `SequencerRuntime`, `TaskRuntimeService`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.
 
 ## Summary Stats
-- total_actions: `8`
-- snapshots captured: `8`
-- median headless tick: `0.328ms`
-- max headless tick: `136.026ms`
+- total_actions: `10`
+- snapshots captured: `10`
+- median headless tick: `0.390ms`
+- max headless tick: `184.742ms`
 - final_ui_excerpt: `Task Tracker | Ashen Oath | No active objective. | Task, objective, and hint come from TaskRuntime plus showcase config.`

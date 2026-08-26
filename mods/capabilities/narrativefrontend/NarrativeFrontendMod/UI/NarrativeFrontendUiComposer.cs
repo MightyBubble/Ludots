@@ -80,22 +80,21 @@ internal static class NarrativeFrontendUiComposer
         string accent = ColorOrDefault(surface.AccentHex, "#F0C36B");
         string surfaceClass = tailRight ? "story-subtitle-bubble" : "story-dialogue-bubble";
 
-        return Ui.Column(
+        // Card must be Absolute root: Absolute+Column with Height:Auto measures as 0x0 in Flex.
+        return Ui.Card(
                 BuildBubbleTail(background, tailRight),
-                Ui.Card(
-                        BuildEyebrow(surface.Subtitle, accent),
-                        BuildPortraitTitleRow(surface, foreground, accent),
-                        Ui.Text(surface.Body).Class("story-body").FontSize(13f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                        BuildMetaRow(surface, muted, accent))
-                    .Classes(surfaceClass, "story-card")
-                    .Gap(8f)
-                    .Padding(18f)
-                    .Radius(26f)
-                    .Background(background)
-                    .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#49FFFFFF")))
-                    .BoxShadow(0f, 18f, 36f, Color("#44000000"))
-                    .BackdropBlur(10f))
-            .Gap(0f)
+                BuildEyebrow(surface.Subtitle, accent),
+                BuildPortraitTitleRow(surface, foreground, accent),
+                Ui.Text(surface.Body).Class("story-body").FontSize(13f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
+                BuildMetaRow(surface, muted, accent))
+            .Classes(surfaceClass, "story-card")
+            .Gap(8f)
+            .Padding(18f)
+            .Radius(26f)
+            .Background(background)
+            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#49FFFFFF")))
+            .BoxShadow(0f, 18f, 36f, Color("#44000000"))
+            .BackdropBlur(10f)
             .Align(tailRight ? UiAlignItems.End : UiAlignItems.Start);
     }
 

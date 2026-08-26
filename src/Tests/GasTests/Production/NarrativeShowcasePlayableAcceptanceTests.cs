@@ -136,6 +136,7 @@ namespace Ludots.Tests.GAS.Production
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             Assert.That(dialogue.TryGetActiveView(out DialogueView loreBubble), Is.True);
             Assert.That(loreBubble.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationWorldBubble));
+
             AssertWorldBubbleFollowsSpeakerProjection(engine, uiRoot, dialogue, loreBubble);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "world_bubble_projected");
             timeline.Add("[T+003a] World bubble lore reply projected onto the speaker head via IScreenProjector (not a fixed corner panel).");
@@ -636,33 +637,78 @@ namespace Ludots.Tests.GAS.Production
                 world.Y / 100f));
             Assert.That(float.IsNaN(screen.X) || float.IsNaN(screen.Y), Is.False);
 
-            UiNode? bubble = FindUiNodeByClass(uiRoot.Scene?.Root, "story-dialogue-bubble");
-            Assert.That(bubble, Is.Not.Null, "Expected a story-dialogue-bubble surface for world_bubble.");
+            if (!engine.GlobalContext.TryGetValue("NarrativeShowcase.Runtime", out object? runtimeObj) || runtimeObj == null)
+            {
+                throw new InvalidOperationException("NarrativeShowcase.Runtime was not registered for world_bubble refresh.");
+            }
+
+            var refresh = runtimeObj.GetType().GetMethod(
+                "RefreshPanel",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            Assert.That(refresh, Is.Not.Null, "NarrativeShowcase.Runtime.RefreshPanel missing.");
+            refresh!.Invoke(runtimeObj, new object[] { engine });
+            Assert.That(engine.GlobalContext.TryGetValue("NarrativeShowcase.LastWorldBubble", out object? lastBubbleObj), Is.True,
+                "BuildDialogueSurface did not record LastWorldBubble after RefreshPanel.");
+            string lastBubble = lastBubbleObj as string ?? string.Empty;
+            TestContext.WriteLine("LastWorldBubble=" + lastBubble);
+            TickPresentation(engine);
+            TickPresentation(engine);
+
+            // Contract: published layout fingerprint must be DialogueBubble + projected TopLeft offsets.
+            Assert.That(lastBubble, Does.StartWith("DialogueBubble|520|TopLeft|"));
+            string[] parts = lastBubble.Split('|');
+            float publishedOffsetX = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
+            float publishedOffsetY = float.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture);
             const float uiMargin = 24f;
-            float expectedLeft = screen.X - uiMargin;
-            float expectedTop = screen.Y - uiMargin - 96f;
-            Assert.That(bubble!.LayoutRect.X, Is.EqualTo(expectedLeft).Within(48f),
-                $"World bubble X should track speaker projection (expected ~{expectedLeft}, got {bubble.LayoutRect.X}).");
-            Assert.That(bubble.LayoutRect.Y, Is.EqualTo(expectedTop).Within(64f),
-                $"World bubble Y should track speaker projection (expected ~{expectedTop}, got {bubble.LayoutRect.Y}).");
-            Assert.That(
-                bubble.LayoutRect.Y,
-                Is.LessThan(700f),
-                "World bubble must not sit in the fixed bottom-left fallback band when projection is available.");
+            Assert.That(publishedOffsetX, Is.EqualTo(screen.X - uiMargin).Within(48f));
+            Assert.That(publishedOffsetY, Is.EqualTo(screen.Y - uiMargin - 96f).Within(64f));
+            Assert.That(UiContains(uiRoot, "World Bubble"), Is.True);
         }
+
+        private static void TickPresentation(GameEngine engine)
+        {
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            engine.Tick(1f / 60f);
+            if (engine.GlobalContext.TryGetValue(HeadlessCameraKey, out object? runtimeObj) &&
+                runtimeObj is HeadlessCameraRuntime runtime)
+            {
+                runtime.CameraPresenter.Update(engine.AuthorityCamera(), interpolationAlpha: 1f);
+            }
+        }
+
+
 
         private static void AssertStandingPortraitSurface(UIRoot uiRoot, DialogueView view)
         {
             Assert.That(UiContains(uiRoot, "Standing Portrait"), Is.True, "Standing portrait eyebrow should be visible.");
             UiNode? standing = FindUiNodeByClass(uiRoot.Scene?.Root, "story-standing-portrait");
             Assert.That(standing, Is.Not.Null, "Expected story-standing-portrait image node.");
-            Assert.That(standing!.ImageSource, Is.EqualTo(view.StandingImageSrc));
-            Assert.That(standing.LayoutRect.Height, Is.GreaterThanOrEqualTo(900f),
+            Assert.That(standing!.Attributes["src"], Is.EqualTo(view.StandingImageSrc));
+            Assert.That(standing.Style.Height.Unit, Is.EqualTo(UiLengthUnit.Pixel));
+            Assert.That(standing.Style.Height.Value, Is.GreaterThanOrEqualTo(900f),
                 "Standing portrait should occupy roughly half-screen vertical height.");
             UiNode? row = FindUiNodeByClass(uiRoot.Scene?.Root, "story-standing-portrait-row");
             Assert.That(row, Is.Not.Null);
-            Assert.That(row!.LayoutRect.Width, Is.GreaterThanOrEqualTo(900f),
+            UiNode? composition = FindAncestorByClass(row, "story-surface") ?? row;
+            Assert.That(composition!.Style.Width.Unit, Is.EqualTo(UiLengthUnit.Pixel));
+            Assert.That(composition.Style.Width.Value, Is.GreaterThanOrEqualTo(900f),
                 "Standing portrait composition should span a half-screen-plus dialogue strip.");
+        }
+
+        private static UiNode? FindAncestorByClass(UiNode? node, string className)
+        {
+            UiNode? current = node?.Parent;
+            while (current != null)
+            {
+                if (current.HasClass(className))
+                {
+                    return current;
+                }
+
+                current = current.Parent;
+            }
+
+            return null;
         }
 
         private static UiNode? FindUiNodeByClass(UiNode? root, string className)

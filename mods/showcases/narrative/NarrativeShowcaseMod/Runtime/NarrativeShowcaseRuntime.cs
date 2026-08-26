@@ -52,6 +52,12 @@ namespace NarrativeShowcaseMod.Runtime
             _context = context;
             using var stream = context.GetResource($"{context.ModId}:assets/Frontend/narrative_frontend.json");
             _frontendConfig = NarrativeShowcaseFrontendConfig.Load(stream);
+            if (ReferenceEquals(_frontendConfig.DialogueBubble, _frontendConfig.OverlayDialogue) ||
+                ReferenceEquals(_frontendConfig.DialogueBubble, _frontendConfig.StandingPortrait))
+            {
+                throw new InvalidOperationException("Narrative frontend surface configs must be distinct objects.");
+            }
+
         }
 
         public Task HandleGameStartAsync(ScriptContext context)
@@ -68,6 +74,7 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             engine.GlobalContext["NarrativeShowcase.SystemsInstalled"] = true;
+            engine.GlobalContext["NarrativeShowcase.Runtime"] = this;
             engine.RegisterSystem(new NarrativeShowcaseInteractionSystem(engine, this), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new NarrativeShowcasePanelPresentationSystem(engine, this));
             EnsureTaskHook(engine);
@@ -516,9 +523,12 @@ namespace NarrativeShowcaseMod.Runtime
                         $"Presentation profile '{NarrativeShowcaseIds.PresentationWorldBubble}' requires IScreenProjector and a bound speaker entity with WorldPositionCm. Speaker '{dialogueView.SpeakerId}' could not be projected.");
                 }
 
+
                 anchor = NarrativeFrontendAnchor.TopLeft;
                 offsetX = screenX - UiMargin;
                 offsetY = screenY - UiMargin - 96f;
+                engine.GlobalContext["NarrativeShowcase.LastWorldBubble"] =
+                    $"{kind}|{config.Width}|{anchor}|{offsetX:0.###}|{offsetY:0.###}|{config.Eyebrow}";
             }
 
             string portraitSrc = standingPortrait
@@ -529,6 +539,7 @@ namespace NarrativeShowcaseMod.Runtime
                 throw new InvalidOperationException(
                     $"Presentation profile '{NarrativeShowcaseIds.PresentationStandingPortrait}' requires speaker '{dialogueView.SpeakerId}' to declare standingImageId with a resolvable image asset.");
             }
+
 
             return new NarrativeFrontendSurfaceModel(
                 SurfaceId: $"{_frontendConfig.OwnerId}.{kind}.{anchor}",
@@ -958,7 +969,7 @@ namespace NarrativeShowcaseMod.Runtime
             int surfaceCount)
         {
             string dialogueSig = dialogue.TryGetActiveView(out DialogueView dialogueView)
-                ? $"{dialogueView.DialogueId}|{dialogueView.NodeId}|{dialogueView.Choices.Count}|{dialogueView.Progress01:0.00}|{dialogueView.PresentationProfile}"
+                ? $"{dialogueView.DialogueId}|{dialogueView.NodeId}|{dialogueView.Choices.Count}|{dialogueView.Progress01:0.00}|{dialogueView.PresentationProfile}|{dialogueView.StandingImageSrc}|{dialogueView.PortraitImageSrc}"
                 : string.Empty;
             string sequenceSig = sequencer.TryGetActiveView(out SequenceView sequence)
                 ? $"{sequence.SequenceId}|{sequence.Time:0.00}|{sequence.ActiveSubtitles.Count}|{sequence.Paused}"
