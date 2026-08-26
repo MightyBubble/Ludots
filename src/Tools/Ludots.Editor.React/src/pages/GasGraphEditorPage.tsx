@@ -36,6 +36,7 @@ import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
 import { EventEntryInspector } from './gas-graph-editor/EventEntryInspector';
+import { GraphCodegenPanel } from './gas-graph-editor/GraphCodegenPanel';
 import {
   collectEventEntries,
   createEmptyEventEntry,
@@ -2468,6 +2469,15 @@ export const GasGraphEditorPage: React.FC = () => {
           <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-amber-200">
             {diagnosticsText || 'Validate or Save to run the Bridge compiler.'}
           </pre>
+
+          {graph ? (
+            <GraphCodegenPanel
+              modId={modId}
+              graphId={graphId}
+              graphBody={flowToGraph(graph, nodes, edges)}
+              executionBackendLabel="Interpret"
+            />
+          ) : null}
 
           <div className="border-t border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-300">
             Live Debug

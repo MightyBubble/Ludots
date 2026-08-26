@@ -13,11 +13,11 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 
-namespace Ludots.Tests.Gas.Graph.Codegen
+namespace Ludots.Graph.Codegen
 {
-    public sealed class GraphRoslynCompileFailureException : Exception
+    public sealed class GraphCodegenCompileFailureException : Exception
     {
-        public GraphRoslynCompileFailureException(string message, IReadOnlyList<string> diagnostics)
+        public GraphCodegenCompileFailureException(string message, IReadOnlyList<string> diagnostics)
             : base(message)
         {
             Diagnostics = diagnostics;
@@ -27,11 +27,10 @@ namespace Ludots.Tests.Gas.Graph.Codegen
     }
 
     /// <summary>
-    /// R0 host: emit → Roslyn compile → Collectible ALC load → bind <see cref="GraphGeneratedExecute"/>.
-    /// Hot reload replaces the entry only after successful compile; failures keep the previous entry (fail-closed).
-    /// Does not silently fall back to the interpret VM.
+    /// Product host: emit → Roslyn → Collectible ALC → bind <see cref="GraphGeneratedExecute"/>.
+    /// Compile failure keeps the previous entry (fail-closed; no silent interpret fallback).
     /// </summary>
-    public sealed class GraphRoslynAlcCompilerHost : IDisposable
+    public sealed class GraphCodegenCompilerHost : IDisposable
     {
         private readonly object _gate = new();
         private GraphGeneratedAssemblyLoadContext? _activeContext;
@@ -40,6 +39,7 @@ namespace Ludots.Tests.Gas.Graph.Codegen
         private Func<int>? _activeTightExecute;
         private string? _activeMarker;
         private string? _activeSource;
+        private GraphCodegenEligibilityReport? _activeEligibility;
         private bool _disposed;
 
         public GraphGeneratedExecute? ActiveExecute
@@ -86,19 +86,55 @@ namespace Ludots.Tests.Gas.Graph.Codegen
             }
         }
 
-        public GraphGeneratedExecute CompileAndActivate(
-            ReadOnlySpan<GraphInstruction> program,
-            string assemblyMarker)
+        public GraphCodegenEligibilityReport? ActiveEligibility
         {
-            string source = LinearIntGraphCsharpEmitter.Emit(program, assemblyMarker);
-            return CompileSourceAndActivate(source, assemblyMarker);
+            get
+            {
+                lock (_gate)
+                {
+                    return _activeEligibility;
+                }
+            }
         }
 
-        public GraphGeneratedExecute CompileSourceAndActivate(string source, string assemblyMarker)
+        public GraphGeneratedExecute CompileAndActivate(
+            ReadOnlySpan<GraphInstruction> program,
+            string assemblyMarker,
+            string[]? symbols = null,
+            bool forceHandlerForward = false)
+        {
+            GraphCodegenEmitResult emit = GraphCsharpEmitter.Emit(
+                program,
+                assemblyMarker,
+                symbols,
+                forceHandlerForward: forceHandlerForward);
+            return CompileSourceAndActivate(emit.Source, assemblyMarker, emit.Eligibility, emit.EmitsTightEntry);
+        }
+
+        public GraphCodegenEmitResult Preview(
+            ReadOnlySpan<GraphInstruction> program,
+            string assemblyMarker,
+            string[]? symbols = null,
+            IReadOnlyList<string>? sourceNodeIds = null,
+            bool forceHandlerForward = false)
+        {
+            return GraphCsharpEmitter.Emit(
+                program,
+                assemblyMarker,
+                symbols,
+                sourceNodeIds,
+                forceHandlerForward);
+        }
+
+        public GraphGeneratedExecute CompileSourceAndActivate(
+            string source,
+            string assemblyMarker,
+            GraphCodegenEligibilityReport? eligibility = null,
+            bool expectTightEntry = true)
         {
             if (_disposed)
             {
-                throw new ObjectDisposedException(nameof(GraphRoslynAlcCompilerHost));
+                throw new ObjectDisposedException(nameof(GraphCodegenCompilerHost));
             }
 
             if (string.IsNullOrWhiteSpace(source))
@@ -114,7 +150,7 @@ namespace Ludots.Tests.Gas.Graph.Codegen
             byte[] peImage = CompileToPeImage(source, assemblyMarker, out IReadOnlyList<string> diagnostics);
             if (peImage.Length == 0)
             {
-                throw new GraphRoslynCompileFailureException(
+                throw new GraphCodegenCompileFailureException(
                     $"Roslyn compilation failed for marker '{assemblyMarker}'. Previous entry retained (no interpreter fallback).",
                     diagnostics);
             }
@@ -123,13 +159,13 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                 "Ludots.Graph.Generated." + assemblyMarker);
             Assembly nextAssembly;
             GraphGeneratedExecute nextExecute;
-            Func<int> nextTightExecute;
+            Func<int>? nextTightExecute;
             try
             {
                 using var peStream = new MemoryStream(peImage, writable: false);
                 nextAssembly = nextContext.LoadFromStream(peStream);
                 nextExecute = BindExecute(nextAssembly);
-                nextTightExecute = BindTightExecute(nextAssembly);
+                nextTightExecute = TryBindTightExecute(nextAssembly, expectTightEntry);
             }
             catch
             {
@@ -147,16 +183,13 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                 _activeTightExecute = nextTightExecute;
                 _activeMarker = assemblyMarker;
                 _activeSource = source;
+                _activeEligibility = eligibility;
             }
 
             previousContext?.Unload();
             return nextExecute;
         }
 
-        /// <summary>
-        /// Drops the active entry so the previous ALC can become unloadable.
-        /// Callers that still hold the returned delegate keep the assembly alive (by design).
-        /// </summary>
         public WeakReference DropActiveForUnloadProbe()
         {
             lock (_gate)
@@ -174,6 +207,7 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                 _activeTightExecute = null;
                 _activeMarker = null;
                 _activeSource = null;
+                _activeEligibility = null;
                 return weak;
             }
         }
@@ -193,6 +227,7 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                 _activeAssembly = null;
                 _activeMarker = null;
                 _activeSource = null;
+                _activeEligibility = null;
                 _activeContext?.Unload();
                 _activeContext = null;
             }
@@ -200,8 +235,7 @@ namespace Ludots.Tests.Gas.Graph.Codegen
 
         private static Type RequireGeneratedType(Assembly assembly)
         {
-            string typeName = LinearIntGraphCsharpEmitter.GeneratedNamespace + "." +
-                              LinearIntGraphCsharpEmitter.GeneratedTypeName;
+            string typeName = GraphCsharpEmitter.GeneratedNamespace + "." + GraphCsharpEmitter.GeneratedTypeName;
             Type? type = assembly.GetType(typeName, throwOnError: false, ignoreCase: false);
             if (type == null)
             {
@@ -215,27 +249,31 @@ namespace Ludots.Tests.Gas.Graph.Codegen
         {
             Type type = RequireGeneratedType(assembly);
             MethodInfo? method = type.GetMethod(
-                LinearIntGraphCsharpEmitter.GeneratedMethodName,
+                GraphCsharpEmitter.GeneratedMethodName,
                 BindingFlags.Public | BindingFlags.Static);
             if (method == null)
             {
                 throw new InvalidOperationException(
-                    $"Generated method '{LinearIntGraphCsharpEmitter.GeneratedMethodName}' was not found on '{type.FullName}'.");
+                    $"Generated method '{GraphCsharpEmitter.GeneratedMethodName}' was not found on '{type.FullName}'.");
             }
 
             return method.CreateDelegate<GraphGeneratedExecute>();
         }
 
-        private static Func<int> BindTightExecute(Assembly assembly)
+        private static Func<int>? TryBindTightExecute(Assembly assembly, bool expectTightEntry)
         {
             Type type = RequireGeneratedType(assembly);
             MethodInfo? method = type.GetMethod(
-                LinearIntGraphCsharpEmitter.GeneratedTightMethodName,
+                GraphCsharpEmitter.GeneratedTightMethodName,
                 BindingFlags.Public | BindingFlags.Static);
             if (method == null)
             {
-                throw new InvalidOperationException(
-                    $"Generated method '{LinearIntGraphCsharpEmitter.GeneratedTightMethodName}' was not found on '{type.FullName}'.");
+                if (expectTightEntry)
+                {
+                    return null;
+                }
+
+                return null;
             }
 
             return method.CreateDelegate<Func<int>>();
@@ -263,24 +301,19 @@ namespace Ludots.Tests.Gas.Graph.Codegen
             EmitResult emitResult = compilation.Emit(peStream);
             diagnostics = emitResult.Diagnostics
                 .Where(d => d.Severity >= DiagnosticSeverity.Warning)
-                .Select(FormatDiagnostic)
+                .Select(d => d.ToString())
                 .ToArray();
 
             if (!emitResult.Success)
             {
                 diagnostics = emitResult.Diagnostics
                     .Where(d => d.Severity == DiagnosticSeverity.Error)
-                    .Select(FormatDiagnostic)
+                    .Select(d => d.ToString())
                     .ToArray();
                 return Array.Empty<byte>();
             }
 
             return peStream.ToArray();
-        }
-
-        private static string FormatDiagnostic(Diagnostic diagnostic)
-        {
-            return diagnostic.ToString();
         }
 
         private static string SanitizeAssemblyName(string marker)
@@ -313,8 +346,10 @@ namespace Ludots.Tests.Gas.Graph.Codegen
             AddAssembly(typeof(Console).Assembly);
             AddAssembly(typeof(GraphExecutionState).Assembly);
             AddAssembly(typeof(GraphInstruction).Assembly);
+            AddAssembly(typeof(MathF).Assembly);
             AddAssembly(AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName("System.Runtime")));
             AddAssembly(AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName("netstandard")));
+            AddAssembly(AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName("System.Memory")));
 
             string? trusted = (string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES");
             if (!string.IsNullOrWhiteSpace(trusted))
@@ -325,7 +360,9 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                     if (string.Equals(fileName, "System.Runtime.dll", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(fileName, "netstandard.dll", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(fileName, "System.Private.CoreLib.dll", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(fileName, "System.Console.dll", StringComparison.OrdinalIgnoreCase))
+                        string.Equals(fileName, "System.Console.dll", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(fileName, "System.Memory.dll", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(fileName, "System.Runtime.InteropServices.dll", StringComparison.OrdinalIgnoreCase))
                     {
                         if (references.Add(path))
                         {

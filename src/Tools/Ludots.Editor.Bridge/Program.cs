@@ -7,6 +7,7 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Graph.Codegen;
 using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
@@ -2534,6 +2535,211 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
         diagnostics = diagnosticPayload,
         instructionCount
     });
+});
+
+app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/codegen/preview", async (string modId, string graphId, HttpRequest req) =>
+{
+    if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
+        return error!;
+
+    using var sr = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await sr.ReadToEndAsync();
+
+    JsonObject graphObj;
+    try
+    {
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            JsonNode? bodyNode;
+            try
+            {
+                bodyNode = JsonNode.Parse(body);
+            }
+            catch (JsonException ex)
+            {
+                return Results.BadRequest(new { ok = false, error = $"Malformed JSON body: {ex.Message}" });
+            }
+
+            if (bodyNode is not JsonObject bodyObj)
+                return Results.BadRequest(new { ok = false, error = "Body must be a graph JSON object." });
+
+            graphObj = bodyObj;
+        }
+        else
+        {
+            if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
+                return readError!;
+            if (!TryFindGraphObject(arr, graphId, out var fileGraphObj, out _))
+                return Results.NotFound(new { ok = false, error = $"Graph not found: {graphId}", path = graphsPath });
+
+            graphObj = fileGraphObj;
+        }
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Failed to read graph JSON: {ex.Message}" });
+    }
+
+    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+        return Results.BadRequest(new { ok = false, error = compileError });
+
+    bool hasErrors = diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error);
+    if (!package.HasValue || hasErrors)
+    {
+        return Results.BadRequest(new
+        {
+            ok = false,
+            error = "Graph compile failed; codegen preview requires a valid lowered program.",
+            diagnostics = diagnostics.Select(d => new
+            {
+                severity = d.Severity.ToString(),
+                code = d.Code,
+                message = d.Message,
+                nodeId = d.NodeId
+            })
+        });
+    }
+
+    GraphInstruction[] program = package.Value.Program;
+    string[] symbols = package.Value.Symbols;
+    try
+    {
+        GraphCodegenEmitResult emit = GraphCsharpEmitter.Emit(program, $"{modId}:{graphId}", symbols);
+        return Results.Ok(new
+        {
+            ok = true,
+            eligible = emit.Eligibility.Eligible,
+            emitMode = emit.Eligibility.EmitMode,
+            backendRecommended = emit.Eligibility.BackendRecommended,
+            instructionCount = emit.Eligibility.InstructionCount,
+            yieldPoints = emit.Eligibility.YieldPoints,
+            unsupportedOps = emit.Eligibility.UnsupportedOps.Select(u => new
+            {
+                op = u.Op,
+                instructionIndex = u.InstructionIndex,
+                nodeId = u.NodeId,
+                reason = u.Reason
+            }),
+            source = emit.Source,
+            diagnostics = emit.Diagnostics,
+            usesSpecialize = emit.UsesSpecialize
+        });
+    }
+    catch (InvalidOperationException ex)
+    {
+        GraphCodegenEligibilityReport report = GraphCodegenEligibility.Analyze(program);
+        return Results.Ok(new
+        {
+            ok = false,
+            eligible = false,
+            emitMode = report.EmitMode,
+            backendRecommended = report.BackendRecommended,
+            instructionCount = report.InstructionCount,
+            yieldPoints = report.YieldPoints,
+            unsupportedOps = report.UnsupportedOps.Select(u => new
+            {
+                op = u.Op,
+                instructionIndex = u.InstructionIndex,
+                nodeId = u.NodeId,
+                reason = u.Reason
+            }),
+            source = (string?)null,
+            diagnostics = new[] { ex.Message },
+            error = ex.Message
+        });
+    }
+});
+
+app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/codegen/parity", async (string modId, string graphId, HttpRequest req) =>
+{
+    if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
+        return error!;
+
+    using var sr = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await sr.ReadToEndAsync();
+
+    JsonObject graphObj;
+    if (!string.IsNullOrWhiteSpace(body))
+    {
+        JsonNode? bodyNode;
+        try
+        {
+            bodyNode = JsonNode.Parse(body);
+        }
+        catch (JsonException ex)
+        {
+            return Results.BadRequest(new { ok = false, error = $"Malformed JSON body: {ex.Message}" });
+        }
+
+        if (bodyNode is not JsonObject bodyObj)
+            return Results.BadRequest(new { ok = false, error = "Body must be a graph JSON object." });
+        graphObj = bodyObj;
+    }
+    else
+    {
+        if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
+            return readError!;
+        if (!TryFindGraphObject(arr, graphId, out var fileGraphObj, out _))
+            return Results.NotFound(new { ok = false, error = $"Graph not found: {graphId}", path = graphsPath });
+        graphObj = fileGraphObj;
+    }
+
+    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+        return Results.BadRequest(new { ok = false, error = compileError });
+
+    if (!package.HasValue || diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error))
+        return Results.BadRequest(new { ok = false, error = "Graph compile failed; parity requires a valid lowered program." });
+
+    GraphInstruction[] program = package.Value.Program;
+    try
+    {
+        using var host = new GraphCodegenCompilerHost();
+        GraphGeneratedExecute execute = host.CompileAndActivate(program, $"parity:{modId}:{graphId}", package.Value.Symbols);
+        GraphCodegenParityDiff diff = GraphCodegenParity.CompareRunToHalt(program, execute);
+        return Results.Ok(new
+        {
+            ok = diff.Matches,
+            matches = diff.Matches,
+            interpretReturnInt = diff.InterpretReturnInt,
+            codegenReturnInt = diff.CodegenReturnInt,
+            interpretStatus = diff.InterpretStatus.ToString(),
+            codegenStatus = diff.CodegenStatus.ToString(),
+            detail = diff.Detail,
+            emitMode = host.ActiveEligibility?.EmitMode,
+            source = host.ActiveSource
+        });
+    }
+    catch (Exception ex) when (ex is InvalidOperationException or GraphCodegenCompileFailureException)
+    {
+        return Results.BadRequest(new { ok = false, matches = false, error = ex.Message });
+    }
+});
+
+app.MapGet("/api/graph/codegen/coverage", () =>
+{
+    string registryPath = Path.Combine(repoRoot, GraphCodegenCoverageProjection.RegistryRelativePath);
+    try
+    {
+        GraphCodegenCoverageSummary summary = GraphCodegenCoverageProjection.FromRegistryFile(registryPath);
+        return Results.Ok(new
+        {
+            ok = true,
+            total = summary.Total,
+            covered = summary.Covered,
+            pending = summary.Pending,
+            exempt = summary.Exempt,
+            entries = summary.Entries.Select(e => new
+            {
+                op = e.Op,
+                codegenStatus = e.CodegenStatus,
+                family = e.Family
+            })
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out string normalizedId, out string error)

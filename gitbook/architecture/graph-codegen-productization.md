@@ -163,6 +163,8 @@ L0 GraphInstruction[] + Symbols + SourceMap
 
 每切片必须：emitter + 对拍 + Bridge/面板可用字段不回退 + 更新本页「已覆盖家族」一句（进度仍只改 capability-status）。
 
+**已覆盖家族（实现）：** F0–F3 = Specialize；F4–F10 = HandlerForward（同 handler 表）。coverage 登记全量 `codegenStatus=covered`。
+
 ### 3.7 与现有尖峰的关系
 
 | 现状 | 产品化后 |
@@ -177,7 +179,7 @@ L0 GraphInstruction[] + Symbols + SourceMap
 ## 4. 场景
 
 1. 作者画完「守卫倒下了」拼句图，打开 Codegen 面板：绿灯，右侧能看到生成的 C#；点对拍，字幕出口与解释器一致。
-2. 作者图上有 `AwaitCallback`，CG-4 未完成前预览红灯点名该节点；装载若强制 `codegen` 模式则失败并写明缺家族，不会上线后才炸。
+2. 作者图上有 `AwaitCallback`：HandlerForward 可编；对拍/装载仍须服从 `ExecuteSlice` 挂起合同，禁止生成「一口气跑完」。
 3. 热更一张纯计算 FuncLib：Codegen 编译成功后替换 ALC 入口；编译失败则保留上一版生成体，并在面板打失败诊断（不静默改走解释）。
 4. QA 打开覆盖页：看到每个 GraphNodeOp 的 `codegenStatus`；任一 `pending` 不得宣称「Codegen 产品完成」。
 5. 夜袭旗舰在 `codegen` 模式下整图装载成功，Live Debug 徽章显示 Codegen，进节点事件仍能对上作者节点名。

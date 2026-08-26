@@ -21,7 +21,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AddFloat",
@@ -42,7 +43,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AddInt",
@@ -64,7 +66,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AggAverageAttribute",
@@ -82,7 +85,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AggCount",
@@ -106,7 +110,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AggMaxAttribute",
@@ -124,7 +129,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AggMaxEntityByAttribute",
@@ -143,7 +149,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AggMinAttribute",
@@ -162,7 +169,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AggMinByDistance",
@@ -186,7 +194,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AggMinEntityByAttribute",
@@ -205,7 +214,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AggSumAttribute",
@@ -223,7 +233,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ApplyEffectDynamic",
@@ -243,7 +254,8 @@
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectApplyEffectDynamic_RequiresTargetAndValueInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ApplyEffectTemplate",
@@ -261,7 +273,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "AwaitCallback",
@@ -278,7 +291,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.AwaitCallback_ConfirmsAndContinues_WithCaption",
         "TriggerGraphAwaitCallbackTests.AwaitCallback_CompletesInRegistrationOrder_NotCompletionOrder"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "BeginLifecycleTransaction",
@@ -295,7 +309,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.BeginLifecycleTransaction_MaterializesBodyAndOpensLedger",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "Call",
@@ -314,7 +329,8 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ClampFloat",
@@ -336,7 +352,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ClampTargetToRange",
@@ -357,7 +374,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "CompareEqEntity",
@@ -379,7 +397,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.CompareEqEntity_NotSelfSettlesStrikeOnTarget",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "CompareEqInt",
@@ -402,7 +421,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.CompareEqInt_StackedSettlesStrikeOnTarget",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "CompareGtFloat",
@@ -425,7 +445,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "CompareLtInt",
@@ -448,7 +469,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.CompareLtInt_BelowLineSettlesFullStrike",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ConcatText",
@@ -465,7 +487,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.FormalTextOp_CompilesFeaturedOpcode",
         "GraphFormalTextOpsTests.DescriptorTable_ExposesFormalTextOps_ForScriptAndTriggerGraph"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ConstBool",
@@ -487,7 +510,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ConstFloat",
@@ -511,7 +535,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ConstInt",
@@ -533,7 +558,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ConstText",
@@ -551,7 +577,8 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.FormalTextOp_CompilesFeaturedOpcode",
         "GraphFormalTextOpsTests.ConstText_ConcatText_SinkPresentationText_PushesComposedSentence",
         "GraphFormalTextOpsTests.DescriptorTable_ExposesFormalTextOps_ForScriptAndTriggerGraph"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ControlDomainControls",
@@ -573,7 +600,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ControlDomainResolve",
@@ -595,7 +623,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "CreatePanel",
@@ -616,7 +645,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPanelOpAcceptanceTests.CreatePanelVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "DestroyPanel",
@@ -637,7 +667,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPanelOpAcceptanceTests.DestroyPanelVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "DispatchMapEvent",
@@ -652,7 +683,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryInvokeAcceptanceTests.DispatchMapEvent_SchemaHeartbeat_ReachesMapListenerWithPayload"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "DivFloat",
@@ -673,7 +705,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "FanOutApplyEffect",
@@ -693,7 +726,8 @@
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffect_RequiresEffectTemplate"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "FanOutApplyEffectDynamic",
@@ -713,7 +747,8 @@
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffectDynamic_RequiresValueInput"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "FanOutDispatchEffect",
@@ -733,7 +768,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "FanOutDispatchEffectDynamic",
@@ -753,7 +789,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "FloatToText",
@@ -769,7 +806,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.FormalTextOp_CompilesFeaturedOpcode"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "HaltReturnInt",
@@ -794,7 +832,8 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "HasTag",
@@ -818,7 +857,8 @@
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "HidePanel",
@@ -839,7 +879,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPanelOpAcceptanceTests.HidePanelVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "IntToText",
@@ -856,7 +897,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.FormalTextOp_CompilesFeaturedOpcode",
         "GraphFormalTextOpsTests.IntToText_And_FormatText_ComposeWithBracePin"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "InvokeBuiltin",
@@ -873,7 +915,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.InvokeBuiltin_BindsBody_ClearsRack_NoMarkStandIn",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "InvokeGraph",
@@ -888,7 +931,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryInvokeAcceptanceTests.InvokeGraph_ExplicitEntryLabel_CalleeReturnsBoostConstant"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "InvokeScript",
@@ -913,7 +957,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "IsPointInCircle",
@@ -935,7 +980,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "Jump",
@@ -955,7 +1001,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "JumpIfFalse",
@@ -977,7 +1024,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "KnowledgeHasProjection",
@@ -998,7 +1046,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadAttribute",
@@ -1021,7 +1070,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.LoadAttribute_CaptionContainsNumber",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadCaster",
@@ -1044,7 +1094,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadConfigEffectId",
@@ -1064,7 +1115,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.LoadConfigEffectId_SettlesTicketDamageEachWave_NoConstFloatStandIn",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadConfigFloat",
@@ -1084,7 +1136,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.LoadConfigFloat_SettlesConfigPowerOnTarget",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadConfigInt",
@@ -1105,7 +1158,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.LoadConfigInt_TierCaptionAndShieldOverlay",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadContextSource",
@@ -1126,7 +1180,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadContextTarget",
@@ -1146,7 +1201,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadContextTargetContext",
@@ -1167,7 +1223,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadEntryPayloadEntity",
@@ -1185,7 +1242,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "TriggerGraphAuthoringTests.DescriptorProjections_TriggerGraphMirrorsScriptIncludingYield"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadEntryPayloadFloat",
@@ -1203,7 +1261,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "TriggerGraphAuthoringTests.DescriptorProjections_TriggerGraphMirrorsScriptIncludingYield"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadEntryPayloadInt",
@@ -1221,7 +1280,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "TriggerGraphAuthoringTests.DescriptorProjections_TriggerGraphMirrorsScriptIncludingYield"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadEventPayloadFloat",
@@ -1243,7 +1303,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadEventPayloadInt",
@@ -1265,7 +1326,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadExplicitTarget",
@@ -1287,7 +1349,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadPlacedEntity",
@@ -1302,7 +1365,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPlacedEntityAcceptanceTests.LoadPlacedEntity_RollCallHitsLiveInstanceThenNullAfterKill"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadSelfAttribute",
@@ -1326,7 +1390,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.LoadSelfAttribute_ReadsCasterPresetHealth",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadTargetPosX",
@@ -1350,7 +1415,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadTargetPosY",
@@ -1374,7 +1440,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadTextKey",
@@ -1391,7 +1458,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.FormalTextOp_CompilesFeaturedOpcode",
         "GraphTextKeyOpsTests.LoadTextKey_WritesLocalizedTemplate_AndSinksSubtitle"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadViewer",
@@ -1411,7 +1479,8 @@
         "GraphOpsNodeGalleryEventAcceptanceTests.LoadViewer_ReadsTheAudience",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "MaxFloat",
@@ -1432,7 +1501,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "MinFloat",
@@ -1453,7 +1523,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ModifyAttributeAdd",
@@ -1473,7 +1544,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.ModifyAttributeAdd_SecondThinkStillDropsFromOpening",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "MoveInt",
@@ -1492,7 +1564,8 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "MulFloat",
@@ -1513,7 +1586,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.MulFloat_SettlesRealWorldDamageThroughGraphTail",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "NegFloat",
@@ -1534,7 +1608,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryAllMapEntities",
@@ -1553,7 +1628,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryAllMapEntities_ScanLightsUnitsProgressively",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCone",
@@ -1574,7 +1650,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFilterAttributeRange",
@@ -1592,7 +1669,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFilterLayer",
@@ -1613,7 +1691,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFilterNotEntity",
@@ -1634,7 +1713,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFilterRelationship",
@@ -1655,7 +1735,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFilterTagAny",
@@ -1674,7 +1755,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTagAny_CrownsNineEnemyBadges",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFilterTagNone",
@@ -1693,7 +1775,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTagNone_BadgesTheDeadUnitAndGhostsItInTheResultWave",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFilterTeam",
@@ -1712,7 +1795,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTeam_KeepsHostileCamp",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFilterTemplate",
@@ -1731,7 +1815,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTemplate_FullAndResultWavesAlternateCirclesAndGhosts",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryFromCollection",
@@ -1751,7 +1836,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFromCollection_ResultWavePullsRosterLinesToSixMembers",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryHexNeighbors",
@@ -1772,7 +1858,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryHexRange",
@@ -1793,7 +1880,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryHexRing",
@@ -1814,7 +1902,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryLimit",
@@ -1840,7 +1929,8 @@
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryLine",
@@ -1861,7 +1951,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryRadius",
@@ -1888,7 +1979,8 @@
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRadius_RequiresCapacityPolicy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryRectangle",
@@ -1909,7 +2001,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QuerySortByAttribute",
@@ -1927,7 +2020,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.SortByAttribute_OverlayCrownsTopThreeWithRankPipsAndCommanderArrow",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QuerySortStable",
@@ -1953,7 +2047,8 @@
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RandomFloat01",
@@ -1974,7 +2069,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.RandomFloat01_RollsAndSettlesScaledDamageAcrossWaves",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ReadBlackboardEntity",
@@ -1996,7 +2092,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ReadBlackboardFloat",
@@ -2019,7 +2116,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.WriteThenReadFloat_VisibleOnHealthAndCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ReadBlackboardInt",
@@ -2041,7 +2139,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ReadMapVarFloat",
@@ -2058,7 +2157,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryMapVarAcceptanceTests.ReadMapVarFloatVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ReadMapVarInt",
@@ -2075,7 +2175,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryMapVarAcceptanceTests.ReadMapVarIntVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipAddMetric",
@@ -2094,7 +2195,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipAggAverageMetric",
@@ -2112,7 +2214,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipAggMaxEntityByMetric",
@@ -2131,7 +2234,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipAggMaxMetric",
@@ -2149,7 +2253,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipAggMinEntityByMetric",
@@ -2167,7 +2272,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipAggMinMetric",
@@ -2185,7 +2291,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipAggSumMetric",
@@ -2203,7 +2310,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipEnsureLink",
@@ -2223,7 +2331,8 @@
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipFilterFlag",
@@ -2241,7 +2350,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipFilterMetricRange",
@@ -2259,7 +2369,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipGetMetric",
@@ -2281,7 +2392,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipHasFlag",
@@ -2306,7 +2418,8 @@
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipHasLink",
@@ -2328,7 +2441,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipQueryBetweenPair",
@@ -2346,7 +2460,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipQueryIncoming",
@@ -2364,7 +2479,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipQueryMutual",
@@ -2382,7 +2498,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipQueryOutgoing",
@@ -2401,7 +2518,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipRemoveLink",
@@ -2421,7 +2539,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.RemoveLink_SecondThinkStillBreaksALink",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipSetFlag",
@@ -2439,7 +2558,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.SetFlag_OverlayPlantsFlagBadgeOnlyAfterTheGraphPlantsIt",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipSetMetric",
@@ -2459,7 +2579,8 @@
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RelationshipSortByMetric",
@@ -2477,7 +2598,8 @@
         "GraphOpsNodeGalleryRelAcceptanceTests.SortByMetric_OverlayDrawsRankBadgesAboveHeads",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "RemoveEffectTemplate",
@@ -2495,7 +2617,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.RemoveEffectTemplate_CaptionUnloadsMark",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ResolveTableRow",
@@ -2517,7 +2640,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryLookupTableAcceptanceTests.ResolveTableRow_VignetteSettlesDrainOnTarget",
         "GraphLookupTableOpsTests.ResolveThenRead_ReturnsTextTokenAndFloat"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "Return",
@@ -2536,7 +2660,8 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "SelectEntity",
@@ -2557,7 +2682,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.SelectEntity_PicksStakeAndSettlesStrike",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "SendEvent",
@@ -2575,7 +2701,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "SetWorldPosition",
@@ -2596,7 +2723,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPanelOpAcceptanceTests.SetWorldPositionVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "ShowPanel",
@@ -2617,7 +2745,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPanelOpAcceptanceTests.ShowPanelVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "SinkPresentationText",
@@ -2634,7 +2763,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.FormalTextOp_CompilesFeaturedOpcode",
         "GraphFormalTextOpsTests.DescriptorTable_ExposesFormalTextOps_ForScriptAndTriggerGraph"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "SnapToNearestGraphEdge",
@@ -2655,7 +2785,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "SnapToNearestInCollection",
@@ -2676,7 +2807,8 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "SpawnTemplate",
@@ -2697,7 +2829,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPanelOpAcceptanceTests.SpawnTemplateVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "StoreArgEntity",
@@ -2712,7 +2845,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryInvokeAcceptanceTests.StoreArgEntity_CalleeMovesTheStagedEntity"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "StoreArgFloat",
@@ -2727,7 +2861,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryInvokeAcceptanceTests.StoreArgFloat_CalleeEchoesIntoMapVariable"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "StoreArgInt",
@@ -2742,7 +2877,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryInvokeAcceptanceTests.StoreArgInt_StagedValueRoundTripsThroughCallee"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "SubFloat",
@@ -2763,7 +2899,8 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "TableReadFloat",
@@ -2785,7 +2922,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryLookupTableAcceptanceTests.TableReadFloat_VignetteSettlesTwoDamage",
         "GraphLookupTableOpsTests.ResolveThenRead_ReturnsTextTokenAndFloat"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "TableReadInt",
@@ -2807,7 +2945,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryLookupTableAcceptanceTests.TableReadInt_VignetteReportsThreeStars",
         "GraphLookupTableOpsTests.ResolveThenRead_ReturnsTextTokenAndFloat"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "TargetListGet",
@@ -2830,7 +2969,8 @@
         "GraphOpsNodeGallerySpatialAcceptanceTests.TargetListGet_NamesTheFirstPerson",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "WeightedPick",
@@ -2851,7 +2991,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRngAcceptanceTests.WeightedPickVignette_PicksFromDeclaredDistributionAndSettles",
         "GraphOpsNodeGalleryRngAcceptanceTests.WeightedPick_AuthoringWithEmptyDistribution_FailsClosedAtCompile"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "WriteBlackboardEntity",
@@ -2868,7 +3009,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "WriteBlackboardFloat",
@@ -2885,7 +3027,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.WriteThenReadFloat_VisibleOnHealthAndCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "WriteBlackboardInt",
@@ -2902,7 +3045,8 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "WriteMapVarFloat",
@@ -2918,7 +3062,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryMapVarAcceptanceTests.WriteMapVarFloatVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "WriteMapVarInt",
@@ -2934,7 +3079,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryMapVarAcceptanceTests.WriteMapVarIntVignette_ExecutesOpWithoutThrow"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "WriteSelfAttribute",
@@ -2954,7 +3100,8 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.WriteSelfAttribute_SecondThinkStillHealsFromOpening",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "Yield",
@@ -2974,7 +3121,8 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.Yield_FillsWaterAcrossTicks_AndCaptionRests",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadPlacedRegion",
@@ -2989,7 +3137,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPlacedRegionAcceptanceTests.LoadPlacedRegion_RollCallReportsYardPresentAndGhostAbsent"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadPlacedAnchor",
@@ -3004,7 +3153,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPlacedRegionAcceptanceTests.LoadPlacedAnchor_RollCallHitsLiveInstanceThenNullAfterKill"
-      ]
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }
