@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpLoadConfigIntEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp LoadConfigInt player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpLoadConfigIntEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpLoadConfigIntEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

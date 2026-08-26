@@ -2,7 +2,7 @@
   "name": "LineOfSightBrushShowcaseMod",
   "version": "1.0.0",
   "description": "Line-of-sight and concealment showcase root.",
-  "main": "bin/net8.0/LineOfSightBrushShowcaseMod.dll",
+  "main": "bin/net9.0/LineOfSightBrushShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

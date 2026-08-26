@@ -2,7 +2,7 @@
   "name": "CapabilityStandardStaticPresenter30kMod",
   "version": "1.0.0",
   "description": "Visual showcase of the Presenter-as-Actor capability_static_presenter scenario with a mouse-driven Ludots UI control panel and scatter benchmark hooks.",
-  "main": "bin/net8.0/CapabilityStandardStaticPresenter30kMod.dll",
+  "main": "bin/net9.0/CapabilityStandardStaticPresenter30kMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

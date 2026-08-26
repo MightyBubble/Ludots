@@ -2,7 +2,7 @@
   "name": "UiPlayerAggregateGraphMvpShowcaseMod",
   "version": "1.0.0",
   "description": "MVP player aggregate resource overview strip driven by Query graph → GraphReturnWriter → GraphOutputValueStore → native UI panel.",
-  "main": "bin/net8.0/UiPlayerAggregateGraphMvpShowcaseMod.dll",
+  "main": "bin/net9.0/UiPlayerAggregateGraphMvpShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

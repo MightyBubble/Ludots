@@ -2,7 +2,7 @@
   "name": "GenreInfoShowcaseMod",
   "version": "1.0.0",
   "description": "Cross-genre information panel showcase covering 4X, RTS, and MOBA portrait, tip, and unit-card patterns.",
-  "main": "bin/net8.0/GenreInfoShowcaseMod.dll",
+  "main": "bin/net9.0/GenreInfoShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

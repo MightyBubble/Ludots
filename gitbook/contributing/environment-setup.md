@@ -4,9 +4,7 @@
 
 ## 1 SDK 要求
 
-- .NET 8.0
-- .NET 9.0
-- .NET 10.0 preview
+- .NET 9.0（`global.json` 固定 SDK 9.0.x，全仓 target `net9.0`）
 - Node.js + npm
 
 ## 2 常用构建命令

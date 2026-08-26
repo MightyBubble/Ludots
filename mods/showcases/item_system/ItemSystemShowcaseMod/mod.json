@@ -2,7 +2,7 @@
   "name": "ItemSystemShowcaseMod",
   "version": "1.0.0",
   "description": "Playable showcase for Ludots item, equip, backpack, stash, trade, ammo, and attachment architecture.",
-  "main": "bin/net8.0/ItemSystemShowcaseMod.dll",
+  "main": "bin/net9.0/ItemSystemShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

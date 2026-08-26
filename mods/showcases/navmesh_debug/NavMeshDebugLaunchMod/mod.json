@@ -2,7 +2,7 @@
   "name": "NavMeshDebugLaunchMod",
   "version": "1.0.0",
   "description": "Runtime navmesh dirty-update showcase controller. N toggles the overlay, P places a structural obstacle, and O clears the obstacles so the rebuilt tiles visibly close and reopen across hex, grid, and VisualHeightmap launch maps.",
-  "main": "bin/net8.0/NavMeshDebugLaunchMod.dll",
+  "main": "bin/net9.0/NavMeshDebugLaunchMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

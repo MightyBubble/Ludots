@@ -365,7 +365,7 @@ namespace Ludots.Tool
                 Name = modId,
                 Version = "1.0.0",
                 Description = "A new Ludots mod.",
-                Main = $"bin/net8.0/{modId}.dll",
+                Main = $"bin/net9.0/{modId}.dll",
                 Priority = 0,
                 Dependencies = new Dictionary<string, string>(),
                 Changelog = "CHANGELOG.md"
@@ -389,7 +389,7 @@ namespace Ludots.Tool
             var coreRelPath = Path.GetRelativePath(modDir, Path.Combine(FindAssetsRoot() ?? Directory.GetCurrentDirectory(), "src", "Core", "Ludots.Core.csproj"));
             var csprojContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -491,7 +491,7 @@ namespace {modId}
             
             if (process.ExitCode == 0)
             {
-                Console.WriteLine($"Build success! Output at mods/{modId}/bin/net8.0");
+                Console.WriteLine($"Build success! Output at mods/{modId}/bin/net9.0");
             }
             else
             {

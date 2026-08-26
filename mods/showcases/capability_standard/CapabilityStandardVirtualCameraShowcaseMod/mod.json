@@ -2,7 +2,7 @@
   "name": "CapabilityStandardVirtualCameraShowcaseMod",
   "version": "1.0.0",
   "description": "Capability-standard showcase for virtual camera profiles, camera behavior, bootstrap framing, tagged shots, and view-mode switching.",
-  "main": "bin/net8.0/CapabilityStandardVirtualCameraShowcaseMod.dll",
+  "main": "bin/net9.0/CapabilityStandardVirtualCameraShowcaseMod.dll",
   "priority": -2000,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

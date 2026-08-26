@@ -2,7 +2,7 @@
   "name": "CameraBootstrapMod",
   "version": "1.0.0",
   "description": "Reusable map camera bootstrap that recenters runtime camera bounds from map tags.",
-  "main": "bin/net8.0/CameraBootstrapMod.dll",
+  "main": "bin/net9.0/CameraBootstrapMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

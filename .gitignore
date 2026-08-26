@@ -71,7 +71,14 @@ debug_error*.txt
 debug_output*.txt
 
 # ----- User Requested Ignores -----
-external/
+# external/ 下的第三方内容默认忽略，但离线依赖层必须入库（0 网络契约）：
+#   external/nuget/ —— 离线 NuGet 源（规范闭包 nupkg）
+#   external/ref/  —— net9.0 框架引用程序集（无 SDK mod 编译器消费）
+external/*
+!external/nuget/
+!external/nuget/**
+!external/ref/
+!external/ref/**
 # docs/  <-- Un-ignore docs to keep archived documentation
 # Ignore build/runtime evidence by default, but keep gallery player
 # videos (Git LFS) and gallery posters for GitHub Pages:
@@ -116,6 +123,8 @@ out.host.*.log
 !src/Platforms/Desktop/raylib.dll
 !src/Platforms/Desktop/libraylib.so
 !src/Libraries/SkiaSharp/runtimes/**/native/*
+# external/ref/ 的框架引用程序集（无 SDK mod 编译器消费，0 网络契约）
+!external/ref/**/*.dll
 
 Thumbs.db
 ehthumbs.db

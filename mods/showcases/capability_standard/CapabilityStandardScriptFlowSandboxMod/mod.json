@@ -2,7 +2,7 @@
   "name": "CapabilityStandardScriptFlowSandboxMod",
   "version": "1.0.0",
   "description": "Atomic L1 Script sandbox: Call/Yield/HaltReturnInt drink-until-full (not BT/HFSM/Level).",
-  "main": "bin/net8.0/CapabilityStandardScriptFlowSandboxMod.dll",
+  "main": "bin/net9.0/CapabilityStandardScriptFlowSandboxMod.dll",
   "priority": -1900,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

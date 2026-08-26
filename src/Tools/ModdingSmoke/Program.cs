@@ -66,7 +66,7 @@ namespace ModdingTest
                 // Note: GameBootstrapper expects "assets" folder to be discoverable from baseDirectory or parents
                 // But our assetsDir might be far away if we are in bin/Debug...
                 // GameBootstrapper.FindAssetsRootStrict looks up parent directories.
-                // If we are in bin/Debug/net8.0, and assets is in project root, it should find it.
+                // If we are in bin/Debug/net9.0, and assets is in project root, it should find it.
                 // Let's verify.
                 
                 Console.WriteLine("[Bootstrapper] Initializing...");

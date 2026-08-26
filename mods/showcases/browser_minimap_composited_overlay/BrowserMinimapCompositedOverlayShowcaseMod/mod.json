@@ -2,7 +2,7 @@
   "name": "BrowserMinimapCompositedOverlayShowcaseMod",
   "version": "1.0.0",
   "description": "Composited minimap showcase where native Skia renders the minimap markers and Web UI is only a transparent overlay.",
-  "main": "bin/net8.0/BrowserMinimapCompositedOverlayShowcaseMod.dll",
+  "main": "bin/net9.0/BrowserMinimapCompositedOverlayShowcaseMod.dll",
   "priority": 192,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"
