@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Relationships;
@@ -6,7 +7,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Dialogue;
+using Ludots.Core.Gameplay.Story;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Teams;
@@ -354,58 +356,60 @@ public sealed class SaveParticipantRegistryTests
     }
 
     [Test]
-    public void NarrativeParticipantRestoresVariablesAndActiveDialogue()
+    public void DialogueParticipantRestoresActiveDialogueSession()
     {
         using GameEngine engine = CreateInitializedEngine();
-        var definitions = new NarrativeDefinitionRegistry();
-        definitions.Register(new NarrativeVariableDefinition
+        DialogueRuntime runtime = engine.GetService(CoreServiceKeys.DialogueRuntime)
+            ?? throw new InvalidOperationException("DialogueRuntime missing.");
+        DialogueDefinitionRegistry dialogues = engine.GetService(CoreServiceKeys.DialogueDefinitions)
+            ?? throw new InvalidOperationException("Dialogue definitions missing.");
+        StoryDefinitionRegistry story = engine.GetService(CoreServiceKeys.StoryDefinitions)
+            ?? throw new InvalidOperationException("Story definitions missing.");
+
+        story.Register(new StoryLineDefinition
         {
-            Id = "trust",
-            Kind = NarrativeValueKind.Int,
-            DefaultInt = 1
+            Id = "line.test.hello",
+            SpeakerId = "speaker.guide",
+            TextToken = "story.test.hello"
         });
-        definitions.Register(new NarrativeDialogueDefinition
+        story.Register(new StoryPresentationProfileDefinition
         {
-            Id = "briefing",
-            StartNodeId = "hello",
+            Id = "story.dialogue_overlay",
+            Backend = StoryPresentationBackend.ScreenOverlay,
+            SurfaceKind = "OverlayDialogue",
+            Anchor = "BottomCenter"
+        });
+        dialogues.Register(new DialogueDefinition
+        {
+            Id = "dialogue.test.briefing",
+            EntryNode = "hello",
             Nodes =
             {
-                new NarrativeDialogueNodeDefinition
+                new DialogueNodeDefinition
                 {
                     Id = "hello",
-                    SpeakerName = "Guide",
-                    Text = "Trust is {trust}",
-                    AutoAdvanceSeconds = 5f,
-                    OnEnter =
-                    {
-                        new NarrativeActionDefinition
-                        {
-                            Kind = NarrativeActionKind.SetVariable,
-                            VariableId = "trust",
-                            ValueKind = NarrativeValueKind.Int,
-                            IntValue = 7
-                        }
-                    }
+                    LineId = "line.test.hello",
+                    PresentationProfile = "story.dialogue_overlay",
+                    AutoAdvanceSeconds = 5f
                 }
             }
         });
 
-        TaskRuntimeService taskRuntime = engine.GetService(CoreServiceKeys.TaskRuntimeService);
-        var source = new NarrativeDirector(engine, definitions, taskRuntime);
-        source.StartDialogue("briefing");
-        source.Update(1.25f);
+        runtime.RestoreSnapshot(new DialogueRuntimeSnapshot(
+            Array.Empty<DialogueBindingSnapshot>(),
+            new DialogueSessionSnapshot("dialogue.test.briefing", "hello", 1.25f)));
+        ISaveParticipant participant = CoreSaveParticipants.CreateDialogueParticipant(runtime);
+        var captured = participant.CaptureState();
 
-        var target = new NarrativeDirector(engine, definitions, taskRuntime);
-        ISaveParticipant participant = CoreSaveParticipants.CreateNarrativeParticipant(source);
-        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateNarrativeParticipant(target);
+        runtime.ResetState();
+        Assert.That(runtime.HasActiveDialogue, Is.False);
+        participant.RestoreState(captured);
 
-        targetParticipant.RestoreState(participant.CaptureState());
-
-        Assert.That(target.GetVariable("trust").IntValue, Is.EqualTo(7));
-        Assert.That(target.HasActiveDialogue, Is.True);
-        Assert.That(target.TryGetActiveDialogueView(out NarrativeDialogueView view), Is.True);
-        Assert.That(view.NodeId, Is.EqualTo("hello"));
-        Assert.That(view.ElapsedSeconds, Is.EqualTo(1.25f).Within(0.001f));
+        Assert.That(runtime.HasActiveDialogue, Is.True);
+        DialogueRuntimeSnapshot restored = runtime.CaptureSnapshot();
+        Assert.That(restored.ActiveDialogue, Is.Not.Null);
+        Assert.That(restored.ActiveDialogue!.NodeId, Is.EqualTo("hello"));
+        Assert.That(restored.ActiveDialogue.ElapsedSeconds, Is.EqualTo(1.25f).Within(0.001f));
     }
 
     [Test]
