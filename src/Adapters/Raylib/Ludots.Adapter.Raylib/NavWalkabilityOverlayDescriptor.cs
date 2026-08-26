@@ -36,39 +36,51 @@ namespace Ludots.Adapter.Raylib
                     $"Map '{mapConfig.Id}' must declare Metadata.{MetadataKey} before DrawNavWalkabilityTexture can be enabled.");
             }
 
-            string textureUri = RequireString(metadata, "textureUri", $"map '{mapConfig.Id}' Metadata.{MetadataKey}");
+            string textureUri = RequireString(
+                metadata["textureUri"],
+                $"map '{mapConfig.Id}' Metadata.{MetadataKey}.textureUri");
             if (!assetPaths.TryResolveFullPath(textureUri, out string texturePath))
             {
                 throw new InvalidOperationException(
                     $"Map '{mapConfig.Id}' nav walkability texture URI cannot be resolved: '{textureUri}'.");
             }
 
-            string sidecarPath = texturePath + ".json";
-            JsonObject boundsSource = metadata;
-            string boundsSourceLabel = $"map '{mapConfig.Id}' Metadata.{MetadataKey}";
             string? selectedSidecarPath = null;
-            if (File.Exists(sidecarPath))
+            string siblingSidecarPath = texturePath + ".json";
+            if (File.Exists(siblingSidecarPath))
             {
-                JsonNode? sidecarNode;
+                selectedSidecarPath = siblingSidecarPath;
+            }
+
+            JsonNode? boundsNode;
+            string boundsSourceLabel;
+            if (selectedSidecarPath != null)
+            {
+                JsonNode? parsedSidecar;
                 try
                 {
-                    sidecarNode = JsonNode.Parse(File.ReadAllText(sidecarPath));
+                    parsedSidecar = JsonNode.Parse(File.ReadAllText(selectedSidecarPath));
                 }
                 catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException)
                 {
                     throw new InvalidOperationException(
-                        $"Nav walkability sidecar could not be read: '{sidecarPath}'.",
+                        $"Nav walkability sidecar could not be read: '{selectedSidecarPath}'.",
                         ex);
                 }
 
-                boundsSource = sidecarNode as JsonObject
+                JsonObject sidecar = parsedSidecar as JsonObject
                     ?? throw new InvalidOperationException(
-                        $"Nav walkability sidecar root must be a JSON object: '{sidecarPath}'.");
-                boundsSourceLabel = $"nav walkability sidecar '{sidecarPath}'";
-                selectedSidecarPath = sidecarPath;
+                        $"Nav walkability sidecar root must be a JSON object: '{selectedSidecarPath}'.");
+                boundsNode = sidecar["boundsCm"];
+                boundsSourceLabel = $"nav walkability sidecar '{selectedSidecarPath}'.boundsCm";
+            }
+            else
+            {
+                boundsNode = metadata["boundsCm"];
+                boundsSourceLabel = $"map '{mapConfig.Id}' Metadata.{MetadataKey}.boundsCm";
             }
 
-            WorldAabbCm bounds = ParseBounds(boundsSource["boundsCm"], boundsSourceLabel);
+            WorldAabbCm bounds = ParseBounds(boundsNode, boundsSourceLabel);
             return new NavWalkabilityOverlayDescriptor(textureUri, bounds, selectedSidecarPath);
         }
 
@@ -76,7 +88,7 @@ namespace Ludots.Adapter.Raylib
         {
             if (node is not JsonObject bounds)
             {
-                throw new InvalidOperationException($"{sourceLabel} must declare boundsCm as an object.");
+                throw new InvalidOperationException($"{sourceLabel} must be an object.");
             }
 
             int minX = RequireInt(bounds, "minX", sourceLabel);
@@ -94,22 +106,22 @@ namespace Ludots.Adapter.Raylib
             return new WorldAabbCm(minX, minZ, (int)width, (int)height);
         }
 
-        private static string RequireString(JsonObject obj, string key, string sourceLabel)
+        private static string RequireString(JsonNode? node, string sourceLabel)
         {
             string value;
             try
             {
-                value = obj[key]?.GetValue<string>() ?? string.Empty;
+                value = node?.GetValue<string>() ?? string.Empty;
             }
             catch (InvalidOperationException ex)
             {
-                throw new InvalidOperationException($"{sourceLabel}.{key} must be a string.", ex);
+                throw new InvalidOperationException($"{sourceLabel} must be a string.", ex);
             }
 
             if (string.IsNullOrWhiteSpace(value) || !string.Equals(value, value.Trim(), StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"{sourceLabel}.{key} must be a non-empty string without surrounding whitespace.");
+                    $"{sourceLabel} must be a non-empty string without surrounding whitespace.");
             }
 
             return value;
@@ -120,7 +132,7 @@ namespace Ludots.Adapter.Raylib
             JsonNode? node = obj[key];
             if (node == null)
             {
-                throw new InvalidOperationException($"{sourceLabel}.boundsCm.{key} is required.");
+                throw new InvalidOperationException($"{sourceLabel}.{key} is required.");
             }
 
             try
@@ -129,7 +141,7 @@ namespace Ludots.Adapter.Raylib
             }
             catch (Exception ex) when (ex is InvalidOperationException or FormatException or OverflowException)
             {
-                throw new InvalidOperationException($"{sourceLabel}.boundsCm.{key} must be an Int32.", ex);
+                throw new InvalidOperationException($"{sourceLabel}.{key} must be an Int32.", ex);
             }
         }
     }

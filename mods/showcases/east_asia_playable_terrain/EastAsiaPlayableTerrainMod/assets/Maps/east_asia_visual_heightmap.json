@@ -25,16 +25,7 @@
     "playableSurface": "Continuous VisualHeightmap",
     "projection": "Spherical Albers equal-area conic, sampled from the exported 14336x8192 East Asia canvas.",
     "coverage": "East Asia with complete Vietnam coverage; India is intentionally outside the primary frame.",
-    "sourceVisualTiles": "east_asia_strategy_height_tile_x0_y0_8192x8192_u16.png + east_asia_strategy_height_tile_x1_y0_6144x8192_u16.png",
-    "navWalkabilityOverlay": {
-      "textureUri": "EastAsiaPlayableTerrainMod:assets/samples/LudotsSample/east_asia/east_asia_nav_walkability.png",
-      "boundsCm": {
-        "minX": -450326016,
-        "minZ": -257329152,
-        "maxX": 450326016,
-        "maxZ": 257329152
-      }
-    }
+    "sourceVisualTiles": "east_asia_strategy_height_tile_x0_y0_8192x8192_u16.png + east_asia_strategy_height_tile_x1_y0_6144x8192_u16.png"
   },
   "Entities": [],
   "TriggerTypes": [],
