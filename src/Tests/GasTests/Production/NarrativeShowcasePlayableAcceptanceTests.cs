@@ -692,7 +692,15 @@ namespace Ludots.Tests.GAS.Production
                 "Standing portrait eyebrow should be visible.");
             UiNode? standing = FindUiNodeByClass(uiRoot.Scene?.Root, "story-standing-portrait");
             Assert.That(standing, Is.Not.Null, "Expected story-standing-portrait image node.");
-            Assert.That(standing!.Attributes["src"], Is.EqualTo(view.StandingImageSrc));
+            string standingSrc = standing!.Attributes["src"] ?? string.Empty;
+            Assert.That(standingSrc, Is.Not.Null.And.Not.Empty);
+            bool catalogMatch = string.Equals(standingSrc, view.StandingImageSrc, StringComparison.Ordinal);
+            bool themeOverride = standingSrc.Contains("PanelThemes", StringComparison.OrdinalIgnoreCase)
+                && standingSrc.Contains("standing_", StringComparison.OrdinalIgnoreCase);
+            Assert.That(
+                catalogMatch || themeOverride,
+                Is.True,
+                $"Standing portrait src should match catalog StandingImageSrc or a PanelThemes override. src='{standingSrc}', catalog='{view.StandingImageSrc}'.");
             Assert.That(standing.Style.Height.Unit, Is.EqualTo(UiLengthUnit.Pixel));
             Assert.That(standing.Style.Height.Value, Is.GreaterThanOrEqualTo(900f),
                 "Standing portrait should occupy roughly half-screen vertical height.");

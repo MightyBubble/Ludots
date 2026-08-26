@@ -120,7 +120,8 @@
       "Sequence.Narrative.Intro"
     ],
     "subtitleSequenceIds": [
-      "Sequence.Narrative.TrialReveal"
+      "Sequence.Narrative.TrialReveal",
+      "Sequence.Demo.Overture"
     ],
     "choiceSignals": [
       {
@@ -183,5 +184,10 @@
     "showVariablesAlways": false,
     "showObjectiveWithDialogue": false,
     "showObjectiveWithSequence": false
+  },
+  "bootstrap": {
+    "pureStoryLane": false,
+    "pureIntroSequenceId": "Sequence.Demo.Overture",
+    "pureBriefingDialogueId": "Dialogue.Demo.Audience"
   }
 }

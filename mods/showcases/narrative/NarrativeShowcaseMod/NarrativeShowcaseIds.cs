@@ -24,6 +24,8 @@ namespace NarrativeShowcaseMod
         public const string ReturnDialogueId = "Dialogue.Narrative.Return";
         public const string IntroSequenceId = "Sequence.Narrative.Intro";
         public const string TrialRevealSequenceId = "Sequence.Narrative.TrialReveal";
+        public const string DemoOvertureSequenceId = "Sequence.Demo.Overture";
+        public const string DemoAudienceDialogueId = "Dialogue.Demo.Audience";
 
         public const string SpawnBeastSignal = "showcase.spawn_beast";
         public const string BeastDefeatedSignal = "showcase.beast_defeated";

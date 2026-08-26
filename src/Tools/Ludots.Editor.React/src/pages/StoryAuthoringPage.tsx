@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { SequencerTimelineEditor } from './story/SequencerTimelineEditor';
 
 type CatalogInfo = {
   id: string;
@@ -87,6 +88,7 @@ export const StoryAuthoringPage: React.FC = () => {
   const [itemsText, setItemsText] = useState('[]');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState(0);
 
   const loadMods = useCallback(async () => {
     const res = await fetch('/api/mods');
@@ -484,6 +486,8 @@ export const StoryAuthoringPage: React.FC = () => {
       copy[idx] = next;
       replaceSelected({ ...row, tracks: copy });
     };
+    const ti = Math.min(Math.max(0, selectedTrackIndex), Math.max(0, tracks.length - 1));
+    const track = tracks[ti];
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
@@ -519,24 +523,33 @@ export const StoryAuthoringPage: React.FC = () => {
           </label>
         </div>
 
+        <SequencerTimelineEditor
+          tracks={tracks}
+          selectedIndex={ti}
+          onSelect={setSelectedTrackIndex}
+          onChangeTrack={updateTrack}
+        />
+
         <div className="flex items-center justify-between">
-          <h3 className="text-sm text-amber-200">轨道（镜头 / 字幕 / 信号）</h3>
+          <h3 className="text-sm text-amber-200">选中轨道属性</h3>
           <button
             type="button"
             className="text-xs px-2 py-1 rounded border border-zinc-700 hover:bg-zinc-900"
-            onClick={() =>
-              replaceSelected({
-                ...row,
-                tracks: [...tracks, { type: 'Subtitle', lineId: '', presentationProfile: 'story.immersive_subtitle', start: 0, duration: 2 }],
-              })
-            }
+            onClick={() => {
+              const nextTracks = [
+                ...tracks,
+                { type: 'Camera', profile: '', start: tracks.reduce((m, t) => Math.max(m, (t.start || 0) + (t.duration || 0)), 0), duration: 2 },
+              ];
+              replaceSelected({ ...row, tracks: nextTracks });
+              setSelectedTrackIndex(nextTracks.length - 1);
+            }}
           >
             + 加轨道
           </button>
         </div>
 
-        {tracks.map((track, ti) => (
-          <div key={ti} className="rounded border border-zinc-800 bg-zinc-950/60 p-3 grid grid-cols-2 gap-2">
+        {track && (
+          <div className="rounded border border-zinc-800 bg-zinc-950/60 p-3 grid grid-cols-2 gap-2">
             <label className={labelClass}>
               类型
               <select
@@ -573,7 +586,7 @@ export const StoryAuthoringPage: React.FC = () => {
             )}
             {track.type === 'Camera' && (
               <label className={labelClass}>
-                镜头配置
+                镜头配置（VirtualCamera）
                 <input
                   className={fieldClass}
                   value={track.profile ?? ''}
@@ -621,8 +634,19 @@ export const StoryAuthoringPage: React.FC = () => {
                 </label>
               </>
             )}
+            <button
+              type="button"
+              className="col-span-2 text-xs px-2 py-1 rounded border border-rose-900 text-rose-300"
+              onClick={() => {
+                const copy = tracks.filter((_, i) => i !== ti);
+                replaceSelected({ ...row, tracks: copy });
+                setSelectedTrackIndex(Math.max(0, ti - 1));
+              }}
+            >
+              删除此轨道
+            </button>
           </div>
-        ))}
+        )}
       </div>
     );
   };

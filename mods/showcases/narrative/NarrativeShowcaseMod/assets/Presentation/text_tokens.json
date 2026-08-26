@@ -1,21 +1,130 @@
 [
-  { "id": "story.speaker.warden.name", "argCount": 0 },
-  { "id": "story.speaker.player.name", "argCount": 0 },
-  { "id": "story.speaker.shrine.name", "argCount": 0 },
-  { "id": "story.ending.mercy", "argCount": 0 },
-  { "id": "story.ending.duty", "argCount": 0 },
-  { "id": "story.warden.intro.elder", "argCount": 0 },
-  { "id": "story.warden.intro.shrine", "argCount": 0 },
-  { "id": "story.warden.briefing.001", "argCount": 0 },
-  { "id": "story.player.briefing.lore", "argCount": 0 },
-  { "id": "story.player.briefing.accept_now", "argCount": 0 },
-  { "id": "story.warden.briefing.lore_reply", "argCount": 0 },
-  { "id": "story.player.briefing.accept_after_lore", "argCount": 0 },
-  { "id": "story.warden.briefing.accept", "argCount": 0 },
-  { "id": "story.shrine.reveal.001", "argCount": 0 },
-  { "id": "story.warden.return.001", "argCount": 0 },
-  { "id": "story.player.return.duty", "argCount": 0 },
-  { "id": "story.player.return.mercy", "argCount": 0 },
-  { "id": "story.warden.return.duty_outro", "argCount": 0 },
-  { "id": "story.warden.return.mercy_outro", "argCount": 0 }
+  {
+    "id": "story.speaker.warden.name",
+    "argCount": 0
+  },
+  {
+    "id": "story.speaker.player.name",
+    "argCount": 0
+  },
+  {
+    "id": "story.speaker.shrine.name",
+    "argCount": 0
+  },
+  {
+    "id": "story.ending.mercy",
+    "argCount": 0
+  },
+  {
+    "id": "story.ending.duty",
+    "argCount": 0
+  },
+  {
+    "id": "story.warden.intro.elder",
+    "argCount": 0
+  },
+  {
+    "id": "story.warden.intro.shrine",
+    "argCount": 0
+  },
+  {
+    "id": "story.warden.briefing.001",
+    "argCount": 0
+  },
+  {
+    "id": "story.player.briefing.lore",
+    "argCount": 0
+  },
+  {
+    "id": "story.player.briefing.accept_now",
+    "argCount": 0
+  },
+  {
+    "id": "story.warden.briefing.lore_reply",
+    "argCount": 0
+  },
+  {
+    "id": "story.player.briefing.accept_after_lore",
+    "argCount": 0
+  },
+  {
+    "id": "story.warden.briefing.accept",
+    "argCount": 0
+  },
+  {
+    "id": "story.shrine.reveal.001",
+    "argCount": 0
+  },
+  {
+    "id": "story.warden.return.001",
+    "argCount": 0
+  },
+  {
+    "id": "story.player.return.duty",
+    "argCount": 0
+  },
+  {
+    "id": "story.player.return.mercy",
+    "argCount": 0
+  },
+  {
+    "id": "story.warden.return.duty_outro",
+    "argCount": 0
+  },
+  {
+    "id": "story.warden.return.mercy_outro",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.overture.elder",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.overture.shrine",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.overture.close",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.audience.open",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.player.ask",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.player.ready",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.audience.ask_reply",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.audience.ready_reply",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.audience.standing",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.player.duty",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.player.mercy",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.audience.duty_end",
+    "argCount": 0
+  },
+  {
+    "id": "story.demo.audience.mercy_end",
+    "argCount": 0
+  }
 ]
