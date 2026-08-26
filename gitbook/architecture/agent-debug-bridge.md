@@ -52,6 +52,7 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 | GAS | `ludots.gas.entity` · `ludots.gas.diagnostics` | tags（名称解析）/ attributes / active effects / ability 槽位；诊断事件缓冲转储 |
 | 订单 | `ludots.orders.inspect` · `ludots.orders.issue` | 准入/终态缓冲明细；经正式 intake 路径下发订单，全生命周期可观测 |
 | 输入 | `ludots.input.state` · `ludots.input.inject` · `ludots.input.raw` | 输入状态与 UI 捕获；**语义层**注入（press/release/set，走 `PlayerInputHandler.Inject*`）；**窗口层**注入（pointerMove/click/scroll/press/type，经 `SyntheticInputDevice` 与物理输入同管线） |
+| 图调试 | `ludots.graph.debug` | `list` / `configure` / `drain`：挂载的 TriggerGraph 条目与固定容量 live trace（sequence 增量、gap/dropped） |
 | 帧捕获 | `ludots.screenshot` · `ludots.recording.start/stop` | 经 `IHostFrameCapture` 端口抓帧 PNG；录屏为 PNG 序列 + manifest.json，agent 可抽帧阅读 |
 
 ### 输入两层模型

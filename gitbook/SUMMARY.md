@@ -38,6 +38,8 @@
     - [Presenter Command Extension](architecture/mod-extensible-runtime-showcases/presenter-command-extension.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
   - [图分层：Flow / Script 与行为调度](architecture/graph-layering-flow-and-behavior.md)
+  - [图能力唯一入口](architecture/graph-capability-status.md)
+  - [Graph 编辑器与 Live Debug 上手](architecture/graph-editor-and-live-debug.md)
   - [通用图查表（唯一查表路径）](architecture/graph-table-lookup.md)
   - [（已废止）TagDisplay 专线查表](architecture/tag-display-lookup.md)
   - [GAS、订单与输入运行时合同](architecture/gas-order-input-runtime-contract.md)
