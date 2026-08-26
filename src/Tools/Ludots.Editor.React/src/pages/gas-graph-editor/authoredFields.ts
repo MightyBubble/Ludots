@@ -25,9 +25,10 @@ export type AuthoredFieldKey =
   | 'lookupField'
   | 'teamId'
   | 'text'
+  | 'textKey'
   | 'presentationSurface';
 
-export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId' | 'enumType';
+export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId' | 'enumType' | 'textKey';
 
 export type AuthoredFieldSpec = {
   key: AuthoredFieldKey;
@@ -61,6 +62,11 @@ const payloadKey: AuthoredFieldSpec = { key: 'payloadKey', label: 'Payload key',
 const instanceId: AuthoredFieldSpec = { key: 'instanceId', label: 'Placed instance', kind: 'instanceId' };
 const teamId: AuthoredFieldSpec = { key: 'teamId', label: 'Team', kind: 'int' };
 const text: AuthoredFieldSpec = { key: 'text', label: 'Text', kind: 'string' };
+const textKey: AuthoredFieldSpec = {
+  key: 'textKey',
+  label: 'Text key (Presentation/text_tokens.json)',
+  kind: 'textKey',
+};
 const presentationSurface: AuthoredFieldSpec = {
   key: 'presentationSurface',
   label: 'Surface (Subtitle/Dialogue)',
@@ -72,6 +78,7 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   ConstFloat: [floatValue],
   ConstBool: [boolValue],
   ConstText: [text],
+  LoadTextKey: [textKey],
   FormatText: [text],
   SinkPresentationText: [presentationSurface],
   CreatePanel: [panelType, panelAnchor, panelSkin, panelZOrder],

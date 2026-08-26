@@ -8326,6 +8326,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SinkPresentationText/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_LoadTextKey",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadTextKeyEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadTextKeyEntryMod.csproj",
+      "title": "按文案键出字幕",
+      "summary": "作者从名册里挑 gallery.hello；跑完，字幕口吐出本地化的「你好」。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadTextKey"
+      ],
+      "binding": "capability_standard_graph_op_LoadTextKey",
+      "preset": "capability_standard_graph_op_LoadTextKey_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadTextKey.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadTextKey",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadTextKey/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadTextKey/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

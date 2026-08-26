@@ -113,6 +113,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
         }
 
+        /// <summary>
+        /// Resolves a patched PresentationTextCatalog token id to default-locale template characters.
+        /// Zero-arg tokens only; argCount&gt;0 fails closed until FormatTextKey lands.
+        /// </summary>
+        ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)
+        {
+            throw new InvalidOperationException(
+                "GAS.GRAPH.ERR.PresentationTextCatalogUnavailable");
+        }
+
         // ── Map-scoped variables ──
 
         int ReadMapVarInt(int varKeyId, MapId mapId)
@@ -523,5 +533,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveRelationshipReason(string name);
         int ResolveTargetDispatchPreset(string name);
         int ResolveEntityTemplate(string name);
+
+        int ResolveTextToken(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references text token '{name}', but no PresentationTextCatalog resolver is available.");
+        }
     }
 }

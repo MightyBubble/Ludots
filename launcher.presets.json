@@ -2552,6 +2552,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadTextKey_raylib",
+      "name": "Graph Op LoadTextKey Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadTextKey"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
