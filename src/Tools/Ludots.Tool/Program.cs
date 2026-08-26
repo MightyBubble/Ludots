@@ -15,6 +15,7 @@ using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Tool
@@ -308,6 +309,18 @@ namespace Ludots.Tool
             var textureMinZOption = new Option<int?>("--minZcm", "Explicit minimum world Z bound in centimeters");
             var textureMaxXOption = new Option<int?>("--maxXcm", "Explicit maximum world X bound in centimeters");
             var textureMaxZOption = new Option<int?>("--maxZcm", "Explicit maximum world Z bound in centimeters");
+            var texturePaintBlockedWaterOption = new Option<bool>(
+                "--paintLandBlockedWater",
+                () => false,
+                "Paint LogicTerrain land-blocked water (sea/lake/river cells) as red under walkable pixels");
+            var textureVhtmOption = new Option<string?>(
+                "--vhtm",
+                () => null,
+                "VisualHeightmap .vhtm used with --paintLandBlockedWater");
+            var textureSeaLevelOption = new Option<int?>(
+                "--seaLevelCm",
+                () => null,
+                "Override board TerrainBlockedAtOrBelowHeightCm when painting blocked water");
             exportWalkabilityCommand.AddOption(textureInDirOption);
             exportWalkabilityCommand.AddOption(textureMapIdOption);
             exportWalkabilityCommand.AddOption(textureModIdOption);
@@ -321,6 +334,9 @@ namespace Ludots.Tool
             exportWalkabilityCommand.AddOption(textureMinZOption);
             exportWalkabilityCommand.AddOption(textureMaxXOption);
             exportWalkabilityCommand.AddOption(textureMaxZOption);
+            exportWalkabilityCommand.AddOption(texturePaintBlockedWaterOption);
+            exportWalkabilityCommand.AddOption(textureVhtmOption);
+            exportWalkabilityCommand.AddOption(textureSeaLevelOption);
             exportWalkabilityCommand.SetHandler((InvocationContext ctx) =>
             {
                 try
@@ -334,6 +350,13 @@ namespace Ludots.Tool
                     string outputPath = ctx.ParseResult.GetValueForOption(textureOutOption)!;
                     int width = ctx.ParseResult.GetValueForOption(textureWidthOption);
                     int height = ctx.ParseResult.GetValueForOption(textureHeightOption);
+                    bool paintLandBlockedWater = ctx.ParseResult.GetValueForOption(texturePaintBlockedWaterOption);
+                    string? vhtmPath = ctx.ParseResult.GetValueForOption(textureVhtmOption);
+                    int? seaLevelOverride = ctx.ParseResult.GetValueForOption(textureSeaLevelOption);
+
+                    string repoRoot = string.IsNullOrWhiteSpace(textureRepoRoot)
+                        ? FindAssetsRoot()
+                        : Path.GetFullPath(textureRepoRoot);
 
                     if (string.IsNullOrWhiteSpace(inputDirectory))
                     {
@@ -342,9 +365,6 @@ namespace Ludots.Tool
                             throw new InvalidOperationException("Pass --inDir, or pass both --mapId and --profile.");
                         }
 
-                        string repoRoot = string.IsNullOrWhiteSpace(textureRepoRoot)
-                            ? FindAssetsRoot()
-                            : Path.GetFullPath(textureRepoRoot);
                         string assetRoot = string.IsNullOrWhiteSpace(textureModId)
                             ? repoRoot
                             : ToolMapConfigResolver.ResolveModRoot(repoRoot, textureModId);
@@ -368,14 +388,37 @@ namespace Ludots.Tool
                     WalkabilityTextureBounds? bounds = allBounds
                         ? new WalkabilityTextureBounds(minX!.Value, minZ!.Value, maxX!.Value, maxZ!.Value)
                         : null;
+
+                    LogicTerrainField? blockedWaterTerrain = null;
+                    if (paintLandBlockedWater)
+                    {
+                        if (string.IsNullOrWhiteSpace(textureMapId))
+                        {
+                            throw new InvalidOperationException("--paintLandBlockedWater requires --mapId.");
+                        }
+
+                        if (string.IsNullOrWhiteSpace(vhtmPath))
+                        {
+                            throw new InvalidOperationException("--paintLandBlockedWater requires --vhtm.");
+                        }
+
+                        blockedWaterTerrain = BuildLandBlockedWaterTerrain(
+                            repoRoot,
+                            textureMapId,
+                            textureModId,
+                            vhtmPath,
+                            seaLevelOverride);
+                    }
+
                     WalkabilityTextureExportResult result = WalkabilityTextureExporter.ExportDirectory(
                         inputDirectory,
                         outputPath,
                         width,
                         height,
-                        bounds);
+                        bounds,
+                        blockedWaterTerrain);
                     Console.WriteLine(
-                        $"ExportWalkabilityTexture done. tiles={result.TileCount} triangles={result.TriangleCount} size={result.Width}x{result.Height} hash={result.ContentHash} out={Path.GetFullPath(outputPath)}");
+                        $"ExportWalkabilityTexture done. tiles={result.TileCount} triangles={result.TriangleCount} blockedWaterPixels={result.BlockedWaterPixelCount} size={result.Width}x{result.Height} hash={result.ContentHash} out={Path.GetFullPath(outputPath)}");
                     ctx.ExitCode = 0;
                 }
                 catch (Exception ex)
@@ -1263,6 +1306,49 @@ namespace {modId}
             }
 
             return emptyTileCount == 0 ? result : new NavBakeResult(entries);
+        }
+
+        static LogicTerrainField BuildLandBlockedWaterTerrain(
+            string repoRoot,
+            string mapId,
+            string? modId,
+            string vhtmPath,
+            int? seaLevelOverrideCm)
+        {
+            if (!File.Exists(vhtmPath))
+            {
+                throw new InvalidOperationException($"VisualHeightmap not found: {vhtmPath}");
+            }
+
+            MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+            BoardConfig boardConfig = ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig)
+                ?? throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
+            int seaLevelCm = seaLevelOverrideCm
+                ?? boardConfig.TerrainBlockedAtOrBelowHeightCm
+                ?? throw new InvalidOperationException(
+                    $"Map '{mapId}' board has no TerrainBlockedAtOrBelowHeightCm; pass --seaLevelCm.");
+            int heightStep = boardConfig.TerrainHeightStepCm > 0 ? boardConfig.TerrainHeightStepCm : 100;
+            int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
+            int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+            int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+
+            Ludots.Core.Presentation.Terrain.VisualHeightmapAsset asset;
+            using (var stream = File.OpenRead(vhtmPath))
+            {
+                asset = Ludots.Core.Presentation.Terrain.VisualHeightmapBinary.Read(stream);
+            }
+
+            var heightmap = new Ludots.Core.Presentation.Terrain.VisualHeightmapRuntime(asset);
+            return VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+                heightmap,
+                widthCells,
+                heightCells,
+                cellSizeCm,
+                new LogicTerrainProjectionOptions(
+                    heightStep,
+                    blockedAtOrBelowHeightCm: seaLevelCm,
+                    originXcm: asset.Bounds.Left,
+                    originZcm: asset.Bounds.Top));
         }
 
         static string ResolveNavOutputRoot(string repoRoot, string? modId, string? outputRoot)

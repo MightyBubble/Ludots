@@ -3,6 +3,8 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Tool;
 
@@ -28,6 +30,11 @@ public readonly record struct WalkabilityTextureBounds(
 
 public readonly record struct WalkabilityAreaColor(byte R, byte G, byte B);
 
+public readonly record struct WalkabilityBlockedWaterStyle(byte R, byte G, byte B, byte A)
+{
+    public static WalkabilityBlockedWaterStyle LandBlockedRed { get; } = new(200, 32, 32, 220);
+}
+
 public sealed record WalkabilityTextureExportResult(
     int TileCount,
     int TriangleCount,
@@ -36,7 +43,8 @@ public sealed record WalkabilityTextureExportResult(
     WalkabilityTextureBounds Bounds,
     string ContentHash,
     string PngPath,
-    string SidecarPath);
+    string SidecarPath,
+    int BlockedWaterPixelCount = 0);
 
 public static class WalkabilityTextureExporter
 {
@@ -45,7 +53,9 @@ public static class WalkabilityTextureExporter
         string outputPngPath,
         int width,
         int height = 0,
-        WalkabilityTextureBounds? explicitBounds = null)
+        WalkabilityTextureBounds? explicitBounds = null,
+        LogicTerrainField? blockedWaterTerrain = null,
+        WalkabilityBlockedWaterStyle? blockedWaterStyle = null)
     {
         if (string.IsNullOrWhiteSpace(inputDirectory))
         {
@@ -94,6 +104,13 @@ public static class WalkabilityTextureExporter
 
         ValidateBoundsContainTiles(tiles, bounds);
         byte[] rgba = Rasterize(tiles, bounds, width, height);
+        int blockedWaterPixels = 0;
+        if (blockedWaterTerrain != null)
+        {
+            WalkabilityBlockedWaterStyle style = blockedWaterStyle ?? WalkabilityBlockedWaterStyle.LandBlockedRed;
+            blockedWaterPixels = PaintBlockedWaterUnderlay(rgba, width, height, bounds, blockedWaterTerrain, style);
+        }
+
         byte[] png = RgbaPngEncoder.Encode(width, height, rgba);
         string hash = Convert.ToHexString(SHA256.HashData(png)).ToLowerInvariant();
 
@@ -124,11 +141,16 @@ public static class WalkabilityTextureExporter
             {
                 format = "RGBA8",
                 row0 = "maxZcm",
-                alpha = "0=not-covered-or-blocked,255=walkable",
-                rgb = "deterministic TriAreaIds palette",
+                alpha = blockedWaterTerrain == null
+                    ? "0=not-covered-or-blocked,255=walkable"
+                    : "0=outside-sample,220=blocked-water,255=walkable-land",
+                rgb = blockedWaterTerrain == null
+                    ? "deterministic TriAreaIds palette"
+                    : "walkable=TriAreaIds palette; blocked-water=fixed land-blocked red",
             },
             sourceTileCount = tiles.Length,
             triangleCount,
+            blockedWaterPixelCount = blockedWaterPixels,
             contentHash = "sha256:" + hash,
         };
         File.WriteAllText(
@@ -143,7 +165,8 @@ public static class WalkabilityTextureExporter
             bounds,
             "sha256:" + hash,
             fullPngPath,
-            sidecarPath);
+            sidecarPath,
+            blockedWaterPixels);
     }
 
     public static byte[] Rasterize(
@@ -190,6 +213,85 @@ public static class WalkabilityTextureExporter
         }
 
         return rgba;
+    }
+
+    /// <summary>
+    /// Paints land-blocked water (LogicTerrain IsBlocked) under walkable pixels so army-blocked
+    /// sea/lake/river cells show as red in the overlay without erasing walkable land.
+    /// </summary>
+    public static int PaintBlockedWaterUnderlay(
+        byte[] rgba,
+        int width,
+        int height,
+        WalkabilityTextureBounds bounds,
+        LogicTerrainField terrain,
+        WalkabilityBlockedWaterStyle style)
+    {
+        if (rgba == null) throw new ArgumentNullException(nameof(rgba));
+        if (terrain == null) throw new ArgumentNullException(nameof(terrain));
+        bounds.Validate();
+        if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width));
+        if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height));
+        if (rgba.Length != checked(width * height * 4))
+        {
+            throw new ArgumentException("RGBA buffer size does not match width*height*4.", nameof(rgba));
+        }
+
+        int stepCm = Math.Max(1, Math.Min(terrain.HorizontalStepCm, terrain.VerticalStepCm));
+        int originXcm;
+        int originZcm;
+        if (terrain is MutableGridLogicTerrainField grid)
+        {
+            originXcm = grid.OriginXcm;
+            originZcm = grid.OriginZcm;
+        }
+        else
+        {
+            terrain.GetWorldPositionMeters(0, 0, out float ox, out float oz);
+            originXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(ox));
+            originZcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(oz));
+        }
+
+        int painted = 0;
+        double widthCm = bounds.WidthCm;
+        double heightCm = bounds.HeightCm;
+        for (int y = 0; y < height; y++)
+        {
+            // row0 = maxZcm
+            double v = (y + 0.5) / height;
+            double worldZ = bounds.MaxZcm - (v * heightCm);
+            int row = (int)Math.Floor((worldZ - originZcm) / stepCm);
+            for (int x = 0; x < width; x++)
+            {
+                int offset = ((y * width) + x) * 4;
+                if (rgba[offset + 3] != 0)
+                {
+                    continue;
+                }
+
+                double u = (x + 0.5) / width;
+                double worldX = bounds.MinXcm + (u * widthCm);
+                int col = (int)Math.Floor((worldX - originXcm) / stepCm);
+                if ((uint)col >= (uint)terrain.WidthCells || (uint)row >= (uint)terrain.HeightCells)
+                {
+                    continue;
+                }
+
+                LogicTerrainCell cell = terrain.GetCell(col, row);
+                if (!cell.IsBlocked && !cell.HasWater)
+                {
+                    continue;
+                }
+
+                rgba[offset] = style.R;
+                rgba[offset + 1] = style.G;
+                rgba[offset + 2] = style.B;
+                rgba[offset + 3] = style.A;
+                painted++;
+            }
+        }
+
+        return painted;
     }
 
     public static WalkabilityAreaColor GetAreaColor(byte areaId)
