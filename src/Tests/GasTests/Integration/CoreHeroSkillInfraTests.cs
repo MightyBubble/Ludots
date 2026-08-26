@@ -186,7 +186,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnApply,
                 behavior,
                 EffectPresetType.None,
-                effectTagId: 0,
+                effectCategoryId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
 
@@ -204,7 +204,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnRemove,
                 behavior,
                 EffectPresetType.None,
-                effectTagId: 0,
+                effectCategoryId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
 
@@ -387,7 +387,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnApply,
                 default,
                 EffectPresetType.Relation,
-                effectTagId: 0,
+                effectCategoryId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
 

@@ -62,7 +62,7 @@ namespace Ludots.Tests.GAS
                 stimDmgMods.Add(attrHealth, ModifierOp.Add, -10f);
                 templates.Register(tplStimSelfDamage, new EffectTemplateData
                 {
-                    TagId = 100,
+                    CategoryId = 100,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS
                 drainMods.Add(attrEnergy, ModifierOp.Add, -5f);
                 templates.Register(tplCloakDrain, new EffectTemplateData
                 {
-                    TagId = 103,
+                    CategoryId = 103,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -91,7 +91,7 @@ namespace Ludots.Tests.GAS
                 empMods.Add(attrShield, ModifierOp.Add, -40f);
                 templates.Register(tplEmp, new EffectTemplateData
                 {
-                    TagId = 104,
+                    CategoryId = 104,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -105,7 +105,7 @@ namespace Ludots.Tests.GAS
                 healTickMods.Add(attrHealth, ModifierOp.Add, 2f);
                 templates.Register(tplHealTick, new EffectTemplateData
                 {
-                    TagId = 105,
+                    CategoryId = 105,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -325,7 +325,7 @@ namespace Ludots.Tests.GAS
                 dmg.Add(attrHealth, ModifierOp.Add, -12f);
                 templates.Register(tplFireball, new EffectTemplateData
                 {
-                    TagId = 200,
+                    CategoryId = 200,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     ParticipatesInResponse = false,
@@ -333,7 +333,7 @@ namespace Ludots.Tests.GAS
                 });
                 templates.Register(tplChainOpen, new EffectTemplateData
                 {
-                    TagId = 220,
+                    CategoryId = 220,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -469,7 +469,7 @@ namespace Ludots.Tests.GAS
                 empMods.Add(attrShield, ModifierOp.Add, -40f);
                 templates.Register(tplEmp, new EffectTemplateData
                 {
-                    TagId = 104,
+                    CategoryId = 104,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,

@@ -17,7 +17,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         {
             using var world = World.Create();
             int healthAttributeId = AttributeRegistry.Register("tests.response-listener.health");
-            const int effectTagId = 71;
+            const int effectCategoryId = 71;
             const int effectTemplateId = 81;
 
             var modifiers = default(EffectModifiers);
@@ -25,7 +25,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var templates = new EffectTemplateRegistry();
             templates.Register(effectTemplateId, new EffectTemplateData
             {
-                TagId = effectTagId,
+                CategoryId = effectCategoryId,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
                 ParticipatesInResponse = true,
@@ -62,7 +62,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
 
             Entity listenerEntity = world.Create();
             var listener = default(ResponseChainListener);
-            listener.Add(effectTagId, ResponseType.Hook, priority: 100);
+            listener.Add(effectCategoryId, ResponseType.Hook, priority: 100);
             ResponseChainListenerOps.Add(world, listenerEntity, in listener, queue);
 
             Publish(queue, target, effectTemplateId);

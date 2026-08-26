@@ -116,7 +116,7 @@ namespace Ludots.Tests.GAS
             RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
             int socialBondTypeId = types.Register("Tests.Relationship.SocialBondBuff");
             int pressureId = EnsureAttribute("Tests.Relationship.Pressure");
-            int effectTagId = EnsureTag("Effect.Test.RelationshipPressureBuff");
+            int effectCategoryId = EffectCategoryRegistry.Register("Effect.Test.RelationshipPressureBuff");
             Entity source = world.Create();
             Entity target = world.Create();
 
@@ -130,7 +130,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(pressureId, ModifierOp.Add, 2f);
             templates.Register(2301, new EffectTemplateData
             {
-                TagId = effectTagId,
+                CategoryId = effectCategoryId,
                 PresetType = EffectPresetType.Buff,
                 LifetimeKind = EffectLifetimeKind.After,
                 ClockId = GasClockId.Step,

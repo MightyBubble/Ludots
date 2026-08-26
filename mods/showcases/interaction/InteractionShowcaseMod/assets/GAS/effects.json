@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.Interaction.DuelBolt",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -13,13 +10,13 @@
         "op": "Add",
         "value": -18
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.BlinkStep",
-    "tags": [
-      "Effect.Interaction.Movement"
-    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -28,13 +25,13 @@
       "totalDistanceCm": 520,
       "totalDurationTicks": 2,
       "overrideNavigation": true
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Movement"
+    ]
   },
   {
     "id": "Effect.Interaction.FireLance",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -51,13 +48,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Interaction.FireLanceHit"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Damage"
+    ]
   },
   {
     "id": "Effect.Interaction.FireLanceHit",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -67,13 +64,13 @@
         "op": "Add",
         "value": -14
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.NovaPulse",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -90,13 +87,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Interaction.NovaPulseHit"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Damage"
+    ]
   },
   {
     "id": "Effect.Interaction.NovaPulseHit",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -106,13 +103,13 @@
         "op": "Add",
         "value": -10
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.ArcDash",
-    "tags": [
-      "Effect.Interaction.Movement"
-    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -121,13 +118,13 @@
       "totalDistanceCm": 320,
       "totalDurationTicks": 8,
       "overrideNavigation": true
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Movement"
+    ]
   },
   {
     "id": "Effect.Interaction.ArcaneGuardAura",
-    "tags": [
-      "Effect.Interaction.Toggle"
-    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -147,13 +144,13 @@
       "kind": "TagPresent",
       "tag": "State.Arcweaver.Guarding",
       "sense": "Effective"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Toggle"
+    ]
   },
   {
     "id": "Effect.Interaction.GuardRelease",
-    "tags": [
-      "Effect.Interaction.Buff"
-    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -163,13 +160,13 @@
         "op": "Add",
         "value": 12
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Buff"
     ]
   },
   {
     "id": "Effect.Interaction.RuneBurst",
-    "tags": [
-      "Effect.Interaction.Zone"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -186,13 +183,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Interaction.RuneBurstHit"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Zone"
+    ]
   },
   {
     "id": "Effect.Interaction.RuneBurstHit",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -202,13 +199,13 @@
         "op": "Add",
         "value": -22
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.Challenge",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -218,13 +215,13 @@
         "op": "Add",
         "value": -16
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.BannerLeap",
-    "tags": [
-      "Effect.Interaction.Movement"
-    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -233,13 +230,13 @@
       "totalDistanceCm": 460,
       "totalDurationTicks": 10,
       "overrideNavigation": true
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Movement"
+    ]
   },
   {
     "id": "Effect.Interaction.CleaveCone",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -256,13 +253,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Interaction.CleaveConeHit"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Damage"
+    ]
   },
   {
     "id": "Effect.Interaction.CleaveConeHit",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -272,13 +269,13 @@
         "op": "Add",
         "value": -12
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.Shockwave",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -296,13 +293,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Interaction.ShockwaveHit"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Damage"
+    ]
   },
   {
     "id": "Effect.Interaction.ShockwaveHit",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -312,13 +309,13 @@
         "op": "Add",
         "value": -13
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.ChargeDash",
-    "tags": [
-      "Effect.Interaction.Movement"
-    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -327,13 +324,13 @@
       "totalDistanceCm": 300,
       "totalDurationTicks": 8,
       "overrideNavigation": true
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Movement"
+    ]
   },
   {
     "id": "Effect.Interaction.IronWallAura",
-    "tags": [
-      "Effect.Interaction.Toggle"
-    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -353,13 +350,13 @@
       "kind": "TagPresent",
       "tag": "State.Vanguard.IronWall",
       "sense": "Effective"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Toggle"
+    ]
   },
   {
     "id": "Effect.Interaction.GroundSlam",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -377,13 +374,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Interaction.GroundSlamHit"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Damage"
+    ]
   },
   {
     "id": "Effect.Interaction.GroundSlamHit",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -393,13 +390,13 @@
         "op": "Add",
         "value": -20
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.SupportBeam",
-    "tags": [
-      "Effect.Interaction.Heal"
-    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -409,13 +406,13 @@
         "op": "Add",
         "value": 22
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Heal"
     ]
   },
   {
     "id": "Effect.Interaction.TacticalJump",
-    "tags": [
-      "Effect.Interaction.Movement"
-    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -424,13 +421,13 @@
       "totalDistanceCm": 560,
       "totalDurationTicks": 8,
       "overrideNavigation": true
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Movement"
+    ]
   },
   {
     "id": "Effect.Interaction.VolleyLine",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -447,13 +444,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Interaction.VolleyLineHit"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Damage"
+    ]
   },
   {
     "id": "Effect.Interaction.VolleyLineHit",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -463,13 +460,13 @@
         "op": "Add",
         "value": -12
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.Overclock",
-    "tags": [
-      "Effect.Interaction.Buff"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -484,13 +481,13 @@
         "op": "Add",
         "value": 80
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Buff"
     ]
   },
   {
     "id": "Effect.Interaction.ThrustJump",
-    "tags": [
-      "Effect.Interaction.Movement"
-    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -499,13 +496,13 @@
       "totalDistanceCm": 320,
       "totalDurationTicks": 7,
       "overrideNavigation": true
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Movement"
+    ]
   },
   {
     "id": "Effect.Interaction.ShieldNetAura",
-    "tags": [
-      "Effect.Interaction.Toggle"
-    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -525,13 +522,13 @@
       "kind": "TagPresent",
       "tag": "State.Commander.ShieldNet",
       "sense": "Effective"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Toggle"
+    ]
   },
   {
     "id": "Effect.Interaction.OrbitalStrike",
-    "tags": [
-      "Effect.Interaction.Zone"
-    ],
     "presetType": "PeriodicSearch",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -553,13 +550,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Interaction.OrbitalStrikeTick"
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Zone"
+    ]
   },
   {
     "id": "Effect.Interaction.OrbitalStrikeTick",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -569,13 +566,13 @@
         "op": "Add",
         "value": -8
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.Stress.Fireball",
-    "tags": [
-      "Effect.Interaction.Projectile"
-    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -592,13 +589,13 @@
       "collisionRelationFilter": "All",
       "collisionExcludeSource": true,
       "maxHitCount": 1
-    }
+    },
+    "categories": [
+      "Effect.Interaction.Projectile"
+    ]
   },
   {
     "id": "Effect.Interaction.Stress.FireballHit",
-    "tags": [
-      "Effect.Interaction.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -608,13 +605,13 @@
         "op": "Add",
         "value": -6
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Damage"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.E",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -629,13 +626,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.F",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -650,13 +647,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.Q",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -671,13 +668,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.R",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -692,13 +689,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.Rune",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -713,13 +710,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.W",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -734,13 +731,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.Z",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -755,13 +752,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.E",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -776,13 +773,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.F",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -797,13 +794,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.Q",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -818,13 +815,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.R",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -839,13 +836,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.Rune",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -860,13 +857,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.W",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -881,13 +878,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.Z",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -902,13 +899,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Stress.Fireball",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -923,13 +920,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.E",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -944,13 +941,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.F",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -965,13 +962,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.Q",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -986,13 +983,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.R",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1007,13 +1004,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.Rune",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1028,13 +1025,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.W",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1049,13 +1046,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.Z",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1070,6 +1067,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   }
 ]

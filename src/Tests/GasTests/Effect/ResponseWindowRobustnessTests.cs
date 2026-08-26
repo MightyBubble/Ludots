@@ -30,7 +30,7 @@ namespace Ludots.Tests.GAS
                 mods.Add(attrId: attrHealth, ModifierOp.Add, -10f);
                 templates.Register(tplInstant, new EffectTemplateData
                 {
-                    TagId = 1,
+                    CategoryId = 1,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -106,7 +106,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplRoot, new EffectTemplateData
                 {
-                    TagId = rootTag,
+                    CategoryId = rootTag,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -122,7 +122,7 @@ namespace Ludots.Tests.GAS
                     int tplId = 3000 + i;
                     templates.Register(tplId, new EffectTemplateData
                     {
-                        TagId = 200 + i,
+                        CategoryId = 200 + i,
                         LifetimeKind = EffectLifetimeKind.Instant,
                         ClockId = GasClockId.Step,
                         DurationTicks = 0,
@@ -200,7 +200,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplRoot, new EffectTemplateData
                 {
-                    TagId = rootTag,
+                    CategoryId = rootTag,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -359,7 +359,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplRoot, new EffectTemplateData
                 {
-                    TagId = rootTag,
+                    CategoryId = rootTag,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     ParticipatesInResponse = true,
@@ -367,7 +367,7 @@ namespace Ludots.Tests.GAS
                 });
                 templates.Register(tplFollow, new EffectTemplateData
                 {
-                    TagId = followTag,
+                    CategoryId = followTag,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     ParticipatesInResponse = true,
@@ -460,7 +460,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplRoot, new EffectTemplateData
                 {
-                    TagId = rootTag,
+                    CategoryId = rootTag,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     ParticipatesInResponse = true,
@@ -549,7 +549,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplRoot, new EffectTemplateData
                 {
-                    TagId = rootTag,
+                    CategoryId = rootTag,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     ParticipatesInResponse = true,
@@ -637,7 +637,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplRoot, new EffectTemplateData
                 {
-                    TagId = rootTag,
+                    CategoryId = rootTag,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     ParticipatesInResponse = true,
@@ -761,7 +761,7 @@ namespace Ludots.Tests.GAS
             var templates = new EffectTemplateRegistry();
             templates.Register(tplRoot, new EffectTemplateData
             {
-                TagId = rootTag,
+                CategoryId = rootTag,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
                 DurationTicks = 0,

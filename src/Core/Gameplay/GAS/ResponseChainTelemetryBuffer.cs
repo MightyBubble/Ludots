@@ -29,7 +29,7 @@ namespace Ludots.Core.Gameplay.GAS
         public ResponseChainTelemetryKind Kind;
         public int RootId;
         public int TemplateId;
-        public int TagId;
+        public int CategoryId;
         public int ProposalIndex;
         public int PromptTagId;
         public int OrderTypeId;

@@ -146,6 +146,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new InvalidOperationException(
                     $"Effect template '{id}' in {relativePath} uses deprecated 'lifecycleDeploy' block. Use configParams '_ep.targetEntityTemplate' with preset graph composition.");
             }
+
+            if (obj.ContainsKey("tags"))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{id}' in {relativePath} field 'tags' was renamed to 'categories' (effect classification, not gameplay tags).");
+            }
         }
 
         private EffectTemplateData Compile(EffectTemplateConfig cfg, string relativePath)
@@ -206,13 +212,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 periodTicks = 0;
             }
 
-            if (cfg.Tags != null && cfg.Tags.Count > 1)
+            if (cfg.Categories != null && cfg.Categories.Count > 1)
             {
                 throw new InvalidOperationException(
-                    $"Effect template '{cfg.Id}' in {relativePath}: 'tags' supports at most one tag.");
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'categories' supports at most one category.");
             }
-            int tagId = cfg.Tags != null && cfg.Tags.Count == 1
-                ? TagRegistry.Register(RequireString(cfg.Tags[0], cfg.Id, relativePath, "tags[0]"))
+            int categoryId = cfg.Categories != null && cfg.Categories.Count == 1
+                ? EffectCategoryRegistry.Register(RequireString(cfg.Categories[0], cfg.Id, relativePath, "categories[0]"))
                 : 0;
 
             int presetTypeId = ParsePresetTypeId(cfg.PresetType, cfg.Id, relativePath);
@@ -520,7 +526,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             return new EffectTemplateData
             {
-                TagId = tagId,
+                CategoryId = categoryId,
                 PresetType = presetType,
                 PresetTypeId = presetTypeId,
                 PresetAttribute0 = presetAttr0,
@@ -1628,10 +1634,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 else
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] has unknown action '{lc.Action}'. Supported: Graph, Event, Both.");
 
-                // Listen tag
-                int listenTagId = 0;
-                if (!string.IsNullOrWhiteSpace(lc.ListenTag))
-                    listenTagId = TagRegistry.Register(lc.ListenTag);
+                // Listen category (effect classification; not a gameplay tag)
+                int listenCategoryId = 0;
+                if (!string.IsNullOrWhiteSpace(lc.ListenCategory))
+                    listenCategoryId = EffectCategoryRegistry.Register(lc.ListenCategory);
 
                 // Listen effect template id
                 int listenEffectId = 0;
@@ -1647,14 +1653,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if ((flags & PhaseListenerActionFlags.ExecuteGraph) != 0 && !string.IsNullOrWhiteSpace(lc.GraphProgram))
                     graphProgramId = ResolveGraphProgram(lc.GraphProgram, ownerId, $"phaseListeners[{i}].graphProgram", relativePath);
 
-                // Event tag
+                // Event tag (real gameplay / event tag)
                 int eventTagId = 0;
                 if ((flags & PhaseListenerActionFlags.PublishEvent) != 0 && !string.IsNullOrWhiteSpace(lc.EventTag))
                     eventTagId = TagRegistry.Register(lc.EventTag);
 
                 int priority = lc.Priority ?? 0;
                 if (!EffectPhaseListenerContract.TryValidateRegistration(
-                        listenTagId,
+                        listenCategoryId,
                         listenEffectId,
                         phaseId,
                         scope,
@@ -1666,7 +1672,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException(
                         $"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] is invalid. {listenerError}");
                 }
-                if (!result.TryAddTemplate(listenTagId, listenEffectId, phaseId, scope, flags, graphProgramId, eventTagId, priority))
+                if (!result.TryAddTemplate(listenCategoryId, listenEffectId, phaseId, scope, flags, graphProgramId, eventTagId, priority))
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners exceeded capacity ({EffectPhaseListenerBuffer.CAPACITY}).");
                 }

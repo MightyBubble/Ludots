@@ -2133,7 +2133,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var pipeline = CreateMinimalPipeline(
                 @"{
                     ""id"": ""test_buff"",
-                    ""tags"": [""Test.Buff""],
+                    ""categories"": [""Test.Buff""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
                     ""duration"": { ""durationTicks"": 100, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
@@ -2199,7 +2199,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var pipeline = CreateMinimalPipeline(
                 @"{
                     ""id"": ""test_slow"",
-                    ""tags"": [""Test.Slow""],
+                    ""categories"": [""Test.Slow""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
                     ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
@@ -2236,7 +2236,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var pipeline = CreateMinimalPipeline(
                 @"{
                     ""id"": ""test_tags_without_base"",
-                    ""tags"": [""Test.Tags""],
+                    ""categories"": [""Test.Tags""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
                     ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
@@ -2271,7 +2271,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var pipeline = CreateMinimalPipeline(
                 @"{
                     ""id"": ""test_stackable"",
-                    ""tags"": [""Test.Stackable""],
+                    ""categories"": [""Test.Stackable""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
                     ""duration"": { ""durationTicks"": 120, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },

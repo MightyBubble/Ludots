@@ -47,9 +47,9 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public const int CAPACITY = 8;
         
         /// <summary>
-        /// 监听的Event Tag ID（匹配EffectPendingEvent）
+        /// Listened effect category ids (match EffectTemplateData.CategoryId; 0 = wildcard).
         /// </summary>
-        public fixed int EventTagIds[CAPACITY];
+        public fixed int EffectCategoryIds[CAPACITY];
         
         /// <summary>
         /// Response类型（Hook/Modify/Chain）
@@ -92,11 +92,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>
         /// 添加监听器
         /// </summary>
-        public bool Add(int eventTagId, ResponseType type, int priority, int effectTemplateId = -1, float modifyValue = 0f, ModifierOp modifyOp = ModifierOp.Add, int responseGraphId = 0)
+        public bool Add(int effectCategoryId, ResponseType type, int priority, int effectTemplateId = -1, float modifyValue = 0f, ModifierOp modifyOp = ModifierOp.Add, int responseGraphId = 0)
         {
             if (Count >= CAPACITY) return false;
             
-            EventTagIds[Count] = eventTagId;
+            EffectCategoryIds[Count] = effectCategoryId;
             ResponseTypes[Count] = (byte)type;
             Priorities[Count] = priority;
             EffectTemplateIds[Count] = effectTemplateId;
@@ -108,13 +108,13 @@ namespace Ludots.Core.Gameplay.GAS.Components
         }
         
         /// <summary>
-        /// 检查是否监听指定的Event Tag
+        /// Whether this listener matches the given effect category (0 entries are wildcards via Add).
         /// </summary>
-        public bool MatchesEventTag(int eventTagId)
+        public bool MatchesEffectCategory(int effectCategoryId)
         {
             for (int i = 0; i < Count; i++)
             {
-                if (EventTagIds[i] == eventTagId)
+                if (EffectCategoryIds[i] == effectCategoryId)
                 {
                     return true;
                 }

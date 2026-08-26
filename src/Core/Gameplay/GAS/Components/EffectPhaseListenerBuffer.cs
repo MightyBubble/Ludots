@@ -6,20 +6,20 @@ namespace Ludots.Core.Gameplay.GAS.Components
 {
     /// <summary>
     /// Shared matching predicate for phase listener collection.
-    /// Single source of truth for tag-wildcard and effectId-wildcard semantics.
+    /// Single source of truth for category-wildcard and effectId-wildcard semantics.
     /// </summary>
     internal static class PhaseListenerMatcher
     {
         /// <summary>
         /// Returns true if a stored listener entry matches the given query parameters.
-        /// A stored value of 0 for tagId or effectId acts as a wildcard (matches everything).
+        /// A stored value of 0 for categoryId or effectId acts as a wildcard (matches everything).
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Matches(byte storedPhase, int storedTagId, int storedEffectId,
-                                   byte queryPhase, int effectTagId, int effectTemplateId)
+        public static bool Matches(byte storedPhase, int storedCategoryId, int storedEffectId,
+                                   byte queryPhase, int effectCategoryId, int effectTemplateId)
         {
             if (storedPhase != queryPhase) return false;
-            if (storedTagId != 0 && storedTagId != effectTagId) return false;
+            if (storedCategoryId != 0 && storedCategoryId != effectCategoryId) return false;
             if (storedEffectId != 0 && storedEffectId != effectTemplateId) return false;
             return true;
         }
@@ -75,7 +75,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         }
 
         public static bool TryValidateRegistration(
-            int listenTagId,
+            int listenCategoryId,
             int listenEffectId,
             EffectPhaseId phase,
             PhaseListenerScope scope,
@@ -84,7 +84,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
             int eventTagId,
             out string reason)
         {
-            if (listenTagId < 0 || listenEffectId < 0)
+            if (listenCategoryId < 0 || listenEffectId < 0)
             {
                 reason = "Listener match ids must be non-negative; zero is the wildcard.";
                 return false;
@@ -159,7 +159,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         }
 
         public static void RequireValidRegistration(
-            int listenTagId,
+            int listenCategoryId,
             int listenEffectId,
             EffectPhaseId phase,
             PhaseListenerScope scope,
@@ -168,7 +168,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
             int eventTagId)
         {
             if (!TryValidateRegistration(
-                    listenTagId,
+                    listenCategoryId,
                     listenEffectId,
                     phase,
                     scope,
@@ -217,7 +217,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public int Count;
         /// <summary>Effect tag id to match (0 = wildcard, matches all).</summary>
-        public fixed int ListenTagIds[CAPACITY];
+        public fixed int ListenCategoryIds[CAPACITY];
         /// <summary>Effect template id to match (0 = wildcard, matches all).</summary>
         public fixed int ListenEffectIds[CAPACITY];
         /// <summary>Which phase triggers this listener.</summary>
@@ -238,12 +238,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>
         /// Try to add a listener entry. Returns false if buffer is full.
         /// </summary>
-        public bool TryAdd(int listenTagId, int listenEffectId, EffectPhaseId phase, PhaseListenerScope scope,
+        public bool TryAdd(int listenCategoryId, int listenEffectId, EffectPhaseId phase, PhaseListenerScope scope,
                            PhaseListenerActionFlags flags, int graphProgramId, int eventTagId, int priority, int ownerEffectId)
         {
             EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
             EffectPhaseListenerContract.RequireValidRegistration(
-                listenTagId,
+                listenCategoryId,
                 listenEffectId,
                 phase,
                 scope,
@@ -252,7 +252,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 eventTagId);
             if (Count >= CAPACITY) return false;
             int idx = Count;
-            ListenTagIds[idx] = listenTagId;
+            ListenCategoryIds[idx] = listenCategoryId;
             ListenEffectIds[idx] = listenEffectId;
             Phases[idx] = (byte)phase;
             Scopes[idx] = (byte)scope;
@@ -269,14 +269,14 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// Try to add a listener entry without an owner (for compile-time template setup).
         /// OwnerEffectIds slot is set to 0; real owner id is filled at runtime registration.
         /// </summary>
-        public bool TryAddTemplate(int listenTagId, int listenEffectId, EffectPhaseId phase, PhaseListenerScope scope,
+        public bool TryAddTemplate(int listenCategoryId, int listenEffectId, EffectPhaseId phase, PhaseListenerScope scope,
                                    PhaseListenerActionFlags flags, int graphProgramId, int eventTagId, int priority)
         {
-            return TryAdd(listenTagId, listenEffectId, phase, scope, flags, graphProgramId, eventTagId, priority, 0);
+            return TryAdd(listenCategoryId, listenEffectId, phase, scope, flags, graphProgramId, eventTagId, priority, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool HasMatch(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope)
+        public bool HasMatch(int effectCategoryId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope)
         {
             EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
             byte phaseB = (byte)phase;
@@ -285,8 +285,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
             {
                 if (Scopes[i] == scopeB &&
                     PhaseListenerMatcher.Matches(
-                        Phases[i], ListenTagIds[i], ListenEffectIds[i],
-                        phaseB, effectTagId, effectTemplateId))
+                        Phases[i], ListenCategoryIds[i], ListenEffectIds[i],
+                        phaseB, effectCategoryId, effectTemplateId))
                 {
                     return true;
                 }
@@ -307,7 +307,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 if (OwnerEffectIds[read] == ownerEffectId) continue;
                 if (write != read)
                 {
-                    ListenTagIds[write] = ListenTagIds[read];
+                    ListenCategoryIds[write] = ListenCategoryIds[read];
                     ListenEffectIds[write] = ListenEffectIds[read];
                     Phases[write] = Phases[read];
                     Scopes[write] = Scopes[read];
@@ -326,13 +326,13 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// Collect all matching entries into <paramref name="output"/> for dispatch.
         /// Returns the number of collected actions.
         /// </summary>
-        public int Collect(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
+        public int Collect(int effectCategoryId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
                            Span<PhaseListenerCollectedAction> output)
         {
-            return Collect(effectTagId, effectTemplateId, phase, scope, output, out _);
+            return Collect(effectCategoryId, effectTemplateId, phase, scope, output, out _);
         }
 
-        public int Collect(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
+        public int Collect(int effectCategoryId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
                            Span<PhaseListenerCollectedAction> output, out int dropped)
         {
             EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
@@ -343,8 +343,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
             for (int i = 0; i < Count; i++)
             {
                 if (Scopes[i] != scopeB) continue;
-                if (!PhaseListenerMatcher.Matches(Phases[i], ListenTagIds[i], ListenEffectIds[i],
-                                                  phaseB, effectTagId, effectTemplateId)) continue;
+                if (!PhaseListenerMatcher.Matches(Phases[i], ListenCategoryIds[i], ListenEffectIds[i],
+                                                  phaseB, effectCategoryId, effectTemplateId)) continue;
 
                 if (collected < output.Length)
                 {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Input.Interaction
@@ -41,12 +42,58 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
+            RejectRenamedAuthoringFields(mergedObject, relativePath);
+
             var config = mergedObject.Deserialize<CommandIntentProfilesConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
             Validate(config, relativePath);
             return config;
         }
 
+        private static void RejectRenamedAuthoringFields(JsonObject root, string relativePath)
+        {
+            if (root["profiles"] is not JsonArray profiles)
+            {
+                return;
+            }
+
+            for (int i = 0; i < profiles.Count; i++)
+            {
+                if (profiles[i] is not JsonObject profile)
+                {
+                    continue;
+                }
+
+                if (profile["rules"] is not JsonArray rules)
+                {
+                    continue;
+                }
+
+                for (int r = 0; r < rules.Count; r++)
+                {
+                    if (rules[r] is not JsonObject rule)
+                    {
+                        continue;
+                    }
+
+                    string rulePath = $"{relativePath}.profiles[{i}].rules[{r}]";
+                    if (rule["actor"] is JsonObject actor && actor.ContainsKey("hasAbilityWithTag"))
+                    {
+                        throw new InvalidOperationException(
+                            $"{rulePath}.actor field 'hasAbilityWithTag' was renamed to 'hasAbilityWithCategory' (ability classification, not gameplay tags).");
+                    }
+
+                    if (rule["route"] is JsonObject route &&
+                        route["slot"] is JsonValue slotValue &&
+                        slotValue.TryGetValue(out string slot) &&
+                        slot.StartsWith("byAbilityTag:", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"{rulePath}.route.slot '{slot}' uses removed prefix 'byAbilityTag:'; rename to 'byAbilityCategory:'.");
+                    }
+                }
+            }
+        }
         /// <summary>Structural fail-fast validation; id resolution happens at registry install.</summary>
         public static void Validate(CommandIntentProfilesConfig config, string source)
         {

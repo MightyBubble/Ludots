@@ -209,9 +209,15 @@ namespace Physics2DPlaygroundMod.Systems
                 return;
             }
 
-            int tagId = TagRegistry.Register("Effect.ApplyForce");
+            int categoryId = EffectCategoryRegistry.GetId("Effect.ApplyForce");
+            if (categoryId == EffectCategoryRegistry.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    "Effect category 'Effect.ApplyForce' is not registered. Declare it on effects.json categories before installing response-chain listeners.");
+            }
+
             var listener = default(ResponseChainListener);
-            listener.Add(tagId, ResponseType.PromptInput, priority: 1000, effectTemplateId: templateId);
+            listener.Add(categoryId, ResponseType.PromptInput, priority: 1000, effectTemplateId: templateId);
 
             _chainDemoEntity = _world.Create(
                 new VisualTransform { Position = Vector3.Zero, Rotation = Quaternion.Identity, Scale = Vector3.One },
