@@ -160,6 +160,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         QueryCollectActiveTasks = 425,      // TargetList = task instances scoped to E[A]
         QueryCollectProgressionNodes = 426, // IntIdList = progression ids on E[A]
         QueryCollectAbilityHolders = 427,   // TargetList = TargetList candidates holding Imm ability
+        QueryCollectActiveActivities = 428, // TargetList = activity instances scoped to E[A]
+        // 429 free
 
         // ── Event evaluation context (410-412, RFC-0065 PROV-4b) ──
         LoadViewer           = 410,  // E[Dst] = state.Viewer (fixed register 2)

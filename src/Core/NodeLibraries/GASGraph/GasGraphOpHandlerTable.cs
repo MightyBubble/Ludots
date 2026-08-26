@@ -258,6 +258,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.QueryCollectItemDefinitions or
                 GraphNodeOp.QueryCollectPresentTags or
                 GraphNodeOp.QueryCollectActiveTasks or
+                GraphNodeOp.QueryCollectActiveActivities or
                 GraphNodeOp.QueryCollectProgressionNodes or
                 GraphNodeOp.QueryCollectAbilityHolders or
                 GraphNodeOp.LoadEffectTiming or
@@ -784,6 +785,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.QueryCollectItemDefinitions, HandleQueryCollectItemDefinitions, "QueryCollectItemDefinitions graph opcode.");
             Register(GraphNodeOp.QueryCollectPresentTags, HandleQueryCollectPresentTags, "QueryCollectPresentTags graph opcode.");
             Register(GraphNodeOp.QueryCollectActiveTasks, HandleQueryCollectActiveTasks, "QueryCollectActiveTasks graph opcode.");
+            Register(GraphNodeOp.QueryCollectActiveActivities, HandleQueryCollectActiveActivities, "QueryCollectActiveActivities graph opcode.");
             Register(GraphNodeOp.QueryCollectProgressionNodes, HandleQueryCollectProgressionNodes, "QueryCollectProgressionNodes graph opcode.");
             Register(GraphNodeOp.QueryCollectAbilityHolders, HandleQueryCollectAbilityHolders, "QueryCollectAbilityHolders graph opcode.");
             Register(GraphNodeOp.LoadEffectTiming, HandleLoadEffectTiming, "LoadEffectTiming graph opcode.");
@@ -1903,6 +1905,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleQueryCollectActiveTasks(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.CollectActiveTasks(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleQueryCollectActiveActivities(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CollectActiveActivities(s.E[ins.A], s.Targets));
         }
 
         private static void HandleQueryCollectProgressionNodes(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

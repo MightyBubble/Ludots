@@ -202,6 +202,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph active-task query runtime is not available.");
         }
 
+        int CollectActiveActivities(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-activity query runtime is not available.");
+        }
+
         int CollectProgressionNodes(Entity owner, Span<int> buffer)
         {
             throw new InvalidOperationException("Graph progression-node query runtime is not available.");

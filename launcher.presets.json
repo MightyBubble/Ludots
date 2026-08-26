@@ -2660,6 +2660,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveActivities_raylib",
+      "name": "Graph Op QueryCollectActiveActivities Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveActivities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

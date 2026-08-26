@@ -7405,7 +7405,7 @@
       "path": "mods/showcases/panel_collection_bags/PanelCollectionBagsShowcaseMod",
       "projectPath": "PanelCollectionBagsShowcaseMod.csproj",
       "title": "名册墙",
-      "summary": "效果图鉴、技能格与身上印记：三个 typed collection bags 同屏投影",
+      "summary": "名册厅六墙：效果图鉴、编队嵌技能、印记、物资聚合、差事活动、火球反查与进度",
       "tier": "T2",
       "category": "panel",
       "binding": "panel_collection_bags",
@@ -7417,11 +7417,16 @@
       "screenshot": "artifacts/acceptance/panel_collection_bags/screens/001_typed-collection-bags.png",
       "status": "active",
       "tags": [
+        "activity",
+        "aggregate",
+        "g12",
+        "nested",
         "panel",
-        "ui",
-        "typed-collection",
+        "progression",
         "showcase",
-        "g12"
+        "source-input",
+        "typed-collection",
+        "ui"
       ]
     },
     {
@@ -8663,6 +8668,33 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryCollectProgressionNodes",
       "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryCollectProgressionNodes/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_QueryCollectProgressionNodes/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveActivities",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod",
+      "projectPath": "CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod.csproj",
+      "title": "点出进行中的活动",
+      "summary": "进行中的活动被点名线牵住。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "QueryCollectActiveActivities"
+      ],
+      "binding": "capability_standard_graph_op_QueryCollectActiveActivities",
+      "preset": "capability_standard_graph_op_QueryCollectActiveActivities_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryCollectActiveActivities.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryCollectActiveActivities",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryCollectActiveActivities/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryCollectActiveActivities/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }

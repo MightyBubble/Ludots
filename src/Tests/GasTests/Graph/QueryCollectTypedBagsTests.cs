@@ -112,6 +112,7 @@ namespace Ludots.Tests.GasTests.Graph
         [TestCase("QueryCollectItemDefinitions")]
         [TestCase("QueryCollectPresentTags")]
         [TestCase("QueryCollectActiveTasks")]
+        [TestCase("QueryCollectActiveActivities")]
         [TestCase("QueryCollectProgressionNodes")]
         [TestCase("QueryCollectAbilityHolders")]
         public void TypedCollector_CompilesWithRequiredInputs(string op)

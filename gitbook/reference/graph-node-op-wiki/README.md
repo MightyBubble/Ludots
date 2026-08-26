@@ -74,6 +74,7 @@
 - [点出身上印记](QueryCollectPresentTags.md) — 身上的印记被点名线牵住。
 - [点出进度节点](QueryCollectProgressionNodes.md) — 进度节点被点名线牵住。
 - [点出进行中的差事](QueryCollectActiveTasks.md) — 进行中的差事被点名线牵住。
+- [点出进行中的活动](QueryCollectActiveActivities.md) — 进行中的活动被点名线牵住。
 - [点名最残的那个](AggMinEntityByAttribute.md) — 全场退成灰影，空血条那个被点名徽钉住。
 - [点名最能扛的](AggMaxEntityByAttribute.md) — 全场退成灰影，满血条那个被点名徽钉住。
 - [照着名册点名](QueryFromCollection.md) — 名册板六格点亮，点名线拉向场上六人。

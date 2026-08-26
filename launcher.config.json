@@ -1991,6 +1991,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectProgressionNodesEntryMod",
         "projectPath": "CapabilityStandardGraphOpQueryCollectProgressionNodesEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveActivities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

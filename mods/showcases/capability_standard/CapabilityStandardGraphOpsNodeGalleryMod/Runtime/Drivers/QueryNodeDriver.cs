@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
 using Ludots.Platform.Abstractions;
@@ -81,6 +82,10 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectActiveTasks), StringComparison.Ordinal))
         {
             SeedActiveTasks(ctx);
+        }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectActiveActivities), StringComparison.Ordinal))
+        {
+            SeedActiveActivities(ctx);
         }
     }
 
@@ -244,6 +249,18 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
             DefinitionId = 1,
             InstanceId = 1,
             State = TaskInstanceState.Active,
+            ScopeHost = ctx.Caster,
+            Revision = 1
+        });
+    }
+
+    private static void SeedActiveActivities(GraphOpsNodeDriverContext ctx)
+    {
+        ctx.SimWorld.Create(new ActivityInstanceCm
+        {
+            DefinitionId = 1,
+            InstanceId = 1,
+            State = ActivityInstanceState.Active,
             ScopeHost = ctx.Caster,
             Revision = 1
         });
@@ -907,6 +924,7 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
             or nameof(GraphNodeOp.QueryCollectActiveEffects)
             or nameof(GraphNodeOp.QueryCollectInventoryItems)
             or nameof(GraphNodeOp.QueryCollectActiveTasks)
+            or nameof(GraphNodeOp.QueryCollectActiveActivities)
             or nameof(GraphNodeOp.QueryCollectAbilityHolders)
             or nameof(GraphNodeOp.AggSumAttribute)
             or nameof(GraphNodeOp.AggAverageAttribute)

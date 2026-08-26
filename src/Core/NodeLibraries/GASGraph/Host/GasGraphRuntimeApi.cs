@@ -23,6 +23,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Placement;
@@ -106,6 +107,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
     {
         public const string MissingBlackboardError = "GAS.GRAPH.ERR.MissingBlackboard";
         private static readonly QueryDescription TaskInstanceQuery = new QueryDescription().WithAll<TaskInstanceCm>();
+        private static readonly QueryDescription ActivityInstanceQuery = new QueryDescription().WithAll<ActivityInstanceCm>();
 
         private readonly World _world;
         private readonly ISpatialQueryService? _spatialQueries;
@@ -1335,6 +1337,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                     if (tasks[index].ScopeHost == owner &&
                         tasks[index].State == TaskInstanceState.Active)
+                    {
+                        buffer[written++] = Unsafe.Add(ref first, index);
+                    }
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectActiveActivities(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            foreach (ref var chunk in _world.Query(in ActivityInstanceQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                Span<ActivityInstanceCm> activities = chunk.GetSpan<ActivityInstanceCm>();
+                foreach (int index in chunk)
+                {
+                    if (written >= buffer.Length)
+                    {
+                        return written;
+                    }
+
+                    if (activities[index].ScopeHost == owner &&
+                        activities[index].State == ActivityInstanceState.Active)
                     {
                         buffer[written++] = Unsafe.Add(ref first, index);
                     }

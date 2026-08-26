@@ -78,6 +78,12 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
     }
 
     [Test]
+    public void QueryCollectActiveActivities_ListsSeededActivities()
+    {
+        AssertEntityCollector("QueryCollectActiveActivities", "活动");
+    }
+
+    [Test]
     public void QueryCollectProgressionNodes_ListsSeededProgressions()
     {
         AssertIntIdCollector("QueryCollectProgressionNodes", "进度");

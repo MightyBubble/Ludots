@@ -183,6 +183,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryCollectItemDefinitions, QueryOnly, queryOut: GraphValueType.IntIdList);
             Add(rows, GraphNodeOp.QueryCollectPresentTags, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
             Add(rows, GraphNodeOp.QueryCollectActiveTasks, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryCollectActiveActivities, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource);
             Add(rows, GraphNodeOp.QueryCollectProgressionNodes, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
             Add(rows, GraphNodeOp.QueryCollectAbilityHolders, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadEffectTiming, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);

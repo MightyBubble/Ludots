@@ -70,6 +70,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryCollectInventoryItems:
                 case GraphNodeOp.QueryCollectPresentTags:
                 case GraphNodeOp.QueryCollectActiveTasks:
+                case GraphNodeOp.QueryCollectActiveActivities:
                 case GraphNodeOp.QueryCollectProgressionNodes:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -385,6 +386,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryCollectInventoryItems:
                 case GraphNodeOp.QueryCollectPresentTags:
                 case GraphNodeOp.QueryCollectActiveTasks:
+                case GraphNodeOp.QueryCollectActiveActivities:
                 case GraphNodeOp.QueryCollectProgressionNodes:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,

@@ -38,6 +38,7 @@
 | QueryCollectItemDefinitions | 写出物品定义 id 袋 | 同上，定义 id |
 | QueryCollectPresentTags | 写出实体当前标签 id 袋 | 标签不是实体 |
 | QueryCollectActiveTasks | 写出范围内任务实例实体袋 | 需明确 scope 语义的收集节点 |
+| QueryCollectActiveActivities | 写出范围内活动实例实体袋 | 与任务同构，域为 Activity |
 | QueryCollectProgressionNodes | 写出实体进度 id 袋 | ProgressionStateBuffer 枚举 |
 | QueryCollectAbilityHolders | 候选实体中筛出持有指定技能者 | 反查样板；约束来自输入/标志 |
 
