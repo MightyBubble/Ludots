@@ -5,9 +5,10 @@ uniform float uShadowTexelWorld;
 uniform float uShadowBias;
 uniform float uShadowMapTexel;
 
-float UnpackDepth(vec4 packed)
+float UnpackDepth(vec4 encodedDepth)
 {
-    return dot(packed.rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0));
+    // Avoid GLSL reserved keyword `packed` (Mesa rejects it as PACKED_TOK).
+    return dot(encodedDepth.rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0));
 }
 
 float SampleShadow(vec3 worldPos, vec3 N)
