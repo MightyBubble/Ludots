@@ -131,3 +131,7 @@ _site/
 .tmp-logs/
 .dsh-*
 .worktrees/
+
+# FieldEditor local session sidecars (must not enter repo)
+*.field-editor-history.json
+*.field-editor-meta.json

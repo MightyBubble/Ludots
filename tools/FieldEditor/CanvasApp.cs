@@ -92,7 +92,17 @@ internal static class CanvasApp
             bool windowOpened = false;
             try
             {
-                Rl.InitWindow(WindowWidth, WindowHeight, "field-editor");
+                try
+                {
+                    Rl.InitWindow(WindowWidth, WindowHeight, "field-editor");
+                }
+                catch (DllNotFoundException ex)
+                {
+                    throw new InvalidOperationException(
+                        "Raylib canvas cannot load native libraylib. Ensure tools/FieldEditor output contains libraylib.so (copied from src/Platforms/Desktop).",
+                        ex);
+                }
+
                 windowOpened = true;
                 Rl.SetExitKey((int)KeyboardKey.KEY_NULL);
                 Rl.SetTargetFPS(60);
