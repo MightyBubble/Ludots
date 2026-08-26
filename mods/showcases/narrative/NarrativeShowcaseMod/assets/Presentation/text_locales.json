@@ -2,6 +2,11 @@
   "defaultLocale": "en-US",
   "locales": {
     "en-US": {
+      "story.speaker.warden.name": "Warden Mirelle",
+      "story.speaker.player.name": "Arcweaver",
+      "story.speaker.shrine.name": "Ember Shrine",
+      "story.ending.mercy": "Mercy",
+      "story.ending.duty": "Duty",
       "story.warden.intro.elder": "The lanterns still burn. That means the valley is still waiting for a witness.",
       "story.warden.intro.shrine": "Wake the shrine, face what it sends, and bring me back a judgment worth keeping.",
       "story.warden.briefing.001": "The Ember Shrine keeps count of every oath we break. Step close and choose how you want to enter the trial.",
@@ -18,6 +23,11 @@
       "story.warden.return.mercy_outro": "Then the valley keeps a memory instead of a scar."
     },
     "zh-CN": {
+      "story.speaker.warden.name": "看守米蕾尔",
+      "story.speaker.player.name": "织弧者",
+      "story.speaker.shrine.name": "余烬神龛",
+      "story.ending.mercy": "仁慈",
+      "story.ending.duty": "职责",
       "story.warden.intro.elder": "灯火仍在燃烧。这说明山谷仍在等待一位见证者。",
       "story.warden.intro.shrine": "唤醒神龛，面对它派出的存在，再带给我一个值得铭记的裁决。",
       "story.warden.briefing.001": "余烬神龛会记下我们打破的每一份誓言。靠近它，并选择你进入试炼的方式。",

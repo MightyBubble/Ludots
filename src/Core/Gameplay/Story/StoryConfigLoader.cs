@@ -9,6 +9,7 @@ namespace Ludots.Core.Gameplay.Story
     {
         public const string LinesPath = "Story/lines.json";
         public const string ProfilesPath = "Story/presentation_profiles.json";
+        public const string SpeakersPath = "Story/speakers.json";
 
         private readonly ConfigPipeline _pipeline;
         private readonly StoryDefinitionRegistry _registry;
@@ -29,6 +30,7 @@ namespace Ludots.Core.Gameplay.Story
             _registry.Clear();
             LoadLines(catalog, report);
             LoadProfiles(catalog, report);
+            LoadSpeakers(catalog, report);
         }
 
         private void LoadLines(ConfigCatalog? catalog, ConfigConflictReport? report)
@@ -51,6 +53,18 @@ namespace Ludots.Core.Gameplay.Story
             {
                 var definition = JsonSerializer.Deserialize<StoryPresentationProfileDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)
                     ?? throw new InvalidOperationException($"Failed to deserialize story presentation profile at '{ProfilesPath}' index {i}.");
+                _registry.Register(definition);
+            }
+        }
+
+        private void LoadSpeakers(ConfigCatalog? catalog, ConfigConflictReport? report)
+        {
+            var entry = ConfigPipeline.RequireEntry(catalog, SpeakersPath, ConfigMergePolicy.ArrayById, "id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            for (int i = 0; i < merged.Count; i++)
+            {
+                var definition = JsonSerializer.Deserialize<StorySpeakerDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)
+                    ?? throw new InvalidOperationException($"Failed to deserialize story speaker at '{SpeakersPath}' index {i}.");
                 _registry.Register(definition);
             }
         }

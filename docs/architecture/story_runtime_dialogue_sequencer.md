@@ -161,9 +161,10 @@ Task 字段：`on_enter_dialogue_id` 保留；`on_enter_cinematic_id` 改为 `on
 
 可操作演示（无外部作品名）：
 
-1. **主对话 overlay**：profile `story.dialogue_overlay`；选项条件来自 Query；确认后 TriggerGraph 改 MapVariable；说话者与头像位走 line/speaker 合同（肖像资产缺位时允许空位，不引入平行 glyph 合同冒充 #128）
-2. **世界气泡**：profile `story.world_bubble`；头顶跟随实体投影
+1. **主对话 overlay**：profile `story.dialogue_overlay`；选项条件来自 Query；确认后 TriggerGraph 改 MapVariable；说话者与肖像走 `Story/speakers.json` + `Presentation/image_assets.json`（[#128](presentation_semantic_text_and_image_assets.md)）
+2. **世界气泡**：profile `story.world_bubble`；头顶跟随实体投影；同一肖像合同
 3. **沉浸字幕序列**：Sequencer 同步 Camera + Subtitle；Signal 触发 TriggerGraph；支持暂停/继续/跳过
+4. **换肤**：`game.json panelTheme` 一行切换对话表面主题包（与数值面板同一主题轴）
 
 前端仍发布到既有 NarrativeFrontend surface kinds（屏幕组合合同已通用化），由 profile 选择 kind 与锚点策略，而不是 showcase 硬编码「有选项就 overlay」。
 

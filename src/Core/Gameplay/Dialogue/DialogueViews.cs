@@ -17,6 +17,8 @@ namespace Ludots.Core.Gameplay.Dialogue
         string NodeId,
         string LineId,
         string SpeakerId,
+        string ResolvedSpeakerName,
+        string PortraitImageSrc,
         string TextToken,
         string ResolvedText,
         string PresentationProfile,

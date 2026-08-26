@@ -22,6 +22,8 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Client;
+using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NarrativeFrontendMod;
@@ -136,7 +138,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             AppendHistory(_frontendConfig.Templates.DialogueEntered, new Dictionary<string, string>
             {
-                ["speaker"] = _frontendConfig.ResolveSpeakerLabel(context.Get(DialogueServiceKeys.SpeakerId) ?? string.Empty),
+                ["speaker"] = ResolveSpeakerDisplay(engine, context.Get(DialogueServiceKeys.SpeakerId) ?? string.Empty),
                 ["bodyText"] = context.Get(DialogueServiceKeys.BodyText) ?? string.Empty,
             });
             RefreshPanel(engine);
@@ -331,7 +333,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             if (sequencer.TryGetActiveView(out SequenceView sequence))
             {
-                surfaces.Add(BuildSequenceSurface(sequence));
+                surfaces.Add(BuildSequenceSurface(engine, sequence));
             }
 
             if (dialogue.TryGetActiveView(out DialogueView dialogueView))
@@ -477,7 +479,9 @@ namespace NarrativeShowcaseMod.Runtime
             DialogueRuntime dialogue,
             DialogueView dialogueView)
         {
-            string speaker = _frontendConfig.ResolveSpeakerLabel(dialogueView.SpeakerId);
+            string speaker = string.IsNullOrWhiteSpace(dialogueView.ResolvedSpeakerName)
+                ? dialogueView.SpeakerId
+                : dialogueView.ResolvedSpeakerName;
             string profile = dialogueView.PresentationProfile ?? string.Empty;
             bool worldBubble = string.Equals(profile, NarrativeShowcaseIds.PresentationWorldBubble, StringComparison.OrdinalIgnoreCase);
             bool overlay = string.Equals(profile, NarrativeShowcaseIds.PresentationDialogueOverlay, StringComparison.OrdinalIgnoreCase)
@@ -526,7 +530,9 @@ namespace NarrativeShowcaseMod.Runtime
                 BackgroundHex: config.BackgroundHex,
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
-                MutedHex: config.MutedHex);
+                MutedHex: config.MutedHex,
+                PortraitSrc: dialogueView.PortraitImageSrc,
+                PortraitSize: overlay ? 112f : 84f);
         }
 
         private NarrativeFrontendSurfaceModel BuildChoiceSurface(DialogueView dialogue)
@@ -551,7 +557,7 @@ namespace NarrativeShowcaseMod.Runtime
                 items);
         }
 
-        private NarrativeFrontendSurfaceModel BuildSequenceSurface(SequenceView sequence)
+        private NarrativeFrontendSurfaceModel BuildSequenceSurface(GameEngine engine, SequenceView sequence)
         {
             SequenceSubtitleView? subtitle = sequence.ActiveSubtitles.Count > 0
                 ? sequence.ActiveSubtitles[0]
@@ -565,7 +571,7 @@ namespace NarrativeShowcaseMod.Runtime
                 : NarrativeFrontendSurfaceKind.SubtitleBubble;
 
             string title = subtitle != null
-                ? _frontendConfig.ResolveSpeakerLabel(subtitle.SpeakerId)
+                ? ResolveSpeakerDisplay(engine, subtitle.SpeakerId)
                 : sequence.DisplayName;
             string body = subtitle?.ResolvedText ?? string.Empty;
             float progress01 = subtitle != null && subtitle.Duration > 0f
@@ -586,6 +592,23 @@ namespace NarrativeShowcaseMod.Runtime
                 true,
                 progress01,
                 countdown);
+        }
+
+        private string ResolveSpeakerDisplay(GameEngine engine, string speakerId)
+        {
+            if (string.IsNullOrWhiteSpace(speakerId))
+            {
+                return string.Empty;
+            }
+
+            if (engine.GetService(CoreServiceKeys.PresentationDisplayResolver) is PresentationDisplayResolver display &&
+                engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
+                story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
+            {
+                return display.FormatTokenOrThrow(speaker.DisplayNameToken);
+            }
+
+            return _frontendConfig.ResolveSpeakerLabel(speakerId);
         }
 
         private NarrativeFrontendSurfaceModel CreateSurface(

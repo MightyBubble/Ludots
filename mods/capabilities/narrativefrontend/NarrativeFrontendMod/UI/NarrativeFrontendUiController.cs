@@ -1,6 +1,7 @@
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
 using Ludots.UI;
+using Ludots.UI.Panels;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
@@ -13,6 +14,7 @@ internal sealed class NarrativeFrontendUiController
     private ReactivePage<NarrativeFrontendRenderState>? _page;
     private IUiSurfaceHost? _surfaceHost;
     private UiSurfaceLeaseHandle _lease;
+    private string? _mountedThemeId;
 
     public void MountOrRefresh(UIRoot root, GameEngine engine, NarrativeFrontendRenderState state)
     {
@@ -22,11 +24,25 @@ internal sealed class NarrativeFrontendUiController
         }
         _surfaceHost = surfaceHost;
 
-        if (_page == null)
+        PanelTheme? theme = PanelThemeCatalog.TryLoad(engine);
+        string? themeId = theme?.Id;
+        bool themeChanged = !string.Equals(_mountedThemeId, themeId, StringComparison.Ordinal);
+
+        if (_page == null || themeChanged)
         {
             var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
             var imageSizeProvider = (IUiImageSizeProvider)engine.GetService(CoreServiceKeys.UiImageSizeProvider);
-            _page = new ReactivePage<NarrativeFrontendRenderState>(textMeasurer, imageSizeProvider, state, NarrativeFrontendUiComposer.BuildRoot);
+            UiStyleSheet[] sheets = theme == null
+                ? Array.Empty<UiStyleSheet>()
+                : new[] { theme.StyleSheet };
+            _page = new ReactivePage<NarrativeFrontendRenderState>(
+                textMeasurer,
+                imageSizeProvider,
+                state,
+                NarrativeFrontendUiComposer.BuildRoot,
+                theme: null,
+                sheets);
+            _mountedThemeId = themeId;
         }
         else
         {
@@ -48,5 +64,8 @@ internal sealed class NarrativeFrontendUiController
             _lease = default;
             _surfaceHost = null;
         }
+
+        _page = null;
+        _mountedThemeId = null;
     }
 }

@@ -6,6 +6,13 @@ using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.Story
 {
+    public sealed class StorySpeakerDefinition : IIdentifiable
+    {
+        public string Id { get; set; } = string.Empty;
+        public string DisplayNameToken { get; set; } = string.Empty;
+        public string PortraitImageId { get; set; } = string.Empty;
+    }
+
     public sealed class StoryLineDefinition : IIdentifiable
     {
         public string Id { get; set; } = string.Empty;
@@ -45,14 +52,17 @@ namespace Ludots.Core.Gameplay.Story
     {
         private readonly Dictionary<string, StoryLineDefinition> _lines = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, StoryPresentationProfileDefinition> _profiles = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, StorySpeakerDefinition> _speakers = new(StringComparer.OrdinalIgnoreCase);
 
         public IReadOnlyCollection<StoryLineDefinition> Lines => _lines.Values;
         public IReadOnlyCollection<StoryPresentationProfileDefinition> Profiles => _profiles.Values;
+        public IReadOnlyCollection<StorySpeakerDefinition> Speakers => _speakers.Values;
 
         public void Clear()
         {
             _lines.Clear();
             _profiles.Clear();
+            _speakers.Clear();
         }
 
         public void Register(StoryLineDefinition definition)
@@ -87,11 +97,30 @@ namespace Ludots.Core.Gameplay.Story
             _profiles[definition.Id] = definition;
         }
 
+        public void Register(StorySpeakerDefinition definition)
+        {
+            if (definition == null) throw new ArgumentNullException(nameof(definition));
+            if (string.IsNullOrWhiteSpace(definition.Id))
+            {
+                throw new InvalidOperationException("Story speaker id is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.DisplayNameToken))
+            {
+                throw new InvalidOperationException($"Story speaker '{definition.Id}' requires displayNameToken.");
+            }
+
+            _speakers[definition.Id] = definition;
+        }
+
         public bool TryGetLine(string lineId, out StoryLineDefinition definition)
             => _lines.TryGetValue(lineId ?? string.Empty, out definition!);
 
         public bool TryGetProfile(string profileId, out StoryPresentationProfileDefinition definition)
             => _profiles.TryGetValue(profileId ?? string.Empty, out definition!);
+
+        public bool TryGetSpeaker(string speakerId, out StorySpeakerDefinition definition)
+            => _speakers.TryGetValue(speakerId ?? string.Empty, out definition!);
 
         public StoryLineDefinition RequireLine(string lineId)
         {
@@ -110,6 +139,17 @@ namespace Ludots.Core.Gameplay.Story
             {
                 throw new InvalidOperationException(
                     $"Story presentation profile '{profileId}' is not registered. Author it under Story/presentation_profiles.json.");
+            }
+
+            return definition;
+        }
+
+        public StorySpeakerDefinition RequireSpeaker(string speakerId)
+        {
+            if (!TryGetSpeaker(speakerId, out StorySpeakerDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"Story speaker '{speakerId}' is not registered. Author it under Story/speakers.json.");
             }
 
             return definition;

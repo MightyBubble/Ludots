@@ -1,6 +1,6 @@
 {
   "ownerId": "NarrativeShowcase",
-  "backdropHex": "#04070C08",
+  "backdropHex": "#05080FCC",
   "promptRibbon": {
     "anchor": "BottomCenter",
     "width": 980,
@@ -160,10 +160,5 @@
     "0": "Unwritten",
     "1": "Duty",
     "2": "Mercy"
-  },
-  "speakerLabels": {
-    "speaker.warden": "Warden Mirelle",
-    "speaker.shrine": "Ember Shrine",
-    "speaker.player": "Arcweaver"
   }
 }

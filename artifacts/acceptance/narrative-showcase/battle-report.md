@@ -3,7 +3,7 @@
 ## Header
 - scenario: `narrative-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-08-26T00:56:46.2997265+00:00`
+- execution_timestamp_utc: `2026-08-26T01:28:58.9763842+00:00`
 - map: `narrative_showcase_hub`
 - clock: `fixed 1/60s`
 
@@ -66,6 +66,6 @@
 ## Summary Stats
 - total_actions: `8`
 - snapshots captured: `8`
-- median headless tick: `0.308ms`
-- max headless tick: `115.463ms`
+- median headless tick: `0.328ms`
+- max headless tick: `136.026ms`
 - final_ui_excerpt: `Task Tracker | Ashen Oath | No active objective. | Task, objective, and hint come from TaskRuntime plus showcase config.`

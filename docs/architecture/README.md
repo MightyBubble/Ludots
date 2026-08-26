@@ -51,6 +51,7 @@
 - [Order / Navigation / Movement Architecture](order_navigation_movement.md)
 - [Quest Core Infrastructure](quest_core_infra.md)
 - [Story Runtime：Dialogue / Sequencer](story_runtime_dialogue_sequencer.md)（#1083 SSOT）
+- [Presentation：语义 TextToken 与 2D 图像资产](presentation_semantic_text_and_image_assets.md)（#128 SSOT）
 - [（已废止）Narrative Dialogue / Cinematic](narrative_dialogue_cinematic.md)
 - [（已废止）Narrative Frontend Kit](narrative_frontend_kit.md)
 - [Interaction Architecture](interaction/README.md)

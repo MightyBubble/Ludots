@@ -375,6 +375,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
         public static readonly ServiceKey<PresentationTextLocaleSelection> PresentationTextLocaleSelection = new("PresentationTextLocaleSelection");
+        public static readonly ServiceKey<PresentationSemanticMapCatalog> PresentationSemanticMapCatalog = new("PresentationSemanticMapCatalog");
+        public static readonly ServiceKey<PresentationImageAssetCatalog> PresentationImageAssetCatalog = new("PresentationImageAssetCatalog");
+        public static readonly ServiceKey<PresentationDisplayResolver> PresentationDisplayResolver = new("PresentationDisplayResolver");
         public static readonly ServiceKey<ScreenHudBatchBuffer> PresentationScreenHudBuffer = new("PresentationScreenHudBuffer");
         public static readonly ServiceKey<ScreenOverlayBuffer> ScreenOverlayBuffer = new("ScreenOverlayBuffer");
         public static readonly ServiceKey<MinimapRuntime> MinimapRuntime = new("MinimapRuntime");

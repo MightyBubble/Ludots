@@ -1,0 +1,20 @@
+[
+  {
+    "id": "portrait.speaker.warden",
+    "kind": "Portrait",
+    "path": "NarrativeShowcaseMod:assets/Presentation/portraits/warden.png",
+    "glyphFallback": "WM"
+  },
+  {
+    "id": "portrait.speaker.player",
+    "kind": "Portrait",
+    "path": "NarrativeShowcaseMod:assets/Presentation/portraits/arcweaver.png",
+    "glyphFallback": "AW"
+  },
+  {
+    "id": "portrait.speaker.shrine",
+    "kind": "Portrait",
+    "path": "NarrativeShowcaseMod:assets/Presentation/portraits/shrine.png",
+    "glyphFallback": "ES"
+  }
+]

@@ -1804,6 +1804,19 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             SetService(CoreServiceKeys.PresentationTextCatalog, presentationTextCatalog);
             SetService(CoreServiceKeys.PresentationTextLocaleSelection, presentationTextLocaleSelection);
+            var presentationSemanticMaps = new PresentationSemanticMapCatalogLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var presentationImageAssets = new PresentationImageAssetCatalogLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var presentationDisplayResolver = new PresentationDisplayResolver(
+                presentationTextCatalog,
+                presentationTextLocaleSelection,
+                presentationSemanticMaps,
+                presentationImageAssets,
+                VFS);
+            SetService(CoreServiceKeys.PresentationSemanticMapCatalog, presentationSemanticMaps);
+            SetService(CoreServiceKeys.PresentationImageAssetCatalog, presentationImageAssets);
+            SetService(CoreServiceKeys.PresentationDisplayResolver, presentationDisplayResolver);
             var screenHudBuffer = new ScreenHudBatchBuffer(presentationConfig.ScreenHudCapacity);
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
             SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
@@ -1884,7 +1897,15 @@ namespace Ludots.Core.Engine
             ValidateTaskStoryReferences();
             var storyGraphs = new StoryGraphInvoker(this);
             PresentationTextCatalog? textCatalog = GetService(CoreServiceKeys.PresentationTextCatalog);
-            var dialogueRuntime = new DialogueRuntime(this, dialogueDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog);
+            PresentationDisplayResolver? displayResolver = GetService(CoreServiceKeys.PresentationDisplayResolver);
+            var dialogueRuntime = new DialogueRuntime(
+                this,
+                dialogueDefinitions,
+                storyDefinitions,
+                storyGraphs,
+                taskRuntime,
+                textCatalog,
+                displayResolver);
             var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog);
             SetService(CoreServiceKeys.StoryGraphInvoker, storyGraphs);
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);

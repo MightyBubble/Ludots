@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Story;
 using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
@@ -29,6 +30,7 @@ namespace Ludots.Core.Gameplay.Dialogue
         private readonly StoryGraphInvoker _graphs;
         private readonly TaskRuntimeService _tasks;
         private readonly PresentationTextCatalog? _textCatalog;
+        private readonly PresentationDisplayResolver? _display;
         private readonly Dictionary<string, Entity> _bindings = new(StringComparer.OrdinalIgnoreCase);
         private ActiveDialogueSession? _active;
 
@@ -38,7 +40,8 @@ namespace Ludots.Core.Gameplay.Dialogue
             StoryDefinitionRegistry story,
             StoryGraphInvoker graphs,
             TaskRuntimeService tasks,
-            PresentationTextCatalog? textCatalog)
+            PresentationTextCatalog? textCatalog,
+            PresentationDisplayResolver? display = null)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _dialogues = dialogues ?? throw new ArgumentNullException(nameof(dialogues));
@@ -46,6 +49,7 @@ namespace Ludots.Core.Gameplay.Dialogue
             _graphs = graphs ?? throw new ArgumentNullException(nameof(graphs));
             _tasks = tasks ?? throw new ArgumentNullException(nameof(tasks));
             _textCatalog = textCatalog;
+            _display = display;
             _tasks.TaskStateChanged += HandleTaskStateChanged;
         }
 
@@ -164,12 +168,15 @@ namespace Ludots.Core.Gameplay.Dialogue
                     choice.ActionGraphId));
             }
 
+            ResolveSpeakerPresentation(line.SpeakerId, out string speakerName, out string portraitSrc);
             view = new DialogueView(
                 _active.Definition.Id,
                 _active.Definition.DisplayName,
                 node.Id,
                 node.LineId,
                 line.SpeakerId,
+                speakerName,
+                portraitSrc,
                 line.TextToken,
                 ResolveLineText(node.LineId),
                 node.PresentationProfile,
@@ -178,6 +185,45 @@ namespace Ludots.Core.Gameplay.Dialogue
                 _active.ElapsedSeconds,
                 choices);
             return true;
+        }
+
+        private void ResolveSpeakerPresentation(string speakerId, out string speakerName, out string portraitSrc)
+        {
+            speakerName = speakerId ?? string.Empty;
+            portraitSrc = string.Empty;
+            if (string.IsNullOrWhiteSpace(speakerId) || !_story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
+            {
+                return;
+            }
+
+            if (_display != null)
+            {
+                speakerName = _display.FormatTokenOrThrow(speaker.DisplayNameToken);
+                if (!string.IsNullOrWhiteSpace(speaker.PortraitImageId))
+                {
+                    portraitSrc = _display.ResolveImageSourceOrThrow(speaker.PortraitImageId);
+                }
+
+                return;
+            }
+
+            if (_textCatalog != null)
+            {
+                int tokenId = _textCatalog.GetTokenId(speaker.DisplayNameToken);
+                if (tokenId > 0)
+                {
+                    var packet = PresentationTextPacket.FromToken(tokenId);
+                    if (PresentationTextFormatter.TryFormat(
+                            _textCatalog,
+                            _textCatalog.DefaultLocaleId,
+                            in packet,
+                            out string formatted) &&
+                        !string.IsNullOrWhiteSpace(formatted))
+                    {
+                        speakerName = formatted;
+                    }
+                }
+            }
         }
 
         public DialogueRuntimeSnapshot CaptureSnapshot()

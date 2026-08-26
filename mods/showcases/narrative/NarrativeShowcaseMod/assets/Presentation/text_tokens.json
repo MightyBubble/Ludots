@@ -1,4 +1,9 @@
 [
+  { "id": "story.speaker.warden.name", "argCount": 0 },
+  { "id": "story.speaker.player.name", "argCount": 0 },
+  { "id": "story.speaker.shrine.name", "argCount": 0 },
+  { "id": "story.ending.mercy", "argCount": 0 },
+  { "id": "story.ending.duty", "argCount": 0 },
   { "id": "story.warden.intro.elder", "argCount": 0 },
   { "id": "story.warden.intro.shrine", "argCount": 0 },
   { "id": "story.warden.briefing.001", "argCount": 0 },

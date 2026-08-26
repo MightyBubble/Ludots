@@ -34,6 +34,7 @@ internal static class NarrativeFrontendUiComposer
         }
 
         return Ui.Column(children.ToArray())
+            .Class("story-root")
             .WidthPercent(100f)
             .HeightPercent(100f)
             .Absolute(0f, 0f)
@@ -64,6 +65,7 @@ internal static class NarrativeFrontendUiComposer
 
         (float left, float top) = ResolvePosition(surface);
         return builder
+            .Class("story-surface")
             .Width(surface.Width)
             .Absolute(left, top)
             .ZIndex(surface.ZIndex);
@@ -75,14 +77,16 @@ internal static class NarrativeFrontendUiComposer
         string foreground = ColorOrDefault(surface.ForegroundHex, "#F5F7FA");
         string muted = ColorOrDefault(surface.MutedHex, "#A9B9C9");
         string accent = ColorOrDefault(surface.AccentHex, "#F0C36B");
+        string surfaceClass = tailRight ? "story-subtitle-bubble" : "story-dialogue-bubble";
 
         return Ui.Column(
                 BuildBubbleTail(background, tailRight),
                 Ui.Card(
                         BuildEyebrow(surface.Subtitle, accent),
-                        Ui.Text(surface.Title).FontSize(18f).Bold().Color(foreground),
-                        Ui.Text(surface.Body).FontSize(13f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
+                        BuildPortraitTitleRow(surface, foreground, accent),
+                        Ui.Text(surface.Body).Class("story-body").FontSize(13f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
                         BuildMetaRow(surface, muted, accent))
+                    .Classes(surfaceClass, "story-card")
                     .Gap(8f)
                     .Padding(18f)
                     .Radius(26f)
@@ -101,17 +105,50 @@ internal static class NarrativeFrontendUiComposer
         string accent = ColorOrDefault(surface.AccentHex, "#F6C56B");
         return Ui.Card(
                 BuildEyebrow(surface.Subtitle, accent),
-                Ui.Text(surface.Title).FontSize(22f).Bold().Color(foreground),
-                Ui.Text(surface.Body).FontSize(14f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
+                BuildPortraitTitleRow(surface, foreground, accent),
+                Ui.Text(surface.Body).Class("story-body").FontSize(15f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
                 BuildItemsColumn(surface, accent, foreground, muted),
                 BuildMetaRow(surface, muted, accent))
-            .Gap(10f)
+            .Classes("story-overlay-dialogue", "story-card")
+            .Gap(12f)
             .Padding(22f)
             .Radius(28f)
             .Background(ColorOrDefault(surface.BackgroundHex, "#0A1220EE"))
             .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#5AD7E9FF")))
             .BoxShadow(0f, 24f, 48f, Color("#55000000"))
             .BackdropBlur(12f);
+    }
+
+    private static UiElementBuilder BuildPortraitTitleRow(
+        NarrativeFrontendSurfaceModel surface,
+        string foreground,
+        string accent)
+    {
+        var titleColumn = Ui.Column(
+                Ui.Text(surface.Title).Class("story-title").FontSize(22f).Bold().Color(foreground),
+                string.IsNullOrWhiteSpace(surface.Subtitle)
+                    ? Ui.Column()
+                    : Ui.Column())
+            .Gap(4f);
+
+        if (string.IsNullOrWhiteSpace(surface.PortraitSrc))
+        {
+            return titleColumn;
+        }
+
+        float size = surface.PortraitSize > 0f ? surface.PortraitSize : 96f;
+        return Ui.Row(
+                Ui.Image(surface.PortraitSrc)
+                    .Class("story-portrait")
+                    .Width(size)
+                    .Height(size)
+                    .Radius(18f)
+                    .Border(2f, Color(accent))
+                    .BoxShadow(0f, 10f, 24f, Color("#66000000")),
+                titleColumn)
+            .Class("story-portrait-row")
+            .Gap(16f)
+            .Align(UiAlignItems.Center);
     }
 
     private static UiElementBuilder BuildCard(NarrativeFrontendSurfaceModel surface, string defaultAccent)
@@ -132,7 +169,8 @@ internal static class NarrativeFrontendUiComposer
             .Radius(22f)
             .Background(ColorOrDefault(surface.BackgroundHex, "#0D1722E6"))
             .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#25465C")))
-            .BackdropBlur(8f);
+            .BackdropBlur(8f)
+            .Class("story-card");
     }
 
     private static UiElementBuilder BuildChoiceList(NarrativeFrontendSurfaceModel surface)
@@ -167,6 +205,7 @@ internal static class NarrativeFrontendUiComposer
         items.Add(BuildMetaRow(surface, muted, accent));
 
         return Ui.Card(items.ToArray())
+            .Classes("story-choice-list", "story-card")
             .Gap(8f)
             .Padding(18f)
             .Radius(24f)

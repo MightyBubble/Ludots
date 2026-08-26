@@ -1,0 +1,42 @@
+/* story-ember — Story Runtime dialogue theme (#128 / #1083). Data-driven via panelTheme. */
+.story-root {
+  font-family: "Segoe UI", "Iosevka", sans-serif;
+}
+
+.story-card {
+  background-color: rgba(10, 16, 26, 236);
+  background-image: url(images/panel_wash.png);
+  background-size: cover;
+  border: 1px solid rgba(246, 197, 107, 0.55);
+  border-radius: 22px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
+}
+
+.story-overlay-dialogue {
+  border-color: rgba(90, 215, 233, 0.75);
+  padding: 22px;
+}
+
+.story-dialogue-bubble,
+.story-subtitle-bubble {
+  border-radius: 24px;
+}
+
+.story-portrait {
+  border-radius: 18px;
+  border: 2px solid rgb(246, 197, 107);
+}
+
+.story-title {
+  color: rgb(248, 250, 252);
+  letter-spacing: 0.4px;
+}
+
+.story-body {
+  color: rgb(226, 234, 242);
+  line-height: 1.45;
+}
+
+.story-choice-list {
+  border-color: rgba(246, 197, 107, 0.35);
+}
