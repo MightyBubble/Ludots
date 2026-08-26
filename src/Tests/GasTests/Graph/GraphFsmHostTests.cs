@@ -3,6 +3,7 @@ using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.Gameplay.AI.Fsm;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph

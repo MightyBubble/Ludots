@@ -180,7 +180,8 @@
     ],
     "controlEdges": [
       { "from": "ask", "fromPort": "next", "to": "halt" }
-    ]
+    ],
+    "valueEdges": []
   },
   {
     "id": "Graph.Narrative.Wire.AwaitDialogConfirm",

@@ -12,7 +12,9 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
@@ -123,7 +125,8 @@ namespace Ludots.Tests.GAS.Production
             var view = new StubViewController(1920f, 1080f);
             engine.SetService(CoreServiceKeys.ViewController, view);
             var cameraAdapter = new StubCameraAdapter();
-            var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            PresentationTimingDiagnostics? timingDiagnostics =
+                engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
             var screenProjector = new CoreScreenProjector(engine.AuthorityCamera(), view);
             var screenRayProvider = new CoreScreenRayProvider(engine.AuthorityCamera(), view);
