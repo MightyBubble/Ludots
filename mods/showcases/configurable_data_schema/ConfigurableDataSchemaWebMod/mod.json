@@ -1,0 +1,9 @@
+{
+  "name": "ConfigurableDataSchemaWebMod",
+  "version": "1.0.0",
+  "description": "Web skin overlay for the data structure workbench",
+  "priority": 0,
+  "dependencies": {
+    "ConfigurableDataSchemaSharedMod": "^1.0.0"
+  }
+}

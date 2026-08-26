@@ -12,6 +12,7 @@
 | UAT-2C | `RoadNetworkShowcaseMod` | `road_network_showcase` | 道路规划与逐实体 MovePlan 执行 | `MovePlanExecutionMode.Individual` |
 | UAT-3 | `RelationshipShowcaseMod` | `relationship_showcase` | 场景卡、状态变化、artifact | battle report、trace、path evidence |
 | UAT-4 | `InteractionShowcaseMod` | `interaction_showcase_hub` | 统一输入、collection、HUD、entity info | 单一 command/selection truth |
+| UAT-DataSchema | `ConfigurableDataSchemaSharedMod` (+ Native/Web) | `configurable_data_schema_workbench` | 作者改草稿后看见面板与校验变化 | `ConfigurableDataSchemaShowcaseAcceptanceTests`；设计见 `configurable-data-schema-showcase-design.md` |
 
 ## Formation 玩家场景
 

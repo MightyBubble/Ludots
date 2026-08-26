@@ -1,0 +1,27 @@
+[
+  {
+    "Path": "Data/data_schemas.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Data/data_records.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Panels/panel_templates.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/graphs.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Entities/templates.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  }
+]

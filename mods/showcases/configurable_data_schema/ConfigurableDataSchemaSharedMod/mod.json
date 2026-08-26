@@ -1,0 +1,11 @@
+{
+  "name": "ConfigurableDataSchemaSharedMod",
+  "version": "1.0.0",
+  "description": "Data structure workbench showcase assets: schema/record drafts drive PanelVariableSet with Graph/Data ablation",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "DataSchemaAuthoringCapabilityMod": "^1.0.0"
+  }
+}

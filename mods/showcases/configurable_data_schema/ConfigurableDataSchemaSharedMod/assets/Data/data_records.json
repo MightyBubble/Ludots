@@ -1,0 +1,35 @@
+﻿[
+  {
+    "id": "unit.scout",
+    "schema": "unit",
+    "value": {
+      "name": "Scout",
+      "position": { "x": 12.5, "y": -3 },
+      "rarity": "Rare",
+      "tags": ["fast", "visible"],
+      "focusTarget": "WorkbenchOwner"
+    }
+  },
+  {
+    "id": "unit.tank",
+    "schema": "unit",
+    "value": {
+      "name": "Tank",
+      "position": { "x": 0, "y": 4 },
+      "rarity": "Common",
+      "tags": ["armored", "slow"],
+      "focusTarget": "WorkbenchOwner"
+    }
+  },
+  {
+    "id": "unit.workbench",
+    "schema": "unit",
+    "value": {
+      "name": "Scout",
+      "position": { "x": 12.5, "y": -3 },
+      "rarity": "Rare",
+      "tags": ["fast", "visible"],
+      "focusTarget": "WorkbenchOwner"
+    }
+  }
+]

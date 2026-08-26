@@ -1,0 +1,12 @@
+{
+  "name": "DataSchemaAuthoringCapabilityMod",
+  "version": "1.0.0",
+  "description": "Reusable data-schema authoring workbench capability (Schema/Record/Binding/Preview + Mod write-back).",
+  "priority": -50,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "main": "bin/net8.0/Ludots.DataSchemaWorkbench.dll",
+  "tags": ["data-schema", "authoring", "capability", "panels"]
+}

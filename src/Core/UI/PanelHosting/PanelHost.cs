@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.UI.PanelProjection;
 
@@ -139,7 +140,7 @@ namespace Ludots.Core.UI.PanelHosting
                     uint previous = entry.Revisions[pin.Name];
                     if (previous != value.Revision)
                     {
-                        entry.Values[pin.Name] = value.FloatValue;
+                        SetValue(entry, pin, value);
                         entry.Revisions[pin.Name] = value.Revision;
                         entry.Revision = (entry.Revision ^ previous ^ value.Revision) * 16777619;
                         changed = true;
@@ -204,6 +205,32 @@ namespace Ludots.Core.UI.PanelHosting
             return false;
         }
 
+        /// <summary>
+        /// Relinks live instances of <paramref name="templateId"/> to the registry's
+        /// current template and re-evaluates pins. Used by authoring preview hot-apply
+        /// so handles stay stable across binding/path drafts.
+        /// </summary>
+        public int RelinkExistingTemplate(string templateId)
+        {
+            PanelTemplate template = _templates.Require(templateId);
+            int relinked = 0;
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                Entry entry = _entries[i];
+                if (!entry.Alive ||
+                    !string.Equals(entry.Template.Id, templateId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                entry.RelinkTemplate(template);
+                EvaluateAll(entry);
+                relinked++;
+            }
+
+            return relinked;
+        }
+
         /// <summary>Disposes every instance whose (template, scope) matches; scope Null matches any scope.</summary>
         public int DisposeMatching(string templateId, Entity scope)
         {
@@ -257,7 +284,7 @@ namespace Ludots.Core.UI.PanelHosting
             foreach (PanelPin pin in entry.Template.Pins)
             {
                 PanelProjectionValue value = _reader.Resolve(entry.Scope, pin);
-                entry.Values[pin.Name] = value.FloatValue;
+                SetValue(entry, pin, value);
                 revision = (revision ^ value.Revision) * 16777619;
                 entry.Revisions[pin.Name] = value.Revision;
                 entry.HasRealtime |= pin.Realtime;
@@ -306,7 +333,29 @@ namespace Ludots.Core.UI.PanelHosting
             return new PanelVariableSet(
                 entry.Template.Id,
                 new Dictionary<string, float>(entry.Values, StringComparer.Ordinal),
-                entry.Revision);
+                entry.Revision,
+                new Dictionary<string, JsonNode>(entry.Nodes, StringComparer.Ordinal));
+        }
+
+        private static void SetValue(Entry entry, PanelPin pin, PanelProjectionValue value)
+        {
+            if (value.Node != null)
+            {
+                entry.Nodes[pin.Name] = value.Node;
+                if (!value.FromData || value.Node is JsonValue)
+                {
+                    entry.Values[pin.Name] = value.FloatValue;
+                }
+                else
+                {
+                    entry.Values.Remove(pin.Name);
+                }
+            }
+            else
+            {
+                entry.Nodes.Remove(pin.Name);
+                entry.Values[pin.Name] = value.FloatValue;
+            }
         }
 
         private Entry RequireEntry(PanelInstanceHandle handle)
@@ -339,20 +388,31 @@ namespace Ludots.Core.UI.PanelHosting
                 Skin = skin;
                 ZOrder = zOrder;
                 Values = new Dictionary<string, float>(template.Pins.Count, StringComparer.Ordinal);
+                Nodes = new Dictionary<string, JsonNode>(template.Pins.Count, StringComparer.Ordinal);
                 Revisions = new Dictionary<string, uint>(template.Pins.Count, StringComparer.Ordinal);
             }
 
-            public PanelTemplate Template { get; }
+            public PanelTemplate Template { get; private set; }
             public string Anchor { get; }
             public Entity Scope { get; }
             public string? Skin { get; }
             public int ZOrder { get; }
-            public Dictionary<string, float> Values { get; }
-            public Dictionary<string, uint> Revisions { get; }
+            public Dictionary<string, float> Values { get; private set; }
+            public Dictionary<string, JsonNode> Nodes { get; private set; }
+            public Dictionary<string, uint> Revisions { get; private set; }
             public uint Revision { get; set; }
             public int Generation { get; set; }
             public bool Alive { get; set; } = true;
             public bool HasRealtime { get; set; }
+
+            public void RelinkTemplate(PanelTemplate template)
+            {
+                Template = template ?? throw new ArgumentNullException(nameof(template));
+                Values = new Dictionary<string, float>(template.Pins.Count, StringComparer.Ordinal);
+                Nodes = new Dictionary<string, JsonNode>(template.Pins.Count, StringComparer.Ordinal);
+                Revisions = new Dictionary<string, uint>(template.Pins.Count, StringComparer.Ordinal);
+                HasRealtime = false;
+            }
         }
     }
 }

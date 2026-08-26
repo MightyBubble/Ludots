@@ -1,0 +1,24 @@
+{
+  "Id": "configurable_data_schema_workbench",
+  "Tags": ["showcase", "panel", "data-schema"],
+  "Entities": [
+    {
+      "InstanceId": "data-schema-owner",
+      "Template": "data_schema_workbench_owner"
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "data-schema-owner" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "data-schema-owner" }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 35,
+    "DistanceCm": 900,
+    "FovYDeg": 50
+  }
+}

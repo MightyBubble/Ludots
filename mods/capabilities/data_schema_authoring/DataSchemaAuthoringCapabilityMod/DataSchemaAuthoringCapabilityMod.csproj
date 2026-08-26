@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputPath>bin\net8.0\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.DataSchemaWorkbench\Ludots.DataSchemaWorkbench.csproj" />
+  </ItemGroup>
+
+  <Target Name="EnsureWorkbenchDll" AfterTargets="Build">
+    <Error Condition="!Exists('$(OutputPath)Ludots.DataSchemaWorkbench.dll')" Text="Expected workbench DLL at $(OutputPath)Ludots.DataSchemaWorkbench.dll" />
+  </Target>
+
+</Project>
