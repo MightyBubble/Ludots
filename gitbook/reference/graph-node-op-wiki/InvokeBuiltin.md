@@ -3,7 +3,7 @@
 造出新身体，再把新身体的效果挂架扫净。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/poster.png" src="artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/play.mp4。
 </video>
 
 ## 作者写法

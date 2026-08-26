@@ -3,7 +3,7 @@
 红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/poster.png" src="artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/play.mp4。
 </video>
 
 ## 作者写法

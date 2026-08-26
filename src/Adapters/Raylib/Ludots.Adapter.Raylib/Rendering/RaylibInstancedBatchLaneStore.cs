@@ -47,7 +47,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                 lane.Visible);
         }
 
-        public void ApplyRequests(ReadOnlySpan<InstancedBatchRequest> requests, InstancedBatchAssetRegistry registry)
+        public void ApplyRequests(ReadOnlySpan<InstancedBatchRequest> requests, InstancedBatchAssetRegistry registry, IVisualHeightmap? visualHeightmap)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
 
@@ -58,7 +58,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                 switch (request.Kind)
                 {
                     case InstancedBatchRequestKind.CreateOrUpdate:
-                        ApplyCreateOrUpdate(in request, registry);
+                        ApplyCreateOrUpdate(in request, registry, visualHeightmap);
                         break;
                     case InstancedBatchRequestKind.Remove:
                         ApplyRemove(in request);
@@ -70,7 +70,7 @@ namespace Ludots.Adapter.Raylib.Rendering
             }
         }
 
-        private void ApplyCreateOrUpdate(in InstancedBatchRequest request, InstancedBatchAssetRegistry registry)
+        private void ApplyCreateOrUpdate(in InstancedBatchRequest request, InstancedBatchAssetRegistry registry, IVisualHeightmap? visualHeightmap)
         {
             if (!registry.TryGet(request.BatchAssetId, out InstancedBatchAsset asset))
             {
@@ -81,8 +81,8 @@ namespace Ludots.Adapter.Raylib.Rendering
             InstancedBatchGroup group = ResolveGroup(asset, in request);
             if (group.Source.IsValid)
             {
-                throw new InvalidOperationException(
-                    $"RaylibInstancedBatchLaneStore does not consume external instanced batch sources yet (batch '{asset.Key}' group '{group.Id}'); external source consumption lands with #1152.");
+                ApplyExternalSourceCreateOrUpdate(asset, in group, in request, visualHeightmap);
+                return;
             }
 
             InstancedBatchTransform[] transforms = group.Transforms ?? Array.Empty<InstancedBatchTransform>();
@@ -93,6 +93,71 @@ namespace Ludots.Adapter.Raylib.Rendering
                     $"RaylibInstancedBatchLaneStore received a chunk for batch '{asset.Key}' group '{group.Id}' without inline transforms.");
             }
 
+            ApplyChunk(asset, in group, in request, declaredInstanceCount, out ResidentLane lane);
+            for (int i = 0; i < request.InstanceCount; i++)
+            {
+                int index = request.InstanceStart + i;
+                lane.Matrices[index] = BuildMatrix(transforms[index]);
+            }
+
+            FinishChunk(lane, in request);
+        }
+
+        private void ApplyExternalSourceCreateOrUpdate(
+            InstancedBatchAsset asset,
+            in InstancedBatchGroup group,
+            in InstancedBatchRequest request,
+            IVisualHeightmap? visualHeightmap)
+        {
+            InstancedBatchFactorizedSource? factorized = group.FactorizedSource;
+            if (factorized == null)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore received a chunk for external source batch '{asset.Key}' group '{group.Id}' without loaded factorized data; the factorized source loader must run at config time (no fallback to inline or static presentation).");
+            }
+
+            if (factorized.InstanceCount != group.Source.InstanceCount)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore external source batch '{asset.Key}' group '{group.Id}' loaded factorized instanceCount {factorized.InstanceCount} diverges from Core-authored instanceCount {group.Source.InstanceCount}; the lane must size from Core-owned counts.");
+            }
+
+            // Core-authored source flag is the SSOT; the loaded factorized copy must match it.
+            bool grounded = group.Source.GroundToVisualHeightmap;
+            if (grounded != factorized.GroundToVisualHeightmap)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore external source batch '{asset.Key}' group '{group.Id}' factorized groundToVisualHeightmap {factorized.GroundToVisualHeightmap} diverges from Core-authored {group.Source.GroundToVisualHeightmap}; the authored source flag is the SSOT.");
+            }
+
+            if (grounded && visualHeightmap == null)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibInstancedBatchLaneStore cannot ground batch '{asset.Key}' group '{group.Id}' because the Core visual heightmap service is unavailable; the adapter must not substitute its own ground height truth.");
+            }
+
+            ApplyChunk(asset, in group, in request, group.Source.InstanceCount, out ResidentLane lane);
+            for (int i = 0; i < request.InstanceCount; i++)
+            {
+                int index = request.InstanceStart + i;
+                lane.Matrices[index] = BuildMatrix(
+                    factorized.PositionCm[index],
+                    factorized.Rotation[index],
+                    factorized.Scale[index],
+                    grounded,
+                    visualHeightmap);
+            }
+
+            FinishChunk(lane, in request);
+        }
+
+        private void ApplyChunk(
+            InstancedBatchAsset asset,
+            in InstancedBatchGroup group,
+            in InstancedBatchRequest request,
+            int declaredInstanceCount,
+            out ResidentLane lane)
+        {
             if (request.InstanceStart < 0 ||
                 request.InstanceCount < 0 ||
                 request.InstanceStart + request.InstanceCount > declaredInstanceCount)
@@ -102,27 +167,27 @@ namespace Ludots.Adapter.Raylib.Rendering
             }
 
             var key = new LaneKey(request.BatchAssetId, request.PresenterStableId, request.Address);
-            if (!_lanes.TryGetValue(key, out ResidentLane? lane))
+            if (!_lanes.TryGetValue(key, out ResidentLane? existing))
             {
-                lane = new ResidentLane(_nextLaneId++, key, declaredInstanceCount);
-                _lanes.Add(key, lane);
-                _residentOrder.Add(lane);
+                existing = new ResidentLane(_nextLaneId++, key, declaredInstanceCount);
+                _lanes.Add(key, existing);
+                _residentOrder.Add(existing);
             }
-            else if (lane.DeclaredInstanceCount != declaredInstanceCount)
+            else if (existing.DeclaredInstanceCount != declaredInstanceCount)
             {
                 // A re-registered batch with a smaller instance total leaves stale tail matrices;
                 // reset the whole lane so the incoming chunk stream rebuilds from Core's new declaration.
-                lane.Reset(declaredInstanceCount);
+                existing.Reset(declaredInstanceCount);
             }
 
-            lane.MeshAssetId = request.MeshAssetId;
-            lane.MaterialAssetId = request.MaterialAssetId;
-            lane.RenderPath = request.RenderPath;
-            for (int i = 0; i < request.InstanceCount; i++)
-            {
-                lane.Matrices[request.InstanceStart + i] = BuildMatrix(transforms[request.InstanceStart + i]);
-            }
+            existing.MeshAssetId = request.MeshAssetId;
+            existing.MaterialAssetId = request.MaterialAssetId;
+            existing.RenderPath = request.RenderPath;
+            lane = existing;
+        }
 
+        private static void FinishChunk(ResidentLane lane, in InstancedBatchRequest request)
+        {
             lane.ResidentCount = Math.Max(lane.ResidentCount, request.InstanceStart + request.InstanceCount);
             lane.Revision++;
             if (request.FinalChunk)
@@ -160,9 +225,36 @@ namespace Ludots.Adapter.Raylib.Rendering
 
         private static Matrix4x4 BuildMatrix(in InstancedBatchTransform transform)
         {
-            Vector3 positionMeters = WorldUnits.CmToM(transform.PositionCm);
-            return Matrix4x4.CreateScale(transform.Scale) *
-                   Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(transform.Rotation)) *
+            return BuildMatrix(transform.PositionCm, transform.Rotation, transform.Scale, grounded: false, visualHeightmap: null);
+        }
+
+        private static Matrix4x4 BuildMatrix(
+            Vector3 positionCm,
+            Quaternion rotation,
+            Vector3 scale,
+            bool grounded,
+            IVisualHeightmap? visualHeightmap)
+        {
+            if (grounded)
+            {
+                if (visualHeightmap == null)
+                {
+                    throw new InvalidOperationException(
+                        "RaylibInstancedBatchLaneStore cannot ground a transform without the Core visual heightmap service.");
+                }
+
+                // Core-owned visual height truth: sample the ground under the authored X/Z and
+                // replace only the ground axis. Out-of-bounds samples keep the authored height;
+                // the adapter never substitutes its own terrain truth.
+                if (visualHeightmap.TrySampleHeightCm(positionCm.X, positionCm.Z, out float heightCm))
+                {
+                    positionCm.Y = heightCm;
+                }
+            }
+
+            Vector3 positionMeters = WorldUnits.CmToM(positionCm);
+            return Matrix4x4.CreateScale(scale) *
+                   Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
                    Matrix4x4.CreateTranslation(positionMeters);
         }
 

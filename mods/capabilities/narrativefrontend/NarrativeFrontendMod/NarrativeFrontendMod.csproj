@@ -10,5 +10,8 @@
     <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
       <Private>false</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI.Panels\Ludots.UI.Panels.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 </Project>

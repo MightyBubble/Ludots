@@ -155,7 +155,9 @@ public sealed class RaylibShaderContractTests
 
         Assert.That(
             include,
-            Does.Contain("dot(packed.rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0))"));
+            Does.Contain("dot(packedDepthRgb.rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0))"));
+        Assert.That(include, Does.Contain("float UnpackDepth(vec4 packedDepthRgb)"));
+        Assert.That(include, Does.Not.Contain("vec4 packed)"));
         Assert.That(include, Does.Contain("vec2 shadowUv = proj.xy"));
         Assert.That(include, Does.Not.Contain("1.0 - proj.y"));
         Assert.That(include, Does.Contain("uniform float uShadowBias"));

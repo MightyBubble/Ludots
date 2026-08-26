@@ -16,8 +16,9 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
     {
         string[] ops =
         [
-            "Jump", "JumpIfFalse", "Call", "Return", "Yield",
-            "HaltReturnInt", "InvokeScript", "MoveInt"
+            "Jump", "JumpIfFalse", "Call", "Return", "Yield", "AwaitCallback",
+            "HaltReturnInt", "InvokeScript", "MoveInt",
+            "ConstText", "ConcatText", "IntToText", "FloatToText", "SinkPresentationText"
         ];
         string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();
         foreach (string op in ops)
@@ -53,6 +54,45 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
                 Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), op);
             }
         }
+    }
+
+    [Test]
+    public void AwaitCallback_ConfirmsAndContinues_WithCaption()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("AwaitCallback");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("等回话再往下走"));
+        Assert.That(runtime.Context.CaptionValues["confirmed"], Is.EqualTo("同意"));
+        Assert.That(int.Parse(runtime.Context.CaptionValues["replies"]), Is.EqualTo(1));
+        Assert.That(runtime.Context.CaptionValues["result"], Is.EqualTo("1"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("确认"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("回话"));
+        Assert.That(runtime.Metrics.Detail, Does.Not.Contain("{"));
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
+        }
+    }
+
+    [TestCase("ConstText")]
+    [TestCase("ConcatText")]
+    [TestCase("IntToText")]
+    [TestCase("FloatToText")]
+    [TestCase("SinkPresentationText")]
+    public void FormalTextOp_CompilesFeaturedOpcode(string op)
+    {
+        string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();
+        GraphOpsNodeVignette vignette = GraphOpsNodeVignetteLoader.Load(assets, op);
+        var compiled = GraphOpsNodeGraphCompiler.Compile(assets, vignette);
+        Assert.That(compiled.Succeeded, Is.True, string.Join(Environment.NewLine, compiled.Diagnostics));
+        Assert.That(
+            compiled.Program.Any(i => i.Op == (ushort)Enum.Parse<GraphNodeOp>(op)),
+            Is.True,
+            $"{op} compiled program must emit the featured opcode.");
     }
 
     [Test]

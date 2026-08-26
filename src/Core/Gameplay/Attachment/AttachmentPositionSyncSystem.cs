@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.Attachment
     /// </summary>
     public sealed class AttachmentPositionSyncSystem : BaseSystem<World, float>
     {
-        public const int ScratchCapacity = 8192;
+        public const int DefaultScratchCapacity = 8192;
         public const string CapacityExceededError = "GAS.ATTACH.SYNC.ERR.CapacityExceeded";
         public const string ParentPositionMissingError = "GAS.ATTACH.SYNC.ERR.ParentPositionMissing";
         public const string PoseAuthorityConflictError = "GAS.ATTACH.SYNC.ERR.PoseAuthorityConflict";
@@ -30,16 +30,36 @@ namespace Ludots.Core.Gameplay.Attachment
         private static readonly QueryDescription AttachedQuery = new QueryDescription()
             .WithAll<ChildOf, AttachedLocalPose>();
 
-        private readonly Entity[] _entities = new Entity[ScratchCapacity];
-        private readonly ChildOf[] _childOf = new ChildOf[ScratchCapacity];
-        private readonly AttachedLocalPose[] _localPose = new AttachedLocalPose[ScratchCapacity];
-        private readonly int[] _depth = new int[ScratchCapacity];
+        private readonly Entity[] _entities;
+        private readonly ChildOf[] _childOf;
+        private readonly AttachedLocalPose[] _localPose;
+        private readonly int[] _depth;
+        private readonly int _scratchCapacity;
         private readonly PoseAuthorityArbiter? _poseAuthorityArbiter;
 
-        public AttachmentPositionSyncSystem(World world, PoseAuthorityArbiter? poseAuthorityArbiter = null) : base(world)
+        public AttachmentPositionSyncSystem(
+            World world,
+            PoseAuthorityArbiter? poseAuthorityArbiter = null,
+            int scratchCapacity = DefaultScratchCapacity) : base(world)
         {
+            if (scratchCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(scratchCapacity),
+                    scratchCapacity,
+                    "AttachmentPositionSync scratch capacity must be positive.");
+            }
+
             _poseAuthorityArbiter = poseAuthorityArbiter;
+            _scratchCapacity = scratchCapacity;
+            _entities = new Entity[scratchCapacity];
+            _childOf = new ChildOf[scratchCapacity];
+            _localPose = new AttachedLocalPose[scratchCapacity];
+            _depth = new int[scratchCapacity];
         }
+
+        /// <summary>本实例预分配挂接子缓冲容量（来自 gasRuntimeCapacity，禁止热路径扩容）。</summary>
+        public int ScratchCapacity => _scratchCapacity;
 
         /// <summary>上一 Update 处理的子实体数（headless 验收日志用）。</summary>
         public int LastAppliedCount { get; private set; }
@@ -65,10 +85,10 @@ namespace Ludots.Core.Gameplay.Attachment
                 var localPoseSpan = chunk.GetSpan<AttachedLocalPose>();
                 foreach (var index in chunk)
                 {
-                    if (count >= ScratchCapacity)
+                    if (count >= _scratchCapacity)
                     {
                         throw new InvalidOperationException(
-                            $"{CapacityExceededError}: staged={count + 1}, capacity={ScratchCapacity}.");
+                            $"{CapacityExceededError}: staged={count + 1}, capacity={_scratchCapacity}.");
                     }
 
                     Entity entity = Unsafe.Add(ref entityFirst, index);

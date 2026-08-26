@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Arch.Core;
@@ -93,6 +94,33 @@ namespace Ludots.Tests.Presentation
         public void Load_AcceptsSourceBackedBatchAndPreservesMetadata()
         {
             string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root,
+                """
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": 3,
+                      "positionCm": {
+                        "x": [1, 4, 7],
+                        "y": [2, 5, 8],
+                        "z": [3, 6, 9]
+                      },
+                      "rotation": {
+                        "x": [0, 0, 0],
+                        "y": [0, 0, 0],
+                        "z": [0, 0, 0],
+                        "w": [1, 1, 1]
+                      },
+                      "scale": {
+                        "x": [1, 2, 1],
+                        "y": [1, 2, 1],
+                        "z": [1, 2, 1]
+                      }
+                    }
+                  }
+                }
+                """);
             WritePresentationFile(root, "instanced_batches.json",
                 """
                 [
@@ -110,7 +138,7 @@ namespace Ludots.Tests.Presentation
                           "format": "ludots.instanced_transform_factorized.v1",
                           "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
                           "setId": "set.alpha",
-                          "instanceCount": 50000,
+                          "instanceCount": 3,
                           "groundToVisualHeightmap": true
                         }
                       }
@@ -119,7 +147,7 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
 
-            var loader = BuildLoader(root, out InstancedBatchAssetRegistry registry);
+            var loader = BuildLoader(root, out InstancedBatchAssetRegistry registry, mountExampleMod: true);
             loader.Load(BuildCatalog());
 
             int id = registry.GetId("batch.external");
@@ -130,11 +158,410 @@ namespace Ludots.Tests.Presentation
             Assert.That(group.Source.Format, Is.EqualTo("ludots.instanced_transform_factorized.v1"));
             Assert.That(group.Source.AssetUri, Is.EqualTo("ExampleMod:assets/Presentation/example_instanced_source.json"));
             Assert.That(group.Source.SetId, Is.EqualTo("set.alpha"));
-            Assert.That(group.Source.InstanceCount, Is.EqualTo(50000));
+            Assert.That(group.Source.InstanceCount, Is.EqualTo(3));
             Assert.That(group.Source.GroundToVisualHeightmap, Is.True);
-            Assert.That(group.InstanceCount, Is.EqualTo(50000));
+            Assert.That(group.InstanceCount, Is.EqualTo(3));
+            Assert.That(group.FactorizedSource, Is.Not.Null);
+            Assert.That(group.FactorizedSource!.InstanceCount, Is.EqualTo(3));
+            Assert.That(group.FactorizedSource.PositionCm[1], Is.EqualTo(new Vector3(4f, 5f, 6f)));
+            Assert.That(group.FactorizedSource.Rotation[1], Is.EqualTo(Quaternion.Identity));
+            Assert.That(group.FactorizedSource.Scale[1], Is.EqualTo(new Vector3(2f, 2f, 2f)));
+            Assert.That(group.FactorizedSource.GroundToVisualHeightmap, Is.True);
             Assert.That(asset.AddressTable.TryResolve("group.external", "bucket.external", "span.external", out InstancedBatchAddress address), Is.True);
             Assert.That(group.Address.Equals(address), Is.True);
+        }
+
+        [Test]
+        public void Load_LoadsFactorizedSourceDefaultsForRotationAndScale()
+        {
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root,
+                """
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": 3,
+                      "positionCm": {
+                        "x": [1, 4, 7],
+                        "y": [2, 5, 8],
+                        "z": [3, 6, 9]
+                      }
+                    }
+                  }
+                }
+                """);
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(3)));
+
+            var loader = BuildLoader(root, out InstancedBatchAssetRegistry registry, mountExampleMod: true);
+            loader.Load(BuildCatalog());
+
+            Assert.That(registry.TryGet(registry.GetId("batch.source"), out InstancedBatchAsset asset), Is.True);
+            InstancedBatchFactorizedSource factorized = asset.Groups[0].FactorizedSource!;
+            Assert.That(factorized, Is.Not.Null);
+            Assert.That(factorized.InstanceCount, Is.EqualTo(3));
+            Assert.That(factorized.PositionCm[0], Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(factorized.PositionCm[1], Is.EqualTo(new Vector3(4f, 5f, 6f)));
+            Assert.That(factorized.PositionCm[2], Is.EqualTo(new Vector3(7f, 8f, 9f)));
+            for (int i = 0; i < factorized.InstanceCount; i++)
+            {
+                Assert.That(factorized.Rotation[i], Is.EqualTo(Quaternion.Identity));
+                Assert.That(factorized.Scale[i], Is.EqualTo(Vector3.One));
+            }
+        }
+
+        [Test]
+        public void Load_RejectsAuthoredCountMismatchWithFactorizedSet()
+        {
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root, ExampleFactorizedSourceJson(instanceCount: 3));
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(5)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("authored instanceCount 5 does not match"));
+        }
+
+        [Test]
+        public void Load_RejectsUnsupportedFactorizedSourceFormat()
+        {
+            string root = CreateTempCoreRoot();
+            WritePresentationFile(root, "instanced_batches.json",
+                SourceBatchJson(
+                    """
+                    {
+                      "id": "group.a",
+                      "meshAssetId": "mesh.unit",
+                      "bucketId": "bucket.a",
+                      "instanceSpanId": "span.a",
+                      "source": {
+                        "format": "ludots.instanced_transform_factorized.v2",
+                        "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
+                        "setId": "set.alpha",
+                        "instanceCount": 3
+                      }
+                    }
+                    """));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("declares unsupported format 'ludots.instanced_transform_factorized.v2'"));
+        }
+
+        [Test]
+        public void Load_RejectsFactorizedFileWithUnknownFields()
+        {
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root,
+                """
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": 2,
+                      "positionCm": {
+                        "x": [1, 2],
+                        "y": [3, 4],
+                        "z": [5, 6]
+                      }
+                    }
+                  },
+                  "extraTopLevel": true
+                }
+                """);
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(2)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("unsupported field 'extraTopLevel'"));
+        }
+
+        [Test]
+        public void Load_RejectsMalformedFactorizedComponentArrays()
+        {
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root,
+                """
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": 3,
+                      "positionCm": {
+                        "x": [1, 2],
+                        "y": [3, 4, 5],
+                        "z": [6, 7, 8]
+                      }
+                    }
+                  }
+                }
+                """);
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(3)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("positionCm.x must contain exactly 3 entries, but contains 2"));
+        }
+
+        [Test]
+        public void Load_RejectsMissingFactorizedSourceAsset()
+        {
+            string root = CreateTempCoreRoot();
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(3)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("unreadable factorized source asset 'ExampleMod:assets/Presentation/example_instanced_source.json'"));
+        }
+
+        [Test]
+        public void Load_RejectsMissingFactorizedSourceSet()
+        {
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root, ExampleFactorizedSourceJson(instanceCount: 3).Replace("set.alpha", "set.other"));
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(3)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("does not declare set 'set.alpha'"));
+        }
+
+        [Test]
+        public void Load_LeavesNoPartialRegistrationWhenFactorizedSourceFails()
+        {
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root, ExampleFactorizedSourceJson(instanceCount: 2));
+            WritePresentationFile(root, "instanced_batches.json",
+                """
+                [
+                  {
+                    "id": "batch.bad",
+                    "renderPath": "InstancedStaticMesh",
+                    "ownerStableId": "owner.alpha",
+                    "groups": [
+                      {
+                        "id": "group.bad",
+                        "meshAssetId": "mesh.unit",
+                        "bucketId": "bucket.bad",
+                        "instanceSpanId": "span.bad",
+                        "source": {
+                          "format": "ludots.instanced_transform_factorized.v1",
+                          "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
+                          "setId": "set.alpha",
+                          "instanceCount": 9
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "batch.good",
+                    "renderPath": "InstancedStaticMesh",
+                    "ownerStableId": "owner.alpha",
+                    "groups": [
+                      {
+                        "id": "group.good",
+                        "meshAssetId": "mesh.unit",
+                        "bucketId": "bucket.good",
+                        "instanceSpanId": "span.good",
+                        "transforms": [ { "positionCm": [1, 2, 3] } ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var loader = BuildLoader(root, out InstancedBatchAssetRegistry registry, mountExampleMod: true);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("authored instanceCount 9 does not match"));
+            Assert.That(registry.GetId("batch.bad"), Is.EqualTo(0));
+            Assert.That(registry.GetId("batch.good"), Is.EqualTo(0));
+            Assert.That(registry.TryGet(0, out _), Is.False);
+        }
+
+        [TestCase("not-a-vfs-uri")]
+        [TestCase(":relative.json")]
+        [TestCase("ExampleMod:")]
+        public void Load_RejectsMalformedFactorizedSourceAssetUriShapeBeforeOpeningStream(string assetUri)
+        {
+            var vfs = new StubFactorizedVfs();
+            var loader = new InstancedBatchFactorizedSourceLoader(vfs);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => loader.Load(
+                    new InstancedBatchInstanceSource(
+                        InstancedBatchFactorizedSourceLoader.SupportedFormat,
+                        assetUri,
+                        "set.alpha",
+                        instanceCount: 2,
+                        groundToVisualHeightmap: false),
+                    "batch.test",
+                    "group.a"))!;
+
+            Assert.That(ex.Message, Does.Contain($"malformed factorized source assetUri '{assetUri}'"));
+            Assert.That(vfs.GetStreamCalls, Is.EqualTo(0));
+        }
+
+        [TestCase(typeof(IOException), "disk read failed")]
+        [TestCase(typeof(UnauthorizedAccessException), "access denied")]
+        public void Load_WrapsVfsStreamOpenFailuresAsUnreadableFactorizedSourceAsset(Type exceptionType, string message)
+        {
+            var vfs = new StubFactorizedVfs();
+            vfs.ThrowOnGetStream = _ => (Exception)Activator.CreateInstance(exceptionType, message)!;
+            var loader = new InstancedBatchFactorizedSourceLoader(vfs);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => loader.Load(ValidFactorizedSource(), "batch.test", "group.a"))!;
+
+            Assert.That(ex.Message, Does.Contain("references unreadable factorized source asset 'ExampleMod:assets/source.json'"));
+            Assert.That(ex.InnerException, Is.InstanceOf(exceptionType));
+        }
+
+        [Test]
+        public void Load_WrapsIOExceptionWhileReadingStreamAsUnreadableFactorizedSourceAsset()
+        {
+            var vfs = new StubFactorizedVfs();
+            vfs.GetStreamImpl = _ => new ThrowingReadStream(new IOException("read failed mid-stream"));
+            var loader = new InstancedBatchFactorizedSourceLoader(vfs);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => loader.Load(ValidFactorizedSource(), "batch.test", "group.a"))!;
+
+            Assert.That(ex.Message, Does.Contain("references unreadable factorized source asset 'ExampleMod:assets/source.json'"));
+            Assert.That(ex.InnerException, Is.InstanceOf<IOException>());
+        }
+
+        [Test]
+        public void Load_DoesNotRelabelProgrammingArgumentNullExceptionFromVfs()
+        {
+            var vfs = new StubFactorizedVfs();
+            vfs.ThrowOnGetStream = _ => new ArgumentNullException("uri", "model guard reached");
+            var loader = new InstancedBatchFactorizedSourceLoader(vfs);
+
+            ArgumentNullException ex = Assert.Throws<ArgumentNullException>(
+                () => loader.Load(ValidFactorizedSource(), "batch.test", "group.a"))!;
+
+            Assert.That(ex.ParamName, Is.EqualTo("uri"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceCountAboveDocumentedMaximumAsAuthoringError()
+        {
+            int huge = InstancedBatchFactorizedSourceLoader.MaxInstanceCount + 1;
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root,
+                $$"""
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": {{huge}},
+                      "positionCm": {
+                        "x": [1, 2],
+                        "y": [3, 4],
+                        "z": [5, 6]
+                      }
+                    }
+                  }
+                }
+                """);
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(huge)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain(
+                $"instanceCount {huge} exceeds the documented maximum {InstancedBatchFactorizedSourceLoader.MaxInstanceCount}"));
+        }
+
+        [Test]
+        public void Load_RejectsMalformedRotationComponentArrayLength()
+        {
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root,
+                """
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": 3,
+                      "positionCm": {
+                        "x": [1, 4, 7],
+                        "y": [2, 5, 8],
+                        "z": [3, 6, 9]
+                      },
+                      "rotation": {
+                        "x": [0, 0],
+                        "y": [0, 0, 0],
+                        "z": [0, 0, 0],
+                        "w": [1, 1, 1]
+                      }
+                    }
+                  }
+                }
+                """);
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(3)));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => BuildLoader(root, out _, mountExampleMod: true).Load(BuildCatalog()))!;
+            Assert.That(ex.Message, Does.Contain("rotation.x must contain exactly 3 entries, but contains 2"));
+        }
+
+        [Test]
+        public void Load_PreservesFiftyThousandInstanceScaleLoading()
+        {
+            const int instanceCount = 50_000;
+            string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root, ExampleFactorizedSourceJson(instanceCount));
+            WritePresentationFile(root, "instanced_batches.json", SourceBatchJson(SourceGroupJson(instanceCount)));
+
+            var loader = BuildLoader(root, out InstancedBatchAssetRegistry registry, mountExampleMod: true);
+            loader.Load(BuildCatalog());
+
+            Assert.That(registry.TryGet(registry.GetId("batch.source"), out InstancedBatchAsset asset), Is.True);
+            InstancedBatchFactorizedSource factorized = asset.Groups[0].FactorizedSource!;
+            Assert.That(factorized, Is.Not.Null);
+            Assert.That(factorized.InstanceCount, Is.EqualTo(instanceCount));
+            Assert.That(factorized.PositionCm.Length, Is.EqualTo(instanceCount));
+            Assert.That(factorized.Rotation.Length, Is.EqualTo(instanceCount));
+            Assert.That(factorized.Scale.Length, Is.EqualTo(instanceCount));
+            Assert.That(factorized.PositionCm[0], Is.EqualTo(new Vector3(0f, 0f, 0f)));
+            Assert.That(factorized.PositionCm[instanceCount - 1], Is.EqualTo(new Vector3((instanceCount - 1) * 100f, 0f, 0f)));
+            for (int i = 0; i < instanceCount; i++)
+            {
+                Assert.That(factorized.Rotation[i], Is.EqualTo(Quaternion.Identity));
+                Assert.That(factorized.Scale[i], Is.EqualTo(Vector3.One));
+            }
+        }
+
+        private static string SourceBatchJson(string groupJson)
+        {
+            return $$"""
+                [
+                  {
+                    "id": "batch.source",
+                    "renderPath": "InstancedStaticMesh",
+                    "ownerStableId": "owner.alpha",
+                    "groups": [ {{groupJson}} ]
+                  }
+                ]
+                """;
+        }
+
+        private static string SourceGroupJson(int instanceCount)
+        {
+            return $$"""
+                {
+                  "id": "group.a",
+                  "meshAssetId": "mesh.unit",
+                  "bucketId": "bucket.a",
+                  "instanceSpanId": "span.a",
+                  "source": {
+                    "format": "ludots.instanced_transform_factorized.v1",
+                    "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
+                    "setId": "set.alpha",
+                    "instanceCount": {{instanceCount}}
+                  }
+                }
+                """;
         }
 
         [TestCase("unknown mesh asset 'missing.mesh'", "{ \"id\": \"group.a\", \"meshAssetId\": \"missing.mesh\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"transforms\": [ { \"positionCm\": [1,2,3] } ] }")]
@@ -239,6 +666,32 @@ namespace Ludots.Tests.Presentation
                         "id": "bad-source",
                         "source": { "kind": "Attribute", "key": "attr.health", "unknownSource": true },
                         "target": { "operation": "SetVisibility", "group": "group.a", "bucket": "bucket.a", "span": "span.a" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+            AssertUnsupportedField(
+                "unknownSourceField",
+                """
+                [
+                  {
+                    "id": "batch.strict",
+                    "renderPath": "InstancedStaticMesh",
+                    "ownerStableId": "owner.alpha",
+                    "groups": [
+                      {
+                        "id": "group.a",
+                        "meshAssetId": "mesh.unit",
+                        "bucketId": "bucket.a",
+                        "instanceSpanId": "span.a",
+                        "source": {
+                          "format": "ludots.instanced_transform_factorized.v1",
+                          "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
+                          "setId": "set.alpha",
+                          "instanceCount": 3,
+                          "unknownSourceField": true
+                        }
                       }
                     ]
                   }
@@ -1327,6 +1780,7 @@ namespace Ludots.Tests.Presentation
         public void EmissionSystem_UsesSourceBackedInstanceCountForChunks()
         {
             string root = CreateTempCoreRoot();
+            WriteExampleSourceFile(root, ExampleFactorizedSourceJson(instanceCount: 5));
             WritePresentationFile(root, "instanced_batches.json",
                 """
                 [
@@ -1353,7 +1807,7 @@ namespace Ludots.Tests.Presentation
                   }
                 ]
                 """);
-            var loader = BuildLoader(root, out InstancedBatchAssetRegistry batches);
+            var loader = BuildLoader(root, out InstancedBatchAssetRegistry batches, mountExampleMod: true);
             loader.Load(BuildCatalog());
             int batchId = batches.GetId("batch.external");
             Assert.That(batches.TryGet(batchId, out InstancedBatchAsset asset), Is.True);
@@ -1448,9 +1902,16 @@ namespace Ludots.Tests.Presentation
             Assert.That(operations.Count, Is.EqualTo(0));
         }
 
-        private static InstancedBatchAssetConfigLoader BuildLoader(string root, out InstancedBatchAssetRegistry registry)
+        private static InstancedBatchAssetConfigLoader BuildLoader(string root, out InstancedBatchAssetRegistry registry, bool mountExampleMod = false)
         {
-            var pipeline = BuildCorePipeline(root);
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", root);
+            if (mountExampleMod)
+            {
+                vfs.Mount("ExampleMod", root);
+            }
+
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var meshes = new MeshAssetRegistry();
             var materials = new PresentationMaterialRegistry();
             registry = new InstancedBatchAssetRegistry();
@@ -1464,6 +1925,7 @@ namespace Ludots.Tests.Presentation
                 registry,
                 meshes,
                 materials,
+                vfs,
                 AttributeRegistry.GetId,
                 ResolveGasEventKey,
                 ResolvePresentationEventKey);
@@ -1551,11 +2013,109 @@ namespace Ludots.Tests.Presentation
             File.WriteAllText(Path.Combine(root, "Presentation", fileName), content);
         }
 
-        private static ConfigPipeline BuildCorePipeline(string coreRoot)
+        private static void WriteExampleSourceFile(string root, string content)
         {
-            var vfs = new VirtualFileSystem();
-            vfs.Mount("Core", coreRoot);
-            return new ConfigPipeline(vfs, modLoader: null!);
+            string dir = Path.Combine(root, "assets", "Presentation");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "example_instanced_source.json"), content);
+        }
+
+        private static string ExampleFactorizedSourceJson(int instanceCount)
+        {
+            var positionX = new List<string>(instanceCount);
+            var positionY = new List<string>(instanceCount);
+            var positionZ = new List<string>(instanceCount);
+            for (int i = 0; i < instanceCount; i++)
+            {
+                positionX.Add((i * 100).ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                positionY.Add("0");
+                positionZ.Add("0");
+            }
+
+            return $$"""
+                {
+                  "format": "ludots.instanced_transform_factorized.v1",
+                  "sets": {
+                    "set.alpha": {
+                      "instanceCount": {{instanceCount}},
+                      "positionCm": {
+                        "x": [{{string.Join(", ", positionX)}}],
+                        "y": [{{string.Join(", ", positionY)}}],
+                        "z": [{{string.Join(", ", positionZ)}}]
+                      }
+                    }
+                  }
+                }
+                """;
+        }
+
+        private static InstancedBatchInstanceSource ValidFactorizedSource()
+        {
+            return new InstancedBatchInstanceSource(
+                InstancedBatchFactorizedSourceLoader.SupportedFormat,
+                "ExampleMod:assets/source.json",
+                "set.alpha",
+                instanceCount: 2,
+                groundToVisualHeightmap: false);
+        }
+
+        private sealed class StubFactorizedVfs : IVirtualFileSystem
+        {
+            public int GetStreamCalls { get; private set; }
+            public Func<string, Stream>? GetStreamImpl { get; set; }
+            public Func<string, Exception>? ThrowOnGetStream { get; set; }
+
+            public Stream GetStream(string uri)
+            {
+                GetStreamCalls++;
+                if (ThrowOnGetStream != null)
+                {
+                    throw ThrowOnGetStream(uri);
+                }
+
+                if (GetStreamImpl != null)
+                {
+                    return GetStreamImpl(uri);
+                }
+
+                throw new FileNotFoundException($"Stub VFS: '{uri}' not found.");
+            }
+
+            public void Mount(string modId, string physicalPath)
+            {
+            }
+
+            public bool Unmount(string modId)
+            {
+                return false;
+            }
+
+            public bool TryResolveFullPath(string uri, out string fullPath)
+            {
+                fullPath = string.Empty;
+                return false;
+            }
+        }
+
+        private sealed class ThrowingReadStream : Stream
+        {
+            private readonly Exception _exception;
+
+            public ThrowingReadStream(Exception exception)
+            {
+                _exception = exception;
+            }
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+            public override void Flush() { }
+            public override int Read(byte[] buffer, int offset, int count) => throw _exception;
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         }
 
         private static ConfigCatalog BuildCatalog()

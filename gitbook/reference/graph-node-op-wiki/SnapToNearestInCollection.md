@@ -3,7 +3,7 @@
 X 标记离开原地，压到花名册里够得着的最近那人身上。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/poster.png" src="artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/play.mp4。
 </video>
 
 ## 作者写法

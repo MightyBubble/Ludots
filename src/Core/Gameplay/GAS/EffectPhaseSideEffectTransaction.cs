@@ -1134,7 +1134,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         for (int listenerIndex = 0; listenerIndex < setup.Count; listenerIndex++)
         {
             EffectPhaseListenerContract.RequireValidRegistration(
-                setup.ListenTagIds[listenerIndex],
+                setup.ListenCategoryIds[listenerIndex],
                 setup.ListenEffectIds[listenerIndex],
                 (EffectPhaseId)setup.Phases[listenerIndex],
                 (PhaseListenerScope)setup.Scopes[listenerIndex],
@@ -2138,7 +2138,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
 
                 if (!_listenerValues[listenerEntityIndex].TryAdd(
-                    registration.Setup.ListenTagIds[setupIndex],
+                    registration.Setup.ListenCategoryIds[setupIndex],
                     registration.Setup.ListenEffectIds[setupIndex],
                     (EffectPhaseId)registration.Setup.Phases[setupIndex],
                     scope,

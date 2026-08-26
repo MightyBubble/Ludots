@@ -19,7 +19,10 @@ namespace Ludots.Core.UI.PanelProjection
             IReadOnlyList<PanelPin> pins,
             IReadOnlyList<PanelTemplateEvent>? events = null,
             IReadOnlyList<PanelIntentMapEntry>? intents = null,
-            string? skin = null)
+            string? skin = null,
+            IReadOnlyList<PanelCollectionBinding>? collections = null,
+            PanelLayout? layout = null,
+            PanelSubjectKind subject = PanelSubjectKind.None)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -47,6 +50,37 @@ namespace Ludots.Core.UI.PanelProjection
                 if (!seen.Add(pin.Name))
                 {
                     throw new ArgumentException($"Panel template '{id}' declares duplicate pin '{pin.Name}'.", nameof(pins));
+                }
+            }
+
+            List<PanelCollectionBinding> safeCollections =
+                new List<PanelCollectionBinding>(collections ?? Array.Empty<PanelCollectionBinding>());
+            if (subject != PanelSubjectKind.None && safeCollections.Count > 0)
+            {
+                throw new ArgumentException(
+                    $"Panel template '{id}' declares subject '{PanelSubjectKinds.ToId(subject)}' and cannot also declare collections.",
+                    nameof(collections));
+            }
+
+            var collectionNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelCollectionBinding collection in safeCollections)
+            {
+                if (collection == null)
+                {
+                    throw new ArgumentException($"Panel template '{id}' has a null collection entry.", nameof(collections));
+                }
+
+                if (!collectionNames.Add(collection.Name))
+                {
+                    throw new ArgumentException(
+                        $"Panel template '{id}' declares duplicate collection '{collection.Name}'.", nameof(collections));
+                }
+
+                if (seen.Contains(collection.Name))
+                {
+                    throw new ArgumentException(
+                        $"Panel template '{id}' collection '{collection.Name}' collides with a pin name.",
+                        nameof(collections));
                 }
             }
 
@@ -90,6 +124,9 @@ namespace Ludots.Core.UI.PanelProjection
             Events = safeEvents;
             Intents = safeIntents;
             Skin = string.IsNullOrWhiteSpace(skin) ? null : skin.Trim();
+            Collections = safeCollections;
+            Layout = layout;
+            Subject = subject;
         }
 
         public string Id { get; }
@@ -99,6 +136,18 @@ namespace Ludots.Core.UI.PanelProjection
         public IReadOnlyList<PanelPin> Pins { get; }
         public IReadOnlyList<PanelTemplateEvent> Events { get; }
         public IReadOnlyList<PanelIntentMapEntry> Intents { get; }
+
+        /// <summary>
+        /// Element subject kind. <see cref="PanelSubjectKind.None"/> = host panel;
+        /// non-None = embeddable element that resolves that payload type.
+        /// </summary>
+        public PanelSubjectKind Subject { get; }
+
+        /// <summary>Collection slots: graph collection + reusable element template id.</summary>
+        public IReadOnlyList<PanelCollectionBinding> Collections { get; }
+
+        /// <summary>Optional builtin control tree; null keeps legacy auto-row layout.</summary>
+        public PanelLayout? Layout { get; }
 
         /// <summary>Per-template default skin; instance op param wins, then game.json default.</summary>
         public string? Skin { get; }

@@ -147,13 +147,14 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(span[0].VisualProxy.AssetKind, Is.EqualTo(AssetKind.Decal));
-            Assert.That(span[0].VisualProxy.Scale, Is.EqualTo(authored));
+            ReadOnlySpan<PresentationRequestOp> ops = requests.Ops;
+            Assert.That(ops.Length, Is.EqualTo(1));
+            Assert.That(ops[0].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            ref readonly VisualProxyChannelItem item = ref requests.VisualProxyAt(ops[0].Slot);
+            Assert.That(item.VisualProxy.AssetKind, Is.EqualTo(AssetKind.Decal));
+            Assert.That(item.VisualProxy.Scale, Is.EqualTo(authored));
 
-            var volume = ProjectedDecalVolume.FromVisualScale(span[0].VisualProxy.Scale);
+            var volume = ProjectedDecalVolume.FromVisualScale(item.VisualProxy.Scale);
             Assert.That(volume.StampSizeMeters, Is.EqualTo(new Vector2(authored.X, authored.Z)));
             Assert.That(volume.StampSizeMeters, Is.Not.EqualTo(Vector2.One));
             Assert.That(volume.ProjectionThicknessMeters, Is.EqualTo(authored.Y));

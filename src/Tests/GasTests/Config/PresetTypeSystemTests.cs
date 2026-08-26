@@ -587,7 +587,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnApply,
                 in behavior,
                 typeId,
-                effectTagId: 0,
+                effectCategoryId: 0,
                 effectTemplateId: 1,
                 in mergedParams);
 

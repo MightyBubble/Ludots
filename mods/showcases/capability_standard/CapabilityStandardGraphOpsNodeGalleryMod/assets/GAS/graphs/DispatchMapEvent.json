@@ -1,0 +1,49 @@
+[
+  {
+    "id": "showcase.graph_op.DispatchMapEvent",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "beat"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "beat",
+        "op": "ConstInt",
+        "intValue": 5
+      },
+      {
+        "id": "fire",
+        "op": "DispatchMapEvent",
+        "event": "MapHeartbeat"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "beat",
+        "fromPort": "next",
+        "to": "fire"
+      },
+      {
+        "from": "fire",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "beat",
+        "fromPort": "value",
+        "to": "fire",
+        "toPort": "heartbeatIndex"
+      }
+    ]
+  }
+]

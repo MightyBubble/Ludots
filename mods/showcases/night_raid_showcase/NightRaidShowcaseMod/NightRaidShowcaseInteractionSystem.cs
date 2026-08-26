@@ -106,7 +106,7 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         var context = _engine.CreateContext();
         context.Set(CoreServiceKeys.MapId, _engine.CurrentMapSession.MapId);
         context.Set(CoreServiceKeys.MapSession, _engine.CurrentMapSession);
-        context.Set(MapTriggerEventPayloadKeys.SourceEntity, target);
+        context.Set("NightRaid.KillTarget", target);
         _engine.TriggerManager.FireMapCustomEvent(
             _engine.CurrentMapSession.MapId,
             "NightRaid.KillTool.Used",

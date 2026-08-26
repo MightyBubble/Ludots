@@ -61,8 +61,8 @@ namespace Ludots.Tests.GAS
             Assert.That(routed, Is.True);
             Assert.That(route.RuleIndex, Is.EqualTo(0), "priority 30 (garrison) must be the unique winner over 20.");
             Assert.That(route.OrderTypeId, Is.EqualTo(harness.CastAbilityOrderId));
-            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityTag));
-            Assert.That(route.RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)));
+            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityCategory));
+            Assert.That(route.RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId(GarrisonAbilityTag)));
         }
 
         [Test]
@@ -140,8 +140,8 @@ namespace Ludots.Tests.GAS
             int routedCount = harness.Intents.RouteGroup(harness.ProfileId(TestProfileId), actors, p1Rep, in facts, routes);
 
             Assert.That(routedCount, Is.EqualTo(2));
-            Assert.That(routes[0].RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)), "garrison-capable actor hits rule 30.");
-            Assert.That(routes[1].RouteParamId, Is.EqualTo(TagRegistry.GetId(WeaponAbilityTag)), "weapon-only actor hits rule 20.");
+            Assert.That(routes[0].RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId(GarrisonAbilityTag)), "garrison-capable actor hits rule 30.");
+            Assert.That(routes[1].RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId(WeaponAbilityTag)), "weapon-only actor hits rule 20.");
             Assert.That(routes[2].HasRoute, Is.False, "actor without abilities matches no entity-hit rule.");
         }
 
@@ -183,7 +183,7 @@ namespace Ludots.Tests.GAS
             var hostileFacts = new CommandIntentTargetFacts(hostileTarget, HasEntity: true);
             bool hostileRouted = harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in hostileFacts, out CommandIntentRoute hostileRoute);
             Assert.That(hostileRouted, Is.True);
-            Assert.That(hostileRoute.RouteParamId, Is.EqualTo(TagRegistry.GetId(WeaponAbilityTag)), "hostile destructible target hits the weapon rule.");
+            Assert.That(hostileRoute.RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId(WeaponAbilityTag)), "hostile destructible target hits the weapon rule.");
 
             var friendlyFacts = new CommandIntentTargetFacts(friendlyTarget, HasEntity: true);
             bool friendlyRouted = harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in friendlyFacts, out _);
@@ -195,6 +195,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
+            AbilityCategoryRegistry.Register("ability.catalog.nonexistent");
             harness.Intents.Install(Harness.Config(new CommandIntentProfileDefinition
             {
                 Id = "intent.command.final",
@@ -205,7 +206,7 @@ namespace Ludots.Tests.GAS
                     {
                         Priority = 40,
                         Target = new CommandIntentTargetPredicateDefinition { AnyTags = new List<string> { DestructibleTag } },
-                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = "byAbilityTag:ability.catalog.nonexistent" },
+                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = "byAbilityCategory:ability.catalog.nonexistent" },
                     },
                     new()
                     {
@@ -227,8 +228,8 @@ namespace Ludots.Tests.GAS
             Assert.That(routed, Is.True);
             Assert.That(route.RuleIndex, Is.EqualTo(0), "winning is final: no fall-through to the lower-priority moveTo rule.");
             Assert.That(route.OrderTypeId, Is.EqualTo(harness.CastAbilityOrderId));
-            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityTag));
-            Assert.That(route.RouteParamId, Is.EqualTo(TagRegistry.GetId("ability.catalog.nonexistent")),
+            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityCategory));
+            Assert.That(route.RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId("ability.catalog.nonexistent")),
                 "slot landing is downstream work; the evaluator returns the winning route as-is.");
         }
 
@@ -271,7 +272,7 @@ namespace Ludots.Tests.GAS
             bool routed = harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in facts, out CommandIntentRoute route);
 
             Assert.That(routed, Is.True);
-            Assert.That(route.RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)),
+            Assert.That(route.RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId(GarrisonAbilityTag)),
                 "an allowed target keeps the ungated routing outcome.");
         }
 
@@ -296,7 +297,7 @@ namespace Ludots.Tests.GAS
             int routedCount = harness.Intents.RouteGroup(harness.ProfileId(TestProfileId), actors, p1Rep, in facts, routes);
 
             Assert.That(routedCount, Is.EqualTo(2), "both actors route: one to garrison, one to the demoted ground rule.");
-            Assert.That(routes[0].RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)),
+            Assert.That(routes[0].RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId(GarrisonAbilityTag)),
                 "the sighted domain keeps the entity rule.");
             Assert.That(routes[1].OrderTypeId, Is.EqualTo(harness.MoveToOrderId),
                 "the blind domain's facts demote per-actor to the ground rule.");
@@ -354,7 +355,7 @@ namespace Ludots.Tests.GAS
 
             var knownFacts = new CommandIntentTargetFacts(knownTarget, HasEntity: true);
             Assert.That(harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in knownFacts, out CommandIntentRoute knownRoute), Is.True);
-            Assert.That(knownRoute.RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)),
+            Assert.That(knownRoute.RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId(GarrisonAbilityTag)),
                 "a live-visible target passes the default gate and hits the entity rule.");
 
             var unknownFacts = new CommandIntentTargetFacts(unknownTarget, HasEntity: true);
@@ -530,24 +531,24 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Priority = 30,
-                            Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithTag = GarrisonAbilityTag },
+                            Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithCategory = GarrisonAbilityTag },
                             Target = new CommandIntentTargetPredicateDefinition
                             {
                                 AllTags = new List<string> { GarrisonableTag },
                                 Stance = new List<string> { "Neutral", "Friendly" },
                             },
-                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityTag:{GarrisonAbilityTag}" },
+                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityCategory:{GarrisonAbilityTag}" },
                         },
                         new()
                         {
                             Priority = 20,
-                            Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithTag = WeaponAbilityTag },
+                            Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithCategory = WeaponAbilityTag },
                             Target = new CommandIntentTargetPredicateDefinition
                             {
                                 AnyTags = new List<string> { DestructibleTag },
                                 Stance = new List<string> { "Hostile", "Neutral" },
                             },
-                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityTag:{WeaponAbilityTag}" },
+                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityCategory:{WeaponAbilityTag}" },
                         },
                         new()
                         {
@@ -576,8 +577,8 @@ namespace Ludots.Tests.GAS
 
             private static void RegisterAbility(AbilityDefinitionRegistry registry, int abilityId, string catalogTag)
             {
-                var def = new AbilityDefinition { HasCatalogTags = true };
-                def.CatalogTags.AddTag(TagRegistry.Register(catalogTag));
+                var def = new AbilityDefinition { HasCategories = true };
+                def.Categories.AddTag(AbilityCategoryRegistry.Register(catalogTag));
                 registry.Register(abilityId, in def);
             }
         }

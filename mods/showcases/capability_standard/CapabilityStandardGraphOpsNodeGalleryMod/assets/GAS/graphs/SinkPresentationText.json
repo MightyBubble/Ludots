@@ -1,0 +1,19 @@
+[
+  {
+    "id": "showcase.graph_op.SinkPresentationText",
+    "kind": "Script",
+    "entry": "line",
+    "nodes": [
+      { "id": "line", "op": "ConstText", "text": "字幕到了" },
+      { "id": "featured", "op": "SinkPresentationText", "presentationSurface": "Dialogue" },
+      { "id": "done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "line", "fromPort": "next", "to": "featured" },
+      { "from": "featured", "fromPort": "next", "to": "done" }
+    ],
+    "valueEdges": [
+      { "from": "line", "fromPort": "value", "to": "featured", "toPort": "a" }
+    ]
+  }
+]

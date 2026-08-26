@@ -13,7 +13,7 @@ namespace Ludots.Core.Input.Interaction
 
     /// <summary>
     /// Route slot selector kinds compiled from the <c>route.slot</c> selector expression
-    /// (RFC-0065 DEC-14). Semantic routing only ever uses <see cref="ByAbilityTag"/> or
+    /// (RFC-0065 DEC-14). Semantic routing only ever uses <see cref="ByAbilityCategory"/> or
     /// <see cref="ContextGroup"/>; bare slot indices are rejected at load time.
     /// </summary>
     public static class CommandIntentRouteKinds
@@ -21,8 +21,8 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>No slot selector; the route carries only the order type.</summary>
         public const int None = 0;
 
-        /// <summary>Slot located by ability catalog tag; <c>RouteParamId</c> is the tag id.</summary>
-        public const int ByAbilityTag = 1;
+        /// <summary>Slot located by ability category; <c>RouteParamId</c> is the category id.</summary>
+        public const int ByAbilityCategory = 1;
 
         /// <summary>Slot delegated to ContextScored evaluation; <c>RouteParamId</c> is the context group id.</summary>
         public const int ContextGroup = 2;
@@ -104,7 +104,7 @@ namespace Ludots.Core.Input.Interaction
     /// </summary>
     public sealed class CommandIntentActorPredicateDefinition
     {
-        public string HasAbilityWithTag { get; set; }
+        public string HasAbilityWithCategory { get; set; }
         public List<string> AllTags { get; set; }
         public List<string> AnyTags { get; set; }
     }
@@ -123,7 +123,7 @@ namespace Ludots.Core.Input.Interaction
 
     /// <summary>
     /// Route declaration: an order type key (validated against OrderTypeRegistry at install) and an
-    /// optional slot selector expression (<c>byAbilityTag:&lt;tag&gt;</c> or <c>contextGroup:&lt;id&gt;</c>).
+    /// optional slot selector expression (<c>byAbilityCategory:&lt;category&gt;</c> or <c>contextGroup:&lt;id&gt;</c>).
     /// </summary>
     public sealed class CommandIntentRouteDefinition
     {

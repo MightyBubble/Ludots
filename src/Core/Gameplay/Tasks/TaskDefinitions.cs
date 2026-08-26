@@ -88,8 +88,8 @@ namespace Ludots.Core.Gameplay.Tasks
         [JsonPropertyName("on_enter_dialogue_id")]
         public string OnEnterDialogueId { get; set; } = string.Empty;
 
-        [JsonPropertyName("on_enter_cinematic_id")]
-        public string OnEnterCinematicId { get; set; } = string.Empty;
+        [JsonPropertyName("on_enter_sequence_id")]
+        public string OnEnterSequenceId { get; set; } = string.Empty;
     }
 
     public sealed class TaskDefinitionRegistry

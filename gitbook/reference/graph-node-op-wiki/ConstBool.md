@@ -3,7 +3,7 @@
 门闩每一拍都开着，亮一个绿点放一刀，一排刻记里从来没有红点。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ConstBool/poster.png" src="artifacts/evidence/capability_standard_graph_op_ConstBool/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ConstBool/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ConstBool/play.mp4。
 </video>
 
 ## 作者写法

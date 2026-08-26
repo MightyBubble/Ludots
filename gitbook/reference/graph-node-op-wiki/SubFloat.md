@@ -3,7 +3,7 @@
 50 的伤害段送到木桩前，格挡块先咬掉头上的 12，剩下的才进血条。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SubFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_SubFloat/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_SubFloat/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_SubFloat/play.mp4。
 </video>
 
 ## 作者写法

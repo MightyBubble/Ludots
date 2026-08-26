@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
@@ -504,9 +505,14 @@ namespace Ludots.Adapter.Raylib
                         engine.Tick(dt);
                         // Typed instanced batch requests live from tick end until the next tick's
                         // buffer clear; consuming them here hands resident lanes to this frame's draw.
+                        // Grounding always samples the Core-owned visual heightmap service; the
+                        // adapter never substitutes its own ground height truth.
                         setup.InstancedBatchLaneStore.ApplyRequests(
                             engine.GetService(CoreServiceKeys.InstancedBatchRequestBuffer).GetSpan(),
-                            engine.GetService(CoreServiceKeys.InstancedBatchAssetRegistry));
+                            engine.GetService(CoreServiceKeys.InstancedBatchAssetRegistry),
+                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? coreVisualHeightmap)
+                                ? coreVisualHeightmap
+                                : null);
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
                         {
@@ -1204,21 +1210,71 @@ namespace Ludots.Adapter.Raylib
             }
 
             string? galliumDriver = Environment.GetEnvironmentVariable("GALLIUM_DRIVER");
+            string? glRenderer = TryReadActiveGlRenderer();
             bool softwareGl =
                 ReadEnvBoolOrDefault("LIBGL_ALWAYS_SOFTWARE", defaultValue: false) ||
                 string.Equals(galliumDriver, "llvmpipe", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(galliumDriver, "softpipe", StringComparison.OrdinalIgnoreCase);
+                string.Equals(galliumDriver, "softpipe", StringComparison.OrdinalIgnoreCase) ||
+                ContainsSoftwareGlRendererToken(glRenderer);
 
             if (softwareGl)
             {
                 Log.Warn(
                     in LogChannels.Presentation,
-                    "Primitive render mode auto Immediate (software GL). DrawMeshInstanced is unsafe on this host.");
+                    $"Primitive render mode auto Immediate (software GL). DrawMeshInstanced is unsafe on this host. renderer='{glRenderer ?? "<unknown>"}'.");
                 return RaylibPrimitiveRenderMode.Immediate;
             }
 
             return RaylibPrimitiveRenderMode.Instanced;
         }
+
+        private static bool ContainsSoftwareGlRendererToken(string? renderer)
+        {
+            if (string.IsNullOrWhiteSpace(renderer))
+            {
+                return false;
+            }
+
+            return renderer.Contains("llvmpipe", StringComparison.OrdinalIgnoreCase) ||
+                   renderer.Contains("softpipe", StringComparison.OrdinalIgnoreCase) ||
+                   renderer.Contains("swrast", StringComparison.OrdinalIgnoreCase) ||
+                   renderer.Contains("Microsoft Basic Render Driver", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string? TryReadActiveGlRenderer()
+        {
+            const int GlRenderer = 0x1F01;
+            try
+            {
+                string libName = OperatingSystem.IsWindows() ? "opengl32" : "libGL.so.1";
+                if (!NativeLibrary.TryLoad(libName, out IntPtr libHandle))
+                {
+                    return null;
+                }
+
+                // Do not NativeLibrary.Free: Raylib already owns the process GL mapping;
+                // releasing here can unload shared GL while the GLFW context is live.
+                if (!NativeLibrary.TryGetExport(libHandle, "glGetString", out IntPtr glGetStringPtr) ||
+                    glGetStringPtr == IntPtr.Zero)
+                {
+                    return null;
+                }
+
+                var glGetString = Marshal.GetDelegateForFunctionPointer<GlGetStringDelegate>(glGetStringPtr);
+                IntPtr rendererPtr = glGetString(GlRenderer);
+                return rendererPtr == IntPtr.Zero ? null : Marshal.PtrToStringAnsi(rendererPtr);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn(
+                    in LogChannels.Presentation,
+                    $"Unable to read GL_RENDERER for software-GL detection: {ex.GetType().Name}: {ex.Message}");
+                return null;
+            }
+        }
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate IntPtr GlGetStringDelegate(int name);
 
         private static int[] ReadEnvFrameList(string key)
         {

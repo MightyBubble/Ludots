@@ -51,6 +51,11 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             return _stack[agent * HfsmLimits.MaxStackDepth + d - 1];
         }
 
+        public string GetLeafStateName(int agent)
+        {
+            return Definition.States[GetLeafState(agent)].Name;
+        }
+
         public HfsmThinkStats TickAll(IHfsmGraphHost? host = null)
         {
             int predicates = 0;

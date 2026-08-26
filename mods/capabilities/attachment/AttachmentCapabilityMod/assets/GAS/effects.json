@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.Attachment.DriveChassis",
-    "tags": [
-      "Effect.Attachment"
-    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -13,13 +10,13 @@
       "totalDistanceCm": 2000,
       "totalDurationTicks": 40,
       "overrideNavigation": false
-    }
+    },
+    "categories": [
+      "Effect.Attachment"
+    ]
   },
   {
     "id": "Effect.Attachment.AttachRider",
-    "tags": [
-      "Effect.Attachment"
-    ],
     "presetType": "Relation",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -34,13 +31,13 @@
         "inheritParentFacing": false,
         "offsetRotation": "None"
       }
-    }
+    },
+    "categories": [
+      "Effect.Attachment"
+    ]
   },
   {
     "id": "Effect.Attachment.DetachRiderScatter",
-    "tags": [
-      "Effect.Attachment"
-    ],
     "presetType": "Relation",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -49,13 +46,13 @@
       "subject": "Target",
       "detachPlacement": "ParentPerimeterRing",
       "detachPerimeterRadiusCm": 260
-    }
+    },
+    "categories": [
+      "Effect.Attachment"
+    ]
   },
   {
     "id": "Effect.Attachment.DetachRiderInPlace",
-    "tags": [
-      "Effect.Attachment"
-    ],
     "presetType": "Relation",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -63,6 +60,9 @@
       "operation": "Detach",
       "subject": "Target",
       "detachPlacement": "KeepWorldPose"
-    }
+    },
+    "categories": [
+      "Effect.Attachment"
+    ]
   }
 ]

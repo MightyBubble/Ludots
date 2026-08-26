@@ -7,6 +7,6 @@
   "browserRuntime": {
     "enabled": true,
     "required": true,
-    "provider": "cef"
+    "provider": "ultralight"
   }
 }

@@ -46,7 +46,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresenterVisualStableIdTable? _visualStableIds;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly List<Entity> _pendingDestroy = new(256);
-        private readonly Dictionary<Entity, PresentationRequest> _singleRequestReplayCache = new();
+        private readonly Dictionary<Entity, PresentationRequestReplay> _singleRequestReplayCache = new();
         private readonly WorldHudPresentBehavior _worldHudBehavior = new();
 
         public PresenterEmitSystem(
@@ -692,7 +692,7 @@ namespace Ludots.Core.Presentation.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
         {
-            return lod != LODLevel.Culled && (!asset.HasMaxLod || lod <= asset.MaxLod);
+            return !asset.HasMaxLod || lod <= asset.MaxLod;
         }
 
         private void ProcessDirtyStaticEmitEntities()
@@ -970,6 +970,7 @@ namespace Ludots.Core.Presentation.Systems
                             in state,
                             in definition,
                             cull.LOD,
+                            ownerCullVisible,
                             position.Value,
                             rotation.Value,
                             in facing,
@@ -982,6 +983,7 @@ namespace Ludots.Core.Presentation.Systems
                                 in state,
                                 definition,
                                 cull.LOD,
+                                ownerCullVisible,
                                 position.Value,
                                 rotation.Value,
                                 in facing,
@@ -991,6 +993,7 @@ namespace Ludots.Core.Presentation.Systems
                             in state,
                             definition,
                             cull.LOD,
+                            ownerCullVisible,
                             position.Value,
                             rotation.Value,
                             in facing,
@@ -1015,7 +1018,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
                 else if (DefinitionHasTransientVisualBindings(definition))
                 {
-                    _requests.Add(PresentationRequest.ClearTransientVisualProjection(state.OwnerEntity));
+                    _requests.ClearTransientVisualProjection(state.OwnerEntity);
                 }
             }
 
@@ -1080,6 +1083,7 @@ namespace Ludots.Core.Presentation.Systems
                 in state,
                 definition,
                 cull.LOD,
+                ownerCullVisible: true,
                 position.Value,
                 rotation.Value,
                 in facing,
@@ -1146,6 +1150,7 @@ namespace Ludots.Core.Presentation.Systems
                 in state,
                 definition,
                 cull.LOD,
+                ownerCullVisible: true,
                 position.Value,
                 rotation.Value,
                 in facing,
@@ -1256,6 +1261,7 @@ namespace Ludots.Core.Presentation.Systems
                 in state,
                 in definition,
                 cull.LOD,
+                ownerCullVisible,
                 position.Value,
                 rotation.Value,
                 in facing,
@@ -1302,7 +1308,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             SurfaceAuthoringBlock surface = slot.SurfaceSource;
-            _requests.Add(PresentationRequest.FromSurfaceSource(state.OwnerEntity, new SurfaceSourceRequest
+            SurfaceSourceRequest request = new SurfaceSourceRequest
             {
                 StableId = state.StableId,
                 PresenterDefinitionId = state.DefId,
@@ -1311,7 +1317,8 @@ namespace Ludots.Core.Presentation.Systems
                 Authoring = surface,
                 AnchorPosition = worldPos,
                 LodSeed = lod,
-            }, lod));
+            };
+            _requests.AddSurfaceSource(state.OwnerEntity, in request, lod);
         }
 
         private bool EmitAssetBindings(
@@ -1319,6 +1326,7 @@ namespace Ludots.Core.Presentation.Systems
             in PresenterState state,
             PresenterDefinition definition,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -1368,6 +1376,7 @@ namespace Ludots.Core.Presentation.Systems
                     in slot,
                     in asset,
                     lod,
+                    ownerCullVisible,
                     presenterWorldPosition,
                     presenterWorldRotation,
                     in presenterWorldFacing,
@@ -1384,6 +1393,7 @@ namespace Ludots.Core.Presentation.Systems
             in PresenterState state,
             PresenterDefinition definition,
             LODLevel lod,
+            bool ownerCullVisible,
             Vector3 presenterWorldPosition,
             Quaternion presenterWorldRotation,
             in PresenterWorldFacing presenterWorldFacing,
@@ -1413,9 +1423,11 @@ namespace Ludots.Core.Presentation.Systems
                     in state,
                     presenterWorldPosition,
                     slot.Motion.YDriftPerSecond);
-                VisualVisibility visibility = lod == LODLevel.Culled || (asset.HasMaxLod && lod > asset.MaxLod)
-                    ? VisualVisibility.Culled
-                    : VisualVisibility.Visible;
+                VisualVisibility visibility = !ownerCullVisible
+                    ? VisualVisibility.Hidden
+                    : (asset.HasMaxLod && lod > asset.MaxLod
+                        ? VisualVisibility.Culled
+                        : VisualVisibility.Visible);
                 if (visibility == VisualVisibility.Visible &&
                     TryEmitSkinnedVisualBatchFast(
                         entity,
@@ -1433,21 +1445,20 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                _requests.Add(PresentationRequest.FromVisualProxy(
-                    state.OwnerEntity,
-                    BuildVisualProxyFast(
-                        entity,
-                        in state,
-                        definition,
-                        in slot,
-                        in asset,
-                        lod,
-                        resolvedPosition,
-                        presenterWorldRotation,
-                        in presenterWorldFacing,
-                        presenterWorldScale,
-                        visibility,
-                        animatorSlot)));
+                PresentationVisualProxy proxy = BuildVisualProxyFast(
+                    entity,
+                    in state,
+                    definition,
+                    in slot,
+                    in asset,
+                    lod,
+                    resolvedPosition,
+                    presenterWorldRotation,
+                    in presenterWorldFacing,
+                    presenterWorldScale,
+                    visibility,
+                    animatorSlot);
+                _requests.AddVisualProxy(state.OwnerEntity, in proxy);
                 emittedStableVisual |= IsCacheableVisualKind(asset.AssetKind);
             }
 
@@ -1469,7 +1480,6 @@ namespace Ludots.Core.Presentation.Systems
         {
             if (_skinnedVisualBatchBuffer == null ||
                 asset.AssetKind != AssetKind.SkinnedMesh ||
-                lod == LODLevel.Culled ||
                 (asset.HasMaxLod && lod > asset.MaxLod) ||
                 !ResolveAssetVisibility(entity, in asset))
             {
@@ -1607,12 +1617,12 @@ namespace Ludots.Core.Presentation.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryReplayCachedRequest(Entity entity)
         {
-            if (!_singleRequestReplayCache.TryGetValue(entity, out PresentationRequest request))
+            if (!_singleRequestReplayCache.TryGetValue(entity, out PresentationRequestReplay request))
             {
                 return false;
             }
 
-            _requests.Add(request);
+            _requests.Replay(in request);
             return true;
         }
 
@@ -1631,7 +1641,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            _singleRequestReplayCache[entity] = _requests.Get(requestStartCount);
+            _singleRequestReplayCache[entity] = _requests.CaptureReplay(requestStartCount);
         }
 
         private void RemoveReplayCache(Entity entity)
@@ -1705,13 +1715,13 @@ namespace Ludots.Core.Presentation.Systems
             {
                 case AssetKind.WorldHud:
                 case AssetKind.WorldText:
-                    _requests.Add(PresentationRequest.RemoveWorldHud(state.OwnerEntity, stableId));
+                    _requests.RemoveWorldHud(state.OwnerEntity, stableId);
                     break;
                 case AssetKind.Spline:
-                    _requests.Add(PresentationRequest.RemoveSplineRibbon(state.OwnerEntity, stableId));
+                    _requests.RemoveSplineRibbon(state.OwnerEntity, stableId);
                     break;
                 case AssetKind.GroundOverlay:
-                    _requests.Add(PresentationRequest.RemoveGroundOverlay(state.OwnerEntity, stableId));
+                    _requests.RemoveGroundOverlay(state.OwnerEntity, stableId);
                     break;
             }
         }
@@ -1740,7 +1750,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            _requests.Add(PresentationRequest.RemoveSurfaceSource(state.OwnerEntity, state.StableId));
+            _requests.RemoveSurfaceSource(state.OwnerEntity, state.StableId);
             emitCache.RetainedRequestPresent = 0;
         }
 

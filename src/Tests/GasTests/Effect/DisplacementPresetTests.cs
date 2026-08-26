@@ -464,7 +464,7 @@ namespace Ludots.Tests.GAS
             if (listenerLocation == 2)
             {
                 Assert.That(globalListeners.Register(
-                    listenTagId: 0,
+                    listenCategoryId: 0,
                     listenEffectId: templateId,
                     EffectPhaseId.OnApply,
                     PhaseListenerActionFlags.PublishEvent,
@@ -489,7 +489,7 @@ namespace Ludots.Tests.GAS
                     ? PhaseListenerScope.Target
                     : PhaseListenerScope.Source;
                 Assert.That(listener.TryAddTemplate(
-                    listenTagId: 0,
+                    listenCategoryId: 0,
                     listenEffectId: templateId,
                     EffectPhaseId.OnApply,
                     scope,

@@ -10,8 +10,7 @@
     {
       "name": "stage",
       "type": "int",
-      "initial": 0,
-      "phase": true
+      "initial": 0
     },
     {
       "name": "kill_count",
@@ -63,6 +62,10 @@
     {
       "InstanceId": "night_raid_hero",
       "Template": "night_raid_hero"
+    },
+    {
+      "InstanceId": "night_raid_raid_circle",
+      "Template": "night_raid_raid_circle"
     },
     {
       "InstanceId": "night_raid_gate",

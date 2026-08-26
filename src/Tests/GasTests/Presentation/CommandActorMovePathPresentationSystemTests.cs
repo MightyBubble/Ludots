@@ -438,7 +438,7 @@ namespace Ludots.Tests.GAS
             {
                 return new PresenterRule
                 {
-                    Event = new EventFilter { Kind = PresentationEventKind.MovePathBegun, KeyId = TagRegistry.Register(key) },
+                    Event = new EventFilter { Kind = PresentationEventKind.MovePathBegun, KeyId = PresentationEventKeyRegistry.Register(key) },
                     Command = new PresenterCommand
                     {
                         CommandKind = PresenterCommandKind.CreatePresenter,
@@ -453,7 +453,7 @@ namespace Ludots.Tests.GAS
             {
                 return new PresenterRule
                 {
-                    Event = new EventFilter { Kind = PresentationEventKind.MovePathUpdated, KeyId = TagRegistry.Register(key) },
+                    Event = new EventFilter { Kind = PresentationEventKind.MovePathUpdated, KeyId = PresentationEventKeyRegistry.Register(key) },
                     Command = new PresenterCommand
                     {
                         CommandKind = PresenterCommandKind.SetParam,
@@ -471,7 +471,7 @@ namespace Ludots.Tests.GAS
             {
                 return new PresenterRule
                 {
-                    Event = new EventFilter { Kind = PresentationEventKind.MovePathEnded, KeyId = TagRegistry.Register(key) },
+                    Event = new EventFilter { Kind = PresentationEventKind.MovePathEnded, KeyId = PresentationEventKeyRegistry.Register(key) },
                     Command = new PresenterCommand
                     {
                         CommandKind = PresenterCommandKind.DestroyScopedPresenter,

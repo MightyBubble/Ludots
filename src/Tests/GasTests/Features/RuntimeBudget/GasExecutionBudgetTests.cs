@@ -186,6 +186,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveAttachmentPositionSyncScratchCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.AttachmentPositionSyncScratchCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("attachmentPositionSyncScratchCapacity"));
+        }
+
+        [Test]
         public void DefaultGameConfig_GasRuntimeCapacity_ValidatesAdmissionResultHeadroom()
         {
             string repoRoot = FindRepoRoot();
@@ -975,7 +985,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             });
             templates.Register(respondingTemplateId, new EffectTemplateData
             {
-                TagId = respondingTagId,
+                CategoryId = respondingTagId,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ParticipatesInResponse = true,
             });
@@ -1071,6 +1081,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
                 CommandIntentScratchCapacity = 64,
+                AttachmentPositionSyncScratchCapacity = 64,
             };
         }
 

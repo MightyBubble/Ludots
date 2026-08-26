@@ -276,12 +276,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadViewer or
                 GraphNodeOp.LoadEventPayloadInt or
                 GraphNodeOp.LoadEventPayloadFloat or
+                GraphNodeOp.LoadEntryPayloadEntity or
+                GraphNodeOp.LoadEntryPayloadInt or
+                GraphNodeOp.LoadEntryPayloadFloat or
+                GraphNodeOp.LoadPlacedEntity or
+                GraphNodeOp.LoadPlacedRegion or
+                GraphNodeOp.LoadPlacedAnchor or
                 GraphNodeOp.ControlDomainResolve or
                 GraphNodeOp.ControlDomainControls or
                 GraphNodeOp.KnowledgeHasProjection or
                 GraphNodeOp.Call or
                 GraphNodeOp.Return or
                 GraphNodeOp.Yield or
+                GraphNodeOp.AwaitCallback or
                 GraphNodeOp.HaltReturnInt or
                 GraphNodeOp.InvokeScript or
                 GraphNodeOp.MoveInt or
@@ -297,7 +304,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.WriteMapVarInt or
                 GraphNodeOp.WriteMapVarFloat or
                 GraphNodeOp.SpawnTemplate or
-                GraphNodeOp.SetWorldPosition
+                GraphNodeOp.SetWorldPosition or
+                GraphNodeOp.InvokeGraph or
+                GraphNodeOp.StoreArgInt or
+                GraphNodeOp.StoreArgFloat or
+                GraphNodeOp.StoreArgEntity or
+                GraphNodeOp.DispatchMapEvent or
+                GraphNodeOp.AwaitCallback or
+                GraphNodeOp.ConstText or
+                GraphNodeOp.ConcatText or
+                GraphNodeOp.IntToText or
+                GraphNodeOp.FloatToText or
+                GraphNodeOp.SinkPresentationText
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -308,8 +326,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>
         /// Run-to-halt execution. Budget exhaustion throws. Yield is rejected.
         /// Falling off the program end is an error; programs must halt with HaltReturnInt.
+        /// startPc selects the entry instruction (TriggerGraph entry dispatch; 0 = program head).
         /// </summary>
-        internal static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
+        internal static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers, int startPc = 0)
         {
             if (state.CallStack.Length < GraphVmLimits.MaxCallStackDepth)
             {
@@ -323,9 +342,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"Graph VM exceeded MaxInstructionsPerExecution ({GraphVmLimits.MaxInstructionsPerExecution}). Possible infinite loop.");
             }
 
+            if ((uint)startPc >= (uint)program.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Graph Execute startPc {startPc} is outside the program (length {program.Length}).");
+            }
+
             var cursor = new GraphExecutionCursor
             {
-                Pc = 0,
+                Pc = startPc,
                 Steps = state.TreeSteps,
                 CallStackCount = state.CallStackCount,
                 ReturnInt = state.ReturnInt,
@@ -333,6 +358,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Status = GraphExecutionStatus.Running
             };
 
+            EnsureTextHeap(ref state);
             GraphSliceResult result = ExecuteSliceCore(
                 ref state,
                 program,
@@ -376,7 +402,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"ExecuteSlice requires a call stack span of at least {GraphVmLimits.MaxCallStackDepth} that outlives the slice.");
             }
 
+            EnsureTextHeap(ref state);
             return ExecuteSliceCore(ref state, program, handlers, ref cursor, budgetSteps);
+        }
+
+        /// <summary>
+        /// Root execution entry binds the thread-local text heap when the caller omitted it.
+        /// Does not clear: producers Write before Read; nested Invoke* push their own frame.
+        /// </summary>
+        private static void EnsureTextHeap(ref GraphExecutionState state)
+        {
+            if (state.Text == null)
+            {
+                state.Text = GraphTextHeap.ForCurrentThread();
+            }
         }
 
         private static GraphSliceResult ExecuteSliceCore(
@@ -786,6 +825,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.LoadViewer, HandleLoadViewer, "LoadViewer graph opcode.");
             Register(GraphNodeOp.LoadEventPayloadInt, HandleLoadEventPayloadInt, "LoadEventPayloadInt graph opcode.");
             Register(GraphNodeOp.LoadEventPayloadFloat, HandleLoadEventPayloadFloat, "LoadEventPayloadFloat graph opcode.");
+            Register(GraphNodeOp.LoadEntryPayloadEntity, HandleLoadEntryPayloadEntity, "LoadEntryPayloadEntity graph opcode.");
+            Register(GraphNodeOp.LoadEntryPayloadInt, HandleLoadEntryPayloadInt, "LoadEntryPayloadInt graph opcode.");
+            Register(GraphNodeOp.LoadEntryPayloadFloat, HandleLoadEntryPayloadFloat, "LoadEntryPayloadFloat graph opcode.");
+            Register(GraphNodeOp.LoadPlacedEntity, HandleLoadPlacedEntity, "LoadPlacedEntity graph opcode.");
+            Register(GraphNodeOp.LoadPlacedRegion, HandleLoadPlacedRegion, "LoadPlacedRegion graph opcode.");
+            Register(GraphNodeOp.LoadPlacedAnchor, HandleLoadPlacedAnchor, "LoadPlacedAnchor graph opcode.");
             Register(GraphNodeOp.RelationshipHasLink, HandleRelationshipHasLink, "RelationshipHasLink graph opcode.");
             Register(GraphNodeOp.ControlDomainResolve, HandleControlDomainResolve, "ControlDomainResolve graph opcode.");
             Register(GraphNodeOp.ControlDomainControls, HandleControlDomainControls, "ControlDomainControls graph opcode.");
@@ -809,6 +854,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ReadMapVarFloat, HandleReadMapVarFloat, "ReadMapVarFloat graph opcode.");
             Register(GraphNodeOp.WriteMapVarInt, HandleWriteMapVarInt, "WriteMapVarInt graph opcode.");
             Register(GraphNodeOp.WriteMapVarFloat, HandleWriteMapVarFloat, "WriteMapVarFloat graph opcode.");
+            Register(GraphNodeOp.InvokeGraph, HandleInvokeGraph, "InvokeGraph graph opcode.");
+            Register(GraphNodeOp.StoreArgInt, HandleStoreArgInt, "StoreArgInt graph opcode.");
+            Register(GraphNodeOp.StoreArgFloat, HandleStoreArgFloat, "StoreArgFloat graph opcode.");
+            Register(GraphNodeOp.StoreArgEntity, HandleStoreArgEntity, "StoreArgEntity graph opcode.");
+            Register(GraphNodeOp.DispatchMapEvent, HandleDispatchMapEvent, "DispatchMapEvent graph opcode.");
+            Register(GraphNodeOp.AwaitCallback, HandleAwaitCallback, "AwaitCallback graph opcode.");
+            Register(GraphNodeOp.ConstText, HandleConstText, "ConstText graph opcode.");
+            Register(GraphNodeOp.ConcatText, HandleConcatText, "ConcatText graph opcode.");
+            Register(GraphNodeOp.IntToText, HandleIntToText, "IntToText graph opcode.");
+            Register(GraphNodeOp.FloatToText, HandleFloatToText, "FloatToText graph opcode.");
+            Register(GraphNodeOp.SinkPresentationText, HandleSinkPresentationText, "SinkPresentationText graph opcode.");
         }
 
         // ── Value Ops ──
@@ -826,6 +882,71 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleConstFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.F[ins.Dst] = ins.ImmF;
+        }
+
+        private static void HandleConstText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            GraphTextHeap text = RequireTextHeap(ref s);
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    "ConstText requires a registered program so Symbols[Imm] can supply the literal.");
+            }
+
+            if ((uint)ins.Imm >= (uint)registration.Symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ConstText Imm {ins.Imm} is outside program symbol table length {registration.Symbols.Length}.");
+            }
+
+            text.Write(ins.Dst, registration.Symbols[ins.Imm].AsSpan());
+        }
+
+        private static void HandleConcatText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            RequireTextHeap(ref s).Concat(ins.Dst, ins.A, ins.B);
+        }
+
+        private static void HandleIntToText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Span<char> buffer = stackalloc char[GraphVmLimits.MaxTextCharsPerRegister];
+            if (!s.I[ins.A].TryFormat(buffer, out int written, provider: System.Globalization.CultureInfo.InvariantCulture))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphTextHeap.OverflowError}: IntToText could not format I[{ins.A}] into MaxTextCharsPerRegister.");
+            }
+
+            RequireTextHeap(ref s).Write(ins.Dst, buffer.Slice(0, written));
+        }
+
+        private static void HandleFloatToText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Span<char> buffer = stackalloc char[GraphVmLimits.MaxTextCharsPerRegister];
+            if (!s.F[ins.A].TryFormat(buffer, out int written, format: "0.###", provider: System.Globalization.CultureInfo.InvariantCulture))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphTextHeap.OverflowError}: FloatToText could not format F[{ins.A}] into MaxTextCharsPerRegister.");
+            }
+
+            RequireTextHeap(ref s).Write(ins.Dst, buffer.Slice(0, written));
+        }
+
+        private static void HandleSinkPresentationText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!Enum.IsDefined(typeof(GraphPresentationTextSurface), (byte)ins.Imm))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphPresentationTextSink.SurfaceError}: Imm={ins.Imm} is not a GraphPresentationTextSurface.");
+            }
+
+            var surface = (GraphPresentationTextSurface)ins.Imm;
+            s.Api.PushPresentationText(surface, RequireTextHeap(ref s).Get(ins.A));
+        }
+
+        private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)
+        {
+            return s.Text ?? throw new InvalidOperationException("Graph execution requires GraphTextHeap.");
         }
 
         // ── Entity Loading ──
@@ -888,6 +1009,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Status = GraphExecutionStatus.Yielded;
         }
 
+        private static void HandleAwaitCallback(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string callbackType = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(ins.Imm)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AwaitCallbackSymbolUnknown: callbackType symbol id {ins.Imm} is not registered.");
+
+            MapId mapId = s.MapScope ?? default;
+            s.Api.BeginAwaitCallback(callbackType, mapId, s.Caster, ins.Dst);
+            s.Status = GraphExecutionStatus.Yielded;
+        }
+
         private static void HandleHaltReturnInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.ReturnInt = s.I[ins.A];
@@ -938,41 +1070,253 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             e[1] = s.ExplicitTarget;
             e[2] = s.E.Length > 2 ? s.E[2] : default;
 
-            var child = new GraphExecutionState
+            GraphTextHeap text = s.Text ?? throw new InvalidOperationException("InvokeScript requires GraphExecutionState.Text.");
+            text.PushFrame();
+            try
             {
-                World = s.World,
-                Caster = s.Caster,
-                ExplicitTarget = s.ExplicitTarget,
-                TargetContext = s.TargetContext,
-                Viewer = s.Viewer,
-                EventPayload = s.EventPayload,
-                TargetPosCm = s.TargetPosCm,
-                RandomSeed = s.RandomSeed,
-                Api = s.Api,
-                Programs = s.Programs,
-                F = f,
-                I = i,
-                B = b,
-                E = e,
-                Targets = targets,
-                TargetList = targetList,
-                CallStack = callStack,
-                Status = GraphExecutionStatus.Running,
-                InvokeDepth = s.InvokeDepth + 1,
-                TreeSteps = s.TreeSteps,
-                CurrentGraphId = graphId,
-                DebugTrace = s.DebugTrace,
-                MapScope = s.MapScope
-            };
+                var child = new GraphExecutionState
+                {
+                    World = s.World,
+                    Caster = s.Caster,
+                    ExplicitTarget = s.ExplicitTarget,
+                    TargetContext = s.TargetContext,
+                    Viewer = s.Viewer,
+                    EventPayload = s.EventPayload,
+                    TargetPosCm = s.TargetPosCm,
+                    RandomSeed = s.RandomSeed,
+                    Api = s.Api,
+                    Programs = s.Programs,
+                    F = f,
+                    I = i,
+                    B = b,
+                    E = e,
+                    Targets = targets,
+                    TargetList = targetList,
+                    CallStack = callStack,
+                    Text = text,
+                    Status = GraphExecutionStatus.Running,
+                    InvokeDepth = s.InvokeDepth + 1,
+                    TreeSteps = s.TreeSteps,
+                    CurrentGraphId = graphId,
+                    DebugTrace = s.DebugTrace,
+                    MapScope = s.MapScope
+                };
 
-            Execute(ref child, childProgram, Instance);
-            s.TreeSteps = child.TreeSteps;
-            s.I[ins.Dst] = child.ReturnInt;
+                Execute(ref child, childProgram, Instance);
+                s.TreeSteps = child.TreeSteps;
+                s.I[ins.Dst] = child.ReturnInt;
+            }
+            finally
+            {
+                text.PopFrame();
+            }
         }
 
         private static void HandleMoveInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.I[ins.Dst] = s.I[ins.A];
+        }
+
+        // ── TriggerGraph subgraph reuse + structured dispatch (#1116/#1115) ──
+
+        private static void HandleStoreArgInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string key = RequireInvokeArgKey(ins.Imm);
+            StagingForStore(ref s).UpsertInt(key, s.I[ins.A]);
+        }
+
+        private static void HandleStoreArgFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string key = RequireInvokeArgKey(ins.Imm);
+            StagingForStore(ref s).UpsertFloat(key, s.F[ins.A]);
+        }
+
+        private static void HandleStoreArgEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string key = RequireInvokeArgKey(ins.Imm);
+            StagingForStore(ref s).UpsertEntity(key, s.E[ins.A]);
+        }
+
+        private static GraphEntryPayloadTable StagingForStore(ref GraphExecutionState s)
+        {
+            return s.InvokeArgs ??= new GraphEntryPayloadTable();
+        }
+
+        private static string RequireInvokeArgKey(int keyId)
+        {
+            return Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(keyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvokeArgSymbolUnknown: StoreArg references unregistered arg key symbol id {keyId}.");
+        }
+
+        private static void HandleInvokeGraph(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.Programs == null)
+            {
+                throw new InvalidOperationException("InvokeGraph requires GraphExecutionState.Programs.");
+            }
+
+            if (s.InvokeDepth >= GraphVmLimits.MaxInvokeDepth)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvokeDepthExceeded: invoke depth {s.InvokeDepth + 1} exceeds MaxInvokeDepth ({GraphVmLimits.MaxInvokeDepth}).");
+            }
+
+            int graphId = ins.Imm;
+            if (graphId <= 0)
+            {
+                throw new InvalidOperationException("InvokeGraph requires a positive TriggerGraph graph id in Imm.");
+            }
+
+            if ((ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.InvokeGraphGraphKeyUnresolved: InvokeGraph.functionName was never patched to a graph id at load time.");
+            }
+
+            s.Programs.RequireKind(graphId, GraphKind.TriggerGraph);
+            if (!s.Programs.TryGetRegistration(graphId, out GraphProgramRegistration childRegistration))
+            {
+                throw new InvalidOperationException($"InvokeGraph target graph id {graphId} is not registered.");
+            }
+
+            if (childRegistration.ContainsYield)
+            {
+                throw new InvalidOperationException(
+                    $"InvokeGraph target graph id {graphId} contains Yield; nested Yield is not supported in this slice.");
+            }
+
+            int startPc = ResolveInvokeGraphEntry(in ins, childRegistration, graphId);
+            ReadOnlySpan<GraphInstruction> childProgram = childRegistration.Program;
+
+            Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+            var targetList = new GraphTargetList(targets);
+            e[0] = s.Caster;
+            e[1] = s.ExplicitTarget;
+
+            GraphTextHeap text = s.Text ?? throw new InvalidOperationException("InvokeGraph requires GraphExecutionState.Text.");
+            text.PushFrame();
+            try
+            {
+                var child = new GraphExecutionState
+                {
+                    World = s.World,
+                    Caster = s.Caster,
+                    ExplicitTarget = s.ExplicitTarget,
+                    TargetContext = s.TargetContext,
+                    Viewer = s.Viewer,
+                    EventPayload = s.EventPayload,
+                    EntryPayload = s.InvokeArgs,
+                    TargetPosCm = s.TargetPosCm,
+                    RandomSeed = s.RandomSeed,
+                    Api = s.Api,
+                    Programs = s.Programs,
+                    F = f,
+                    I = i,
+                    B = b,
+                    E = e,
+                    Targets = targets,
+                    TargetList = targetList,
+                    CallStack = callStack,
+                    Text = text,
+                    Status = GraphExecutionStatus.Running,
+                    InvokeDepth = s.InvokeDepth + 1,
+                    TreeSteps = s.TreeSteps,
+                    CurrentGraphId = graphId,
+                    DebugTrace = s.DebugTrace,
+                    MapScope = s.MapScope
+                };
+
+                Execute(ref child, childProgram, Instance, startPc);
+                s.TreeSteps = child.TreeSteps;
+                s.I[ins.Dst] = child.ReturnInt;
+                s.InvokeArgs?.Clear();
+            }
+            finally
+            {
+                text.PopFrame();
+            }
+        }
+
+        /// <summary>
+        /// Flags bit 1 set → A carries the target entry ordinal + 1, resolved from the
+        /// caller-authored label symbol at load time (GraphProgramRegistry rewrites
+        /// B|C&lt;&lt;8 → A and clears B/C; A == 0 means "never validated" and fails closed).
+        /// </summary>
+        private static int ResolveInvokeGraphEntry(in GraphInstruction ins, GraphProgramRegistration registration, int graphId)
+        {
+            if (registration.TriggerGraphEntries.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"InvokeGraph target graph id {graphId} has an empty TriggerGraph entry table.");
+            }
+
+            if ((ins.Flags & 2) == 0)
+            {
+                return registration.TriggerGraphEntries[0].StartPc;
+            }
+
+            if (ins.A == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvokeGraphEntryLabelUnresolved: InvokeGraph on graph id {graphId} carries an entry label that was never validated at load time.");
+            }
+
+            int ordinal = ins.A - 1;
+            if ((uint)ordinal >= (uint)registration.TriggerGraphEntries.Count)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvokeGraphEntryNotFound: InvokeGraph entry ordinal {ordinal} is outside TriggerGraph id {graphId}'s entry table.");
+            }
+
+            return registration.TriggerGraphEntries[ordinal].StartPc;
+        }
+
+        private static void HandleDispatchMapEvent(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            bool selfScope = (ins.Flags & 1) != 0;
+            bool globalScope = (ins.Flags & 2) != 0;
+            MapId mapId = globalScope
+                ? (s.MapScope ?? ResolveMapOfEntity(ref s, s.Caster))
+                : selfScope || s.MapScope is null
+                    ? ResolveMapOfEntity(ref s, s.Caster)
+                    : s.MapScope.Value;
+            if (globalScope)
+            {
+                // Global dispatch (#1123): the origin map rides the context as transport
+                // metadata; an unmapped caster only means no origin stamp, not an error.
+                s.Api.FireGlobalEventPayload(ins.Imm, mapId, s.InvokeArgs);
+                s.InvokeArgs?.Clear();
+                return;
+            }
+
+            if (selfScope && string.IsNullOrEmpty(mapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchMapEventNoMapScope: DispatchMapEvent (event key id {ins.Imm}) in 'self' scope requires the caster to anchor a map.");
+            }
+
+            if (string.IsNullOrEmpty(mapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchMapEventNoMapScope: DispatchMapEvent (event key id {ins.Imm}) requires a map-bound host (MapScope) or a caster that anchors a map.");
+            }
+
+            Entity selfSource = selfScope ? s.Caster : Entity.Null;
+            s.Api.FireMapEventPayload(ins.Imm, mapId, selfSource, s.InvokeArgs);
+            s.InvokeArgs?.Clear();
+        }
+
+        private static MapId ResolveMapOfEntity(ref GraphExecutionState s, Entity entity)
+        {
+            return s.World != null && s.World.IsAlive(entity) && s.World.TryGet<MapEntity>(entity, out MapEntity mapEntity)
+                ? mapEntity.MapId
+                : new MapId(string.Empty);
         }
 
         // ── Generic lookup tables (#881) ──
@@ -1643,6 +1987,73 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 3 => s.EventPayload.FloatD,
                 _ => throw new InvalidOperationException($"LoadEventPayloadFloat slot {ins.Imm} is out of range (0..3 = FloatA..FloatD)."),
             };
+        }
+
+        private static void HandleLoadEntryPayloadEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string key = RequireEntryPayloadKey(ref s, ins.Imm, out GraphEntryPayloadTable table);
+            s.E[ins.Dst] = table.TryGetEntity(key, out Entity entity)
+                ? entity
+                : throw EntryPayloadNotCarried(key);
+        }
+
+        private static void HandleLoadEntryPayloadInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string key = RequireEntryPayloadKey(ref s, ins.Imm, out GraphEntryPayloadTable table);
+            s.I[ins.Dst] = table.TryGetInt(key, out int value)
+                ? value
+                : throw EntryPayloadNotCarried(key);
+        }
+
+        private static void HandleLoadEntryPayloadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string key = RequireEntryPayloadKey(ref s, ins.Imm, out GraphEntryPayloadTable table);
+            s.F[ins.Dst] = table.TryGetFloat(key, out float value)
+                ? value
+                : throw EntryPayloadNotCarried(key);
+        }
+
+        private static string RequireEntryPayloadKey(ref GraphExecutionState s, int keyId, out GraphEntryPayloadTable table)
+        {
+            table = s.EntryPayload ?? throw new InvalidOperationException(
+                $"GAS.GRAPH.ERR.EntryPayloadUnavailable: LoadEntryPayload* op (payload key id {keyId}) runs outside a TriggerGraph entry capture.");
+            return Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(keyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EntryPayloadSymbolUnknown: payload key id {keyId} has no registered symbol.");
+        }
+
+        // ── Placed-entity variable reads (#1108) ──
+
+        private static void HandleLoadPlacedEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // A miss is a readable value, not a throw (#1108 contract): unregistered ids and
+            // destroyed entities both write Entity.Null so downstream ops branch on it.
+            MapId mapId = RequireMapVariableScopeMap(ref s, s.Caster, nameof(GraphNodeOp.LoadPlacedEntity));
+            s.E[ins.Dst] = s.Api.TryGetPlacedEntity(ins.Imm, mapId, out Entity entity) && s.World.IsAlive(entity)
+                ? entity
+                : Entity.Null;
+        }
+
+        private static void HandleLoadPlacedRegion(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            MapId mapId = RequireMapVariableScopeMap(ref s, s.Caster, nameof(GraphNodeOp.LoadPlacedRegion));
+            s.I[ins.Dst] = s.Api.TryHasPlacedRegion(ins.Imm, mapId) ? 1 : 0;
+        }
+
+        private static void HandleLoadPlacedAnchor(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Runtime channel is identical to LoadPlacedEntity; mount/authoring require the
+            // InstanceId to contain "anchor". Miss / dead → Entity.Null.
+            MapId mapId = RequireMapVariableScopeMap(ref s, s.Caster, nameof(GraphNodeOp.LoadPlacedAnchor));
+            s.E[ins.Dst] = s.Api.TryGetPlacedEntity(ins.Imm, mapId, out Entity entity) && s.World.IsAlive(entity)
+                ? entity
+                : Entity.Null;
+        }
+
+        private static InvalidOperationException EntryPayloadNotCarried(string key)
+        {
+            return new InvalidOperationException(
+                $"GAS.GRAPH.ERR.EntryPayloadKeyNotCarried: this entry event did not carry payload key '{key}'; wire the read from an entry whose event declares it.");
         }
 
         // ── Topology predicates (397, 420-422) ──

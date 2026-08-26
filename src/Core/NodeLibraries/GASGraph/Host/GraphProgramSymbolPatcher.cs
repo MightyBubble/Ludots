@@ -75,6 +75,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.ReadMapVarFloat:
                     case GraphNodeOp.WriteMapVarInt:
                     case GraphNodeOp.WriteMapVarFloat:
+                    case GraphNodeOp.LoadEntryPayloadEntity:
+                    case GraphNodeOp.LoadEntryPayloadInt:
+                    case GraphNodeOp.LoadEntryPayloadFloat:
+                    case GraphNodeOp.LoadPlacedEntity:
+                    case GraphNodeOp.LoadPlacedRegion:
+                    case GraphNodeOp.LoadPlacedAnchor:
+                    case GraphNodeOp.StoreArgInt:
+                    case GraphNodeOp.StoreArgFloat:
+                    case GraphNodeOp.StoreArgEntity:
+                    case GraphNodeOp.DispatchMapEvent:
+                    case GraphNodeOp.AwaitCallback:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.CreatePanel:
@@ -229,7 +240,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Resolves InvokeScript instructions that carry Func Lib names (Flags=<see cref="GraphInstructionFlags.FuncLibName"/>).
+        /// Resolves InvokeScript instructions that carry Func Lib names (Flags=<see cref="GraphInstructionFlags.FuncLibName"/>)
+        /// and InvokeGraph instructions that carry graph keys (same flag): the script name goes
+        /// through the catalog, the TriggerGraph key resolves via <see cref="GraphIdRegistry"/>.
         /// </summary>
         public static void PatchFuncLib(string[] symbols, GraphInstruction[] program, GraphFunctionCatalog catalog)
         {
@@ -239,20 +252,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < program.Length; i++)
             {
                 ref var ins = ref program[i];
-                if (ins.Op != (ushort)GraphNodeOp.InvokeScript)
+                if ((ins.Op == (ushort)GraphNodeOp.InvokeScript || ins.Op == (ushort)GraphNodeOp.InvokeGraph) &&
+                    (ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
                 {
-                    continue;
-                }
+                    string symbol = ResolveSymbol(symbols, ins.Imm);
+                    if (ins.Op == (ushort)GraphNodeOp.InvokeGraph)
+                    {
+                        int targetGraphId = GraphIdRegistry.GetId(symbol);
+                        if (targetGraphId <= 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"InvokeGraph.functionName '{symbol}' is not a registered graph key.");
+                        }
 
-                if ((ins.Flags & GraphInstructionFlags.FuncLibName) == 0)
-                {
-                    continue;
-                }
+                        ins.Imm = targetGraphId;
+                    }
+                    else
+                    {
+                        GraphFunctionEntry entry = catalog.Require(symbol);
+                        ins.Imm = entry.GraphId;
+                    }
 
-                string functionName = ResolveSymbol(symbols, ins.Imm);
-                GraphFunctionEntry entry = catalog.Require(functionName);
-                ins.Imm = entry.GraphId;
-                ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.FuncLibName);
+                    ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.FuncLibName);
+                }
             }
         }
 

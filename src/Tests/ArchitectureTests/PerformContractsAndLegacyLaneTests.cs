@@ -191,35 +191,36 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void PresentationRequest_RemainsAdapterNeutralOutputGate()
+        public void PresentationRequestAggregateFacade_IsRemovedFromCore()
         {
-            FieldInfo[] fields = typeof(PresentationRequest).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            Assembly assembly = typeof(PresenterCommand).Assembly;
+            Assert.That(
+                assembly.GetType("Ludots.Core.Presentation.Requests.PresentationRequest", throwOnError: false),
+                Is.Null,
+                "The fat PresentationRequest aggregate must not exist; typed lanes are the only request contract.");
 
-            string[] forbiddenTokens =
-            {
-                "PresenterRule",
-                "PresenterCommand",
-                "PresenterCommandBuffer",
-                "PresentationBehaviorDefinition",
-            };
+            string[] publicMethodNames = typeof(PresentationRequestBuffer)
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(static method => method.DeclaringType == typeof(PresentationRequestBuffer))
+                .Select(static method => method.Name)
+                .ToArray();
 
-            string[] offendingNames =
-                fields.Where(field => forbiddenTokens.Any(token => field.Name.Contains(token, StringComparison.OrdinalIgnoreCase)))
-                    .Select(static field => field.Name)
-                    .ToArray();
-
-            string[] offendingTypes =
-                fields.Where(field =>
-                    {
-                        string? fullName = field.FieldType.FullName;
-                        return fullName != null &&
-                               forbiddenTokens.Any(token => fullName.Contains(token, StringComparison.OrdinalIgnoreCase));
-                    })
-                    .Select(static field => $"{field.Name}:{field.FieldType.FullName}")
-                    .ToArray();
-
-            Assert.That(offendingNames, Is.Empty, "PresentationRequest must stay an adapter-neutral output packet.");
-            Assert.That(offendingTypes, Is.Empty, "PresentationRequest must not store orchestration or phase contracts.");
+            Assert.That(
+                publicMethodNames,
+                Does.Not.Contain("Add"),
+                "PresentationRequestBuffer.Add(aggregate) must not exist; use the typed Add* lane methods.");
+            Assert.That(
+                publicMethodNames,
+                Does.Not.Contain("GetSpan"),
+                "PresentationRequestBuffer.GetSpan must not exist; consume via Ops + *At lane accessors.");
+            Assert.That(
+                publicMethodNames,
+                Does.Not.Contain("Get"),
+                "PresentationRequestBuffer.Get must not exist; consume via Ops + *At lane accessors.");
+            Assert.That(
+                publicMethodNames,
+                Does.Not.Contain("Reconstruct"),
+                "PresentationRequestBuffer.Reconstruct must not exist; typed lanes are the only request contract.");
         }
 
         [Test]

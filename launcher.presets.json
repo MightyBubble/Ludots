@@ -235,6 +235,49 @@
       }
     },
     {
+      "id": "browser_ui_ultralight_raylib",
+      "name": "Browser UI Ultralight Raylib",
+      "selectors": [
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
+      "id": "browser_react_flow_ultralight_raylib",
+      "name": "Browser React Flow Ultralight Raylib",
+      "selectors": [
+        "$browser_react_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
+      "id": "browser_minimap_composited_overlay_ultralight_raylib",
+      "name": "Browser Minimap Composited Overlay Ultralight Raylib",
+      "selectors": [
+        "$presenter_blacksmith_large_world_nohud",
+        "$browser_minimap_composited_overlay_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
       "id": "ui_player_aggregate_graph_mvp_raylib",
       "name": "Player Aggregate Graph MVP Raylib",
       "selectors": [
@@ -547,6 +590,15 @@
       "name": "残血的分更高",
       "selectors": [
         "$capability_standard_graph_score"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_formal_text_raylib",
+      "name": "拼一句上字幕",
+      "selectors": [
+        "$capability_standard_graph_formal_text"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2085,6 +2137,24 @@
       ]
     },
     {
+      "id": "engine_raylib_slash_trail",
+      "name": "引擎画廊·刀光轨迹",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "slash_trail",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_slash_trail/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_slash_trail/stats.json"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_HidePanel_raylib",
       "name": "Graph Op HidePanel Raylib",
       "selectors": [
@@ -2116,6 +2186,15 @@
       "name": "Graph Op DestroyPanel Raylib",
       "selectors": [
         "$capability_standard_graph_op_DestroyPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_entity_list_raylib",
+      "name": "Panel Entity List Raylib",
+      "selectors": [
+        "$panel_entity_list"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2281,6 +2360,195 @@
       "name": "Graph Op WeightedPick Raylib",
       "selectors": [
         "$capability_standard_graph_op_WeightedPick"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadEntity_raylib",
+      "name": "Graph Op LoadEntryPayloadEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadFloat_raylib",
+      "name": "Graph Op LoadEntryPayloadFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadInt_raylib",
+      "name": "Graph Op LoadEntryPayloadInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DispatchMapEvent_raylib",
+      "name": "Graph Op DispatchMapEvent Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DispatchMapEvent"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_InvokeGraph_raylib",
+      "name": "Graph Op InvokeGraph Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_InvokeGraph"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgEntity_raylib",
+      "name": "Graph Op StoreArgEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgFloat_raylib",
+      "name": "Graph Op StoreArgFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgInt_raylib",
+      "name": "Graph Op StoreArgInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedEntity_raylib",
+      "name": "Graph Op LoadPlacedEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AwaitCallback_raylib",
+      "name": "Graph Op AwaitCallback Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AwaitCallback"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_raylib",
+      "name": "Narrative Showcase Raylib",
+      "selectors": [
+        "$narrative"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_sanguo_raylib",
+      "name": "Narrative Theme 三国 Raylib",
+      "selectors": [
+        "$narrative_theme_sanguo"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_fantasy_raylib",
+      "name": "Narrative Theme 奇幻 Raylib",
+      "selectors": [
+        "$narrative_theme_fantasy"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_acnh_raylib",
+      "name": "Narrative Theme 动森 Raylib",
+      "selectors": [
+        "$narrative_theme_acnh"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedAnchor_raylib",
+      "name": "Graph Op LoadPlacedAnchor Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedAnchor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedRegion_raylib",
+      "name": "Graph Op LoadPlacedRegion Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedRegion"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConcatText_raylib",
+      "name": "Graph Op ConcatText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConcatText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConstText_raylib",
+      "name": "Graph Op ConstText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConstText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FloatToText_raylib",
+      "name": "Graph Op FloatToText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FloatToText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IntToText_raylib",
+      "name": "Graph Op IntToText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IntToText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SinkPresentationText_raylib",
+      "name": "Graph Op SinkPresentationText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SinkPresentationText"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

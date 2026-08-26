@@ -1,0 +1,88 @@
+{
+  "Id": "capability_standard_graph_op_LoadPlacedRegion",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "记录官"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -200,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "marker",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "营地标"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 400,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    }
+  ],
+  "Variables": [
+    {
+      "name": "gallery.region_yard",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "gallery.region_ghost",
+      "type": "int",
+      "initial": -1
+    }
+  ],
+  "Regions": [
+    {
+      "id": "yard",
+      "shape": "circle",
+      "x": 400,
+      "y": 0,
+      "radiusCm": 200
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "marker"
+    }
+  ]
+}

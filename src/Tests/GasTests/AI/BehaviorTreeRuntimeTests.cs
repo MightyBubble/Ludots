@@ -142,17 +142,17 @@ namespace Ludots.Tests.Gas.AI
             var world = new BehaviorTreeWorld(tree, 1);
             world.AddAgent();
 
-            sensors.See = false;
+            sensors.SeeDistanceCm = ScriptedSensors.NoTargetCm;
             TickUntilPatrolCompletes(world, sensors);
             Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
 
             world.ResetAgent(0);
-            sensors.See = true;
-            sensors.InRange = false;
+            sensors.SeeDistanceCm = ScriptedSensors.OnTopCm;
+            sensors.RangeDistanceCm = ScriptedSensors.SeenOutOfRangeCm;
             TickUntilScriptReturn(world, sensors, 1);
 
             world.ResetAgent(0);
-            sensors.InRange = true;
+            sensors.RangeDistanceCm = ScriptedSensors.OnTopCm;
             TickUntilScriptReturn(world, sensors, 2);
         }
 
@@ -194,7 +194,13 @@ namespace Ludots.Tests.Gas.AI
         {
             for (int i = 0; i < 12; i++)
             {
-                world.RestartThinking(0);
+                // Only restart topology after a terminal leaf. Restarting while a ScriptSlice is
+                // Yielded re-enters seeEnemy first and clears the suspended patrol cursor.
+                if (world.Statuses[0] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
+                {
+                    world.RestartThinking(0);
+                }
+
                 world.TickAll(Programs, 32, sensors);
                 if (world.LastScriptReturns[0] == expectedReturn &&
                     world.Statuses[0] is BehaviorTreeStatus.Success)
@@ -204,15 +210,28 @@ namespace Ludots.Tests.Gas.AI
             }
 
             Assert.That(
+                world.Statuses[0],
+                Is.EqualTo(BehaviorTreeStatus.Success),
+                $"BT status after {12} think waves: return={world.LastScriptReturns[0]}");
+            Assert.That(
                 world.LastScriptReturns[0],
                 Is.EqualTo(expectedReturn),
                 $"BT script return after {12} think waves: status={world.Statuses[0]}");
         }
 
+        /// <summary>
+        /// Glue feeds the raw distance measurement (cm) into I[0]; the de-hollowed leaf graphs
+        /// own the sight (551) and attack-range (126) thresholds. 0 = on top of the enemy,
+        /// 300 = seen but out of attack range, 100000 = no target.
+        /// </summary>
         private sealed class ScriptedSensors : IBehaviorTreeSensorFeed
         {
-            public bool See;
-            public bool InRange;
+            public const int OnTopCm = 0;
+            public const int SeenOutOfRangeCm = 300;
+            public const int NoTargetCm = 100_000;
+
+            public int SeeDistanceCm;
+            public int RangeDistanceCm;
             private readonly int _see;
             private readonly int _range;
 
@@ -224,8 +243,8 @@ namespace Ludots.Tests.Gas.AI
 
             public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)
             {
-                if (graphId == _see) ints[0] = See ? 1 : 0;
-                else if (graphId == _range) ints[0] = InRange ? 1 : 0;
+                if (graphId == _see) ints[0] = SeeDistanceCm;
+                else if (graphId == _range) ints[0] = RangeDistanceCm;
             }
         }
     }

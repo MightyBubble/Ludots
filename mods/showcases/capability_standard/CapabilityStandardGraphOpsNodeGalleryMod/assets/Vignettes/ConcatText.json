@@ -1,0 +1,22 @@
+{
+  "op": "ConcatText",
+  "driver": "script",
+  "title": "左右两段字接成一句",
+  "beat": "左边「左」、右边「右」并进同一句；字幕口吐出「左右」。",
+  "detailTemplate": "文字出口已收到拼好的句子。",
+  "assertDetailContains": ["文字"],
+  "featuredNodeId": "featured",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "作者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

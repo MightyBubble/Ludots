@@ -18,7 +18,7 @@ public sealed class MapVariableSaveParticipantTests
         {
             Variables =
             {
-                new MapVariableDeclaration { Name = "phase", Type = MapVariableType.Int, Initial = 0, Phase = true },
+                new MapVariableDeclaration { Name = "phase", Type = MapVariableType.Int, Initial = 0 },
                 new MapVariableDeclaration { Name = "kills", Type = MapVariableType.Int, Initial = 0 },
                 new MapVariableDeclaration { Name = "ammo", Type = MapVariableType.Float, Initial = 1.5 },
             }
@@ -67,7 +67,7 @@ public sealed class MapVariableSaveParticipantTests
     }
 
     [Test]
-    public void Restore_DoesNotFirePhaseChanged_FirstWriteDiffsAgainstRestoredValue()
+    public void Restore_DoesNotFireVariableChanged_FirstWriteDiffsAgainstRestoredValue()
     {
         MapSessionManager source = CreateManagerWithSession();
         source.FocusedSession!.Variables!.WriteInt("phase", 2);
@@ -76,11 +76,17 @@ public sealed class MapVariableSaveParticipantTests
         MapSessionManager target = CreateManagerWithSession();
         MapVariableStore targetStore = target.FocusedSession!.Variables!;
         var changes = new List<(string Name, int Value)>();
-        targetStore.PhaseChangedDispatcher = (_, name, value) => changes.Add((name, value));
+        targetStore.VariableChangedDispatcher = (_, name, type, oldInt, newInt, _, _) =>
+        {
+            if (type == MapVariableType.Int)
+            {
+                changes.Add((name, newInt));
+            }
+        };
 
         CoreSaveParticipants.CreateMapSessionsParticipant(target).RestoreState(domain);
 
-        Assert.That(changes, Is.Empty, "restore must not dispatch PhaseChanged");
+        Assert.That(changes, Is.Empty, "restore must not dispatch VariableChanged");
 
         targetStore.WriteInt("phase", 2);
         Assert.That(changes, Is.Empty, "same-value write after restore must not fire");

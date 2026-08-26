@@ -313,7 +313,7 @@ public sealed class EffectExecutionPlanTests
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
-            listenTagId: 0,
+            listenCategoryId: 0,
             listenEffectId: 0,
             EffectPhaseId.OnApply,
             PhaseListenerScope.Target,
@@ -355,7 +355,7 @@ public sealed class EffectExecutionPlanTests
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
-            listenTagId: 0,
+            listenCategoryId: 0,
             listenEffectId: 0,
             EffectPhaseId.OnApply,
             PhaseListenerScope.Target,
@@ -385,7 +385,7 @@ public sealed class EffectExecutionPlanTests
         var templates = new EffectTemplateRegistry();
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
-            listenTagId: 0,
+            listenCategoryId: 0,
             listenEffectId: 0,
             EffectPhaseId.OnApply,
             PhaseListenerScope.Target,
@@ -438,7 +438,7 @@ public sealed class EffectExecutionPlanTests
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
-            listenTagId: 0,
+            listenCategoryId: 0,
             listenEffectId: 0,
             EffectPhaseId.OnPropose,
             PhaseListenerScope.Target,
@@ -472,7 +472,7 @@ public sealed class EffectExecutionPlanTests
         var templates = new EffectTemplateRegistry();
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
-            listenTagId: 0,
+            listenCategoryId: 0,
             listenEffectId: 0,
             EffectPhaseId.OnApply,
             PhaseListenerScope.Target,
@@ -553,7 +553,7 @@ public sealed class EffectExecutionPlanTests
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
-            listenTagId: 0,
+            listenCategoryId: 0,
             listenEffectId: 0,
             EffectPhaseId.OnApply,
             PhaseListenerScope.Target,

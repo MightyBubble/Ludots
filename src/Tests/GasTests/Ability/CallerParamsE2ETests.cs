@@ -610,7 +610,7 @@ namespace Ludots.Tests.GAS
                 [
                   {
                     "id": "Effect.Preset.ApplyForce2D",
-                    "tags": ["Effect.ApplyForce"],
+                    "categories": ["Effect.ApplyForce"],
                     "presetType": "ApplyForce2D",
                     "lifetime": "Instant",
                     "participatesInResponse": true,
@@ -652,7 +652,7 @@ namespace Ludots.Tests.GAS
                 [
                   {
                     "id": "Effect.Preset.ApplyForce2D",
-                    "tags": ["Effect.ApplyForce"],
+                    "categories": ["Effect.ApplyForce"],
                     "presetType": "ApplyForce2D",
                     "lifetime": "Instant",
                     "participatesInResponse": true,

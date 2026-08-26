@@ -209,15 +209,15 @@ namespace Ludots.Tests.Gas.Graph
         {
             var manager = new TriggerManager();
             var global = new CountingTrigger { EventKey = new EventKey("CrossMap.Probe") };
-            manager.RegisterMapTriggers(new MapId("map-a"), new[] { global });
-            manager.RegisterMapTriggers(new MapId("map-b"), Array.Empty<Trigger>());
+            manager.RegisterGlobalTriggers(new MapId("map-a"), new[] { global });
 
-            manager.FireMapEvent(new MapId("map-b"), global.EventKey, new ScriptContext());
+            manager.FireGlobalEvent(global.EventKey, new ScriptContext());
             Assert.That(global.Count, Is.EqualTo(1));
 
             manager.UnregisterMapTriggers(new MapId("map-a"), new ScriptContext());
-            manager.FireMapEvent(new MapId("map-b"), global.EventKey, new ScriptContext());
-            Assert.That(global.Count, Is.EqualTo(1));
+            manager.FireGlobalEvent(global.EventKey, new ScriptContext());
+            Assert.That(global.Count, Is.EqualTo(1),
+                "Unregistering the owning map must detach its global subscriptions.");
         }
 
         [Test]

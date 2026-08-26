@@ -8,7 +8,7 @@ champion 演示 mod 的标记 Buff（真实）：上限 1、刷新时长、满�
 
 ```json
 [
-  { "id": "Effect.Champion.Ezreal.EssenceFluxHit", "tags": ["Effect.Champion.Buff"],
+  { "id": "Effect.Champion.Ezreal.EssenceFluxHit", "categories": ["Effect.Champion.Buff"],
     "presetType": "Buff", "lifetime": "After", "participatesInResponse": false,
     "duration": { "durationTicks": 240, "periodTicks": 0, "clockId": "FixedFrame" },
     "stack": { "limit": 1, "policy": "RefreshDuration", "overflowPolicy": "RejectNew" },

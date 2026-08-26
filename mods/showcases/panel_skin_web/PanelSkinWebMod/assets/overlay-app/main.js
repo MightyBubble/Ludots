@@ -1,7 +1,11 @@
 const SCHEMA_VERSION = 1;
 const CONTROL_CHANNEL = 'ludots.dataplane.control';
 const SESSION_ID = 'fireball-web-skin';
-const routeParams = new URLSearchParams(window.location.search);
+const routeParams = new URLSearchParams(
+  (window.location.search && window.location.search.length > 1)
+    ? window.location.search
+    : (window.__LUDOTS_NAV_QUERY__ || '')
+);
 const dataPlaneTopic = routeParams.get('topic') || 'ludots.showcase.fireball.status';
 
 const refs = {

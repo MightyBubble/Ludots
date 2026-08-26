@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.Rts.Shared.ApplySpawnTargetOrder",
-    "tags": [
-      "Effect.Rts.Shared.SpawnTarget"
-    ],
     "presetType": "SubmitOrderFromBlackboard",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -21,13 +18,13 @@
       "entityOrderTypeKey": "castAbility",
       "entityOrderIntArg0": 1,
       "submitMode": "Immediate"
-    }
+    },
+    "categories": [
+      "Effect.Rts.Shared.SpawnTarget"
+    ]
   },
   {
     "id": "Effect.Rts.Shared.EnterGarrison",
-    "tags": [
-      "Effect.Rts.Shared.Garrison"
-    ],
     "presetType": "Relation",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -36,13 +33,13 @@
       "subject": "Source",
       "parent": "Target",
       "snapSubjectToParentPosition": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.Shared.Garrison"
+    ]
   },
   {
     "id": "Effect.Rts.Shared.Construction.War3",
-    "tags": [
-      "Effect.Rts.Shared.Construction"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -57,13 +54,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Rts.Shared.Construction"
     ]
   },
   {
     "id": "Effect.Rts.Shared.Construction.Cnc",
-    "tags": [
-      "Effect.Rts.Shared.Construction"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -78,13 +75,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Rts.Shared.Construction"
     ]
   },
   {
     "id": "Effect.Rts.Shared.Construction.Zerg",
-    "tags": [
-      "Effect.Rts.Shared.Construction"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -99,13 +96,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Rts.Shared.Construction"
     ]
   },
   {
     "id": "Effect.Rts.Shared.WarpIn",
-    "tags": [
-      "Effect.Rts.Shared.Warp"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -120,13 +117,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Rts.Shared.Warp"
     ]
   },
   {
     "id": "Effect.Rts.War3.CostLumberMill",
-    "tags": [
-      "Effect.Rts.War3.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -141,13 +138,13 @@
         "op": "Add",
         "value": -60
       }
+    ],
+    "categories": [
+      "Effect.Rts.War3.Cost"
     ]
   },
   {
     "id": "Effect.Rts.War3.CostGuardTower",
-    "tags": [
-      "Effect.Rts.War3.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -162,13 +159,13 @@
         "op": "Add",
         "value": -80
       }
+    ],
+    "categories": [
+      "Effect.Rts.War3.Cost"
     ]
   },
   {
     "id": "Effect.Rts.War3.CostTrainFootman",
-    "tags": [
-      "Effect.Rts.War3.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -178,13 +175,13 @@
         "op": "Add",
         "value": -135
       }
+    ],
+    "categories": [
+      "Effect.Rts.War3.Cost"
     ]
   },
   {
     "id": "Effect.Rts.War3.CreateLumberMillSite",
-    "tags": [
-      "Effect.Rts.War3.Build"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -194,13 +191,13 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.Shared.Construction.War3",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.War3.Build"
+    ]
   },
   {
     "id": "Effect.Rts.War3.CreateGuardTowerSite",
-    "tags": [
-      "Effect.Rts.War3.Build"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -210,13 +207,13 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.Shared.Construction.War3",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.War3.Build"
+    ]
   },
   {
     "id": "Effect.Rts.War3.TrainFootman",
-    "tags": [
-      "Effect.Rts.War3.Train"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -227,13 +224,13 @@
       "offsetRadius": 280,
       "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.War3.Train"
+    ]
   },
   {
     "id": "Effect.Rts.Cnc.CostPowerPlant",
-    "tags": [
-      "Effect.Rts.Cnc.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -243,13 +240,13 @@
         "op": "Add",
         "value": -500
       }
+    ],
+    "categories": [
+      "Effect.Rts.Cnc.Cost"
     ]
   },
   {
     "id": "Effect.Rts.Cnc.CostRefinery",
-    "tags": [
-      "Effect.Rts.Cnc.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -259,13 +256,13 @@
         "op": "Add",
         "value": -1400
       }
+    ],
+    "categories": [
+      "Effect.Rts.Cnc.Cost"
     ]
   },
   {
     "id": "Effect.Rts.Cnc.CostTrainRhino",
-    "tags": [
-      "Effect.Rts.Cnc.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -275,13 +272,13 @@
         "op": "Add",
         "value": -900
       }
+    ],
+    "categories": [
+      "Effect.Rts.Cnc.Cost"
     ]
   },
   {
     "id": "Effect.Rts.Cnc.CostTrainRhinoStep",
-    "tags": [
-      "Effect.Rts.Cnc.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -291,13 +288,13 @@
         "op": "Add",
         "value": -100
       }
+    ],
+    "categories": [
+      "Effect.Rts.Cnc.Cost"
     ]
   },
   {
     "id": "Effect.Rts.Cnc.PlacePowerPlant",
-    "tags": [
-      "Effect.Rts.Cnc.Build"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -307,13 +304,13 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.Cnc.Build"
+    ]
   },
   {
     "id": "Effect.Rts.Cnc.PlaceRefinery",
-    "tags": [
-      "Effect.Rts.Cnc.Build"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -323,13 +320,13 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.Cnc.Build"
+    ]
   },
   {
     "id": "Effect.Rts.Cnc.TrainRhino",
-    "tags": [
-      "Effect.Rts.Cnc.Train"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -340,13 +337,13 @@
       "offsetRadius": 340,
       "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.Cnc.Train"
+    ]
   },
   {
     "id": "Effect.Rts.Sc2.CostTrainZealot",
-    "tags": [
-      "Effect.Rts.Sc2.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -356,13 +353,13 @@
         "op": "Add",
         "value": -100
       }
+    ],
+    "categories": [
+      "Effect.Rts.Sc2.Cost"
     ]
   },
   {
     "id": "Effect.Rts.Sc2.CostResearchWarpGate",
-    "tags": [
-      "Effect.Rts.Sc2.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -377,13 +374,13 @@
         "op": "Add",
         "value": -50
       }
+    ],
+    "categories": [
+      "Effect.Rts.Sc2.Cost"
     ]
   },
   {
     "id": "Effect.Rts.Sc2.CostWarpZealot",
-    "tags": [
-      "Effect.Rts.Sc2.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -393,13 +390,13 @@
         "op": "Add",
         "value": -100
       }
+    ],
+    "categories": [
+      "Effect.Rts.Sc2.Cost"
     ]
   },
   {
     "id": "Effect.Rts.Sc2.TrainZealot",
-    "tags": [
-      "Effect.Rts.Sc2.Train"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -410,13 +407,13 @@
       "offsetRadius": 260,
       "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.Sc2.Train"
+    ]
   },
   {
     "id": "Effect.Rts.Sc2.ResearchWarpGateComplete",
-    "tags": [
-      "Effect.Rts.Sc2.Research"
-    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -426,13 +423,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Rts.Sc2.Research"
     ]
   },
   {
     "id": "Effect.Rts.Sc2.WarpZealot",
-    "tags": [
-      "Effect.Rts.Sc2.Warp"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -442,13 +439,13 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.Shared.WarpIn",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.Sc2.Warp"
+    ]
   },
   {
     "id": "Effect.Rts.Zerg.CostMorphSpawningPool",
-    "tags": [
-      "Effect.Rts.Zerg.Cost"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -458,13 +455,13 @@
         "op": "Add",
         "value": -200
       }
+    ],
+    "categories": [
+      "Effect.Rts.Zerg.Cost"
     ]
   },
   {
     "id": "Effect.Rts.Zerg.MorphSpawningPool",
-    "tags": [
-      "Effect.Rts.Zerg.Build"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -474,6 +471,9 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.Shared.Construction.Zerg",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.Zerg.Build"
+    ]
   }
 ]

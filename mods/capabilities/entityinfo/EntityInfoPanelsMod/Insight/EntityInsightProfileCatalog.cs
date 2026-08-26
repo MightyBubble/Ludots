@@ -63,6 +63,7 @@ public sealed class EntityInsightProfile
     public required string SurfaceColorHex { get; init; }
     public required string GenreGlyph { get; init; }
     public required string PortraitGlyph { get; init; }
+    public string PortraitImageId { get; init; } = string.Empty;
     public required int GenreLabelTokenId { get; init; }
     public required int SubtitleTokenId { get; init; }
     public required int BodyTokenId { get; init; }

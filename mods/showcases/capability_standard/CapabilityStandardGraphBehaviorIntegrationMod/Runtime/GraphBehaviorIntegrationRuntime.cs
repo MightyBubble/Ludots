@@ -12,6 +12,7 @@ namespace CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 {
     private const float EnemyFirstWaveSeconds = 0.6f;
+    private const int NoTargetDistanceCm = 100_000;
 
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
@@ -100,7 +101,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         }
 
         Metrics.AgentCount = guards + sentries;
-        Metrics.Detail = "Integration Scripts from ActionLib";
+        Metrics.Detail = "Integration old-path: BehaviorTreeWorld + HfsmWorld/GraphProgramHfsmHost (not GraphFsmHost)";
     }
 
     public void Tick(float dt)
@@ -142,7 +143,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
             Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
             if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
             Metrics.ThinkWaves++;
-            Metrics.Detail = $"Integration Scripts last={Metrics.LastThinkMs:F3}ms";
+            Metrics.Detail = $"Integration old-path last={Metrics.LastThinkMs:F3}ms (HfsmWorld+GraphProgramHfsmHost)";
         }
 
         IntegrateGuards(dt);
@@ -150,12 +151,16 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
     {
-        if (graphId == _seeId) ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
-        else if (graphId == _rangeId)
-            ints[0] = _enemyAlive && Dist2(_gx[agentIndex], _gy[agentIndex], _ex, _ey) <=
-                      _config.AttackRadius * _config.AttackRadius
-                ? 1
-                : 0;
+        if (graphId != _seeId && graphId != _rangeId) return;
+        if (!_enemyAlive)
+        {
+            ints[0] = NoTargetDistanceCm;
+            return;
+        }
+
+        float dx = _ex - _gx[agentIndex];
+        float dy = _ey - _gy[agentIndex];
+        ints[0] = (int)MathF.Ceiling(MathF.Sqrt(dx * dx + dy * dy) * 100f);
     }
 
     private void IntegrateGuards(float dt)

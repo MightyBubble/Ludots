@@ -23,9 +23,9 @@ namespace Ludots.Tests.GAS
     [NonParallelizable]
     public sealed class AbilityAggregationProfileTests
     {
-        private const string FamilyTagPrefix = "castFamily";
-        private const string StimFamilyTag = "castFamily.stimpack";
-        private const string ChargeFamilyTag = "castFamily.charge_shot";
+        private const string FamilyCategoryPrefix = "castFamily";
+        private const string StimFamilyCategory = "castFamily.stimpack";
+        private const string ChargeFamilyCategory = "castFamily.charge_shot";
 
         private const int StimAbilityId = 101;
         private const int TankChargeAbilityId = 201;
@@ -43,7 +43,13 @@ namespace Ludots.Tests.GAS
         [SetUp]
         public void SetUp()
         {
-            TagRegistry.Clear();
+            ModRegistryAmbient.Reset();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            ModRegistryAmbient.Reset();
         }
 
         [Test]
@@ -60,11 +66,11 @@ namespace Ludots.Tests.GAS
             Assert.That(groupCount, Is.EqualTo(3));
 
             // Catalog-tag groups (kind 1) sort before ability-identity groups (kind 2), tag id ascending.
-            Assert.That(result.GetGroupKey(0), Is.EqualTo(CatalogKey(StimFamilyTag)));
+            Assert.That(result.GetGroupKey(0), Is.EqualTo(CatalogKey(StimFamilyCategory)));
             Assert.That(result.GroupEntities(0).ToArray(), Is.EqualTo(new[] { selection.Marine1, selection.Marine2, selection.Elite }),
                 "stim family: both marines plus the elite marine.");
 
-            Assert.That(result.GetGroupKey(1), Is.EqualTo(CatalogKey(ChargeFamilyTag)));
+            Assert.That(result.GetGroupKey(1), Is.EqualTo(CatalogKey(ChargeFamilyCategory)));
             Assert.That(result.GroupEntities(1).ToArray(), Is.EqualTo(new[] { selection.Elite, selection.Tank1, selection.Tank2 }),
                 "charge family: one group of 3 across the two templates.");
 
@@ -154,7 +160,7 @@ namespace Ludots.Tests.GAS
 
             int groupCount = harness.Registry.BuildGroups(profileId, selection.Members, world, harness.Abilities, ref result);
             Assert.That(groupCount, Is.EqualTo(4));
-            Assert.That(result.GetGroupKey(1), Is.EqualTo(CatalogKey(ChargeFamilyTag)));
+            Assert.That(result.GetGroupKey(1), Is.EqualTo(CatalogKey(ChargeFamilyCategory)));
             Assert.That(result.GroupEntities(1).ToArray(), Is.EqualTo(new[] { selection.Tank1, selection.Tank2 }),
                 "aggregation follows the AbilitySlotResolver result, not the base slot.");
             AssertGroup(result, 2, IdentityKey(FormVariantAbilityId), 1);
@@ -277,7 +283,7 @@ namespace Ludots.Tests.GAS
             };
             AbilityAggregationProfileConfigLoader.Validate(modConfig, modPath);
 
-            TagRegistry.Register(StimFamilyTag);
+            AbilityCategoryRegistry.Register(StimFamilyCategory);
             var registry = new AbilityAggregationProfileRegistry(
                 new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
             registry.Install(coreConfig);
@@ -311,9 +317,16 @@ namespace Ludots.Tests.GAS
             Assert.That(result.GroupEntities(groupIndex).Length, Is.EqualTo(expectedMembers));
         }
 
-        private static long CatalogKey(string tagName)
+        private static long CatalogKey(string categoryName)
         {
-            return AbilityAggregationKeyKinds.MakeKey(AbilityAggregationKeyKinds.CatalogTag, TagRegistry.GetId(tagName));
+            int categoryId = AbilityCategoryRegistry.GetId(categoryName);
+            if (categoryId == AbilityCategoryRegistry.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    $"Ability category '{categoryName}' is not registered before building catalog aggregation keys.");
+            }
+
+            return AbilityAggregationKeyKinds.MakeKey(AbilityAggregationKeyKinds.CatalogCategory, categoryId);
         }
 
         private static long IdentityKey(int abilityId)
@@ -375,16 +388,16 @@ namespace Ludots.Tests.GAS
 
             public static Harness Create(World world)
             {
-                // Tag ids: stim family < charge family (registration order fixes the group order).
-                TagRegistry.Register(StimFamilyTag);
-                TagRegistry.Register(ChargeFamilyTag);
+                // Category ids: stim family < charge family (registration order fixes the group order).
+                AbilityCategoryRegistry.Register(StimFamilyCategory);
+                AbilityCategoryRegistry.Register(ChargeFamilyCategory);
 
                 var abilities = new AbilityDefinitionRegistry();
-                RegisterAbility(abilities, StimAbilityId, StimFamilyTag);
-                RegisterAbility(abilities, TankChargeAbilityId, ChargeFamilyTag);
-                RegisterAbility(abilities, EliteChargeAbilityId, ChargeFamilyTag);
-                RegisterAbility(abilities, FormVariantAbilityId, catalogTag: null);
-                RegisterAbility(abilities, AttackAbilityId, catalogTag: null);
+                RegisterAbility(abilities, StimAbilityId, StimFamilyCategory);
+                RegisterAbility(abilities, TankChargeAbilityId, ChargeFamilyCategory);
+                RegisterAbility(abilities, EliteChargeAbilityId, ChargeFamilyCategory);
+                RegisterAbility(abilities, FormVariantAbilityId, categoryName: null);
+                RegisterAbility(abilities, AttackAbilityId, categoryName: null);
 
                 var profileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var registry = new AbilityAggregationProfileRegistry(profileIds);
@@ -392,7 +405,7 @@ namespace Ludots.Tests.GAS
                     new AbilityAggregationProfileDefinition
                     {
                         Id = ByFamilyProfileId,
-                        GroupBy = "catalog." + FamilyTagPrefix,
+                        GroupBy = "catalog." + FamilyCategoryPrefix,
                         Overflow = "nextPanelSlot",
                     },
                     new AbilityAggregationProfileDefinition { Id = ByTemplateProfileId, GroupBy = "template.id" },
@@ -439,13 +452,13 @@ namespace Ludots.Tests.GAS
                 return actor;
             }
 
-            private static void RegisterAbility(AbilityDefinitionRegistry registry, int abilityId, string catalogTag)
+            private static void RegisterAbility(AbilityDefinitionRegistry registry, int abilityId, string categoryName)
             {
                 var def = new AbilityDefinition();
-                if (catalogTag != null)
+                if (categoryName != null)
                 {
-                    def.HasCatalogTags = true;
-                    def.CatalogTags.AddTag(TagRegistry.Register(catalogTag));
+                    def.HasCategories = true;
+                    def.Categories.AddTag(AbilityCategoryRegistry.Register(categoryName));
                 }
 
                 registry.Register(abilityId, in def);
