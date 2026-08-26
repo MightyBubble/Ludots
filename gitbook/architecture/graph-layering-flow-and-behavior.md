@@ -110,7 +110,8 @@ TriggerGraph 的域与事件时序以 [Trigger Guide](../../docs/architecture/tr
 
 ## 5. 边界
 
-- 禁止平行 `GraphVmOpcode` / 第二执行器
+- 禁止平行 `GraphVmOpcode` / 禁止第二套作者格式与平行改世界路径。
+- **允许**对同一份 `GraphInstruction[]` 提供可替换执行后端（解释器 / Codegen），语义金样为既有 handler；合同正本见 [图 Codegen 产品化](graph-codegen-productization.md)。Codegen 不是第二套 opcode 表。
 - 操作码空闲段控制流为 430+；不得占用已有 GAS 号段假装「FSM 段」
 - Effect 事务不得因 Yield 跨帧悬挂
 
