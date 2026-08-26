@@ -13,5 +13,8 @@
     <ProjectReference Include="..\Ludots.UI\Ludots.UI.csproj">
       <Private>false</Private>
     </ProjectReference>
+    <ProjectReference Include="..\Ludots.AgentBridge\Ludots.AgentBridge.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 </Project>

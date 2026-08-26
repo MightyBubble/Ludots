@@ -205,6 +205,32 @@ namespace Ludots.Core.UI.PanelHosting
             return false;
         }
 
+        /// <summary>
+        /// Relinks live instances of <paramref name="templateId"/> to the registry's
+        /// current template and re-evaluates pins. Used by authoring preview hot-apply
+        /// so handles stay stable across binding/path drafts.
+        /// </summary>
+        public int RelinkExistingTemplate(string templateId)
+        {
+            PanelTemplate template = _templates.Require(templateId);
+            int relinked = 0;
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                Entry entry = _entries[i];
+                if (!entry.Alive ||
+                    !string.Equals(entry.Template.Id, templateId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                entry.RelinkTemplate(template);
+                EvaluateAll(entry);
+                relinked++;
+            }
+
+            return relinked;
+        }
+
         /// <summary>Disposes every instance whose (template, scope) matches; scope Null matches any scope.</summary>
         public int DisposeMatching(string templateId, Entity scope)
         {
@@ -366,18 +392,27 @@ namespace Ludots.Core.UI.PanelHosting
                 Revisions = new Dictionary<string, uint>(template.Pins.Count, StringComparer.Ordinal);
             }
 
-            public PanelTemplate Template { get; }
+            public PanelTemplate Template { get; private set; }
             public string Anchor { get; }
             public Entity Scope { get; }
             public string? Skin { get; }
             public int ZOrder { get; }
-            public Dictionary<string, float> Values { get; }
-            public Dictionary<string, JsonNode> Nodes { get; }
-            public Dictionary<string, uint> Revisions { get; }
+            public Dictionary<string, float> Values { get; private set; }
+            public Dictionary<string, JsonNode> Nodes { get; private set; }
+            public Dictionary<string, uint> Revisions { get; private set; }
             public uint Revision { get; set; }
             public int Generation { get; set; }
             public bool Alive { get; set; } = true;
             public bool HasRealtime { get; set; }
+
+            public void RelinkTemplate(PanelTemplate template)
+            {
+                Template = template ?? throw new ArgumentNullException(nameof(template));
+                Values = new Dictionary<string, float>(template.Pins.Count, StringComparer.Ordinal);
+                Nodes = new Dictionary<string, JsonNode>(template.Pins.Count, StringComparer.Ordinal);
+                Revisions = new Dictionary<string, uint>(template.Pins.Count, StringComparer.Ordinal);
+                HasRealtime = false;
+            }
         }
     }
 }

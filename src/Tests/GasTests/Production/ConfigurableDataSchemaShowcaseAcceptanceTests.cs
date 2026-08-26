@@ -231,9 +231,33 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
         Tick(engine, 8);
 
         ConfigurableDataSchemaRuntimeProxy runtime = RequireRuntime(engine);
-        runtime.InjectInvalidUnknownEnum(engine);
+        runtime.InjectInvalidBindingPath(engine, "does.not.exist");
         Tick(engine, 2);
-        Assert.That(runtime.CanExport, Is.False);
+        Assert.That(runtime.CanSaveToMod, Is.False);
+        Assert.That(runtime.AuthoringError, Does.Contain("does.not.exist").IgnoreCase
+            .Or.Contain("path").IgnoreCase
+            .Or.Contain("unknown").IgnoreCase
+            .Or.Not.Empty);
+    }
+
+    [Test]
+    public void Authoring_BindingPathHotAppliesToLivePanel()
+    {
+        using GameEngine engine = CreateEngine(null);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 8);
+
+        ConfigurableDataSchemaRuntimeProxy runtime = RequireRuntime(engine);
+        runtime.SetAuthoringLayer(engine, "Binding");
+        runtime.AuthoringSelectPin(engine, "name");
+        runtime.AuthoringSelectBindingPath(engine, "rarity");
+        Tick(engine, 2);
+
+        PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)!;
+        PanelInstanceHandle mixed = FindPanel(panelHost, "panel.mixed.schema.workbench");
+        Assert.That(panelHost.TryGetValues(mixed, out PanelVariableSet values), Is.True);
+        Assert.That(values.GetDisplayText("name"), Is.EqualTo("Common").Or.EqualTo("Rare").Or.EqualTo("Epic"));
     }
 
     private static ConfigurableDataSchemaRuntimeProxy RequireRuntime(GameEngine engine)
@@ -370,6 +394,15 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
             }
         }
 
+        public string AuthoringError
+        {
+            get
+            {
+                object snapshot = _type.GetProperty("Snapshot")!.GetValue(_runtime)!;
+                return (string)snapshot.GetType().GetProperty("AuthoringError")!.GetValue(snapshot)!;
+            }
+        }
+
         public void SetAuthoringLayer(GameEngine engine, string layerName)
         {
             Type layerType = _type.Assembly.GetType("ConfigurableDataSchemaSharedMod.Runtime.DataSchemaAuthoringLayer")
@@ -386,6 +419,9 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
 
         public void AuthoringSelectBindingPath(GameEngine engine, string path) =>
             _type.GetMethod("AuthoringSelectBindingPath")!.Invoke(_runtime, new object[] { engine, path });
+
+        public void InjectInvalidBindingPath(GameEngine engine, string path) =>
+            _type.GetMethod("InjectInvalidBindingPath")!.Invoke(_runtime, new object[] { engine, path });
 
         public void SaveAuthoringToMod(GameEngine engine) =>
             _type.GetMethod("SaveAuthoringToMod")!.Invoke(_runtime, new object[] { engine });

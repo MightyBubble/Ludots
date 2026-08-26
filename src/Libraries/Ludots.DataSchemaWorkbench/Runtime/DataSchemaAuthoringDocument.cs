@@ -563,8 +563,82 @@ public sealed class DataSchemaAuthoringDocument
     {
         var writer = new DataSchemaModAssetWriter();
         DataSchemaModAssetWritePlan plan = writer.Preview(_saveTargetRoot, _schemas, _records, _panels);
-        _canSave = plan.CanSave;
-        _firstError = plan.Diagnostics.Count > 0 ? plan.Diagnostics[0] : string.Empty;
+        var diagnostics = new List<string>(plan.Diagnostics);
+        ValidateDataPinPaths(diagnostics);
+        _canSave = diagnostics.Count == 0;
+        _firstError = diagnostics.Count > 0 ? diagnostics[0] : string.Empty;
+    }
+
+    private void ValidateDataPinPaths(List<string> diagnostics)
+    {
+        foreach (JsonNode? panelNode in _panels)
+        {
+            if (panelNode is not JsonObject panel || panel["pins"] is not JsonArray pins)
+            {
+                continue;
+            }
+
+            string panelId = panel["id"]?.GetValue<string>() ?? "(panel)";
+            foreach (JsonNode? pinNode in pins)
+            {
+                if (pinNode is not JsonObject pin)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(pin["source"]?.GetValue<string>(), "data", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                string pinName = pin["name"]?.GetValue<string>() ?? "(pin)";
+                string path = pin["path"]?.GetValue<string>() ?? string.Empty;
+                string recordId = pin["record"]?.GetValue<string>() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    diagnostics.Add($"Panel '{panelId}' pin '{pinName}' data path is empty.");
+                    continue;
+                }
+
+                JsonObject? record = FindRecord(recordId);
+                if (record == null)
+                {
+                    diagnostics.Add($"Panel '{panelId}' pin '{pinName}' references unknown record '{recordId}'.");
+                    continue;
+                }
+
+                string schemaId = record["schema"]?.GetValue<string>() ?? _selectedSchemaId;
+                IReadOnlyList<string> allowed = EnumerateBindingPaths(schemaId);
+                bool known = false;
+                for (int i = 0; i < allowed.Count; i++)
+                {
+                    if (string.Equals(allowed[i], path, StringComparison.Ordinal))
+                    {
+                        known = true;
+                        break;
+                    }
+                }
+
+                if (!known)
+                {
+                    diagnostics.Add($"Panel '{panelId}' pin '{pinName}' unknown path '{path}'.");
+                }
+            }
+        }
+    }
+
+    private JsonObject? FindRecord(string id)
+    {
+        foreach (JsonNode? node in _records)
+        {
+            if (node is JsonObject record &&
+                string.Equals(record["id"]?.GetValue<string>(), id, StringComparison.Ordinal))
+            {
+                return record;
+            }
+        }
+
+        return null;
     }
 
     private static bool TryGetObjectPath(JsonObject root, string path, out JsonObject parent, out string leaf)

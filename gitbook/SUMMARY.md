@@ -31,6 +31,8 @@
   - [可配置数据结构与面板投影](architecture/configurable-data-schema.md)
   - [可配置数据结构 Showcase](architecture/configurable-data-schema-showcase-design.md)
   - [可配置数据结构作者编辑器](architecture/data-schema-authoring-workbench-design.md)
+  - [可配置数据结构 Showcase UAT](acceptance/configurable-data-schema-showcase.feature)
+  - [作者编辑器 UAT](acceptance/data-schema-authoring-workbench.feature)
   - [Browser Runtime Provider Adapter Guide](architecture/browser-runtime-provider-adapter-guide.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [Mod Extensible Runtime](architecture/mod-extensible-runtime.md)

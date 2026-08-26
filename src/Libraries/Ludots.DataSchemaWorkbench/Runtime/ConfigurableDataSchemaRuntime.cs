@@ -10,6 +10,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.Core.UI.PanelHosting;
+using Ludots.Core.UI.PanelProjection;
 using Ludots.UI;
 using ConfigurableDataSchemaSharedMod.UI;
 
@@ -291,6 +292,8 @@ public sealed class ConfigurableDataSchemaRuntime
     {
         EnsureAuthoringLoaded(engine);
         _authoring.SelectBindingPath(path);
+        SyncAuthoringPreview(engine);
+        ApplyAuthoringPanelDrafts(engine);
         MountWorkbench(engine);
     }
 
@@ -305,6 +308,8 @@ public sealed class ConfigurableDataSchemaRuntime
     {
         EnsureAuthoringLoaded(engine);
         _authoring.SetSelectedPinSource(source);
+        SyncAuthoringPreview(engine);
+        ApplyAuthoringPanelDrafts(engine);
         MountWorkbench(engine);
     }
 
@@ -335,6 +340,42 @@ public sealed class ConfigurableDataSchemaRuntime
     {
         EnsureAuthoringLoaded(engine);
         _authoring.RedirectSaveRootForTests(root);
+    }
+
+    public void InjectInvalidBindingPath(GameEngine engine, string path)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SelectPin("name");
+        _authoring.SelectBindingPath(path);
+        SyncAuthoringPreview(engine);
+        ApplyAuthoringPanelDrafts(engine);
+        MountWorkbench(engine);
+    }
+
+    public JsonObject BuildBridgeState()
+    {
+        ConfigurableDataSchemaSnapshot snap = Snapshot;
+        return new JsonObject
+        {
+            ["schemaId"] = snap.SchemaId,
+            ["presetRecordId"] = snap.PresetRecordId,
+            ["authoringLayer"] = snap.AuthoringLayer.ToString(),
+            ["selectedPin"] = snap.SelectedPinName,
+            ["selectedBindingPath"] = snap.SelectedBindingPath,
+            ["authoringStatus"] = snap.AuthoringStatus,
+            ["authoringError"] = snap.AuthoringError,
+            ["canSaveToMod"] = snap.CanSaveToMod,
+            ["isValid"] = snap.IsValid,
+            ["errorCount"] = snap.ErrorCount,
+            ["firstErrorPath"] = snap.FirstErrorPath,
+            ["status"] = snap.Status,
+            ["activePanelId"] = snap.ActivePanelId,
+            ["sourceMode"] = snap.SourceMode.ToString(),
+            ["unitName"] = snap.UnitName,
+            ["positionX"] = snap.PositionX,
+            ["authoringRecordSummary"] = snap.AuthoringRecordSummary,
+            ["saveTargetRoot"] = snap.SaveTargetRoot,
+        };
     }
 
     private void EnsureAuthoringLoaded(GameEngine engine)
@@ -372,6 +413,41 @@ public sealed class ConfigurableDataSchemaRuntime
             _firstErrorPath = string.Empty;
             _status = _authoring.Status;
         }
+    }
+
+    private void ApplyAuthoringPanelDrafts(GameEngine engine)
+    {
+        if (!_authoring.CanSave && !string.IsNullOrEmpty(_authoring.FirstError))
+        {
+            // Keep last-good live panels; draft diagnostics already surface the failure.
+            return;
+        }
+
+        PanelTemplateRegistry templates = engine.GetService(CoreServiceKeys.PanelTemplateRegistry)
+            ?? throw new InvalidOperationException("PanelTemplateRegistry missing.");
+        PanelHost host = engine.GetService(CoreServiceKeys.PanelHost)
+            ?? throw new InvalidOperationException("PanelHost missing.");
+
+        foreach (JsonNode? node in _authoring.Panels)
+        {
+            if (node is not JsonObject panelObject)
+            {
+                continue;
+            }
+
+            string? id = panelObject["id"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(id) || !ConfigurableDataSchemaIds.IsWorkbenchPanel(id))
+            {
+                continue;
+            }
+
+            PanelTemplate template = PanelTemplateLoader.Load(panelObject);
+            templates.ReplaceExisting(template);
+            host.RelinkExistingTemplate(id);
+        }
+
+        EnsurePanels(engine);
+        ApplySourceMode(engine);
     }
 
     private static string ResolveShowcaseModRoot(GameEngine engine)

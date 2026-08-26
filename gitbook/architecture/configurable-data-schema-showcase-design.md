@@ -15,8 +15,8 @@
 | Core 能力（schema / record / Data pin） | 已实现，适合作为能力 PR 合并 | PR #1216：`DataSchemaCatalog`、`DataSchemaRegistry`、`PanelProjectionReader` Data source、单元测试 |
 | 真实作者资产 | Showcase 已交付非空示例 | `ConfigurableDataSchemaSharedMod/assets/Data/data_schemas.json` 与 `data_records.json` |
 | Showcase Mod / preset / 启动入口 | 已交付 | `showcase.registry.json`：`configurable_data_schema` / `_native` / `_web`；preset `configurable_data_schema_*_raylib` |
-| Agent Bridge 实机交互证据 | 进程内验收已交付；实机截图可补 | `artifacts/acceptance/configurable-data-schema-showcase/` + `ConfigurableDataSchemaShowcaseAcceptanceTests` |
-| 作者编辑器 | 未交付 | 见 [data-schema-authoring-workbench-design.md](data-schema-authoring-workbench-design.md)；独立后续切片 |
+| Agent Bridge 实机交互证据 | 领域工具已挂；实机截图按 preset 采证 | `ludots.dataschema.state` / `ludots.dataschema.author`；`artifacts/acceptance/configurable-data-schema-showcase/` |
+| 作者编辑器 | MVP 已交付（宿主在 Showcase 工作台） | 四层 Schema/Record/Binding/Preview；写回 `DataSchemaModAssetWriter`；详见 [data-schema-authoring-workbench-design.md](data-schema-authoring-workbench-design.md) |
 
 本 Showcase 做成“数据结构工作台”展示，而不是静态单位信息面板。动态轴是：
 

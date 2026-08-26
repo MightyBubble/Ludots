@@ -21,4 +21,9 @@ internal static class ConfigurableDataSchemaIds
 
     public static bool IsShowcaseMap(string? mapId) =>
         string.Equals(mapId, MapId, StringComparison.Ordinal);
+
+    public static bool IsWorkbenchPanel(string? panelId) =>
+        string.Equals(panelId, PanelData, StringComparison.Ordinal) ||
+        string.Equals(panelId, PanelGraph, StringComparison.Ordinal) ||
+        string.Equals(panelId, PanelMixed, StringComparison.Ordinal);
 }

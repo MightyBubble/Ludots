@@ -37,6 +37,23 @@ namespace Ludots.Core.UI.PanelHosting
             }
         }
 
+        /// <summary>
+        /// Replaces an already-registered template by id. Allowed after freeze so
+        /// authoring preview can hot-apply binding/pin drafts without a cold reload.
+        /// Unknown ids fail closed — use <see cref="Register"/> before freeze for new ids.
+        /// </summary>
+        public void ReplaceExisting(PanelTemplate template)
+        {
+            ArgumentNullException.ThrowIfNull(template);
+            if (!_templates.ContainsKey(template.Id))
+            {
+                throw new InvalidOperationException(
+                    $"Unknown panel template '{template.Id}'; ReplaceExisting cannot introduce new ids.");
+            }
+
+            _templates[template.Id] = template;
+        }
+
         public PanelTemplate Require(string templateId)
         {
             if (string.IsNullOrWhiteSpace(templateId))
