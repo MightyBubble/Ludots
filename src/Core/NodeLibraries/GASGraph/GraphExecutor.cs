@@ -334,7 +334,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int budgetSteps,
             GraphKind kind = GraphKind.Script,
             GraphDebugTrace? debugTrace = null,
-            MapId? mapScope = null)
+            MapId? mapScope = null,
+            int graphId = 0)
         {
             RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
             GraphFrame frame = GraphFrame.Bind(
@@ -355,6 +356,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 cursor,
                 debugTrace: debugTrace,
                 mapScope: mapScope);
+            frame.GraphId = graphId;
             GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps);
             cursor = frame.Cursor;
             return result;
