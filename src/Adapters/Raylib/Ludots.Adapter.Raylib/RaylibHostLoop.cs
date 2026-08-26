@@ -788,10 +788,9 @@ namespace Ludots.Adapter.Raylib
                                 out IVisualHeightmap? fieldHeightSampleSource))
                         {
                             fieldRenderPresenter.HeightSampleSource = fieldHeightSampleSource;
-                            fieldRenderPresenter.HeightSampleDisplayScale =
-                                fieldHeightSampleSource is IVisualHeightmapRenderSource fieldRenderSource
-                                    ? fieldRenderSource.RenderProfile.DisplayHeightScale
-                                    : 1f;
+                            // Match RaylibVisualHeightmapRenderer mesh Y (heightCm * 0.01f) — that path
+                            // does not multiply DisplayHeightScale, so neither does the drape.
+                            fieldRenderPresenter.HeightSampleDisplayScale = 1f;
                         }
                         else
                         {
