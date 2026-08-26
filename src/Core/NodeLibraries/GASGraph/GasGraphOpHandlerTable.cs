@@ -324,6 +324,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             };
         }
 
+        public void RunToHalt(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, int startPc = 0) =>
+            Execute(ref state, program, this, startPc);
+
+        public GraphSliceResult RunSlice(
+            ref GraphExecutionState state,
+            ReadOnlySpan<GraphInstruction> program,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps) =>
+            ExecuteSlice(ref state, program, this, ref cursor, budgetSteps);
+
         /// <summary>
         /// Run-to-halt execution. Budget exhaustion throws. Yield is rejected.
         /// Falling off the program end is an error; programs must halt with HaltReturnInt.

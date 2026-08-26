@@ -12,7 +12,7 @@
 
 当前收口：控制流端口、作者糖（含 `FsmState` / `SelectByEnum` / `InlineGraph` / `FormatText` 等 Bridge 投影项）、删节点清悬挂边、source map 缺失失败关闭。正式文字合同已齐：`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText` 与 `FormatText` 花括号自动引脚进入 descriptor / 糖名册（见 [图正式文字](graph-formal-text.md)）。
 
-Codegen 产品化合同见 [图 Codegen 产品化](graph-codegen-productization.md)：编辑器将增加 Codegen 面板（预览生成 C#、资格红灯、一键对拍）；Live Debug 将标注执行后端。面板按 CG 切片落地前，本节不假装已有按钮。
+Codegen 产品化合同见 [图 Codegen 产品化](graph-codegen-productization.md)：右侧 **Codegen** 面板可预览生成 C#、看资格红绿灯、一键对拍；Bridge 提供 `codegen/preview`、`codegen/parity`、`GET /api/graph/codegen/coverage`。Live Debug 后端徽章可显示当前执行后端标签（面板已预留 `backend` 展示位）。
 
 ---
 
