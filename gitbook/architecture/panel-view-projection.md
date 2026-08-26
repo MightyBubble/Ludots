@@ -135,16 +135,25 @@
 
 装载期：`template.subject` 与集合种类必须相容（今日：`EntityCollection` ↔ `Entity`；扩展见集合输出合同）。
 
-### 3.3 复合：元素上的子名单
+### 3.3 复合：显式 inputs 与子名单
 
-元素模板在复合切片下可声明子 `collections`（嵌套技能栏、反查持有者等）。  
+跨层数据必须明文接线，装载期强校验（细则见[查询图集合输出 §2.4 · §3.7.2](query-graph-collection-outputs.md)）。
+
+| 字段（示意） | 含义 |
+|---|---|
+| `inputs[]` | 子模板声明消费的父级空间引脚 |
+| `inputs[].from.space` | 本切片仅 `parent` |
+| `inputs[].from.output` | 父 graph 的 collectionKey 或 Summary key |
+| `inputs[].type` | 期望类型（如 `EntityCollection`）；与父 output 对账 |
+| `collections[].source` | `selfGraph`（本元素图输出）或绑到某条 input 名 |
 
 | 规则 | |
 |---|---|
-| 子袋数据 | 必须由图以 **当前元素成员** 为 scope/owner（或显式约束）写出 |
+| 子袋数据 | 来源唯一且可追溯：selfGraph output **或** 已校验的 parent input |
 | 子元素 `subject` | 与子袋类型相容 |
-| 过滤排序 | 仍只在图内；面板只编排 |
-| 嵌套深度 | 本切片建议 ≤ 2（宿主→元素→子名单）；更深另立合同 |
+| 过滤排序 | 仍只在图内；面板只编排与接线 |
+| 嵌套深度 | 本切片建议 ≤ 2；更深另立合同 |
+| 禁止 | 同名 key 隐式撞袋；控件私扫世界 |
 
 ### 3.4 元素图示例（Entity）
 
@@ -188,7 +197,8 @@
 ## 5. 边界
 
 - 不做父级拆列与元素自解对等双轨  
-- 父→子额外参数（非成员本身）本切片不做；需要时另立显式 `params` 合同  
+- 父→子数据必须经显式 `inputs`/`source` 接线并类型校验；不做隐式同名撞袋  
+- 父→子额外「非引脚参数」本切片不做；需要时另立显式 `params` 合同  
 - Task/Ability/Effect 等集合类型未接线前，配置写了对应 subject/引用 → 装载或绑定 fail-closed（类型表见[查询图集合输出](query-graph-collection-outputs.md)）  
 - 不硬编码 EntityInfo / AbilityIcon / ItemStack 控件；复合靠配置  
 - 点击行选中仍属 #1015  
@@ -225,4 +235,22 @@ Feature: 元素自己声明解什么，并自己跑图
     When 我向下滚动名单
     Then 滚动偏移更新且集合总人数不变
     And 晕眩徽标仍能在可见窗内找到
+
+  Scenario: 单位详情可以嵌自己的技能名单
+    Given 单位详情元素的图明文输出技能槽名单
+    And 详情 list 绑定该输出
+    When 我打开该单位详情
+    Then 技能栏只显示该单位的技能
+
+  Scenario: 反查必须声明父级候选引脚输入
+    Given 技能格要显示持有者
+    And 配置写明 inputs 来自父级「候选编队」实体集合输出
+    When 装载成功且父级候选里有人会该技能
+    Then 持有者名单只包含会该技能的人
+
+  Scenario: 集合可以聚合成首位加数量
+    Given 某栏位绑定完整物品实例名单且 present 为 aggregate
+    When 名单里有多件同类物
+    Then 画面显示首位外观与总数
+    And 不会把名单改写成只含一个成员的假集合
 ```

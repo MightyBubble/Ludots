@@ -90,24 +90,40 @@
 
 ### 2.3 复合结构（配置轴，不是业务硬编码）
 
-除「一张平面名单」外，作者常见三种 **编排形态**。它们 **不** 新增玩法规则，只组合已有集合类型 + 面板编排字段：
+除「一张平面名单」外，作者常见三种 **编排形态**。它们 **不** 新增玩法规则，只组合已有集合类型 + **显式引脚接线**：
 
 ```text
 ① 嵌套（Compound / Nested）
    单位详情 ──内嵌──► 该单位的技能槽名单
-   （外层成员作内层查询的 scope / owner）
 
 ② 反查（Reverse / Holders）
    技能图标 ──内嵌──► 「谁拥有此技能」的实体名单
-   （内层名单以当前技能成员为约束，由查询图写出）
 
 ③ 聚合（Aggregate present）
-   输入仍是完整集合袋
-   画面只取「首位成员的图标 + 总数」等配置化投影
-   （不是另造一种假单例类型）
+   输入仍是完整集合袋；画面配置成首位图标 + 总数
 ```
 
-三种形态的 **数据仍来自类型化集合**；差别在：查询以谁为 scope、面板用哪种 `present`。详见 §3.8 与 [面板视图投影](panel-view-projection.md) 复合编排。
+### 2.4 复合数据一律显式接线（强类型）
+
+跨层级的名单/标量 **禁止靠同名 key 猜**。合同要求：
+
+```text
+父级空间 graph
+  outputs[]  ──额外写出──►  类型化引脚（Summary 或 Collection*）
+        │
+        ▼  子模板 inputs[] 明文声明来源 + 期望类型
+子级（元素模板 / 内嵌控件）
+  inputs 满足后 → 再跑子 graph / 绑定 list·聚合
+```
+
+| 规则 | |
+|---|---|
+| **明文** | 子级必须写 `inputs[]`：从父级哪个 output / 哪个集合键取数 |
+| **类型** | 每条 input 声明期望的集合类型或标量 kind；与父级 output 的 destination/type **装载期强校验** |
+| **方向** | 数据只从「已求值的父级空间输出」流入子级；子级不隐式扫全局 Store 碰运气 |
+| **再输出** | 子 graph 仍可写出自己的集合（如 holders），供自己的 list 绑定；那是子级自己的 output，不是偷父级的 |
+
+嵌套与反查在面板 JSON 上都可能长得很像（都有子 `collections`）；差别在 **inputs 从哪来、子图约束是什么**——见 §3.7。
 
 ---
 
@@ -214,20 +230,22 @@
 #### 3.7.1 嵌套：单位详情里挂技能名单
 
 - **作者意图**：一个单位信息面板上，除血条外，还列出该单位可用技能。  
-- **数据**：外层 scope = 该单位；内层查询（或外层图的第二段）以该单位为 owner 写出 `AbilitySlotCollection`。  
-- **面板**：宿主 layout 里既有单位 pins，又有 `list`/`grid` 绑定内层集合，元素模板 `subject` 对齐技能槽。  
-- **合同要点**：内层集合的 owner/scope = 外层透传成员；不是全局再圈一坨无关技能。
+- **数据路径（显式）**：  
+  - 单位元素 `subject=Entity`；其 graph（或以该实体为 owner 的查询段）**output** `AbilitySlotCollection`；  
+  - 元素 `collections` 绑定该 output 的 key；或父宿主先写出「焦点单位技能袋」再经 `inputs` 传入——**来源必须在配置写明**。  
+- **合同要点**：子袋类型与技能元素 subject 相容；过滤排序仍在图内。
 
 ```jsonc
-// 形状示意——单位元素允许声明「相对自己」的子集合绑定
 {
   "id": "panel.unit.info",
   "subject": "Entity",
   "graph": "Graph.Unit.Info",
+  // Graph.Unit.Info outputs: AbilitySlotCollection key=unit.info.abilities
   "collections": [
     {
       "name": "abilities",
-      "collectionKey": "unit.info.abilities", // 由图以该单位为 owner 写出
+      "collectionKey": "unit.info.abilities", // 明文：来自本元素 graph output
+      "source": "selfGraph",                  // 示意判别；与 from.parent 互斥
       "template": "panel.ability.slot"
     }
   ],
@@ -240,24 +258,55 @@
 }
 ```
 
-> 相对今日 G12「元素禁止 collections」：**复合切片允许元素声明子集合**，但子集合必须与 subject 域相容，且成员仍由 **图** 写出（元素不内联过滤排序）。
+#### 3.7.2 反查：技能图标上挂「谁会这招」（显式 inputs）
 
-#### 3.7.2 反查：技能图标上挂「谁会这招」
+- **作者意图**：技能图标旁显示「当前候选部队里谁拥有该技能」。  
+- **科学拆法**：  
+  1. **父级空间**（编队/技能板宿主）的 graph **额外 output** 写出候选实体袋（及技能槽袋）；  
+  2. **技能元素**明文 `inputs` 声明：我要消费父级的 `candidates`（类型 = EntityCollection）；  
+  3. **技能元素自己的 graph** 以 `self=当前技能槽` + input `candidates` 为约束，再 **output** `holders`；  
+  4. layout 的 list **只 bind 自己的 holders**（或 bind 某条 input，若父级已算好持有者——两态都须类型吻合）。  
 
-- **作者意图**：技能图标旁（或展开层）显示当前选中部队里谁拥有该技能。  
-- **数据**：以 **当前技能成员**（槽或定义 id）为约束，查询图写出 `EntityCollection`（持有者）。输入侧另有「候选部队」集合时，圈选逻辑仍在图内完成。  
-- **面板**：技能元素模板内嵌 `list`，`bind` 持有者集合；元素 subject = Entity。  
-- **合同要点**：反查结果仍是普通类型化集合；没有「Ability 控件内置扫全图」的隐式规则。
+没有「Ability 控件内置扫全图」；没有「同名 collectionKey 自动撞上」。
 
 ```jsonc
+// ① 父级宿主（示意）——多写一袋候选给子级用
+{
+  "id": "panel.squad.abilityBoard",
+  "graph": "Graph.Squad.AbilityBoard",
+  // Graph outputs（概念）：
+  //   EntityCollection  collectionKey=squad.candidates
+  //   AbilitySlotCollection collectionKey=squad.focus.abilities
+  "collections": [
+    {
+      "name": "abilities",
+      "collectionKey": "squad.focus.abilities",
+      "template": "panel.ability.slot"
+    }
+  ],
+  "layout": {
+    "controls": [
+      { "type": "list", "bind": "abilities", "present": "grid" }
+    ]
+  }
+}
+
+// ② 技能元素——明文声明父级引脚输入 + 自己再算出 holders
 {
   "id": "panel.ability.slot",
   "subject": "AbilitySlot",
   "graph": "Graph.Ability.SlotCard",
+  "inputs": [
+    {
+      "name": "candidates",
+      "from": { "space": "parent", "output": "squad.candidates" },
+      "type": "EntityCollection"   // 装载期与父 graph output 强校验
+    }
+  ],
   "collections": [
     {
       "name": "holders",
-      "collectionKey": "ability.slot.holders", // 图：在候选实体中筛「拥有此槽技能」者
+      "collectionKey": "ability.slot.holders", // 本元素 graph 的 output
       "template": "panel.unit.chip"
     }
   ],
@@ -269,6 +318,29 @@
   }
 }
 ```
+
+**接线表（装载期要对账）**
+
+| 子配置 | 必须对上 | 失败时 |
+|---|---|---|
+| `inputs[].from.space` | 封闭：`parent`（本切片）；日后可扩 `root` | 未知 space → 失败 |
+| `inputs[].from.output` | 父 graph 确有该 collectionKey / Summary key | 找不到 → 失败 |
+| `inputs[].type` | 与父 output 的 destination/成员身份一致 | 类型不合 → 失败 |
+| `collections[].collectionKey` | 若声称来自「本元素 graph output」，则子 graph outputs 必须声明同 key+类型 | 未声明 → 失败 |
+| list `bind` | 只能绑：本模板 `collections` 名，或已声明的 input 名（若允许控件直绑 input） | 悬空 bind → 失败 |
+
+**两种合法数据路径（作者二选一，不可混而不宣）**
+
+```text
+路径 A · 子图再计算（反查主路径）
+  parent output candidates ──input──► child graph ──output──► holders ──list──► UI
+
+路径 B · 父级已算好持有者（少见，适合「当前焦点技能」单格）
+  parent output holdersForFocus ──input──► child list 直接 bind 该 input
+  （此时子模板可不跑反查图；inputs.type 仍须是 EntityCollection）
+```
+
+路径必须在配置上可区分（例如 list `bind` 指向 `collections.holders` vs 指向 `inputs.holders`）；装载期校验唯一来源。
 
 #### 3.7.3 聚合：输入是集合，画面是「首位 + 总数」
 
@@ -295,9 +367,11 @@
 
 | 形态 | 是否新 destination | 图要多做什么 | 面板要多做什么 |
 |---|---|---|---|
-| 嵌套 | 否（子袋仍是既有类型） | 以成员为 owner 写出子集合 | 元素可声明子 `collections` + 内嵌 list |
-| 反查 | 否 | 以成员为约束写出另一域集合 | 同上 |
-| 聚合 | 否 | 可选并行 Summary count | `present: aggregate` 配置 |
+| 嵌套 | 否 | 以成员为 owner **output** 子集合 | 元素 `collections` 明文 `source=selfGraph`（或 parent input） |
+| 反查 | 否 | 父级 **output** 候选袋；子图 ingest + **output** holders | 元素 `inputs[]` 声明父引脚；list bind 自有 holders 或 input |
+| 聚合 | 否 | 可选并行 Summary count | `present: aggregate`；bind 仍指向完整集合 |
+
+凡跨层数据：**有 `from` / `source`，有 `type`，装载期对账**；禁止靠 key 重名碰运气。
 
 ### 3.8 推进顺序（建议）
 
@@ -371,6 +445,7 @@
 - **不** 把 Dialogue 整场会话当成名册 subject；选项列表另约。  
 - **不** 在本页规定皮层视觉（主题、动效）；只定数据类型与消费关系。  
 - **不** 在引擎内硬编码 EntityInfo / AbilityIcon / ItemStack 等业务控件；嵌套、反查、聚合一律配置表达。  
+- **不** 靠 collectionKey 同名或「当前成员上下文」隐式撞袋；跨层必须 `inputs`/`source` 明文 + 类型强校验。  
 - **不** 把 `aggregate` 做成「图只输出第一个成员」的假集合类型以省事。  
 - **不** 在 `docs/adr/` 另开平行 AAC ADR；集合与面板投影合同以 gitbook 本页 + [panel-view-projection](panel-view-projection.md) 为准。  
 - 未实现的 destination / subject / present：**fail-closed**，禁止 fallback 到实体集或静默空画。
@@ -429,11 +504,18 @@ Feature: 查询图能诚实写出不同类型的名单，面板只按类型来�
     And 不会出现其它单位的技能混在同一栏
 
   Scenario: 技能旁能看到谁会这招
-    Given 当前编队里有人会火球、有人不会
-    And 火球技能格绑定了「持有者」实体名单（由查询按该技能约束写出）
+    Given 父级技能板查询额外写出了「候选编队」实体名单引脚
+    And 火球技能格明文声明 inputs 消费该候选名单且类型为实体集合
+    And 技能格自己的查询在候选里筛出会火球的人并写出持有者名单
     When 我查看火球技能格
     Then 持有者名单里只有会火球的人
-    And 系统没有在技能控件里私自扫描全场单位
+    And 配置里能看出持有者数据来自「父引脚 → 子输入 → 子查询输出」而不是控件私扫
+
+  Scenario: 父引脚类型与子输入声明不一致则失败
+    Given 父级输出的是效果模板名单
+    And 子技能格 inputs 却声明要实体集合
+    When 装载或绑定
+    Then 失败并指出父输出与子输入类型不合
 
   Scenario: 一堆同类物资可以聚合成一个图标加数量
     Given 背包查询写出了 12 瓶同类药剂的实例名单
