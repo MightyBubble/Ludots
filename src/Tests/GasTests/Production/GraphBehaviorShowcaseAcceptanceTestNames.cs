@@ -47,6 +47,23 @@ namespace Ludots.Tests.Gas.Production
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(ShowcaseThinkBudgetMs));
+
+            // FSM-1a acceptance gate (registry-bound): Graph.FSM.Sentry via GraphFsmHost must
+            // actually drive the featured sentry's phase through the intruder's distance-driven
+            // cycle, not just report a static label. Mirrors GraphFsmSugarTests'
+            // SentryGraphs_DeHollowed_AndFsmHostDrivesPhaseCycle truth but through the production
+            // showcase runtime's own intruder movement instead of a synthetic feed.
+            var seenPhases = new HashSet<string> { runtime.GetSentryStateName(0) };
+            for (int i = 0; i < 70; i++)
+            {
+                runtime.Tick(0.2f);
+                seenPhases.Add(runtime.GetSentryStateName(0));
+            }
+
+            Assert.That(seenPhases, Does.Contain("idle"), "sentry must start/return to Idle while the intruder is far or absent");
+            Assert.That(seenPhases, Does.Contain("alert"), "sentry must Alert once the intruder's distance drive closes under range");
+            Assert.That(seenPhases, Does.Contain("combat"), "Alert must transition into Combat (Always arm) as GraphFsmHost dispatches the next wave");
+            Assert.That(seenPhases, Does.Not.Contain("unknown"), "GraphFsmHost must report a real phase value on every wave, never a hollow default");
         }
     }
 
