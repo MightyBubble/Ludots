@@ -7,7 +7,12 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Dialogue;
 using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Story;
+using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.Tests.TestCommon;
@@ -208,12 +213,9 @@ namespace Ludots.Tests.GAS.Story
         public void DialogueRuntime_ChoiceWithoutConditionGraph_IsAvailableAndAdvanceClearsSession()
         {
             using GameEngine engine = CreateCoreEngine();
-            DialogueDefinitionRegistry dialogues = engine.GetService(CoreServiceKeys.DialogueDefinitions)
-                ?? throw new InvalidOperationException("DialogueDefinitions missing.");
-            StoryDefinitionRegistry story = engine.GetService(CoreServiceKeys.StoryDefinitions)
-                ?? throw new InvalidOperationException("StoryDefinitions missing.");
-            DialogueRuntime dialogue = engine.GetService(CoreServiceKeys.DialogueRuntime)
-                ?? throw new InvalidOperationException("DialogueRuntime missing.");
+            var dialogues = new DialogueDefinitionRegistry();
+            var story = new StoryDefinitionRegistry();
+            DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
 
             story.Register(new StoryLineDefinition
             {
@@ -289,12 +291,12 @@ namespace Ludots.Tests.GAS.Story
         public void SequencerRuntime_ActivatesCameraAndSubtitleSections_AndFiresSignalOnce()
         {
             using GameEngine engine = CreateCoreEngine();
-            SequenceDefinitionRegistry sequences = engine.GetService(CoreServiceKeys.SequenceDefinitions)
-                ?? throw new InvalidOperationException("SequenceDefinitions missing.");
-            StoryDefinitionRegistry story = engine.GetService(CoreServiceKeys.StoryDefinitions)
-                ?? throw new InvalidOperationException("StoryDefinitions missing.");
-            SequencerRuntime sequencer = engine.GetService(CoreServiceKeys.SequencerRuntime)
-                ?? throw new InvalidOperationException("SequencerRuntime missing.");
+            const string signalActionGraphId = "Graph.Story.Unit.SignalNoOp";
+            RegisterHaltTriggerGraph(engine, signalActionGraphId);
+
+            var sequences = new SequenceDefinitionRegistry();
+            var story = new StoryDefinitionRegistry();
+            SequencerRuntime sequencer = CreateIsolatedSequencerRuntime(engine, sequences, story);
 
             story.Register(new StoryLineDefinition
             {
@@ -330,6 +332,7 @@ namespace Ludots.Tests.GAS.Story
                     {
                         Type = SequenceTrackType.Signal,
                         EventId = "unit.signal.once",
+                        ActionGraphId = signalActionGraphId,
                         Start = 0.4f
                     }
                 }
@@ -384,6 +387,54 @@ namespace Ludots.Tests.GAS.Story
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
                 Path.Combine(repoRoot, "assets"));
             return engine;
+        }
+
+        private static DialogueRuntime CreateIsolatedDialogueRuntime(
+            GameEngine engine,
+            DialogueDefinitionRegistry dialogues,
+            StoryDefinitionRegistry story)
+        {
+            TaskRuntimeService tasks = engine.GetService(CoreServiceKeys.TaskRuntimeService)
+                ?? throw new InvalidOperationException("TaskRuntimeService missing.");
+            StoryGraphInvoker graphs = engine.GetService(CoreServiceKeys.StoryGraphInvoker)
+                ?? new StoryGraphInvoker(engine);
+            return new DialogueRuntime(engine, dialogues, story, graphs, tasks, textCatalog: null);
+        }
+
+        private static SequencerRuntime CreateIsolatedSequencerRuntime(
+            GameEngine engine,
+            SequenceDefinitionRegistry sequences,
+            StoryDefinitionRegistry story)
+        {
+            TaskRuntimeService tasks = engine.GetService(CoreServiceKeys.TaskRuntimeService)
+                ?? throw new InvalidOperationException("TaskRuntimeService missing.");
+            StoryGraphInvoker graphs = engine.GetService(CoreServiceKeys.StoryGraphInvoker)
+                ?? new StoryGraphInvoker(engine);
+            return new SequencerRuntime(engine, sequences, story, graphs, tasks, textCatalog: null);
+        }
+
+        private static void RegisterHaltTriggerGraph(GameEngine engine, string graphName)
+        {
+            RegistryMapping[] mappings = GraphIdRegistry.SnapshotMappings();
+            GraphIdRegistry.Clear();
+            Array.Sort(mappings, (a, b) => a.Id.CompareTo(b.Id));
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                GraphIdRegistry.Register(mappings[i].Name);
+            }
+
+            int graphId = GraphIdRegistry.Register(graphName);
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+            var entries = new[]
+            {
+                new TriggerGraphEntry("story_invoke", "Story.ManualInvoke", startPc: 0, once: true),
+            };
+            engine.GetService(CoreServiceKeys.GraphProgramRegistry)!
+                .Register(graphId, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, null, entries);
         }
 
         private static string CreateTempRoot(out ConfigPipeline pipeline)
