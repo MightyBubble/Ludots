@@ -28,6 +28,7 @@ namespace Ludots.Core.GraphRuntime
     {
         public GraphDebugTraceRecord(
             long sequence,
+            int graphId,
             GraphDebugTraceEvent eventKind,
             int sourcePc,
             int cursorPc,
@@ -38,6 +39,7 @@ namespace Ludots.Core.GraphRuntime
             Entity entityValue)
         {
             Sequence = sequence;
+            GraphId = graphId;
             EventKind = eventKind;
             SourcePc = sourcePc;
             CursorPc = cursorPc;
@@ -49,6 +51,7 @@ namespace Ludots.Core.GraphRuntime
         }
 
         public long Sequence { get; }
+        public int GraphId { get; }
         public GraphDebugTraceEvent EventKind { get; }
         public int SourcePc { get; }
         public int CursorPc { get; }
@@ -62,6 +65,8 @@ namespace Ludots.Core.GraphRuntime
     /// <summary>
     /// Fixed-capacity, opt-in execution trace for one mounted graph entry.
     /// The producer never allocates or formats data; consumers drain by sequence.
+    /// Nested InvokeScript shares the ring and attributes each record with its graph id.
+    /// NodeExit is reserved and not emitted by the current producer contract.
     /// </summary>
     public sealed class GraphDebugTrace
     {
@@ -106,72 +111,72 @@ namespace Ludots.Core.GraphRuntime
             _dropped = 0;
         }
 
-        public void RecordNode(int sourcePc, int cursorPc, int steps, GraphDebugTraceEvent eventKind)
+        public void RecordNode(int graphId, int sourcePc, int cursorPc, int steps, GraphDebugTraceEvent eventKind)
         {
             if (Mode == GraphDebugTraceMode.Disabled)
             {
                 return;
             }
 
-            Write(eventKind, sourcePc, cursorPc, steps, -1, 0, 0f, default);
+            Write(graphId, eventKind, sourcePc, cursorPc, steps, -1, 0, 0f, default);
         }
 
-        public void RecordIntPin(int sourcePc, int registerIndex, int value, int cursorPc, int steps)
+        public void RecordIntPin(int graphId, int sourcePc, int registerIndex, int value, int cursorPc, int steps)
         {
             if (Mode != GraphDebugTraceMode.NodeAndPins)
             {
                 return;
             }
 
-            Write(GraphDebugTraceEvent.PinInt, sourcePc, cursorPc, steps, registerIndex, value, 0f, default);
+            Write(graphId, GraphDebugTraceEvent.PinInt, sourcePc, cursorPc, steps, registerIndex, value, 0f, default);
         }
 
-        public void RecordFloatPin(int sourcePc, int registerIndex, float value, int cursorPc, int steps)
+        public void RecordFloatPin(int graphId, int sourcePc, int registerIndex, float value, int cursorPc, int steps)
         {
             if (Mode != GraphDebugTraceMode.NodeAndPins)
             {
                 return;
             }
 
-            Write(GraphDebugTraceEvent.PinFloat, sourcePc, cursorPc, steps, registerIndex, 0, value, default);
+            Write(graphId, GraphDebugTraceEvent.PinFloat, sourcePc, cursorPc, steps, registerIndex, 0, value, default);
         }
 
-        public void RecordBoolPin(int sourcePc, int registerIndex, bool value, int cursorPc, int steps)
+        public void RecordBoolPin(int graphId, int sourcePc, int registerIndex, bool value, int cursorPc, int steps)
         {
             if (Mode != GraphDebugTraceMode.NodeAndPins)
             {
                 return;
             }
 
-            Write(GraphDebugTraceEvent.PinBool, sourcePc, cursorPc, steps, registerIndex, value ? 1 : 0, 0f, default);
+            Write(graphId, GraphDebugTraceEvent.PinBool, sourcePc, cursorPc, steps, registerIndex, value ? 1 : 0, 0f, default);
         }
 
-        public void RecordEntityPin(int sourcePc, int registerIndex, Entity value, int cursorPc, int steps)
+        public void RecordEntityPin(int graphId, int sourcePc, int registerIndex, Entity value, int cursorPc, int steps)
         {
             if (Mode != GraphDebugTraceMode.NodeAndPins)
             {
                 return;
             }
 
-            Write(GraphDebugTraceEvent.PinEntity, sourcePc, cursorPc, steps, registerIndex, 0, 0f, value);
+            Write(graphId, GraphDebugTraceEvent.PinEntity, sourcePc, cursorPc, steps, registerIndex, 0, 0f, value);
         }
 
-        public void RecordBlackboardInt(int sourcePc, int keyId, int value, int cursorPc, int steps)
+        public void RecordBlackboardInt(int graphId, int sourcePc, int keyId, int value, int cursorPc, int steps)
         {
             if (Mode != GraphDebugTraceMode.NodeAndPins) return;
-            Write(GraphDebugTraceEvent.BlackboardInt, sourcePc, cursorPc, steps, keyId, value, 0f, default);
+            Write(graphId, GraphDebugTraceEvent.BlackboardInt, sourcePc, cursorPc, steps, keyId, value, 0f, default);
         }
 
-        public void RecordBlackboardFloat(int sourcePc, int keyId, float value, int cursorPc, int steps)
+        public void RecordBlackboardFloat(int graphId, int sourcePc, int keyId, float value, int cursorPc, int steps)
         {
             if (Mode != GraphDebugTraceMode.NodeAndPins) return;
-            Write(GraphDebugTraceEvent.BlackboardFloat, sourcePc, cursorPc, steps, keyId, 0, value, default);
+            Write(graphId, GraphDebugTraceEvent.BlackboardFloat, sourcePc, cursorPc, steps, keyId, 0, value, default);
         }
 
-        public void RecordBlackboardEntity(int sourcePc, int keyId, Entity value, int cursorPc, int steps)
+        public void RecordBlackboardEntity(int graphId, int sourcePc, int keyId, Entity value, int cursorPc, int steps)
         {
             if (Mode != GraphDebugTraceMode.NodeAndPins) return;
-            Write(GraphDebugTraceEvent.BlackboardEntity, sourcePc, cursorPc, steps, keyId, 0, 0f, value);
+            Write(graphId, GraphDebugTraceEvent.BlackboardEntity, sourcePc, cursorPc, steps, keyId, 0, 0f, value);
         }
 
         public int ReadSince(long since, Span<GraphDebugTraceRecord> destination, out long oldestSequence)
@@ -193,6 +198,7 @@ namespace Ludots.Core.GraphRuntime
         }
 
         private void Write(
+            int graphId,
             GraphDebugTraceEvent eventKind,
             int sourcePc,
             int cursorPc,
@@ -218,6 +224,7 @@ namespace Ludots.Core.GraphRuntime
 
             _records[index] = new GraphDebugTraceRecord(
                 sequence,
+                graphId,
                 eventKind,
                 sourcePc,
                 cursorPc,

@@ -36,6 +36,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "input",
             "useRequirement",
             "showRequirement",
+            "triggerGraphs",
         };
 
         private static readonly string[] RemovedAimVisualFieldNames =
@@ -255,6 +256,34 @@ namespace Ludots.Core.Gameplay.GAS.Config
             def.HasUseProgressionRequirement = def.UseProgressionRequirementId > 0;
             def.ShowProgressionRequirementId = ResolveProgressionRequirement(obj, "showRequirement", id, path);
             def.HasShowProgressionRequirement = def.ShowProgressionRequirementId > 0;
+
+            if (obj["triggerGraphs"] is JsonArray triggerGraphs)
+            {
+                def.TriggerGraphs = new List<string>(triggerGraphs.Count);
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < triggerGraphs.Count; i++)
+                {
+                    if (triggerGraphs[i] is not JsonValue value || !value.TryGetValue<string>(out string? graph))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' field 'triggerGraphs' entries must be strings.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(graph) || !string.Equals(graph, graph.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' field 'triggerGraphs' entries must be trimmed non-empty strings.");
+                    }
+
+                    if (!seen.Add(graph))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' field 'triggerGraphs' repeats graph id '{graph}'.");
+                    }
+
+                    def.TriggerGraphs.Add(graph);
+                }
+            }
 
             return def;
         }

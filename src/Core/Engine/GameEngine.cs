@@ -539,13 +539,15 @@ namespace Ludots.Core.Engine
                     TriggerManager,
                     CreateContext,
                     () => TriggerDecoratorRegistry,
-                    () => GetService(CoreServiceKeys.GraphProgramRegistry));
+                    () => GetService(CoreServiceKeys.GraphProgramRegistry),
+                    () => GetService(CoreServiceKeys.CustomEventNameRegistry));
                 MapLoader.SetEntityTriggerGraphMounts(EntityTriggerGraphMounts);
                 MapLoader.LoadTemplates(ConfigCatalog, ConfigConflictReport);
                 SetService(CoreServiceKeys.EntityTemplateKeyRegistry, MapLoader.EntityTemplateKeys);
 
                 // 6. Initialize Core Systems with merged config
                 InitializeCoreSystems(MergedConfig);
+                FireLoadedModTriggerGraphs();
 
                 TriggerManager.RegisterTrigger(new Ludots.Core.Config.ReloadConfigTrigger(this));
 
@@ -1050,6 +1052,7 @@ namespace Ludots.Core.Engine
                 tagOps.RegisterTagRuleSet(tagRules[i].TagId, tagRules[i].RuleSet);
             }
             graphConfigLoader.PatchAndRegister(graphPackages);
+            InstallModTriggerGraphs(graphProgramRegistry);
             var graphFunctionCatalog = new GraphFunctionCatalog();
             new GraphFunctionCatalogLoader(ConfigPipeline, graphFunctionCatalog, graphProgramRegistry)
                 .Load(ConfigCatalog, ConfigConflictReport);
@@ -2076,6 +2079,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new ModTriggerResumeClockSystem(TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
@@ -3292,12 +3296,52 @@ namespace Ludots.Core.Engine
                 _mapDeathRuleSystem.Retract(session.MapId);
             }
 
-            triggers.AddRange(TriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry), EntityTriggerGraphMounts, GetService(CoreServiceKeys.CustomEventNameRegistry)));
+            triggers.AddRange(TriggerGraphMounting.BuildTriggers(
+                session,
+                GetService(CoreServiceKeys.GraphProgramRegistry),
+                EntityTriggerGraphMounts,
+                GetService(CoreServiceKeys.CustomEventNameRegistry),
+                GetService(CoreServiceKeys.AbilityDefinitionRegistry)));
 
             // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));
 
             return triggers;
+        }
+
+        private void InstallModTriggerGraphs(GraphProgramRegistry programs)
+        {
+            if (ModLoader == null || ModLoader.LoadedManifests.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < ModLoader.LoadedManifests.Count; i++)
+            {
+                var manifest = ModLoader.LoadedManifests[i];
+                List<Trigger> triggers = TriggerGraphMounting.BuildModMountTriggers(
+                    programs,
+                    manifest,
+                    GetService(CoreServiceKeys.CustomEventNameRegistry)
+                        ?? throw new InvalidOperationException("Mod TriggerGraph installation requires CustomEventNameRegistry."));
+                ApplyTriggerDecorators(triggers);
+                TriggerManager.RegisterModTriggers(manifest.Name, triggers);
+            }
+        }
+
+        private void FireLoadedModTriggerGraphs()
+        {
+            if (ModLoader == null || ModLoader.LoadedManifests.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < ModLoader.LoadedManifests.Count; i++)
+            {
+                ScriptContext context = CreateContext();
+                context.Set(MapTriggerEventPayloadKeys.ModId, ModLoader.LoadedManifests[i].Name);
+                TriggerManager.FireEvent(GameEvents.ModLoaded, context);
+            }
         }
 
         private void ApplyTriggerDecorators(List<Trigger> triggers)
@@ -3888,6 +3932,7 @@ namespace Ludots.Core.Engine
             if (ModLoader != null)
             {
                 Diagnostics.Log.Info(in LogChannels.Engine, "Unloading ModLoader contexts...");
+                TriggerManager?.UnregisterAllModTriggers();
                 ModLoader.UnloadAll();
             }
 

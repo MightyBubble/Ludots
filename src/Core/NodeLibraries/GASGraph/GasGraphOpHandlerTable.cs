@@ -511,7 +511,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             }
                         }
 
-                        state.DebugTrace?.RecordNode(instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
+                        state.DebugTrace?.RecordNode(state.CurrentGraphId, instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
                         continue;
                     }
                     else
@@ -519,14 +519,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ints[ins.Dst] = ints[ins.A];
                     }
 
-                    state.DebugTrace?.RecordNode(instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
+                    state.DebugTrace?.RecordNode(state.CurrentGraphId, instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
                     continue;
                 }
 
                 if (op == constIntOp)
                 {
                     ints[ins.Dst] = ins.Imm;
-                    state.DebugTrace?.RecordNode(instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
+                    state.DebugTrace?.RecordNode(state.CurrentGraphId, instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
                     continue;
                 }
 
@@ -603,7 +603,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     treeSteps = state.TreeSteps;
                 }
 
-                state.DebugTrace?.RecordNode(instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
+                state.DebugTrace?.RecordNode(state.CurrentGraphId, instructionIndex, pc, treeSteps, GraphDebugTraceEvent.NodeEnter);
 
                 if (state.Status == GraphExecutionStatus.Yielded)
                 {
@@ -960,6 +960,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Status = GraphExecutionStatus.Running,
                 InvokeDepth = s.InvokeDepth + 1,
                 TreeSteps = s.TreeSteps,
+                CurrentGraphId = graphId,
+                DebugTrace = s.DebugTrace,
                 MapScope = s.MapScope
             };
 
@@ -1755,7 +1757,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (!s.Api.TryReadBlackboardFloat(entity, ins.Imm, out float value))
                 throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardFloat), entity, ins.Imm);
             s.F[ins.Dst] = value;
-            s.DebugTrace?.RecordBlackboardFloat(s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
+            s.DebugTrace?.RecordBlackboardFloat(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
 
         private static InvalidOperationException MissingBlackboardRead(string opName, Entity entity, int keyId)
@@ -1768,7 +1770,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (!s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value))
                 throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardInt), entity, ins.Imm);
             s.I[ins.Dst] = value;
-            s.DebugTrace?.RecordBlackboardInt(s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
+            s.DebugTrace?.RecordBlackboardInt(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
 
         private static void HandleReadBlackboardEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1778,7 +1780,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (!s.Api.TryReadBlackboardEntity(entity, ins.Imm, out Entity value))
                 throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardEntity), entity, ins.Imm);
             s.E[ins.Dst] = value;
-            s.DebugTrace?.RecordBlackboardEntity(s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
+            s.DebugTrace?.RecordBlackboardEntity(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
 
         private static void HandleWriteBlackboardFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1786,7 +1788,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // E[A].BB_Float[Imm] = F[B]   (immediate write)
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardFloat(entity, ins.Imm, s.F[ins.B]);
-            s.DebugTrace?.RecordBlackboardFloat(s.CurrentInstructionPc, ins.Imm, s.F[ins.B], pc, s.TreeSteps);
+            s.DebugTrace?.RecordBlackboardFloat(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, s.F[ins.B], pc, s.TreeSteps);
         }
 
         private static void HandleWriteBlackboardInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1794,7 +1796,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // E[A].BB_Int[Imm] = I[B]
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardInt(entity, ins.Imm, s.I[ins.B]);
-            s.DebugTrace?.RecordBlackboardInt(s.CurrentInstructionPc, ins.Imm, s.I[ins.B], pc, s.TreeSteps);
+            s.DebugTrace?.RecordBlackboardInt(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, s.I[ins.B], pc, s.TreeSteps);
         }
 
         private static void HandleWriteBlackboardEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1802,7 +1804,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // E[A].BB_Entity[Imm] = E[B]
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardEntity(entity, ins.Imm, s.E[ins.B]);
-            s.DebugTrace?.RecordBlackboardEntity(s.CurrentInstructionPc, ins.Imm, s.E[ins.B], pc, s.TreeSteps);
+            s.DebugTrace?.RecordBlackboardEntity(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, s.E[ins.B], pc, s.TreeSteps);
         }
 
         // ── Config parameter reading (310-312) ──

@@ -69,12 +69,22 @@
 主干已经收进去了。这里是卫生债，不是玩法。
 → https://github.com/MightyBubble/Ludots/issues/918
 
-这三张票都已经进主干；本页只记关单，不再派实现票。
+**第四件：Query 图契约（#1084）。**
+Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 Store/事件/动作/continuation 的合同已由主干 GraphReturnWriter/操作策略与回归测试覆盖，本页只记关单。
+→ https://github.com/MightyBubble/Ludots/issues/1084
+
+**第五件：TriggerGraph/Dialogue 统一 QueryGraphGateway（#1099）。**
+显式 subject + pins、目标必须已登记 GraphKind.Query、typed Bool/Int/Float/Entity/EntitySet、缺失/类型不符失败关闭、禁止 Query 动作/事件/Store/continuation、不新增第二 VM 的统一 Query 网关合同已由主干 GraphReturnWriter/操作策略/编译器与回归测试覆盖（TriggerGraph 程序走同一 GraphExecutor，不经 Query 网关），本页只记关单。
+→ https://github.com/MightyBubble/Ludots/issues/1099
+
+这五张票都已经进主干；本页只记关单，不再派实现票。
 
 ### 3.3 真正还在做的
 
-**编辑器里程碑（本轮已收口的能力）。**
-节点联想只从运行时 descriptor 获取；Break 是 Script/TriggerGraph 的作者糖，编译时严格降低为带显式 `target` 边的 Jump；Select 仍明确是实体选择 `SelectEntity`，不是尚不存在的通用 Select。编辑器连线、删节点后的悬挂边清理、布局数据校验和 live trace source map 校验均走失败关闭。
+**编辑器里程碑（控制流与 live debug 已收口，文本能力未收口）。**
+节点联想只从运行时 descriptor 获取；Bridge 同时投影 `BranchBool`、`SwitchInt`、`Wait`、`While`、`Until`、`Break` 六种作者糖及其控制/值端口。`Jump.target`、`Call.call/next` 等普通控制端口也来自 Bridge descriptor，React 不维护第二份 op 端口表。`Break` 编译时严格降低为带显式 `target` 边的 Jump；`Select` 仍明确是实体选择 `SelectEntity`，不是尚不存在的通用 Select。编辑器连线、删节点后的悬挂边清理、布局数据校验和 live trace source map 校验均走失败关闭。
+
+Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标、引脚和黑板变化；嵌套 `InvokeScript` 继承固定容量 trace 并携带子图 id。当前不伪造 `NodeExit` 生命周期事件。黑板 buffer 缺失仍在运行时明确失败；实体能力在 authoring 阶段的声明和编译校验仍是下一条合同切片，不能把运行时隐式安装路径写成已完成。
 
 字符串花括号自动引脚、字符串寄存器、组合文本与 `Concat` 仍未完成。当前运行时没有正式的 text value、固定容量/零分配传递、符号 patch 和 presentation sink 合同，因此编辑器不会展示可保存但运行时不可执行的假节点。它们必须作为独立基建切片先补齐合同，再进入 descriptor 名册。
 
@@ -88,7 +98,7 @@
 
 新开了一条线，别当成图能力收口的回锅：触发器图（TriggerGraph，原 MapTriggerGraph）。
 进度与计划只认两张票：地图域线 https://github.com/MightyBubble/Ludots/issues/1030 ；域扩展线（实体域挂载、GAS 事件桥、技能/效果时刻桥、presenter 时序合同）https://github.com/MightyBubble/Ludots/issues/1031 ——两张票顶部各有进度快照与剩余切片清单，新活从快照开工，别重做已落地的。
-方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落在 codex/panel-four-skins-showcase 分支上；技能域挂载、mod 域/叠加仲裁/override 还开在票里。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。合不合、什么时候合，看那两张票。
+方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落地；2026-08-24 又补上技能域 `abilities.json.triggerGraphs`、Mod 域 `mod.json.triggerGraphs` 和显式 `route: global` 跨地图路由，统一复用现有 TriggerManager/TriggerGraph VM。剩余收口是 S4 时序合同全文对齐与 S5 实体/技能真实可玩 showcase、画廊和 AgentBridge 运行证据，不能把 headless 基建测试写成 showcase 完成。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。合不合、什么时候合，看 #1031 的最新进度快照。
 
 下面这些早就知道、还没做，**不要当成新发现再审一轮**：默认「看见敌人 / 进入射程」还要有人先塞数字；图号在代码里还是普通整数；有一条事件丢弃计数永远是零；两个节点钉同一格时说不清。
 
@@ -178,7 +188,7 @@ Feature: 接手的人只看一页
 
 已经合进主干：941、944、945、946、948、950、951、952、953、954、956、957、959、960、962、963、964、965、966、967、968。
 
-已合进主干、只剩关单：916、917、918。
+已合进主干、只剩关单：916、917、918、1084、1099。
 
 还开着、本页点过名的：915、861。
 

@@ -9,6 +9,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
         Map = 0,
         Entity = 1,
         Ability = 2,
+        Mod = 3,
+    }
+
+    public enum TriggerGraphMountRoute
+    {
+        Local = 0,
+        Global = 1,
     }
 
     public sealed class TriggerGraphMount
@@ -18,6 +25,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private const string ScopeInstanceIdField = "scopeInstanceId";
         private const string DomainField = "domain";
         private const string AbilityField = "ability";
+        private const string RouteField = "route";
 
         public string Graph { get; }
         public string ScopeInstanceId { get; }
@@ -27,13 +35,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         /// <summary>Ability config id binding for ability-domain mounts.</summary>
         public string Ability { get; }
+        public TriggerGraphMountRoute Route { get; }
 
-        private TriggerGraphMount(string graph, string scopeInstanceId, TriggerGraphMountDomain domain, string ability)
+        private TriggerGraphMount(
+            string graph,
+            string scopeInstanceId,
+            TriggerGraphMountDomain domain,
+            string ability,
+            TriggerGraphMountRoute route)
         {
             Graph = graph;
             ScopeInstanceId = scopeInstanceId;
             Domain = domain;
             Ability = ability;
+            Route = route;
         }
 
         public static List<TriggerGraphMount> ParseList(JsonNode? node, string mapId)
@@ -71,10 +86,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 if (!string.Equals(kvp.Key, GraphField, StringComparison.Ordinal) &&
                     !string.Equals(kvp.Key, ScopeInstanceIdField, StringComparison.Ordinal) &&
                     !string.Equals(kvp.Key, DomainField, StringComparison.Ordinal) &&
-                    !string.Equals(kvp.Key, AbilityField, StringComparison.Ordinal))
+                    !string.Equals(kvp.Key, AbilityField, StringComparison.Ordinal) &&
+                    !string.Equals(kvp.Key, RouteField, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"{context} has unknown field '{kvp.Key}'. Allowed fields: '{GraphField}', '{ScopeInstanceIdField}', '{DomainField}', '{AbilityField}'.");
+                        $"{context} has unknown field '{kvp.Key}'. Allowed fields: '{GraphField}', '{ScopeInstanceIdField}', '{DomainField}', '{AbilityField}', '{RouteField}'.");
                 }
             }
 
@@ -103,6 +119,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 ability = ReadRequiredTrimmedString(obj, AbilityField, context);
             }
 
+            TriggerGraphMountRoute route = TriggerGraphMountRoute.Local;
+            if (obj.TryGetPropertyValue(RouteField, out JsonNode? routeNode) && routeNode != null)
+            {
+                if (routeNode is not JsonValue routeValue || !routeValue.TryGetValue<string>(out string? routeText))
+                {
+                    throw new InvalidOperationException($"{context} field '{RouteField}' must be a string.");
+                }
+
+                route = ParseRoute(routeText, context);
+            }
+
             if (domain == TriggerGraphMountDomain.Entity && scopeInstanceId == null)
             {
                 throw new InvalidOperationException(
@@ -124,7 +151,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
             }
 
-            return new TriggerGraphMount(graph, scopeInstanceId, domain, ability);
+            if (domain == TriggerGraphMountDomain.Mod)
+            {
+                throw new InvalidOperationException(
+                    $"{context} domain 'mod' is declared by its owning manifest; use the mod triggerGraphs field.");
+            }
+
+            if (domain == TriggerGraphMountDomain.Entity && route == TriggerGraphMountRoute.Global)
+            {
+                throw new InvalidOperationException(
+                    $"{context} entity-domain mounts cannot declare a global map route; entity scope is map-local.");
+            }
+
+            return new TriggerGraphMount(graph, scopeInstanceId, domain, ability, route);
         }
 
         private static TriggerGraphMountDomain ParseDomain(string text, string context)
@@ -144,8 +183,29 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return TriggerGraphMountDomain.Ability;
             }
 
+            if (string.Equals(text, "mod", StringComparison.Ordinal))
+            {
+                return TriggerGraphMountDomain.Mod;
+            }
+
             throw new InvalidOperationException(
-                $"{context} field 'domain' value '{text}' is not a mount domain; expected \"map\", \"entity\", or \"ability\".");
+                $"{context} field 'domain' value '{text}' is not a mount domain; expected \"map\", \"entity\", \"ability\" or \"mod\".");
+        }
+
+        private static TriggerGraphMountRoute ParseRoute(string text, string context)
+        {
+            if (string.Equals(text, "local", StringComparison.Ordinal))
+            {
+                return TriggerGraphMountRoute.Local;
+            }
+
+            if (string.Equals(text, "global", StringComparison.Ordinal))
+            {
+                return TriggerGraphMountRoute.Global;
+            }
+
+            throw new InvalidOperationException(
+                $"{context} field '{RouteField}' value '{text}' is not a route; expected \"local\" or \"global\".");
         }
 
         private static string ReadRequiredTrimmedString(JsonObject obj, string field, string context)

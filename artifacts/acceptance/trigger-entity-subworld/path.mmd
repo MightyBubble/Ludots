@@ -1,0 +1,10 @@
+flowchart LR
+  A[EntityTemplate root] --> B[MaterializeTemplate]
+  B --> C[AttachmentOps.Attach child]
+  B --> D[Mount multiple TriggerGraphs in list order]
+  C --> E[Child source event]
+  E --> F{Root aggregate scope?}
+  F -->|yes| G[Root graph updates state]
+  F -->|no| H[External event ignored]
+  style A stroke:#cc0000,stroke-width:2px
+  style G stroke:#cc0000,stroke-width:2px

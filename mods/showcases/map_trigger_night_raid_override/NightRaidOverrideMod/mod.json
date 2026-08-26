@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "跨 mod 触发图叠加：地图片段把 kill_threshold 3→2，并叠加 override 计数图（override_active / override_seen），与基底夜袭图同拍运行。",
   "priority": 50,
+  "triggerGraphs": ["Graph.NightRaid.Override.Mod"],
   "dependencies": {
     "MapTriggerNightRaidMod": "^1.0.0"
   }

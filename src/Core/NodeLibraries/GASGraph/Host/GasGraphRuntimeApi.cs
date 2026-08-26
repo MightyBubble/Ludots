@@ -375,12 +375,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
 
         /// <summary>
-        /// Fires a config-key-named trigger event from a graph program: map-scoped when the
-        /// scope resolves to a map, global otherwise.
+        /// Fires a config-key-named trigger event from a graph program in the scope entity's map.
         /// </summary>
         public void FireEventKey(Entity scope, int eventKeyId)
         {
             RejectDerivedAttributeSideEffect(nameof(FireEventKey));
+            RejectNonTransactionalEffectSideEffect(nameof(FireEventKey));
             var triggerManager = _triggerManager
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
 
@@ -391,18 +391,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     $"GAS.GRAPH.ERR.EventKeyNameUnknown: FireEventKey references unregistered config key id {eventKeyId}.");
             }
 
+            MapId mapId = ResolveRequiredMapId(scope);
             var context = new ScriptContext();
-            MapId mapId = ResolveMapId(scope);
-            if (!string.IsNullOrEmpty(mapId.Value))
-            {
-                context.Set(ContextKeys.MapId, mapId);
-                context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
-                triggerManager.FireMapEvent(mapId, new EventKey(name), context);
-            }
-            else
-            {
-                triggerManager.FireEvent(new EventKey(name), context);
-            }
+            context.Set(ContextKeys.MapId, mapId);
+            context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
+            triggerManager.FireMapEvent(mapId, new EventKey(name), context);
         }
 
         /// <summary>
@@ -487,6 +480,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return new MapId(string.Empty);
+        }
+
+        private MapId ResolveRequiredMapId(Entity entity)
+        {
+            if (entity == Entity.Null || entity == default || !_world.IsAlive(entity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.FireEventKeyScopeInvalid: scope entity {entity} is null or not alive.");
+            }
+
+            if (!_world.TryGet<Ludots.Core.Components.MapEntity>(entity, out var mapEntity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.FireEventKeyScopeInvalid: scope entity {entity} has no MapEntity.");
+            }
+
+            if (string.IsNullOrWhiteSpace(mapEntity.MapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.FireEventKeyScopeInvalid: scope entity {entity} has an empty map id.");
+            }
+
+            return mapEntity.MapId;
         }
 
         private Gameplay.MapTriggers.MapVariableStore ResolveMapVariableStore(MapId mapId)

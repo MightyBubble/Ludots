@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -56,7 +57,32 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void FireEventKey_NoMapScope_FallsBackToGlobalEvent()
+        public void FireEventKey_ValidMapScope_DoesNotDispatchToGlobalTrigger()
+        {
+            using World world = World.Create();
+            var mapId = new MapId("fire_map_global_collision");
+            Entity scope = world.Create();
+            world.Add(scope, new MapEntity { MapId = mapId });
+
+            var manager = new TriggerManager();
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager);
+
+            int keyId = ConfigKeyRegistry.Register("Custom.CollisionEvent");
+            var globalTrigger = new RecordingTrigger { EventKey = new EventKey("Custom.CollisionEvent") };
+            manager.RegisterTrigger(globalTrigger);
+            var mapTrigger = new RecordingTrigger { EventKey = new EventKey("Custom.CollisionEvent") };
+            manager.RegisterMapTriggers(mapId, new Trigger[] { mapTrigger });
+
+            api.FireEventKey(scope, keyId);
+
+            Assert.That(mapTrigger.Executed, Is.True, "Map-scoped trigger must run for the scope's map.");
+            Assert.That(globalTrigger.Executed, Is.False,
+                "A globally registered trigger with the same event key must not be dispatched by the map-scoped FireEventKey bridge.");
+        }
+
+        [Test]
+        public void FireEventKey_NoMapScope_Throws()
         {
             using World world = World.Create();
             Entity scope = world.Create();
@@ -66,13 +92,41 @@ namespace Ludots.Tests.Gas.Graph
             api.BindTriggerManager(manager);
 
             int keyId = ConfigKeyRegistry.Register("Custom.GlobalEvent");
-            var trigger = new RecordingTrigger { EventKey = new EventKey("Custom.GlobalEvent") };
-            manager.RegisterTrigger(trigger);
+            var ex = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(scope, keyId));
+            Assert.That(ex!.Message, Does.StartWith("GAS.GRAPH.ERR.FireEventKeyScopeInvalid"));
+        }
 
-            api.FireEventKey(scope, keyId);
+        [Test]
+        public void FireEventKey_DeadOrUnmappedScope_Throws()
+        {
+            using World world = World.Create();
+            var manager = new TriggerManager();
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager);
+            int keyId = ConfigKeyRegistry.Register("Custom.InvalidScope");
 
-            Assert.That(trigger.Executed, Is.True, "Global trigger must run when the scope has no map.");
-            Assert.That(trigger.SeenMapValue, Is.Null, "Global fallback must not populate a map id in context.");
+            Entity dead = world.Create();
+            world.Destroy(dead);
+            var deadEx = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(dead, keyId));
+            Assert.That(deadEx!.Message, Does.StartWith("GAS.GRAPH.ERR.FireEventKeyScopeInvalid"));
+
+            Entity unmapped = world.Create();
+            var unmappedEx = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(unmapped, keyId));
+            Assert.That(unmappedEx!.Message, Does.StartWith("GAS.GRAPH.ERR.FireEventKeyScopeInvalid"));
+        }
+
+        [Test]
+        public void FireEventKey_EmptyMapIdScope_Throws()
+        {
+            using World world = World.Create();
+            Entity scope = world.Create(new MapEntity { MapId = new MapId(" ") });
+            var manager = new TriggerManager();
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager);
+            int keyId = ConfigKeyRegistry.Register("Custom.EmptyMap");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(scope, keyId));
+            Assert.That(ex!.Message, Does.StartWith("GAS.GRAPH.ERR.FireEventKeyScopeInvalid"));
         }
 
         [Test]
@@ -99,6 +153,67 @@ namespace Ludots.Tests.Gas.Graph
 
             var ex = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(scope, 999_999));
             Assert.That(ex!.Message, Does.StartWith("GAS.GRAPH.ERR.EventKeyNameUnknown"));
+        }
+
+        [Test]
+        public void FireEventKey_DuringDerivedAttributeWrites_ThrowsBeforeDispatch()
+        {
+            using World world = World.Create();
+            var mapId = new MapId("derived_event_map");
+            Entity scope = world.Create(new AttributeBuffer(), new MapEntity { MapId = mapId });
+            var manager = new TriggerManager();
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager);
+            int keyId = ConfigKeyRegistry.Register("Custom.DerivedEvent");
+            var trigger = new RecordingTrigger { EventKey = new EventKey("Custom.DerivedEvent") };
+            manager.RegisterMapTriggers(mapId, new Trigger[] { trigger });
+            AttributeBuffer staged = world.Get<AttributeBuffer>(scope);
+
+            api.BeginDerivedAttributeWrites(scope, in staged);
+            try
+            {
+                var ex = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(scope, keyId));
+                Assert.That(ex!.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+                Assert.That(trigger.Executed, Is.False);
+            }
+            finally
+            {
+                api.EndDerivedAttributeWrites(scope, ref staged, commit: false);
+            }
+        }
+
+        [Test]
+        public void FireEventKey_DuringEffectSideEffectTransaction_ThrowsBeforeDispatch()
+        {
+            using World world = World.Create();
+            var mapId = new MapId("effect_event_map");
+            Entity scope = world.Create(new AttributeBuffer(), new MapEntity { MapId = mapId });
+            var manager = new TriggerManager();
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager);
+            int keyId = ConfigKeyRegistry.Register("Custom.EffectEvent");
+            var trigger = new RecordingTrigger { EventKey = new EventKey("Custom.EffectEvent") };
+            manager.RegisterMapTriggers(mapId, new Trigger[] { trigger });
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 1);
+            transaction.Begin();
+            api.BeginEffectSideEffectTransaction(transaction);
+
+            try
+            {
+                var ex = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(scope, keyId));
+                Assert.That(ex!.Message, Does.StartWith(EffectPhaseSideEffectTransaction.UnsupportedSideEffectError));
+                Assert.That(trigger.Executed, Is.False);
+            }
+            finally
+            {
+                api.EndEffectSideEffectTransaction(transaction);
+            }
         }
 
         // ── Blackboard capacity overflow throws ──

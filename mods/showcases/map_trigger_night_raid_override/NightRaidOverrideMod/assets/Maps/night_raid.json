@@ -8,9 +8,7 @@
     }
   ],
   "TriggerGraphs": [
-    {
-      "graph": "Graph.NightRaid.Override",
-      "scopeInstanceId": "night_raid_hero"
-    }
+    { "graph": "Graph.NightRaid.Override", "scopeInstanceId": "night_raid_hero" },
+    { "graph": "Graph.NightRaid.Override.GlobalObserver", "route": "global" }
   ]
 }
