@@ -45,6 +45,11 @@
       "kind": "csproj",
       "value": "mods/showcases/panel_fireball_shared/FireballSharedMod",
       "reason": "shared fireball gameplay library consumed by all panel skin/theme showcase mods; not a standalone showcase entry"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/save_showcases_shared/SaveShowcasesShared",
+      "reason": "save_load / deterministic_replay / reconnect_recovery 共用的归一化 WorldDigestLens 库；非独立 showcase 条目"
     }
   ],
   "showcases": [
