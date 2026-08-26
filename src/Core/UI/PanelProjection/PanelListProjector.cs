@@ -9,7 +9,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Binds EntityCollection rows to scalar columns declared by <see cref="PanelListDeclaration"/>.
+    /// Binds EntityCollection rows to scalar columns declared by the collection's item template.
     /// Membership and order come from the query graph; this type does not filter or sort.
     /// </summary>
     public sealed class PanelListProjector
@@ -26,9 +26,13 @@ namespace Ludots.Core.UI.PanelProjection
         public static void BindSymbols(PanelTemplate template)
         {
             ArgumentNullException.ThrowIfNull(template);
-            foreach (PanelListDeclaration list in template.Lists)
+            foreach (PanelCollectionBinding collection in template.Collections)
             {
-                foreach (PanelItemField field in list.Fields)
+                PanelItemTemplate item = collection.Item
+                    ?? throw new InvalidOperationException(
+                        $"Panel template '{template.Id}' collection '{collection.Name}' item '{collection.ItemTemplateId}' is not bound.");
+
+                foreach (PanelItemField field in item.Fields)
                 {
                     field.SymbolId = field.Kind switch
                     {
@@ -43,24 +47,28 @@ namespace Ludots.Core.UI.PanelProjection
 
         public IReadOnlyList<PanelListProjection> Project(Entity scope, PanelTemplate template)
         {
-            if (template.Lists.Count == 0)
+            if (template.Collections.Count == 0)
             {
                 return Array.Empty<PanelListProjection>();
             }
 
-            var result = new List<PanelListProjection>(template.Lists.Count);
-            foreach (PanelListDeclaration list in template.Lists)
+            var result = new List<PanelListProjection>(template.Collections.Count);
+            foreach (PanelCollectionBinding collection in template.Collections)
             {
-                result.Add(ProjectList(scope, list));
+                result.Add(ProjectCollection(scope, collection));
             }
 
             return result;
         }
 
-        private PanelListProjection ProjectList(Entity scope, PanelListDeclaration list)
+        private PanelListProjection ProjectCollection(Entity scope, PanelCollectionBinding collection)
         {
+            PanelItemTemplate itemTemplate = collection.Item
+                ?? throw new InvalidOperationException(
+                    $"Collection '{collection.Name}' item '{collection.ItemTemplateId}' is not bound.");
+
             var items = new List<PanelListItemProjection>(16);
-            if (_collections.TryGet(scope, list.CollectionKey, out EntityCollectionHandle handle) &&
+            if (_collections.TryGet(scope, collection.CollectionKey, out EntityCollectionHandle handle) &&
                 _collections.TryGetView(handle, out EntityCollectionView view))
             {
                 for (int i = 0; i < view.Count; i++)
@@ -72,11 +80,11 @@ namespace Ludots.Core.UI.PanelProjection
                         continue;
                     }
 
-                    items.Add(ProjectItem(entity, list.Fields));
+                    items.Add(ProjectItem(entity, itemTemplate.Fields));
                 }
             }
 
-            return new PanelListProjection(list.Name, items);
+            return new PanelListProjection(collection.Name, items);
         }
 
         private PanelListItemProjection ProjectItem(Entity entity, IReadOnlyList<PanelItemField> fields)

@@ -1081,7 +1081,9 @@ namespace Ludots.Core.Engine
             gasGraphApi.BindGraphCallbackService(graphCallbackService);
             gasGraphApi.BindRngPickService(rngPickService);
             _gasGraphRuntimeApi = gasGraphApi;
-            var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var panelItemTemplates = new PanelItemTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(
+                panelItemTemplates, ConfigCatalog, ConfigConflictReport);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,

@@ -23,8 +23,13 @@ namespace Ludots.Core.UI.PanelHosting
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
         }
 
-        public PanelTemplateRegistry Load(ConfigCatalog? catalog = null, ConfigConflictReport? report = null)
+        public PanelTemplateRegistry Load(
+            PanelItemTemplateRegistry itemTemplates,
+            ConfigCatalog? catalog = null,
+            ConfigConflictReport? report = null)
         {
+            ArgumentNullException.ThrowIfNull(itemTemplates);
+
             var registry = new PanelTemplateRegistry();
             var entry = ConfigPipeline.RequireEntry(catalog, ConfigPath, ConfigMergePolicy.ArrayById, "id");
             IReadOnlyList<MergedConfigEntry> nodes = _configs.MergeArrayByIdFromCatalog(in entry, report);
@@ -50,7 +55,7 @@ namespace Ludots.Core.UI.PanelHosting
                 }
 
                 template.GraphId = graphId;
-                PanelListProjector.BindSymbols(template);
+                PanelItemTemplateBinder.Bind(template, itemTemplates);
             }
 
             return registry;

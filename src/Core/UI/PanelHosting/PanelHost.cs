@@ -117,8 +117,8 @@ namespace Ludots.Core.UI.PanelHosting
             for (int i = 0; i < _entries.Count; i++)
             {
                 Entry entry = _entries[i];
-                bool hasLists = entry.Template.Lists.Count > 0;
-                if (!entry.Alive || (!entry.HasRealtime && !hasLists))
+                bool hasCollections = entry.Template.Collections.Count > 0;
+                if (!entry.Alive || (!entry.HasRealtime && !hasCollections))
                 {
                     continue;
                 }
@@ -158,7 +158,7 @@ namespace Ludots.Core.UI.PanelHosting
                     }
                 }
 
-                if (hasLists)
+                if (hasCollections)
                 {
                     ProjectLists(entry);
                     changed = true;
@@ -311,7 +311,7 @@ namespace Ludots.Core.UI.PanelHosting
 
         private void ProjectLists(Entry entry)
         {
-            if (_listProjector == null || entry.Template.Lists.Count == 0)
+            if (_listProjector == null || entry.Template.Collections.Count == 0)
             {
                 entry.ListProjections = Array.Empty<PanelListProjection>();
                 return;

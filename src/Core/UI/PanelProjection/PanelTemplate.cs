@@ -20,7 +20,7 @@ namespace Ludots.Core.UI.PanelProjection
             IReadOnlyList<PanelTemplateEvent>? events = null,
             IReadOnlyList<PanelIntentMapEntry>? intents = null,
             string? skin = null,
-            IReadOnlyList<PanelListDeclaration>? lists = null,
+            IReadOnlyList<PanelCollectionBinding>? collections = null,
             PanelLayout? layout = null)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -52,24 +52,27 @@ namespace Ludots.Core.UI.PanelProjection
                 }
             }
 
-            List<PanelListDeclaration> safeLists = new List<PanelListDeclaration>(lists ?? Array.Empty<PanelListDeclaration>());
-            var listNames = new HashSet<string>(StringComparer.Ordinal);
-            foreach (PanelListDeclaration list in safeLists)
+            List<PanelCollectionBinding> safeCollections =
+                new List<PanelCollectionBinding>(collections ?? Array.Empty<PanelCollectionBinding>());
+            var collectionNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelCollectionBinding collection in safeCollections)
             {
-                if (list == null)
+                if (collection == null)
                 {
-                    throw new ArgumentException($"Panel template '{id}' has a null list entry.", nameof(lists));
+                    throw new ArgumentException($"Panel template '{id}' has a null collection entry.", nameof(collections));
                 }
 
-                if (!listNames.Add(list.Name))
-                {
-                    throw new ArgumentException($"Panel template '{id}' declares duplicate list '{list.Name}'.", nameof(lists));
-                }
-
-                if (seen.Contains(list.Name))
+                if (!collectionNames.Add(collection.Name))
                 {
                     throw new ArgumentException(
-                        $"Panel template '{id}' list '{list.Name}' collides with a pin name.", nameof(lists));
+                        $"Panel template '{id}' declares duplicate collection '{collection.Name}'.", nameof(collections));
+                }
+
+                if (seen.Contains(collection.Name))
+                {
+                    throw new ArgumentException(
+                        $"Panel template '{id}' collection '{collection.Name}' collides with a pin name.",
+                        nameof(collections));
                 }
             }
 
@@ -113,7 +116,7 @@ namespace Ludots.Core.UI.PanelProjection
             Events = safeEvents;
             Intents = safeIntents;
             Skin = string.IsNullOrWhiteSpace(skin) ? null : skin.Trim();
-            Lists = safeLists;
+            Collections = safeCollections;
             Layout = layout;
         }
 
@@ -125,8 +128,8 @@ namespace Ludots.Core.UI.PanelProjection
         public IReadOnlyList<PanelTemplateEvent> Events { get; }
         public IReadOnlyList<PanelIntentMapEntry> Intents { get; }
 
-        /// <summary>Homogeneous list projections (#G12 / view-projection SSOT).</summary>
-        public IReadOnlyList<PanelListDeclaration> Lists { get; }
+        /// <summary>Collection slots: graph EntityCollection + reusable item template id.</summary>
+        public IReadOnlyList<PanelCollectionBinding> Collections { get; }
 
         /// <summary>Optional builtin control tree; null keeps legacy auto-row layout.</summary>
         public PanelLayout? Layout { get; }

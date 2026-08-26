@@ -1,200 +1,207 @@
-# 面板视图投影：图管集合 · 面板只绑列
+# 面板视图投影：独立 Item 模板 · 容器只编排
 
-本页是面板「画面只消费一种投影」合同的 SSOT（落实 G12）。与[四皮面板](panel-skins.md)、[面板目录总合同](panel-catalog-designs.md)正交：皮管长相，**图管谁在名单里、什么顺序**，**本页只管「行 → 标量列」与控件绑定**。
+本页是面板「画面只消费一种投影」合同的 SSOT（落实 G12）。与[四皮面板](panel-skins.md)、[面板目录总合同](panel-catalog-designs.md)正交。
 
 ## 1. 概述
 
-职责劈开（禁止在面板里再造一套查询语言）：
+核心拆分（**Item 不知道自己挂在谁下面**）：
 
-| 层 | 管什么 | 不写什么 |
+| 资产 | 管什么 | 不写什么 |
 |---|---|---|
-| **Entity Query 图** | 圈人、过滤、排序、写出 `EntityCollection` + Summary 计数 | 不关心血条怎么画 |
-| **面板模板 `lists`** | 给集合的每一行声明要读哪些标量列 | 不再写 `filter` / `sort` |
-| **面板模板 `layout`** | 把 pin / 列绑到 builtin 控件 | 不看见 Entity |
-| **皮 / 主题** | 长相（CSS、九宫、三宫） | 不改数据合同 |
+| **Entity Query 图** | 圈人、过滤、排序 → `EntityCollection` + Summary | 不关心怎么画一行 |
+| **Item 模板** | 「一个实体怎么画」：`fields` + `layout` | 无 `graph`、无 `collectionKey`、不知 list/grid |
+| **容器面板**（list / 日后 grid） | 哪份集合 + **引用哪个 item** + 怎么排版 | 不内联行控件、不写 filter/sort |
+| **皮 / 主题** | 长相 | 不改数据合同 |
 
-通货仍是：
+同一份 `item.unit.roster`：今天挂在 list 面板，明天挂在 grid 面板——**item 配置零改动**。
+
+通货：
 
 - **叶子**：标量（float / bool / string）
-- **唯一复合**：同构列表（行序 = 图写出的集合序；每行一袋由 `item.fields` 声明的叶子）
+- **唯一复合**：同构集合（行序 = 图写出的集合序；每行按 **被引用的 item 模板** 填列）
 
 本切片配置面：
 
-1. `lists[]`：`name` + `collectionKey` + `item.fields`（**无** filter/sort）
-2. `layout.controls[]`：`label` / `progressBar` / `badge` / `list`
-3. Showcase：查询图内完成「存活 + 按血量降序」，面板只绑名字/血条/晕眩徽标
-
-运行时目标（与小地图/血条同纪律）：对 `EntityCollection` **定容填列**，热路径不按行 `new Dictionary`；本页先锁配置合同，缓冲 SoA 化可随后落地。
+1. `Panels/item_templates.json`：独立 item
+2. 容器 `collections[]`：`name` + `collectionKey` + `item`（模板 id）
+3. 容器 `layout`：`label` / `list`（日后 `grid`）；**禁止** `itemControls` 内联
+4. Showcase：查询图存活+血量降序；item 管名字/血条/晕眩；list 容器只编排
 
 ## 2. 结构
 
 ```text
 Query 图
-  QueryAll / QueryFilter* / QuerySortByAttribute / AggCount
-       │
-       ├─ Summary ──► pins[]（计数等）
-       └─ EntityCollection（已过滤、已排序）──► lists[].collectionKey
-                │
-                ▼
-         列绑定（item.fields → 按行读组件）
-                │
-                ▼
-         layout.controls[]（只吃 pin 名 / 列名）
-                │
-                ▼
+  └─ EntityCollection + Summary pins
+           │
+           ▼
+容器面板 collections[] ── item:"item.unit.roster" ──► Item 模板
+  layout: list / grid（只编排）                      fields + layout（一行怎么画）
+           │
+           ▼
          皮 / 主题
 ```
 
-| 配置块 | 职责 |
-|---|---|
-| `pins` | 面板级标量（在编人数等）——既有 |
-| `lists` | 指向图集合 + 行内列声明 |
-| `layout` | 控件树 |
+| 配置块 | 所在资产 | 职责 |
+|---|---|---|
+| `fields` + `layout` | **Item 模板** | 一行/一格的列与控件 |
+| `pins` / `graph` / `collections` / `layout` | **容器面板** | 面板级标量、集合绑定、排版 |
+| `skin` | 容器或实例 | 长相 |
 
 ## 3. 详情
 
-### 3.1 模板根字段
+### 3.1 Item 模板（独立、可复用）
 
-在既有 `id/graph/pins/events/intents/skin` 之外允许：
-
-- `lists`：数组，可空
-- `layout`：对象；缺省 = 旧自动堆行
-
-未知字段 fail-closed。`lists[]` 上出现 `filter` / `sort` → **装载失败**（请改写到图里）。
-
-### 3.2 `lists[]`（只绑列）
+路径：`Panels/item_templates.json`（ArrayById 合并）。
 
 ```jsonc
 {
-  "name": "units",                       // layout list.bind 引用
-  "collectionKey": "panel.roster.units", // 与图 EntityCollection 输出一致
-  "item": {
-    "fields": [
-      { "name": "displayName", "kind": "name" },
-      { "name": "health", "kind": "attribute", "attribute": "Health" },
-      { "name": "healthMax", "kind": "attributeBase", "attribute": "Health" },
-      { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
+  "id": "item.unit.roster",
+  "fields": [
+    { "name": "displayName", "kind": "name" },
+    { "name": "health", "kind": "attribute", "attribute": "Health" },
+    { "name": "healthMax", "kind": "attributeBase", "attribute": "Health" },
+    { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
+  ],
+  "layout": {
+    "controls": [
+      { "type": "label", "bind": "displayName" },
+      { "type": "progressBar", "current": "health", "max": "healthMax" },
+      { "type": "badge", "bind": "stunned", "text": "晕眩", "showWhen": true }
     ]
   }
 }
 ```
 
-| kind | 产出 | 读法 |
-|---|---|---|
-| `attribute` | float | `AttributeBuffer.GetCurrent` |
-| `attributeBase` | float | `AttributeBuffer.GetBase` |
-| `tag` | bool | `GameplayTagContainer.HasTag` |
-| `name` | string | 显示名组件；缺省 `""` |
+| 规则 | |
+|---|---|
+| 允许根字段 | `id` / `fields` / `layout`（及日后皮级扩展若另立合同） |
+| **禁止** | `graph`、`pins`、`collections`、`collectionKey`、`filter`、`sort`、任何父容器语义 |
+| `fields[].kind` | `attribute` / `attributeBase` / `tag` / `name`（同前） |
+| `layout` 绑定域 | 只见本 item 的 `fields[].name` |
+| 未知字段 | 装载 fail-closed |
 
-行序、成员集合 **完全等于** 图写入的 `EntityCollection`；面板不得重排、不得再筛。
+Item **不**需要知道「我是谁的 item」。
 
-### 3.3 `layout.controls[]`
+### 3.2 容器面板
 
-| type | 绑定 | 用途 |
-|---|---|---|
-| `label` | `text` 或 `bind`；可选 `prefix` | 标题、名字、计数 |
-| `progressBar` | `current` + `max`（列名） | 血条 |
-| `badge` | `bind`（bool）+ `text` + `showWhen` | 状态徽标 |
-| `list` | `bind`→list 名；`itemControls[]` | 按行重复 |
+路径：仍为 `Panels/panel_templates.json`。
 
-- 面板级 `bind` → `pins[].name`
-- `itemControls` 内 → 该 list 的 `item.fields[].name`
+在既有 `id/graph/pins/events/intents/skin` 之外：
 
-### 3.4 图侧约定（查询唯一入口）
+- `collections`：数组，可空
+- `layout`：对象；缺省 = 旧自动堆行
 
-值图必须：
+**禁止**根上再写内联 `lists[].item.fields` / `itemControls`（旧形状 → 装载失败）。
 
-1. 用 Query 家族完成过滤/排序（例：`QueryFilterTeam`、`QueryFilterAttributeRange`、`QuerySortByAttribute`）
-2. 写出 `EntityCollection`（`destination: EntityCollection`，`type: TargetList`，`collectionKey` 对齐模板）
-3. （推荐）`AggCount` → Summary pin，标题「在编 N」与名单人数一致
-
-示例骨架：
+#### `collections[]`
 
 ```jsonc
 {
-  "id": "Graph.Entity.List",
-  "kind": "Query",
-  "entry": "all",
-  "nodes": [
-    { "id": "all", "op": "QueryAllMapEntities" },
-    { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
-    { "id": "minHp", "op": "ConstFloat", "floatValue": 0.001 },
-    { "id": "maxHp", "op": "ConstFloat", "floatValue": 999999 },
-    { "id": "alive", "op": "QueryFilterAttributeRange", "attribute": "Health" },
-    { "id": "sorted", "op": "QuerySortByAttribute", "attribute": "Health", "descending": true },
-    { "id": "rowCount", "op": "AggCount" }
-  ],
-  "outputs": [
-    {
-      "id": "units",
-      "destination": "EntityCollection",
-      "type": "TargetList",
-      "collectionKey": "panel.roster.units",
-      "role": "Display"
-    },
-    {
-      "id": "rowCount",
-      "destination": "Summary",
-      "type": "Int",
-      "source": "rowCount",
-      "key": "panel.roster.rowCount"
-    }
-  ]
+  "name": "units",                        // layout list/grid.bind
+  "collectionKey": "panel.roster.units",  // 对齐图 EntityCollection
+  "item": "item.unit.roster"              // 引用独立 item 模板 id
 }
 ```
 
-### 3.5 运行时合同
+| 字段 | 含义 |
+|---|---|
+| `name` | 容器内集合槽名 |
+| `collectionKey` | 图写出的集合键 |
+| `item` | **必须**是已注册的 item 模板 id |
 
-- 刷新：图 eval 写出集合后，按 `item.fields` **按行填列**（目标：定容 SoA，不按行分配字典）
-- 死亡成员：图侧应已滤掉；若集合仍含死实体，填列时该行用字段缺省（0 / false / `""`），不炸面板
-- 符号：attribute / tag 装载期绑定 id；运行期缺组件 → 缺省，对齐 pin default
-- 结构错误（未知字段、`filter`/`sort`、重名、layout 绑错列）→ 装载 fail-closed
+行序、成员 = 图集合；容器不得再筛再排。
+
+#### 容器 `layout.controls[]`
+
+| type | 绑定 | 用途 |
+|---|---|---|
+| `label` | `text` 或 `bind`→pin；可选 `prefix` | 标题、计数 |
+| `list` | `bind`→collection 名 | **竖排**重复 item.layout |
+| `grid`（日后） | `bind`→collection 名 + 列数等 | **网格**重复同一 item.layout |
+| `progressBar` / `badge` | 面板级 pin（若需要） | 少用；行内控件应在 item 里 |
+
+- `list` / `grid` **不得**带 `itemControls`（出现 → 装载失败）
+- 行怎么画，只看 `collections[].item` 指向的模板
+
+### 3.3 图侧（查询唯一入口）
+
+与前一版相同：Query 家族过滤/排序 → `EntityCollection` + 推荐 `AggCount` → Summary pin。示例见案 13 / Showcase `Graph.Entity.List`。
+
+### 3.4 运行时合同
+
+1. 装载：先 item 目录，再面板；面板 `collections[].item` 必须解析到存在的 item
+2. 刷新：按 item.`fields` 对集合逐行填列（目标定容 SoA）
+3. 呈现：容器只选排版；每行/格实例化 **同一份** item.`layout`
+4. 结构错误 fail-closed；缺组件 → 字段缺省，不炸面板
 
 ## 4. 场景
 
-**实体名册**（`panel_entity_list`）
+**名册 list（今天）**
 
-- 图：己方 → 血量>0 → 按血量降序 → 集合 + 计数
-- 面板：只声明列与 layout（名字、血条、晕眩徽标）
-- 玩家：进图见名册；掉血后顺序与条长随图刷新变化；晕眩行出徽标
+- Item：`item.unit.roster`（名字、血条、晕眩）
+- 容器：`panel.entity.list` → `collections` 引用该 item + `layout` 一个 `list`
+
+**单位墙 grid（明天，同 item）**
+
+```jsonc
+{
+  "id": "panel.entity.grid",
+  "graph": "Graph.Entity.List",
+  "pins": [ { "name": "rowCount", "key": "panel.roster.rowCount", "default": 0 } ],
+  "collections": [
+    { "name": "units", "collectionKey": "panel.roster.units", "item": "item.unit.roster" }
+  ],
+  "layout": {
+    "controls": [
+      { "type": "label", "prefix": "在编 ", "bind": "rowCount" },
+      { "type": "grid", "bind": "units", "columns": 3 }
+    ]
+  }
+}
+```
+
+`item.unit.roster` **一行不改**。
 
 ## 5. 边界
 
-- 不做面板内第二套 filter/sort
-- 不做技能/效果列表产品面（列绑定合同可复用）
+- Item 不是完整面板：无 CreatePanel 生命周期、无独立 graph 圈人
+- 不做面板内 filter/sort
 - 不做点击行选中（#1015）
 - 不把 Entity 暴露给控件
-- 小地图 marker 热路径仍走 Core Minimap SoA，不进本列表投影
-- 旧模板无 `lists`/`layout`：行为不变
+- 小地图 marker 仍走 Core Minimap SoA
+- 旧无 `collections`/`layout` 的标量面板：行为不变
+- 本切片落地 `list`；`grid` 合同预留、控件实现可后开
 
 ## 6. UAT
 
 ```gherkin
-Feature: 名册的人由查询图决定，面板只声明怎么展示
+Feature: 一行怎么画是独立模板，list 和 grid 都能引用
   作为一个做关卡的人
-  我想在图里圈存活单位并排好序
-  面板模板只写每一行要显示的名字、血条和状态
+  我想先写好「一个单位格子长什么样」
+  再把它挂到名册或格子墙，而不用复制两份行配置
 
-  Scenario: 图决定名单与顺序
-    Given 名册地图已加载且值图已按血量过滤并排序
-    When 我看左侧名册
-    Then 我只看到存活单位且从上到下血量从高到低
-    And 标题上的在编人数与列表行数一致
+  Scenario: Item 模板不包含父容器语义
+    Given 存在 item.unit.roster，只有 fields 与 layout
+    Then 其中没有 collectionKey、没有 list/grid、没有 filter/sort
 
-  Scenario: 面板只声明列与控件
-    Given 模板 lists 没有 filter/sort 字段
-    And item.fields 声明了名字、血量、晕眩
-    When 名册渲染
-    Then 每一行有名字和血条
-    And 带晕眩状态的那一行出现「晕眩」徽标
+  Scenario: List 容器只引用 item
+    Given panel.entity.list 的 collections 指向 item.unit.roster
+    And layout 只有 list 编排、没有 itemControls
+    When 名册打开
+    Then 每一行按 item 模板画出名字、血条与晕眩徽标
 
-  Scenario: 误把过滤写进面板会装载失败
-    Given 某模板 lists 条目写了 filter 或 sort
+  Scenario: 同一 item 可挂到另一种编排（合同）
+    Given 另有容器用 grid 绑定同一 collection 与同一 item id
+    Then 不必修改 item.unit.roster 即可复用行画面
+
+  Scenario: 误把行控件写进 list 容器会装载失败
+    Given 某 list 控件写了 itemControls
     When 配置装载
     Then 装载失败并指出非法字段
 
-  Scenario: 旧标量面板不受影响
-    Given 火球状态模板没有 lists/layout
-    When 面板打开
-    Then 仍按自动堆行显示 pin
+  Scenario: 图仍决定名单与顺序
+    Given 查询图已过滤排序
+    When 我看名册
+    Then 只见存活单位且血量从高到低
+    And 在编人数与行数一致
 ```

@@ -174,7 +174,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         var dim = new UiColor(136, 136, 136);
 
         UiElementBuilder body = template.Layout != null
-            ? BuildDeclaredControls(template.Layout.Controls, values, lists, item: null)
+            ? BuildDeclaredControls(template, template.Layout.Controls, values, lists, item: null)
             : BuildRows(template, values);
 
         var builder = new UiElementBuilder(UiNodeKind.Container).Column()
@@ -204,6 +204,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     }
 
     private static UiElementBuilder BuildDeclaredControls(
+        PanelTemplate template,
         IReadOnlyList<PanelLayoutControl> controls,
         PanelVariableSet values,
         IReadOnlyList<PanelListProjection> lists,
@@ -213,7 +214,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         for (int i = 0; i < controls.Count; i++)
         {
             PanelLayoutControl control = controls[i];
-            UiElementBuilder? built = BuildControl(control, values, lists, item);
+            UiElementBuilder? built = BuildControl(template, control, values, lists, item);
             if (built != null)
             {
                 children.Add(built);
@@ -228,6 +229,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     }
 
     private static UiElementBuilder? BuildControl(
+        PanelTemplate template,
         PanelLayoutControl control,
         PanelVariableSet values,
         IReadOnlyList<PanelListProjection> lists,
@@ -238,7 +240,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             PanelLayoutControlType.Label => BuildLabel(control, values, item),
             PanelLayoutControlType.ProgressBar => BuildProgressBar(control, values, item),
             PanelLayoutControlType.Badge => BuildBadge(control, values, item),
-            PanelLayoutControlType.List => BuildList(control, values, lists),
+            PanelLayoutControlType.List => BuildList(template, control, values, lists),
             _ => null,
         };
     }
@@ -332,10 +334,18 @@ public sealed class PanelPresentationSystem : ISystem<float>
     }
 
     private static UiElementBuilder BuildList(
+        PanelTemplate template,
         PanelLayoutControl control,
         PanelVariableSet values,
         IReadOnlyList<PanelListProjection> lists)
     {
+        PanelCollectionBinding collection = FindCollection(template, control.Bind!)
+            ?? throw new InvalidOperationException(
+                $"Panel '{template.Id}' list bind '{control.Bind}' has no matching collection.");
+        PanelItemTemplate itemTemplate = collection.Item
+            ?? throw new InvalidOperationException(
+                $"Panel '{template.Id}' collection '{collection.Name}' item is not bound.");
+
         PanelListProjection? projection = FindList(lists, control.Bind!);
         var rows = new List<UiElementBuilder>();
         if (projection != null)
@@ -352,7 +362,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     .Background(new UiColor(28, 28, 48, 180))
                     .Radius(4)
                     .Children(
-                        BuildDeclaredControls(control.ItemControls, values, lists, item)));
+                        BuildDeclaredControls(template, itemTemplate.Layout.Controls, values, lists, item)));
             }
         }
 
@@ -363,6 +373,19 @@ public sealed class PanelPresentationSystem : ISystem<float>
             .Class($"list-{control.Bind}")
             .Gap(4)
             .Children(rows.ToArray());
+    }
+
+    private static PanelCollectionBinding? FindCollection(PanelTemplate template, string name)
+    {
+        for (int i = 0; i < template.Collections.Count; i++)
+        {
+            if (string.Equals(template.Collections[i].Name, name, StringComparison.Ordinal))
+            {
+                return template.Collections[i];
+            }
+        }
+
+        return null;
     }
 
     private static PanelListProjection? FindList(IReadOnlyList<PanelListProjection> lists, string name)

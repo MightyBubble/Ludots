@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
 using Ludots.Core.UI.PanelProjection;
@@ -165,63 +166,76 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void Load_ListsAndLayout_ParsesColumnsAndControls()
+        public void Load_CollectionsReferenceItemTemplateId()
         {
             const string json = """
             {
               "id": "tests.panel.roster",
               "graph": "tests.graph.roster",
               "pins": [ { "name": "rowCount", "key": "k.count", "mode": "realtime", "default": 0 } ],
-              "lists": [
+              "collections": [
                 {
                   "name": "units",
                   "collectionKey": "tests.collection.units",
-                  "item": {
-                    "fields": [
-                      { "name": "displayName", "kind": "name" },
-                      { "name": "health", "kind": "attribute", "attribute": "Health" },
-                      { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
-                    ]
-                  }
+                  "item": "item.unit.roster"
                 }
               ],
               "layout": {
                 "controls": [
                   { "type": "label", "prefix": "在编 ", "bind": "rowCount" },
-                  {
-                    "type": "list",
-                    "bind": "units",
-                    "itemControls": [
-                      { "type": "label", "bind": "displayName" },
-                      { "type": "badge", "bind": "stunned", "text": "晕眩", "showWhen": true }
-                    ]
-                  }
+                  { "type": "list", "bind": "units" }
                 ]
               }
             }
             """;
 
             PanelTemplate template = PanelTemplateLoader.Load(json);
-            Assert.That(template.Lists.Count, Is.EqualTo(1));
-            Assert.That(template.Lists[0].Fields[2].Kind, Is.EqualTo(PanelItemFieldKind.Tag));
+            Assert.That(template.Collections.Count, Is.EqualTo(1));
+            Assert.That(template.Collections[0].ItemTemplateId, Is.EqualTo("item.unit.roster"));
             Assert.That(template.Layout, Is.Not.Null);
             Assert.That(template.Layout!.Controls[1].Type, Is.EqualTo(PanelLayoutControlType.List));
-            Assert.That(template.Layout.Controls[1].ItemControls[1].ShowWhen, Is.True);
         }
 
         [Test]
-        public void Load_ListFilterOrSort_FailsClosed()
+        public void Load_InlineItemControls_FailsClosed()
         {
             const string json = """
             {
-              "id": "tests.panel.badfilter",
+              "id": "tests.panel.inline",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                { "name": "units", "collectionKey": "c", "item": "item.unit.roster" }
+              ],
+              "layout": {
+                "controls": [
+                  {
+                    "type": "list",
+                    "bind": "units",
+                    "itemControls": [ { "type": "label", "text": "x" } ]
+                  }
+                ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("itemControls"));
+        }
+
+        [Test]
+        public void Load_LegacyListsRoot_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.legacy",
               "graph": "g",
               "pins": [ { "name": "n", "key": "k" } ],
               "lists": [
                 {
                   "name": "units",
                   "collectionKey": "c",
-                  "filter": [ { "kind": "attribute", "attribute": "Health", "op": "gt", "value": 0 } ],
                   "item": { "fields": [ { "name": "health", "kind": "attribute", "attribute": "Health" } ] }
                 }
               ]
@@ -230,7 +244,7 @@ namespace Ludots.Tests.GasTests.UI
 
             Assert.That(
                 () => PanelTemplateLoader.Load(json),
-                Throws.InvalidOperationException.With.Message.Contains("filter"));
+                Throws.InvalidOperationException.With.Message.Contains("lists"));
         }
 
         [Test]
@@ -243,7 +257,7 @@ namespace Ludots.Tests.GasTests.UI
               "pins": [ { "name": "n", "key": "k" } ],
               "layout": {
                 "controls": [
-                  { "type": "list", "bind": "missing", "itemControls": [ { "type": "label", "text": "x" } ] }
+                  { "type": "list", "bind": "missing" }
                 ]
               }
             }
@@ -252,6 +266,65 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(
                 () => PanelTemplateLoader.Load(json),
                 Throws.InvalidOperationException.With.Message.Contains("list"));
+        }
+
+        [Test]
+        public void ItemTemplate_Load_RejectsParentSemantics()
+        {
+            const string json = """
+            {
+              "id": "item.bad",
+              "fields": [ { "name": "health", "kind": "attribute", "attribute": "Health" } ],
+              "layout": {
+                "controls": [ { "type": "list", "bind": "units" } ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelItemTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("list"));
+        }
+
+        [Test]
+        public void Bind_ResolvesItemOntoCollection()
+        {
+            PanelItemTemplate item = PanelItemTemplateLoader.Load("""
+            {
+              "id": "item.unit.roster",
+              "fields": [
+                { "name": "displayName", "kind": "name" },
+                { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "label", "bind": "displayName" },
+                  { "type": "badge", "bind": "stunned", "text": "晕眩", "showWhen": true }
+                ]
+              }
+            }
+            """);
+
+            PanelTemplate panel = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.roster",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                { "name": "units", "collectionKey": "c", "item": "item.unit.roster" }
+              ],
+              "layout": { "controls": [ { "type": "list", "bind": "units" } ] }
+            }
+            """);
+
+            var items = new Ludots.Core.UI.PanelHosting.PanelItemTemplateRegistry();
+            items.Register(item);
+            items.Freeze();
+            TagRegistry.Register("Status.Stunned");
+            Ludots.Core.UI.PanelHosting.PanelItemTemplateBinder.Bind(panel, items);
+
+            Assert.That(panel.Collections[0].Item, Is.SameAs(item));
+            Assert.That(panel.Collections[0].Item!.Fields[1].SymbolId, Is.GreaterThan(0));
         }
     }
 }

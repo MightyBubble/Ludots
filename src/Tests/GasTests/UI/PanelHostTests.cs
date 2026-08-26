@@ -321,6 +321,7 @@ namespace Ludots.Tests.GasTests.UI
                 string dir = System.IO.Path.Combine(tempRoot, "Panels");
                 System.IO.Directory.CreateDirectory(dir);
                 System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "panel_templates.json"), "[" + TemplateJson + "]");
+                System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "item_templates.json"), "[]");
 
                 var vfs = new Ludots.Core.Modding.VirtualFileSystem();
                 vfs.Mount("Core", tempRoot);
@@ -328,11 +329,16 @@ namespace Ludots.Tests.GasTests.UI
                 var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
                 var catalog = new Ludots.Core.Config.ConfigCatalog();
                 catalog.Add(new Ludots.Core.Config.ConfigCatalogEntry(
+                    PanelItemTemplateCatalogLoader.ConfigPath,
+                    Ludots.Core.Config.ConfigMergePolicy.ArrayById,
+                    "id"));
+                catalog.Add(new Ludots.Core.Config.ConfigCatalogEntry(
                     PanelTemplateCatalogLoader.ConfigPath,
                     Ludots.Core.Config.ConfigMergePolicy.ArrayById,
                     "id"));
 
-                PanelTemplateRegistry registry = new PanelTemplateCatalogLoader(pipeline).Load(catalog);
+                PanelItemTemplateRegistry items = new PanelItemTemplateCatalogLoader(pipeline).Load(catalog);
+                PanelTemplateRegistry registry = new PanelTemplateCatalogLoader(pipeline).Load(items, catalog);
                 Assert.That(registry.Count, Is.EqualTo(1));
                 Assert.That(registry.Require(TemplateId).Pins[0].Realtime, Is.True);
             }

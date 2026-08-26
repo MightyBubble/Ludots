@@ -36,24 +36,71 @@ namespace Ludots.Core.UI.PanelProjection
     }
 
     /// <summary>
-    /// List declaration: points at a graph EntityCollection and declares row scalar columns.
-    /// Membership and order are owned by the query graph — no filter/sort here.
+    /// Reusable one-entity presentation template. Does not know list/grid parents
+    /// or which collection it will be bound to.
     /// </summary>
-    public sealed class PanelListDeclaration
+    public sealed class PanelItemTemplate
     {
-        public PanelListDeclaration(
-            string name,
-            string collectionKey,
-            IReadOnlyList<PanelItemField> fields)
+        public PanelItemTemplate(string id, IReadOnlyList<PanelItemField> fields, PanelLayout layout)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("Item template id is required.", nameof(id));
+            }
+
+            if (fields == null || fields.Count == 0)
+            {
+                throw new ArgumentException($"Item template '{id}' must declare at least one field.", nameof(fields));
+            }
+
+            if (layout == null || layout.Controls.Count == 0)
+            {
+                throw new ArgumentException($"Item template '{id}' requires a non-empty layout.", nameof(layout));
+            }
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelItemField field in fields)
+            {
+                if (field == null)
+                {
+                    throw new ArgumentException($"Item template '{id}' has a null field.", nameof(fields));
+                }
+
+                if (!seen.Add(field.Name))
+                {
+                    throw new ArgumentException($"Item template '{id}' declares duplicate field '{field.Name}'.", nameof(fields));
+                }
+            }
+
+            Id = id.Trim();
+            Fields = fields;
+            Layout = layout;
+        }
+
+        public string Id { get; }
+        public IReadOnlyList<PanelItemField> Fields { get; }
+        public PanelLayout Layout { get; }
+    }
+
+    /// <summary>
+    /// Container binding: graph collection + which reusable item template fills each row.
+    /// Membership and order are owned by the query graph.
+    /// </summary>
+    public sealed class PanelCollectionBinding
+    {
+        public PanelCollectionBinding(string name, string collectionKey, string itemTemplateId)
         {
             Name = name;
             CollectionKey = collectionKey;
-            Fields = fields;
+            ItemTemplateId = itemTemplateId;
         }
 
         public string Name { get; }
         public string CollectionKey { get; }
-        public IReadOnlyList<PanelItemField> Fields { get; }
+        public string ItemTemplateId { get; }
+
+        /// <summary>Resolved after catalog load; null until <see cref="PanelItemTemplateBinder"/> runs.</summary>
+        public PanelItemTemplate? Item { get; internal set; }
     }
 
     public sealed class PanelLayoutControl
@@ -66,8 +113,7 @@ namespace Ludots.Core.UI.PanelProjection
             string? prefix,
             string? current,
             string? max,
-            bool? showWhen,
-            IReadOnlyList<PanelLayoutControl>? itemControls)
+            bool? showWhen)
         {
             Type = type;
             ClassName = className;
@@ -77,7 +123,6 @@ namespace Ludots.Core.UI.PanelProjection
             Current = current;
             Max = max;
             ShowWhen = showWhen;
-            ItemControls = itemControls ?? Array.Empty<PanelLayoutControl>();
         }
 
         public PanelLayoutControlType Type { get; }
@@ -88,14 +133,13 @@ namespace Ludots.Core.UI.PanelProjection
         public string? Current { get; }
         public string? Max { get; }
         public bool? ShowWhen { get; }
-        public IReadOnlyList<PanelLayoutControl> ItemControls { get; }
     }
 
     public sealed class PanelLayout
     {
         public PanelLayout(IReadOnlyList<PanelLayoutControl> controls)
         {
-            Controls = controls;
+            Controls = controls ?? Array.Empty<PanelLayoutControl>();
         }
 
         public IReadOnlyList<PanelLayoutControl> Controls { get; }

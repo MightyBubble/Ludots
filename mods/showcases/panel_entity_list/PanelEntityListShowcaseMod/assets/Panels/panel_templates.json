@@ -10,18 +10,11 @@
         "default": 0
       }
     ],
-    "lists": [
+    "collections": [
       {
         "name": "units",
         "collectionKey": "panel.roster.units",
-        "item": {
-          "fields": [
-            { "name": "displayName", "kind": "name" },
-            { "name": "health", "kind": "attribute", "attribute": "Health" },
-            { "name": "healthMax", "kind": "attributeBase", "attribute": "Health" },
-            { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
-          ]
-        }
+        "item": "item.unit.roster"
       }
     ],
     "layout": {
@@ -35,27 +28,7 @@
         {
           "type": "list",
           "class": "roster-list",
-          "bind": "units",
-          "itemControls": [
-            {
-              "type": "label",
-              "class": "unit-name",
-              "bind": "displayName"
-            },
-            {
-              "type": "progressBar",
-              "class": "unit-health",
-              "current": "health",
-              "max": "healthMax"
-            },
-            {
-              "type": "badge",
-              "class": "unit-stunned",
-              "bind": "stunned",
-              "text": "晕眩",
-              "showWhen": true
-            }
-          ]
+          "bind": "units"
         }
       ]
     }

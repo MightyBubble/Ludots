@@ -6,6 +6,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Registry;
+using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
 using NUnit.Framework;
 
@@ -29,35 +30,49 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void Project_PreservesGraphOrderAndFillsColumns()
+        public void Project_PreservesGraphOrderAndFillsColumnsFromItemTemplate()
         {
             int healthId = AttributeRegistry.Register("Health");
             int stunnedId = TagRegistry.Register("Status.Stunned");
 
-            const string templateJson = """
+            PanelItemTemplate item = PanelItemTemplateLoader.Load("""
+            {
+              "id": "item.unit.roster",
+              "fields": [
+                { "name": "displayName", "kind": "name" },
+                { "name": "health", "kind": "attribute", "attribute": "Health" },
+                { "name": "healthMax", "kind": "attributeBase", "attribute": "Health" },
+                { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "label", "bind": "displayName" },
+                  { "type": "progressBar", "current": "health", "max": "healthMax" },
+                  { "type": "badge", "bind": "stunned", "text": "晕眩", "showWhen": true }
+                ]
+              }
+            }
+            """);
+
+            PanelTemplate template = PanelTemplateLoader.Load("""
             {
               "id": "tests.panel.list",
               "graph": "g",
               "pins": [ { "name": "n", "key": "k" } ],
-              "lists": [
+              "collections": [
                 {
                   "name": "units",
                   "collectionKey": "tests.roster",
-                  "item": {
-                    "fields": [
-                      { "name": "displayName", "kind": "name" },
-                      { "name": "health", "kind": "attribute", "attribute": "Health" },
-                      { "name": "healthMax", "kind": "attributeBase", "attribute": "Health" },
-                      { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
-                    ]
-                  }
+                  "item": "item.unit.roster"
                 }
               ]
             }
-            """;
+            """);
 
-            PanelTemplate template = PanelTemplateLoader.Load(templateJson);
-            PanelListProjector.BindSymbols(template);
+            var items = new PanelItemTemplateRegistry();
+            items.Register(item);
+            items.Freeze();
+            PanelItemTemplateBinder.Bind(template, items);
 
             using World world = World.Create();
             Entity owner = world.Create();
@@ -70,7 +85,6 @@ namespace Ludots.Tests.GasTests.UI
                 "tests.roster",
                 EntityCollectionSourceKind.GasGraphResult,
                 EntityCollectionRoleKind.Display);
-            // Graph already sorted / filtered — projector must keep this order.
             store.Replace(owner, descriptor, new[] { high, mid });
 
             var projector = new PanelListProjector(world, store);
