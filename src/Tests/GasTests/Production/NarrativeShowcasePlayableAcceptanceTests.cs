@@ -13,7 +13,9 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Dialogue;
+using Ludots.Core.Gameplay.MapTriggers;
+using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
@@ -81,53 +83,93 @@ namespace Ludots.Tests.GAS.Production
             var uiRoot = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
                 ?? throw new InvalidOperationException("UIRoot was not installed.");
             var backend = GetInputBackend(engine);
-            var director = engine.GetService(CoreServiceKeys.NarrativeDirector)
-                ?? throw new InvalidOperationException("NarrativeDirector was not installed.");
+            var dialogue = engine.GetService(CoreServiceKeys.DialogueRuntime)
+                ?? throw new InvalidOperationException("DialogueRuntime was not installed.");
+            var sequencer = engine.GetService(CoreServiceKeys.SequencerRuntime)
+                ?? throw new InvalidOperationException("SequencerRuntime was not installed.");
+            var tasks = engine.GetService(CoreServiceKeys.TaskRuntimeService)
+                ?? throw new InvalidOperationException("TaskRuntimeService was not installed.");
 
             LoadMap(engine, MapId, frameTimesMs, 8);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
-            Assert.That(AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains("Narrative Showcase", StringComparison.Ordinal)), Is.True);
-            AssertTaskState(director, NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingTaskId, TaskInstanceState.Active);
-            CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "map_loaded");
-            timeline.Add("[T+001] Loaded the narrative showcase hub; HUD mounted and task chain entered the briefing beat.");
-
-            SelectNamedEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, frameTimesMs);
-            PressButton(engine, backend, "<Keyboard>/enter", frameTimesMs);
-            PressButton(engine, backend, "<Keyboard>/enter", frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => director.HasActiveDialogue && !director.HasActiveCinematic, 30);
-            CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
-            timeline.Add("[T+002] Advanced the intro cinematic through the shared narrative input path and handed off into elder dialogue.");
-
-            PressButton(engine, backend, "<Keyboard>/1", frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => director.BuildDialogueSummary().Contains("ember-memory", StringComparison.OrdinalIgnoreCase), 20);
-            PressButton(engine, backend, "<Keyboard>/1", frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => director.BuildDialogueSummary().Contains("Wake what sleeps beneath it", StringComparison.OrdinalIgnoreCase), 20);
-            PressButton(engine, backend, "<Keyboard>/enter", frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => !director.HasActiveDialogue, 20);
-            Assert.That(director.GetVariable(NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId).IntValue, Is.EqualTo(1));
-            Assert.That(director.GetVariable(NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId).IntValue, Is.EqualTo(2));
-            AssertTaskState(director, NarrativeShowcaseMod.NarrativeShowcaseIds.TrialTaskId, TaskInstanceState.Active);
-            CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "briefing_branch_complete");
-            timeline.Add("[T+003] Took the lore branch, raised shared narrative variables, and advanced the reusable task runtime into the trial beat.");
-
-            float baselineMoveSpeed = ReadAttribute(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, "MoveSpeed");
-            MoveNearEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.ShrineName, 250f, frameTimesMs);
-            PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
+            Assert.That(
+                AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text =>
+                    text.Contains("Story Showcase", StringComparison.Ordinal) ||
+                    text.Contains("Narrative Showcase", StringComparison.Ordinal)),
+                Is.True);
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => director.HasActiveCinematic && UiContains(uiRoot, "Auto Bubble"),
-                40);
-            CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "shrine_interacted");
-            timeline.Add("[T+004] Drove the ECS move/order loop to the shrine and triggered the reveal cinematic through the showcase interaction system.");
+                () => sequencer.HasActiveSequence || dialogue.HasActiveDialogue,
+                30,
+                () => "Expected bootstrap intro sequence or briefing dialogue after map focus.");
+            AssertTaskState(tasks, NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingTaskId, TaskInstanceState.Active);
+            CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "map_loaded");
+            timeline.Add("[T+001] Loaded the narrative showcase hub; HUD mounted and TaskRuntime entered the briefing beat.");
 
-            PressButton(engine, backend, "<Keyboard>/enter", frameTimesMs);
+            SelectNamedEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, frameTimesMs);
+            if (sequencer.HasActiveSequence)
+            {
+                PressStoryAction(engine, backend, DialogueInputActionIds.Skip, frameTimesMs);
+            }
+
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => dialogue.HasActiveDialogue && !sequencer.HasActiveSequence,
+                60,
+                () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
+            Assert.That(dialogue.TryGetActiveView(out DialogueView introDialogue), Is.True);
+            Assert.That(introDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingDialogueId));
+            CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
+            timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
+
+            PressStoryAction(engine, backend, DialogueInputActionIds.Choice1, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => dialogue.TryGetActiveView(out DialogueView view) &&
+                      view.ResolvedText.Contains("ember-memory", StringComparison.OrdinalIgnoreCase),
+                20,
+                () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
+            PressStoryAction(engine, backend, DialogueInputActionIds.Choice1, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => dialogue.TryGetActiveView(out DialogueView view) &&
+                      view.ResolvedText.Contains("Wake what sleeps beneath it", StringComparison.OrdinalIgnoreCase),
+                20,
+                () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
+            PressStoryAction(engine, backend, DialogueInputActionIds.Advance, frameTimesMs);
+            TickUntil(engine, frameTimesMs, () => !dialogue.HasActiveDialogue, 20);
+            AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId, 1);
+            AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId, 2);
+            AssertTaskState(tasks, NarrativeShowcaseMod.NarrativeShowcaseIds.TrialTaskId, TaskInstanceState.Active);
+            CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "briefing_branch_complete");
+            timeline.Add("[T+003] Took the lore branch via StoryChoice1, wrote MapVariableStore trust/lore, and advanced TaskRuntime into the trial beat.");
+
+            float baselineMoveSpeed = ReadAttribute(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, "MoveSpeed");
+            MoveNearEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.ShrineName, 250f, frameTimesMs);
+            PressStoryAction(engine, backend, DialogueInputActionIds.Interact, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => sequencer.HasActiveSequence &&
+                      (UiContains(uiRoot, "Immersive Subtitle") || UiContains(uiRoot, "Auto Bubble")),
+                40,
+                () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
+            Assert.That(sequencer.TryGetActiveView(out SequenceView reveal), Is.True);
+            Assert.That(reveal.SequenceId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.TrialRevealSequenceId));
+            CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "shrine_interacted");
+            timeline.Add("[T+004] Drove the ECS move/order loop to the shrine and started TrialReveal through SequencerRuntime.");
+
+            PressStoryAction(engine, backend, DialogueInputActionIds.Skip, frameTimesMs);
             TickUntil(engine, frameTimesMs, () => FindEntityByName(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.BeastName) != Entity.Null, 60);
             Entity beast = FindEntityByName(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.BeastName);
             Assert.That(beast, Is.Not.EqualTo(Entity.Null));
-            CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "beast_spawned");
-            timeline.Add("[T+005] Completed the reveal cinematic, let the callback emit the spawn signal, and observed the beast arrive through the runtime entity queue.");
+            CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "beast_spawned");
+            timeline.Add("[T+005] Skipped the reveal sequence, let the completed callback emit the spawn signal, and observed the beast arrive through the runtime entity queue.");
             WaitForCameraBlendToComplete(engine, frameTimesMs);
 
             float beastHealthBeforeInput = ReadHealth(engine.World, beast);
@@ -136,38 +178,45 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 8, frameTimesMs);
             float beastHealthAfterInput = ReadHealth(engine.World, beast);
             Assert.That(beastHealthAfterInput, Is.LessThan(beastHealthBeforeInput), BuildCombatInputDiagnostics(engine, beast));
-            CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "beast_pressured");
+            CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "beast_pressured");
             timeline.Add($"[T+006] Used Arcweaver's inherited combat input on the spawned beast; HP {beastHealthBeforeInput:0.##} -> {beastHealthAfterInput:0.##}.");
 
             ApplyDeterministicGasFinisher(engine, FindEntityByName(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName), beast, frameTimesMs);
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => director.TryGetTaskState(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnTaskId, out var state) && state == TaskInstanceState.Active,
+                () => tasks.TryGetState(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnTaskId, out var state) && state == TaskInstanceState.Active,
                 120,
-                () => BuildTaskProgressDiagnostics(engine, director, beast));
+                () => BuildTaskProgressDiagnostics(engine, dialogue, tasks, beast));
             Assert.That(ReadHealth(engine.World, beast), Is.LessThanOrEqualTo(0f));
-            CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "beast_defeated");
-            timeline.Add("[T+007] Finished the encounter through GAS effects, which the narrative runtime converted into the return beat via signal tracking.");
+            CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "beast_defeated");
+            timeline.Add("[T+007] Finished the encounter through GAS effects; TaskRuntime advanced into the return beat via signal tracking.");
 
             MoveNearEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.ElderName, 260f, frameTimesMs);
-            PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => director.HasActiveDialogue, 30);
-            PressButton(engine, backend, "<Keyboard>/2", frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => director.TryGetTaskState(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnTaskId, out var state) && state == TaskInstanceState.Completed, 60);
+            PressStoryAction(engine, backend, DialogueInputActionIds.Interact, frameTimesMs);
+            TickUntil(engine, frameTimesMs, () => dialogue.HasActiveDialogue, 30);
+            Assert.That(dialogue.TryGetActiveView(out DialogueView returnDialogue), Is.True);
+            Assert.That(returnDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnDialogueId));
+            PressStoryAction(engine, backend, DialogueInputActionIds.Choice2, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => tasks.TryGetState(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnTaskId, out var state) && state == TaskInstanceState.Completed,
+                60,
+                () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             Tick(engine, 10, frameTimesMs);
             float rewardedMoveSpeed = ReadAttribute(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, "MoveSpeed");
-            Assert.That(director.GetVariable(NarrativeShowcaseMod.NarrativeShowcaseIds.EndingVariableId).StringValue, Is.EqualTo("Mercy"));
-            Assert.That(director.GetVariable(NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId).IntValue, Is.EqualTo(4));
+            AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.EndingVariableId, NarrativeShowcaseMod.NarrativeShowcaseIds.EndingMercy);
+            AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId, 4);
             Assert.That(rewardedMoveSpeed, Is.GreaterThan(baselineMoveSpeed));
-            CaptureSnapshot(engine, uiRoot, director, snapshots, frames, frameTimesMs, screensDir, "mercy_ending");
-            timeline.Add("[T+008] Returned to the elder, unlocked the Mercy branch from earlier lore knowledge, completed the task chain, and received the trigger-driven GAS blessing reward.");
+            CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "mercy_ending");
+            timeline.Add("[T+008] Returned to the elder, unlocked Mercy through lore-gated StoryChoice2, completed TaskRuntime, and received the trigger-driven GAS blessing reward.");
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, snapshots, frames, frameTimesMs));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
-            AcceptanceUiEvidenceWriter.WriteTimelineSheet(frames, screensDir, Path.Combine(screensDir, "timeline.png"), "Narrative showcase 5W1H screenshot flow");
+            AcceptanceUiEvidenceWriter.WriteTimelineSheet(frames, screensDir, Path.Combine(screensDir, "timeline.png"), "Story showcase Dialogue/Sequencer screenshot flow");
             AcceptanceUiEvidenceWriter.WriteFiveWOneHMarkdown("narrative-showcase", frames, Path.Combine(artifactDir, "5w1h.md"));
         }
         private static GameEngine CreateEngine()
@@ -291,6 +340,21 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 2, frameTimesMs);
         }
 
+        private static void PressStoryAction(GameEngine engine, TestInputBackend backend, string actionId, List<double> frameTimesMs)
+        {
+            string path = actionId switch
+            {
+                DialogueInputActionIds.Interact => "<Keyboard>/e",
+                DialogueInputActionIds.Advance => "<Keyboard>/enter",
+                DialogueInputActionIds.Skip => "<Keyboard>/tab",
+                DialogueInputActionIds.Choice1 => "<Keyboard>/1",
+                DialogueInputActionIds.Choice2 => "<Keyboard>/2",
+                DialogueInputActionIds.Choice3 => "<Keyboard>/3",
+                _ => throw new ArgumentOutOfRangeException(nameof(actionId), actionId, "Unknown story input action.")
+            };
+            PressButton(engine, backend, path, frameTimesMs);
+        }
+
         private static void LeftClickWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
         {
             SetMouseWorld(engine, backend, screenPosition, frameTimesMs);
@@ -346,10 +410,29 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ReadHealth(engine.World, target), Is.LessThanOrEqualTo(0f));
         }
 
-        private static void AssertTaskState(NarrativeDirector director, string taskId, TaskInstanceState expectedState)
+        private static void AssertTaskState(TaskRuntimeService tasks, string taskId, TaskInstanceState expectedState)
         {
-            Assert.That(director.TryGetTaskState(taskId, out var actualState), Is.True);
+            Assert.That(tasks.TryGetState(taskId, out var actualState), Is.True);
             Assert.That(actualState, Is.EqualTo(expectedState));
+        }
+
+        private static void AssertMapVariable(GameEngine engine, string variableId, int expected)
+        {
+            MapVariableStore variables = engine.CurrentMapSession?.Variables
+                ?? throw new InvalidOperationException("CurrentMapSession.Variables was not available.");
+            Assert.That(variables.Contains(variableId), Is.True, $"Map variable '{variableId}' is not declared.");
+            Assert.That(variables.ReadInt(variableId), Is.EqualTo(expected), $"Map variable '{variableId}' mismatch.");
+        }
+
+        private static string BuildStoryStateDiagnostics(DialogueRuntime dialogue, SequencerRuntime sequencer, TaskRuntimeService tasks)
+        {
+            string dialogueText = dialogue.TryGetActiveView(out DialogueView view)
+                ? $"{view.DialogueId}/{view.NodeId}:{view.ResolvedText}"
+                : "<none>";
+            string sequenceText = sequencer.TryGetActiveView(out SequenceView sequence)
+                ? $"{sequence.SequenceId}@{sequence.Time:0.##}"
+                : "<none>";
+            return $"dialogue={dialogueText} | sequence={sequenceText} | tasks={BuildTaskSummary(tasks)}";
         }
 
         private static Entity FindEntityByName(World world, string name)
@@ -551,16 +634,16 @@ namespace Ludots.Tests.GAS.Production
             return string.Join(" || ", details);
         }
 
-        private static string BuildTaskProgressDiagnostics(GameEngine engine, NarrativeDirector director, Entity beast)
+        private static string BuildTaskProgressDiagnostics(GameEngine engine, DialogueRuntime dialogue, TaskRuntimeService tasks, Entity beast)
         {
             var details = new List<string>
             {
-                $"task={director.BuildTaskSummary()}",
-                $"objective={director.BuildObjectiveSummary()}",
+                $"task={BuildTaskSummary(tasks)}",
+                $"objective={BuildObjectiveSummary(tasks)}",
                 $"beastHealth={ReadHealth(engine.World, beast):0.##}"
             };
 
-            if (director.TryResolveEntity(NarrativeShowcaseMod.NarrativeShowcaseIds.BeastAlias, out Entity boundBeast))
+            if (dialogue.TryResolveEntity(NarrativeShowcaseMod.NarrativeShowcaseIds.BeastAlias, out Entity boundBeast))
             {
                 details.Add($"boundBeast={boundBeast.Id}:{boundBeast.WorldId}:{boundBeast.Version}");
                 details.Add($"boundHealth={ReadHealth(engine.World, boundBeast):0.##}");
@@ -575,12 +658,8 @@ namespace Ludots.Tests.GAS.Production
                 details.Add($"beastDefeatedFlag={defeated}");
             }
 
-            if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService tasks)
-            {
-                tasks.Signals.TryGetValue(NarrativeShowcaseMod.NarrativeShowcaseIds.BeastDefeatedSignal, out int signalCount);
-                details.Add($"beastSignalCount={signalCount}");
-            }
-
+            tasks.Signals.TryGetValue(NarrativeShowcaseMod.NarrativeShowcaseIds.BeastDefeatedSignal, out int signalCount);
+            details.Add($"beastSignalCount={signalCount}");
             details.Add($"triggerErrors={engine.TriggerManager.Errors.Count}");
             return string.Join(" | ", details);
         }
@@ -796,7 +875,9 @@ namespace Ludots.Tests.GAS.Production
         private static void CaptureSnapshot(
             GameEngine engine,
             UIRoot uiRoot,
-            NarrativeDirector director,
+            DialogueRuntime dialogue,
+            SequencerRuntime sequencer,
+            TaskRuntimeService tasks,
             List<AcceptanceSnapshot> snapshots,
             List<UiAcceptanceEvidenceFrame> frames,
             IReadOnlyList<double> frameTimesMs,
@@ -823,16 +904,81 @@ namespace Ludots.Tests.GAS.Production
             var snapshot = new AcceptanceSnapshot(
                 step,
                 frame.ScreenshotFileName,
-                director.BuildTaskSummary(),
-                director.BuildObjectiveSummary(),
-                director.BuildDialogueSummary(),
-                director.BuildCinematicSummary(),
-                director.BuildVariableSummary(NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId, NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId, NarrativeShowcaseMod.NarrativeShowcaseIds.EndingVariableId),
+                BuildTaskSummary(tasks),
+                BuildObjectiveSummary(tasks),
+                BuildDialogueSummary(dialogue),
+                BuildSequenceSummary(sequencer),
+                BuildVariableSummary(engine),
                 frame.UiHead,
                 GetActiveModeId(engine),
                 frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d,
                 entities);
             snapshots.Add(snapshot);
+        }
+
+        private static string BuildTaskSummary(TaskRuntimeService tasks)
+        {
+            IReadOnlyList<TaskView> views = tasks.CaptureViews();
+            if (views.Count == 0) return "<none>";
+            var parts = new List<string>(views.Count);
+            for (int i = 0; i < views.Count; i++)
+            {
+                parts.Add($"{views[i].TaskId}:{views[i].State}");
+            }
+
+            return string.Join(",", parts);
+        }
+
+        private static string BuildObjectiveSummary(TaskRuntimeService tasks)
+        {
+            IReadOnlyList<TaskView> views = tasks.CaptureViews();
+            for (int i = 0; i < views.Count; i++)
+            {
+                if (views[i].State == TaskInstanceState.Active && views[i].Objectives.Count > 0)
+                {
+                    return views[i].Objectives[0].Title;
+                }
+            }
+
+            return "No active objective.";
+        }
+
+        private static string BuildDialogueSummary(DialogueRuntime dialogue)
+        {
+            if (!dialogue.TryGetActiveView(out DialogueView view))
+            {
+                return "<none>";
+            }
+
+            return $"{view.DialogueId}/{view.NodeId}:{view.ResolvedText}";
+        }
+
+        private static string BuildSequenceSummary(SequencerRuntime sequencer)
+        {
+            if (!sequencer.TryGetActiveView(out SequenceView view))
+            {
+                return "<none>";
+            }
+
+            return $"{view.SequenceId}@{view.Time:0.##} camera={view.ActiveCameraProfile} subs={view.ActiveSubtitles.Count}";
+        }
+
+        private static string BuildVariableSummary(GameEngine engine)
+        {
+            MapVariableStore? variables = engine.CurrentMapSession?.Variables;
+            if (variables == null)
+            {
+                return "<none>";
+            }
+
+            static int Read(MapVariableStore store, string name)
+                => store.Contains(name) ? store.ReadInt(name) : 0;
+
+            return string.Join(",",
+                $"{NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId}={Read(variables, NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId)}",
+                $"{NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId}={Read(variables, NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId)}",
+                $"{NarrativeShowcaseMod.NarrativeShowcaseIds.EndingVariableId}={Read(variables, NarrativeShowcaseMod.NarrativeShowcaseIds.EndingVariableId)}",
+                $"{NarrativeShowcaseMod.NarrativeShowcaseIds.TrialPhaseVariableId}={Read(variables, NarrativeShowcaseMod.NarrativeShowcaseIds.TrialPhaseVariableId)}");
         }
 
         private static EntityState BuildEntityState(World world, string name)
@@ -848,14 +994,14 @@ namespace Ludots.Tests.GAS.Production
             return step switch
             {
                 "map_loaded" => ("T+001", "Arcweaver, Warden Mirelle, and the shared HUD", "Boot the showcase and confirm task tracker, journal, variables, and prompt ribbon are mounted.", "narrative_showcase_hub", "Verify the reusable frontend is live before any branch begins.", "Load the real mod set, tick the engine, and snapshot the mounted UIRoot scene."),
-                "intro_complete" => ("T+002", "Arcweaver and Warden Mirelle", "Advance the intro until the transmission overlay hands off into overlay dialogue.", "The shrine approach briefing inside the hub map.", "Show cinematic-to-dialogue handoff works through one shared frontend owner.", "Drive production input with Enter and wait for NarrativeDirector to enter dialogue state."),
-                "briefing_branch_complete" => ("T+003", "Arcweaver, Mirelle, and the branch state panel", "Take the lore branch, unlock trust, and advance the task chain into the trial beat.", "The elder dialogue flow with variables and objective tracker still visible.", "Prove conditions, variables, and choice availability remain data-driven.", "Commit choice shortcuts with number keys and validate NarrativeDirector variables plus task state."),
-                "shrine_interacted" => ("T+004", "Arcweaver, the shrine, and the subtitle bubble", "Trigger the shrine reveal and capture the non-wait-input subtitle bubble state.", "The shrine arena on the trial objective.", "Validate the frontend supports skippable cinematic/subtitle beats without blocking on wait-input.", "Use ECS move and interaction loops to hit the trigger, then wait until the shared frontend mounts the subtitle bubble."),
-                "beast_spawned" => ("T+005", "Arcweaver, the Ashen Beast, and the history journal", "Complete the reveal callback and show the spawned beast arriving while the flow review updates.", "The shrine arena after the cinematic signal resolves.", "Prove cinematic callbacks can wake gameplay entities and the frontend reflects the transition.", "Advance once, wait for the runtime entity spawn queue, and resnapshot the mounted frontend."),
+                "intro_complete" => ("T+002", "Arcweaver and Warden Mirelle", "Skip the intro Sequencer until DialogueRuntime opens the briefing overlay.", "The shrine approach briefing inside the hub map.", "Show Sequencer-to-Dialogue handoff works through one shared frontend owner.", "Drive production input with StorySkip and wait for DialogueRuntime to enter briefing dialogue."),
+                "briefing_branch_complete" => ("T+003", "Arcweaver, Mirelle, and the branch state panel", "Take the lore branch, unlock trust, and advance TaskRuntime into the trial beat.", "The elder dialogue flow with variables and objective tracker still visible.", "Prove conditions, MapVariableStore values, and choice availability remain data-driven.", "Commit StoryChoice1 shortcuts and validate MapVariableStore plus TaskRuntime state."),
+                "shrine_interacted" => ("T+004", "Arcweaver, the shrine, and the subtitle bubble", "Trigger the shrine reveal and capture the Sequencer immersive subtitle state.", "The shrine arena on the trial objective.", "Validate the frontend supports skippable Sequencer subtitle beats without blocking on wait-input.", "Use ECS move and StoryInteract to hit the trigger, then wait until SequencerRuntime mounts the subtitle bubble."),
+                "beast_spawned" => ("T+005", "Arcweaver, the Ashen Beast, and the history journal", "Complete the reveal callback and show the spawned beast arriving while the flow review updates.", "The shrine arena after the Sequencer signal resolves.", "Prove Sequencer completed callbacks can wake gameplay entities and the frontend reflects the transition.", "StorySkip once, wait for the runtime entity spawn queue, and resnapshot the mounted frontend."),
                 "beast_pressured" => ("T+006", "Arcweaver, the Ashen Beast, and the combat prompt ribbon", "Damage the newly spawned beast through the shared combat input before the deterministic finisher lands.", "The shrine arena while the return stage is still unresolved.", "Close the evidence gap between spawn and defeat with a real playable combat step.", "Aim at the beast, fire Arcweaver's inherited combat action, and snapshot the mounted frontend after health drops."),
-                "beast_defeated" => ("T+007", "Arcweaver, the fallen beast, and the objective tracker", "Finish the encounter and show the quest state shifting into the return leg.", "The trial arena after combat resolution.", "Validate GAS combat, signals, and narrative callbacks converge without a parallel quest pipeline.", "Apply deterministic production effect requests until the beast dies and the return stage is published."),
-                "mercy_ending" => ("T+008", "Arcweaver, Mirelle, and the completed task surfaces", "Choose the Mercy ending and confirm the reward branch lands as shared frontend state.", "Back at the elder after the trial.", "Demonstrate branch gating on prior lore knowledge and trigger-driven reward callbacks.", "Return to Mirelle, pick the unlocked ending, and validate the reward raises MoveSpeed while task status completes."),
-                _ => ($"T+{step}", "Narrative showcase actors", "Capture the current narrative frontend state.", "The active showcase map.", "Keep the screenshot flow auditable.", "Snapshot the mounted UIRoot scene.")
+                "beast_defeated" => ("T+007", "Arcweaver, the fallen beast, and the objective tracker", "Finish the encounter and show TaskRuntime shifting into the return leg.", "The trial arena after combat resolution.", "Validate GAS combat, signals, and TaskRuntime converge without a parallel quest pipeline.", "Apply deterministic production effect requests until the beast dies and the return stage is published."),
+                "mercy_ending" => ("T+008", "Arcweaver, Mirelle, and the completed task surfaces", "Choose the Mercy ending and confirm the reward branch lands as shared frontend state.", "Back at the elder after the trial.", "Demonstrate branch gating on prior lore knowledge and trigger-driven reward callbacks.", "Return to Mirelle, pick StoryChoice2, and validate the reward raises MoveSpeed while task status completes."),
+                _ => ($"T+{step}", "Story showcase actors", "Capture the current Dialogue/Sequencer frontend state.", "The active showcase map.", "Keep the screenshot flow auditable.", "Snapshot the mounted UIRoot scene.")
             };
         }
 
@@ -874,7 +1020,7 @@ namespace Ludots.Tests.GAS.Production
                     task = snapshot.TaskSummary,
                     objective = snapshot.ObjectiveSummary,
                     dialogue = snapshot.DialogueSummary,
-                    cinematic = snapshot.CinematicSummary,
+                    sequence = snapshot.SequenceSummary,
                     variables = snapshot.VariableSummary,
                     active_mode_id = snapshot.ActiveModeId,
                     tick_ms = Math.Round(snapshot.TickMs, 4),
@@ -903,7 +1049,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- clock: `fixed 1/60s`");
             sb.AppendLine();
             sb.AppendLine("## Intent");
-            sb.AppendLine("- Player goal: play a full task/dialogue/cinematic loop that starts in a camera-led intro, branches on dialogue knowledge, wakes a shrine, defeats a spawned beast, and returns for an ending choice.");
+            sb.AppendLine("- Player goal: play a full task/dialogue/sequencer loop that starts in a camera-led intro, branches on dialogue knowledge, wakes a shrine, defeats a spawned beast, and returns for an ending choice.");
             sb.AppendLine("- Gameplay domain: shared Ludots ECS movement, interaction showcase combat/GAS, trigger callbacks, runtime entity spawning, virtual cameras, and a single reusable narrative frontend scene.");
             sb.AppendLine();
             sb.AppendLine("## Determinism Inputs");
@@ -911,20 +1057,20 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- Map: `narrative_showcase_hub`");
             sb.AppendLine($"- Mods: `{string.Join("`, `", AcceptanceMods)}`");
             sb.AppendLine("- Clock profile: fixed `1/60s`, headless `GameEngine.Tick()` loop.");
-            sb.AppendLine("- Input source: real `InputConfigPipelineLoader` + `PlayerInputHandler` with deterministic backend injections.");
-            sb.AppendLine("- Narrative branches exercised: briefing lore path -> return mercy path.");
+            sb.AppendLine("- Input source: real `InputConfigPipelineLoader` + `PlayerInputHandler` with deterministic backend injections mapped to `DialogueInputActionIds`.");
+            sb.AppendLine("- Story branches exercised: briefing lore path -> return mercy path.");
             sb.AppendLine();
             sb.AppendLine("## Action Script");
             sb.AppendLine("1. Boot the real engine with the narrative showcase mod and load the hub map.");
-            sb.AppendLine("2. Advance the intro cinematic, then choose the lore branch and accept the trial in elder dialogue.");
-            sb.AppendLine("3. Move to the shrine through the production order path and trigger the reveal callback.");
+            sb.AppendLine("2. Skip the intro Sequencer, then choose the lore branch and accept the trial in DialogueRuntime.");
+            sb.AppendLine("3. Move to the shrine through the production order path and trigger the TrialReveal Sequencer.");
             sb.AppendLine("4. Damage the spawned beast through the inherited interaction combat input, then finish it through deterministic GAS effect application.");
             sb.AppendLine("5. Return to the elder, choose the Mercy ending, and validate the trigger-driven GAS blessing reward.");
             sb.AppendLine();
             sb.AppendLine("## Expected Outcomes");
-            sb.AppendLine("- Primary success condition: task, dialogue, cinematic, interaction, and reward callbacks stay on shared runtime infrastructure from start to finish.");
+            sb.AppendLine("- Primary success condition: TaskRuntime, DialogueRuntime, SequencerRuntime, interaction, and reward callbacks stay on shared runtime infrastructure from start to finish.");
             sb.AppendLine("- Failure branch condition: without prior lore knowledge, the Mercy branch remains unavailable at return dialogue.");
-            sb.AppendLine("- Key metrics: task state, trust/lore/ending variables, cinematic state, active UI surfaces, beast health, and reward movement speed delta.");
+            sb.AppendLine("- Key metrics: task state, MapVariableStore trust/lore/ending/trial_phase, sequencer state, active UI surfaces, beast health, and reward movement speed delta.");
             sb.AppendLine();
             sb.AppendLine("## Evidence Artifacts");
             sb.AppendLine("- `artifacts/acceptance/narrative-showcase/trace.jsonl`");
@@ -942,7 +1088,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final task: `{final.TaskSummary}`");
             sb.AppendLine($"- final variables: `{final.VariableSummary}`");
             sb.AppendLine($"- final dialogue card: `{final.DialogueSummary}`");
-            sb.AppendLine("- reason: the showcase stayed on `ConfigPipeline`, `NarrativeDirector`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.");
+            sb.AppendLine("- reason: the showcase stayed on `ConfigPipeline`, `DialogueRuntime`, `SequencerRuntime`, `TaskRuntimeService`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.");
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
             sb.AppendLine($"- total_actions: `{timeline.Count}`");
@@ -958,15 +1104,15 @@ namespace Ludots.Tests.GAS.Production
             return string.Join(Environment.NewLine, new[]
             {
                 "flowchart TD",
-                "    A[Load narrative_showcase_hub] --> B[Intro cinematic steps advance]",
-                "    B --> C[Briefing dialogue lore branch]",
-                "    C --> D[Task chain advances to trial]",
+                "    A[Load narrative_showcase_hub] --> B[Intro Sequencer StorySkip]",
+                "    B --> C[Briefing Dialogue lore branch]",
+                "    C --> D[TaskRuntime advances to trial]",
                 "    D --> E[Right-click move near shrine]",
-                "    E --> F[Press E -> reveal cinematic]",
-                "    F --> G[Trigger callback spawns Ashen Beast]",
+                "    E --> F[StoryInteract -> TrialReveal Sequencer]",
+                "    F --> G[Completed callback spawns Ashen Beast]",
                 "    G --> H[Arcweaver combat damages beast]",
                 "    H --> I[GAS finisher defeats beast -> signal emitted]",
-                "    I --> J[Task chain advances to return]",
+                "    I --> J[TaskRuntime advances to return]",
                 "    J --> K{Lore learned?}",
                 "    K -- no --> L[Guard branch: Mercy ending stays locked]",
                 "    K -- yes --> M[Return dialogue unlocks Mercy branch]",
@@ -993,7 +1139,7 @@ namespace Ludots.Tests.GAS.Production
             return (ordered.Length & 1) == 0 ? (ordered[middle - 1] + ordered[middle]) * 0.5d : ordered[middle];
         }
 
-        private sealed record AcceptanceSnapshot(string Step, string ScreenshotFileName, string TaskSummary, string ObjectiveSummary, string DialogueSummary, string CinematicSummary, string VariableSummary, IReadOnlyList<string> UiText, string ActiveModeId, double TickMs, IReadOnlyList<EntityState> Entities);
+        private sealed record AcceptanceSnapshot(string Step, string ScreenshotFileName, string TaskSummary, string ObjectiveSummary, string DialogueSummary, string SequenceSummary, string VariableSummary, IReadOnlyList<string> UiText, string ActiveModeId, double TickMs, IReadOnlyList<EntityState> Entities);
         private sealed record EntityState(string Name, bool Alive, float X, float Y, float Health);
 
         private sealed class TestInputBackend : IInputBackend
