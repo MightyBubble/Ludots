@@ -121,7 +121,7 @@ namespace Ludots.Tests.GAS.Production
             Fix64Vec2 chassisPose = engine.World.Get<WorldPositionCm>(chassis).Value;
             Fix64Vec2 turretPose = engine.World.Get<WorldPositionCm>(turret).Value;
             Fix64Vec2 barrelPose = engine.World.Get<WorldPositionCm>(barrel).Value;
-            Log($"[多层跟随] 底盘 Nav 移动至 ({chassisPose.X.ToInt()},{chassisPose.Y.ToInt()})cm →" +
+            Log($"[多层跟随] 底盘按作者配置的位置写者移动至 ({chassisPose.X.ToInt()},{chassisPose.Y.ToInt()})cm →" +
                 $" 炮塔=({turretPose.X.ToInt()},{turretPose.Y.ToInt()})cm（零偏移锚定）," +
                 $" 炮管=({barrelPose.X.ToInt()},{barrelPose.Y.ToInt()})cm（炮塔朝向 -Y 的 220cm 前伸）," +
                 $" 深度={sink.LastMaxDepth}");
@@ -181,7 +181,7 @@ namespace Ludots.Tests.GAS.Production
                 "rider must be detached with Nav authority after DetachOp");
             Fix64Vec2 riderDetached = engine.World.Get<WorldPositionCm>(rider).Value;
             Log($"[DetachOp] 周界散布下车：落地=({riderDetached.X.ToInt()},{riderDetached.Y.ToInt()})cm" +
-                $"（底盘 (3500,0) 半径 260cm 环槽 0），写权={engine.World.Get<PoseAuthority>(rider).Value}");
+                $"（底盘 (3500,0) 半径 260cm 环槽 0），写权按作者配置归还");
             Assert.Multiple(() =>
             {
                 Assert.That(engine.World.Has<ChildOf>(rider), Is.False);
@@ -291,14 +291,14 @@ namespace Ludots.Tests.GAS.Production
         private const string MermaidPath = @"flowchart TD
     A[地图装载: 模板 children 预置组合] --> D[sink: 父∘局部 深度序恒重算]
     D --> D2[静态父: 重派生幂等 位置不变]
-    D --> E[底盘 Nav 写权独立移动]
+    D --> E[底盘按作者配置的位置写者独立移动]
     E --> F[炮塔零偏移锚定 + 独立朝向]
     F --> G[炮管随炮塔朝向前伸 孙层]
-    G --> H[AttachOp: 骑乘上车 Nav→Attached]
+    G --> H[AttachOp: 骑乘上车并切换 Attached 写权]
     H --> I{事务失败?}
     I -- 是 --> J[回滚: 挂接/位姿/写权恢复]
     I -- 否 --> K[随车保持局部偏移]
-    K --> L[DetachOp: 周界散布 Attached→Nav]
+    K --> L[DetachOp: 周界散布并按作者配置归还写权]
     L --> M[验收通过]
     J --> M";
 

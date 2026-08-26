@@ -21,65 +21,6 @@ public struct MassNavigationAgentProfile
     public float SpeedCmPerSecond;
 }
 
-/// <summary>
-/// 挂接约定的 nav 成员身份挂起快照：attachment 挂接链上只允许一个 mass nav 成员
-/// （独立移动的根）；子实体 attach 时摘除成员身份并存此快照，detach / 孤儿自愈时恢复。
-/// 求解器槽位的回收与重播种由 MassNavigationAuthoredAgentBindingSystem 按组件在场感知，
-/// 恢复时不复用旧 Index——按已提交位姿重新绑定。
-/// </summary>
-public struct SuspendedNavMembership
-{
-    public MassNavigationAgent Agent;
-}
-
-public static class MassNavigationMembership
-{
-    public const string SuspendedError = "MASSNAV.MEMBERSHIP.ERR.AlreadySuspended";
-
-    public static bool IsMember(World world, Entity entity)
-    {
-        return world.Has<MassNavigationAgent>(entity);
-    }
-
-    public static void Suspend(World world, Entity entity)
-    {
-        if (!world.Has<MassNavigationAgent>(entity))
-        {
-            return;
-        }
-
-        if (world.Has<SuspendedNavMembership>(entity))
-        {
-            throw new System.InvalidOperationException(
-                $"{SuspendedError}: entity={entity.Id}.");
-        }
-
-        world.Add(entity, new SuspendedNavMembership { Agent = world.Get<MassNavigationAgent>(entity) });
-        if (world.Has<MassNavigationAgentIndex>(entity))
-        {
-            world.Remove<MassNavigationAgentIndex>(entity);
-        }
-
-        if (world.Has<MassNavigationAgentProfile>(entity))
-        {
-            world.Remove<MassNavigationAgentProfile>(entity);
-        }
-
-        world.Remove<MassNavigationAgent>(entity);
-    }
-
-    public static void Restore(World world, Entity entity)
-    {
-        if (!world.Has<SuspendedNavMembership>(entity))
-        {
-            return;
-        }
-
-        world.Add(entity, world.Get<SuspendedNavMembership>(entity).Agent);
-        world.Remove<SuspendedNavMembership>(entity);
-    }
-}
-
 public struct MassNavigationBlocker
 {
     public float RadiusCm;

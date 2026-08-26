@@ -110,16 +110,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly FacingDirection[] _relationFacingOriginalValues;
     private readonly bool[] _relationAuthorityPendingAttached;
     private readonly bool[] _relationAuthorityPendingHandback;
-    private readonly byte[] _relationNavMembershipOps;
-    private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[] _relationNavAgentValues;
-    private readonly bool[] _relationNavAgentOriginalExisted;
-    private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[] _relationNavAgentOriginalValues;
-    private readonly bool[] _relationNavAgentIndexOriginalExisted;
-    private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex[] _relationNavAgentIndexOriginalValues;
-    private readonly bool[] _relationNavAgentProfileOriginalExisted;
-    private readonly Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile[] _relationNavAgentProfileOriginalValues;
-    private readonly bool[] _relationSuspendedNavOriginalExisted;
-    private readonly Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership[] _relationSuspendedNavOriginalValues;
     private readonly int[] _relationParentRingTotal;
     private readonly ushort[] _relationParentRingSlotsTaken;
     private readonly Ludots.Core.Movement.PoseAuthorityArbiter? _poseAuthorityArbiter;
@@ -259,16 +249,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationFacingOriginalValues = new FacingDirection[attributeEntityCapacity];
         _relationAuthorityPendingAttached = new bool[attributeEntityCapacity];
         _relationAuthorityPendingHandback = new bool[attributeEntityCapacity];
-        _relationNavMembershipOps = new byte[attributeEntityCapacity];
-        _relationNavAgentValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[attributeEntityCapacity];
-        _relationNavAgentOriginalExisted = new bool[attributeEntityCapacity];
-        _relationNavAgentOriginalValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent[attributeEntityCapacity];
-        _relationNavAgentIndexOriginalExisted = new bool[attributeEntityCapacity];
-        _relationNavAgentIndexOriginalValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex[attributeEntityCapacity];
-        _relationNavAgentProfileOriginalExisted = new bool[attributeEntityCapacity];
-        _relationNavAgentProfileOriginalValues = new Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile[attributeEntityCapacity];
-        _relationSuspendedNavOriginalExisted = new bool[attributeEntityCapacity];
-        _relationSuspendedNavOriginalValues = new Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership[attributeEntityCapacity];
         _relationParentRingTotal = new int[relationParentCapacity];
         _relationParentRingSlotsTaken = new ushort[relationParentCapacity];
         _poseAuthorityArbiter = poseAuthorityArbiter;
@@ -396,7 +376,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.ParentPositionMissingError}: parent={parent.Id}.");
         }
 
-        StageNavMembershipSuspend(childIndex, subject);
         StageAttachedAuthorityGrant(childIndex, subject);
 
         Entity currentParent = _relationChildValues[childIndex].Parent;
@@ -530,7 +509,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.TargetInvalidError}: subject={subject.Id}, parent={parent.Id}, reason=perimeter-requires-live-parent.");
         }
 
-        StageNavMembershipRestore(childIndex, subject);
         StageDetachedAuthorityHandback(childIndex, subject);
 
         // 同事务 attach→detach：attach 阶段 stage 过的初始位姿写不再落地
@@ -2064,48 +2042,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _structuralCommands.Add(subject, _relationPreviousPositionValues[i]);
             }
         }
-
-        ApplyStagedNavMembership();
-    }
-
-    /// <summary>挂接链唯一 mass nav 约定的提交落地：挂起摘三组件存快照，恢复回放 Agent 标记（旧 Index 不复用，绑定系统按已提交位姿重播种）。</summary>
-    private void ApplyStagedNavMembership()
-    {
-        for (int i = 0; i < _relationChildCount; i++)
-        {
-            byte navOp = _relationNavMembershipOps[i];
-            if (navOp == NavMembershipNone)
-            {
-                continue;
-            }
-
-            Entity subject = _relationChildEntities[i];
-            if (navOp == NavMembershipSuspend)
-            {
-                _structuralCommands.Add(subject, new Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership
-                {
-                    Agent = _relationNavAgentValues[i],
-                });
-                if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject))
-                {
-                    _structuralCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject);
-                }
-
-                if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject))
-                {
-                    _structuralCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject);
-                }
-
-                _structuralCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject);
-            }
-            else
-            {
-                _structuralCommands.Add(
-                    subject,
-                    _world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject).Agent);
-                _structuralCommands.Remove<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject);
-            }
-        }
     }
 
     private unsafe void PrepareListenerValues()
@@ -2396,7 +2332,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
             }
 
-            RestoreNavMembershipSnapshot(i, subject);
         }
 
         for (int i = 0; i < _attributeCount; i++)
@@ -2477,73 +2412,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         if (_structuralRollbackCommands.Size > 0)
         {
             _structuralRollbackCommands.Playback(_world);
-        }
-    }
-
-    private void RestoreNavMembershipSnapshot(int index, Entity subject)
-    {
-        if (_relationNavAgentOriginalExisted[index])
-        {
-            if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject))
-            {
-                _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject) = _relationNavAgentOriginalValues[index];
-            }
-            else
-            {
-                _structuralRollbackCommands.Add(subject, _relationNavAgentOriginalValues[index]);
-            }
-        }
-        else if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject))
-        {
-            _structuralRollbackCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject);
-        }
-
-        if (_relationNavAgentIndexOriginalExisted[index])
-        {
-            if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject))
-            {
-                _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject) = _relationNavAgentIndexOriginalValues[index];
-            }
-            else
-            {
-                _structuralRollbackCommands.Add(subject, _relationNavAgentIndexOriginalValues[index]);
-            }
-        }
-        else if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject))
-        {
-            _structuralRollbackCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject);
-        }
-
-        if (_relationNavAgentProfileOriginalExisted[index])
-        {
-            if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject))
-            {
-                _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject) = _relationNavAgentProfileOriginalValues[index];
-            }
-            else
-            {
-                _structuralRollbackCommands.Add(subject, _relationNavAgentProfileOriginalValues[index]);
-            }
-        }
-        else if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject))
-        {
-            _structuralRollbackCommands.Remove<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject);
-        }
-
-        if (_relationSuspendedNavOriginalExisted[index])
-        {
-            if (_world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject))
-            {
-                _world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject) = _relationSuspendedNavOriginalValues[index];
-            }
-            else
-            {
-                _structuralRollbackCommands.Add(subject, _relationSuspendedNavOriginalValues[index]);
-            }
-        }
-        else if (_world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject))
-        {
-            _structuralRollbackCommands.Remove<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject);
         }
     }
 
@@ -2660,73 +2528,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             : default;
         _relationFacingValues[index] = _relationFacingOriginalValues[index];
         _relationFacingWrite[index] = false;
-        bool navAgentExisted = _world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject);
-        _relationNavAgentOriginalExisted[index] = navAgentExisted;
-        _relationNavAgentOriginalValues[index] = navAgentExisted
-            ? _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject)
-            : default;
-        bool navIndexExisted = _world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject);
-        _relationNavAgentIndexOriginalExisted[index] = navIndexExisted;
-        _relationNavAgentIndexOriginalValues[index] = navIndexExisted
-            ? _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject)
-            : default;
-        bool navProfileExisted = _world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject);
-        _relationNavAgentProfileOriginalExisted[index] = navProfileExisted;
-        _relationNavAgentProfileOriginalValues[index] = navProfileExisted
-            ? _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(subject)
-            : default;
-        bool suspendedNavExisted = _world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject);
-        _relationSuspendedNavOriginalExisted[index] = suspendedNavExisted;
-        _relationSuspendedNavOriginalValues[index] = suspendedNavExisted
-            ? _world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject)
-            : default;
         _relationAuthorityPendingAttached[index] = false;
         _relationAuthorityPendingHandback[index] = false;
-        _relationNavMembershipOps[index] = NavMembershipNone;
         return index;
-    }
-
-    private const byte NavMembershipNone = 0;
-    private const byte NavMembershipSuspend = 1;
-    private const byte NavMembershipRestore = 2;
-
-    /// <summary>
-    /// 挂接链唯一 mass nav 约定的事务 staged 形态：attach stage 挂起成员身份、detach stage 恢复，
-    /// 同事务正反抵消回 None（净效果无成员变化）。提交期经 _structuralCommands 落地。
-    /// </summary>
-    private void StageNavMembershipSuspend(int childIndex, Entity subject)
-    {
-        if (_relationNavMembershipOps[childIndex] == NavMembershipRestore)
-        {
-            _relationNavMembershipOps[childIndex] = NavMembershipNone;
-            return;
-        }
-
-        if (_relationNavMembershipOps[childIndex] != NavMembershipNone ||
-            !_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject))
-        {
-            return;
-        }
-
-        _relationNavAgentValues[childIndex] = _world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(subject);
-        _relationNavMembershipOps[childIndex] = NavMembershipSuspend;
-    }
-
-    private void StageNavMembershipRestore(int childIndex, Entity subject)
-    {
-        if (_relationNavMembershipOps[childIndex] == NavMembershipSuspend)
-        {
-            _relationNavMembershipOps[childIndex] = NavMembershipNone;
-            return;
-        }
-
-        if (_relationNavMembershipOps[childIndex] != NavMembershipNone ||
-            !_world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(subject))
-        {
-            return;
-        }
-
-        _relationNavMembershipOps[childIndex] = NavMembershipRestore;
     }
 
     private void CaptureRelationSnapSource(int index, Entity source)

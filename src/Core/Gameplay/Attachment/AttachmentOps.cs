@@ -138,10 +138,6 @@ namespace Ludots.Core.Gameplay.Attachment
 
             try
             {
-                // 挂接链唯一 mass nav 约定：子实体是 nav 成员时挂起成员身份（求解器槽位由绑定系统
-                // 在下一 RuntimeEntityBinding pass 回收），detach / 孤儿自愈时恢复。
-                Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Suspend(world, child);
-
                 // 写权授予：持有 PoseAuthority 的子实体必须切到 Attached（无竞争写者化）。
                 authorityMutation = ApplyAttachedGrant(world, arbiter, child);
                 RelationOps.SetParent(world, child, parent);
@@ -190,7 +186,6 @@ namespace Ludots.Core.Gameplay.Attachment
             try
             {
                 authorityMutation = ApplyAttachedHandback(world, arbiter, child);
-                Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
                 Upsert(world, child, new WorldPositionCm { Value = ringPosition });
                 Upsert(world, child, new PreviousWorldPositionCm { Value = ringPosition });
                 if (world.Has<AttachedLocalPose>(child))
@@ -251,7 +246,6 @@ namespace Ludots.Core.Gameplay.Attachment
             try
             {
                 authorityMutation = ApplyAttachedHandback(world, arbiter, child);
-                Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(world, child);
                 if (world.Has<AttachedLocalPose>(child))
                 {
                     world.Remove<AttachedLocalPose>(child);
@@ -438,9 +432,8 @@ namespace Ludots.Core.Gameplay.Attachment
         }
 
         /// <summary>
-        /// 授予 Attached 写权。返回 true 表示实体持有 PoseAuthority 且已处理（授予或本就 Attached）；
-        /// 返回 false 表示实体无 PoseAuthority（无竞争写者）。持有 Displacement/Physics 写权时
-        /// fail-fast；nav 成员身份已在 attach 前挂起，求解器不再是竞争写者。
+        /// 通过 PoseAuthorityArbiter 请求 Attached 写权；无 PoseAuthority 的实体不产生待结算变更。
+        /// Physics/Displacement 持有者直接失败。导航成员身份不属于 Attachment 的职责边界。
         /// </summary>
         private static AuthorityPendingMutation ApplyAttachedGrant(
             World world,
@@ -544,14 +537,6 @@ namespace Ludots.Core.Gameplay.Attachment
             private WorldPositionCm _worldPosition;
             private bool _previousPositionExisted;
             private PreviousWorldPositionCm _previousPosition;
-            private bool _navAgentExisted;
-            private Ludots.Core.MassNavigation.Runtime.MassNavigationAgent _navAgent;
-            private bool _navIndexExisted;
-            private Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex _navIndex;
-            private bool _navProfileExisted;
-            private Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile _navProfile;
-            private bool _suspendedNavExisted;
-            private Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership _suspendedNav;
             private Entity _oldParent;
             private Entity _targetParent;
             private bool _oldParentChildrenExisted;
@@ -568,10 +553,6 @@ namespace Ludots.Core.Gameplay.Attachment
                     _facingExisted = world.Has<FacingDirection>(child),
                     _worldPositionExisted = world.Has<WorldPositionCm>(child),
                     _previousPositionExisted = world.Has<PreviousWorldPositionCm>(child),
-                    _navAgentExisted = world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child),
-                    _navIndexExisted = world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child),
-                    _navProfileExisted = world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(child),
-                    _suspendedNavExisted = world.Has<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child),
                     _targetParent = targetParent,
                     _targetParentChildrenExisted = world.Has<ChildrenBuffer>(targetParent),
                 };
@@ -586,10 +567,6 @@ namespace Ludots.Core.Gameplay.Attachment
                 if (snapshot._facingExisted) snapshot._facing = world.Get<FacingDirection>(child);
                 if (snapshot._worldPositionExisted) snapshot._worldPosition = world.Get<WorldPositionCm>(child);
                 if (snapshot._previousPositionExisted) snapshot._previousPosition = world.Get<PreviousWorldPositionCm>(child);
-                if (snapshot._navAgentExisted) snapshot._navAgent = world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>(child);
-                if (snapshot._navIndexExisted) snapshot._navIndex = world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child);
-                if (snapshot._navProfileExisted) snapshot._navProfile = world.Get<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentProfile>(child);
-                if (snapshot._suspendedNavExisted) snapshot._suspendedNav = world.Get<Ludots.Core.MassNavigation.Runtime.SuspendedNavMembership>(child);
                 if (snapshot._targetParentChildrenExisted) snapshot._targetParentChildren = world.Get<ChildrenBuffer>(targetParent);
 
                 if (snapshot._childOfExisted &&
@@ -611,10 +588,6 @@ namespace Ludots.Core.Gameplay.Attachment
                 RestoreComponent(world, child, _facingExisted, _facing);
                 RestoreComponent(world, child, _worldPositionExisted, _worldPosition);
                 RestoreComponent(world, child, _previousPositionExisted, _previousPosition);
-                RestoreComponent(world, child, _navAgentExisted, _navAgent);
-                RestoreComponent(world, child, _navIndexExisted, _navIndex);
-                RestoreComponent(world, child, _navProfileExisted, _navProfile);
-                RestoreComponent(world, child, _suspendedNavExisted, _suspendedNav);
                 RestoreChildren(world, _oldParent, _oldParentChildrenExisted, _oldParentChildren);
                 RestoreChildren(world, _targetParent, _targetParentChildrenExisted, _targetParentChildren);
             }

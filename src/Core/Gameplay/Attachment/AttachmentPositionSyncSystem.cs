@@ -320,10 +320,6 @@ namespace Ludots.Core.Gameplay.Attachment
                 _poseAuthorityArbiter.RequestAttachedHandback(World, child);
             }
 
-            // 挂接期间挂起的 nav 成员身份随自愈恢复——父死亡是常规玩法事件，
-            // 子实体以独立 nav 成员身份重新出现（绑定系统按已提交位姿重新播种）。
-            Ludots.Core.MassNavigation.Runtime.MassNavigationMembership.Restore(World, child);
-
             if (World.Has<AttachedLocalPose>(child))
             {
                 World.Remove<AttachedLocalPose>(child);

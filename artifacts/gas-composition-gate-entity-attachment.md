@@ -67,9 +67,9 @@
 
 ### 9.1 写权决策：引入 `PoseAuthorityKind.Attached`
 
-- 架构事实核验：`PoseAuthorityKind` 未被任何架构测试钉死；全部读点为 `DisplacementRuntimeSystem`（只比对 Displacement）与 `MassNavigationPoseAuthorityBridge`（显式 throw 未支持转移——本票扩展 Nav↔Attached 两条转移，复用 displaced 求解器状态：跳过积分、邻居避让、每 sync 节拍回灌已提交位姿，语义与位移窗口一致且已被 `SyncDisplacedAgentPoses` 支持）。
-- 结论：**采用 Attached=4**，经 `PoseAuthorityArbiter` pending transition 在固定步边界结算（保持"切换只在固定步边界经 CommandBuffer 生效"合同）；attach 授予（Nav→Attached）、detach 归还（Attached→Nav），事务可撤销 pending（回滚调 arbiter 移除待结算切换）。
-- 附带规则：子实体无 `PoseAuthority`（未声明 MovementParticipation）时无写者冲突，attach 不授予任何东西（sink 即唯一写者）；`Physics`/`Displacement` 持有者 attach fail-fast；无 `PoseAuthority` 的模板 children 禁止声明 MovementParticipation（spawn 期 fail-fast）。
+- 架构事实核验：`PoseAuthorityKind` 的 pending transition 由 `PoseAuthorityArbiter` 统一结算；Attachment 只负责自身的 Attached 写权边界，不读取或改变 Mass Navigation 组件，也不调用 Mass Navigation API。
+- 结论：**采用 Attached=4**，经 `PoseAuthorityArbiter` pending transition 在固定步边界结算；事务可撤销 pending（回滚调 arbiter 移除待结算切换）。
+- 附带规则：子实体无 `PoseAuthority`（未声明 MovementParticipation）时无写者冲突，attach 不授予任何东西（sink 即唯一写者）。作者若同时保留其它位置写者，冲突结果属于作者配置责任，不由 Attachment 自动协调。
 
 ### 9.2 parent-moved 门的保守边界
 
@@ -91,18 +91,13 @@ runtime 模板 spawn：children 经 `RuntimeEntitySpawnQueue` enqueue（票面�
 
 ### 10.1 HIGH-1：parent-moved 门删除，sink 恒重算
 
-审计发现（已逐环核实）：`SavePreviousWorldPositionSystem`（SchemaUpdate 步首）先把 Previous=Current 抹平，而真实位姿写者大量存在于 sink 之后（PostMovement 后段的 `MassNavigationSimulationStepSystem`、AbilityActivation 的 `MoveToWorldCmOrderSystem`、EffectProcessing 的位移/投射物）——sink 运行时父的 `Current==Previous` 是常态，Previous 比对门会让位置依赖子（炮塔/骑乘/驻防形态）在真实 nav 驱动父下**永久冻结**，且被两层测试时序差异掩护（harness 把求解器排在 sink 前 + 不跑 SavePrevious；验收用 InputCollection 脚本写者并注释"与真实 nav 写者同位次"——不实）。
+审计发现（已逐环核实）：`SavePreviousWorldPositionSystem`（SchemaUpdate 步首）先把 Previous=Current 抹平，而真实位姿写者大量存在于 sink 之后（PostMovement 后段、AbilityActivation 的 `MoveToWorldCmOrderSystem`、EffectProcessing 的位移/投射物）——sink 运行时父的 `Current==Previous` 是常态，Previous 比对门会让位置依赖子（炮塔/骑乘/驻防形态）**永久冻结**，且被两层测试时序差异掩护。Attachment 因此恒重算；其它位置写者的先后与冲突由作者配置负责。
 
 修正：门整体删除（`LastGateSkippedCount`/`DependsOnFacing` 一并移除），sink 恒重算——compose 只是几次 Fix64 运算，恒重算不构成热点；静态父重派生幂等。**这是对票面"parent-moved 门（静态父整树跳过）"的显式偏离**，理由：门的推断前提（Previous 比对可识别"未移动"）在引擎真实时序下不成立。回归测试 `PostSinkWriterTiming_PositionDependentChild_StillFollows` 钉住该时序。两个 harness 同步改为引擎真实时序（sink 先于求解器；验收测试注释如实标注 pre-sink 写者与 post-sink 用例的覆盖分工）。
 
-### 10.2 约定修正：挂接链唯一 mass nav——成员身份挂起/恢复取代 displaced 复用
+### 10.2 约定修正：职责隔离
 
-按引擎约定修正（此前实现违反）：**attachment 挂接链上只允许一个 mass nav 成员**（独立移动的根）。原实现保留子实体 nav agent 身份、复用位移窗口的 displaced 求解器状态（跳积分/避让/回灌）——删除：
-
-- `MassNavigationPoseAuthorityBridge` 的 Nav↔Attached 两条转移回退为 main 形态；对 Attached 转移显式 no-op（成员身份 rebuild 已维护求解器状态：挂起回收槽位、恢复按已提交位姿重播种）。
-- nav 域新增 `SuspendedNavMembership` 快照组件与 `MassNavigationMembership.Suspend/Restore` 单点：attach 摘除 `MassNavigationAgent/AgentIndex/AgentProfile` 三组件并存快照；detach / 孤儿自愈回放 Agent 标记（旧 Index 不复用，绑定系统按已提交位姿重播种）。成员数变化由既有 `MassNavigationAuthoredAgentBindingSystem` 感知（rebuild/append）。
-- 事务路径同构：`StageAttach/StageDetach` stage 成员身份挂起/恢复（同事务正反抵消），提交期经 `_structuralCommands` 落地；"nav agent 无 MovementParticipation attach fail-fast"旧合同删除（成员身份挂起后求解器不再是竞争写者，双写前提消失）。
-- `EntityAttachmentTests` 旧钉子测试（fail-fast 合同）改写为新约定合同；`MassNavigationAttachedAuthorityTests` 重写为成员身份合同（attach 后 TotalAgents==1、sink 镜像载具已提交位姿、detach 重播种恢复行军）。
+此前实现错误地把“挂接期间暂停导航成员、脱离后恢复导航成员、按位姿重新播种”放进 Attachment。该逻辑已全部删除：Attachment 不依赖 Mass Navigation 类型、组件或 API；Mass Navigation 也不为 Attachment 调整系统顺序或隐式接管父子关系。作者可以自行配置多个位置写者，并自行承担位置竞争结果。
 
 ### 10.3 MEDIUM 修复
 
@@ -113,7 +108,7 @@ runtime 模板 spawn：children 经 `RuntimeEntitySpawnQueue` enqueue（票面�
 
 - `Ludots.Core` 构建 0 错误。
 - GasTests attachment 全集 23/23 通过（含 HIGH-1 回归、成员身份合同、事务回滚）。
-- `MassNavigationAttachedAuthorityTests` 1/1 通过（引擎时序 + 成员身份 + 重播种行军）。
+- Attachment 定向测试覆盖关系、位姿、写权与事务回滚；不再把 Mass Navigation 行为列为 Attachment 合同。
 - ArchitectureTests 见票面评论（基线 4 失败与本票无关）。
 
 ## 11. Mainline closeout gate（2026-08-26）
