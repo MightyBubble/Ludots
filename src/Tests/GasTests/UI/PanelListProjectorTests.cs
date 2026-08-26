@@ -24,7 +24,6 @@ namespace Ludots.Tests.GasTests.UI
             AttributeRegistry.Clear();
             TagRegistry.Clear();
             EffectTemplateIdRegistry.Clear();
-            AbilityIdRegistry.Clear();
         }
 
         [TearDown]
@@ -33,7 +32,6 @@ namespace Ludots.Tests.GasTests.UI
             AttributeRegistry.Clear();
             TagRegistry.Clear();
             EffectTemplateIdRegistry.Clear();
-            AbilityIdRegistry.Clear();
         }
 
         [Test]
@@ -273,10 +271,6 @@ namespace Ludots.Tests.GasTests.UI
 
             using World world = World.Create();
             Entity owner = world.Create();
-            int abilityId = AbilityIdRegistry.Register("火球术");
-            var abilities = default(AbilityStateBuffer);
-            abilities.AddAbility(abilityId);
-            world.Add(owner, abilities);
             var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
             var entityStore = new EntityCollectionStore(keyRegistry, 8, 16);
             var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
@@ -286,7 +280,7 @@ namespace Ludots.Tests.GasTests.UI
                     "ability.slots",
                     EntityCollectionSourceKind.GasGraphResult,
                     EntityCollectionRoleKind.Display),
-                new[] { 0 });
+                new[] { 3 });
             var values = new GraphOutputValueStore(
                 new StringIntRegistry(8, 1, 0, StringComparer.Ordinal),
                 8);
@@ -303,8 +297,8 @@ namespace Ludots.Tests.GasTests.UI
 
             Assert.That(evaluator.GraphId, Is.EqualTo(42));
             Assert.That(evaluator.Owner, Is.EqualTo(owner));
-            Assert.That(evaluator.SubjectIntId, Is.Zero);
-            Assert.That(lists[0].Items[0].Strings["displayName"], Is.EqualTo("火球术"));
+            Assert.That(evaluator.SubjectIntId, Is.EqualTo(3));
+            Assert.That(lists[0].Items[0].Strings["displayName"], Is.EqualTo("3"));
         }
 
         [Test]
