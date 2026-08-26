@@ -45,7 +45,7 @@
 | G9 | actorSource 值域扩展（"none"） | #1015 |
 | G10 | TriggerGraph 消费 UI 事件的接线 | #1013/#1030 交界 |
 | G11 | 图内读属性 base 值的节点（现用 ConstFloat 顶） | 图 op 家族 |
-| G12 | 列表投影：图写出集合 → **元素模板**（`subject`+自有 graph）透传成员求值 + 容器只编排。SSOT：[面板视图投影](panel-view-projection.md)；Showcase `panel_entity_list` | 已落地；#1015 点选另开 |
+| G12 | 列表投影：图写出**类型化集合** → 元素模板（`subject`+自有 graph）透传求值 + 容器只编排。集合类型 SSOT：[查询图集合输出](query-graph-collection-outputs.md)；面板消费：[面板视图投影](panel-view-projection.md)；Showcase `panel_entity_list` | 实体名册已落地；Effect/Item/Ability 等按集合输出合同分期；#1015 点选另开 |
 
 （G1/G2/G4/G7 随 schema 收编消失：变量种类=图输出类型的事、聚合=图内节点、主题覆盖/地图变量读法另议。G12 为双审计后新增。）
 
