@@ -64,6 +64,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public int InvokeDepth;
         public int TreeSteps;
         public int CurrentInstructionPc;
+        public int CurrentGraphId;
         public GraphDebugTrace? DebugTrace;
     }
 }
