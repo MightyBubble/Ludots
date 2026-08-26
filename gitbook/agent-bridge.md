@@ -1,33 +1,36 @@
 # Agent Bridge
 
-> 面向 **人机共用** 的 Ludots 运行时操控与取证通道：环回 HTTP JSON-RPC，内置工具数以运行时 `GET /tools` / `BuiltinAgentTools` 为准（当前 28），零多模态依赖——看画面、点 UI、放技能、查状态、抓证据，全部用结构化 JSON 完成。AI 用 CLI / MCP，人用 Inspector，指令等同。引擎侧资产验收见[教程：Raylib 资产验收台](raylib-asset-acceptance.md)。计划 SSOT：[epic #1056](https://github.com/MightyBubble/Ludots/issues/1056)。
->
-> 设计正本：[RFC-0066](https://github.com/mightyBubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md)；工具域参考手册：[架构页 · Agent 调试桥](architecture/agent-debug-bridge.md)。**本页是任务视角的实操指南**。
+环回 HTTP JSON-RPC，操控运行中的 Ludots 进程：查状态、点 UI、下订单、截图取证。工具清单以 `GET /tools`（`BuiltinAgentTools`）为准。
+
+- 实操本页；架构：[Agent 调试桥](architecture/agent-debug-bridge.md)
+- 设计：[RFC-0066](https://github.com/mightyBubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md) · 计划 [epic #1056](https://github.com/MightyBubble/Ludots/issues/1056)
+- 引擎资产验收：[Raylib 资产验收台](raylib-asset-acceptance.md)
 
 ## 60 秒上手
 
 ```bash
 # 1. 构建（app + 图中各 mod）
 dotnet build src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj -c Debug
-dotnet build mods/AgentBridgeMod/AgentBridgeMod.csproj -c Debug   # 其余 mod 同理
+dotnet build mods/AgentBridgeMod/AgentBridgeMod.csproj -c Debug
 
-# 2. 启动（launch graph 的 orderedModIds 含 AgentBridgeMod 即启用）
+# 2. 启动（orderedModIds 含 AgentBridgeMod）
 cd src/Apps/Raylib/Ludots.App.Raylib/bin/Debug/net8.0
 dotnet Ludots.App.Raylib.dll launcher.agent-demo.runtime.json
 
-# 3. 判活 + 发现工具（也可用 CLI）
+# 3. 判活 + 列工具
 curl -s http://127.0.0.1:47921/health
-curl -s http://127.0.0.1:47921/tools    # 与 BuiltinAgentTools / MCP tools/list / Inspector 侧栏一致
+curl -s http://127.0.0.1:47921/tools
 dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- tools --names
 
-# 4. 第一个调用（三前端等价）
+# 4. 调用
 curl -s -X POST http://127.0.0.1:47921/rpc \
   -d '{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}'
 dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- call ludots.session.info
-# 人：cd src/Tools/Ludots.Inspector.React && npm run dev → 打开侧栏点同一工具
 ```
 
-环境变量：`LUDOTS_AGENT_BRIDGE=0` 强制关闭；`LUDOTS_AGENT_BRIDGE_PORT` 换端口（默认 47921，占用自动 +1）；发现目录 `artifacts/agent-bridge/sessions/<pid>.json`（运行时生成、不入库），进程退出即删。仅绑定 127.0.0.1，无鉴权调试接口。
+Inspector（浏览器面板）：`cd src/Tools/Ludots.Inspector.React && npm run dev` → `http://127.0.0.1:5179`。
+
+环境变量：`LUDOTS_AGENT_BRIDGE=0` 关闭；`LUDOTS_AGENT_BRIDGE_PORT` 换端口（默认 47921，占用自动 +1）。发现文件 `artifacts/agent-bridge/sessions/<pid>.json`（进程退出删除）。仅 `127.0.0.1`，无鉴权。
 
 ## Agent 标准工作循环：观察 → 驱动 → 验证
 
@@ -72,16 +75,30 @@ dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- call ludots.session.inf
 | 图运行时调试 | `ludots.graph.debug` | 查/开 GraphDebugTrace |
 | Presenter 全链观测 | `ludots.presenters.query` / `.desync` / `.screen` | 视觉代理实体、四跳分歧、席位投影 |
 
-## 三前端（同一语义层）
+## 客户端
 
-| 前端 | 谁用 | 入口 |
-|------|------|------|
-| HTTP / curl | 任意脚本 | `GET /tools` · `POST /rpc` |
-| CLI | AI / 终端 | `src/Tools/Ludots.AgentBridge.Cli` |
-| MCP | MCP 宿主 | `src/Tools/Ludots.AgentBridge.Mcp`（建议 Release 构建） |
-| Inspector | 人 | `src/Tools/Ludots.Inspector.React`（按 schema 为每个工具生成表单） |
+| 客户端 | 入口 |
+|--------|------|
+| HTTP | `GET /health` · `GET /tools` · `POST /rpc` |
+| CLI | `src/Tools/Ludots.AgentBridge.Cli` |
+| MCP | `src/Tools/Ludots.AgentBridge.Mcp`（建议 Release） |
+| Inspector | `src/Tools/Ludots.Inspector.React` |
 
-## 实测会话摘录（agent-demo · 可直接复制的形状）
+### Inspector
+
+紧凑面板（非全屏），可与游戏窗口并排：
+
+```bash
+cd src/Tools/Ludots.Inspector.React
+npm install && npm run dev   # http://127.0.0.1:5179 ，默认连 47921
+```
+
+- 左侧：按域列出 `/tools`
+- 中间：当前工具参数表单 → **调用**
+- 右侧：该工具自己的 debug（req / res / 耗时 / 错误）；切工具互不串；调过的左侧有蓝点
+- 顶栏：暂停 / 步进 / 继续
+
+## 实测会话摘录
 
 ```jsonc
 // 找实体 → 拿到 entityId

@@ -1,28 +1,30 @@
 # Agent 调试桥（Agent Debug Bridge）
 
-> 设计 SSOT：[`docs/rfcs/RFC-0066-agent-debug-bridge.md`](https://github.com/mightybubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md)。本页是面向使用者的运行手册。
+设计 SSOT：[`RFC-0066`](https://github.com/mightybubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md) · 计划 [epic #1056](https://github.com/MightyBubble/Ludots/issues/1056)。任务实操见 [Agent Bridge](../agent-bridge.md)。
 
-Ludots Agent 调试桥是**人机共用**的运行时 QA 控制面（计划 SSOT：[epic #1056](https://github.com/MightyBubble/Ludots/issues/1056)）：`IAgentTool` 注册表是唯一语义层；CLI / MCP / curl / Inspector 都是客户端，不另造协议。
+语义层是 `IAgentTool` 注册表；客户端走同一环回 HTTP JSON-RPC（`method` = 工具名）。
 
 ## 架构一句话
 
 ```
 CLI / MCP / Inspector / curl
-        │ 同一 HTTP JSON-RPC（method = 工具名）
+        │ HTTP JSON-RPC
         ▼
-127.0.0.1:47921（AgentBridgeHttpServer，传输线程只收发字节；浏览器侧开 CORS）
-        │ ConcurrentQueue 入队
+127.0.0.1:47921（AgentBridgeHttpServer；CORS 给浏览器）
+        │ ConcurrentQueue
         ▼
-游戏线程每帧 Pump（AgentBridgeSystem，presentation 组）
+游戏线程 Pump（AgentBridgeSystem）
         │ BuiltinAgentTools → AgentToolRegistry
         ▼
 TaskCompletionSource 回包
 ```
 
-- MCP：`src/Tools/Ludots.AgentBridge.Mcp`（stdio → HTTP）
-- CLI：`src/Tools/Ludots.AgentBridge.Cli`（终端 → 同一 HTTP）
-- Inspector：`src/Tools/Ludots.Inspector.React`（人用；`GET /tools` 驱动侧栏，每个工具一张 schema 表单）
-- 地址解析 SSOT：`AgentBridgeEndpoint`
+| 客户端 | 路径 |
+|--------|------|
+| CLI | `src/Tools/Ludots.AgentBridge.Cli` |
+| MCP | `src/Tools/Ludots.AgentBridge.Mcp`（stdio → HTTP） |
+| Inspector | `src/Tools/Ludots.Inspector.React`（紧凑面板；每工具独立 debug） |
+| 地址解析 | `AgentBridgeEndpoint` |
 
 ## 启用
 
@@ -39,9 +41,9 @@ TaskCompletionSource 回包
 ## 端点
 
 - `GET /health` → `{ ok, instance, pendingRequests, pumpCount, lastPumpUtc }`（`pumpCount` 不涨说明游戏主循环停了）
-- `GET /tools` → 自描述工具目录；**工具数以本端点 / `BuiltinAgentTools` 为准**（HTTP · MCP · CLI · Inspector 共用）
-- `POST /rpc` → JSON-RPC 2.0：`{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}`
-- 浏览器 CORS：允许 Inspector 跨源调用环回端口；破坏性确认是前端策略，不进协议
+- `GET /tools` → 工具目录（以本端点 / `BuiltinAgentTools` 为准）
+- `POST /rpc` → `{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}`
+- CORS：浏览器可连环回端口
 
 ## 内置工具
 
@@ -76,28 +78,26 @@ TaskCompletionSource 回包
 
 错误协议：`-32601` 未知工具，`-32602` 参数错，`-32000` 域错误（`data.code` 如 `entity.not_found`、`ui.node_not_found`、`bridge.timeout`）。错误信息自带下一步指引（如发现工具、合法键来源）。
 
-## 客户端接入（CLI / MCP / Inspector）
+## 客户端接入
 
-地址解析 SSOT：`AgentBridgeEndpoint`（显式 URL > `LUDOTS_AGENT_BRIDGE_URL` > discovery > `47921`）。
+地址：`AgentBridgeEndpoint`（显式 URL > `LUDOTS_AGENT_BRIDGE_URL` > discovery > `47921`）。
 
 ```bash
-# AI / 脚本
 dotnet build src/Tools/Ludots.AgentBridge.Cli/Ludots.AgentBridge.Cli.csproj -c Release
 dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net8.0/Ludots.AgentBridge.Cli.dll tools --names
 dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net8.0/Ludots.AgentBridge.Cli.dll call ludots.session.info
 
-# MCP（建议 Release）
 dotnet build src/Tools/Ludots.AgentBridge.Mcp/Ludots.AgentBridge.Mcp.csproj -c Release
 dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
 
-# 人用 Inspector（每个工具一张 schema 表单，调用同一 /rpc）
 cd src/Tools/Ludots.Inspector.React && npm install && npm run dev
+# → http://127.0.0.1:5179 ；每工具独立 debug（req/res），非全屏壳
 ```
 
 ## 扩展
 
-其他 Mod 可通过 `AgentBridgeModEntry.ToolRegistryKey`（`ServiceKey<AgentToolRegistry>`）从 `GlobalContext` 取注册表并注册自己的 `IAgentTool`——工具即刻出现在 `/tools`、MCP、CLI、Inspector 中。
+其他 Mod 取 `AgentBridgeModEntry.ToolRegistryKey`（`ServiceKey<AgentToolRegistry>`）注册 `IAgentTool` 后，即出现在 `/tools` 与各客户端。
 
-## 已验证的验收闭环
+## 已验证闭环
 
-pi coding agent + deepseek-v4-flash（无多模态）仅凭 `GET /tools` 自描述完成：列工具 → 会话快照 → 镜头内实体 → UI 树 → 单实体 GAS → pause/step 3/resume → stop 订单闭环；并自发用 `ui.click` 操作沙盒工具栏把镜头转回实体群。详见 RFC §8。
+无多模态 agent 仅凭 `GET /tools` 完成：列工具 → 会话 → 镜头内实体 → UI 树 → GAS → pause/step/resume → 订单；并用 `ui.click` 转镜头。详见 RFC §8。

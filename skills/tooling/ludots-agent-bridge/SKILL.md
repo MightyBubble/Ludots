@@ -5,9 +5,9 @@ description: 驱动运行中的 Ludots 游戏进程做调试、验收与取证�
 
 # Ludots Agent Bridge 实操
 
-内置工具经 `POST http://127.0.0.1:47921/rpc`（JSON-RPC 2.0，method=工具名）调用；**工具清单以运行时 `GET /tools` 为准**（与 `BuiltinAgentTools`、MCP `tools/list`、Inspector 侧栏同一注册表，禁止手写平行清单）。`GET /health` 判活。完整文档：`gitbook/agent-bridge.md`（任务视角）与 `gitbook/architecture/agent-debug-bridge.md`（架构正本）；计划 SSOT：epic #1056。
+内置工具经 `POST http://127.0.0.1:47921/rpc`（JSON-RPC 2.0，method=工具名）调用；清单以 `GET /tools` 为准（禁止手写平行清单）。`GET /health` 判活。文档：`gitbook/agent-bridge.md` · `gitbook/architecture/agent-debug-bridge.md` · epic #1056。
 
-优先用 CLI（与 MCP 方法名/参数完全相同）：
+优先用 CLI：
 
 ```bash
 dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- health
@@ -78,11 +78,11 @@ dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- health
 
 **配方 D · 事件链取证**：`events.fire {event}` → `logs.tail {contains:"…"}`。
 
-## MCP / 人前端（可选）
+## MCP / Inspector
 
 ```bash
 dotnet build src/Tools/Ludots.AgentBridge.Mcp/Ludots.AgentBridge.Mcp.csproj -c Release
 dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll
 ```
 
-人用 Inspector：`src/Tools/Ludots.Inspector.React`（`npm run dev`，默认连 `47921`，每个工具一张 schema 表单，调用同一 `/rpc`）。
+Inspector：`cd src/Tools/Ludots.Inspector.React && npm run dev` → `http://127.0.0.1:5179`（默认 `47921`；紧凑面板；每工具独立 debug）。
