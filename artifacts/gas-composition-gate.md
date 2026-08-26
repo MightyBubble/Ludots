@@ -51,6 +51,59 @@ N/A — trace 不是执行 op，不改变 Graph program。
 
 「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
 
+## Issue #1177 Beat 5 — Field-region ability scope — 2026-08-26
+
+- **Task / Issue**: Add the `field_jing_yang_transit` region-scoped ability demonstration.
+- **Date**: 2026-08-26
+- **Agent / Author**: GPT-5.6 Sol
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A**
+
+结论: **PASS**
+
+一句话理由: 区域过境复用现有 TriggerGraph 事件、effect tag 和 ability validation graph 组合，不新增 Graph op、profile enum、preset 开关或平行管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 区域进入/退出授予与移除 scope tag | 2 | 现有 `FieldRegionEntered` / `FieldRegionExited` TriggerGraph + `ApplyEffectTemplate` / `RemoveEffectTemplate` |
+| Ability 激活门 | 2 | 现有 Validation graph + `HasTag` + `activationPrecondition` |
+| 成功施放地图状态 | 2 | 现有 Effect graph + `ReadMapVarInt` / `AddInt` / `WriteMapVarInt` |
+| 当前区域只读查询 | Core query | `RegionMembershipCm` + `FieldSessionStore` + `RegionIdRegistry` |
+
+### 3. Reuse list
+
+- Handlers: `HasTag`, `ApplyEffectTemplate`, `RemoveEffectTemplate`, `ReadMapVarInt`, `AddInt`, `WriteMapVarInt`.
+- Queues / Systems: `FieldRegionMembershipSystem`, existing TriggerGraph dispatch, GAS effect request/processing pipeline.
+- Resolvers / Registries: `FieldSessionStore`, `RegionIdRegistry`, `TagRegistry`, `EffectTemplateIdRegistry`, `AbilityDefinitionRegistry`, `GraphProgramRegistry`.
+- Existing presets / graphs: `Buff` infinite effect, Validation graph authoring, `AbilityExecLoader.activationPrecondition`.
+
+### 4. New Layer 0 ops (if any)
+
+N/A — no new Graph op, effect handler, or lifecycle operation.
+
+### 5. Transaction boundary
+
+No new transaction boundary. Region transitions publish existing ordered exit/enter events; each graph applies one existing effect operation.
+
+### 6. Config SSOT
+
+Behavior config remains in the showcase's existing `GAS/graphs.json`, plus standard `GAS/effects.json` and `GAS/abilities.json` catalog assets. 是否新增 JSON schema: **NO**。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
+
 ## Issues #714-#719 AI/GAS Order Boundary — Pre-Implementation Gate — 2026-07-31
 
 - **Task / Issue**: Implement issues #714-#719 after PR #713, keeping ability lockout as duration Effect data, keeping Utility AI out of GAS ability eligibility, and converging AI output on typed Order contracts and read-only scoring.

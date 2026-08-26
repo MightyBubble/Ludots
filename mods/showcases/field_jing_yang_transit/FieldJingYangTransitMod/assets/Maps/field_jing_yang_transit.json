@@ -42,6 +42,21 @@
       "name": "last_exit_code",
       "type": "int",
       "initial": 0
+    },
+    {
+      "name": "fire_scope",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "fire_cast_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "fire_last_result",
+      "type": "int",
+      "initial": 0
     }
   ],
   "TriggerGraphs": [
