@@ -36,6 +36,12 @@ namespace Ludots.Platform.Abstractions
         public float AbsoluteColorPeakSpanCm { get; set; } = DefaultAbsoluteColorPeakSpanCm;
 
         /// <summary>
+        /// When true, visual-heightmap adapters must zero distance-fog params for this map
+        /// (board-scale cameras sit far past authored fog end and would otherwise wash albedo).
+        /// </summary>
+        public bool DisableDistanceFog { get; set; }
+
+        /// <summary>
         /// When the camera footprint exceeds detail radius times this multiplier,
         /// adapters must draw the overview mesh instead of the near-chunk window.
         /// </summary>
@@ -58,6 +64,7 @@ namespace Ludots.Platform.Abstractions
                 DisplayHeightScale = DisplayHeightScale,
                 ColorContrast = ColorContrast,
                 AbsoluteColorPeakSpanCm = AbsoluteColorPeakSpanCm,
+                DisableDistanceFog = DisableDistanceFog,
                 OverviewSwitchChunkSpans = OverviewSwitchChunkSpans,
                 OverviewVertexLimit = OverviewVertexLimit,
             };

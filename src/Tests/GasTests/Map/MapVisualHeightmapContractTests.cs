@@ -164,6 +164,29 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
+        public void LoadMap_WhenDisableDistanceFog_IsHonoredOnRenderProfile()
+        {
+            WriteHeightmap("outer.vhtm", 40);
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "visualHeightmap": {
+                "asset": "assets/terrain/outer.vhtm",
+                "renderProfile": {
+                  "disableDistanceFog": true
+                }
+              }
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("outer_map");
+
+            var renderSource = (IVisualHeightmapRenderSource)engine.GetService(CoreServiceKeys.VisualHeightmap);
+            Assert.That(renderSource.RenderProfile.DisableDistanceFog, Is.True);
+        }
+
+        [Test]
         public void LoadMap_WhenWorldWidthCmOverride_RemapsBoundsKeepingAspectAndSamples()
         {
             WriteHeightmap("outer.vhtm", 40);

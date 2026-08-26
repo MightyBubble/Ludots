@@ -383,6 +383,7 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
+            VisualHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
             if (_controlMapEnabled)
             {
                 WorldAabbCm bounds = source.Bounds;
@@ -393,7 +394,7 @@ namespace Ludots.Raylib.Render
                     MathF.Max(bounds.Height * 0.01f, 1e-5f));
             }
 
-            UpdateUniforms(camera);
+            UpdateUniforms(camera, profile.DisableDistanceFog);
 
             _frameIndex++;
             DrawnChunkCountLastFrame = 0;
@@ -403,7 +404,6 @@ namespace Ludots.Raylib.Render
             ChunkBuildMsLastFrame = 0d;
 
             float aspect = ResolveFrameAspect();
-            VisualHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
             bool useOverview = ShouldUseOverviewMesh(
                 source,
                 in camera,
@@ -421,13 +421,12 @@ namespace Ludots.Raylib.Render
                 long buildStart = Stopwatch.GetTimestamp();
                 EnsureOverviewMesh(source, heightSampleSource, profile.OverviewVertexLimit);
                 ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
-                // Continental overview filters high-frequency albedo/control/nav into mud; draw absolute vertex colors.
-                ApplyOverviewVertexColorUniforms();
+                // Keep albedo/control so authored weight maps stay readable; drop nav walkability wash only.
+                ApplyOverviewWithoutNavWalkabilityUniforms();
                 RaylibMatrix identity = RaylibMatrix.Identity;
                 Rl.rlDisableBackfaceCulling();
                 Rl.DrawMesh(_overviewMesh, _terrainMaterial, identity);
                 Rl.rlEnableBackfaceCulling();
-                ApplyAlbedoUniforms();
                 ApplyNavWalkabilityUniforms();
                 DrawnChunkCountLastFrame = 1;
                 TerrainVertexCountLastFrame = _overviewMesh.vertexCount;
@@ -646,7 +645,7 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        private void UpdateUniforms(in Camera3D camera)
+        private void UpdateUniforms(in Camera3D camera, bool disableDistanceFog)
         {
             if (_frameLighting == null)
             {
@@ -655,10 +654,31 @@ namespace Ludots.Raylib.Render
             }
 
             ApplySkyIrradianceUniforms();
+            if (disableDistanceFog)
+            {
+                ApplyDisabledDistanceFog();
+            }
+
             _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, camera.position);
             ApplyTerrainShadow();
             ApplyAlbedoUniforms();
             ApplyNavWalkabilityUniforms();
+        }
+
+        private unsafe void ApplyDisabledDistanceFog()
+        {
+            Vector4 fogParams = Vector4.Zero;
+            Vector3 fogColor = Vector3.Zero;
+            Rl.SetShaderValue(
+                _terrainShader,
+                _terrainLightingLocs.FogParams,
+                &fogParams,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _terrainLightingLocs.FogColor,
+                &fogColor,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
         }
 
         private void ApplySkyIrradianceUniforms()
@@ -715,7 +735,7 @@ namespace Ludots.Raylib.Render
                 (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
         }
 
-        private void ApplyOverviewVertexColorUniforms()
+        private void ApplyOverviewWithoutNavWalkabilityUniforms()
         {
             if (!_initialized)
             {
@@ -723,16 +743,6 @@ namespace Ludots.Raylib.Render
             }
 
             int off = 0;
-            Rl.SetShaderValue(
-                _terrainShader,
-                _locUseTerrainAlbedo,
-                &off,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
-            Rl.SetShaderValue(
-                _terrainShader,
-                _locUseControlMap,
-                &off,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
             Rl.SetShaderValue(
                 _terrainShader,
                 _locUseNavWalkability,

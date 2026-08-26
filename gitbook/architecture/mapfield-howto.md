@@ -117,7 +117,7 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 
 ### 7.1 东亚省级归属覆盖层
 
-`field_east_asia_admin` 是叠加在 `EastAsiaPlayableTerrainMod` 上的数据-only Mod。它用 `7143 cm`（约 71.4 m）格长把 `ownership.east_asia.admin` 挂到 `east_asia_visual_heightmap`，以 schema v2 矩形写入 26 个省级示意区（经纬度框经 Albers 投到格网，先涂先占、无重叠），共 52881 个非默认格。可玩图幅由地图 `VisualHeightmap.WorldWidthCm = 6400000`（64 km 宽，南北约 36.6 km）等比收缩；高度样本仍来自大陆源 VHTM。远景走 overview mesh，`DisplayHeightScale` 约 50 让厘米级海拔在 64 km 板上可读；归属用整图半透明贴面叠在绝对海拔色上。运行时沿标准 `FieldRegionMaterializer` 物化区域，再由 `FieldDiscreteVisualProjector` 发布 `DiscreteOwnership`，不复制地形资产或引入专用代码。
+`field_east_asia_admin` 是叠加在 `EastAsiaPlayableTerrainMod` 上的数据-only Mod。它用 `7143 cm`（约 71.4 m）格长把 `ownership.east_asia.admin` 挂到 `east_asia_visual_heightmap`，以 schema v2 矩形写入 26 个省级示意区（经纬度框经 Albers 投到格网，先涂先占、无重叠），共 52881 个非默认格。可玩图幅由地图 `VisualHeightmap.WorldWidthCm = 6400000`（64 km 宽，南北约 36.6 km）等比收缩；高度样本仍来自大陆源 VHTM。远景走 overview mesh，并打开 `DisableDistanceFog`（板级相机远超默认雾距，否则会整片洗蓝），保留 albedo/控制权重贴图；`DisplayHeightScale` 约 50 让厘米级海拔可读；归属用整图半透明贴面叠在地形色上。运行时沿标准 `FieldRegionMaterializer` 物化区域，再由 `FieldDiscreteVisualProjector` 发布 `DiscreteOwnership`，不复制地形资产或引入专用代码。
 
 ```powershell
 .\scripts\run-mod-launcher.cmd cli launch 'preset:field_east_asia_admin_raylib'
