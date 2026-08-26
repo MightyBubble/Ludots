@@ -161,9 +161,7 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
     [Test]
     public void Workbench_WebSkin_HeadlessStillProjectsData()
     {
-        using GameEngine engine = CreateEngine(
-            "ConfigurableDataSchemaWebMod",
-            extraMods: new[] { "FireballSharedMod", "PanelSkinWebMod" });
+        using GameEngine engine = CreateEngine("ConfigurableDataSchemaWebMod");
         engine.Start();
         engine.LoadMap(MapId);
         Tick(engine, 8);
@@ -249,15 +247,11 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
         return new ConfigurableDataSchemaRuntimeProxy(runtimeObj);
     }
 
-    private static GameEngine CreateEngine(string? skinMod, string[]? extraMods = null)
+    private static GameEngine CreateEngine(string? skinMod)
     {
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
         IEnumerable<string> mods = skinMod == null ? BaseMods : BaseMods.Append(skinMod);
-        if (extraMods != null)
-        {
-            mods = mods.Concat(extraMods);
-        }
 
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),

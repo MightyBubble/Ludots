@@ -6,5 +6,5 @@
     "provider": "cef"
   },
   "panelSkin": "web",
-  "panelWebApp": "PanelSkinWebMod:Assets/overlay-app/index.html"
+  "panelWebApp": "ConfigurableDataSchemaWebMod:Assets/overlay-app/index.html"
 }
