@@ -258,7 +258,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     internal static void RegisterAuthoredCompileSymbols(string assetsRoot)
     {
         _ = AttributeRegistry.Register("Health");
-        _ = AbilityIdRegistry.Register(GalleryAbility);
         RegisterTagRules(Path.Combine(assetsRoot, "GAS", "tag_rules.json"));
         RegisterEffectIds(Path.Combine(assetsRoot, "GAS", "effects.json"));
     }

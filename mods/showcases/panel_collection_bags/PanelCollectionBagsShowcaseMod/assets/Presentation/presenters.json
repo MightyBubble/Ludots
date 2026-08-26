@@ -1,0 +1,55 @@
+[
+  {
+    "id": "collectionbags_showcase_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "collection_bags_hero" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "collectionbags_unit_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "collection_bags_hero" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "collectionbags_unit_root",
+    "children": [
+      {
+        "definitionId": "collectionbags_unit_mesh",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [0, 1.2, 0],
+            "localScale": [1.6, 2.2, 1.6]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "collectionbags_unit_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "collectionbags.unit_box",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static"
+        },
+        "style": {
+          "color": [0.82, 0.56, 0.2, 1]
+        }
+      }
+    ]
+  }
+]

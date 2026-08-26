@@ -1,0 +1,14 @@
+[
+  {
+    "id": "Ability.GraphOps.Gallery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    }
+  }
+]
