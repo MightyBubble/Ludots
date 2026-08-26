@@ -79,6 +79,11 @@ external/
 artifacts/*
 !artifacts/gas-composition-gate.md
 !artifacts/gas-composition-gate-*.md
+!artifacts/showcases/
+artifacts/showcases/*
+!artifacts/showcases/graph-fsm-bt-refactor-design.md
+!artifacts/showcases/enum-driven-fsm-showcase-design.md
+!artifacts/showcases/capability-standard-*/
 !artifacts/evidence/
 artifacts/evidence/*
 !artifacts/evidence/capability_standard_graph_op_*/

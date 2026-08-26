@@ -9,6 +9,15 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardHfsmSentryArenaMod.Runtime;
 
+/// <summary>
+/// FSM-1 closeout arena: the featured sentry band runs Graph.FSM.Sentry (FsmState sugar)
+/// through GraphFsmHost — one Script dispatch slice per agent per think wave. Glue feeds
+/// intruder distance into I[0]; phase lives in the per-agent map variable sentry.phase.
+/// The 10k crowd band is an explicitly labeled no-graph pressure baseline: C# HfsmWorld
+/// over hfsm.sentry with zero lifecycle Script hosts (builtin Stimulus/Always predicates
+/// only). A 10k GraphFsmHost crowd would claim graph semantics the CI envelope cannot
+/// honestly carry (same decision class as the BT arena crowd band).
+/// </summary>
 public sealed class HfsmSentryArenaRuntime : IDisposable
 {
     private readonly GraphShowcaseConfig _config = new();
@@ -32,14 +41,13 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
     public float IntruderX => _ix;
     public float IntruderY => _iy;
     public bool IntruderAlive => _intruderAlive;
-    /// <summary>Featured band drives Graph.FSM.Sentry through GraphFsmHost (FSM-1a).</summary>
+    public GraphFsmHost? FsmHost => _fsmHost;
+    public HfsmWorld? CrowdWorld => _crowd;
     public bool FeaturedUsesGraphFsmHost => _fsmHost != null;
-    /// <summary>Crowd band is intentional no-graph pressure (HfsmWorld), not a second graph claim.</summary>
     public bool CrowdUsesNoGraphHfsmWorld => _crowd != null;
     public int CrowdAgentCount => _crowd?.Count ?? 0;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_hfsm_sentry_arena" };
 
-    /// <summary>Featured band phase source (FSM-1a): per-agent map variable driven by Graph.FSM.Sentry.</summary>
     public string GetSentryStateName(int agent)
     {
         if (_fsmHost == null || agent < 0 || agent >= _fsmHost.Count)
@@ -91,7 +99,7 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
         }
 
         Metrics.AgentCount = n;
-        Metrics.Detail = "HFSM sentry FSM graph (FsmState sugar) + no-graph crowd band";
+        Metrics.Detail = "HFSM sentry FSM graph (FsmState sugar) + labeled no-graph crowd band";
     }
 
     public void Tick(float dt)
@@ -106,13 +114,21 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
 
         var sw = Stopwatch.StartNew();
         GraphFsmThinkStats stats = _fsmHost!.ThinkWave(budgetSteps: 128, sensors: _feed);
-        _crowd?.TickAll();
+        HfsmThinkStats? crowdStats = null;
+        if (_crowd != null)
+        {
+            crowdStats = _crowd.TickAll();
+        }
+
         sw.Stop();
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
+        string crowdPart = crowdStats is { } c
+            ? $" crowdAgents={c.Agents} crowdLifecycleRuns={c.LifecycleRuns}"
+            : string.Empty;
         Metrics.Detail =
-            $"HFSM sentry FSM wave agents={stats.Agents} steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms phase0={GetSentryStateName(0)}";
+            $"HFSM sentry FSM wave agents={stats.Agents} steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms phase0={GetSentryStateName(0)}{crowdPart}";
     }
 
     public void Dispose()
@@ -137,7 +153,6 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
         }
     }
 
-    /// <summary>Glue feed: I[0] = intruder distance in cm (dead intruder sits at int.MaxValue).</summary>
     private sealed class DistanceSensorFeed : IBehaviorTreeSensorFeed
     {
         private readonly HfsmSentryArenaRuntime _runtime;

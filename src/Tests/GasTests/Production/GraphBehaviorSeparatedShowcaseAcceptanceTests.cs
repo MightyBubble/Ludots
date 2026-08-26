@@ -6,6 +6,7 @@ using CapabilityStandardHfsmSentryArenaMod.Runtime;
 using Ludots.Core.Gameplay.AI;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.Gameplay.AI.Config;
+using Ludots.Core.Gameplay.AI.Fsm;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Tests.Gas.Graph;
@@ -161,8 +162,10 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(runtime.GetSentryStateName(0), Is.EqualTo("idle"));
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
+            Assert.That(runtime.FsmHost, Is.Not.Null, "Featured sentries must run GraphFsmHost (FsmState sugar).");
             Assert.That(runtime.Metrics.Detail, Does.Contain("HFSM"));
             Assert.That(runtime.Metrics.Detail, Does.Contain("FSM"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("crowdLifecycleRuns=0"));
             Assert.That(runtime.SentryCount, Is.GreaterThanOrEqualTo(8));
             Assert.That(runtime.GetSentryStateName(0), Is.Not.EqualTo("unknown"));
             if (runtime.CrowdUsesNoGraphHfsmWorld)
@@ -170,6 +173,40 @@ namespace Ludots.Tests.Gas.Production
                 Assert.That(runtime.CrowdAgentCount, Is.GreaterThan(0),
                     "Crowd band exists as no-graph HfsmWorld pressure; do not claim it as GraphFsmHost.");
             }
+
+            Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
+        }
+
+        /// <summary>
+        /// Crowd honesty gate (FSM-1): featured band = GraphFsmHost + Graph.FSM.Sentry;
+        /// 10k crowd = HfsmWorld(hfsm.sentry) with zero lifecycle Script hosts
+        /// (LifecycleRuns == 0). Same decision class as BT arena: true-graph 10k exceeds
+        /// the CI envelope, so the pressure band must stay labeled no-graph — never a
+        /// silent second graph claim.
+        /// </summary>
+        [Test]
+        public void HfsmSentryArena_CrowdBand_NoGraphPressureBaseline_Labeled()
+        {
+            var runtime = new HfsmSentryArenaRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+            Warm(runtime.Tick);
+            Drive(runtime.Tick, runtime.Metrics);
+
+            Assert.That(runtime.FsmHost, Is.Not.Null, "The featured segment must run GraphFsmHost.");
+            Assert.That(runtime.FsmHost!.Count, Is.GreaterThanOrEqualTo(8));
+            Assert.That(runtime.GetSentryStateName(0), Is.AnyOf("idle", "alert", "combat", "retreat"));
+
+            HfsmWorld? crowd = runtime.CrowdWorld;
+            Assert.That(crowd, Is.Not.Null, "The crowd pressure band must exist.");
+            HfsmThinkStats crowdStats = crowd!.TickAll();
+            TestContext.WriteLine(
+                $"crowd band no-graph baseline: agents={crowdStats.Agents} lifecycleRuns={crowdStats.LifecycleRuns} predicates={crowdStats.PredicatesChecked}");
+            Assert.That(crowdStats.LifecycleRuns, Is.EqualTo(0),
+                "The crowd band is a no-graph pressure baseline; any lifecycle Script host would be an unlabeled graph claim.");
+            Assert.That(crowdStats.Agents, Is.EqualTo(10_000));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("crowdLifecycleRuns=0"));
 
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
@@ -207,9 +244,10 @@ namespace Ludots.Tests.Gas.Production
             runtime.EnsureWorld();
             Warm(runtime.Tick, waves: 10);
             Drive(runtime.Tick, runtime.Metrics);
-            Assert.That(runtime.Metrics.Detail, Does.Contain("Integration"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("old-path"));
             Assert.That(runtime.GuardCount, Is.EqualTo(6));
             Assert.That(runtime.SentryCount, Is.EqualTo(6));
+            Assert.That(runtime.Hfsm, Is.Not.Null, "Integration keeps the labeled old HfsmWorld path until it migrates.");
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
         }

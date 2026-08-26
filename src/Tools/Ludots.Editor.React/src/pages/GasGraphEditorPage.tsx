@@ -102,6 +102,7 @@ type GraphNodeConfig = {
   scope?: string | null;
   argKey?: string | null;
   enumType?: string | null;
+  stateVar?: string | null;
   pinRegister?: number;
 };
 
@@ -308,6 +309,7 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     scope: n.scope ?? undefined,
     argKey: n.argKey ?? undefined,
     enumType: n.enumType ?? undefined,
+    stateVar: n.stateVar ?? undefined,
     pinRegister: n.pinRegister,
   });
 }
@@ -1163,10 +1165,16 @@ export const GasGraphEditorPage: React.FC = () => {
   }, [edges, nodes]);
 
   const addSwitchCase = React.useCallback(() => {
-    if (!selectedNodeId || !graph || !isControlFlowGraph(graph) || selectedData?.op !== 'SwitchInt') return;
+    if (!selectedNodeId || !graph || !isControlFlowGraph(graph)) return;
+    const op = selectedData?.op;
+    if (op !== 'SwitchInt' && op !== 'FsmState') return;
     const boundEnum = selectedData.enumType
       ? enumCatalog.find((candidate) => candidate.name === selectedData.enumType)
       : null;
+    if (op === 'FsmState' && !boundEnum) {
+      setStatus('FsmState case arms require a bound enumType.');
+      return;
+    }
     let sourceHandle: string;
     if (boundEnum) {
       // Enum-bound arms author member names; the compiler resolves them to values.
@@ -1184,11 +1192,11 @@ export const GasGraphEditorPage: React.FC = () => {
       sourceHandle = `case:${caseValue}`;
     }
     if (!switchCaseTarget || !nodes.some((node) => node.id === switchCaseTarget)) {
-      setStatus('SwitchInt case requires an existing target node.');
+      setStatus(`${op} case requires an existing target node.`);
       return;
     }
     if (edges.some((edge) => edge.source === selectedNodeId && edge.sourceHandle === sourceHandle)) {
-      setStatus(`SwitchInt case '${sourceHandle}' already exists.`);
+      setStatus(`${op} case '${sourceHandle}' already exists.`);
       return;
     }
     setEdges((previous) => addEdge({
@@ -1204,7 +1212,7 @@ export const GasGraphEditorPage: React.FC = () => {
     setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
       ? node
       : { ...node, data: { ...node.data, controlOutputPorts: [...new Set([...(node.data.controlOutputPorts ?? []), sourceHandle])] } }));
-    setStatus(`Added SwitchInt ${sourceHandle} -> ${switchCaseTarget}.`);
+    setStatus(`Added ${op} ${sourceHandle} -> ${switchCaseTarget}.`);
   }, [edges, enumCatalog, graph, nodes, selectedData?.enumType, selectedData?.op, selectedNodeId, switchCaseTarget, switchCaseValue]);
 
   const availableNodes = React.useMemo(() => {
@@ -1920,7 +1928,7 @@ export const GasGraphEditorPage: React.FC = () => {
                   nodeStrokeColor="#94a3b8"
                   nodeColor={(node) => {
                     if (node.data.role === 'event-entry') return '#fb7185';
-                    if (node.data.op === 'SwitchInt') return '#f59e0b';
+                    if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return '#f59e0b';
                     return '#38bdf8';
                   }}
                 />
@@ -2209,13 +2217,20 @@ export const GasGraphEditorPage: React.FC = () => {
                     </div>
                   </div>
                 ) : null}
-                {selectedData.op === 'SwitchInt' && graph && isControlFlowGraph(graph) ? (
+                {(selectedData.op === 'SwitchInt' || selectedData.op === 'FsmState') && graph && isControlFlowGraph(graph) ? (
                   <div className="space-y-2 rounded border border-sky-900 bg-sky-950/30 p-2">
-                    <div className="text-sky-300">Switch cases</div>
+                    <div className="text-sky-300">{selectedData.op === 'FsmState' ? 'FsmState case arms' : 'Switch cases'}</div>
                     {(() => {
                       const boundEnum = selectedData.enumType
                         ? enumCatalog.find((candidate) => candidate.name === selectedData.enumType)
                         : null;
+                      if (selectedData.op === 'FsmState' && !boundEnum) {
+                        return (
+                          <div className="text-[11px] text-amber-300">
+                            Bind enumType before adding case arms (FsmState fails closed without it).
+                          </div>
+                        );
+                      }
                       if (boundEnum) {
                         return (
                           <label className="block">

@@ -53,7 +53,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                    string.Equals(opName, Wait, StringComparison.Ordinal) ||
                    string.Equals(opName, While, StringComparison.Ordinal) ||
                    string.Equals(opName, Until, StringComparison.Ordinal) ||
-                   string.Equals(opName, Break, StringComparison.Ordinal);
+                   string.Equals(opName, Break, StringComparison.Ordinal) ||
+                   IsFsmSugar(opName);
         }
 
         /// <summary>
@@ -73,10 +74,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                    string.Equals(opName, BtDecorator, StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// FSM dispatch sugar (FSM-1a). Script/TriggerGraph only: reads stateVar, then SwitchInt-style
+        /// enum arms. Driven by GraphFsmHost; never a GraphNodeOp value.
+        /// </summary>
+        public static bool IsFsmSugar(string? opName)
+        {
+            if (string.IsNullOrWhiteSpace(opName))
+            {
+                return false;
+            }
+
+            return string.Equals(opName, FsmState, StringComparison.Ordinal);
+        }
+
         public static string DescribeScriptOnlySugar()
-            => $"{BranchBool}, {SwitchInt}, {SelectByEnum}, {Wait}, {While}, {Until}, {Break}";
+            => $"{BranchBool}, {SwitchInt}, {SelectByEnum}, {Wait}, {While}, {Until}, {Break}, {FsmState}";
 
         public static string DescribeBtSugar()
             => $"{BtSequence}, {BtSelector}, {BtDecorator}";
+
+        public static string DescribeFsmSugar()
+            => FsmState;
     }
 }

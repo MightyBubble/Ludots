@@ -8,6 +8,7 @@ export type AuthoredFieldKey =
   | 'scope'
   | 'argKey'
   | 'enumType'
+  | 'stateVar'
   | 'panelType'
   | 'panelAnchor'
   | 'panelSkin'
@@ -41,6 +42,7 @@ const eventName: AuthoredFieldSpec = { key: 'event', label: 'Event', kind: 'stri
 const scope: AuthoredFieldSpec = { key: 'scope', label: 'Scope (map/self/global)', kind: 'string' };
 const argKey: AuthoredFieldSpec = { key: 'argKey', label: 'Arg key', kind: 'string' };
 const enumType: AuthoredFieldSpec = { key: 'enumType', label: 'Enum type (Enums/enums.json)', kind: 'enumType' };
+const stateVar: AuthoredFieldSpec = { key: 'stateVar', label: 'State variable (map int holding enum phase)', kind: 'string' };
 const panelType: AuthoredFieldSpec = { key: 'panelType', label: 'Panel', kind: 'string' };
 const panelAnchor: AuthoredFieldSpec = { key: 'panelAnchor', label: 'Anchor', kind: 'anchor' };
 const panelSkin: AuthoredFieldSpec = { key: 'panelSkin', label: 'Skin', kind: 'string' };
@@ -98,6 +100,7 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   DispatchMapEvent: [eventName, scope],
   SwitchInt: [enumType],
   SelectByEnum: [enumType],
+  FsmState: [enumType, stateVar],
   StoreArgInt: [argKey],
   StoreArgFloat: [argKey],
   StoreArgEntity: [argKey],
