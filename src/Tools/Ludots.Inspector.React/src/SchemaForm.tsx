@@ -12,13 +12,13 @@ function coerce(raw: string, prop: JsonSchemaProperty): unknown {
   if (type === "integer") {
     if (raw.trim() === "") return undefined;
     const n = Number.parseInt(raw, 10);
-    if (Number.isNaN(n)) throw new Error(`需要整数`);
+    if (Number.isNaN(n)) throw new Error("需要整数");
     return n;
   }
   if (type === "number") {
     if (raw.trim() === "") return undefined;
     const n = Number.parseFloat(raw);
-    if (Number.isNaN(n)) throw new Error(`需要数字`);
+    if (Number.isNaN(n)) throw new Error("需要数字");
     return n;
   }
   if (type === "boolean") return raw === "true";
@@ -32,7 +32,7 @@ export function SchemaForm({ schema, value, onChange }: Props) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   if (keys.length === 0) {
-    return <p className="muted">此工具无参数。</p>;
+    return <p className="muted">无参数</p>;
   }
 
   return (
@@ -42,19 +42,16 @@ export function SchemaForm({ schema, value, onChange }: Props) {
         const type = Array.isArray(prop.type) ? prop.type[0] : prop.type;
         const current = value[key];
         const isRequired = required.has(key);
+        const label = `${key}${isRequired ? " *" : ""}`;
 
         if (prop.enum) {
           return (
             <label key={key} className="field">
-              <span>
-                {key}
-                {isRequired ? " *" : ""}
-              </span>
+              <span>{label}</span>
               <select
                 value={String(current ?? "")}
                 onChange={(e) => {
-                  const next = { ...value, [key]: coerce(e.target.value, prop) };
-                  onChange(next);
+                  onChange({ ...value, [key]: coerce(e.target.value, prop) });
                 }}
               >
                 {!isRequired && <option value="">—</option>}
@@ -64,7 +61,7 @@ export function SchemaForm({ schema, value, onChange }: Props) {
                   </option>
                 ))}
               </select>
-              {prop.description && <small>{prop.description}</small>}
+              {fieldErrors[key] && <small className="error">{fieldErrors[key]}</small>}
             </label>
           );
         }
@@ -77,24 +74,21 @@ export function SchemaForm({ schema, value, onChange }: Props) {
                 checked={Boolean(current)}
                 onChange={(e) => onChange({ ...value, [key]: e.target.checked })}
               />
-              <span>
-                {key}
-                {isRequired ? " *" : ""}
-              </span>
-              {prop.description && <small>{prop.description}</small>}
+              <span>{label}</span>
             </label>
           );
         }
 
         if (type === "object" || type === "array") {
-          const text = typeof current === "string" ? current : JSON.stringify(current ?? (type === "array" ? [] : {}), null, 2);
+          const text =
+            typeof current === "string"
+              ? current
+              : JSON.stringify(current ?? (type === "array" ? [] : {}), null, 2);
           return (
             <label key={key} className="field">
-              <span>
-                {key} (JSON{isRequired ? " *" : ""})
-              </span>
+              <span>{key} json{isRequired ? " *" : ""}</span>
               <textarea
-                rows={4}
+                rows={3}
                 value={text}
                 onChange={(e) => {
                   try {
@@ -111,21 +105,14 @@ export function SchemaForm({ schema, value, onChange }: Props) {
                   }
                 }}
               />
-              {(fieldErrors[key] || prop.description) && (
-                <small className={fieldErrors[key] ? "error" : undefined}>
-                  {fieldErrors[key] ?? prop.description}
-                </small>
-              )}
+              {fieldErrors[key] && <small className="error">{fieldErrors[key]}</small>}
             </label>
           );
         }
 
         return (
           <label key={key} className="field">
-            <span>
-              {key}
-              {isRequired ? " *" : ""}
-            </span>
+            <span>{label}</span>
             <input
               type={type === "number" || type === "integer" ? "number" : "text"}
               value={current === undefined || current === null ? "" : String(current)}
@@ -149,11 +136,7 @@ export function SchemaForm({ schema, value, onChange }: Props) {
                 }
               }}
             />
-            {(fieldErrors[key] || prop.description) && (
-              <small className={fieldErrors[key] ? "error" : undefined}>
-                {fieldErrors[key] ?? prop.description}
-              </small>
-            )}
+            {fieldErrors[key] && <small className="error">{fieldErrors[key]}</small>}
           </label>
         );
       })}
