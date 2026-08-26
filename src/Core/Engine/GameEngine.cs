@@ -1288,6 +1288,7 @@ namespace Ludots.Core.Engine
                 instancedBatchAssets,
                 meshAssets,
                 materialAssets,
+                VFS,
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId,
                 ResolveInstancedBatchGasEventKey,
                 ResolveInstancedBatchPresentationEventKey).Load(ConfigCatalog, ConfigConflictReport);
