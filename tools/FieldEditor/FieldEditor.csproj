@@ -11,4 +11,16 @@
     <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\src\Libraries\Raylib-cs\Raylib-cs.csproj" />
   </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <None Include="..\..\src\Platforms\Desktop\libraylib.so">
+      <Link>libraylib.so</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <None Include="..\..\src\Platforms\Desktop\raylib.dll" Condition="Exists('..\..\src\Platforms\Desktop\raylib.dll')">
+      <Link>raylib.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
