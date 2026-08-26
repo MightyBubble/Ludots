@@ -92,7 +92,7 @@ public sealed class AttachmentMountDemoSystem : BaseSystem<World, float>
             case AttachmentMountPhase.Ride:
             {
                 int rideTicks = Math.Max(0, _state.Tick - _rideStartTick);
-                float x = Math.Min(3500f, rideTicks * 50f);
+                float x = Math.Min(3500f, rideTicks * 120f);
                 World.Get<WorldPositionCm>(_carrier).Value = Fix64Vec2.FromFloat(x, 0f);
                 if (x >= 3500f)
                 {

@@ -35,6 +35,7 @@ public sealed class AttachmentVehicleParadeDemoSystem : BaseSystem<World, float>
     private Entity _chassis = Entity.Null;
     private Entity _turret = Entity.Null;
     private Entity _barrel = Entity.Null;
+    private int _turretAimTicks;
 
     public AttachmentVehicleParadeDemoSystem(World world, AttachmentVehicleParadeDemoState state) : base(world)
     {
@@ -60,10 +61,11 @@ public sealed class AttachmentVehicleParadeDemoSystem : BaseSystem<World, float>
         {
             case AttachmentVehicleParadePhase.Drive:
             {
-                float x = Math.Min(2000f, _state.Tick * 40f);
+                float x = Math.Min(2000f, _state.Tick * 100f);
                 World.Get<WorldPositionCm>(_chassis).Value = Fix64Vec2.FromFloat(x, 0f);
                 if (x >= 2000f)
                 {
+                    _turretAimTicks = 0;
                     _state.Phase = AttachmentVehicleParadePhase.TurnTurret;
                     _state.Caption = "炮塔独立转向：炮管跟着炮塔朝前伸";
                 }
@@ -72,9 +74,9 @@ public sealed class AttachmentVehicleParadeDemoSystem : BaseSystem<World, float>
             }
             case AttachmentVehicleParadePhase.TurnTurret:
             {
-                float facing = MathF.PI / 2f;
-                World.Get<FacingDirection>(_turret).AngleRad = facing;
-                if (_state.Tick > 70)
+                _turretAimTicks++;
+                World.Get<FacingDirection>(_turret).AngleRad = MathF.PI / 2f;
+                if (_turretAimTicks >= 8)
                 {
                     _state.Phase = AttachmentVehicleParadePhase.Done;
                     _state.Caption = "阅兵完成：多层挂接跟随与独立瞄准成立";

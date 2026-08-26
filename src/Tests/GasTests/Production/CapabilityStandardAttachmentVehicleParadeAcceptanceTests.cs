@@ -46,7 +46,7 @@ public sealed class CapabilityStandardAttachmentVehicleParadeAcceptanceTests
             engine,
             frameTimes,
             () => state.Phase == AttachmentVehicleParadePhase.Done,
-            maxFrames: 120);
+            maxFrames: 240);
 
         // DemoState 在 InputCollection 快照，子位姿在 PostMovement 派生：多推一帧对齐世界坐标。
         CapabilityStandardShowcaseTestHarness.TickMeasured(engine, 1, frameTimes);

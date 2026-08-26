@@ -18,18 +18,15 @@ public sealed class CapabilityStandardAttachmentMountDismountModEntry : IMod
         context.Log("[CapabilityStandardAttachmentMountDismountMod] Loaded — 乘员上下车");
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null)
-            {
-                return Task.CompletedTask;
-            }
+            GameEngine engine = ctx.Get(CoreServiceKeys.Engine)
+                ?? throw new InvalidOperationException("乘员上下车开场需要引擎服务。");
 
             var state = new AttachmentMountDemoState();
             engine.SetService(DemoStateKey, state);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
-                ?? throw new InvalidOperationException("Mount showcase requires ScreenOverlayBuffer.");
+                ?? throw new InvalidOperationException("乘员上下车需要 ScreenOverlayBuffer。");
             engine.RegisterSystem(new AttachmentMountDemoSystem(engine, state), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new AttachmentMountPresentationSystem(state, debugDraw, overlay));
             return Task.CompletedTask;

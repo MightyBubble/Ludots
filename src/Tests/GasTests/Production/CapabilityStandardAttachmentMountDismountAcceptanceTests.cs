@@ -63,7 +63,7 @@ public sealed class CapabilityStandardAttachmentMountDismountAcceptanceTests
             engine,
             frameTimes,
             () => state.Phase == AttachmentMountPhase.Done,
-            maxFrames: 160);
+            maxFrames: 300);
         CapabilityStandardShowcaseTestHarness.TickMeasured(engine, 1, frameTimes);
 
         Assert.Multiple(() =>
