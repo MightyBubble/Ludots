@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Registry;
@@ -25,6 +26,8 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
     private bool _graphRanHandlerBound;
     private int _scriptIndex;
     private int _orderSerial;
+    private bool _outcomeObserverBound;
+    private string _castSlotThisFrame = "";
     private readonly Dictionary<string, Entity> _actors = new(StringComparer.Ordinal);
     private readonly HashSet<string> _seenEvents = new(StringComparer.Ordinal);
 
@@ -40,6 +43,7 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ownsEngine = ownsEngine;
         BindGraphRanHandler();
+        BindOutcomeObserver();
     }
 
     public void BindFromStartupMapId(string? mapId)
@@ -143,14 +147,14 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
         for (int i = 0; i < maxFrames; i++)
         {
             engine.Tick(FrameStep);
-            if (_scriptIndex >= _vignette!.Script.Length && !HasActiveExec())
+            if (_scriptIndex >= _vignette!.Script.Length)
             {
                 return;
             }
         }
 
         throw new InvalidOperationException(
-            $"Ability feature '{_feature}' did not settle in {maxFrames} frames; scriptIndex={_scriptIndex}/{_vignette!.Script.Length}.");
+            $"Ability feature '{_feature}' did not settle in {maxFrames} frames; scriptIndex={_scriptIndex}/{_vignette!.Script.Length}; frame={Metrics.Frame}.");
     }
 
     public static string ResolveAssetsRoot()
@@ -185,6 +189,55 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
                 return Task.CompletedTask;
             });
         _graphRanHandlerBound = true;
+    }
+
+    private void BindOutcomeObserver()
+    {
+        if (_outcomeObserverBound || _engine == null)
+        {
+            return;
+        }
+
+        _engine.RegisterSystem(
+            new AbilityFeatureGalleryCastOutcomeSystem(_engine, this),
+            SystemGroup.Cleanup);
+        _outcomeObserverBound = true;
+    }
+
+    public void ObserveCastOutcomes()
+    {
+        if (string.IsNullOrEmpty(_castSlotThisFrame) || _engine == null)
+        {
+            return;
+        }
+
+        GasPresentationEventBuffer? buffer = _engine.GetService(CoreServiceKeys.GasPresentationEventBuffer);
+        if (buffer == null)
+        {
+            throw new InvalidOperationException("Ability feature gallery requires GasPresentationEventBuffer.");
+        }
+
+        Entity caster = Actor("caster");
+        ReadOnlySpan<GasPresentationEvent> events = buffer.Events;
+        for (int i = 0; i < events.Length; i++)
+        {
+            if (events[i].Kind == GasPresentationEventKind.CastFailed && events[i].Actor == caster)
+            {
+                if (string.Equals(_castSlotThisFrame, "second", StringComparison.Ordinal))
+                {
+                    Metrics.SecondCast = "rejected";
+                }
+                else
+                {
+                    Metrics.FirstCast = "rejected";
+                }
+
+                break;
+            }
+        }
+
+        _castSlotThisFrame = "";
+        Metrics.Detail = RenderDetail();
     }
 
     public void Dispose()
@@ -426,26 +479,30 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
 
     private void RecordCast(string? saveAs, string result)
     {
-        if (string.Equals(saveAs, "first", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(Metrics.FirstCast))
+        string slot = ResolveCastSlot(saveAs);
+        _castSlotThisFrame = slot;
+        if (string.Equals(slot, "second", StringComparison.Ordinal))
         {
-            if (string.IsNullOrWhiteSpace(Metrics.FirstCast))
-            {
-                Metrics.FirstCast = result;
-            }
+            Metrics.SecondCast = result;
+            return;
         }
 
+        Metrics.FirstCast = result;
+    }
+
+    private string ResolveCastSlot(string? saveAs)
+    {
         if (string.Equals(saveAs, "second", StringComparison.Ordinal))
         {
-            Metrics.SecondCast = result;
+            return "second";
         }
-        else if (string.Equals(saveAs, "first", StringComparison.Ordinal))
+
+        if (string.Equals(saveAs, "first", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(Metrics.FirstCast))
         {
-            Metrics.FirstCast = result;
+            return "first";
         }
-        else if (string.IsNullOrWhiteSpace(Metrics.SecondCast) && !string.IsNullOrWhiteSpace(Metrics.FirstCast) && Metrics.FirstCast != result)
-        {
-            Metrics.SecondCast = result;
-        }
+
+        return "second";
     }
 
     private void ObserveEvents()
@@ -491,13 +548,6 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
         {
             Metrics.Interrupted = true;
         }
-    }
-
-    private bool HasActiveExec()
-    {
-        GameEngine engine = RequireEngine();
-        Entity caster = Actor("caster");
-        return engine.World.IsAlive(caster) && engine.World.Has<AbilityExecInstance>(caster);
     }
 
     private void RefreshHealth()
