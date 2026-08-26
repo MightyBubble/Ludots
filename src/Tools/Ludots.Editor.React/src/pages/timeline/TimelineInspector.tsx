@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { readString, type TimelineClip, type TimelineField } from './model.ts';
 
 const fieldClass = 'mt-1 w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-100';
@@ -59,10 +59,25 @@ function FieldControl({
       </label>
     );
   }
+  const committed = readString(value);
+  const [draft, setDraft] = useState(committed);
+  useEffect(() => {
+    setDraft(committed);
+  }, [committed]);
   return (
     <label className={labelClass}>
       {field.label}
-      <input className={fieldClass} value={readString(value)} onChange={(e) => onChange(e.target.value)} />
+      <input
+        className={fieldClass}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          if (draft !== committed) onChange(draft);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && draft !== committed) onChange(draft);
+        }}
+      />
     </label>
   );
 }

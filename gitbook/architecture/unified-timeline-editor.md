@@ -127,8 +127,9 @@ Feature: 作者用同一套时间轴编三种合同
 
   Scenario: 不能手写保留计时名
     Given 作者选中一条 TimerSet
-    When 作者把计时名改成 presenter.duration
+    When 作者把计时名改成 presenter.duration 并离开输入框
     Then 编辑器拒绝这次改动
+    And 输入框回到原来的计时名
     And 原规则保持不变
 ```
 

@@ -38,9 +38,11 @@ function applyMutation(
   mutation: TimelineMutation,
   setSource: (value: unknown) => void,
   setError: (value: string) => void,
+  onRejected?: () => void,
 ): boolean {
   if (mutation.ok === false) {
     setError(mutation.error);
+    onRejected?.();
     return false;
   }
   setSource(mutation.source);
@@ -66,6 +68,7 @@ export const TimelineAuthoringPage: React.FC = () => {
   const [error, setError] = useState('');
   const [playhead, setPlayhead] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [inspectorNonce, setInspectorNonce] = useState(0);
 
   const adapter = adapterFor(contextId);
   const selected = useMemo(() => items.find((item) => documentId(item) === selectedId) ?? items[0] ?? null, [items, selectedId]);
@@ -207,6 +210,7 @@ export const TimelineAuthoringPage: React.FC = () => {
         }
       },
       setError,
+      () => setInspectorNonce((n) => n + 1),
     );
   };
 
@@ -390,6 +394,7 @@ export const TimelineAuthoringPage: React.FC = () => {
 
               {selectedClip ? (
                 <TimelineInspector
+                  key={`${selectedClip.id}:${inspectorNonce}`}
                   title="选中条目"
                   fields={adapter.clipFields(selectedClip)}
                   values={clipValues(selectedClip)}
