@@ -452,7 +452,7 @@ def write_op_page(path: Path, vignette: dict, sections: list[str]) -> None:
 {beat}
 
 <video controls playsinline preload="metadata" poster="{media}/poster.png" src="{media}/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `{media}/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 {media}/play.mp4。
 </video>
 
 """ + (chr(10) * 2).join(sections) + f"""

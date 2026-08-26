@@ -3,7 +3,7 @@
 记录官翻出名册点到锚点，营地锚立刻在岗应答；倒下后名册读出空位。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadPlacedAnchor/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadPlacedAnchor/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadPlacedAnchor/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_LoadPlacedAnchor/play.mp4。
 </video>
 
 ## 作者写法

@@ -3,7 +3,7 @@
 记录官点名营地圈，地图名册回 1；点名不存在的鬼区，名册回 0。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion/play.mp4。
 </video>
 
 ## 作者写法
