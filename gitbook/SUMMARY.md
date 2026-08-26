@@ -8,6 +8,7 @@
   - [编码标准](contributing/coding-standards.md)
   - [Feature 开发工作流](contributing/feature-development-workflow.md)
   - [AI 辅助开发规范](contributing/ai-assisted-development.md)
+  - [Showcase 完成度硬门槛](contributing/showcase-completion-bar.md)
   - [环境与构建](contributing/environment-setup.md)
   - [文档治理](contributing/documentation-governance.md)
   - [共享 Skill 治理](contributing/shared-skill-governance.md)

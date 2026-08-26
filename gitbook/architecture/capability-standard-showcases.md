@@ -2,6 +2,8 @@
 
 This page is the SSOT for production-grade capability acceptance showcase roots in core. Validation, regression launches, and adapter alignment should prefer these root mods instead of legacy business showcase names.
 
+**完成度硬门槛**：凡登记为可玩 / 短剧 / 画廊的条目，必须满足 `gitbook/contributing/showcase-completion-bar.md`（正式 Presenter 主画面；禁止 DebugDraw 色圈冒充产品画面）。
+
 ## Acceptance Root Mods
 
 | Scenario | Binding | Root Mod | Acceptance Focus |

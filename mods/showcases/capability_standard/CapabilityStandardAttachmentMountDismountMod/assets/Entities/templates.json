@@ -5,6 +5,7 @@
       "Name": { "Value": "Attachment.Mount.Carrier" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0 },
+      "VisualHeightmapSampleState": {},
       "AttributeBuffer": {
         "base": { "Health": 100 },
         "current": { "Health": 100 }
@@ -25,6 +26,7 @@
       "Name": { "Value": "Attachment.Mount.Rider" },
       "WorldPositionCm": { "Value": { "X": 1200, "Y": -400 } },
       "FacingDirection": { "AngleRad": 0 },
+      "VisualHeightmapSampleState": {},
       "AttributeBuffer": {
         "base": { "Health": 100 },
         "current": { "Health": 100 }

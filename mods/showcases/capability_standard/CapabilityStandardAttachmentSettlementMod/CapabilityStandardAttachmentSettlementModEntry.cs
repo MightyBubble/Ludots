@@ -4,7 +4,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
-using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardAttachmentSettlementMod;
 
@@ -23,12 +22,10 @@ public sealed class CapabilityStandardAttachmentSettlementModEntry : IMod
 
             var state = new AttachmentSettlementDemoState();
             engine.SetService(DemoStateKey, state);
-            var debugDraw = new DebugDrawCommandBuffer();
-            engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
                 ?? throw new InvalidOperationException("哨所静物需要 ScreenOverlayBuffer。");
             engine.RegisterSystem(new AttachmentSettlementDemoSystem(engine.World, state), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new AttachmentSettlementPresentationSystem(state, debugDraw, overlay));
+            engine.RegisterPresentationSystem(new AttachmentSettlementPresentationSystem(state, overlay));
             return Task.CompletedTask;
         });
     }

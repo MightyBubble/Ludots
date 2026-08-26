@@ -4,7 +4,8 @@
     "components": {
       "Name": { "Value": "Attachment.Settlement.Hall" },
       "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } },
-      "FacingDirection": { "AngleRad": 0 }
+      "FacingDirection": { "AngleRad": 0 },
+      "VisualHeightmapSampleState": {}
     },
     "children": [
       {
@@ -32,13 +33,17 @@
   {
     "id": "attachment_settlement_annex",
     "components": {
-      "Name": { "Value": "Attachment.Settlement.Annex" }
+      "Name": { "Value": "Attachment.Settlement.Annex" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {}
     }
   },
   {
     "id": "attachment_settlement_tower",
     "components": {
-      "Name": { "Value": "Attachment.Settlement.Tower" }
+      "Name": { "Value": "Attachment.Settlement.Tower" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {}
     }
   }
 ]

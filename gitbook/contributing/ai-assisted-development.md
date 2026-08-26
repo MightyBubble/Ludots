@@ -12,6 +12,8 @@
 
 **GAS / 实体生命周期 / effect preset / graph op 类任务**：编码前还必须执行共享 skill `ludots-gas-composition-gate`（见 `skills/governance/ludots-gas-composition-gate/`），填写自审清单并产出 `artifacts/gas-composition-gate.md`。核心判断标准：新变体应新增 graph 节点或 effect 步骤，而不是 profile enum 或 preset 开关。
 
+**可玩 Showcase 类任务**：编码前必须先读 `gitbook/contributing/showcase-completion-bar.md`。主画面必须走正式 Presenter；禁止用 DebugDraw 色圈冒充产品画面。
+
 ## 2 防幻觉条款
 
 - 禁止凭空发明类、方法、字段、Registry 能力和 NuGet API。

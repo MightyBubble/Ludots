@@ -1,0 +1,119 @@
+[
+  {
+    "id": "attachment.vehicle.hud.health_bar",
+    "extends": "entity_health_bar",
+    "bindings": [
+      { "paramKey": "worldBar.width", "source": "constant", "constantValue": 110 },
+      { "paramKey": "worldBar.height", "source": "constant", "constantValue": 12 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [110, 12, 1],
+          "materialParamKey": "worldBar.fillRatio"
+        },
+        "style": { "color": [0.12, 0.92, 0.28, 1] }
+      }
+    ],
+    "anchor": { "offset": [0, 2.4, 0] }
+  },
+  {
+    "id": "attachment.vehicle.chassis",
+    "children": [
+      { "definitionId": "attachment.vehicle.hud.health_bar", "scopeTag": "hud" }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [3.2, 1.1, 2.2]
+        },
+        "style": { "color": [0.18, 0.72, 0.86, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "attachment_vehicle_chassis" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "attachment.vehicle.chassis" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "attachment_vehicle_chassis" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "attachment.vehicle.turret",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.6, 0.9, 1.6]
+        },
+        "style": { "color": [0.95, 0.82, 0.2, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "attachment_vehicle_turret" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "attachment.vehicle.turret" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "attachment_vehicle_turret" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "attachment.vehicle.barrel",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [2.4, 0.35, 0.35]
+        },
+        "style": { "color": [0.92, 0.28, 0.22, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "attachment_vehicle_barrel" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "attachment.vehicle.barrel" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "attachment_vehicle_barrel" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  }
+]

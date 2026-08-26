@@ -4,7 +4,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
-using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardAttachmentMountDismountMod;
 
@@ -23,12 +22,10 @@ public sealed class CapabilityStandardAttachmentMountDismountModEntry : IMod
 
             var state = new AttachmentMountDemoState();
             engine.SetService(DemoStateKey, state);
-            var debugDraw = new DebugDrawCommandBuffer();
-            engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
                 ?? throw new InvalidOperationException("乘员上下车需要 ScreenOverlayBuffer。");
             engine.RegisterSystem(new AttachmentMountDemoSystem(engine, state), SystemGroup.InputCollection);
-            engine.RegisterPresentationSystem(new AttachmentMountPresentationSystem(state, debugDraw, overlay));
+            engine.RegisterPresentationSystem(new AttachmentMountPresentationSystem(state, overlay));
             return Task.CompletedTask;
         });
     }

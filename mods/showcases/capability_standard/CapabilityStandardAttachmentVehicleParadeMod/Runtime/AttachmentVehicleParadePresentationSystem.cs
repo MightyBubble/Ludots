@@ -1,23 +1,19 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardAttachmentVehicleParadeMod.Runtime;
 
 internal sealed class AttachmentVehicleParadePresentationSystem : ISystem<float>
 {
     private readonly AttachmentVehicleParadeDemoState _state;
-    private readonly DebugDrawCommandBuffer _debugDraw;
     private readonly ScreenOverlayBuffer _overlay;
 
     public AttachmentVehicleParadePresentationSystem(
         AttachmentVehicleParadeDemoState state,
-        DebugDrawCommandBuffer debugDraw,
         ScreenOverlayBuffer overlay)
     {
         _state = state;
-        _debugDraw = debugDraw;
         _overlay = overlay;
     }
 
@@ -28,13 +24,6 @@ internal sealed class AttachmentVehicleParadePresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        GraphShowcaseStagePresenter.Clear(_debugDraw);
-        float chassisX = _state.ChassisXCm / 100f;
-        float barrelX = _state.BarrelXCm / 100f;
-        float barrelY = _state.BarrelYCm / 100f;
-        GraphShowcaseStagePresenter.DrawActor(_debugDraw, chassisX, 0f, 2.2f, DebugDrawColor.Cyan, 0.18f);
-        GraphShowcaseStagePresenter.DrawActor(_debugDraw, chassisX, 0f, 1.1f, DebugDrawColor.Yellow, 0.14f);
-        GraphShowcaseStagePresenter.DrawActor(_debugDraw, barrelX, barrelY, 0.7f, DebugDrawColor.Red, 0.14f);
         GraphShowcaseStagePresenter.DrawPlayerCaption(
             _overlay,
             "装甲阅兵",

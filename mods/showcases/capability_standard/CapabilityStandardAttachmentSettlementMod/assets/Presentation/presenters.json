@@ -1,0 +1,92 @@
+[
+  {
+    "id": "attachment.settlement.hall",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [4.2, 2.4, 4.2]
+        },
+        "style": { "color": [0.92, 0.92, 0.9, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "attachment_settlement_hall" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "attachment.settlement.hall" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "attachment_settlement_hall" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "attachment.settlement.annex",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [2.6, 1.8, 2.6]
+        },
+        "style": { "color": [0.25, 0.78, 0.9, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "attachment_settlement_annex" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "attachment.settlement.annex" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "attachment_settlement_annex" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "attachment.settlement.tower",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.6, 3.6, 1.6]
+        },
+        "style": { "color": [0.95, 0.8, 0.2, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "attachment_settlement_tower" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "attachment.settlement.tower" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "attachment_settlement_tower" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  }
+]
