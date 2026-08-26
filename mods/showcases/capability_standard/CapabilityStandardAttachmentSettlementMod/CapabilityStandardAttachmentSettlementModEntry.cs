@@ -18,18 +18,15 @@ public sealed class CapabilityStandardAttachmentSettlementModEntry : IMod
         context.Log("[CapabilityStandardAttachmentSettlementMod] Loaded — 哨所静物");
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null)
-            {
-                return Task.CompletedTask;
-            }
+            GameEngine engine = ctx.Get(CoreServiceKeys.Engine)
+                ?? throw new InvalidOperationException("哨所静物开场需要引擎服务。");
 
             var state = new AttachmentSettlementDemoState();
             engine.SetService(DemoStateKey, state);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
-                ?? throw new InvalidOperationException("Settlement showcase requires ScreenOverlayBuffer.");
+                ?? throw new InvalidOperationException("哨所静物需要 ScreenOverlayBuffer。");
             engine.RegisterSystem(new AttachmentSettlementDemoSystem(engine.World, state), SystemGroup.PostMovement);
             engine.RegisterPresentationSystem(new AttachmentSettlementPresentationSystem(state, debugDraw, overlay));
             return Task.CompletedTask;
