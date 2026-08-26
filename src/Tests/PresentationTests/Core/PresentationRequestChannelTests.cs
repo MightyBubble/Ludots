@@ -30,6 +30,43 @@ namespace Ludots.Tests.Presentation
         private const int LegacyFatPresentationRequestBytes = 688;
 
         [Test]
+        public void VisualRenderPayload_Equals_DoesNotAllocate()
+        {
+            var left = new PresentationVisualProxy
+            {
+                StableId = 7,
+                MeshAssetId = 3,
+                LOD = LODLevel.High,
+                RenderPath = VisualRenderPath.StaticMesh,
+                Flags = VisualRuntimeFlags.Visible,
+                Visibility = VisualVisibility.Visible,
+                Scale = Vector3.One,
+                Rotation = Quaternion.Identity,
+            };
+            var right = left;
+            bool equal = false;
+            for (int i = 0; i < 1000; i++)
+            {
+                equal = left.Payload.Equals(right.Payload);
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10000; i++)
+            {
+                equal = left.Payload.Equals(right.Payload);
+            }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(equal, Is.True);
+            Assert.That(allocated, Is.EqualTo(0),
+                "VisualRenderPayload.Equals must not box AnimatorPackedState/AnimationOverlayRequest.");
+        }
+
+        [Test]
         public void ChannelElementSizes_AreEachNarrowerThanFatPresentationRequest()
         {
             Assert.That(Unsafe.SizeOf<VisualProxyChannelItem>(), Is.LessThan(LegacyFatPresentationRequestBytes));
@@ -502,7 +539,17 @@ namespace Ludots.Tests.Presentation
         {
             for (int i = 0; i < visualCount; i++)
             {
-                var visual = new PresentationVisualProxy { StableId = i + 1, MeshAssetId = 1, LOD = LODLevel.High };
+                var visual = new PresentationVisualProxy
+                {
+                    StableId = i + 1,
+                    MeshAssetId = 1,
+                    LOD = LODLevel.High,
+                    RenderPath = VisualRenderPath.StaticMesh,
+                    Flags = VisualRuntimeFlags.Visible,
+                    Visibility = VisualVisibility.Visible,
+                    Scale = Vector3.One,
+                    Rotation = Quaternion.Identity,
+                };
                 requests.AddVisualProxy(Entity.Null, in visual);
             }
 
