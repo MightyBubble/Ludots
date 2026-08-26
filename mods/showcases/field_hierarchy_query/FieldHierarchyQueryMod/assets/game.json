@@ -1,7 +1,8 @@
 {
   "startupMapId": "field_hierarchy_query",
   "startupInputContexts": [
-    "Default_Gameplay"
+    "Default_Gameplay",
+    "FieldHierarchyQuery.Controls"
   ],
   "startupLocalSeats": [
     {

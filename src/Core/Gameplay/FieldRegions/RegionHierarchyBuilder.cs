@@ -10,18 +10,336 @@ using Ludots.Core.Map;
 namespace Ludots.Core.Gameplay.FieldRegions
 {
     /// <summary>
-    /// Lookup of hierarchy group entities by key, plus the roster state the builder
-    /// validated. Point queries walk ChildOf edges at read time; no parent-side grid
-    /// is ever stored, so there is no projection that could fall out of sync.
+    /// Lookup of hierarchy groups and baked readonly leaf-to-ancestor visual remaps.
+    /// Point queries still walk ChildOf edges; the remaps are presentation-derived and
+    /// never become an authoring surface.
     /// </summary>
     public sealed class RegionHierarchyRuntime
     {
-        public RegionHierarchyRuntime(Dictionary<string, Entity> groupByKey)
+        private readonly Dictionary<FieldLayerId, LayerProjectionTable> _projectionByLayer = new();
+        private readonly Dictionary<string, int> _projectionIdByKey = new(StringComparer.Ordinal);
+        private int _nextProjectionId = 1;
+
+        internal RegionHierarchyRuntime(
+            Dictionary<string, Entity> groupByKey,
+            World world,
+            MapSession session)
         {
             GroupByKey = groupByKey;
+            RebuildRemaps(world, session, markDirty: false);
         }
 
-        public Dictionary<string, Entity> GroupByKey { get; }
+        public IReadOnlyDictionary<string, Entity> GroupByKey { get; }
+        public int Revision { get; private set; }
+
+        public void RebuildRemaps(World world, MapSession session)
+        {
+            RebuildRemaps(world, session, markDirty: true);
+        }
+
+        public int GetProjectionRevision(FieldLayerId layerId)
+        {
+            return RequireProjection(layerId).Revision;
+        }
+
+        public int GetMaxProjectedId(FieldLayerId layerId, in FieldDiscreteVisualMapMode mode)
+        {
+            LayerProjectionTable projection = RequireProjection(layerId);
+            int max = 0;
+            for (int regionId = 1; regionId < projection.Chains.Length; regionId++)
+            {
+                int projectedId = projection.Resolve(regionId, in mode);
+                if (projectedId > max)
+                {
+                    max = projectedId;
+                }
+            }
+
+            return max;
+        }
+
+        public int ResolveProjectedId(
+            FieldLayerId layerId,
+            int leafRegionId,
+            in FieldDiscreteVisualMapMode mode)
+        {
+            LayerProjectionTable projection = RequireProjection(layerId);
+            if ((uint)leafRegionId >= (uint)projection.Chains.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(leafRegionId));
+            }
+
+            return projection.Resolve(leafRegionId, in mode);
+        }
+
+        private void RebuildRemaps(World world, MapSession session, bool markDirty)
+        {
+            ArgumentNullException.ThrowIfNull(world);
+            ArgumentNullException.ThrowIfNull(session);
+
+            if (session.Fields == null || session.RegionIndex == null)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{session.MapId.Value}' must materialize field regions before hierarchy remaps are built.");
+            }
+
+            var rebuilt = new Dictionary<FieldLayerId, LayerProjectionTable>();
+            foreach (FieldLayerData layerData in session.Fields.Layers)
+            {
+                if (layerData is not DiscreteIdFieldLayerData layer)
+                {
+                    continue;
+                }
+
+                string[][] chains = BuildChains(world, session, layer);
+                _projectionByLayer.TryGetValue(layer.LayerId, out LayerProjectionTable? previous);
+                bool[] changedRegions = FindChangedRegions(previous?.Chains, chains);
+                int revision = previous == null
+                    ? 1
+                    : HasChanges(changedRegions) ? NextRevision(previous.Revision) : previous.Revision;
+                rebuilt.Add(layer.LayerId, BuildProjectionTable(chains, revision));
+
+                if (markDirty && HasChanges(changedRegions))
+                {
+                    MarkChangedRegionsDirty(layer.Field, changedRegions);
+                }
+            }
+
+            _projectionByLayer.Clear();
+            foreach (KeyValuePair<FieldLayerId, LayerProjectionTable> entry in rebuilt)
+            {
+                _projectionByLayer.Add(entry.Key, entry.Value);
+            }
+
+            Revision = NextRevision(Revision);
+        }
+
+        private string[][] BuildChains(World world, MapSession session, DiscreteIdFieldLayerData layer)
+        {
+            var chains = new string[layer.Regions.Count + 1][];
+            chains[0] = Array.Empty<string>();
+            var keys = new List<string>(8);
+            for (int regionId = 1; regionId <= layer.Regions.Count; regionId++)
+            {
+                if (!session.RegionIndex!.TryResolve(layer.LayerId, regionId, out Entity regionEntity))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{session.MapId.Value}' has no materialized entity for field layer '{layer.LayerKey}' region {regionId}.");
+                }
+
+                keys.Clear();
+                Entity current = regionEntity;
+                for (int depth = 0; depth <= 64; depth++)
+                {
+                    keys.Add(ResolveHierarchyKey(world, current));
+                    if (!world.Has<ChildOf>(current))
+                    {
+                        break;
+                    }
+
+                    current = world.Get<ChildOf>(current).Parent;
+                    if (!world.IsAlive(current))
+                    {
+                        throw new InvalidOperationException(
+                            $"Hierarchy chain for field layer '{layer.LayerKey}' region {regionId} references a dead parent.");
+                    }
+
+                    if (depth == 64)
+                    {
+                        throw new InvalidOperationException(
+                            $"Hierarchy chain for field layer '{layer.LayerKey}' region {regionId} exceeded 64 ancestors.");
+                    }
+                }
+
+                chains[regionId] = keys.ToArray();
+            }
+
+            return chains;
+        }
+
+        private LayerProjectionTable BuildProjectionTable(string[][] chains, int revision)
+        {
+            int maxDepth = 0;
+            for (int regionId = 1; regionId < chains.Length; regionId++)
+            {
+                maxDepth = Math.Max(maxDepth, chains[regionId].Length - 1);
+            }
+
+            var depthRemaps = new int[maxDepth][];
+            for (int depth = 0; depth < maxDepth; depth++)
+            {
+                depthRemaps[depth] = new int[chains.Length];
+            }
+
+            var groupRemaps = new Dictionary<string, int[]>(StringComparer.Ordinal);
+            for (int regionId = 1; regionId < chains.Length; regionId++)
+            {
+                string[] chain = chains[regionId];
+                for (int chainIndex = 0; chainIndex < chain.Length; chainIndex++)
+                {
+                    string key = chain[chainIndex];
+                    int projectedId = GetOrCreateProjectionId(key);
+                    if (!groupRemaps.TryGetValue(key, out int[]? groupRemap))
+                    {
+                        groupRemap = new int[chains.Length];
+                        groupRemaps.Add(key, groupRemap);
+                    }
+
+                    groupRemap[regionId] = projectedId;
+                    if (chainIndex > 0)
+                    {
+                        depthRemaps[chainIndex - 1][regionId] = projectedId;
+                    }
+                }
+            }
+
+            return new LayerProjectionTable(chains, depthRemaps, groupRemaps, revision);
+        }
+
+        private int GetOrCreateProjectionId(string key)
+        {
+            if (_projectionIdByKey.TryGetValue(key, out int projectionId))
+            {
+                return projectionId;
+            }
+
+            projectionId = _nextProjectionId++;
+            _projectionIdByKey.Add(key, projectionId);
+            return projectionId;
+        }
+
+        private LayerProjectionTable RequireProjection(FieldLayerId layerId)
+        {
+            if (!_projectionByLayer.TryGetValue(layerId, out LayerProjectionTable? projection))
+            {
+                throw new InvalidOperationException(
+                    $"Hierarchy visual projection has no discrete field layer id {layerId.Value}.");
+            }
+
+            return projection;
+        }
+
+        private static string ResolveHierarchyKey(World world, Entity entity)
+        {
+            if (!world.IsAlive(entity))
+            {
+                throw new InvalidOperationException("Hierarchy visual projection encountered a dead entity.");
+            }
+
+            if (world.Has<RegionCm>(entity))
+            {
+                return world.Get<RegionCm>(entity).RegionKey;
+            }
+
+            if (world.Has<RegionGroupCm>(entity))
+            {
+                return world.Get<RegionGroupCm>(entity).GroupKey;
+            }
+
+            throw new InvalidOperationException(
+                $"Hierarchy entity {entity.Id} has neither RegionCm nor RegionGroupCm.");
+        }
+
+        private static bool[] FindChangedRegions(string[][]? previous, string[][] current)
+        {
+            var changed = new bool[current.Length];
+            for (int regionId = 1; regionId < current.Length; regionId++)
+            {
+                changed[regionId] =
+                    previous == null ||
+                    regionId >= previous.Length ||
+                    !ChainsEqual(previous[regionId], current[regionId]);
+            }
+
+            return changed;
+        }
+
+        private static bool ChainsEqual(string[] left, string[] right)
+        {
+            if (left.Length != right.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < left.Length; i++)
+            {
+                if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool HasChanges(bool[] changed)
+        {
+            for (int i = 1; i < changed.Length; i++)
+            {
+                if (changed[i])
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void MarkChangedRegionsDirty(ChunkedField2D<int> field, bool[] changedRegions)
+        {
+            for (int chunkIndex = 0; chunkIndex < field.ChunkCount; chunkIndex++)
+            {
+                FieldChunk2D<int> chunk = field.GetChunkAt(chunkIndex);
+                for (int local = 0; local < chunk.CellCount; local++)
+                {
+                    int regionId = chunk.Get(local);
+                    if ((uint)regionId >= (uint)changedRegions.Length || !changedRegions[regionId])
+                    {
+                        continue;
+                    }
+
+                    field.MarkDirty(field.Grid.CellFromChunkLocal(chunk.ChunkX, chunk.ChunkY, local));
+                }
+            }
+        }
+
+        private static int NextRevision(int revision) => revision == int.MaxValue ? 1 : revision + 1;
+
+        private sealed class LayerProjectionTable
+        {
+            public LayerProjectionTable(
+                string[][] chains,
+                int[][] depthRemaps,
+                Dictionary<string, int[]> groupRemaps,
+                int revision)
+            {
+                Chains = chains;
+                DepthRemaps = depthRemaps;
+                GroupRemaps = groupRemaps;
+                Revision = revision;
+            }
+
+            public string[][] Chains { get; }
+            public int[][] DepthRemaps { get; }
+            public Dictionary<string, int[]> GroupRemaps { get; }
+            public int Revision { get; }
+
+            public int Resolve(int leafRegionId, in FieldDiscreteVisualMapMode mode)
+            {
+                return mode.Kind switch
+                {
+                    FieldDiscreteVisualMapModeKind.Leaf => leafRegionId,
+                    FieldDiscreteVisualMapModeKind.AncestorDepth =>
+                        mode.Depth <= DepthRemaps.Length ? DepthRemaps[mode.Depth - 1][leafRegionId] : 0,
+                    FieldDiscreteVisualMapModeKind.GroupKey =>
+                        GroupRemaps.TryGetValue(mode.GroupKey, out int[]? remap)
+                            ? remap[leafRegionId]
+                            : throw new InvalidOperationException(
+                                $"Hierarchy visual projection group key '{mode.GroupKey}' is not present in this field layer."),
+                    _ => throw new ArgumentOutOfRangeException(nameof(mode)),
+                };
+            }
+        }
     }
 
     /// <summary>
@@ -41,7 +359,7 @@ namespace Ludots.Core.Gameplay.FieldRegions
             var groupByKey = new Dictionary<string, Entity>(StringComparer.Ordinal);
             if (rosters.Count == 0)
             {
-                return new RegionHierarchyRuntime(groupByKey);
+                return new RegionHierarchyRuntime(groupByKey, world, session);
             }
 
             Dictionary<string, Entity> entityByKey = CollectRegionEntities(session);
@@ -82,7 +400,7 @@ namespace Ludots.Core.Gameplay.FieldRegions
                 }
             }
 
-            return new RegionHierarchyRuntime(groupByKey);
+            return new RegionHierarchyRuntime(groupByKey, world, session);
         }
 
         /// <summary>

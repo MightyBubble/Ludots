@@ -8,6 +8,15 @@
         "event": "MapLoaded",
         "start": "load_scope",
         "once": true
+      },
+      {
+        "label": "on_cycle_mapmode",
+        "event": "InputActionFired",
+        "start": "mode_scope",
+        "refire": "restart",
+        "filters": {
+          "action": "FieldHierarchyQuery.CycleMapMode"
+        }
       }
     ],
     "nodes": [
@@ -22,7 +31,20 @@
       },
       { "id": "progress_show", "op": "ShowPanel", "panelType": "panel.field_hierarchy_query.progress" },
       { "id": "load_ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "load_done", "op": "HaltReturnInt" }
+      { "id": "load_done", "op": "HaltReturnInt" },
+      { "id": "mode_scope", "op": "LoadExplicitTarget" },
+      { "id": "mode_read", "op": "ReadMapVarInt", "var": "mapmode" },
+      { "id": "mode_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "mode_next", "op": "AddInt" },
+      { "id": "mode_switch", "op": "SwitchInt" },
+      { "id": "mode_leaf", "op": "ConstInt", "intValue": 0 },
+      { "id": "mode_parent", "op": "ConstInt", "intValue": 1 },
+      { "id": "mode_top", "op": "ConstInt", "intValue": 2 },
+      { "id": "mode_write_leaf", "op": "WriteMapVarInt", "var": "mapmode" },
+      { "id": "mode_write_parent", "op": "WriteMapVarInt", "var": "mapmode" },
+      { "id": "mode_write_top", "op": "WriteMapVarInt", "var": "mapmode" },
+      { "id": "mode_ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "mode_done", "op": "HaltReturnInt" }
     ],
     "controlEdges": [
       { "from": "load_scope", "fromPort": "next", "to": "load_one" },
@@ -30,11 +52,32 @@
       { "from": "write_stage_one", "fromPort": "next", "to": "progress_panel" },
       { "from": "progress_panel", "fromPort": "next", "to": "progress_show" },
       { "from": "progress_show", "fromPort": "next", "to": "load_ok" },
-      { "from": "load_ok", "fromPort": "next", "to": "load_done" }
+      { "from": "load_ok", "fromPort": "next", "to": "load_done" },
+      { "from": "mode_scope", "fromPort": "next", "to": "mode_read" },
+      { "from": "mode_read", "fromPort": "next", "to": "mode_one" },
+      { "from": "mode_one", "fromPort": "next", "to": "mode_next" },
+      { "from": "mode_next", "fromPort": "next", "to": "mode_switch" },
+      { "from": "mode_switch", "fromPort": "case:1", "to": "mode_parent" },
+      { "from": "mode_switch", "fromPort": "case:2", "to": "mode_top" },
+      { "from": "mode_switch", "fromPort": "default", "to": "mode_leaf" },
+      { "from": "mode_leaf", "fromPort": "next", "to": "mode_write_leaf" },
+      { "from": "mode_parent", "fromPort": "next", "to": "mode_write_parent" },
+      { "from": "mode_top", "fromPort": "next", "to": "mode_write_top" },
+      { "from": "mode_write_leaf", "fromPort": "next", "to": "mode_ok" },
+      { "from": "mode_write_parent", "fromPort": "next", "to": "mode_ok" },
+      { "from": "mode_write_top", "fromPort": "next", "to": "mode_ok" },
+      { "from": "mode_ok", "fromPort": "next", "to": "mode_done" }
     ],
     "valueEdges": [
       { "from": "load_one", "fromPort": "value", "to": "write_stage_one", "toPort": "value" },
-      { "from": "load_ok", "fromPort": "value", "to": "load_done", "toPort": "value" }
+      { "from": "load_ok", "fromPort": "value", "to": "load_done", "toPort": "value" },
+      { "from": "mode_read", "fromPort": "value", "to": "mode_next", "toPort": "a" },
+      { "from": "mode_one", "fromPort": "value", "to": "mode_next", "toPort": "b" },
+      { "from": "mode_next", "fromPort": "value", "to": "mode_switch", "toPort": "selector" },
+      { "from": "mode_leaf", "fromPort": "value", "to": "mode_write_leaf", "toPort": "value" },
+      { "from": "mode_parent", "fromPort": "value", "to": "mode_write_parent", "toPort": "value" },
+      { "from": "mode_top", "fromPort": "value", "to": "mode_write_top", "toPort": "value" },
+      { "from": "mode_ok", "fromPort": "value", "to": "mode_done", "toPort": "value" }
     ]
   },
   {
@@ -42,12 +85,14 @@
     "kind": "Query",
     "entry": "stage_rd",
     "nodes": [
-      { "id": "stage_rd", "op": "ReadMapVarInt", "var": "stage" }
+      { "id": "stage_rd", "op": "ReadMapVarInt", "var": "stage" },
+      { "id": "mapmode_rd", "op": "ReadMapVarInt", "var": "mapmode" }
     ],
     "controlEdges": [],
     "valueEdges": [],
     "outputs": [
-      { "id": "stage", "destination": "Summary", "type": "Int", "source": "stage_rd", "key": "field.hierarchy.panel.stage" }
+      { "id": "stage", "destination": "Summary", "type": "Int", "source": "stage_rd", "key": "field.hierarchy.panel.stage" },
+      { "id": "mapmode", "destination": "Summary", "type": "Int", "source": "mapmode_rd", "key": "field.hierarchy.panel.mapmode" }
     ]
   }
 ]

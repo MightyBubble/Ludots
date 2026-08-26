@@ -83,6 +83,12 @@
 - 无格子的 parent 物化为 `RegionGroupCm`；查询用 `RegionHierarchyBuilder.TryResolveChain`（finest → ancestors）。
 - 跨层区域 key 在同一张图必须唯一。
 
+### 4.1 只读视觉投影与 mapmode
+
+`FieldDiscreteVisualProjector` 始终读取最细 `DiscreteIdFieldLayerData`，把 leaf regionId 经装载期烘焙的 `ChildOf` remap 发布为 `GlobalFieldVisualKind.DiscreteOwnership`；它没有写投影格的 API。`Leaf` 显示作者 id，`AncestorDepth(n)` 取精确第 n 级祖先（该级不存在则为 0/透明），`GroupKey(key)` 只着色该 key 的后代。叶格变更由 `FieldDirtyCursor<int>` 按 chunk 增量发布；`RegionHierarchyRuntime.RebuildRemaps` 在 reparent/roster 变化后标脏受影响 leaf chunk。
+
+Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent；`field_hierarchy_query` 按 `M` 循环三档。byte palette 的最大投影 id 是 255；更大的 region/key 空间由 projector 的 `Vector4` palette callback 发布 RGBA，不截断 id。
+
 ## 5. Field-editor CLI
 
 离线改 Mod 资产（写出即 schema v2）。命令与示例见 [Field Editor CLI](field-editor.md)。入口工程：`tools/FieldEditor/`。
