@@ -110,7 +110,7 @@ FEATURES: list[dict] = [
         "abilityId": "Ability.AbilityFeature.EffectClip",
         "script": [
             {"atFrame": 12, "op": "cast", "slot": 0, "target": "target"},
-            {"atFrame": 50, "op": "settle"},
+            {"atFrame": 30, "op": "settle"},
         ],
         "expect": {"targetHealthMax": 99, "targetHasTag": "Status.AbilityFeature.Burning"},
         "ability": ability(

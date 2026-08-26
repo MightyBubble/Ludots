@@ -16,7 +16,7 @@
       "target": "target"
     },
     {
-      "atFrame": 50,
+      "atFrame": 30,
       "op": "settle"
     }
   ],

@@ -206,7 +206,7 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
 
     public void ObserveCastOutcomes()
     {
-        if (string.IsNullOrEmpty(_castSlotThisFrame) || _engine == null)
+        if (_engine == null || _actors.Count == 0)
         {
             return;
         }
@@ -221,7 +221,12 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
         ReadOnlySpan<GasPresentationEvent> events = buffer.Events;
         for (int i = 0; i < events.Length; i++)
         {
-            if (events[i].Kind == GasPresentationEventKind.CastFailed && events[i].Actor == caster)
+            if (events[i].Actor != caster)
+            {
+                continue;
+            }
+
+            if (events[i].Kind == GasPresentationEventKind.CastFailed && !string.IsNullOrEmpty(_castSlotThisFrame))
             {
                 if (string.Equals(_castSlotThisFrame, "second", StringComparison.Ordinal))
                 {
@@ -231,8 +236,10 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
                 {
                     Metrics.FirstCast = "rejected";
                 }
-
-                break;
+            }
+            else if (events[i].Kind == GasPresentationEventKind.CastInterrupted)
+            {
+                Metrics.Interrupted = true;
             }
         }
 
