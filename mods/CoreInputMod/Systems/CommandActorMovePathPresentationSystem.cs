@@ -10,7 +10,6 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Events;
@@ -760,8 +759,10 @@ namespace CoreInputMod.Systems
 
         private static int ResolveEventKeyId(string key)
         {
-            int existing = TagRegistry.GetId(key);
-            return existing > 0 ? existing : TagRegistry.Register(key);
+            int existing = PresentationEventKeyRegistry.GetId(key);
+            return existing > PresentationEventKeyRegistry.InvalidId
+                ? existing
+                : PresentationEventKeyRegistry.Register(key);
         }
 
         private static Vector3 ToVisualMeters(Vector3 worldCm)
