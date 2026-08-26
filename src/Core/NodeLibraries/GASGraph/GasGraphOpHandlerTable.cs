@@ -358,6 +358,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Status = GraphExecutionStatus.Running
             };
 
+            EnsureTextHeap(ref state);
             GraphSliceResult result = ExecuteSliceCore(
                 ref state,
                 program,
@@ -401,7 +402,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"ExecuteSlice requires a call stack span of at least {GraphVmLimits.MaxCallStackDepth} that outlives the slice.");
             }
 
+            EnsureTextHeap(ref state);
             return ExecuteSliceCore(ref state, program, handlers, ref cursor, budgetSteps);
+        }
+
+        /// <summary>
+        /// Root execution entry binds the thread-local text heap when the caller omitted it.
+        /// Nested Invoke* already pass a non-null heap and must not reset here.
+        /// </summary>
+        private static void EnsureTextHeap(ref GraphExecutionState state)
+        {
+            if (state.Text == null)
+            {
+                state.Text = GraphTextHeap.ForCurrentThreadCleared();
+            }
         }
 
         private static GraphSliceResult ExecuteSliceCore(
