@@ -1,0 +1,24 @@
+{
+  "Id": "collection_bags_arena",
+  "Tags": ["showcase", "panel", "typed-collection-bags"],
+  "TriggerGraphs": [
+    { "graph": "Graph.CollectionBags.Panels.Open", "scopeInstanceId": "collection-bags-hero" }
+  ],
+  "Entities": [
+    { "InstanceId": "collection-bags-hero", "Template": "collection_bags_hero" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "collection-bags-hero" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "collection-bags-hero" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": { "TargetXCm": 0, "TargetYCm": 0, "Yaw": 45, "Pitch": 35, "DistanceCm": 900, "FovYDeg": 50 }
+}
