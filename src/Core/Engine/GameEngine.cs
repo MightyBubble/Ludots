@@ -965,6 +965,7 @@ namespace Ludots.Core.Engine
                 fogKnowledgeProjector);
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.ScopeKeyRegistry, progressionScopeKeys);
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.VisionFogLayerRegistry, visionFogLayerRegistry);
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.FieldLayerRegistry, fieldLayerRegistry);
             // Lookup TextToken columns resolve against PresentationTextCatalog; load catalog before graphs.
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var rngStreams = new Randomization.RngStreamService();
