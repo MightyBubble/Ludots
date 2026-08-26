@@ -146,6 +146,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new InvalidOperationException(
                     $"Effect template '{id}' in {relativePath} uses deprecated 'lifecycleDeploy' block. Use configParams '_ep.targetEntityTemplate' with preset graph composition.");
             }
+
+            if (obj.ContainsKey("tags"))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{id}' in {relativePath} field 'tags' was renamed to 'categories' (effect classification, not gameplay tags).");
+            }
         }
 
         private EffectTemplateData Compile(EffectTemplateConfig cfg, string relativePath)
