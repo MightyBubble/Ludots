@@ -40,7 +40,7 @@ public sealed class ActivationConditionShowcaseAcceptanceTests
 
         int beaconDefinitionId = definitions.GetId(BeaconDefinitionKey);
         Assert.That(beaconDefinitionId, Is.GreaterThan(0));
-        ref readonly PresenterDefinition definition = ref definitions.Get(beaconDefinitionId);
+        PresenterDefinition definition = definitions.Get(beaconDefinitionId);
         Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.AssetBinding));
         Assert.That(definition.Behaviors[0].ActiveByDefault, Is.False,
             "loader must force ActiveByDefault=false when activationCondition is present");

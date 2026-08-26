@@ -44,7 +44,7 @@ public sealed class TrailMeshShowcaseAcceptanceTests
 
         int bladeDefinitionId = definitions.GetId(BladeDefinitionKey);
         Assert.That(bladeDefinitionId, Is.GreaterThan(0));
-        ref readonly PresenterDefinition definition = ref definitions.Get(bladeDefinitionId);
+        PresenterDefinition definition = definitions.Get(bladeDefinitionId);
         Assert.That(definition.Behaviors.Length, Is.EqualTo(2));
         Assert.That(definition.Behaviors[1].Kind, Is.EqualTo(BehaviorKind.TrailMesh));
         Assert.That(definition.Behaviors[1].TrailMesh.MaxSamples, Is.EqualTo(20));

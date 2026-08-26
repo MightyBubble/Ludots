@@ -58,7 +58,7 @@ public sealed class MaterialBehaviorShowcaseAcceptanceTests
 
         int propDefinitionId = definitions.GetId(PropDefinitionKey);
         Assert.That(propDefinitionId, Is.GreaterThan(0));
-        ref readonly PresenterDefinition definition = ref definitions.Get(propDefinitionId);
+        PresenterDefinition definition = definitions.Get(propDefinitionId);
         Assert.That(definition.Behaviors[1].Kind, Is.EqualTo(BehaviorKind.Material));
         Assert.That(definition.Behaviors[1].Material.SwapTable.Length, Is.EqualTo(2));
 
