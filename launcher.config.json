@@ -170,6 +170,30 @@
       }
     },
     {
+      "name": "capability_standard_attachment_vehicle_parade",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardAttachmentVehicleParadeMod",
+        "projectPath": "CapabilityStandardAttachmentVehicleParadeMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_attachment_mount_dismount",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardAttachmentMountDismountMod",
+        "projectPath": "CapabilityStandardAttachmentMountDismountMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_attachment_settlement",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardAttachmentSettlementMod",
+        "projectPath": "CapabilityStandardAttachmentSettlementMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_physics2d_stress",
       "target": {
         "type": "path",

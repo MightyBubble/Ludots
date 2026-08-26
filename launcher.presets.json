@@ -156,6 +156,33 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_attachment_vehicle_parade_raylib",
+      "name": "Capability Standard Attachment Vehicle Parade Raylib",
+      "selectors": [
+        "$capability_standard_attachment_vehicle_parade"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_attachment_mount_dismount_raylib",
+      "name": "Capability Standard Attachment Mount Dismount Raylib",
+      "selectors": [
+        "$capability_standard_attachment_mount_dismount"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_attachment_settlement_raylib",
+      "name": "Capability Standard Attachment Settlement Raylib",
+      "selectors": [
+        "$capability_standard_attachment_settlement"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_physics2d_stress_raylib",
       "name": "Capability Standard Physics2D Stress Raylib",
       "selectors": [

@@ -1,0 +1,31 @@
+{
+  "startupMapId": "capability_standard_attachment_settlement",
+  "windowTitle": "Ludots - 哨所静物（挂接）",
+  "startupInputContexts": ["Default_Gameplay"],
+  "startupLocalSeats": [{ "seatId": "seat.0", "playerId": 1 }],
+  "targetFps": 0,
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "presentation": {
+    "runtimeEntitySpawnQueueCapacity": 64,
+    "runtimeEntitySpawnReceiptQueueCapacity": 64,
+    "presenterInstanceCapacity": 64,
+    "presentationEventStreamCapacity": 128,
+    "presentationOwnerChangeCapacity": 128,
+    "presenterCommandCapacity": 128,
+    "primitiveDrawBufferCapacity": 256,
+    "visualSnapshotBufferCapacity": 128,
+    "visualProxyBufferCapacity": 128,
+    "presentationRequestCapacity": 128,
+    "groundOverlayCapacity": 32,
+    "worldHudCapacity": 64,
+    "screenHudCapacity": 64,
+    "skinnedVisualBatchCapacity": 64,
+    "minimapMarkerCapacity": 32,
+    "cameraCulling": {
+      "highLodDistanceCm": 8000,
+      "mediumLodDistanceCm": 16000,
+      "lowLodDistanceCm": 32000
+    }
+  }
+}

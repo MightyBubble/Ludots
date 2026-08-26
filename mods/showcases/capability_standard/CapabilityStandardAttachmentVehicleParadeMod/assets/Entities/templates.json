@@ -1,0 +1,59 @@
+[
+  {
+    "id": "attachment_vehicle_chassis",
+    "components": {
+      "Name": { "Value": "Attachment.Vehicle.Chassis" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0 },
+      "AttributeBuffer": {
+        "base": { "Health": 100 },
+        "current": { "Health": 100 }
+      },
+      "MovementParticipation": {
+        "physicsPresence": "none",
+        "displacement": {
+          "allowed": true,
+          "handbackSpeedThresholdCmPerSec": 20,
+          "maxDurationMs": 2000
+        }
+      }
+    },
+    "children": [
+      {
+        "template": "attachment_vehicle_turret",
+        "localPose": {
+          "offsetXCm": 0,
+          "offsetYCm": 0,
+          "facingDeg": 0,
+          "inheritParentFacing": false,
+          "offsetRotation": "None"
+        }
+      }
+    ]
+  },
+  {
+    "id": "attachment_vehicle_turret",
+    "components": {
+      "Name": { "Value": "Attachment.Vehicle.Turret" },
+      "FacingDirection": { "AngleRad": 0 }
+    },
+    "children": [
+      {
+        "template": "attachment_vehicle_barrel",
+        "localPose": {
+          "offsetXCm": 220,
+          "offsetYCm": 0,
+          "facingDeg": 0,
+          "inheritParentFacing": true,
+          "offsetRotation": "ParentFacing"
+        }
+      }
+    ]
+  },
+  {
+    "id": "attachment_vehicle_barrel",
+    "components": {
+      "Name": { "Value": "Attachment.Vehicle.Barrel" }
+    }
+  }
+]

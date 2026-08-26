@@ -14,6 +14,9 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Physics2D | `capability_standard_physics2d` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DMod` | Pure Physics2D startup, static polygon wall, restitution bounce, ForceInput knockback, damping field, kinematic rotating door, friction tangent impulse, radial impulse symmetry |
 | Physics2D Stress | `capability_standard_physics2d_stress` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DStressMod` | Large-N Physics2D throughput budget and pipeline-level steady-state allocation evidence |
 | Physics2D Tuning | `capability_standard_physics2d_showcase` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod` | 15Hz Physics2D, 30K dynamic entities, 100K static entities, broadphase strategy, static obstacle templates, polygon authoring |
+| Attachment 装甲阅兵 | `capability_standard_attachment_vehicle_parade` | `mods/showcases/capability_standard/CapabilityStandardAttachmentVehicleParadeMod` | **可读剧本**：底盘开动时炮塔/炮管跟随；炮塔独立瞄准，炮管随朝向前伸。一功能一 Mod |
+| Attachment 乘员上下车 | `capability_standard_attachment_mount_dismount` | `mods/showcases/capability_standard/CapabilityStandardAttachmentMountDismountMod` | **可读剧本**：Effect 上车挂座 → 跟车 → 周界散布下车。一功能一 Mod |
+| Attachment 哨所静物 | `capability_standard_attachment_settlement` | `mods/showcases/capability_standard/CapabilityStandardAttachmentSettlementMod` | **可读剧本**：静态父大厅带着附楼/塔楼，多拍重派生位置不漂移。一功能一 Mod |
 | TimeFlow | `capability_standard_time_flow_showcase` | `mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod` | TimeFlow pause/scale token stacks: settings pause, menu pause, skill indicator pause, nested system guide pause, scale layering, with MassNavigation, Physics2D, and GAS clock probes and no Formation/action coupling |
 | Crowd Physics Arena | `capability_standard_crowd_physics_arena` | `mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod` | massnav→kinematic bridge acceptance: kinematic squads push dynamic crates, pressure plate contact events open a door, Q shockwave displacement windows with handback, E boulder spawn with initial velocity, HUD counters |
 | Script Flow Sandbox | `capability_standard_script_flow_sandbox` | `mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod` | **原子 L1 Script**：Call/Yield/Halt「喝水直到满」水位条；不含 BT/HFSM/Level |
@@ -38,6 +41,9 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_stress' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_attachment_vehicle_parade' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_attachment_mount_dismount' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_attachment_settlement' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_time_flow_showcase' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_crowd_physics_arena' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_script_flow_sandbox' --adapter raylib
@@ -61,6 +67,9 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_stress_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_showcase_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_attachment_vehicle_parade_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_attachment_mount_dismount_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_attachment_settlement_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_time_flow_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_crowd_physics_arena_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_script_flow_sandbox_raylib'
