@@ -1863,6 +1863,15 @@
       "processSharedAssemblyNamePrefixes": [
         "CefSharp"
       ]
+    },
+    {
+      "id": "ultralight",
+      "projectPath": "src/Libraries/Ludots.UI.Browser.Ultralight/Ludots.UI.Browser.Ultralight.csproj",
+      "packageRootPath": "BrowserRuntime/ultralight",
+      "assemblyPath": "BrowserRuntime/ultralight/Ludots.UI.Browser.Ultralight.dll",
+      "hostTypeName": "Ludots.UI.Browser.Ultralight.UltralightBrowserRuntimeHost",
+      "useCollectibleLoadContext": true,
+      "processSharedAssemblyNamePrefixes": []
     }
   ],
   "projectHints": []

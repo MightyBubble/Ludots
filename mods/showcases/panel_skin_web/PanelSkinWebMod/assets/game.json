@@ -2,7 +2,7 @@
   "browserRuntime": {
     "enabled": true,
     "required": true,
-    "provider": "cef"
+    "provider": "ultralight"
   },
   "windowTitle": "Ludots - Panel Web UI Skin",
   "windowWidth": 1600,
@@ -13,5 +13,5 @@
     "globalLevel": "Info"
   },
   "panelSkin": "web",
-  "panelWebApp": "PanelSkinWebMod:Assets/overlay-app/index.html"
+  "panelWebApp": "PanelSkinWebMod:assets/overlay-app/index.html"
 }

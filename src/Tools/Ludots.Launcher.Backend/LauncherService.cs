@@ -288,13 +288,21 @@ public sealed class LauncherService
         IEnumerable<string> selectors,
         string? adapterId = null,
         LauncherBuildMode buildMode = LauncherBuildMode.Always,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? browserProviderOverride = null)
     {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        var resolveResult = ResolvePlan(
+            resolvedSelectors,
+            adapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            LoadPresets(),
+            browserProviderOverride);
         WriteLaunchGraphDocument(resolveResult.Plan);
         return await BuildPlanRuntimeAsync(resolveResult.Plan, config, ct);
     }
@@ -395,13 +403,21 @@ public sealed class LauncherService
     public async Task<LauncherLaunchResult> LaunchAsync(
         IEnumerable<string> selectors,
         string? adapterId = null,
-        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto,
+        string? browserProviderOverride = null)
     {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        var resolveResult = ResolvePlan(
+            resolvedSelectors,
+            adapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            LoadPresets(),
+            browserProviderOverride);
         if (resolveResult.Plan.IsExecutableTarget)
         {
             return await LaunchExecutableTargetAsync(resolveResult.Plan, config);
@@ -509,11 +525,22 @@ public sealed class LauncherService
         return $"\"{argument.Replace("\"", "\\\"")}\"";
     }
 
-    public LauncherResolveResult Resolve(IEnumerable<string> selectors, string? adapterId = null, LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    public LauncherResolveResult Resolve(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto,
+        string? browserProviderOverride = null)
     {
         var config = LoadConfig();
         var catalog = BuildCatalog(config);
-        var result = ResolvePlan(selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(), adapterId, buildMode, config, catalog, LoadPresets());
+        var result = ResolvePlan(
+            selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(),
+            adapterId,
+            buildMode,
+            config,
+            catalog,
+            LoadPresets(),
+            browserProviderOverride);
         WriteLaunchGraphDocument(result.Plan);
         return result;
     }
@@ -597,7 +624,8 @@ public sealed class LauncherService
         LauncherBuildMode buildMode,
         LauncherConfig config,
         CatalogIndex catalog,
-        LauncherPresetDocument presetDocument)
+        LauncherPresetDocument presetDocument,
+        string? browserProviderOverride = null)
     {
         if (selectors.Count == 0)
         {
@@ -654,7 +682,12 @@ public sealed class LauncherService
             .Select(entry => entry.Info.Id)
             .ToList();
         var diagnostics = BuildPlanDiagnostics(roots, ordered);
-        var browserRuntime = ResolveBrowserRuntimeConfig(selectors, presetDocument, diagnostics, config);
+        var browserRuntime = ResolveBrowserRuntimeConfig(
+            selectors,
+            presetDocument,
+            diagnostics,
+            config,
+            browserProviderOverride);
         var adapterDescriptor = BuildAdapterDescriptor(profile);
         var bootstrapArtifactPath = Path.Combine(profile.OutputDirectory, profile.RuntimeBootstrapFileName);
         var appAssemblyPath = ResolveAppAssemblyPath(profile);
@@ -1026,12 +1059,31 @@ public sealed class LauncherService
         IReadOnlyList<string> selectors,
         LauncherPresetDocument presetDocument,
         LauncherPlanDiagnostics diagnostics,
-        LauncherConfig config)
+        LauncherConfig config,
+        string? browserProviderOverride = null)
     {
         BrowserRuntimeConfig? gameConfig = ResolveBrowserRuntimeFromDiagnostics(diagnostics);
         BrowserRuntimeConfig? presetConfig = ResolveBrowserRuntimeFromSelectors(selectors, presetDocument);
         BrowserRuntimeConfig? effective = presetConfig ?? gameConfig;
-        return effective == null ? null : CompleteHostBrowserRuntimeConfig(effective, config);
+        if (effective == null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(browserProviderOverride))
+        {
+            effective = CloneBrowserRuntimeConfig(effective);
+            effective.Provider = browserProviderOverride.Trim();
+            // Force host paths to be re-derived from the selected provider registration.
+            effective.ProviderAssemblyPath = string.Empty;
+            effective.ProviderHostTypeName = string.Empty;
+            effective.ProviderProjectPath = string.Empty;
+            effective.RuntimeRootPath = string.Empty;
+            effective.UseCollectibleLoadContext = null;
+            effective.ProcessSharedAssemblyNamePrefixes = Array.Empty<string>();
+        }
+
+        return CompleteHostBrowserRuntimeConfig(effective, config);
     }
 
     private static BrowserRuntimeConfig? ResolveBrowserRuntimeFromDiagnostics(LauncherPlanDiagnostics diagnostics)
@@ -1882,6 +1934,41 @@ public sealed class LauncherService
                     message = $"CEF browser runtime package is incomplete. Missing: {path}";
                     return false;
                 }
+            }
+        }
+        else if (string.Equals(browserRuntime.Provider, "ultralight", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] requiredFiles =
+            {
+                "Ludots.UI.Browser.Ultralight.deps.json",
+                "Ludots.UI.Browser.Ultralight.dll",
+                "UltralightNet.dll",
+                "UltralightNet.Binaries.dll",
+                "UltralightNet.AppCore.dll",
+                "UltralightNet.AppCore.Binaries.dll"
+            };
+
+            foreach (string file in requiredFiles)
+            {
+                string path = Path.Combine(browserRuntime.RuntimeRootPath, file);
+                if (!File.Exists(path))
+                {
+                    message = $"Ultralight browser runtime package is incomplete. Missing: {path}";
+                    return false;
+                }
+            }
+
+            bool hasLinux = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "libUltralight.so")) ||
+                            File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "linux-x64", "native", "libUltralight.so"));
+            bool hasWindows = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "Ultralight.dll")) ||
+                              File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "win-x64", "native", "Ultralight.dll"));
+            bool hasMac = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "libUltralight.dylib")) ||
+                          File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "osx-x64", "native", "libUltralight.dylib"));
+            if (!hasLinux && !hasWindows && !hasMac)
+            {
+                message =
+                    $"Ultralight browser runtime package is incomplete. Missing native Ultralight libraries under '{browserRuntime.RuntimeRootPath}'.";
+                return false;
             }
         }
 

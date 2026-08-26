@@ -235,6 +235,49 @@
       }
     },
     {
+      "id": "browser_ui_ultralight_raylib",
+      "name": "Browser UI Ultralight Raylib",
+      "selectors": [
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
+      "id": "browser_react_flow_ultralight_raylib",
+      "name": "Browser React Flow Ultralight Raylib",
+      "selectors": [
+        "$browser_react_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
+      "id": "browser_minimap_composited_overlay_ultralight_raylib",
+      "name": "Browser Minimap Composited Overlay Ultralight Raylib",
+      "selectors": [
+        "$presenter_blacksmith_large_world_nohud",
+        "$browser_minimap_composited_overlay_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
       "id": "ui_player_aggregate_graph_mvp_raylib",
       "name": "Player Aggregate Graph MVP Raylib",
       "selectors": [
