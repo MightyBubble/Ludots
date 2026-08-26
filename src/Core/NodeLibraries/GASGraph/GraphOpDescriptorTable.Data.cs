@@ -222,6 +222,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.Call, ScriptAndTriggerGraph, scriptPorts: noPorts, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.Return, ScriptAndTriggerGraph, scriptPorts: noPorts);
             Add(rows, GraphNodeOp.Yield, ScriptAndTriggerGraph, scriptPorts: noPorts, scriptSliceOnly: true);
+            // LinearOutputType carries the Bool result for Script/TriggerGraph emit
+            // (scriptOut is not stored on the descriptor; UsesLinearDescriptorEmit reads LinearOut).
+            Add(rows, GraphNodeOp.AwaitCallback, ScriptAndTriggerGraph, GraphValueType.Bool, scriptPorts: noPorts, scriptOut: GraphValueType.Bool, scriptSliceOnly: true);
             Add(rows, GraphNodeOp.HaltReturnInt, LinearQueryScript, linearPorts: portValue, queryPorts: portValue, scriptPorts: portValue, scriptOut: GraphValueType.Void);
             Add(rows, GraphNodeOp.InvokeScript, LinearQueryScript, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int, flags: GraphOperandRole.FuncLibNameFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.MoveInt, ScriptAndTriggerGraph, GraphValueType.Int, scriptPorts: portValue, scriptOut: GraphValueType.Int);

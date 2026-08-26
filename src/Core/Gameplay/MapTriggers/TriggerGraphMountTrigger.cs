@@ -63,7 +63,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// entity's mounts are inert (CheckConditions false) and lazily swept at think
     /// waves by the mount pipeline.
     /// </summary>
-    public sealed class TriggerGraphMountTrigger : Trigger, IMapTriggerRoute
+    public sealed class TriggerGraphMountTrigger : Trigger, IMapTriggerRoute, IGraphCallbackResumeTarget
     {
         private const string TargetEntityPayloadKey = "MapTrigger.TargetEntity";
         private const string TagIdPayloadKey = "MapTrigger.TagId";
@@ -101,8 +101,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private bool _runActive;
         private bool _ranToHaltOnce;
         private bool _lifecycleDispatch;
+        private bool _awaitingCallback;
+        private ScriptContext? _parkedContext;
 
         public TriggerGraphMountDomain Domain => _domain;
+        public bool IsAwaitingCallback => _awaitingCallback;
+        public bool IsCallbackResumeAlive => _runActive;
 
         public TriggerGraphMountTrigger(
             int graphId,
@@ -389,12 +393,43 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         internal void ResumeFromSuspension(ScriptContext context)
         {
-            if (!_runActive)
+            if (!_runActive || _awaitingCallback)
             {
                 return;
             }
 
             RunSlice(context);
+        }
+
+        public void ResumeAfterGraphCallback(int handleId, bool confirmed, int resultBoolRegister)
+        {
+            if (!_runActive)
+            {
+                throw new InvalidOperationException(
+                    $"GRAPH.CALLBACK.ERR.MountNotSuspended: handle {handleId} completed but mount '{Name}' has no active run.");
+            }
+
+            if (!_awaitingCallback)
+            {
+                throw new InvalidOperationException(
+                    $"GRAPH.CALLBACK.ERR.MountNotAwaiting: handle {handleId} completed but mount '{Name}' is not awaiting a callback.");
+            }
+
+            if ((uint)resultBoolRegister >= (uint)_vmBoolRegisters.Length)
+            {
+                throw new InvalidOperationException(
+                    $"GRAPH.CALLBACK.ERR.ResultRegisterOutOfRange: bool register {resultBoolRegister} is outside the mount VM.");
+            }
+
+            if (_parkedContext == null)
+            {
+                throw new InvalidOperationException(
+                    $"GRAPH.CALLBACK.ERR.ParkedContextMissing: handle {handleId} completed without a parked ScriptContext on mount '{Name}'.");
+            }
+
+            _vmBoolRegisters[resultBoolRegister] = (byte)(confirmed ? 1 : 0);
+            _awaitingCallback = false;
+            RunSlice(_parkedContext);
         }
 
         internal bool IsScopeDispatchable(ScriptContext context)
@@ -438,28 +473,47 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 "触发器图挂载");
 
             MapId? mapScope = ResolveMapScopeOnce(dependencies);
-            GraphSliceResult result = GraphExecutor.ExecuteScriptSlice(
-                dependencies.Engine.World,
-                _runCaster,
-                _scope,
-                ResolveTargetPosCm(context),
-                program,
-                dependencies.GraphApi,
-                dependencies.Programs,
-                _vmFloatRegisters,
-                _vmIntRegisters,
-                _vmBoolRegisters,
-                _vmEntityRegisters,
-                _vmTargetRegisters,
-                _vmCallStack,
-                ref _cursor,
-                TriggerGraphLimits.SliceBudgetSteps,
-                GraphKind.Script,
-                _debugTrace,
-                mapScope,
-                _graphId,
-                _entryPayload,
-                _invokeArgs);
+            GraphCallbackService? callbacks = dependencies.Engine.GetService(CoreServiceKeys.GraphCallbackService);
+            _parkedContext = context;
+            if (callbacks != null)
+            {
+                callbacks.PushResumeTarget(this);
+            }
+
+            GraphSliceResult result;
+            try
+            {
+                result = GraphExecutor.ExecuteScriptSlice(
+                    dependencies.Engine.World,
+                    _runCaster,
+                    _scope,
+                    ResolveTargetPosCm(context),
+                    program,
+                    dependencies.GraphApi,
+                    dependencies.Programs,
+                    _vmFloatRegisters,
+                    _vmIntRegisters,
+                    _vmBoolRegisters,
+                    _vmEntityRegisters,
+                    _vmTargetRegisters,
+                    _vmCallStack,
+                    ref _cursor,
+                    TriggerGraphLimits.SliceBudgetSteps,
+                    GraphKind.Script,
+                    _debugTrace,
+                    mapScope,
+                    _graphId,
+                    _entryPayload,
+                    _invokeArgs);
+            }
+            finally
+            {
+                if (callbacks != null)
+                {
+                    callbacks.PopResumeTarget(this);
+                }
+            }
+
             LastSliceResult = result;
 
             RecordDebugTrace(result);
@@ -468,10 +522,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 _runActive = false;
                 _ranToHaltOnce = true;
+                _awaitingCallback = false;
                 return;
             }
 
             _runActive = true;
+            _awaitingCallback = result.Yielded && callbacks != null && callbacks.HasLiveWaiterForTarget(this);
             if (_cursor.Steps >= GraphVmLimits.MaxInstructionsPerExecution)
             {
                 throw new InvalidOperationException(
@@ -722,7 +778,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public bool IsSuspended => _owner.IsSuspended;
 
         public override bool CheckConditions(ScriptContext context)
-            => _owner.IsSuspended && _owner.IsScopeDispatchable(context);
+            => _owner.IsSuspended && !_owner.IsAwaitingCallback && _owner.IsScopeDispatchable(context);
 
         public override Task ExecuteAsync(ScriptContext context)
         {

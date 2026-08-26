@@ -17,6 +17,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Placement;
@@ -112,6 +113,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
         private Ludots.Core.Scripting.TriggerManager? _triggerManager;
+        private Ludots.Core.GraphRuntime.GraphCallbackService? _graphCallbacks;
         private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
         private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
 
@@ -249,6 +251,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
         {
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
+        }
+
+        /// <summary>
+        /// Binds #1126 AwaitCallback registration/completion service.
+        /// </summary>
+        public void BindGraphCallbackService(Ludots.Core.GraphRuntime.GraphCallbackService callbacks)
+        {
+            _graphCallbacks = callbacks ?? throw new ArgumentNullException(nameof(callbacks));
         }
 
         /// <summary>
@@ -476,6 +486,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ScriptContext context = BuildDispatchContext(schema, originMapId, stagedArgs);
 
             triggerManager.FireGlobalEvent(new EventKey(name), context);
+        }
+
+        public void BeginAwaitCallback(string callbackType, MapId mapId, Entity scope, int resultBoolRegister)
+        {
+            RejectDerivedAttributeSideEffect(nameof(BeginAwaitCallback));
+            GraphCallbackService callbacks = _graphCallbacks
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.GraphCallbackUnavailable");
+            callbacks.BeginAwait(callbackType, mapId, scope, resultBoolRegister);
         }
 
         private static EventSchema RequireDispatchEventSchema(TriggerManager triggerManager, int eventKeyId, out string name)

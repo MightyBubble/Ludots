@@ -83,6 +83,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.StoreArgFloat:
                     case GraphNodeOp.StoreArgEntity:
                     case GraphNodeOp.DispatchMapEvent:
+                    case GraphNodeOp.AwaitCallback:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.CreatePanel:

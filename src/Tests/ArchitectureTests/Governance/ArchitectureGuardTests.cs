@@ -46,6 +46,7 @@ namespace Ludots.Tests.Architecture.Governance
             nameof(SystemGroup.RuntimeEntityBinding),
             nameof(SystemGroup.AttributeCalculation),
             nameof(SystemGroup.DeferredTriggerCollection),
+            nameof(SystemGroup.Continuation),
             nameof(SystemGroup.Cleanup),
             nameof(SystemGroup.EventDispatch),
             nameof(SystemGroup.ClearPresentationFlags)

@@ -1114,6 +1114,9 @@ namespace Ludots.Core.Engine
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
+            var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
+            SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
+            gasGraphApi.BindGraphCallbackService(graphCallbackService);
             gasGraphApi.BindRngPickService(rngPickService);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -2102,6 +2105,13 @@ namespace Ludots.Core.Engine
                     () => GetService(CoreServiceKeys.AuthoritativeInput),
                     inputTriggerActions),
                 SystemGroup.DeferredTriggerCollection);
+
+            // Phase 5.5: Continuation (#1126 AwaitCallback drain — registration order)
+            RegisterSystem(
+                new Ludots.Core.GraphRuntime.GraphCallbackContinuationSystem(
+                    GetService(CoreServiceKeys.GraphCallbackService)
+                    ?? throw new InvalidOperationException("GraphCallbackService missing before Continuation phase registration.")),
+                SystemGroup.Continuation);
 
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);

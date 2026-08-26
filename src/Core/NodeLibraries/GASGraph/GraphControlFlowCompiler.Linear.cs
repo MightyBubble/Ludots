@@ -463,6 +463,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.ArgKey, "argKey", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.AwaitCallback:
+                    RequireNonEmpty(node.CallbackType, "callbackType", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.DispatchMapEvent:
                 {
                     if (dispatchSchemas == null || !dispatchSchemas.TryGetValue(node.Id, out Ludots.Core.Scripting.EventSchema schema))
@@ -1311,6 +1315,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                                 : Ludots.Core.Scripting.EventParamType.Entity),
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.ArgKey, "argKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AwaitCallback:
+                    instruction.Imm = RequireSymbol(node.CallbackType, "callbackType", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.DispatchMapEvent:

@@ -199,9 +199,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
 
                 case GraphNodeOp.Yield:
+                case GraphNodeOp.AwaitCallback:
                     if (walk.FindYield)
                     {
-                        return Fail(walk.Path, $"Yield@pc={pc}", out diagnostic);
+                        return Fail(walk.Path, $"{op}@pc={pc}", out diagnostic);
                     }
 
                     return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);

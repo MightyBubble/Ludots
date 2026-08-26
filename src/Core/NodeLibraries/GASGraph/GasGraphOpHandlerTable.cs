@@ -286,6 +286,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.Call or
                 GraphNodeOp.Return or
                 GraphNodeOp.Yield or
+                GraphNodeOp.AwaitCallback or
                 GraphNodeOp.HaltReturnInt or
                 GraphNodeOp.InvokeScript or
                 GraphNodeOp.MoveInt or
@@ -306,7 +307,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.StoreArgInt or
                 GraphNodeOp.StoreArgFloat or
                 GraphNodeOp.StoreArgEntity or
-                GraphNodeOp.DispatchMapEvent
+                GraphNodeOp.DispatchMapEvent or
+                GraphNodeOp.AwaitCallback
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -834,6 +836,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.StoreArgFloat, HandleStoreArgFloat, "StoreArgFloat graph opcode.");
             Register(GraphNodeOp.StoreArgEntity, HandleStoreArgEntity, "StoreArgEntity graph opcode.");
             Register(GraphNodeOp.DispatchMapEvent, HandleDispatchMapEvent, "DispatchMapEvent graph opcode.");
+            Register(GraphNodeOp.AwaitCallback, HandleAwaitCallback, "AwaitCallback graph opcode.");
         }
 
         // ── Value Ops ──
@@ -910,6 +913,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleYield(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
+            s.Status = GraphExecutionStatus.Yielded;
+        }
+
+        private static void HandleAwaitCallback(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string callbackType = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(ins.Imm)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AwaitCallbackSymbolUnknown: callbackType symbol id {ins.Imm} is not registered.");
+
+            MapId mapId = s.MapScope ?? default;
+            s.Api.BeginAwaitCallback(callbackType, mapId, s.Caster, ins.Dst);
             s.Status = GraphExecutionStatus.Yielded;
         }
 

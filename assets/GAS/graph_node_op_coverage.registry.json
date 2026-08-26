@@ -2856,6 +2856,23 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryInvokeAcceptanceTests.StoreArgInt_StagedValueRoundTripsThroughCallee"
       ]
+    },
+    {
+      "op": "AwaitCallback",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_AwaitCallback",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryScriptAcceptanceTests.AwaitCallback_ConfirmsAndContinues_WithCaption",
+        "TriggerGraphAwaitCallbackTests.AwaitCallback_CompletesInRegistrationOrder_NotCompletionOrder"
+      ]
     }
   ]
 }

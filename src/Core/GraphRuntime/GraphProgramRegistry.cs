@@ -40,7 +40,8 @@ namespace Ludots.Core.GraphRuntime
         {
             for (int i = 0; i < program.Length; i++)
             {
-                if (program[i].Op == (ushort)GraphNodeOp.Yield)
+                if (program[i].Op == (ushort)GraphNodeOp.Yield ||
+                    program[i].Op == (ushort)GraphNodeOp.AwaitCallback)
                 {
                     return true;
                 }

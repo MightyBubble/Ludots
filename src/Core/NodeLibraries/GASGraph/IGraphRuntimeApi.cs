@@ -422,6 +422,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
         }
 
+        /// <summary>
+        /// #1126: register an AwaitCallback waiter (Imm callback type) and park the slice.
+        /// Completions resume through GraphCallbackContinuationSystem in registration order.
+        /// </summary>
+        void BeginAwaitCallback(string callbackType, MapId mapId, Entity scope, int resultBoolRegister)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.GraphCallbackUnavailable");
+        }
+
         // ── Entity lifecycle graph composition ──
         void BeginLifecycleTransaction()
         {

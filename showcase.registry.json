@@ -7991,6 +7991,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_LoadPlacedEntity/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_AwaitCallback",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAwaitCallbackEntryMod",
+      "projectPath": "CapabilityStandardGraphOpAwaitCallbackEntryMod.csproj",
+      "title": "等回话再往下走",
+      "summary": "图停在门口等确认；回话一到，下一拍接着演。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "AwaitCallback"
+      ],
+      "binding": "capability_standard_graph_op_AwaitCallback",
+      "preset": "capability_standard_graph_op_AwaitCallback_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AwaitCallback.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_AwaitCallback",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AwaitCallback/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AwaitCallback/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

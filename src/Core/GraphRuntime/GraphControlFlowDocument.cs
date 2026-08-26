@@ -214,6 +214,8 @@ namespace Ludots.Core.GraphRuntime
         public string? Event { get; set; }
         /// <summary>Dispatch domain for DispatchMapEvent: "map" (default), "self", or "global" (#1123).</summary>
         public string? Scope { get; set; }
+        /// <summary>#1126 AwaitCallback catalog name (Imm symbol); required on AwaitCallback nodes.</summary>
+        public string? CallbackType { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>
         public string? ArgKey { get; set; }
         public string? QueryCapacityPolicy { get; set; }

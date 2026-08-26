@@ -1570,6 +1570,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     case GraphNodeOp.CompareLtInt:
                     case GraphNodeOp.MoveInt:
                     case GraphNodeOp.Yield:
+                    case GraphNodeOp.AwaitCallback:
                     case GraphNodeOp.InvokeScript:
                         if (!btChainTerminal)
                         {

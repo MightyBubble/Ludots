@@ -238,6 +238,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         StoreArgEntity = 453,
         /// <summary>Assemble a ScriptContext from the InvokeArgs staging per the event schema (Imm: event name symbol id) and fire it map-scoped; Flags 0 = map domain, 1 = self domain.</summary>
         DispatchMapEvent = 454,
+        /// <summary>
+        /// #1126 AwaitCallback: register a named callback handle (Imm: callbackType symbol id),
+        /// park the slice (Yielded), and on Complete write confirmed into B[Dst] then resume
+        /// in the Continuation phase (registration order).
+        /// </summary>
+        AwaitCallback = 455,
     }
 
     public static class GraphNodeOpParser
