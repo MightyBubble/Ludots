@@ -288,6 +288,94 @@ namespace Ludots.Tests.GAS.Story
         }
 
         [Test]
+        public void DialogueRuntime_ChoiceCommit_CompletesOldestDialogConfirmWaiter()
+        {
+            using GameEngine engine = CreateCoreEngine();
+            GraphCallbackService callbacks = engine.GetService(CoreServiceKeys.GraphCallbackService)
+                ?? throw new InvalidOperationException("GraphCallbackService missing.");
+            var dialogues = new DialogueDefinitionRegistry();
+            var story = new StoryDefinitionRegistry();
+            DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
+
+            story.Register(new StoryLineDefinition
+            {
+                Id = "line.unit.hello",
+                SpeakerId = "speaker.guide",
+                TextToken = "story.unit.hello"
+            });
+            story.Register(new StoryLineDefinition
+            {
+                Id = "line.unit.choice",
+                SpeakerId = "speaker.player",
+                TextToken = "story.unit.choice"
+            });
+            story.Register(new StoryPresentationProfileDefinition
+            {
+                Id = "story.dialogue_overlay",
+                Backend = StoryPresentationBackend.ScreenOverlay,
+                SurfaceKind = "OverlayDialogue",
+                Anchor = "BottomCenter"
+            });
+            dialogues.Register(new DialogueDefinition
+            {
+                Id = "dialogue.unit.confirm",
+                EntryNode = "hello",
+                Nodes =
+                {
+                    new DialogueNodeDefinition
+                    {
+                        Id = "hello",
+                        LineId = "line.unit.hello",
+                        PresentationProfile = "story.dialogue_overlay",
+                        Choices =
+                        {
+                            new DialogueChoiceDefinition
+                            {
+                                Id = "go",
+                                LineId = "line.unit.choice",
+                                NextNode = string.Empty
+                            }
+                        }
+                    }
+                }
+            });
+
+            var mount = new RecordingCallbackTarget();
+            callbacks.PushResumeTarget(mount);
+            callbacks.BeginAwait(GraphCallbackTypes.DialogConfirm, default, Arch.Core.Entity.Null, resultBoolRegister: 2);
+            callbacks.PopResumeTarget(mount);
+
+            dialogue.StartDialogue("dialogue.unit.confirm");
+            dialogue.ChooseOption(0);
+
+            Assert.That(
+                callbacks.TryGetOldestLiveHandleByCallbackType(GraphCallbackTypes.DialogConfirm, out _),
+                Is.False,
+                "Completed DialogConfirm waiter must not stay selectable as live.");
+
+            callbacks.Drain();
+            Assert.That(mount.ResumeCount, Is.EqualTo(1));
+            Assert.That(mount.LastConfirmed, Is.True);
+            Assert.That(mount.LastResultBoolRegister, Is.EqualTo(2));
+            Assert.That(dialogue.HasActiveDialogue, Is.False);
+        }
+
+        private sealed class RecordingCallbackTarget : Ludots.Core.GraphRuntime.IGraphCallbackResumeTarget
+        {
+            public int ResumeCount { get; private set; }
+            public bool LastConfirmed { get; private set; }
+            public int LastResultBoolRegister { get; private set; } = -1;
+            public bool IsCallbackResumeAlive => true;
+
+            public void ResumeAfterGraphCallback(int handleId, bool confirmed, int resultBoolRegister)
+            {
+                ResumeCount++;
+                LastConfirmed = confirmed;
+                LastResultBoolRegister = resultBoolRegister;
+            }
+        }
+
+        [Test]
         public void SequencerRuntime_ActivatesCameraAndSubtitleSections_AndFiresSignalOnce()
         {
             using GameEngine engine = CreateCoreEngine();

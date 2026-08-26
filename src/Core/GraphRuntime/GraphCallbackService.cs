@@ -267,6 +267,64 @@ namespace Ludots.Core.GraphRuntime
             return false;
         }
 
+        /// <summary>
+        /// Finds the oldest live waiter for <paramref name="callbackType"/> (registration order).
+        /// Dialogue Completers use this when they do not own the resume target.
+        /// </summary>
+        public bool TryGetOldestLiveHandleByCallbackType(string callbackType, out int handleId)
+        {
+            handleId = 0;
+            if (string.IsNullOrWhiteSpace(callbackType))
+            {
+                return false;
+            }
+
+            string needle = callbackType.Trim();
+            int bestOrder = int.MaxValue;
+            int bestHandle = 0;
+            for (int i = 1; i <= MaxHandles; i++)
+            {
+                if (!_waiters[i].Occupied || _waiters[i].Completed)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(_waiters[i].CallbackType, needle, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (_waiters[i].RegistrationOrder < bestOrder)
+                {
+                    bestOrder = _waiters[i].RegistrationOrder;
+                    bestHandle = i;
+                }
+            }
+
+            if (bestHandle == 0)
+            {
+                return false;
+            }
+
+            handleId = bestHandle;
+            return true;
+        }
+
+        /// <summary>
+        /// Completes the oldest live waiter for <paramref name="callbackType"/>, if any.
+        /// Returns false when no waiter is pending (Dialogue paths are not required to park a mount).
+        /// </summary>
+        public bool TryCompleteByCallbackType(string callbackType, bool confirmed)
+        {
+            if (!TryGetOldestLiveHandleByCallbackType(callbackType, out int handleId))
+            {
+                return false;
+            }
+
+            Complete(handleId, confirmed);
+            return true;
+        }
+
         public void InvalidateMap(MapId mapId)
         {
             for (int i = 1; i <= MaxHandles; i++)

@@ -99,6 +99,7 @@ Dialogue / Sequencer 只引用 `lineId`。最终文案经 `PresentationTextCatal
 - 推进输入、提交选择、节点跳转
 - 选项可用性：`StoryGraphInvoker.EvaluateCondition(conditionGraphId)` → **Query Graph**，以 `HaltReturnInt != 0` 为真（与图能力合同一致）
 - 选择副作用：`StoryGraphInvoker.ExecuteAction(actionGraphId)` → **TriggerGraph**，单次切片必须 `Halt`；若 `Yield` 则失败关闭（对话提交是同步权威点）
+- AwaitCallback Completer：挂载图可在别处 `AwaitCallback(DialogConfirm)` 停车；玩家 `ChooseOption` / `AdvanceDialogue` 时 Dialogue 只调用 `GraphCallbackService.TryCompleteByCallbackType`，**不**实现 `IGraphCallbackResumeTarget`，Drain 仍走 `SystemGroup.Continuation`
 - 不持有变量存储；不解析动作/条件枚举；不执行 cinematic step
 
 事件（替换旧 `Narrative.*`）：

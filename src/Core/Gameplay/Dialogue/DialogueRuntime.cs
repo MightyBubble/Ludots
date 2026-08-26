@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Story;
 using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -101,6 +102,9 @@ namespace Ludots.Core.Gameplay.Dialogue
                 return;
             }
 
+            // Player confirmed a no-choice line: wake any mount parked on DialogConfirm.
+            CompletePendingDialogConfirm(confirmed: true);
+
             string nextNode = _active.CurrentNode?.NextNode ?? string.Empty;
             if (string.IsNullOrWhiteSpace(nextNode))
             {
@@ -121,6 +125,9 @@ namespace Ludots.Core.Gameplay.Dialogue
             DialogueChoiceDefinition choice = _active.Choices[index];
             Entity subject = ResolveSubject();
             _graphs.ExecuteAction(choice.ActionGraphId, subject);
+            // Choice commit is the Dialogue Completer for AwaitCallback(DialogConfirm).
+            // Mounts park; Dialogue never owns a second resume target / waiter.
+            CompletePendingDialogConfirm(confirmed: true);
             FireEvent(DialogueEventKeys.ChoiceCommitted, ctx =>
             {
                 ctx.Set(DialogueServiceKeys.DialogueId, _active.Definition.Id);
@@ -449,6 +456,22 @@ namespace Ludots.Core.Gameplay.Dialogue
         private void ActivateCamera(string cameraId)
         {
             _engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest { Id = cameraId });
+        }
+
+        /// <summary>
+        /// Completes the oldest live <see cref="GraphCallbackTypes.DialogConfirm"/> waiter, if any.
+        /// Drain stays on Continuation phase — Dialogue only Completes.
+        /// </summary>
+        private void CompletePendingDialogConfirm(bool confirmed)
+        {
+            GraphCallbackService? callbacks = _engine.GetService(CoreServiceKeys.GraphCallbackService);
+            if (callbacks == null)
+            {
+                throw new InvalidOperationException(
+                    "DialogueRuntime requires GraphCallbackService to Complete AwaitCallback(DialogConfirm) waiters.");
+            }
+
+            callbacks.TryCompleteByCallbackType(GraphCallbackTypes.DialogConfirm, confirmed);
         }
 
         private void FireEvent(EventKey eventKey, Action<ScriptContext> populate)

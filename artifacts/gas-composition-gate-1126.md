@@ -49,4 +49,4 @@ callbackType 走 ConfigKey 符号（与 DispatchMapEvent 事件名同一路径�
 
 ## 8. Next variant
 
-Dialogue 宿主：拿到 live handle → Complete → Continuation Drain；不新造等待机制。
+Dialogue 宿主 Completer 已落地：`TryCompleteByCallbackType(DialogConfirm)` 在 `ChooseOption` / `AdvanceDialogue`；Drain 仍归 Continuation。剩余卫生：关 #1126 与 Epic #1083 子树关单。
