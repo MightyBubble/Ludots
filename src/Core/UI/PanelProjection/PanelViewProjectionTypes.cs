@@ -59,6 +59,11 @@ namespace Ludots.Core.UI.PanelProjection
 
         public string Name { get; }
         public string FromSpace { get; }
+
+        /// <summary>
+        /// Parent graph collection outputs consumed through source=input publish
+        /// their collectionKey with this exact remapping value.
+        /// </summary>
         public string FromOutput { get; }
         public string Type { get; }
     }

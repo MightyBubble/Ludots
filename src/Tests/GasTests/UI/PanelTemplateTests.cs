@@ -251,6 +251,28 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(element.Collections.Count, Is.EqualTo(0));
         }
 
+        [TestCase("ItemInstance", PanelSubjectKind.ItemInstance)]
+        [TestCase("ItemDefinition", PanelSubjectKind.ItemDefinition)]
+        [TestCase("AbilitySlot", PanelSubjectKind.AbilitySlot)]
+        [TestCase("AbilityDefinition", PanelSubjectKind.AbilityDefinition)]
+        [TestCase("Activity", PanelSubjectKind.Activity)]
+        [TestCase("Tag", PanelSubjectKind.Tag)]
+        [TestCase("ProgressionNode", PanelSubjectKind.ProgressionNode)]
+        public void Load_TypedCollectionSubject_Parses(string subject, PanelSubjectKind expected)
+        {
+            string json = $$"""
+            {
+              "id": "panel.typed.subject",
+              "subject": "{{subject}}",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "layout": { "controls": [ { "type": "label", "bind": "displayName" } ] }
+            }
+            """;
+
+            Assert.That(PanelTemplateLoader.Load(json).Subject, Is.EqualTo(expected));
+        }
+
         [Test]
         public void Load_UnknownSubject_FailsClosed()
         {
@@ -266,6 +288,35 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(
                 () => PanelTemplateLoader.Load(json),
                 Throws.InvalidOperationException.With.Message.Contains("subject"));
+        }
+
+        [Test]
+        public void Load_UnknownPresentMode_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.bad-present",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "units",
+                  "source": "selfGraph",
+                  "collectionKey": "units",
+                  "template": "panel.unit"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "units", "present": "grid" }
+                ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("grid"));
         }
 
         [Test]
