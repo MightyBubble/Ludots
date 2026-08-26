@@ -6,15 +6,20 @@
     <Nullable>enable</Nullable>
     <OutputPath>bin\net8.0\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj">
-      <Private>false</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
-      <Private>false</Private>
-    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.DataSchemaWorkbench\Ludots.DataSchemaWorkbench.csproj" />
   </ItemGroup>
+
+  <!-- Ensure the workbench assembly is the mod entry DLL that ModLoader scans. -->
+  <Target Name="PublishWorkbenchAsModMain" AfterTargets="Build">
+    <PropertyGroup>
+      <_WorkbenchDll>$(OutputPath)Ludots.DataSchemaWorkbench.dll</_WorkbenchDll>
+      <_WorkbenchPdb>$(OutputPath)Ludots.DataSchemaWorkbench.pdb</_WorkbenchPdb>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_WorkbenchDll)')" Text="Expected workbench DLL at $(_WorkbenchDll)" />
+  </Target>
 
 </Project>

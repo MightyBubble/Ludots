@@ -7,5 +7,5 @@
     "LudotsCoreMod": "^1.0.0",
     "CoreInputMod": "^1.0.0"
   },
-  "main": "bin/net8.0/ConfigurableDataSchemaSharedMod.dll"
+  "main": "bin/net8.0/Ludots.DataSchemaWorkbench.dll"
 }

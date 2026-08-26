@@ -15,8 +15,7 @@ public sealed class ConfigurableDataSchemaSharedModEntry : IMod
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null)
+            if (ctx.Get(CoreServiceKeys.Engine) is not GameEngine engine)
             {
                 return Task.CompletedTask;
             }

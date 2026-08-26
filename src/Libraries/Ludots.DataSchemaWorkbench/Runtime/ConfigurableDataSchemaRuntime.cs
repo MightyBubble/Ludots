@@ -38,8 +38,7 @@ public sealed class ConfigurableDataSchemaRuntime
     public DataSchemaAuthoringDocument Authoring => _authoring;
     public Task HandleMapFocusedAsync(ScriptContext context)
     {
-        GameEngine? engine = context.GetEngine();
-        if (engine == null)
+        if (context.Get(CoreServiceKeys.Engine) is not GameEngine engine)
         {
             return Task.CompletedTask;
         }
@@ -63,13 +62,17 @@ public sealed class ConfigurableDataSchemaRuntime
 
     public Task HandleMapUnloadedAsync(ScriptContext context)
     {
-        GameEngine? engine = context.GetEngine();
-        if (engine?.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+        if (context.Get(CoreServiceKeys.Engine) is not GameEngine engine)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
         {
             _workbench.ClearIfOwned(root);
         }
 
-        engine?.GetService(CoreServiceKeys.DataSchemaProjectionSession)?.UseStartup();
+        engine.GetService(CoreServiceKeys.DataSchemaProjectionSession)?.UseStartup();
         _mapReady = false;
         _owner = Entity.Null;
         return Task.CompletedTask;
