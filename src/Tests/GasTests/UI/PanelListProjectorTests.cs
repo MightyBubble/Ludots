@@ -334,7 +334,7 @@ namespace Ludots.Tests.GasTests.UI
                   "template": "panel.nested.child"
                 },
                 {
-                  "name": "sharedChildren",
+                  "name": "sharedChildItems",
                   "source": "input",
                   "input": "sharedChildren",
                   "template": "panel.nested.child"
@@ -344,7 +344,7 @@ namespace Ludots.Tests.GasTests.UI
                 "controls": [
                   { "type": "label", "bind": "displayName" },
                   { "type": "list", "bind": "children" },
-                  { "type": "list", "bind": "sharedChildren" }
+                  { "type": "list", "bind": "sharedChildItems" }
                 ]
               }
             }
@@ -419,7 +419,7 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(
                 parentItem.NestedLists[0].Items[0].Strings["displayName"],
                 Is.EqualTo("子"));
-            Assert.That(parentItem.NestedLists[1].Name, Is.EqualTo("sharedChildren"));
+            Assert.That(parentItem.NestedLists[1].Name, Is.EqualTo("sharedChildItems"));
             Assert.That(
                 parentItem.NestedLists[1].Items[0].Strings["displayName"],
                 Is.EqualTo("共享子"));
