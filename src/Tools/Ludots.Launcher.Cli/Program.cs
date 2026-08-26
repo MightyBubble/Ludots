@@ -24,7 +24,11 @@ try
         case "resolve":
         {
             var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
-            var result = service.Resolve(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            var result = service.Resolve(
+                selectors,
+                ResolveRequestedAdapter(service, command),
+                command.BuildMode,
+                command.BrowserProvider);
             PrintResolveResult(result, command.Json);
             return 0;
         }
@@ -36,7 +40,11 @@ try
                 return await RunRecordedLaunchAsync(service, repoRoot, selectors, ResolveRequestedAdapter(service, command), command, args);
             }
 
-            var result = await service.LaunchAsync(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            var result = await service.LaunchAsync(
+                selectors,
+                ResolveRequestedAdapter(service, command),
+                command.BuildMode,
+                command.BrowserProvider);
             if (!result.Ok)
             {
                 Console.Error.WriteLine(result.Error);
@@ -78,7 +86,11 @@ try
         case "build":
         {
             var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
-            var results = await service.BuildAsync(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            var results = await service.BuildAsync(
+                selectors,
+                ResolveRequestedAdapter(service, command),
+                command.BuildMode,
+                browserProviderOverride: command.BrowserProvider);
             return PrintBuildResults(results);
         }
         case "adapter" when command.Secondary == "list":
@@ -302,13 +314,17 @@ static async Task<int> RunRecordedLaunchAsync(
     CliCommand command,
     string[] rawArgs)
 {
-    var resolveResult = service.Resolve(selectors, adapterId, command.BuildMode);
+    var resolveResult = service.Resolve(selectors, adapterId, command.BuildMode, command.BrowserProvider);
     if (resolveResult.Plan.IsExecutableTarget)
     {
         return await RunRecordedExecutableLaunchAsync(service, selectors, adapterId, resolveResult.Plan, command);
     }
 
-    var buildResults = await service.BuildAsync(selectors, adapterId, command.BuildMode);
+    var buildResults = await service.BuildAsync(
+        selectors,
+        adapterId,
+        command.BuildMode,
+        browserProviderOverride: command.BrowserProvider);
     int buildExitCode = PrintBuildResults(buildResults);
     if (buildExitCode != 0)
     {
@@ -589,10 +605,10 @@ Ludots launcher CLI
 
 Commands
   catalog
-  resolve [selectors...] [--adapter raylib|web] [--build auto|always|never] [--json]
-  build [selectors...] [--adapter raylib|web] [--build auto|always|never]
+  resolve [selectors...] [--adapter raylib|web] [--browser-provider cef|ultralight] [--build auto|always|never] [--json]
+  build [selectors...] [--adapter raylib|web] [--browser-provider cef|ultralight] [--build auto|always|never]
   build app [--adapter raylib|web]
-  launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--record <artifactDir>]
+  launch [selectors...] [--adapter raylib|web] [--browser-provider cef|ultralight] [--build auto|always|never] [--record <artifactDir>]
   adapter list
   adapter select --adapter raylib|web
   workspace list
@@ -621,6 +637,8 @@ Examples
   .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter web
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
+  .\scripts\run-mod-launcher.cmd cli launch panel_skin_web --adapter raylib --browser-provider ultralight
+  .\scripts\run-mod-launcher.cmd cli resolve preset:browser_react_flow_cef_raylib --browser-provider ultralight --adapter raylib
   .\scripts\run-mod-launcher.cmd cli resolve engine_gallery
   .\scripts\run-mod-launcher.cmd cli launch preset:engine_gallery_skybox --record artifacts/acceptance/engine-gallery-skybox
   .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod
@@ -633,6 +651,7 @@ internal sealed class CliCommand
     public string Primary { get; private set; } = string.Empty;
     public string Secondary { get; private set; } = string.Empty;
     public string? AdapterId { get; private set; }
+    public string? BrowserProvider { get; private set; }
     public string? PresetId { get; private set; }
     public string? Name { get; private set; }
     public string? Template { get; private set; }
@@ -666,6 +685,9 @@ internal sealed class CliCommand
             {
                 case "--adapter" when index + 1 < args.Length:
                     command.AdapterId = args[++index].Trim().ToLowerInvariant();
+                    break;
+                case "--browser-provider" when index + 1 < args.Length:
+                    command.BrowserProvider = NormalizeBrowserProvider(args[++index]);
                     break;
                 case "--preset" when index + 1 < args.Length:
                     command.PresetId = args[++index].Trim();
@@ -747,6 +769,18 @@ internal sealed class CliCommand
         return Enum.TryParse<LauncherBuildMode>(raw, true, out var parsed)
             ? parsed
             : throw new InvalidOperationException($"Unsupported build mode: {raw}");
+    }
+
+    private static string NormalizeBrowserProvider(string raw)
+    {
+        string provider = raw.Trim().ToLowerInvariant();
+        if (provider is not ("cef" or "ultralight"))
+        {
+            throw new InvalidOperationException(
+                $"Unsupported browser provider '{raw}'. Expected 'cef' or 'ultralight'.");
+        }
+
+        return provider;
     }
 }
 

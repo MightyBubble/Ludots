@@ -21,8 +21,11 @@
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
 .\scripts\run-mod-launcher.cmd cli workspace add --path ..\ExternalMods
+.\scripts\run-mod-launcher.cmd cli launch panel_skin_web --adapter raylib --browser-provider ultralight
+.\scripts\run-mod-launcher.cmd cli resolve preset:browser_react_flow_cef_raylib --browser-provider ultralight --adapter raylib
 ```
 
+`--browser-provider cef|ultralight` 覆盖本次 resolve/build/launch 解析出的 `browserRuntime.provider`（高于 game.json / preset），用于同一条命令在 CEF 与 Ultralight 之间切换。Linux/云环境请使用 `ultralight`。
 ## 3 规则
 
 - `launch` 是产品命令
