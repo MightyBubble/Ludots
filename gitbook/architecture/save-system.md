@@ -69,6 +69,46 @@ Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buff
 | 含 `Entity` 引用的 ECS 组件或 buffer | formatter 规则同上：unmanaged 自动、managed 显式 | 除 formatter 外，还必须在 `SaveEntityReferenceValidator` 登记有效性校验，并在 `SaveEntityWorldIdNormalizer` 登记读回 WorldId 归一化 | 覆盖引用实体 alive、Id / Version 保真、WorldId 归一化、引用被排除实体时 fail-fast |
 | 非 ECS 域状态（clock、session、registry 外的运行时服务状态） | 否，不进入 `world.bin` | 实现 `ISaveParticipant`，通过 `SaveParticipantRegistry` 贡献 `domains.json`；domain key 必须唯一，不新建平行存档管线 | 补 participant capture / restore 测试，覆盖未知 domain、缺失 domain、重复 domain fail-fast |
 | 不应进入存档的实体或瞬时事件实体 | 否，被策略排除 | 给实体挂 `SaveExcludedTag`，或使用既有排除类型：`GameplayEvent`、`SimulationBudgetFuseEvent`、`PresentationDestroyPending` | 补 inclusion policy 或引用校验测试，确保 persistent 实体不能引用被排除实体 |
+| 玩家面存档 UI（槽位列表 / 存 / 读 / 删 / autosave） | 不改容器，只消费正式链路 | 在启动图或 `ModPaths` 声明依赖 `SavePanelMod`；图用 `ShowPanel`/`HidePanel`（panel type = `panel.save`）开关，或按 F5。面板零文件 IO，只走引擎 `ISaveStorage` + `CheckpointCoordinator` + `SaveSlotStore` | 不另写平行存档桩；验收用 showcase 直接复用本面板 |
+
+## 玩家面接入
+
+`SavePanelMod`（`mods/SavePanelMod`）是通用存档面板：槽位列表（tick / mapId / 时间 / 字节数 / schemaVersion / modSetHash 与 fingerprint 摘要）、手动存读删、autosave 轮换状态、落盘根路径常显。宿主未注入 `CoreServiceKeys.SaveStorage` 时面板 fail-fast 提示，不降级内存。损坏槽位或指纹不匹配时错误显示在面板上，不吞进日志。
+
+接入一行：把 `SavePanelMod` 放进运行配置的 ModPaths（或依赖声明），需要时图里 `ShowPanel(panel.save)`。快捷键：F5 开关 / F6 存 / F7 读 / F8 删 / F9 自动存。
+
+### 玩家面 UAT（Cucumber）
+
+```gherkin
+Feature: 通用存档面板开箱即用
+  作为玩家或作者
+  我想不写存档代码就有存读删界面
+  以便任何模组都能直接复用
+
+  Scenario: 存档后槽位出现，读档还原，删除后消失
+    Given 运行配置已加载 SavePanelMod 且宿主提供了存档存储
+    And 存档面板已打开
+    When 我把手动槽名设为 "panel-a" 并点击存档
+    And 世界走过一个干净步
+    Then 槽位列表出现 "manual/panel-a"，并显示 tick、地图、字节数与落盘根路径
+    When 我继续推动世界若干步后选中该槽位并读档
+    Then 世界状态回到存档点，状态栏提示读档成功
+    When 我删除该槽位
+    Then 槽位列表不再包含 "manual/panel-a"
+
+  Scenario: 篡改槽位文件时读档失败可见
+    Given 已有完整槽位 "manual/tamper"
+    When 有人改坏了该槽位文件内容
+    And 我选中它并点击读档
+    Then 面板错误区显示哈希校验失败，状态栏以「失败：」开头
+    And 运行中的世界不被悄悄改写
+
+  Scenario: 宿主没给存储服务时面板拒绝装样子
+    Given 引擎没有注册存档存储服务
+    When SavePanelMod 尝试绑定
+    Then 面板错误区明确写出缺少 ISaveStorage
+    And 不会暗中改用内存或私有路径
+```
 
 ## 非 ECS 域
 
@@ -170,4 +210,5 @@ UAT 证据输出到 `artifacts/acceptance/save-system/`。
 - `src/Core/Persistence/SaveSlotStore.cs`
 - `src/Platform/Ludots.Platform.Abstractions/ISaveStorage.cs`
 - `src/Platform/Ludots.Platform.Desktop/DesktopSaveStorage.cs`
+- `mods/SavePanelMod/`（玩家面通用存档面板）
 - `src/Tests/PersistenceTests/`

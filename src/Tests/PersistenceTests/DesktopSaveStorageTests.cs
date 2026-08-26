@@ -97,6 +97,8 @@ public sealed class DesktopSaveStorageTests
             _inner = new DesktopSaveStorage(root);
         }
 
+        public string DisplayRoot => _inner.DisplayRoot;
+
         public bool FailNextCommit { get; set; }
 
         public IReadOnlyList<string> ListFileKeys(string prefix) => _inner.ListFileKeys(prefix);

@@ -1,0 +1,23 @@
+{
+  "actions": [
+    { "id": "SavePanel.Toggle", "name": "SavePanel_Toggle", "type": "Button" },
+    { "id": "SavePanel.SaveManual", "name": "SavePanel_SaveManual", "type": "Button" },
+    { "id": "SavePanel.WriteAutosave", "name": "SavePanel_WriteAutosave", "type": "Button" },
+    { "id": "SavePanel.RestoreSelected", "name": "SavePanel_RestoreSelected", "type": "Button" },
+    { "id": "SavePanel.DeleteSelected", "name": "SavePanel_DeleteSelected", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "SavePanel.Controls",
+      "name": "Save Panel Controls",
+      "priority": 85,
+      "bindings": [
+        { "actionId": "SavePanel.Toggle", "path": "<Keyboard>/f5" },
+        { "actionId": "SavePanel.SaveManual", "path": "<Keyboard>/f6" },
+        { "actionId": "SavePanel.RestoreSelected", "path": "<Keyboard>/f7" },
+        { "actionId": "SavePanel.DeleteSelected", "path": "<Keyboard>/f8" },
+        { "actionId": "SavePanel.WriteAutosave", "path": "<Keyboard>/f9" }
+      ]
+    }
+  ]
+}

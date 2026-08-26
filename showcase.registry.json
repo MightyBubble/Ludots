@@ -4449,6 +4449,28 @@
       ]
     },
     {
+      "id": "save_panel_mod",
+      "path": "mods/SavePanelMod",
+      "projectPath": "SavePanelMod.csproj",
+      "title": "通用存档面板",
+      "summary": "开箱即用的存/读/删/autosave 面板；零文件 IO，走 SaveStorage + CheckpointCoordinator + SaveSlotStore；图可用 ShowPanel(panel.save) 触发。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "save",
+        "panel",
+        "persistence"
+      ],
+      "binding": null,
+      "preset": null,
+      "docsPath": "gitbook/architecture/save-system.md",
+      "readmePath": null,
+      "acceptanceTest": "SavePanelRuntimeTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "entity_info_panels",
       "path": "mods/capabilities/entityinfo/EntityInfoPanelsMod",
       "projectPath": "EntityInfoPanelsMod.csproj",

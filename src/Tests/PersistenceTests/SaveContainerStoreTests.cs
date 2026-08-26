@@ -174,6 +174,8 @@ public sealed class SaveContainerStoreTests
 
     private sealed class MemorySaveStorage : ISaveStorage
     {
+        public string DisplayRoot => string.Empty;
+
         private readonly Dictionary<string, byte[]> _files = new(StringComparer.Ordinal);
         private readonly HashSet<string> _tempFiles = new(StringComparer.Ordinal);
 

@@ -1,0 +1,12 @@
+{
+  "name": "SavePanelMod",
+  "version": "1.0.0",
+  "description": "Reusable save/load panel: slot list, manual save/load/delete, autosave rotation status. Zero file IO — all traffic through engine SaveStorage + CheckpointCoordinator + SaveSlotStore.",
+  "main": "bin/net8.0/SavePanelMod.dll",
+  "priority": 140,
+  "dependencies": {
+    "LudotsCoreMod": ">=1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["ui", "save", "persistence", "panel"]
+}

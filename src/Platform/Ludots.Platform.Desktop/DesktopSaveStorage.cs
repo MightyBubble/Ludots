@@ -22,6 +22,8 @@ namespace Ludots.Platform.Desktop
 
         public string RootDirectory => _rootDirectory;
 
+        public string DisplayRoot => _rootDirectory;
+
         public IReadOnlyList<string> ListFileKeys(string prefix)
         {
             if (prefix == null) throw new ArgumentNullException(nameof(prefix));

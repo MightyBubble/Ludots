@@ -533,6 +533,8 @@ Feature: Player saves and reloads a named actor after the host reloads game asse
 
     private sealed class MemorySaveStorage : ISaveStorage
     {
+        public string DisplayRoot => string.Empty;
+
         private readonly Dictionary<string, byte[]> _files = new(StringComparer.Ordinal);
 
         public IReadOnlyList<string> ListFileKeys(string prefix)
