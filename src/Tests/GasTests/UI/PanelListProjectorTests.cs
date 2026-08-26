@@ -151,10 +151,6 @@ namespace Ludots.Tests.GasTests.UI
 
             using World world = World.Create();
             Entity owner = world.Create();
-            int abilityId = AbilityIdRegistry.Register("火球术");
-            var abilities = default(AbilityStateBuffer);
-            abilities.AddAbility(abilityId);
-            world.Add(owner, abilities);
             var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
             var entityStore = new EntityCollectionStore(keyRegistry, 8, 16);
             var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
@@ -277,6 +273,10 @@ namespace Ludots.Tests.GasTests.UI
 
             using World world = World.Create();
             Entity owner = world.Create();
+            int abilityId = AbilityIdRegistry.Register("火球术");
+            var abilities = default(AbilityStateBuffer);
+            abilities.AddAbility(abilityId);
+            world.Add(owner, abilities);
             var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
             var entityStore = new EntityCollectionStore(keyRegistry, 8, 16);
             var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
