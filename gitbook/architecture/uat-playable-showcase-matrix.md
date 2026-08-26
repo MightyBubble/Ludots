@@ -12,6 +12,7 @@
 | UAT-2C | `RoadNetworkShowcaseMod` | `road_network_showcase` | 道路规划与逐实体 MovePlan 执行 | `MovePlanExecutionMode.Individual` |
 | UAT-3 | `RelationshipShowcaseMod` | `relationship_showcase` | 场景卡、状态变化、artifact | battle report、trace、path evidence |
 | UAT-4 | `InteractionShowcaseMod` | `interaction_showcase_hub` | 统一输入、collection、HUD、entity info | 单一 command/selection truth |
+| UAT-DataSchema | 未实现：`configurable-data-schema-showcase` | 计划中 | 作者改 schema/record 后看见面板与校验变化 | 设计见 `configurable-data-schema-showcase-design.md`；Core 能力在 PR #1216，不可宣称已可玩 |
 
 ## Formation 玩家场景
 
