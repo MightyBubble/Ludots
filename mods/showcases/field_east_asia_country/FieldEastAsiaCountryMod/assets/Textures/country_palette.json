@@ -1,0 +1,23 @@
+{
+  "fillAlpha": 128,
+  "borderAlpha": 230,
+  "regions": {
+    "country.bangladesh": [46, 139, 87],
+    "country.bhutan": [186, 85, 211],
+    "country.cambodia": [178, 102, 255],
+    "country.china": [220, 68, 60],
+    "country.india": [255, 153, 51],
+    "country.japan": [255, 204, 51],
+    "country.laos": [102, 204, 153],
+    "country.mongolia": [204, 153, 102],
+    "country.myanmar": [102, 178, 255],
+    "country.nepal": [255, 102, 153],
+    "country.north_korea": [102, 153, 204],
+    "country.philippines": [255, 128, 171],
+    "country.russia": [120, 160, 200],
+    "country.south_korea": [51, 153, 255],
+    "country.taiwan": [255, 215, 64],
+    "country.thailand": [255, 102, 102],
+    "country.vietnam": [64, 196, 96]
+  }
+}

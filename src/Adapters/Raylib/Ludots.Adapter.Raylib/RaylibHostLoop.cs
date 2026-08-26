@@ -460,7 +460,9 @@ namespace Ludots.Adapter.Raylib
                             visualHeightmapForFrame is IVisualHeightmapRenderSource;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
-                        bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
+                        bool drawFieldOverlays = renderDebug.DrawFieldOverlays &&
+                            !cleanPerformanceMode &&
+                            !ActiveMapHasTag(engine, MapTags.RaylibHideFieldOverlays);
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
 
                         bool drawNavMeshOverlay = renderDebug.DrawNavMesh &&

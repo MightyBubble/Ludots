@@ -1,0 +1,13 @@
+{
+  "width": 896,
+  "height": 512,
+  "cellSizeCm": 7142,
+  "playableWorldWidthCm": 6399232,
+  "playableWorldHeightCm": 3656704,
+  "originCellX": -448,
+  "originCellY": -256,
+  "paintedCells": 203193,
+  "borderCells": 8467,
+  "stampWidthMeters": 63992.32,
+  "stampDepthMeters": 36567.04
+}

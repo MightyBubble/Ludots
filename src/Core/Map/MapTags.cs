@@ -9,5 +9,6 @@ namespace Ludots.Core.Map
         public static readonly MapTag FeatureNavMeshOn = new MapTag("Feature.NavMesh:On");
         public static readonly MapTag RaylibDeepBackground = new MapTag("Raylib.Background:Deep");
         public static readonly MapTag RaylibHideDebugGuides = new MapTag("Raylib.DebugGuides:Off");
+        public static readonly MapTag RaylibHideFieldOverlays = new MapTag("Raylib.FieldOverlays:Off");
     }
 }

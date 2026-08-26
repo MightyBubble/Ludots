@@ -360,6 +360,38 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void HeightmapProjector_FitAppliesDisplayHeightScaleToSampledHeight()
+        {
+            using var projector = new RaylibVisualHeightmapRenderer();
+            projector.DisplayHeightScale = 50f;
+            projector.AbsoluteColorSeaLevelCm = 0f;
+            projector.AbsoluteColorPeakSpanCm = 5000f;
+            projector.BindStampHeightSampleSource(new ConstantVisualHeightmap(200f));
+            Vector3 center = projector.FitYawedStampProjectorCenter(
+                new Vector3(4f, 99f, 6f),
+                0f,
+                new Vector2(3.8f, 4.2f),
+                47);
+            Assert.That(center.Y, Is.EqualTo(100f).Within(1e-3f));
+        }
+
+        [Test]
+        public void HeightmapProjector_FitClampsOceanSentinelToSeaBeforeDisplayScale()
+        {
+            using var projector = new RaylibVisualHeightmapRenderer();
+            projector.DisplayHeightScale = 50f;
+            projector.AbsoluteColorSeaLevelCm = 0f;
+            projector.AbsoluteColorPeakSpanCm = 5000f;
+            projector.BindStampHeightSampleSource(new ConstantVisualHeightmap(999_999f));
+            Vector3 center = projector.FitYawedStampProjectorCenter(
+                new Vector3(4f, 99f, 6f),
+                0f,
+                new Vector2(3.8f, 4.2f),
+                48);
+            Assert.That(center.Y, Is.EqualTo(0f).Within(1e-3f));
+        }
+
+        [Test]
         public void HeightmapProjector_FitMissingOverlapThrowsInsteadOfSkipping()
         {
             using var projector = new RaylibVisualHeightmapRenderer();
@@ -588,6 +620,56 @@ namespace Ludots.Tests.Presentation
             {
                 throw new InvalidOperationException(
                     "Stub receiver cannot sample stamp height; bind a receiver that implements FitYawedStampProjectorCenter.");
+            }
+        }
+
+        private sealed class ConstantVisualHeightmap : IVisualHeightmap
+        {
+            private readonly float _heightCm;
+
+            public ConstantVisualHeightmap(float heightCm)
+            {
+                _heightCm = heightCm;
+            }
+
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
+            {
+                heightCm = _heightCm;
+                return true;
+            }
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)
+            {
+                outHeightCm.Fill(_heightCm);
+                return true;
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
+            {
+                hit = default;
+                return false;
+            }
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = -1)
+            {
+                outHitMask.Clear();
+                return false;
             }
         }
 

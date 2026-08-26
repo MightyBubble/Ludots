@@ -2,10 +2,12 @@
 
 玩家在约 64 km 东亚棋盘上：
 
-1. 看到 **Natural Earth 国界** 半透明铺在地形上（不是矩形示意框）
+1. 看到 **国界色贴在地形上**（投影贴花，不是调试格网）
 2. 点选 **陆军**（黄块，开局在中国境内）右键走陆地导航网
 3. 点选 **航船**（蓝块，开局在黄海海面）右键直线驶向目标
 4. 单位跨入不同国家时，左上角面板刷新过境代码与次数
+
+导航三角网 / 走性贴图是调试层，本演示默认不开。需要时用 `preset:east_asia_navmesh_debug_raylib`，按 `N` / `T`。
 
 航船当前是直线移动：本图主棋盘是陆地 NavMesh；河网 PreferGraph 需要 NodeGraph 主棋盘，记为后续债。
 
@@ -19,7 +21,6 @@
 
 - 左键选中陆军或航船
 - 右键地面下移动令（`massNavigationMove`）
-- `N` 导航三角网 / `T` 走性贴图（`NavMeshDebugLaunchMod`，由 Raylib preset 显式挂载）
 
 ## 过境面板代码
 
@@ -36,6 +37,5 @@
 
 ## Data
 
-国界由 `tools/east_asia_borders/rasterize_countries_to_field.py` 从 Natural Earth 110m
-按 `east_asia_terrain_profile.json` 的 Albers + `WorldWidthCm` 栅格化生成，写入
-`FieldEastAsiaCountryMod` 的 `ownership.east_asia.country`。
+国界格子由 `tools/east_asia_borders/rasterize_countries_to_field.py` 生成。
+玩家看见的颜色来自同目录 `export_country_decal_png.py` 画的 Decal 贴花。

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -99,6 +100,32 @@ public sealed class FieldEastAsiaCountryAcceptanceTests
         GlobalFieldVisualRecord record = FindDiscreteOwnershipRecord(buffer);
         Assert.That(record.Descriptor.Id.Kind, Is.EqualTo(GlobalFieldVisualKind.DiscreteOwnership));
         Assert.That(record.CellCount, Is.EqualTo(layer.Field.NonDefaultCount));
+
+        Assert.That(session.MapConfig!.Tags, Does.Contain("Raylib.FieldOverlays:Off"));
+        Assert.That(FindNamed(engine, "EastAsia.CountryDecal"), Is.Not.EqualTo(Entity.Null));
+    }
+
+    [Test]
+    public void BordersLandSeaPreset_DoesNotAutoEnableNavMeshDebugLaunch()
+    {
+        using var presets = JsonDocument.Parse(File.ReadAllText(Path.Combine(FindRepoRoot(), "launcher.presets.json")));
+        JsonElement found = default;
+        bool present = false;
+        foreach (JsonElement preset in presets.RootElement.GetProperty("presets").EnumerateArray())
+        {
+            if (preset.GetProperty("id").GetString() == "east_asia_borders_land_sea_raylib")
+            {
+                found = preset;
+                present = true;
+                break;
+            }
+        }
+
+        Assert.That(present, Is.True);
+        foreach (JsonElement selector in found.GetProperty("selectors").EnumerateArray())
+        {
+            Assert.That(selector.GetString(), Is.Not.EqualTo("mod:NavMeshDebugLaunchMod"));
+        }
     }
 
     [Test]
@@ -112,6 +139,57 @@ public sealed class FieldEastAsiaCountryAcceptanceTests
             "FieldEastAsiaCountryMod");
         Assert.That(File.Exists(Path.Combine(modRoot, "mod.json")), Is.True);
         Assert.That(File.Exists(Path.Combine(modRoot, "FieldEastAsiaCountryMod.csproj")), Is.False);
+    }
+
+    [Test]
+    public void EastAsiaCountry_DecalStampMatchesFieldBoardAndPalette()
+    {
+        string repoRoot = FindRepoRoot();
+        string textures = Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "field_east_asia_country",
+            "FieldEastAsiaCountryMod",
+            "assets",
+            "Textures");
+        using var palette = JsonDocument.Parse(File.ReadAllText(Path.Combine(textures, "country_palette.json")));
+        using var meta = JsonDocument.Parse(File.ReadAllText(Path.Combine(textures, "country_borders.png.meta.json")));
+        using var field = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "field_east_asia_country",
+            "FieldEastAsiaCountryMod",
+            "assets",
+            "Fields",
+            "cells",
+            "ownership.east_asia.country.json")));
+
+        Assert.That(meta.RootElement.GetProperty("width").GetInt32(), Is.EqualTo(896));
+        Assert.That(meta.RootElement.GetProperty("height").GetInt32(), Is.EqualTo(512));
+        Assert.That(meta.RootElement.GetProperty("paintedCells").GetInt32(), Is.EqualTo(ExpectedNonDefaultCells));
+        Assert.That(File.Exists(Path.Combine(textures, "country_borders.png")), Is.True);
+
+        foreach (JsonElement region in field.RootElement.GetProperty("regions").EnumerateArray())
+        {
+            string key = region.GetString() ?? throw new InvalidOperationException("blank region");
+            Assert.That(palette.RootElement.GetProperty("regions").TryGetProperty(key, out _), Is.True, key);
+        }
+    }
+
+    private static Entity FindNamed(GameEngine engine, string name)
+    {
+        Entity found = Entity.Null;
+        var query = new QueryDescription().WithAll<Name>();
+        engine.World.Query(in query, (Entity entity, ref Name named) =>
+        {
+            if (named.Value == name)
+            {
+                found = entity;
+            }
+        });
+        return found;
     }
 
     private static GlobalFieldVisualRecord FindDiscreteOwnershipRecord(GlobalFieldVisualBuffer buffer)

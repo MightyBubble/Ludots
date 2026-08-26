@@ -562,7 +562,16 @@ namespace Ludots.Raylib.Render
                 in stampSizeMeters,
                 stableId,
                 heightmap,
-                nameof(RaylibVisualHeightmapRenderer));
+                nameof(RaylibVisualHeightmapRenderer),
+                RemapStampHeightCm);
+        }
+
+        private float RemapStampHeightCm(float heightCm)
+        {
+            float seaCm = _absoluteColorSeaLevelCm ?? 0f;
+            float sanitized = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, _absoluteColorPeakSpanCm);
+            float scale = MathF.Max(VisualHeightmapRenderProfile.MinDisplayHeightScale, _displayHeightScale);
+            return sanitized * scale;
         }
 
         private void EnsureInitialized()

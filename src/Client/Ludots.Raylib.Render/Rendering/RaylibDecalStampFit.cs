@@ -20,7 +20,8 @@ namespace Ludots.Raylib.Render
             in Vector2 stampSizeMeters,
             int stableId,
             IVisualHeightmap heightmap,
-            string receiverName)
+            string receiverName,
+            Func<float, float>? remapHeightCm = null)
         {
             if (!float.IsFinite(stampSizeMeters.X) || !float.IsFinite(stampSizeMeters.Y) ||
                 stampSizeMeters.X <= 0f || stampSizeMeters.Y <= 0f)
@@ -50,6 +51,11 @@ namespace Ludots.Raylib.Render
                     {
                         throw new InvalidOperationException(
                             $"{receiverName} Decal stableId={stableId} stamp does not overlap sampleable receiver height at ({worldXCm:F1},{worldYCm:F1}).");
+                    }
+
+                    if (remapHeightCm != null)
+                    {
+                        heightCm = remapHeightCm(heightCm);
                     }
 
                     float heightM = WorldUnits.CmToM(heightCm);

@@ -1,0 +1,7 @@
+[
+  {
+    "id": "east_asia.country.borders",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "Unlit", "DoubleSided"]
+  }
+]

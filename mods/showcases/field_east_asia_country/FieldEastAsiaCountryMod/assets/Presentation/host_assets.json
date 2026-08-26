@@ -1,0 +1,11 @@
+[
+  {
+    "id": "east_asia.country.borders.material.raylib",
+    "assetKind": "Material",
+    "assetId": "east_asia.country.borders",
+    "backendId": "raylib",
+    "textures": {
+      "albedo": "FieldEastAsiaCountryMod:assets/Textures/country_borders.png"
+    }
+  }
+]

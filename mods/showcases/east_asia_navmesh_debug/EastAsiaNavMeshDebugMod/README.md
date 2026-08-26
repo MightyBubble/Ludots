@@ -13,9 +13,11 @@ into the same `NavObstacleSet` as map-authored obstacles. Corridor nodes are
 Albers-projected lon/lat samples scaled with the playable board; carve width
 comes from `widthCm`; presentation ribbon width stays on `visualWidthMeters`.
 
-It depends on `FieldEastAsiaCountryMod` so the same VisualHeightmap also draws
-Natural Earth national-border `ownership.east_asia.country` DiscreteOwnership colors
-on terrain (`DrawFieldOverlays`, default on). Country cells are 7142 cm (~2× nav cell).
+It depends on `FieldEastAsiaCountryMod` so the same VisualHeightmap also hosts
+Natural Earth national borders (`ownership.east_asia.country`, cell 7142 cm, ~2× nav
+cell). Players see those colors as a board-sized Decal stamp; the map tag
+`Raylib.FieldOverlays:Off` keeps the DiscreteOwnership debug mosaic off. Press `N` /
+`T` here for the baked nav triangles and walkability texture.
 
 Bake the authoritative continuous VisualHeightmap from the repository root:
 

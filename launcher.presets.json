@@ -523,7 +523,6 @@
       "name": "East Asia Borders Land Sea Raylib",
       "selectors": [
         "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
-        "mod:NavMeshDebugLaunchMod",
         "$east_asia_borders_land_sea"
       ],
       "adapterId": "raylib",

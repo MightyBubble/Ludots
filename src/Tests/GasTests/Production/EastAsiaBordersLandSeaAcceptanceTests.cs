@@ -79,6 +79,8 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         MapSession session = engine.CurrentMapSession
             ?? throw new InvalidOperationException("map session missing");
         Assert.That(session.Fields!.TryGetByKey(LayerKey, out _), Is.True);
+        Assert.That(session.MapConfig!.Tags, Does.Contain("Raylib.FieldOverlays:Off"));
+        Assert.That(FindNamed(engine, "EastAsia.CountryDecal"), Is.Not.EqualTo(Entity.Null));
 
         Entity army = FindNamed(engine, "EastAsia.Army");
         Entity ship = FindNamed(engine, "EastAsia.Ship");

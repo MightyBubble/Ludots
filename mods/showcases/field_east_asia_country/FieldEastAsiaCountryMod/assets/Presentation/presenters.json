@@ -1,0 +1,52 @@
+[
+  {
+    "id": "east_asia_country_decal_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "east_asia_country_decal" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "east_asia_country_decal",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "east_asia_country_decal" },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "east_asia_country_decal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "east_asia.country.borders",
+          "materialId": "east_asia.country.borders",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [63992.32, 4000.0, 36567.04]
+        },
+        "style": { "color": [1.0, 1.0, 1.0, 1.0] }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  }
+]

@@ -3,6 +3,10 @@
 `rasterize_countries_to_field.py` converts Natural Earth `admin_0` GeoJSON into
 Ludots Field schema v2 rects for the East Asia playable board.
 
+`export_country_decal_png.py` paints those rects into `country_borders.png`, a
+board-aligned Decal stamp (one pixel per Field cell). Palette is
+`FieldEastAsiaCountryMod/assets/Textures/country_palette.json`.
+
 Projection parameters are read from
 `EastAsiaPlayableTerrainMod/assets/terrain/east_asia_terrain_profile.json`
 (spherical Albers + `playableWorldWidthOverrideCm` / `sourceWorldWidthCm`).

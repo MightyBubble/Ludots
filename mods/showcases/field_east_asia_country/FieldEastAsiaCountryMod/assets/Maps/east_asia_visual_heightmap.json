@@ -1,10 +1,19 @@
 {
   "Id": "east_asia_visual_heightmap",
+  "Tags": [
+    "Raylib.FieldOverlays:Off"
+  ],
   "Fields": {
     "Layers": [
       "ownership.east_asia.country"
     ]
   },
+  "Entities": [
+    {
+      "InstanceId": "country.decal.1",
+      "Template": "east_asia_country_decal"
+    }
+  ],
   "Variables": [
     {
       "name": "mapmode",
