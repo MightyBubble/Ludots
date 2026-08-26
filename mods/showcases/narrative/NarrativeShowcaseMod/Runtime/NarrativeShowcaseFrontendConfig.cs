@@ -23,6 +23,7 @@ namespace NarrativeShowcaseMod.Runtime
         public NarrativeShowcaseHintConfig Hints { get; set; } = new();
         public NarrativeShowcaseTemplateConfig Templates { get; set; } = new();
         public NarrativeShowcaseRoutingConfig Routing { get; set; } = new();
+        public NarrativeShowcaseStageHudConfig StageHud { get; set; } = new();
         public NarrativeShowcaseVariableConfig[] Variables { get; set; } = Array.Empty<NarrativeShowcaseVariableConfig>();
         public Dictionary<string, string> EndingLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, string> SpeakerLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -140,6 +141,17 @@ namespace NarrativeShowcaseMod.Runtime
         public string[] TransmissionSequenceIds { get; set; } = Array.Empty<string>();
         public string[] SubtitleSequenceIds { get; set; } = Array.Empty<string>();
         public NarrativeShowcaseChoiceSignalRoute[] ChoiceSignals { get; set; } = Array.Empty<NarrativeShowcaseChoiceSignalRoute>();
+    }
+
+    /// <summary>
+    /// Stage-focused HUD: one beat, one job. Debug panels are opt-in, never always-on kitchen sink.
+    /// </summary>
+    internal sealed class NarrativeShowcaseStageHudConfig
+    {
+        public bool ShowHistoryAlways { get; set; }
+        public bool ShowVariablesAlways { get; set; }
+        public bool ShowObjectiveWithDialogue { get; set; }
+        public bool ShowObjectiveWithSequence { get; set; }
     }
 
     internal sealed class NarrativeShowcaseChoiceSignalRoute

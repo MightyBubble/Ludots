@@ -330,20 +330,38 @@ namespace NarrativeShowcaseMod.Runtime
             SequencerRuntime sequencer,
             TaskRuntimeService tasks)
         {
-            var surfaces = new List<NarrativeFrontendSurfaceModel>(8)
+            bool dialogueActive = dialogue.TryGetActiveView(out DialogueView dialogueView);
+            bool sequenceActive = sequencer.TryGetActiveView(out SequenceView sequence);
+            NarrativeShowcaseStageHudConfig hud = _frontendConfig.StageHud ?? new NarrativeShowcaseStageHudConfig();
+
+            var surfaces = new List<NarrativeFrontendSurfaceModel>(6)
             {
                 BuildPromptSurface(engine, dialogue, sequencer),
-                BuildObjectiveSurface(tasks),
-                BuildHistorySurface(),
-                BuildVariablesSurface(engine),
             };
 
-            if (sequencer.TryGetActiveView(out SequenceView sequence))
+            bool showObjective = (!dialogueActive || hud.ShowObjectiveWithDialogue)
+                && (!sequenceActive || hud.ShowObjectiveWithSequence);
+            if (showObjective)
+            {
+                surfaces.Add(BuildObjectiveSurface(tasks));
+            }
+
+            if (hud.ShowHistoryAlways)
+            {
+                surfaces.Add(BuildHistorySurface());
+            }
+
+            if (hud.ShowVariablesAlways)
+            {
+                surfaces.Add(BuildVariablesSurface(engine));
+            }
+
+            if (sequenceActive)
             {
                 surfaces.Add(BuildSequenceSurface(engine, sequence));
             }
 
-            if (dialogue.TryGetActiveView(out DialogueView dialogueView))
+            if (dialogueActive)
             {
                 surfaces.Add(BuildDialogueSurface(engine, dialogue, dialogueView));
                 if (dialogueView.Choices.Count > 0)
