@@ -9,5 +9,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\src\Libraries\Raylib-cs\Raylib-cs.csproj" />
   </ItemGroup>
 </Project>

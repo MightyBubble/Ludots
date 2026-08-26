@@ -1,6 +1,6 @@
-# Field Editor CLI
+# Field Editor
 
-`tools/FieldEditor` 是离线作者工具：对 Mod 目录下的 `Fields/layers.json` 与 `Fields/cells/<layerKey>.json` 做声明、区域登记与矩形笔画。写出格式与引擎装载格式一致——**schemaVersion 2 + `regions` + `rects`**（可选 `points`），禁止 v1 的 `cells` 数组。编辑器内存态直接使用 `ChunkedField2D<int>`；读取 rect 时调用 `FillRect`，保存时从场合并 rect，不展开成逐格字典或 point 列表。
+`tools/FieldEditor` 是独立的离线作者工具，提供 Raylib 画布和 CLI：对 Mod 目录下的 `Fields/layers.json` 与 `Fields/cells/<layerKey>.json` 做声明、区域登记与矩形笔画。写出格式与引擎装载格式一致——**schemaVersion 2 + `regions` + `rects`**（可选 `points`），禁止 v1 的 `cells` 数组。编辑器内存态直接使用 `ChunkedField2D<int>`；读取 rect 时调用 `FillRect`，保存时从场合并 rect，不展开成逐格字典或 point 列表。
 
 运行（在仓库根，已还原 .NET 8）：
 
@@ -28,6 +28,7 @@ dotnet run --project tools/FieldEditor -- <command> --mod <ModAssetsOrModRoot>
 | `render` | ASCII 预览当前笔画 |
 | `save` | 再校验容量并写出（突变命令本身已 atomic 写出） |
 | `session` | 保持进程存活，逐行执行子命令，`quit` 退出 |
+| `canvas` | 打开 Raylib 可视化画布；仅按 `S` 时写出 cells 资产 |
 
 `new-layer` 可选 `--map <mapId>`：把层 id 写入 `Maps/<mapId>.json` 的 `Fields.Layers`。
 
@@ -40,6 +41,31 @@ field-editor> brush --at 8,8 --radius 2
 field-editor> undo
 field-editor> quit
 ```
+
+## Raylib 画布
+
+图形环境中运行：
+
+```powershell
+dotnet run --project tools/FieldEditor -- canvas --mod %MOD% --layer ownership.paint
+```
+
+左侧区域面板显示 `regions` 容量、区域 key 与颜色。颜色优先读取 `<layer>.field-editor-meta.json` 的 `regionColors`；未配置颜色的 key 使用稳定的派生色。单击区域可选择活动 key，区域较多时在面板内滚轮滚动。
+
+| 输入 | 操作 |
+|------|------|
+| `1` | 单格画笔，可按住左键拖画 |
+| `2` | Chebyshev 方形画笔；`[` / `]` 调整半径 |
+| `3` | 左键按下并拖到终点后填充矩形 |
+| `4` | 擦除，可按住左键拖动 |
+| `5` | 滴管；单击非空格选择其区域 key |
+| 鼠标滚轮 | 在画布缩放；在区域面板滚动 |
+| 鼠标中键或右键拖动 | 平移画布 |
+| `Z` / `Y` | 撤销 / 重做 |
+| `S` | 校验容量并原子保存 cells 资产 |
+| `Esc` | 退出；存在未保存 cells 改动时拒绝退出并提示先按 `S` |
+
+画布与 CLI 共用 `CellsDocument`、history sidecar 和 metadata sidecar，不另设资产 codec。Linux 下没有 `DISPLAY` 或 `WAYLAND_DISPLAY` 时，`canvas` 会明确报错并返回失败，不会静默跳过。
 
 `FieldCellsConfig` 使用 fail-strict JSON，不能在引擎 cells JSON 中加入未知字段。因此区域色只写入编辑器 sidecar `<layer>.field-editor-meta.json` 的 `regionColors`，引擎资产保持原 schema。
 
