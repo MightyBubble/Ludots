@@ -88,7 +88,9 @@
       { "id": "stage_rd", "op": "ReadMapVarInt", "var": "stage" },
       { "id": "mapmode_rd", "op": "ReadMapVarInt", "var": "mapmode" }
     ],
-    "controlEdges": [],
+    "controlEdges": [
+      { "from": "stage_rd", "fromPort": "next", "to": "mapmode_rd" }
+    ],
     "valueEdges": [],
     "outputs": [
       { "id": "stage", "destination": "Summary", "type": "Int", "source": "stage_rd", "key": "field.hierarchy.panel.stage" },
