@@ -19,7 +19,7 @@
 | Collect* 读容器/注册表填 TargetList 或 IntIdList | 0 | `GraphNodeOp` + `GasGraphOpHandlerTable` + `IGraphRuntimeApi` |
 | 类型化集合写出 | 1/2 | `GraphReturnWriter` → `EntityCollectionStore` / `IntIdCollectionStore` |
 | 面板 subject / source=input / nested / aggregate | 2 | `PanelListProjector` + `PanelPresentationSystem` + 模板装载 |
-| Showcase 验收 | 2 | showcase mods + acceptance tests |
+| Showcase 验收 | 2 | 共享宿主 + 每袋薄入口（禁止大合集墙）+ `PanelTypedCollectionShowcaseAcceptanceTests` |
 
 ### 3. Reuse list
 
