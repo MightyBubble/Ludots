@@ -3,7 +3,7 @@
 整数参数放进暂存表，子图按名字取走，回执就是同一数字。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_StoreArgInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_StoreArgInt/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_StoreArgInt/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_StoreArgInt/play.mp4。
 </video>
 
 ## 作者写法

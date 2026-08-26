@@ -3,7 +3,7 @@
 载荷按 schema 组装成事件，地图上的监听者按账本收货。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/poster.png" src="artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/play.mp4。
 </video>
 
 ## 作者写法
