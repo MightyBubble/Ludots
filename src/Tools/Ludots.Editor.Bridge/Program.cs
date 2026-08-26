@@ -1882,6 +1882,14 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
         });
         authoringSugars.Add(new
         {
+            op = GraphAuthoringSugar.FsmState,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Default },
+            valueInputPorts = Array.Empty<string>(),
+            outputType = GraphValueType.Int.ToString(),
+            lowersTo = GraphNodeOp.ReadMapVarInt.ToString(),
+        });
+        authoringSugars.Add(new
+        {
             op = GraphAuthoringSugar.Wait,
             controlOutputPorts = new[] { GraphControlFlowPorts.Next },
             valueInputPorts = Array.Empty<string>(),

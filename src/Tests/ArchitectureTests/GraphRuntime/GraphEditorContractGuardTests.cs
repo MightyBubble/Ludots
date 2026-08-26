@@ -89,6 +89,8 @@ namespace Ludots.Tests.Architecture.GraphRuntime
             {
                 GraphAuthoringSugar.BranchBool,
                 GraphAuthoringSugar.SwitchInt,
+                GraphAuthoringSugar.SelectByEnum,
+                GraphAuthoringSugar.FsmState,
                 GraphAuthoringSugar.Wait,
                 GraphAuthoringSugar.While,
                 GraphAuthoringSugar.Until,

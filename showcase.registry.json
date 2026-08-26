@@ -453,7 +453,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
       "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj",
       "title": "行为树演武场",
-      "summary": "独立 BT 万人思考波次演示（不含 HFSM/关卡/技能）。",
+      "summary": "主带真图巡逻树；万人灰点带=无图 BehaviorTreeWorld 压测基线（真图 10k 超预算，不做假装）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -468,7 +468,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_behavior_tree_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "BT-B: featured=GraphBehaviorTreeHost; crowd=labeled no-graph BehaviorTreeWorld, ScriptSlices==0 honesty gate."
     },
     {
       "id": "capability_standard_config_shards_showcase",
@@ -547,7 +547,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
       "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj",
       "title": "图行为整合演示",
-      "summary": "单独的整合演示：BT+HFSM+Level 合波（不是四个单秀的大杂烩合并）。",
+      "summary": "旧数据路径合波：BT+HFSM 仍走 BehaviorTreeWorld / HfsmWorld+GraphProgramHfsmHost（非 GraphFsmHost；不是 FSM-1 真图旗舰）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -562,7 +562,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_behavior_integration",
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "Explicit old-path dual-track. Retires from graph-claim demos when migrated to GraphBehaviorTreeHost + GraphFsmHost; until then Metrics.Detail must say old-path."
     },
     {
       "id": "capability_standard_graph_op_AbsFloat",
@@ -3779,7 +3779,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
       "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
       "title": "HFSM 岗哨演武场",
-      "summary": "哨兵 featured 带走 GraphFsmHost（FsmState 糖 / Graph.FSM.Sentry）；万人 crowd 带是无图 HfsmWorld 压测，不顶 graph 语义。",
+      "summary": "主带 GraphFsmHost+FsmState 哨兵相位；万人灰点带=无图 HfsmWorld 压测基线（不做真图假装）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3795,7 +3795,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "FSM-1a featured=GraphFsmHost; crowd=no-graph HfsmWorld. Acceptance: GraphFsmHostTests + HfsmSentryArena_GateVignette honest band asserts."
+      "notes": "FSM-1 closeout: featured=GraphFsmHost/Graph.FSM.Sentry; crowd=labeled no-graph HfsmWorld(hfsm.sentry), LifecycleRuns==0 honesty gate."
     },
     {
       "id": "capability_standard_live_skill_workbench",

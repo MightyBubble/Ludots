@@ -10,7 +10,7 @@
 
 打开编辑器后，节点联想和控制输出端口只来自 Bridge 投影的运行时 descriptor / 作者糖，不在前端自造 op。游戏进程加载 `AgentBridgeMod` 后，编辑器右侧 Live Debug 能列出已挂载的 TriggerGraph 条目，开启固定容量 trace，并按 sequence 增量拉取变化。
 
-当前收口：控制流端口、六种作者糖、删节点清悬挂边、source map 缺失失败关闭。未收口：字符串模板 / Concat（无 text value 合同前不开放假节点）。
+当前收口：控制流端口、作者糖（含 `FsmState` / `SelectByEnum` / `InlineGraph` 等 Bridge 投影项）、删节点清悬挂边、source map 缺失失败关闭。未收口：字符串模板 / Concat（无 text value 合同前不开放假节点）。
 
 ---
 
@@ -39,7 +39,7 @@ cd src/Tools/Ludots.Editor.React && npm ci && npm run dev
 | modId | `MapTriggerNightRaidMod` |
 | graphId | `Graph.NightRaid.Flow` |
 
-Load 后画布显示控制边（蓝）与值边。左侧节点表里六种作者糖应标为 sugar：`BranchBool`、`SwitchInt`、`Wait`、`While`、`Until`、`Break`。普通节点的 `Jump.target`、`Call.call/next` 等端口来自 Bridge，不是前端硬编码。
+Load 后画布显示控制边（蓝）与值边。左侧节点表里的作者糖只来自 Bridge `authoringSugars`（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；TriggerGraph 另有 `InlineGraph`）。普通节点的 `Jump.target`、`Call.call/next` 等端口来自 Bridge，不是前端硬编码。`FsmState` 必须绑 `enumType` + `stateVar`，case 臂用枚举成员名。
 
 Validate 走 `GraphProgramAuthoringFrontDoor`；缺控制边 / 未知 op 失败关闭。Save 只在 Validate 通过后写 `assets/GAS/graphs.json`；布局写 `graph_editor.json`，不进运行时合同。
 
@@ -72,9 +72,10 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 
 ## 4. 场景
 
-1. 新人打开 `/gas-graphs`，加载夜袭 Flow 图，看见控制端口与六种糖，Validate 通过。
+1. 新人打开 `/gas-graphs`，加载夜袭 Flow 图，看见控制端口与 Bridge 投影的作者糖，Validate 通过。
 2. 故意加未连线的 Until，Validate 点名缺 `body`/`next`/`condition`。
 3. 夜袭 + AgentBridge 运行中，Watch 后看到 heartbeat / MapLoaded 触发的节点高亮与 pin 变化。
+4. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
 
 ---
 

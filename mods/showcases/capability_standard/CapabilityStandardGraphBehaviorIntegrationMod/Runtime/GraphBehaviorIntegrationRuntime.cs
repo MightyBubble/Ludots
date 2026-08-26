@@ -101,7 +101,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         }
 
         Metrics.AgentCount = guards + sentries;
-        Metrics.Detail = "Integration Scripts from ActionLib";
+        Metrics.Detail = "Integration old-path: BehaviorTreeWorld + HfsmWorld/GraphProgramHfsmHost (not GraphFsmHost)";
     }
 
     public void Tick(float dt)
@@ -143,7 +143,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
             Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
             if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
             Metrics.ThinkWaves++;
-            Metrics.Detail = $"Integration Scripts last={Metrics.LastThinkMs:F3}ms";
+            Metrics.Detail = $"Integration old-path last={Metrics.LastThinkMs:F3}ms (HfsmWorld+GraphProgramHfsmHost)";
         }
 
         IntegrateGuards(dt);
