@@ -49,48 +49,78 @@ internal sealed class SaveLoadShowcasePanelController
     private UiElementBuilder BuildRoot(ReactiveContext<SaveLoadShowcasePanelState> context)
     {
         SaveLoadShowcasePanelState s = context.State;
+        int step = Math.Clamp(s.StepIndex, 0, 4);
         var kids = new List<UiElementBuilder>
         {
-            Ui.Text(s.Header).FontSize(22f).Bold().Color("#F5F7FA"),
-            Ui.Text(s.Summary).FontSize(12f).Color("#D6E0EA").WhiteSpace(UiWhiteSpace.Normal),
-            Ui.Text(s.Controls).FontSize(10f).Color("#8AD7FF").WhiteSpace(UiWhiteSpace.Normal),
-            Ui.Text($"消融模式：{s.Ablation}").FontSize(12f).Bold().Color("#F0C36B"),
-            Ui.Text($"落盘根：{s.StorageRoot}").FontSize(11f).Color("#C7D0DD").WhiteSpace(UiWhiteSpace.Normal),
-            Ui.Text($"排除临时单位：{(s.ExcludeEphemeral ? "开" : "关")} · autosave 保留 {s.AutosaveRetention}").FontSize(11f).Color("#C7D0DD"),
-            Ui.Text($"对比 digest 前 {s.BeforeDigest} / 后 {s.AfterDigest} · 实体 {s.BeforeEntityCount}→{s.AfterEntityCount}").FontSize(11f).Color("#8DE3AE").WhiteSpace(UiWhiteSpace.Normal),
-            Ui.Text(s.Status).FontSize(13f).Bold().Color("#8DE3AE").WhiteSpace(UiWhiteSpace.Normal),
+            Ui.Text(s.Header).FontSize(24f).Bold().Color("#F5F7FA"),
+            Ui.Text(s.Hook).FontSize(14f).Bold().Color("#FFD27A").WhiteSpace(UiWhiteSpace.Normal),
+            Ui.Text($"当前步骤：{s.StepGuide}").FontSize(16f).Bold().Color("#8DE3AE"),
+            StepRow(step),
+            Ui.Text($"巡逻兵现在 {s.PatrolNow} · 已挪 {s.MoveCount} 步").FontSize(13f).Color("#8AD7FF"),
+            Ui.Text($"存档点 {s.SavedPoint}").FontSize(13f).Bold().Color(s.HasSavedPoint ? "#8DE3AE" : "#8899AA"),
+            Ui.Text(s.Outcome).FontSize(13f).Bold().Color("#F0C36B").WhiteSpace(UiWhiteSpace.Normal),
+            Ui.Text(s.Status).FontSize(13f).Color("#C7D0DD").WhiteSpace(UiWhiteSpace.Normal),
         };
         if (!string.IsNullOrWhiteSpace(s.Error))
-            kids.Add(Ui.Text($"错误：{s.Error}").FontSize(12f).Bold().Color("#FF7A7A").WhiteSpace(UiWhiteSpace.Normal));
+            kids.Add(Ui.Text($"注意：{s.Error}").FontSize(12f).Bold().Color("#FF7A7A").WhiteSpace(UiWhiteSpace.Normal));
 
+        kids.Add(Ui.Text("挪巡逻兵").FontSize(12f).Bold().Color("#F5F7FA"));
         kids.Add(Ui.Row(
-            Btn("推进世界", "nudge", r => r.NudgeWorld()),
+            Btn("←西", "west", r => r.Move(-SaveLoadShowcaseIds.MoveStepCm, 0)),
+            Btn("↑北", "north", r => r.Move(0, SaveLoadShowcaseIds.MoveStepCm)),
+            Btn("↓南", "south", r => r.Move(0, -SaveLoadShowcaseIds.MoveStepCm)),
+            Btn("东→", "east", r => r.Move(SaveLoadShowcaseIds.MoveStepCm, 0))).Gap(6f).Wrap());
+
+        kids.Add(Ui.Text("主循环").FontSize(12f).Bold().Color("#F5F7FA"));
+        kids.Add(Ui.Row(
+            Btn("存这一档", "save", r => r.QuickSave()),
+            Btn("读档回来", "load", r => r.QuickLoad())).Gap(8f).Wrap());
+
+        kids.Add(Ui.Text("对照与故障").FontSize(12f).Bold().Color("#F5F7FA"));
+        kids.Add(Ui.Row(
             Btn("无存档重置", "reset", r => r.AblateReset()),
             Btn("有存档恢复", "restore", r => r.AblateRestore())).Gap(6f).Wrap());
         kids.Add(Ui.Row(
-            Btn("篡改槽位", "tamper", r => r.TamperSelectedSlot()),
-            Btn("排除开关", "exclude", r => r.ToggleExclude()),
-            Btn("冷启动故事", "cold", r => r.ColdStartStory())).Gap(6f).Wrap());
+            Btn("弄坏这一档", "tamper", r => r.TamperSelectedSlot()),
+            Btn(s.ExcludeScout ? "排除：开" : "排除：关", "exclude", r => r.ToggleExclude())).Gap(6f).Wrap());
         kids.Add(Ui.Row(
+            Btn("冷启动故事", "cold", r => r.ColdStartStory()),
             Btn("保留-1", "ret-down", r => r.AdjustRetention(-1)),
             Btn("保留+1", "ret-up", r => r.AdjustRetention(1))).Gap(6f).Wrap());
-        kids.Add(Section("读档对比（绿=回来 / 灰=排除）", s.DiffLines, "#8DE3AE"));
-        kids.Add(Section("轨迹", s.LogLines, "#FFB38A"));
+
+        kids.Add(Ui.Text($"消融：{s.Ablation} · 自动档保留 {s.AutosaveRetention}").FontSize(11f).Color("#C7D0DD"));
+        kids.Add(Ui.Text($"落盘：{s.StorageRoot}").FontSize(10f).Color("#8899AA").WhiteSpace(UiWhiteSpace.Normal));
+        kids.Add(Ui.Text("图例：青圈=巡逻兵现在 · 绿幽灵=存档点 · 灰圈=不进档的临时侦察").FontSize(10f).Color("#A8B4C4").WhiteSpace(UiWhiteSpace.Normal));
+        kids.Add(Ui.Text(s.Controls).FontSize(10f).Color("#6F8499").WhiteSpace(UiWhiteSpace.Normal));
+        kids.Add(Scroll("刚才发生了什么", s.LogLines));
 
         return Ui.Column(
-                Ui.Column(kids.ToArray()).Width(480f).Height(620f).Padding(16f).Gap(8f).Radius(8f).Background("#0B1520").Border(1f, Color("#2F475E")))
-            .WidthPercent(100f).HeightPercent(100f).Padding(20f).Align(UiAlignItems.Start).ZIndex(60);
+                Ui.Column(kids.ToArray()).Width(520f).Height(680f).Padding(16f).Gap(7f).Radius(8f).Background("#0B1520").Border(1f, Color("#2F475E")))
+            .WidthPercent(100f).HeightPercent(100f).Padding(16f).Align(UiAlignItems.Start).ZIndex(60);
+    }
+
+    private static UiElementBuilder StepRow(int step)
+    {
+        string[] labels = { "①挪", "②存", "③再挪", "④读", "✓" };
+        var cells = new List<UiElementBuilder>(labels.Length);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            bool on = i == Math.Min(step, labels.Length - 1);
+            cells.Add(Ui.Text(labels[i]).FontSize(12f).Bold().Color(on ? "#8DE3AE" : "#5A6B7C"));
+        }
+
+        return Ui.Row(cells.ToArray()).Gap(10f);
     }
 
     private UiElementBuilder Btn(string label, string id, Action<SaveLoadShowcaseRuntime> action)
-        => Ui.Button(label, _ => { if (_engine != null) action(_runtime); }).Id($"save-load-{id}").Height(34f);
+        => Ui.Button(label, _ => { if (_engine != null) action(_runtime); }).Id($"save-load-{id}").Height(36f);
 
-    private static UiElementBuilder Section(string title, IReadOnlyList<string> lines, string accent)
+    private static UiElementBuilder Scroll(string title, IReadOnlyList<string> lines)
     {
-        var c = new List<UiElementBuilder> { Ui.Text(title).FontSize(12f).Bold().Color(accent) };
+        var c = new List<UiElementBuilder> { Ui.Text(title).FontSize(12f).Bold().Color("#FFB38A") };
         foreach (string line in lines)
             c.Add(Ui.Text(line).FontSize(11f).Color("#C7D0DD").WhiteSpace(UiWhiteSpace.Normal));
-        return Ui.ScrollView(c.ToArray()).Height(140f).Gap(4f);
+        return Ui.ScrollView(c.ToArray()).Height(110f).Gap(3f);
     }
 
     private static UiColor Color(string hex)

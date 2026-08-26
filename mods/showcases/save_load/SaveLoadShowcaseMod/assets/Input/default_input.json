@@ -1,10 +1,14 @@
 {
   "actions": [
+    { "id": "SaveLoad.MoveNorth", "name": "SaveLoad_MoveNorth", "type": "Button" },
+    { "id": "SaveLoad.MoveSouth", "name": "SaveLoad_MoveSouth", "type": "Button" },
+    { "id": "SaveLoad.MoveWest", "name": "SaveLoad_MoveWest", "type": "Button" },
+    { "id": "SaveLoad.MoveEast", "name": "SaveLoad_MoveEast", "type": "Button" },
+    { "id": "SaveLoad.QuickSave", "name": "SaveLoad_QuickSave", "type": "Button" },
+    { "id": "SaveLoad.QuickLoad", "name": "SaveLoad_QuickLoad", "type": "Button" },
     { "id": "SaveLoad.AblateReset", "name": "SaveLoad_AblateReset", "type": "Button" },
-    { "id": "SaveLoad.AblateRestore", "name": "SaveLoad_AblateRestore", "type": "Button" },
     { "id": "SaveLoad.TamperSlot", "name": "SaveLoad_TamperSlot", "type": "Button" },
     { "id": "SaveLoad.ToggleExclude", "name": "SaveLoad_ToggleExclude", "type": "Button" },
-    { "id": "SaveLoad.NudgeWorld", "name": "SaveLoad_NudgeWorld", "type": "Button" },
     { "id": "SaveLoad.ColdStartStory", "name": "SaveLoad_ColdStartStory", "type": "Button" },
     { "id": "SaveLoad.RetentionDown", "name": "SaveLoad_RetentionDown", "type": "Button" },
     { "id": "SaveLoad.RetentionUp", "name": "SaveLoad_RetentionUp", "type": "Button" }
@@ -15,9 +19,13 @@
       "name": "Save Load Showcase Controls",
       "priority": 90,
       "bindings": [
-        { "actionId": "SaveLoad.NudgeWorld", "path": "<Keyboard>/n" },
+        { "actionId": "SaveLoad.MoveNorth", "path": "<Keyboard>/w" },
+        { "actionId": "SaveLoad.MoveSouth", "path": "<Keyboard>/s" },
+        { "actionId": "SaveLoad.MoveWest", "path": "<Keyboard>/a" },
+        { "actionId": "SaveLoad.MoveEast", "path": "<Keyboard>/d" },
+        { "actionId": "SaveLoad.QuickSave", "path": "<Keyboard>/f" },
+        { "actionId": "SaveLoad.QuickLoad", "path": "<Keyboard>/g" },
         { "actionId": "SaveLoad.AblateReset", "path": "<Keyboard>/1" },
-        { "actionId": "SaveLoad.AblateRestore", "path": "<Keyboard>/2" },
         { "actionId": "SaveLoad.TamperSlot", "path": "<Keyboard>/t" },
         { "actionId": "SaveLoad.ToggleExclude", "path": "<Keyboard>/x" },
         { "actionId": "SaveLoad.ColdStartStory", "path": "<Keyboard>/c" },

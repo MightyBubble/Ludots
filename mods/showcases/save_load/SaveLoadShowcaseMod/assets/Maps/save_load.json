@@ -16,34 +16,34 @@
   "Entities": [
     {
       "Template": "rts_ra2_war_factory",
-      "InstanceId": "save_load_war_factory",
+      "InstanceId": "save_load_camp",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 9800, "Y": 22600 } },
-        "Name": { "Value": "Save Factory" }
+        "Name": { "Value": "营地" }
       }
     },
     {
       "Template": "rts_ra2_rhino",
-      "InstanceId": "save_load_rhino",
+      "InstanceId": "save_load_patrol",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 10900, "Y": 21950 } },
-        "Name": { "Value": "Save Armor" }
+        "Name": { "Value": "巡逻兵" }
       }
     },
     {
       "Template": "rts_ra2_rhino",
-      "InstanceId": "save_load_ephemeral",
+      "InstanceId": "save_load_scout",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 9000, "Y": 23000 } },
-        "Name": { "Value": "Ephemeral Scout" }
+        "Name": { "Value": "临时侦察" }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "save_load_war_factory" }
+    { "TeamId": 1, "RepresentativeInstanceId": "save_load_camp" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "save_load_war_factory" }
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "save_load_camp" }
   ],
   "ParticipantRelationships": {
     "Teams": [

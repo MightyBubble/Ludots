@@ -24,9 +24,14 @@ internal sealed class SaveLoadShowcaseInputSystem : Arch.System.ISystem<float>
     public void Update(in float t)
     {
         if (_engine.GetService(CoreServiceKeys.InputHandler) is not PlayerInputHandler input) return;
-        if (input.PressedThisFrame(SaveLoadShowcaseIds.NudgeWorld)) _runtime.NudgeWorld();
+        int step = SaveLoadShowcaseIds.MoveStepCm;
+        if (input.PressedThisFrame(SaveLoadShowcaseIds.MoveNorth)) _runtime.Move(0, step);
+        if (input.PressedThisFrame(SaveLoadShowcaseIds.MoveSouth)) _runtime.Move(0, -step);
+        if (input.PressedThisFrame(SaveLoadShowcaseIds.MoveWest)) _runtime.Move(-step, 0);
+        if (input.PressedThisFrame(SaveLoadShowcaseIds.MoveEast)) _runtime.Move(step, 0);
+        if (input.PressedThisFrame(SaveLoadShowcaseIds.QuickSave)) _runtime.QuickSave();
+        if (input.PressedThisFrame(SaveLoadShowcaseIds.QuickLoad)) _runtime.QuickLoad();
         if (input.PressedThisFrame(SaveLoadShowcaseIds.AblateReset)) _runtime.AblateReset();
-        if (input.PressedThisFrame(SaveLoadShowcaseIds.AblateRestore)) _runtime.AblateRestore();
         if (input.PressedThisFrame(SaveLoadShowcaseIds.TamperSlot)) _runtime.TamperSelectedSlot();
         if (input.PressedThisFrame(SaveLoadShowcaseIds.ToggleExclude)) _runtime.ToggleExclude();
         if (input.PressedThisFrame(SaveLoadShowcaseIds.ColdStartStory)) _runtime.ColdStartStory();

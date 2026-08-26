@@ -1,18 +1,23 @@
-# 存档读档冷启动战报
+# 存档读档战报（玩家主循环）
 
 ## 场景
 
-Bridge `ludots.save.write` → 销毁引擎（跨进程边界）→ `ludots.save.read` + `ludots.save.restore` → 续跑。
+岸线小地图上的「巡逻兵」：挪 → 存 → 再挪 → 读档归位。
 
-## 五时序节点
+## 主循环证据（合同测试）
 
-- 1_before_write tick=1 digest=454936C87481
-- 2_after_write tick=2 path=/tmp/ludots-cold-start-4kfi3be1.e44/saves/manual/cold-start.ldsave digest=9B300C945483
-- 3_restart storageRoot=/tmp/ludots-cold-start-4kfi3be1.e44 (engine disposed; new process boundary)
-- 4_after_restore tick=2 digest=9B300C945483
-- 5_after_continue tick=4 digest=2F644DC2C6E7
+`SaveLoadShowcaseAcceptanceTests.PatrolMoveSaveMoveLoad_ReturnsToSavedPoint`
 
-## 结论
+1. 巡逻兵出生 (1000,2000)
+2. 往东挪一步 → (1400,2000)
+3. 经 SavePanelMod 写入 `manual/showcase`
+4. 再挪远 → (2200,2200)
+5. 读档 → 回到 (1400,2000)
 
-- 落盘路径真实存在，跨引擎实例归一化 digest 一致。
-- 续跑后 digest 变化，证明读档后世界可继续操作。
+额外：无存档重置回到出厂；弄坏档拒读且位置不被改写。
+
+## 屏幕故事
+
+- 首屏四步：①挪 ②存 ③再挪 ④读
+- 青圈=现在，绿幽灵=存档点，灰圈=不进档临时侦察
+- 右侧复用通用存档面板（零拷贝）

@@ -52,8 +52,8 @@
       "id": "save_load",
       "path": "mods/showcases/save_load/SaveLoadShowcaseMod",
       "projectPath": "SaveLoadShowcaseMod.csproj",
-      "title": "存档读档",
-      "summary": "退出再进，世界原样回来。复用 SavePanelMod；消融无存档重置 vs 有存档恢复。",
+      "title": "存档读档：巡逻兵归位",
+      "summary": "把巡逻兵挪走、存一档、再挪远，读档后弹回绿圈。复用 SavePanelMod。",
       "tier": "T2",
       "category": "demo",
       "tags": [
