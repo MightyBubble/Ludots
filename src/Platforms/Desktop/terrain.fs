@@ -137,8 +137,8 @@ vec4 SampleControlWeights(vec3 worldPos)
 
 void main()
 {
-    vec3 albedo = fragColor.rgb;
-    if (uUseTerrainAlbedo != 0)
+            vec3 albedo = fragColor.rgb;
+    if (uUseTerrainAlbedo != 0 && fragHeightBand > 0.0)
     {
         float scale = max(uTerrainTileScale, 1e-5);
         vec2 uv = fragPos.xz * scale;

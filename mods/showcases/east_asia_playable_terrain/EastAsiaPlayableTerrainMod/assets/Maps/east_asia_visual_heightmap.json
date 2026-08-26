@@ -8,7 +8,7 @@
       "ChunkLodErrorPx": 240,
       "DisableDistanceFog": true,
       "DisplayHeightScale": 5,
-      "AbsoluteColorPeakSpanCm": 65000
+      "AbsoluteColorPeakSpanCm": 5000
     }
   },
   "Tags": [

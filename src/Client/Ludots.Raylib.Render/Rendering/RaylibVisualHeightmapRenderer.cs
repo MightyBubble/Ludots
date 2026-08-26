@@ -1131,14 +1131,8 @@ namespace Ludots.Raylib.Render
                     float worldYCm = chunk.Bounds.Top + (sourceY * stepYCm);
                     chunk.TryReadHeightCm(sourceX, sourceY, out float heightCm);
                     Vector3 normal = ComputeNormal(in chunk, sourceX, sourceY, stepXCm, stepYCm);
+                    float displayHeightCm = heightCm;
                     int f = vertex * 3;
-                    mesh.vertices[f + 0] = worldXCm * 0.01f;
-                    mesh.vertices[f + 1] = heightCm * 0.01f;
-                    mesh.vertices[f + 2] = worldYCm * 0.01f;
-                    mesh.normals[f + 0] = normal.X;
-                    mesh.normals[f + 1] = normal.Y;
-                    mesh.normals[f + 2] = normal.Z;
-
                     int c = vertex * 4;
                     float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
                     float heightBand;
@@ -1147,8 +1141,8 @@ namespace Ludots.Raylib.Render
                     byte blue;
                     if (absoluteSeaCm is float seaCm)
                     {
-                        // Keep negative bands for submerged shelf/abyss tint (refraction reads depth).
-                        heightBand = MathF.Min(1f, (heightCm - seaCm) / absolutePeakSpanCm);
+                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
+                        displayHeightCm = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, absolutePeakSpanCm);
                         ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
                     else
@@ -1157,10 +1151,19 @@ namespace Ludots.Raylib.Render
                         ResolveTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
 
+                    mesh.vertices[f + 0] = worldXCm * 0.01f;
+                    mesh.vertices[f + 1] = displayHeightCm * 0.01f;
+                    mesh.vertices[f + 2] = worldYCm * 0.01f;
+                    mesh.normals[f + 0] = normal.X;
+                    mesh.normals[f + 1] = normal.Y;
+                    mesh.normals[f + 2] = normal.Z;
                     mesh.colors[c + 0] = red;
                     mesh.colors[c + 1] = green;
                     mesh.colors[c + 2] = blue;
-                    mesh.colors[c + 3] = ClampToByte(Math.Clamp(heightBand, 0f, 1f) * 255f);
+                    // Alpha 0 marks open-water fill so terrain.fs skips albedo/control over ocean sentinels.
+                    mesh.colors[c + 3] = heightBand <= 0f
+                        ? (byte)0
+                        : ClampToByte(Math.Clamp(heightBand, 1f / 255f, 1f) * 255f);
                 }
             }
 
@@ -1229,6 +1232,28 @@ namespace Ludots.Raylib.Render
             red = ClampToByte(color.X * shade);
             green = ClampToByte(color.Y * shade);
             blue = ClampToByte(color.Z * shade);
+        }
+
+        internal static float ResolveAbsoluteHeightBand(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
+        {
+            float peakSpanCm = MathF.Max(1f, absolutePeakSpanCm);
+            float relative = (heightCm - seaLevelCm) / peakSpanCm;
+            // Authored land peaks sit within AbsoluteColorPeakSpanCm. Continental assets may fill
+            // ocean/void with sentinel values far above that span — tint those as open water, not peaks.
+            if (relative > 1f)
+            {
+                float overshoot = relative - 1f;
+                return -Math.Clamp(overshoot * 0.02f, 0.01f, 0.08f);
+            }
+
+            return relative;
+        }
+
+        internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
+        {
+            float peakSpanCm = MathF.Max(1f, absolutePeakSpanCm);
+            float relative = (heightCm - seaLevelCm) / peakSpanCm;
+            return relative > 1f ? seaLevelCm : heightCm;
         }
 
         private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
@@ -1397,12 +1422,15 @@ namespace Ludots.Raylib.Render
                         heightCm = absoluteSeaCm ?? 0f;
                     }
 
+                    float displayHeightCm = absoluteSeaCm is float seaForDisplay
+                        ? ResolveAbsoluteDisplayHeightCm(heightCm, seaForDisplay, absolutePeakSpanCm)
+                        : heightCm;
                     heights[vertex] = heightCm;
                     minHeightCm = MathF.Min(minHeightCm, heightCm);
                     maxHeightCm = MathF.Max(maxHeightCm, heightCm);
                     int f = vertex * 3;
                     mesh.vertices[f + 0] = worldXCm * 0.01f;
-                    mesh.vertices[f + 1] = heightCm * 0.01f;
+                    mesh.vertices[f + 1] = displayHeightCm * 0.01f;
                     mesh.vertices[f + 2] = worldYCm * 0.01f;
                     mesh.normals[f + 0] = 0f;
                     mesh.normals[f + 1] = 1f;
@@ -1447,7 +1475,7 @@ namespace Ludots.Raylib.Render
                     byte blue;
                     if (absoluteSeaCm is float seaCm)
                     {
-                        heightBand = MathF.Min(1f, (heightCm - seaCm) / absolutePeakSpanCm);
+                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
                         ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
                     else
@@ -1460,7 +1488,9 @@ namespace Ludots.Raylib.Render
                     mesh.colors[c + 0] = red;
                     mesh.colors[c + 1] = green;
                     mesh.colors[c + 2] = blue;
-                    mesh.colors[c + 3] = ClampToByte(Math.Clamp(heightBand, 0f, 1f) * 255f);
+                    mesh.colors[c + 3] = heightBand <= 0f
+                        ? (byte)0
+                        : ClampToByte(Math.Clamp(heightBand, 1f / 255f, 1f) * 255f);
                 }
             }
 

@@ -63,6 +63,35 @@ public sealed class RaylibVisualHeightmapRendererTests
     }
 
     [Test]
+    public void ResolveAbsoluteHeightBand_TreatsOceanSentinelAbovePeakSpanAsOpenWater()
+    {
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteHeightBand(
+                heightCm: 2_132f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.EqualTo(2_132f / 5_000f).Within(0.0001f));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteHeightBand(
+                heightCm: 59_563f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.LessThan(0f));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                heightCm: 59_563f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.EqualTo(0f));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                heightCm: 2_132f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.EqualTo(2_132f));
+    }
+
+    [Test]
     public void ResolveOverviewStepChunks_KeepsLargeMapOverviewUnderRaylibVertexLimit()
     {
         int step = RaylibVisualHeightmapRenderer.ResolveOverviewStepChunks(
