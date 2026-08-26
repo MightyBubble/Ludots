@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Fields;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
