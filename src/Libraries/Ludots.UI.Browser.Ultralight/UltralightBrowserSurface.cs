@@ -359,17 +359,7 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 		}
 
 		string json = message.Substring(MessagePrefix.Length);
-		using JsonDocument document = JsonDocument.Parse(json);
-		JsonElement root = document.RootElement;
-		string channel = root.TryGetProperty("channel", out JsonElement channelElement)
-			? channelElement.GetString() ?? BrowserMessageChannels.Application
-			: BrowserMessageChannels.Application;
-		string payload = root.TryGetProperty("payload", out JsonElement payloadElement)
-			? payloadElement.ValueKind == JsonValueKind.String
-				? payloadElement.GetString() ?? string.Empty
-				: payloadElement.GetRawText()
-			: string.Empty;
-		_messages.RaiseMessage(new BrowserScriptMessage(channel, payload));
+		_messages.RaiseMessage(UltralightBrowserMessageNormalizer.Normalize(json));
 	}
 
 	private void OnBridgeMessageReceived(object? sender, BrowserScriptMessage message)

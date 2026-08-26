@@ -492,7 +492,42 @@ internal static class UltralightLocalAppStager
 				physicalEntry);
 		}
 
-		return new Uri(physicalEntry).AbsoluteUri;
+		// Ultralight file:// navigations do not expose query to page JS (location.search stays empty).
+		// Persist the original query into the staged HTML so zero-code panels keep their topic.
+		string fileUrl = new Uri(physicalEntry).AbsoluteUri;
+		if (!string.IsNullOrEmpty(navigationUri.Query))
+		{
+			InjectNavigationQueryBootstrap(physicalEntry, navigationUri.Query);
+			fileUrl += navigationUri.Query;
+		}
+
+		return fileUrl;
+	}
+
+	private static void InjectNavigationQueryBootstrap(string htmlPath, string query)
+	{
+		string html = File.ReadAllText(htmlPath);
+		string bootstrap =
+			"<script>window.__LUDOTS_NAV_QUERY__=" +
+			System.Text.Json.JsonSerializer.Serialize(query) +
+			";</script>";
+		if (html.Contains("__LUDOTS_NAV_QUERY__", StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		int head = html.IndexOf("<head", StringComparison.OrdinalIgnoreCase);
+		if (head >= 0)
+		{
+			int insertAt = html.IndexOf('>', head);
+			if (insertAt >= 0)
+			{
+				File.WriteAllText(htmlPath, html.Insert(insertAt + 1, bootstrap));
+				return;
+			}
+		}
+
+		File.WriteAllText(htmlPath, bootstrap + html);
 	}
 
 	private static async Task StageUriAsync(
