@@ -161,7 +161,7 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 - **是什么**：黑板参数驱动材质换装表（区域参数 0=北方黑砖、1=南方红砖这类查表切换）。
 - **怎么写**：`material`（`baseMaterialId`/`materialSwapParamKey`/`swapTable`）。
-- **跑/证据**：L1 preset `capability_standard_presenter_material_behavior_showcase_raylib`（Material BehaviorKind 作者路径）；夹具 `blacksmith_test_raylib`。注意：画廊 `engine_raylib_material_binding` 是材质实例/自发光课，**不是**本 BehaviorKind 的作者证明。铁匠铺 showcase 的「区域砖色」实际常走 AssetBinding 的 assetSwapTable（整资产换装），与本行为（只换材质）不同通道。
+- **跑/证据**：L1 preset `capability_standard_presenter_material_behavior_showcase_raylib`（`C`/`W`/`Space`；Material BehaviorKind 作者路径）；夹具 `blacksmith_test_raylib`。注意：画廊 `engine_raylib_material_binding` 是材质实例/自发光课，**不是**本 BehaviorKind 的作者证明。铁匠铺 showcase 的「区域砖色」实际常走 AssetBinding 的 assetSwapTable（整资产换装），与本行为（只换材质）不同通道。
 
 标准生产配置（区域参数 0=黑砖 1=红砖；同定义 body 槽 AssetBinding 用 materialParamKey 引用同一个 region 参数做实例级材质直推）：
 
@@ -347,7 +347,7 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 - **是什么**：行为激活期间按间隔采样刀刃 base/tip 世界坐标，写入 `TrailMeshBuffer`；停用后存量样本按寿命淡出。采样语义与画廊 `slash_trail` 共用 `TrailSampleHistory`，但**作者路径必须写本 BehaviorKind**。
 - **怎么写**：`trailMesh`（`baseOffset`/`tipOffset`/`maxSamples`/`sampleIntervalSeconds`/`sampleLifetimeSeconds`/`headColor`/`tailColor`）。
-- **跑**：L1 preset `capability_standard_presenter_trailmesh_showcase_raylib`（presenters.json 作者路径）；L4 渲染画廊 `engine_raylib_slash_trail` 只证渲染器，目录不得把它当作本行为的作者证明。
+- **跑**：L1 preset `capability_standard_presenter_trailmesh_showcase_raylib`（按 `T` 开合拖尾；presenters.json 作者路径）；L4 渲染画廊 `engine_raylib_slash_trail` 只证渲染器，目录不得把它当作本行为的作者证明。
 - **证据**：能力翻新合同见 `docs/architecture/presenter-capability-showcase-refresh.md`；画廊页 [挥砍的刀光弧线](../engine-gallery-wiki/slash_trail.md)。
 
 标准生产配置（行为默认关闭，由 ActivateBehavior / activationCondition 点亮；同定义通常还有 AssetBinding 刀身）：

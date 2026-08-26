@@ -8,7 +8,7 @@
       "name": "TrailMesh Showcase Controls",
       "priority": 140,
       "bindings": [
-        { "actionId": "TrailMeshShowcase.ToggleTrail", "path": "<Keyboard>/1" }
+        { "actionId": "TrailMeshShowcase.ToggleTrail", "path": "<Keyboard>/t" }
       ]
     }
   ]

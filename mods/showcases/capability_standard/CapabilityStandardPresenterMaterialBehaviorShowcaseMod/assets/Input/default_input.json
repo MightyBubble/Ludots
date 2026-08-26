@@ -10,9 +10,9 @@
       "name": "Material Behavior Showcase Controls",
       "priority": 140,
       "bindings": [
-        { "actionId": "MaterialBehaviorShowcase.SelectCool", "path": "<Keyboard>/1" },
-        { "actionId": "MaterialBehaviorShowcase.SelectWarm", "path": "<Keyboard>/2" },
-        { "actionId": "MaterialBehaviorShowcase.Toggle", "path": "<Keyboard>/3" }
+        { "actionId": "MaterialBehaviorShowcase.SelectCool", "path": "<Keyboard>/c" },
+        { "actionId": "MaterialBehaviorShowcase.SelectWarm", "path": "<Keyboard>/w" },
+        { "actionId": "MaterialBehaviorShowcase.Toggle", "path": "<Keyboard>/space" }
       ]
     }
   ]

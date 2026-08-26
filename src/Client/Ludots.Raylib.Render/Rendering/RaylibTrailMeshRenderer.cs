@@ -24,6 +24,7 @@ namespace Ludots.Raylib.Render
 
             Span<TrailMeshVertex> vertices = stackalloc TrailMeshVertex[TrailMeshGeometry.MaxStripVertices];
             Rl.rlDisableBackfaceCulling();
+            Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
             try
             {
                 for (int i = 0; i < trails.Count; i++)
@@ -42,6 +43,7 @@ namespace Ludots.Raylib.Render
             }
             finally
             {
+                Rl.EndBlendMode();
                 Rl.rlEnableBackfaceCulling();
             }
         }

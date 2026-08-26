@@ -73,11 +73,13 @@
 
 ### 3.4 本轮必做清单（相对审计）
 
-1. 目录：Behavior 十四种（补 TrailMesh）；修正 Timer/Destroy/Initialize/InstancedBatch 过期口径；SUMMARY 改「十四种」。
-2. L1 补齐：TrailMesh 作者演示；Material BehaviorKind 演示；activationCondition 演示。
-3. 指令全息：SinkParamToAsset 改为 presenters 规则，删 C# `PublishRefresh` 直发。
-4. 铁匠铺 registry/acceptance-map：降级为 L3。
-5. schema：删除或修正死字段（定义级 `visibility`、`assetBinding.grounding*`）；`activationCondition` 类型与 loader 对齐。
+1. 目录：Behavior 十四种（补 TrailMesh）；修正 Timer/Destroy/Initialize/InstancedBatch 过期口径；SUMMARY 改「十四种」。✅
+2. L1 补齐：TrailMesh 作者演示；Material BehaviorKind 演示；activationCondition 演示。✅
+3. 指令全息：SinkParamToAsset 改为 presenters 规则，删 C# `PublishRefresh` 直发。✅
+4. 铁匠铺 registry/acceptance-map：降级为 L3。✅
+5. schema：删除或修正死字段（定义级 `visibility`、`assetBinding.grounding*`）；`activationCondition` 类型与 loader 对齐。✅
+
+L1 preset：`capability_standard_presenter_trailmesh_showcase_raylib` / `capability_standard_presenter_material_behavior_showcase_raylib` / `capability_standard_presenter_activation_condition_showcase_raylib`。
 
 ## 4. 场景
 

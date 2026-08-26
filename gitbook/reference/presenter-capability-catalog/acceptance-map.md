@@ -8,6 +8,16 @@
 
 每条 BehaviorKind / PresenterCommandKind 必须能从本目录跳到 **L1 单能力演示**（一能力一入口）。铁匠铺与大世界压测是 L3，**不能**代替逐条勾选。
 
+本轮缺口补齐入口：
+
+| 能力 | L1 preset | 操作 |
+|---|---|---|
+| TrailMesh | `capability_standard_presenter_trailmesh_showcase_raylib` | `T` 开合拖尾 |
+| Material BehaviorKind | `capability_standard_presenter_material_behavior_showcase_raylib` | `C`/`W` 冷暖材质，`Space` 切换 |
+| activationCondition | `capability_standard_presenter_activation_condition_showcase_raylib` | 左亮右灭对照 |
+| Sound | `capability_standard_sound_showcase_raylib` | `1`/`2`/`3` |
+| 指令全息（多站） | `capability_standard_presenter_command_showcase_raylib` | 站内按钮 |
+
 ## 路线一：引擎画廊 20 场景（先看见渲染）
 
 每场景一键跑、带验收截图 + 120 帧统计 + 页内录像；逐场讲解（这场演的是什么 / 作者怎么写 / 怎么跑 / 边界）见 [引擎画廊 Wiki](../engine-gallery-wiki/README.md)。
