@@ -923,29 +923,37 @@ namespace Ludots.Tests.Presentation
             int splineCount = 0;
             int hudCount = 0;
             int textCount = 0;
-            foreach (ref readonly PresentationRequest request in requests.GetSpan())
+            foreach (ref readonly PresentationRequestOp op in requests.Ops)
             {
-                if (request.Kind == PresentationRequestKind.VisualProxy)
+                switch (op.Channel)
                 {
-                    visualCount++;
-                    if (request.VisualProxy.MeshAssetId == 11)
+                    case PresentationRequestChannel.VisualProxy:
                     {
-                        Assert.That(request.VisualProxy.Animator.GetControllerId(), Is.EqualTo(7));
+                        ref readonly VisualProxyChannelItem visual = ref requests.VisualProxyAt(op.Slot);
+                        visualCount++;
+                        if (visual.VisualProxy.MeshAssetId == 11)
+                        {
+                            Assert.That(visual.VisualProxy.Animator.GetControllerId(), Is.EqualTo(7));
+                        }
+
+                        break;
                     }
-                }
-                else if (request.Kind == PresentationRequestKind.SplineRibbon)
-                {
-                    splineCount++;
-                }
-                else if (request.Kind == PresentationRequestKind.WorldHud)
-                {
-                    if (request.WorldHud.Kind == Ludots.Core.Presentation.Hud.WorldHudItemKind.Bar)
+                    case PresentationRequestChannel.SplineRibbon:
+                        splineCount++;
+                        break;
+                    case PresentationRequestChannel.WorldHud:
                     {
-                        hudCount++;
-                    }
-                    else if (request.WorldHud.Kind == Ludots.Core.Presentation.Hud.WorldHudItemKind.Text)
-                    {
-                        textCount++;
+                        Ludots.Core.Presentation.Hud.WorldHudItemKind kind = requests.WorldHudAt(op.Slot).Item.Kind;
+                        if (kind == Ludots.Core.Presentation.Hud.WorldHudItemKind.Bar)
+                        {
+                            hudCount++;
+                        }
+                        else if (kind == Ludots.Core.Presentation.Hud.WorldHudItemKind.Text)
+                        {
+                            textCount++;
+                        }
+
+                        break;
                     }
                 }
             }
@@ -986,15 +994,15 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
 
             int visualCount = 0;
-            foreach (ref readonly PresentationRequest request in requests.GetSpan())
+            foreach (ref readonly PresentationRequestOp op in requests.Ops)
             {
-                if (request.Kind != PresentationRequestKind.VisualProxy)
+                if (op.Channel != PresentationRequestChannel.VisualProxy)
                 {
                     continue;
                 }
 
                 visualCount++;
-                Assert.That(request.VisualProxy.MeshAssetId is 61 or 62, Is.True);
+                Assert.That(requests.VisualProxyAt(op.Slot).VisualProxy.MeshAssetId is 61 or 62, Is.True);
             }
 
             Assert.That(visualCount, Is.EqualTo(2));

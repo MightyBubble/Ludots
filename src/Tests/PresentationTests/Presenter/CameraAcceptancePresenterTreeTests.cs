@@ -170,13 +170,15 @@ namespace Ludots.Tests.Presentation
             emit.Update(0.016f);
 
             var kinds = new HashSet<AssetKind>();
-            for (int i = 0; i < requests.Count; i++)
+            ReadOnlySpan<PresentationRequestOp> ops = requests.Ops;
+            for (int i = 0; i < ops.Length; i++)
             {
-                PresentationRequest request = requests.GetSpan()[i];
-                if (request.Kind == PresentationRequestKind.VisualProxy)
+                if (ops[i].Channel != PresentationRequestChannel.VisualProxy)
                 {
-                    kinds.Add(request.VisualProxy.AssetKind);
+                    continue;
                 }
+
+                kinds.Add(requests.VisualProxyAt(ops[i].Slot).VisualProxy.AssetKind);
             }
 
             Assert.That(kinds, Does.Contain(AssetKind.Mesh));
