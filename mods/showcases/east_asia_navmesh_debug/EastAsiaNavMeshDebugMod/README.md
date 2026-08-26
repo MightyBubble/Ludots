@@ -13,9 +13,9 @@ into the same `NavObstacleSet` as map-authored obstacles. Corridor nodes are
 Albers-projected lon/lat samples scaled with the playable board; carve width
 comes from `widthCm`; presentation ribbon width stays on `visualWidthMeters`.
 
-It depends on `FieldEastAsiaAdminMod` so the same VisualHeightmap also draws
-province-scale `ownership.east_asia.admin` DiscreteOwnership colors on terrain
-(`DrawFieldOverlays`, default on). Admin cells are 7142 cm (~2× nav cell).
+It depends on `FieldEastAsiaCountryMod` so the same VisualHeightmap also draws
+Natural Earth national-border `ownership.east_asia.country` DiscreteOwnership colors
+on terrain (`DrawFieldOverlays`, default on). Country cells are 7142 cm (~2× nav cell).
 
 Bake the authoritative continuous VisualHeightmap from the repository root:
 
@@ -58,4 +58,5 @@ Launch with:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:east_asia_navmesh_debug_raylib'
 ```
 
-`N` toggles baked NavMesh triangles and `T` toggles the projected walkability texture.
+`N` toggles baked NavMesh triangles and `T` toggles the projected walkability texture
+（由 Raylib preset 显式挂载 `NavMeshDebugLaunchMod`；本 Mod 只提供数据与棋盘叠加，不硬依赖调试输入）。

@@ -5138,6 +5138,51 @@
       "status": "active"
     },
     {
+      "id": "east_asia_borders_land_sea",
+      "path": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod",
+      "title": "East Asia Borders Land & Sea",
+      "summary": "Army PreferMesh + ship Direct on East Asia Natural Earth borders, with FieldRegion enter popups. PreferGraph river sailing needs a NodeGraph board (documented debt).",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "east-asia",
+        "borders",
+        "navmesh",
+        "transport",
+        "showcase"
+      ],
+      "binding": "east_asia_borders_land_sea",
+      "preset": "east_asia_borders_land_sea_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod/README.md",
+      "acceptanceTest": "EastAsiaBordersLandSeaAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_east_asia_country",
+      "path": "mods/showcases/field_east_asia_country/FieldEastAsiaCountryMod",
+      "title": "East Asia Country Borders",
+      "summary": "Natural Earth admin_0 national borders rasterized as DiscreteOwnership on the East Asia VisualHeightmap.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "east-asia",
+        "mapfield",
+        "borders",
+        "visual-heightmap"
+      ],
+      "binding": "field_east_asia_country",
+      "preset": "field_east_asia_country_raylib",
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
+      "readmePath": "mods/showcases/field_east_asia_country/FieldEastAsiaCountryMod/README.md",
+      "acceptanceTest": "FieldEastAsiaCountryAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "field_jing_yang_transit",
       "path": "mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod",
       "title": "荆扬过境",

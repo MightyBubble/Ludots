@@ -511,8 +511,30 @@
       "name": "East Asia NavMesh Debug Raylib",
       "selectors": [
         "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "mod:NavMeshDebugLaunchMod",
         "$east_asia_navmesh_debug",
-        "$field_east_asia_admin"
+        "$field_east_asia_country"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "east_asia_borders_land_sea_raylib",
+      "name": "East Asia Borders Land Sea Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "mod:NavMeshDebugLaunchMod",
+        "$east_asia_borders_land_sea"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_east_asia_country_raylib",
+      "name": "Field East Asia Country Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "$field_east_asia_country"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -601,7 +623,7 @@
     },
     {
       "id": "capability_standard_graph_score_raylib",
-      "name": "残血的分更高",
+      "name": "\u6b8b\u8840\u7684\u5206\u66f4\u9ad8",
       "selectors": [
         "$capability_standard_graph_score"
       ],
@@ -1735,7 +1757,7 @@
     },
     {
       "id": "engine_raylib_skybox",
-      "name": "引擎画廊·skybox",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7skybox",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1753,7 +1775,7 @@
     },
     {
       "id": "engine_raylib_sky_daynight",
-      "name": "引擎画廊·sky_daynight",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7sky_daynight",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1771,7 +1793,7 @@
     },
     {
       "id": "engine_raylib_water",
-      "name": "引擎画廊·water",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7water",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1789,7 +1811,7 @@
     },
     {
       "id": "engine_raylib_terrain_surface",
-      "name": "引擎画廊·terrain_surface",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7terrain_surface",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1807,7 +1829,7 @@
     },
     {
       "id": "engine_raylib_terrain_heightmap",
-      "name": "引擎画廊·terrain_heightmap",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7terrain_heightmap",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1825,7 +1847,7 @@
     },
     {
       "id": "engine_raylib_atmosphere_fog",
-      "name": "引擎画廊·atmosphere_fog",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7atmosphere_fog",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1843,7 +1865,7 @@
     },
     {
       "id": "engine_raylib_frame_lighting",
-      "name": "引擎画廊·frame_lighting",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7frame_lighting",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1861,7 +1883,7 @@
     },
     {
       "id": "engine_raylib_postprocess",
-      "name": "引擎画廊·postprocess",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7postprocess",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1879,7 +1901,7 @@
     },
     {
       "id": "engine_raylib_gpu_skinning",
-      "name": "引擎画廊·gpu_skinning",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7gpu_skinning",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1897,7 +1919,7 @@
     },
     {
       "id": "engine_raylib_instancing",
-      "name": "引擎画廊·instancing",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7instancing",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1915,7 +1937,7 @@
     },
     {
       "id": "engine_raylib_particles",
-      "name": "引擎画廊·particles",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7particles",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1933,7 +1955,7 @@
     },
     {
       "id": "engine_raylib_decal_projection",
-      "name": "引擎画廊·decal_projection",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7decal_projection",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1951,7 +1973,7 @@
     },
     {
       "id": "engine_raylib_vegetation_cutout",
-      "name": "引擎画廊·vegetation_cutout",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7vegetation_cutout",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1969,7 +1991,7 @@
     },
     {
       "id": "engine_raylib_material_binding",
-      "name": "引擎画廊·material_binding",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7material_binding",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1987,7 +2009,7 @@
     },
     {
       "id": "engine_raylib_ribbon_overlay",
-      "name": "引擎画廊·ribbon_overlay",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7ribbon_overlay",
       "selectors": [
         "$engine_gallery"
       ],
@@ -2005,7 +2027,7 @@
     },
     {
       "id": "engine_raylib_skia_overlay",
-      "name": "引擎画廊·skia_overlay",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7skia_overlay",
       "selectors": [
         "$engine_gallery"
       ],
@@ -2023,7 +2045,7 @@
     },
     {
       "id": "engine_raylib_debug_draw",
-      "name": "引擎画廊·debug_draw",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7debug_draw",
       "selectors": [
         "$engine_gallery"
       ],
@@ -2041,7 +2063,7 @@
     },
     {
       "id": "engine_raylib_primitives",
-      "name": "引擎画廊·primitives",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7primitives",
       "selectors": [
         "$engine_gallery"
       ],
@@ -2107,7 +2129,7 @@
     },
     {
       "id": "engine_raylib_lighting",
-      "name": "引擎画廊·光照全效",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7\u5149\u7167\u5168\u6548",
       "selectors": [
         "$engine_gallery"
       ],
@@ -2125,7 +2147,7 @@
     },
     {
       "id": "engine_raylib_crowd_anim",
-      "name": "引擎画廊·大量动画实例合批",
+      "name": "\u5f15\u64ce\u753b\u5eca\u00b7\u5927\u91cf\u52a8\u753b\u5b9e\u4f8b\u5408\u6279",
       "selectors": [
         "$engine_gallery"
       ],

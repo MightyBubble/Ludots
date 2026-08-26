@@ -121,17 +121,17 @@ public sealed class RaylibFieldRenderPresenterTests
         Assert.That(
             RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
                 cellSizeCm: 250,
-                drapeMaxCellSizeCm: 5_000),
+                drapeMaxCellSizeCm: 8_000),
             Is.True);
         Assert.That(
             RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
-                cellSizeCm: 5_000,
-                drapeMaxCellSizeCm: 5_000),
-            Is.False);
+                cellSizeCm: 7_142,
+                drapeMaxCellSizeCm: 8_000),
+            Is.True);
         Assert.That(
             RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
-                cellSizeCm: 7_142,
-                drapeMaxCellSizeCm: 5_000),
+                cellSizeCm: 8_000,
+                drapeMaxCellSizeCm: 8_000),
             Is.False);
     }
 

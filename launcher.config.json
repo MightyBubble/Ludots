@@ -491,6 +491,20 @@
       }
     },
     {
+      "name": "east_asia_borders_land_sea",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod"
+      }
+    },
+    {
+      "name": "field_east_asia_country",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_east_asia_country/FieldEastAsiaCountryMod"
+      }
+    },
+    {
       "name": "field_jing_yang_transit",
       "target": {
         "type": "path",
