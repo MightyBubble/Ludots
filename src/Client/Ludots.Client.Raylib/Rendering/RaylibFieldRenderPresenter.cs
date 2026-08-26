@@ -53,12 +53,16 @@ namespace Ludots.Client.Raylib.Rendering
         private byte[] _uploadScratch = Array.Empty<byte>();
         private Mesh _quadMesh;
         private Material _material;
+        private Texture2D _solidTexture;
         private bool _quadMeshLoaded;
         private bool _materialLoaded;
         private bool _disposed;
 
         public float FogOverlayY { get; set; } = 0.08f;
         public float DiscreteOwnershipOverlayY { get; set; } = 0.06f;
+        public IVisualHeightmap? HeightSampleSource { get; set; }
+        public float HeightSampleDisplayScale { get; set; } = 1f;
+        public float DiscreteOwnershipDrapeOffsetMeters { get; set; } = 2f;
 
         public int LastFieldTextureCount { get; private set; }
         public int LastFieldCellCount { get; private set; }
@@ -201,7 +205,16 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly RaylibFieldTexturePlan plan = ref plans[i];
                 FieldTextureState state = _stateById[plan.Id];
                 UploadDirtyRects(state);
-                DrawTexturePlane(state, plan.CellSizeCm);
+                if (state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership &&
+                    HeightSampleSource is IVisualHeightmap heightSampleSource)
+                {
+                    DrawDrapedDiscreteOwnership(state, plan.CellSizeCm, heightSampleSource);
+                }
+                else
+                {
+                    DrawTexturePlane(state, plan.CellSizeCm);
+                }
+
                 LastDrawCount++;
             }
 
@@ -454,6 +467,36 @@ namespace Ludots.Client.Raylib.Rendering
             return new Vector4(r * scale, g * scale, b * scale, a * scale);
         }
 
+        internal static bool TryResolveDiscreteOwnershipDrape(
+            IVisualHeightmap heightSampleSource,
+            IntRect boundsCells,
+            int cellSizeCm,
+            int textureX,
+            int textureY,
+            float heightSampleDisplayScale,
+            float drapeOffsetMeters,
+            out Vector3 centerMeters)
+        {
+            ArgumentNullException.ThrowIfNull(heightSampleSource);
+
+            float halfCellSizeCm = cellSizeCm * 0.5f;
+            float worldXCm = ((boundsCells.X + textureX) * (float)cellSizeCm) + halfCellSizeCm;
+            float worldYCm = ((boundsCells.Y + textureY) * (float)cellSizeCm) + halfCellSizeCm;
+            if (!heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
+            {
+                centerMeters = default;
+                return false;
+            }
+
+            float visualYMeters = (heightCm * heightSampleDisplayScale / WorldUnits.CmPerMeter) +
+                                  drapeOffsetMeters;
+            centerMeters = new Vector3(
+                WorldUnits.CmToM(worldXCm),
+                visualYMeters,
+                WorldUnits.CmToM(worldYCm));
+            return true;
+        }
+
         private static void ResolveClearColorBytes(
             GlobalFieldVisualKind kind,
             out byte r,
@@ -650,6 +693,56 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawMesh(_quadMesh, _material, transform);
         }
 
+        private void DrawDrapedDiscreteOwnership(
+            FieldTextureState state,
+            int cellSizeCm,
+            IVisualHeightmap heightSampleSource)
+        {
+            EnsureRaylibResources();
+            Rl.rlEnableDepthTest();
+
+            int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
+            _material.maps[albedoIndex].texture = _solidTexture;
+            float cellSizeMeters = WorldUnits.CmToM(cellSizeCm);
+            float halfCellSizeMeters = cellSizeMeters * 0.5f;
+
+            for (int y = 0; y < state.Height; y++)
+            {
+                int rowPixel = y * state.Width * 4;
+                for (int x = 0; x < state.Width; x++)
+                {
+                    int pixel = rowPixel + (x * 4);
+                    byte alpha = state.Pixels[pixel + 3];
+                    if (alpha == 0 ||
+                        !TryResolveDiscreteOwnershipDrape(
+                            heightSampleSource,
+                            state.BoundsCells,
+                            cellSizeCm,
+                            x,
+                            y,
+                            HeightSampleDisplayScale,
+                            DiscreteOwnershipDrapeOffsetMeters,
+                            out Vector3 centerMeters))
+                    {
+                        continue;
+                    }
+
+                    _material.maps[albedoIndex].color = new Color(
+                        state.Pixels[pixel],
+                        state.Pixels[pixel + 1],
+                        state.Pixels[pixel + 2],
+                        alpha);
+                    RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                        Matrix4x4.CreateScale(cellSizeMeters, 1f, cellSizeMeters) *
+                        Matrix4x4.CreateTranslation(
+                            centerMeters.X - halfCellSizeMeters,
+                            centerMeters.Y,
+                            centerMeters.Z - halfCellSizeMeters));
+                    Rl.DrawMesh(_quadMesh, _material, transform);
+                }
+            }
+        }
+
         private void EnsureRaylibResources()
         {
             if (!_quadMeshLoaded)
@@ -661,6 +754,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (!_materialLoaded)
             {
                 _material = Rl.LoadMaterialDefault();
+                _solidTexture = _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].texture;
                 _materialLoaded = true;
             }
         }

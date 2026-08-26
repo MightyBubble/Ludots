@@ -783,6 +783,22 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
                         }
 
+                        if (engine.TryGetService(
+                                CoreServiceKeys.VisualHeightmap,
+                                out IVisualHeightmap? fieldHeightSampleSource))
+                        {
+                            fieldRenderPresenter.HeightSampleSource = fieldHeightSampleSource;
+                            fieldRenderPresenter.HeightSampleDisplayScale =
+                                fieldHeightSampleSource is IVisualHeightmapRenderSource fieldRenderSource
+                                    ? fieldRenderSource.RenderProfile.DisplayHeightScale
+                                    : 1f;
+                        }
+                        else
+                        {
+                            fieldRenderPresenter.HeightSampleSource = null;
+                            fieldRenderPresenter.HeightSampleDisplayScale = 1f;
+                        }
+
                         if (drawNavMeshOverlay)
                         {
                             navMeshPresentationRenderer.Draw(navMeshPresentationBuffer);
