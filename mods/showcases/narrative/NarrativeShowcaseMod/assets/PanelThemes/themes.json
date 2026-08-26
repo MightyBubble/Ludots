@@ -2,5 +2,17 @@
   {
     "id": "story-ember",
     "root": "NarrativeShowcaseMod:assets/PanelThemes/story-ember/theme.css"
+  },
+  {
+    "id": "story-sanguo",
+    "root": "NarrativeShowcaseMod:assets/PanelThemes/story-sanguo/theme.css"
+  },
+  {
+    "id": "story-fantasy",
+    "root": "NarrativeShowcaseMod:assets/PanelThemes/story-fantasy/theme.css"
+  },
+  {
+    "id": "story-acnh",
+    "root": "NarrativeShowcaseMod:assets/PanelThemes/story-acnh/theme.css"
   }
 ]

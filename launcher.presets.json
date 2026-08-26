@@ -2392,6 +2392,42 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "narrative_raylib",
+      "name": "Narrative Showcase Raylib",
+      "selectors": [
+        "$narrative"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_sanguo_raylib",
+      "name": "Narrative Theme 三国 Raylib",
+      "selectors": [
+        "$narrative_theme_sanguo"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_fantasy_raylib",
+      "name": "Narrative Theme 奇幻 Raylib",
+      "selectors": [
+        "$narrative_theme_fantasy"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_acnh_raylib",
+      "name": "Narrative Theme 动森 Raylib",
+      "selectors": [
+        "$narrative_theme_acnh"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
