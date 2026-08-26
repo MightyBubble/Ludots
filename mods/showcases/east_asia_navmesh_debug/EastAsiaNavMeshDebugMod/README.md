@@ -12,6 +12,10 @@ The overlay also authors a simplified East Asia waterway `TransportNetwork`
 into the same `NavObstacleSet` as map-authored obstacles. Corridor width comes
 from `widthCm`; presentation ribbon width stays on `visualWidthMeters`.
 
+It depends on `FieldEastAsiaAdminMod` so the same VisualHeightmap also draws
+province-scale `ownership.east_asia.admin` DiscreteOwnership colors on terrain
+(`DrawFieldOverlays`, default on).
+
 Bake the authoritative continuous VisualHeightmap from the repository root:
 
 ```powershell
