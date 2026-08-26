@@ -1,0 +1,25 @@
+[
+  {
+    "id": "Ability.AbilityFeature.TagClip",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 24,
+          "tag": "Mark.AbilityFeature.SelfTimed"
+        },
+        {
+          "kind": "End",
+          "tick": 24
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "自己身上挂一阵印",
+      "iconGlyph": "印",
+      "hintText": "自己挂一阵标记。"
+    }
+  }
+]

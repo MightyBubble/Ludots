@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_TagClipTarget",
+  "windowTitle": "Ludots - 给对面挂一阵印",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

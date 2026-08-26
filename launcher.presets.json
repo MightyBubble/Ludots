@@ -2561,6 +2561,204 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_EffectSignal_raylib",
+      "name": "点一下就打中",
+      "selectors": [
+        "$capability_standard_ability_feature_EffectSignal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_EffectClip_raylib",
+      "name": "火还在烧",
+      "selectors": [
+        "$capability_standard_ability_feature_EffectClip"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_TagClip_raylib",
+      "name": "自己身上挂一阵印",
+      "selectors": [
+        "$capability_standard_ability_feature_TagClip"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_TagClipTarget_raylib",
+      "name": "给对面挂一阵印",
+      "selectors": [
+        "$capability_standard_ability_feature_TagClipTarget"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_TagSignal_raylib",
+      "name": "瞬间给自己打上印",
+      "selectors": [
+        "$capability_standard_ability_feature_TagSignal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_TagSignalTarget_raylib",
+      "name": "瞬间给对面打上印",
+      "selectors": [
+        "$capability_standard_ability_feature_TagSignalTarget"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_EventSignal_raylib",
+      "name": "出手那一下敲响铃",
+      "selectors": [
+        "$capability_standard_ability_feature_EventSignal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_InputGate_raylib",
+      "name": "等你点头才打出去",
+      "selectors": [
+        "$capability_standard_ability_feature_InputGate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_EventGate_raylib",
+      "name": "铃响了才打出去",
+      "selectors": [
+        "$capability_standard_ability_feature_EventGate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_TargetCollectionGate_raylib",
+      "name": "名单齐了才打出去",
+      "selectors": [
+        "$capability_standard_ability_feature_TargetCollectionGate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_InterruptAny_raylib",
+      "name": "被晕就停手",
+      "selectors": [
+        "$capability_standard_ability_feature_InterruptAny"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_CallerParams_raylib",
+      "name": "同一招两波不同力道",
+      "selectors": [
+        "$capability_standard_ability_feature_CallerParams"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_BlockTagsBlocked_raylib",
+      "name": "身上有禁招印就放不出",
+      "selectors": [
+        "$capability_standard_ability_feature_BlockTagsBlocked"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_BlockTagsRequired_raylib",
+      "name": "没有姿态印就放不出",
+      "selectors": [
+        "$capability_standard_ability_feature_BlockTagsRequired"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_ActivationPrecondition_raylib",
+      "name": "残血才打得中",
+      "selectors": [
+        "$capability_standard_ability_feature_ActivationPrecondition"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_UseRequirement_raylib",
+      "name": "没解锁就放不出",
+      "selectors": [
+        "$capability_standard_ability_feature_UseRequirement"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_ShowRequirement_raylib",
+      "name": "没解锁栏上就没有",
+      "selectors": [
+        "$capability_standard_ability_feature_ShowRequirement"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_ToggleSpec_raylib",
+      "name": "再按一次关掉",
+      "selectors": [
+        "$capability_standard_ability_feature_ToggleSpec"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_ToggleDeactivateExec_raylib",
+      "name": "关掉时补一刀收尾",
+      "selectors": [
+        "$capability_standard_ability_feature_ToggleDeactivateExec"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_DispatchTarget_raylib",
+      "name": "这一刀打回自己",
+      "selectors": [
+        "$capability_standard_ability_feature_DispatchTarget"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_TriggerGraphs_raylib",
+      "name": "出手之后图跟着跑",
+      "selectors": [
+        "$capability_standard_ability_feature_TriggerGraphs"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_feature_FormSet_raylib",
+      "name": "换姿态换一栏招",
+      "selectors": [
+        "$capability_standard_ability_feature_FormSet"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -1,0 +1,39 @@
+{
+  "feature": "TargetCollectionGate",
+  "family": "timeline",
+  "title": "名单齐了才打出去",
+  "beat": "出手之后先停住等名单；名单一到，近处木桩才掉血。远处那根只是名单上的名字，这一场不挨打。",
+  "detailTemplate": "名单齐了；近木桩 {targetAfter}，远木桩仍是 {target2After}。",
+  "assertDetailContains": [
+    "名单"
+  ],
+  "abilityId": "Ability.AbilityFeature.TargetCollectionGate",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 18,
+      "op": "confirmCollection",
+      "targets": [
+        "target",
+        "target2"
+      ]
+    },
+    {
+      "atFrame": 30,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "targetHealthDelta": -25,
+    "target2HealthDelta": 0,
+    "waitedForGate": true
+  },
+  "extraActors": [
+    "target2"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "feature": "EventGate",
+  "family": "timeline",
+  "title": "铃响了才打出去",
+  "beat": "出手之后先停住等铃；铃一响，木桩才掉血。",
+  "detailTemplate": "铃响之后木桩血条从 {targetBefore} 掉到 {targetAfter}。",
+  "assertDetailContains": [
+    "铃"
+  ],
+  "abilityId": "Ability.AbilityFeature.EventGate",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 18,
+      "op": "publishEvent",
+      "tag": "Event.AbilityFeature.Impact"
+    },
+    {
+      "atFrame": 30,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "targetHealthDelta": -25,
+    "waitedForGate": true
+  }
+}

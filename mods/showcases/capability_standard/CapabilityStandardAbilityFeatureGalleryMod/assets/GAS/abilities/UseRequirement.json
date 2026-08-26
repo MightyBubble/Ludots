@@ -1,0 +1,25 @@
+[
+  {
+    "id": "Ability.AbilityFeature.UseRequirement",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "useRequirement": "Req.AbilityFeature.Unlock",
+    "presentation": {
+      "displayName": "没解锁就放不出",
+      "iconGlyph": "锁",
+      "hintText": "进度不够就拒。"
+    }
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "id": "Ability.AbilityFeature.FormHammer",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.AbilityFeature.Hammer"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "锤砸",
+      "iconGlyph": "锤",
+      "hintText": "锤姿态覆盖栏。"
+    }
+  }
+]

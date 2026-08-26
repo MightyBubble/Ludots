@@ -1,0 +1,37 @@
+[
+  {
+    "id": "Ability.AbilityFeature.ToggleDeactivateExec",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "toggleSpec": {
+      "toggleTag": "State.AbilityFeature.ToggleArmed",
+      "activeEffects": [],
+      "deactivateExec": {
+        "clockId": "FixedFrame",
+        "items": [
+          {
+            "kind": "EffectSignal",
+            "tick": 0,
+            "template": "Effect.AbilityFeature.ToggleClose"
+          },
+          {
+            "kind": "End",
+            "tick": 0
+          }
+        ]
+      }
+    },
+    "presentation": {
+      "displayName": "关掉时补一刀收尾",
+      "iconGlyph": "收",
+      "hintText": "关闭时跑收尾时间轴。"
+    }
+  }
+]

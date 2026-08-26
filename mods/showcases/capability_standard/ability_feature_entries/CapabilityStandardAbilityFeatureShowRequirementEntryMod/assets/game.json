@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_ShowRequirement",
+  "windowTitle": "Ludots - 没解锁栏上就没有",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

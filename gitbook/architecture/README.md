@@ -30,6 +30,7 @@
 - [实体仿真工作流拆分](entity-simulation-workstreams.md)
 - [实体仿真阶段验收](entity-simulation-uat.md)
 - [能力标准 Showcase](capability-standard-showcases.md)
+- [Ability 词条画廊](ability-feature-gallery.md)
 - [UAT 可玩 Showcase 矩阵](uat-playable-showcase-matrix.md)
 - [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)
 - [Structure Collision Surfaces](structure-collision-surfaces.md)

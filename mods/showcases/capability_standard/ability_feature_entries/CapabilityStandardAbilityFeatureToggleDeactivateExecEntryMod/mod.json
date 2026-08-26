@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardAbilityFeatureToggleDeactivateExecEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for Ability feature ToggleDeactivateExec player gallery.",
+  "main": "bin/net9.0/CapabilityStandardAbilityFeatureToggleDeactivateExecEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardAbilityFeatureGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "ability",
+    "per-feature"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "feature": "ActivationPrecondition",
+  "family": "gates",
+  "title": "残血才打得中",
+  "beat": "对着满血木桩出手放不出；对着残血木桩出手，残血掉血，满血不动。",
+  "detailTemplate": "残血木桩 {woundedAfter}，满血木桩仍是 {targetAfter}。",
+  "assertDetailContains": [
+    "残血"
+  ],
+  "abilityId": "Ability.AbilityFeature.ActivationPrecondition",
+  "script": [
+    {
+      "atFrame": 8,
+      "op": "cast",
+      "slot": 0,
+      "target": "target",
+      "saveAs": "first"
+    },
+    {
+      "atFrame": 16,
+      "op": "cast",
+      "slot": 0,
+      "target": "wounded"
+    },
+    {
+      "atFrame": 28,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "firstCast": "rejected",
+    "woundedHealthDelta": -25,
+    "targetHealthDelta": 0
+  },
+  "extraActors": [
+    "wounded"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "feature": "InterruptAny",
+  "family": "timeline",
+  "title": "被晕就停手",
+  "beat": "出手之后还没打中，施法者被晕，这一招停在半路，木桩不掉血。",
+  "detailTemplate": "停手时木桩血条仍是 {targetAfter}。",
+  "assertDetailContains": [
+    "停"
+  ],
+  "abilityId": "Ability.AbilityFeature.InterruptAny",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 20,
+      "op": "addTag",
+      "entity": "caster",
+      "tag": "Status.AbilityFeature.Stunned"
+    },
+    {
+      "atFrame": 40,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "interrupted": true,
+    "targetHealthDelta": 0
+  }
+}

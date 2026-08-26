@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_UseRequirement",
+  "windowTitle": "Ludots - 没解锁就放不出",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

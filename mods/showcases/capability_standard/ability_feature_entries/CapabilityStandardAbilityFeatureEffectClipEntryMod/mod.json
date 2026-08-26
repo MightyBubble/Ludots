@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardAbilityFeatureEffectClipEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for Ability feature EffectClip player gallery.",
+  "main": "bin/net9.0/CapabilityStandardAbilityFeatureEffectClipEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardAbilityFeatureGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "ability",
+    "per-feature"
+  ]
+}

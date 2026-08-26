@@ -1,0 +1,11 @@
+[
+  {
+    "id": "Req.AbilityFeature.Unlock",
+    "root": {
+      "kind": "ProgressionCompleted",
+      "progression": "Progression.AbilityFeature.Unlock",
+      "scope": "abilityfeature.self",
+      "entitySource": "ScopeHost"
+    }
+  }
+]

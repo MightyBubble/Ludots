@@ -1,0 +1,50 @@
+{
+  "feature": "FormSet",
+  "family": "form",
+  "title": "换姿态换一栏招",
+  "beat": "先按换姿态，栏上那一格从炮打换成锤砸；再出手，木桩挨的是锤。",
+  "detailTemplate": "换栏之后这一格是 {slot0Name}；木桩血条从 {targetBefore} 掉到 {targetAfter}。",
+  "assertDetailContains": [
+    "换"
+  ],
+  "abilityId": "Ability.AbilityFeature.FormSwitch",
+  "script": [
+    {
+      "atFrame": 8,
+      "op": "snapshotSlot",
+      "slot": 0,
+      "saveAs": "before"
+    },
+    {
+      "atFrame": 14,
+      "op": "cast",
+      "slot": 1,
+      "target": "caster"
+    },
+    {
+      "atFrame": 22,
+      "op": "snapshotSlot",
+      "slot": 0,
+      "saveAs": "after"
+    },
+    {
+      "atFrame": 28,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 40,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "slot0After": "Ability.AbilityFeature.FormHammer",
+    "targetHealthDelta": -35
+  },
+  "casterAbilities": [
+    "Ability.AbilityFeature.FormCannon",
+    "Ability.AbilityFeature.FormSwitch"
+  ],
+  "formSetId": "ability_feature_hammer_forms"
+}

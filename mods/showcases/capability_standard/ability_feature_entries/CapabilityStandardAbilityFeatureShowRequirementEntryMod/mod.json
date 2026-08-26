@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardAbilityFeatureShowRequirementEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for Ability feature ShowRequirement player gallery.",
+  "main": "bin/net9.0/CapabilityStandardAbilityFeatureShowRequirementEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardAbilityFeatureGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "ability",
+    "per-feature"
+  ]
+}

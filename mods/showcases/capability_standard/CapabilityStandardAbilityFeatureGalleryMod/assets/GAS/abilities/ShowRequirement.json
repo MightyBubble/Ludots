@@ -1,0 +1,20 @@
+[
+  {
+    "id": "Ability.AbilityFeature.ShowRequirement",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "showRequirement": "Req.AbilityFeature.Unlock",
+    "presentation": {
+      "displayName": "隐藏招",
+      "iconGlyph": "藏",
+      "hintText": "没解锁就看不见。"
+    }
+  }
+]

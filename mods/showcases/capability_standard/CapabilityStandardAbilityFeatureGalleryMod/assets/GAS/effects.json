@@ -1,0 +1,129 @@
+[
+  {
+    "id": "Effect.AbilityFeature.Strike",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -25
+      }
+    ],
+    "categories": [
+      "Effect.AbilityFeature.Strike"
+    ]
+  },
+  {
+    "id": "Effect.AbilityFeature.SelfStrike",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
+    ],
+    "categories": [
+      "Effect.AbilityFeature.SelfStrike"
+    ]
+  },
+  {
+    "id": "Effect.AbilityFeature.ToggleClose",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
+    ],
+    "categories": [
+      "Effect.AbilityFeature.ToggleClose"
+    ]
+  },
+  {
+    "id": "Effect.AbilityFeature.TriggerExtra",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
+    ],
+    "categories": [
+      "Effect.AbilityFeature.TriggerExtra"
+    ]
+  },
+  {
+    "id": "Effect.AbilityFeature.Hammer",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -35
+      }
+    ],
+    "categories": [
+      "Effect.AbilityFeature.Hammer"
+    ]
+  },
+  {
+    "id": "Effect.AbilityFeature.Wave",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "configParams": {
+      "abilityfeature.wave.damage": {
+        "type": "Float",
+        "value": 10
+      }
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.AbilityFeature.WaveHit"
+      }
+    },
+    "categories": [
+      "Effect.AbilityFeature.Wave"
+    ]
+  },
+  {
+    "id": "Effect.AbilityFeature.Burn",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 36,
+      "periodTicks": 12,
+      "clockId": "FixedFrame"
+    },
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ],
+    "grantedTags": [
+      {
+        "tag": "Status.AbilityFeature.Burning",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.AbilityFeature.Burn"
+    ]
+  }
+]

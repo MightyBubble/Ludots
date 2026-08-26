@@ -1,0 +1,22 @@
+[
+  {
+    "id": "Ability.AbilityFeature.TriggerGraphs",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "triggerGraphs": [
+      "Graph.AbilityFeature.OnCast"
+    ],
+    "presentation": {
+      "displayName": "出手之后图跟着跑",
+      "iconGlyph": "图",
+      "hintText": "技能自带触发图。"
+    }
+  }
+]

@@ -1,0 +1,83 @@
+{
+  "Id": "capability_standard_ability_feature_EffectSignal",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "ability",
+    "per-feature",
+    "EffectSignal"
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 5200,
+    "TargetYCm": 5000,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 6400,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 32,
+      "HeightInMacroTiles": 32,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "AbilityFeature.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "施法者"
+        },
+        "AbilityStateBuffer": {
+          "abilityIds": [
+            "Ability.AbilityFeature.EffectSignal"
+          ]
+        }
+      }
+    },
+    {
+      "InstanceId": "target",
+      "Template": "AbilityFeature.Dummy",
+      "Overrides": {
+        "Name": {
+          "Value": "木桩"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5600,
+            "Y": 5000
+          }
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "caster"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "target"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "caster"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "target"
+    }
+  ]
+}

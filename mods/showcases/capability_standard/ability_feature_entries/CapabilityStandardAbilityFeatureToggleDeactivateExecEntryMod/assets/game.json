@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_ToggleDeactivateExec",
+  "windowTitle": "Ludots - 关掉时补一刀收尾",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_BlockTagsRequired",
+  "windowTitle": "Ludots - 没有姿态印就放不出",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

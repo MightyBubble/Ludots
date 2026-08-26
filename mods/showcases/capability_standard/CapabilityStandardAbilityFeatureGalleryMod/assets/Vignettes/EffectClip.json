@@ -1,0 +1,27 @@
+{
+  "feature": "EffectClip",
+  "family": "timeline",
+  "title": "火还在烧",
+  "beat": "出手之后火还挂在木桩身上，血条一格格往下掉。",
+  "detailTemplate": "火还在烧；木桩血条从 {targetBefore} 掉到 {targetAfter}。",
+  "assertDetailContains": [
+    "还在烧"
+  ],
+  "abilityId": "Ability.AbilityFeature.EffectClip",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 50,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "targetHealthMax": 99,
+    "targetHasTag": "Status.AbilityFeature.Burning"
+  }
+}

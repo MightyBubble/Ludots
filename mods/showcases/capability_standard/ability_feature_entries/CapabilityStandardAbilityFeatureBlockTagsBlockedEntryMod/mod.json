@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardAbilityFeatureBlockTagsBlockedEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for Ability feature BlockTagsBlocked player gallery.",
+  "main": "bin/net9.0/CapabilityStandardAbilityFeatureBlockTagsBlockedEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardAbilityFeatureGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "ability",
+    "per-feature"
+  ]
+}

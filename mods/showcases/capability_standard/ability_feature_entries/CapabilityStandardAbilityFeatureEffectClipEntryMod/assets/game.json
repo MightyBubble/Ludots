@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_EffectClip",
+  "windowTitle": "Ludots - 火还在烧",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

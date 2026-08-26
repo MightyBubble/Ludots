@@ -1,0 +1,29 @@
+[
+  {
+    "id": "Ability.AbilityFeature.BlockTagsRequired",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "blockTags": {
+      "requiredAll": [
+        "State.AbilityFeature.Stance"
+      ]
+    },
+    "presentation": {
+      "displayName": "没有姿态印就放不出",
+      "iconGlyph": "姿",
+      "hintText": "缺姿态印就拒。"
+    }
+  }
+]

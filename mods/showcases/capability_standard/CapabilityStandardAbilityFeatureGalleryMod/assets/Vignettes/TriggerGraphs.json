@@ -1,0 +1,26 @@
+{
+  "feature": "TriggerGraphs",
+  "family": "trigger",
+  "title": "出手之后图跟着跑",
+  "beat": "出手之后，技能自己带着的图跟着跑起来，字幕报图跑了。",
+  "detailTemplate": "技能自己带着的图{graphState}。",
+  "assertDetailContains": [
+    "图"
+  ],
+  "abilityId": "Ability.AbilityFeature.TriggerGraphs",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 36,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "triggerGraphFired": true
+  }
+}

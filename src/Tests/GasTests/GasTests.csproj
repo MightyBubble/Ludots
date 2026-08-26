@@ -102,6 +102,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\CapabilityStandardTimeFlowShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorCommon\CapabilityStandardGraphBehaviorCommon.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsNodeGalleryMod\CapabilityStandardGraphOpsNodeGalleryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardAbilityFeatureGalleryMod\CapabilityStandardAbilityFeatureGalleryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardBehaviorTreeArenaMod\CapabilityStandardBehaviorTreeArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardHfsmSentryArenaMod\CapabilityStandardHfsmSentryArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardAbilityGraphSandboxMod\CapabilityStandardAbilityGraphSandboxMod.csproj" />

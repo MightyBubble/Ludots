@@ -1,0 +1,210 @@
+[
+  {
+    "id": "Graph.AbilityFeature.WaveHit",
+    "kind": "Effect",
+    "entry": "cfg",
+    "nodes": [
+      {
+        "id": "cfg",
+        "op": "LoadConfigFloat",
+        "configKey": "abilityfeature.wave.damage"
+      },
+      {
+        "id": "neg",
+        "op": "NegFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "cfg",
+        "fromPort": "next",
+        "to": "neg"
+      },
+      {
+        "from": "neg",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      },
+      {
+        "from": "hit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "cfg",
+        "fromPort": "value",
+        "to": "neg",
+        "toPort": "value"
+      },
+      {
+        "from": "neg",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.AbilityFeature.WoundedOnly",
+    "kind": "Validation",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "hp",
+        "op": "LoadAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "line",
+        "op": "ConstFloat",
+        "floatValue": 50
+      },
+      {
+        "id": "wounded",
+        "op": "CompareGtFloat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "hp"
+      },
+      {
+        "from": "hp",
+        "fromPort": "next",
+        "to": "line"
+      },
+      {
+        "from": "line",
+        "fromPort": "next",
+        "to": "wounded"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "hp",
+        "toPort": "source"
+      },
+      {
+        "from": "line",
+        "fromPort": "value",
+        "to": "wounded",
+        "toPort": "a"
+      },
+      {
+        "from": "hp",
+        "fromPort": "value",
+        "to": "wounded",
+        "toPort": "b"
+      }
+    ]
+  },
+  {
+    "id": "Graph.AbilityFeature.OnCast",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_cast",
+        "event": "Ability.CastStarted",
+        "start": "target",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.TargetEntity"
+      },
+      {
+        "id": "fire",
+        "op": "DispatchMapEvent",
+        "event": "Event.AbilityFeature.GraphRan",
+        "scope": "map"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "fire"
+      },
+      {
+        "from": "fire",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

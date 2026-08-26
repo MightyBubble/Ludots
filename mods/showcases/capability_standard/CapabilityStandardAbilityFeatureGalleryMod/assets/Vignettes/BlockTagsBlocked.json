@@ -1,0 +1,34 @@
+{
+  "feature": "BlockTagsBlocked",
+  "family": "gates",
+  "title": "身上有禁招印就放不出",
+  "beat": "第一下挂上禁招印；印还在时再出手，字幕说放不出。",
+  "detailTemplate": "第二下{secondCast}。",
+  "assertDetailContains": [
+    "放不出"
+  ],
+  "abilityId": "Ability.AbilityFeature.BlockTagsBlocked",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 20,
+      "op": "cast",
+      "slot": 0,
+      "target": "target",
+      "saveAs": "second"
+    },
+    {
+      "atFrame": 30,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "secondCast": "rejected",
+    "casterHasTag": "Cooldown.AbilityFeature.Lock"
+  }
+}

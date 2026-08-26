@@ -1,0 +1,49 @@
+[
+  {
+    "id": "Ability.AbilityFeature.CallerParams",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.AbilityFeature.Wave",
+          "callerParamsIdx": 0
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 12,
+          "template": "Effect.AbilityFeature.Wave",
+          "callerParamsIdx": 1
+        },
+        {
+          "kind": "End",
+          "tick": 12
+        }
+      ],
+      "callerParams": [
+        {
+          "entries": [
+            {
+              "key": "abilityfeature.wave.damage",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "entries": [
+            {
+              "key": "abilityfeature.wave.damage",
+              "value": 30
+            }
+          ]
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "同一招两波不同力道",
+      "iconGlyph": "波",
+      "hintText": "同一模板换两组数。"
+    }
+  }
+]

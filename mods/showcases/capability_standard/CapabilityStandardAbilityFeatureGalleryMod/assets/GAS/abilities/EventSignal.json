@@ -1,0 +1,24 @@
+[
+  {
+    "id": "Ability.AbilityFeature.EventSignal",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EventSignal",
+          "tick": 0,
+          "tag": "Event.AbilityFeature.Bell"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "出手那一下敲响铃",
+      "iconGlyph": "铃",
+      "hintText": "到点发布事件。"
+    }
+  }
+]

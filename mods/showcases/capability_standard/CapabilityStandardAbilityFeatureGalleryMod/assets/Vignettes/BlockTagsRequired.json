@@ -1,0 +1,40 @@
+{
+  "feature": "BlockTagsRequired",
+  "family": "gates",
+  "title": "没有姿态印就放不出",
+  "beat": "没亮姿态印时出手放不出；印一挂上，木桩才掉血。",
+  "detailTemplate": "挂上姿态印之后木桩血条从 {targetBefore} 掉到 {targetAfter}。",
+  "assertDetailContains": [
+    "姿态"
+  ],
+  "abilityId": "Ability.AbilityFeature.BlockTagsRequired",
+  "script": [
+    {
+      "atFrame": 8,
+      "op": "cast",
+      "slot": 0,
+      "target": "target",
+      "saveAs": "first"
+    },
+    {
+      "atFrame": 14,
+      "op": "addTag",
+      "entity": "caster",
+      "tag": "State.AbilityFeature.Stance"
+    },
+    {
+      "atFrame": 20,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 32,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "firstCast": "rejected",
+    "targetHealthDelta": -25
+  }
+}

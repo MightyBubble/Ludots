@@ -1,0 +1,26 @@
+{
+  "feature": "CallerParams",
+  "family": "params",
+  "title": "同一招两波不同力道",
+  "beat": "同一张效果票先轻轻一下，再重重一下，木桩掉两截不同的血。",
+  "detailTemplate": "两波打完木桩血条从 {targetBefore} 掉到 {targetAfter}。",
+  "assertDetailContains": [
+    "两波"
+  ],
+  "abilityId": "Ability.AbilityFeature.CallerParams",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 36,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "targetHealthDelta": -40
+  }
+}

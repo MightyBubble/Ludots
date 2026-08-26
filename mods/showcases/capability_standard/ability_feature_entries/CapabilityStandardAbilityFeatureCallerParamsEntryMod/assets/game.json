@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_CallerParams",
+  "windowTitle": "Ludots - 同一招两波不同力道",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}
