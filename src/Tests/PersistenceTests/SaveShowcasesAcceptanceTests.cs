@@ -89,7 +89,7 @@ public sealed class DeterministicReplayShowcaseAcceptanceTests
     [Test]
     public void Isolation_DiscardsLiveInjectWhileReplayFlagOn()
     {
-        var input = _engine.GetService(CoreServiceKeys.AuthoritativeInput)!;
+        var input = (FrozenInputActionReader)_engine.GetService(CoreServiceKeys.AuthoritativeInput)!;
         input.SetReplayInputIsolation(true);
         input.SetActionValue("inject_pollute", new Vector3(3f, 0f, 0f));
         Step(_engine);
