@@ -27,7 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "id",
             "exec",
             "blockTags",
-            "catalogTags",
+            "categories",
             "interactionContextProfile",
             "activationPrecondition",
             "toggleSpec",
@@ -64,6 +64,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             _registry.Clear();
             AbilityIdRegistry.Clear();
+            AbilityCategoryRegistry.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog!, relativePath, ConfigMergePolicy.ArrayById, "id");
             var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report!);
@@ -184,26 +185,32 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.ActivationBlockTags = blockTags;
             }
 
-            // ── catalogTags (RFC-0065 DEC-14) ──
-            if (obj["catalogTags"] is JsonArray catalogArr)
+            // ── categories (ability classification; not gameplay tags) ──
+            if (obj["catalogTags"] != null)
             {
-                var catalogTags = default(GameplayTagContainer);
-                bool hasCatalogTags = false;
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'catalogTags' was renamed to 'categories'.");
+            }
+
+            if (obj["categories"] is JsonArray catalogArr)
+            {
+                var categories = default(GameplayTagContainer);
+                bool hasCategories = false;
                 foreach (var t in catalogArr)
                 {
                     string? tag = t?.GetValue<string>();
                     if (string.IsNullOrWhiteSpace(tag))
                     {
                         throw new InvalidOperationException(
-                            $"Ability '{id}' in '{path}' catalogTags entries must be non-empty strings.");
+                            $"Ability '{id}' in '{path}' categories entries must be non-empty strings.");
                     }
 
-                    catalogTags.AddTag(TagRegistry.Register(tag));
-                    hasCatalogTags = true;
+                    categories.AddTag(AbilityCategoryRegistry.Register(tag));
+                    hasCategories = true;
                 }
 
-                def.CatalogTags = catalogTags;
-                def.HasCatalogTags = hasCatalogTags;
+                def.Categories = categories;
+                def.HasCategories = hasCategories;
             }
 
             // ── interactionContextProfile (RFC-0065 CTX-6) ──

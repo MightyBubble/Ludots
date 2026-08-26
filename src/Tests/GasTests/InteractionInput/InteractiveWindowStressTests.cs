@@ -32,7 +32,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplOpen, new EffectTemplateData
                 {
-                    TagId = tagOpen,
+                    CategoryId = tagOpen,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -46,7 +46,7 @@ namespace Ludots.Tests.GAS
                 dmgMods.Add(attrHealth, ModifierOp.Add, -1f);
                 templates.Register(tplDamage, new EffectTemplateData
                 {
-                    TagId = tagDamage,
+                    CategoryId = tagDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,

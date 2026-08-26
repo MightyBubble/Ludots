@@ -16,10 +16,10 @@ namespace Ludots.Core.UI.EntityCommandPanels
     /// through a prefix-keyed selector delegate table (DEC-11: extensible via
     /// <see cref="RegisterKeySelectorPrefix"/>, never a closed enum). Built-in prefixes:
     /// <list type="bullet">
-    /// <item><c>catalog.&lt;tagPrefix&gt;</c> — group by the first (lowest-id) ability catalog tag whose
-    /// registered name starts with <c>&lt;tagPrefix&gt;.</c>; abilities without a matching tag fall back
-    /// to their identity key (own group). The prefix mask is resolved against <see cref="TagRegistry"/>
-    /// at install, so profiles must install after ability catalog tags are registered.</item>
+    /// <item><c>catalog.&lt;categoryPrefix&gt;</c> — group by the first (lowest-id) ability category whose
+    /// registered name starts with <c>&lt;categoryPrefix&gt;.</c>; abilities without a matching category fall back
+    /// to their identity key (own group). The prefix mask is resolved against <see cref="AbilityCategoryRegistry"/>
+    /// at install, so profiles must install after ability categories are registered.</item>
     /// <item><c>template.id</c> / <c>ability.id</c> — in this repository ability ids are definition ids
     /// (<see cref="AbilityIdRegistry"/> is the single id space; there is no separate instantiated-ability
     /// id). <c>template.id</c> groups by owner unit template plus slot index, while
@@ -242,25 +242,30 @@ namespace Ludots.Core.UI.EntityCommandPanels
         }
 
         /// <summary>
-        /// <c>catalog.&lt;tagPrefix&gt;</c>: resolve the tag-name prefix to a tag bitset mask against
-        /// <see cref="TagRegistry"/> at install (string work happens once here); evaluation intersects
-        /// the ability's catalog tags with the mask in place (zero strings, zero copies).
+        /// <c>catalog.&lt;categoryPrefix&gt;</c>: resolve the category-name prefix to a bitset mask against
+        /// <see cref="AbilityCategoryRegistry"/> at install (string work happens once here); evaluation intersects
+        /// the ability's categories with the mask in place (zero strings, zero copies).
         /// </summary>
         private static AbilityAggregationKeySelector CompileCatalogSelector(string tagPrefix)
         {
             if (string.IsNullOrWhiteSpace(tagPrefix))
             {
-                throw new InvalidOperationException("groupBy 'catalog.' requires a non-empty tag prefix.");
+                throw new InvalidOperationException("groupBy 'catalog.' requires a non-empty category prefix.");
             }
 
             string dottedPrefix = tagPrefix + ".";
             var mask = default(GameplayTagContainer);
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
+            RegistryMapping[] mappings = AbilityCategoryRegistry.SnapshotMappings();
+            for (int i = 0; i < mappings.Length; i++)
             {
-                string name = TagRegistry.GetName(tagId);
-                if (name.Length > 0 && name.StartsWith(dottedPrefix, StringComparison.Ordinal))
+                string name = mappings[i].Name;
+                int categoryId = mappings[i].Id;
+                if (categoryId > 0 &&
+                    categoryId <= GameplayTagContainer.MAX_TAG_ID &&
+                    name.Length > 0 &&
+                    name.StartsWith(dottedPrefix, StringComparison.Ordinal))
                 {
-                    mask.AddTag(tagId);
+                    mask.AddTag(categoryId);
                 }
             }
 
@@ -268,7 +273,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
             {
                 if (slot.AbilityId > 0)
                 {
-                    int tagId = abilities.FirstCatalogTagIntersection(slot.AbilityId, in mask);
+                    int tagId = abilities.FirstCategoryIntersection(slot.AbilityId, in mask);
                     if (tagId != 0)
                     {
                         return AbilityAggregationKeyKinds.MakeKey(AbilityAggregationKeyKinds.CatalogTag, tagId);

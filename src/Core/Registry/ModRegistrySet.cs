@@ -11,7 +11,9 @@ public sealed class ModRegistrySet
         Attributes = CreateAttributes();
         AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributes];
         AbilityIds = CreateAbilityIds();
+        AbilityCategories = CreateAbilityCategories();
         EffectTemplateIds = CreateEffectTemplateIds();
+        EffectCategories = CreateEffectCategories();
         ConfigKeys = CreateConfigKeys();
     }
 
@@ -20,7 +22,9 @@ public sealed class ModRegistrySet
     public IdentityTable Attributes { get; private set; }
     public AttributeRegistry.AttributeConstraints[] AttributeConstraints { get; private set; }
     public IdentityTable AbilityIds { get; private set; }
+    public IdentityTable AbilityCategories { get; private set; }
     public IdentityTable EffectTemplateIds { get; private set; }
+    public IdentityTable EffectCategories { get; private set; }
     public IdentityTable ConfigKeys { get; private set; }
     public bool IsFrozen { get; private set; }
 
@@ -30,7 +34,9 @@ public sealed class ModRegistrySet
         Tags.Freeze();
         Attributes.Freeze();
         AbilityIds.Freeze();
+        AbilityCategories.Freeze();
         EffectTemplateIds.Freeze();
+        EffectCategories.Freeze();
         ConfigKeys.Freeze();
         IsFrozen = true;
     }
@@ -58,7 +64,9 @@ public sealed class ModRegistrySet
         AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributes];
     }
     public void ReplaceAbilityIds() => AbilityIds = CreateAbilityIds();
+    public void ReplaceAbilityCategories() => AbilityCategories = CreateAbilityCategories();
     public void ReplaceEffectTemplateIds() => EffectTemplateIds = CreateEffectTemplateIds();
+    public void ReplaceEffectCategories() => EffectCategories = CreateEffectCategories();
     public void ReplaceConfigKeys() => ConfigKeys = CreateConfigKeys();
 
     private static IdentityTable CreateGraphIds()
@@ -84,8 +92,24 @@ public sealed class ModRegistrySet
     private static IdentityTable CreateAbilityIds()
         => new("AbilityId", maxExclusive: 4096, startId: 1, invalidId: 0);
 
+    private static IdentityTable CreateAbilityCategories()
+        => new(
+            "AbilityCategory",
+            maxExclusive: AbilityCategoryRegistry.MaxCategories,
+            startId: 1,
+            invalidId: 0,
+            comparer: StringComparer.Ordinal);
+
     private static IdentityTable CreateEffectTemplateIds()
         => new("EffectTemplateId", maxExclusive: 4096, startId: 1, invalidId: 0);
+
+    private static IdentityTable CreateEffectCategories()
+        => new(
+            "EffectCategory",
+            maxExclusive: EffectCategoryRegistry.MaxCategories + 1,
+            startId: 1,
+            invalidId: 0,
+            comparer: StringComparer.Ordinal);
 
     private static IdentityTable CreateConfigKeys()
         => new("ConfigKey", maxExclusive: 4096, startId: 1, invalidId: 0);

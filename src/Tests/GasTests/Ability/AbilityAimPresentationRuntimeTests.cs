@@ -260,11 +260,11 @@ namespace Ludots.Tests.GAS
         [Test]
         public void UpdateAiming_CreateUnitWithEffectTag_PublishesSemanticPreviewEvent()
         {
-            int effectTagId = TagRegistry.Register("Effect.Rts.Sc2.Warp");
+            int effectCategoryId = EffectCategoryRegistry.Register("Effect.Rts.Sc2.Warp");
             int effectId = 2004;
             _effects.Register(effectId, new EffectTemplateData
             {
-                TagId = effectTagId,
+                CategoryId = effectCategoryId,
                 PresetType = EffectPresetType.CreateUnit,
                 UnitCreation = new UnitCreationDescriptor
                 {
@@ -284,7 +284,7 @@ namespace Ludots.Tests.GAS
             PresentationEvent genericPreview = SingleEvent(PresentationEventKind.AbilityAimUpdated, AbilityAimPresentationEventKeys.Preview);
             PresentationEvent semanticPreview = SingleEvent(PresentationEventKind.AbilityAimUpdated, "Effect.Rts.Sc2.Warp");
             PresentationEvent area = SingleEvent(PresentationEventKind.AbilityAimUpdated, AbilityAimPresentationEventKeys.AreaCircle);
-            Assert.That(semanticPreview.KeyId, Is.EqualTo(effectTagId));
+            Assert.That(semanticPreview.KeyId, Is.EqualTo(effectCategoryId));
             Assert.That(semanticPreview.PayloadA, Is.EqualTo(genericPreview.PayloadA));
             Assert.That(area.FloatA, Is.EqualTo(2.6f).Within(0.001f));
         }
@@ -292,11 +292,11 @@ namespace Ludots.Tests.GAS
         [Test]
         public void UpdateAiming_TagOnlyImpact_UsesExplicitEmptyAffectedCollection()
         {
-            int effectTagId = TagRegistry.Register("Effect.Test.RelationOnlyPreview");
+            int effectCategoryId = EffectCategoryRegistry.Register("Effect.Test.RelationOnlyPreview");
             const int effectId = 2006;
             _effects.Register(effectId, new EffectTemplateData
             {
-                TagId = effectTagId,
+                CategoryId = effectCategoryId,
                 PresetType = EffectPresetType.Buff,
             });
             RegisterAbility(1006, castRangeCm: 700f, effectId);
@@ -312,7 +312,7 @@ namespace Ludots.Tests.GAS
             Assert.That(view.Count, Is.EqualTo(0));
             Assert.That(view.PrimaryEntity, Is.EqualTo(Entity.Null));
             PresentationEvent semanticPreview = SingleEvent(PresentationEventKind.AbilityAimUpdated, "Effect.Test.RelationOnlyPreview");
-            Assert.That(semanticPreview.KeyId, Is.EqualTo(effectTagId));
+            Assert.That(semanticPreview.KeyId, Is.EqualTo(effectCategoryId));
         }
 
         [Test]
@@ -357,7 +357,7 @@ namespace Ludots.Tests.GAS
                 graphSetup.Api);
             _effects.Register(effectId, new EffectTemplateData
             {
-                TagId = TagRegistry.Register("Effect.Test.GraphPreview"),
+                CategoryId = EffectCategoryRegistry.Register("Effect.Test.GraphPreview"),
                 TargetQuery = new TargetQueryDescriptor
                 {
                     Kind = TargetResolverKind.GraphProgram,
@@ -753,7 +753,7 @@ namespace Ludots.Tests.GAS
         {
             _effects.Register(effectId, new EffectTemplateData
             {
-                TagId = TagRegistry.Register(effectTag),
+                CategoryId = EffectCategoryRegistry.Register(effectTag),
                 TargetQuery = new TargetQueryDescriptor
                 {
                     Kind = TargetResolverKind.BuiltinSpatial,

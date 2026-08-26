@@ -1,7 +1,6 @@
 [
   {
     "id": "Effect.Rts.RedAlert.Construction",
-    "tags": ["Effect.Rts.RedAlert.Construction"],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -16,51 +15,77 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Rts.RedAlert.Construction"
     ]
   },
   {
     "id": "Effect.Rts.RedAlert.CostPowerPlantStep",
-    "tags": ["Effect.Rts.RedAlert.Cost"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Credits", "op": "Add", "value": -62.5 }
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -62.5
+      }
+    ],
+    "categories": [
+      "Effect.Rts.RedAlert.Cost"
     ]
   },
   {
     "id": "Effect.Rts.RedAlert.CostRefineryStep",
-    "tags": ["Effect.Rts.RedAlert.Cost"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Credits", "op": "Add", "value": -140 }
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -140
+      }
+    ],
+    "categories": [
+      "Effect.Rts.RedAlert.Cost"
     ]
   },
   {
     "id": "Effect.Rts.RedAlert.CostWarFactoryStep",
-    "tags": ["Effect.Rts.RedAlert.Cost"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Credits", "op": "Add", "value": -166.6667 }
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -166.6667
+      }
+    ],
+    "categories": [
+      "Effect.Rts.RedAlert.Cost"
     ]
   },
   {
     "id": "Effect.Rts.RedAlert.CostTrainRhinoStep",
-    "tags": ["Effect.Rts.RedAlert.Cost"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Credits", "op": "Add", "value": -100 }
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -100
+      }
+    ],
+    "categories": [
+      "Effect.Rts.RedAlert.Cost"
     ]
   },
   {
     "id": "Effect.Rts.RedAlert.PlacePowerPlant",
-    "tags": ["Effect.Rts.RedAlert.Build"],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -70,11 +95,13 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.RedAlert.Construction",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.RedAlert.Build"
+    ]
   },
   {
     "id": "Effect.Rts.RedAlert.PlaceRefinery",
-    "tags": ["Effect.Rts.RedAlert.Build"],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -84,11 +111,13 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.RedAlert.Construction",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.RedAlert.Build"
+    ]
   },
   {
     "id": "Effect.Rts.RedAlert.PlaceWarFactory",
-    "tags": ["Effect.Rts.RedAlert.Build"],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -98,11 +127,13 @@
       "count": 1,
       "onSpawnEffect": "Effect.Rts.RedAlert.Construction",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.RedAlert.Build"
+    ]
   },
   {
     "id": "Effect.Rts.RedAlert.TrainRhino",
-    "tags": ["Effect.Rts.RedAlert.Train"],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -112,11 +143,13 @@
       "count": 1,
       "offsetRadius": 340,
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.RedAlert.Train"
+    ]
   },
   {
     "id": "Effect.Rts.RedAlert.DeployMcv",
-    "tags": ["Effect.Rts.RedAlert.Deploy"],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -127,6 +160,9 @@
       "offsetRadius": 220,
       "onSpawnEffect": "Effect.Rts.RedAlert.Construction",
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Rts.RedAlert.Deploy"
+    ]
   }
 ]

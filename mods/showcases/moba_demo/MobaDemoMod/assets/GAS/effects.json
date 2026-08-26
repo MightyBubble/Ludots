@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.Moba.Damage.Q",
-    "tags": [
-      "Effect.Moba.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -13,13 +10,13 @@
         "op": "Add",
         "value": -20
       }
+    ],
+    "categories": [
+      "Effect.Moba.Damage"
     ]
   },
   {
     "id": "Effect.Moba.Heal.W",
-    "tags": [
-      "Effect.Moba.Heal"
-    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -29,13 +26,13 @@
         "op": "Add",
         "value": 15
       }
+    ],
+    "categories": [
+      "Effect.Moba.Heal"
     ]
   },
   {
     "id": "Effect.Moba.Damage.E",
-    "tags": [
-      "Effect.Moba.Damage"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -57,13 +54,13 @@
         "payloadTarget": "ResolvedEntity",
         "payloadTargetContext": "OriginalTarget"
       }
-    }
+    },
+    "categories": [
+      "Effect.Moba.Damage"
+    ]
   },
   {
     "id": "Effect.Moba.Cone.E.Hit",
-    "tags": [
-      "Effect.Moba.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -73,13 +70,13 @@
         "op": "Add",
         "value": -5
       }
+    ],
+    "categories": [
+      "Effect.Moba.Damage"
     ]
   },
   {
     "id": "Effect.Moba.Damage.R",
-    "tags": [
-      "Effect.Moba.Damage"
-    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -89,13 +86,13 @@
         "op": "Add",
         "value": -10
       }
+    ],
+    "categories": [
+      "Effect.Moba.Damage"
     ]
   },
   {
     "id": "Effect.Moba.DOT.Burn",
-    "tags": [
-      "Effect.Moba.DoT"
-    ],
     "presetType": "DoT",
     "lifetime": "After",
     "participatesInResponse": true,
@@ -110,13 +107,13 @@
         "op": "Add",
         "value": -3
       }
+    ],
+    "categories": [
+      "Effect.Moba.DoT"
     ]
   },
   {
     "id": "Effect.Moba.HOT.Regen",
-    "tags": [
-      "Effect.Moba.HoT"
-    ],
     "presetType": "HoT",
     "lifetime": "After",
     "participatesInResponse": true,
@@ -131,13 +128,13 @@
         "op": "Add",
         "value": 5
       }
+    ],
+    "categories": [
+      "Effect.Moba.HoT"
     ]
   },
   {
     "id": "Effect.Moba.Buff.SpeedBoost",
-    "tags": [
-      "Effect.Moba.Buff"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -152,13 +149,13 @@
         "op": "Add",
         "value": 50
       }
+    ],
+    "categories": [
+      "Effect.Moba.Buff"
     ]
   },
   {
     "id": "Effect.Moba.Search.Fireball",
-    "tags": [
-      "Effect.Moba.Search"
-    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -174,13 +171,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Moba.Damage.R"
-    }
+    },
+    "categories": [
+      "Effect.Moba.Search"
+    ]
   },
   {
     "id": "Effect.Moba.Search.BlizzardZone",
-    "tags": [
-      "Effect.Moba.PeriodicSearch"
-    ],
     "presetType": "PeriodicSearch",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -201,13 +198,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Moba.Damage.R"
-    }
+    },
+    "categories": [
+      "Effect.Moba.PeriodicSearch"
+    ]
   },
   {
     "id": "Effect.Moba.Projectile.Arrow",
-    "tags": [
-      "Effect.Moba.Projectile"
-    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -224,13 +221,13 @@
       "collisionRelationFilter": "All",
       "collisionExcludeSource": true,
       "maxHitCount": 1
-    }
+    },
+    "categories": [
+      "Effect.Moba.Projectile"
+    ]
   },
   {
     "id": "Effect.Moba.Summon.Skeleton",
-    "tags": [
-      "Effect.Moba.Summon"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -242,13 +239,13 @@
       "placementRadiusCm": 200,
       "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true
-    }
+    },
+    "categories": [
+      "Effect.Moba.Summon"
+    ]
   },
   {
     "id": "Effect.Moba.Buff.Shield",
-    "tags": [
-      "Effect.Moba.Shield"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -266,20 +263,20 @@
     ],
     "phaseListeners": [
       {
-        "listenTag": "Effect.Moba.Damage",
+        "listenCategory": "Effect.Moba.Damage",
         "phase": "OnHit",
         "scope": "Target",
         "action": "Graph",
         "graphProgram": "Graph.Shield.Absorb",
         "priority": 100
       }
+    ],
+    "categories": [
+      "Effect.Moba.Shield"
     ]
   },
   {
     "id": "Effect.Moba.Aura.FriendlyHeal",
-    "tags": [
-      "Effect.Moba.Aura"
-    ],
     "presetType": "PeriodicSearch",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -300,13 +297,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.Moba.Aura.FriendlyHeal.Tick"
-    }
+    },
+    "categories": [
+      "Effect.Moba.Aura"
+    ]
   },
   {
     "id": "Effect.Moba.Aura.FriendlyHeal.Tick",
-    "tags": [
-      "Effect.Moba.Heal"
-    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -316,13 +313,13 @@
         "op": "Add",
         "value": 3
       }
+    ],
+    "categories": [
+      "Effect.Moba.Heal"
     ]
   },
   {
     "id": "Effect.Moba.Debuff.Slow",
-    "tags": [
-      "Effect.Moba.Debuff"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -344,13 +341,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Moba.Debuff"
     ]
   },
   {
     "id": "Effect.Moba.Debuff.Silence",
-    "tags": [
-      "Effect.Moba.Debuff"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -365,13 +362,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Moba.Debuff"
     ]
   },
   {
     "id": "Effect.Moba.Force.E",
-    "tags": [
-      "Effect.Moba.ApplyForce"
-    ],
     "presetType": "ApplyForce2D",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -392,13 +389,13 @@
         "type": "Float",
         "value": 0
       }
-    }
+    },
+    "categories": [
+      "Effect.Moba.ApplyForce"
+    ]
   },
   {
     "id": "Effect.Moba.Displacement.R",
-    "tags": [
-      "Effect.Moba.Displacement"
-    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -407,13 +404,13 @@
       "totalDistanceCm": 350,
       "totalDurationTicks": 12,
       "overrideNavigation": true
-    }
+    },
+    "categories": [
+      "Effect.Moba.Displacement"
+    ]
   },
   {
     "id": "Effect.Moba.Lockout.GCD",
-    "tags": [
-      "Effect.Moba.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -428,13 +425,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Moba.Lockout"
     ]
   },
   {
     "id": "Effect.Moba.Lockout.Skill.E",
-    "tags": [
-      "Effect.Moba.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -449,13 +446,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Moba.Lockout"
     ]
   },
   {
     "id": "Effect.Moba.Lockout.Skill.Q",
-    "tags": [
-      "Effect.Moba.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -470,13 +467,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Moba.Lockout"
     ]
   },
   {
     "id": "Effect.Moba.Lockout.Skill.R",
-    "tags": [
-      "Effect.Moba.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -491,13 +488,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Moba.Lockout"
     ]
   },
   {
     "id": "Effect.Moba.Lockout.Skill.W",
-    "tags": [
-      "Effect.Moba.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -512,6 +509,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Moba.Lockout"
     ]
   }
 ]

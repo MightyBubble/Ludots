@@ -451,8 +451,8 @@ namespace Ludots.Tests.GAS
             };
             if (catalogTag != null)
             {
-                definition.HasCatalogTags = true;
-                definition.CatalogTags.AddTag(TagRegistry.Register(catalogTag));
+                definition.HasCategories = true;
+                definition.Categories.AddTag(AbilityCategoryRegistry.Register(catalogTag));
             }
 
             registry.Register(abilityId, in definition, "CollectionGasEntityCommandPanelAggregationTests");

@@ -409,7 +409,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(healthId, ModifierOp.Add, -10f);
             templates.Register(1101, new EffectTemplateData
             {
-                TagId = 1,
+                CategoryId = 1,
                 PresetType = EffectPresetType.InstantDamage,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
@@ -471,7 +471,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(healthId, ModifierOp.Add, -10f);
             templates.Register(1201, new EffectTemplateData
             {
-                TagId = 1,
+                CategoryId = 1,
                 PresetType = EffectPresetType.InstantDamage,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
@@ -535,7 +535,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(healthId, ModifierOp.Add, 15f);
             templates.Register(1102, new EffectTemplateData
             {
-                TagId = 2,
+                CategoryId = 2,
                 PresetType = EffectPresetType.Heal,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,

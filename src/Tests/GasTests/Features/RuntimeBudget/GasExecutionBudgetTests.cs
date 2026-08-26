@@ -985,7 +985,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             });
             templates.Register(respondingTemplateId, new EffectTemplateData
             {
-                TagId = respondingTagId,
+                CategoryId = respondingTagId,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ParticipatesInResponse = true,
             });

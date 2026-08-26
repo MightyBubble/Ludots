@@ -34,7 +34,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_A",
-                        "tags": ["Event.TestA"],
+                        "categories": ["Event.TestA"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -44,7 +44,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_B",
-                        "tags": ["Event.TestB"],
+                        "categories": ["Event.TestB"],
                         "presetType": "None",
                         "lifetime": "After",
                         "duration": { "durationTicks": 10, "periodTicks": 0, "clockId": "FixedFrame" },
@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
                 That(registry.TryGet(1, out var a), Is.True);
                 That(registry.TryGet(2, out var b), Is.True);
 
-                That(a.TagId, Is.Not.EqualTo(0));
+                That(a.CategoryId, Is.Not.EqualTo(0));
                 That(a.Modifiers.Count, Is.EqualTo(1));
 
                 // TODO: b.OnApplyEffectId assertion removed — callback fields migrated to Phase Graph architecture
@@ -94,7 +94,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_A",
-                        "tags": ["Event.TestA"],
+                        "categories": ["Event.TestA"],
                         "duration": 1.0
                       }
                     ]
@@ -128,7 +128,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect.MultipleTags",
-                        "tags": ["Effect.First", "Effect.Second"],
+                        "categories": ["Effect.First", "Effect.Second"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": false
@@ -140,7 +140,7 @@ namespace Ludots.Tests.GAS
                 var ex = Throws<InvalidOperationException>(() =>
                     loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
 
-                That(ex!.Message, Does.Contain("tags"));
+                That(ex!.Message, Does.Contain("categories"));
                 That(ex.Message, Does.Contain("at most one"));
             }
             finally
@@ -161,7 +161,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Search",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -204,7 +204,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Search",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -261,7 +261,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Search_LayerMasked",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -307,7 +307,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Search_BadLayer",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -352,7 +352,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -372,7 +372,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_Hit",
-                        "tags": ["Event.Hit"],
+                        "categories": ["Event.Hit"],
                         "presetType": "InstantDamage",
                         "lifetime": "Instant",
                         "participatesInResponse": true
@@ -403,7 +403,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -448,7 +448,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -489,7 +489,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -533,7 +533,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -575,7 +575,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Aura",
-                        "tags": ["Event.Aura"],
+                        "categories": ["Event.Aura"],
                         "presetType": "None",
                         "lifetime": "Infinite",
                         "participatesInResponse": true
@@ -610,7 +610,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Aura",
-                        "tags": ["Event.Aura"],
+                        "categories": ["Event.Aura"],
                         "presetType": "None",
                         "lifetime": "Infinite",
                         "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
@@ -644,7 +644,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Search",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -658,7 +658,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_Hit",
-                        "tags": ["Event.Hit"],
+                        "categories": ["Event.Hit"],
                         "presetType": "InstantDamage",
                         "lifetime": "Instant",
                         "participatesInResponse": true
@@ -695,7 +695,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Dispatch",
-                        "tags": ["Event.Dispatch"],
+                        "categories": ["Event.Dispatch"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -710,7 +710,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_Payload",
-                        "tags": ["Event.Payload"],
+                        "categories": ["Event.Payload"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true
@@ -745,7 +745,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Dispatch",
-                        "tags": ["Event.Dispatch"],
+                        "categories": ["Event.Dispatch"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -785,7 +785,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Dispatch",
-                        "tags": ["Event.Dispatch"],
+                        "categories": ["Event.Dispatch"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -826,7 +826,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Reactive",
-                        "tags": ["Event.Reactive"],
+                        "categories": ["Event.Reactive"],
                         "presetType": "None",
                         "lifetime": "Infinite",
                         "participatesInResponse": true,
@@ -874,7 +874,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect.Invalid.InstantListener",
-                        "tags": ["Event.Invalid"],
+                        "categories": ["Event.Invalid"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": false,
@@ -915,7 +915,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_CreateUnit",
-                        "tags": ["Event.CreateUnit"],
+                        "categories": ["Event.CreateUnit"],
                         "presetType": "CreateUnit",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -954,7 +954,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_CreateUnit",
-                        "tags": ["Event.CreateUnit"],
+                        "categories": ["Event.CreateUnit"],
                         "presetType": "CreateUnit",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -993,7 +993,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_CreateUnit",
-                        "tags": ["Event.CreateUnit"],
+                        "categories": ["Event.CreateUnit"],
                         "presetType": "CreateUnit",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -1034,7 +1034,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_GraphTag",
-                        "tags": ["Event.GraphTag"],
+                        "categories": ["Event.GraphTag"],
                         "presetType": "None",
                         "lifetime": "Infinite",
                         "participatesInResponse": true,
@@ -1074,7 +1074,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Preset_Force",
-                        "tags": ["Effect.ApplyForce"],
+                        "categories": ["Effect.ApplyForce"],
                         "presetType": "ApplyForce2D",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -1120,7 +1120,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Custom_Status",
-                        "tags": ["Effect.Custom.Status"],
+                        "categories": ["Effect.Custom.Status"],
                         "presetType": "ExampleMod.CustomStatus",
                         "lifetime": "Instant",
                         "participatesInResponse": false
@@ -1172,7 +1172,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Graph_Query",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -1217,7 +1217,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect.Test.SubmitOrderMissingIntArg0",
-                        "tags": ["Effect.Test.SubmitOrder"],
+                        "categories": ["Effect.Test.SubmitOrder"],
                         "presetType": "SubmitOrderFromBlackboard",
                         "lifetime": "Instant",
                         "participatesInResponse": false,
@@ -1270,7 +1270,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect.Test.SubmitOrderUnknownType",
-                        "tags": ["Effect.Test.SubmitOrder"],
+                        "categories": ["Effect.Test.SubmitOrder"],
                         "presetType": "SubmitOrderFromBlackboard",
                         "lifetime": "Instant",
                         "participatesInResponse": false,
@@ -1320,14 +1320,14 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect_Infinite_NoDuration",
-                        "tags": ["Event.Infinite.NoDuration"],
+                        "categories": ["Event.Infinite.NoDuration"],
                         "presetType": "Buff",
                         "lifetime": "Infinite",
                         "participatesInResponse": false
                       },
                       {
                         "id": "Effect_Infinite_PeriodOnly",
-                        "tags": ["Event.Infinite.PeriodOnly"],
+                        "categories": ["Event.Infinite.PeriodOnly"],
                         "presetType": "Buff",
                         "lifetime": "Infinite",
                         "duration": { "periodTicks": 20 },
@@ -1335,7 +1335,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_Infinite_FullDuration",
-                        "tags": ["Event.Infinite.FullDuration"],
+                        "categories": ["Event.Infinite.FullDuration"],
                         "presetType": "Buff",
                         "lifetime": "Infinite",
                         "duration": { "durationTicks": 0, "periodTicks": 60, "clockId": "FixedFrame" },
@@ -1398,7 +1398,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect.Attach.InvalidFacingCombo",
-                        "tags": ["Effect.Attachment"],
+                        "categories": ["Effect.Attachment"],
                         "presetType": "Relation",
                         "lifetime": "Instant",
                         "participatesInResponse": false,

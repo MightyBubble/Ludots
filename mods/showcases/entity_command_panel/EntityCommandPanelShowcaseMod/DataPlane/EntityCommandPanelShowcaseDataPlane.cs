@@ -286,7 +286,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
             {
                 string tag = TagRegistry.GetName(tagId);
                 if (tag.StartsWith("castFamily.", StringComparison.Ordinal) &&
-                    _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)?.HasCatalogTag(representativeAbilityId, tagId) == true)
+                    _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)?.HasCategory(representativeAbilityId, tagId) == true)
                 {
                     return FormatTagLeaf(tag);
                 }

@@ -150,14 +150,14 @@ namespace Ludots.Core.Gameplay.GAS
         public int ShowProgressionRequirementId;
         public bool HasShowProgressionRequirement;
 
-        // ── Catalog classification (RFC-0065 DEC-14) ──
+        // ── Category classification (RFC-0065 DEC-14) ──
         /// <summary>
-        /// Catalog tags declared on the ability (abilities.json <c>catalogTags</c>).
-        /// Pure classification data for semantic routing (e.g. CommandIntentProfile
-        /// <c>hasAbilityWithTag</c> / <c>byAbilityTag</c>); Core never interprets tag names.
+        /// Categories declared on the ability (abilities.json <c>categories</c>).
+        /// Classification for semantic routing (CommandIntentProfile / aggregation);
+        /// ids come from <see cref="Registry.AbilityCategoryRegistry"/>, not TagRegistry.
         /// </summary>
-        public GameplayTagContainer CatalogTags;
-        public bool HasCatalogTags;
+        public GameplayTagContainer Categories;
+        public bool HasCategories;
 
         // ── Interaction context binding (RFC-0065 CTX-6) ──
         /// <summary>
@@ -248,7 +248,7 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>In-place catalog tag probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>
-        public bool HasCatalogTag(int abilityId, int tagId)
+        public bool HasCategory(int abilityId, int tagId)
         {
             if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
             {
@@ -256,7 +256,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             ref readonly AbilityDefinition definition = ref _items[abilityId];
-            return definition.HasCatalogTags && definition.CatalogTags.HasTag(tagId);
+            return definition.HasCategories && definition.Categories.HasTag(tagId);
         }
 
         /// <summary>
@@ -284,11 +284,11 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
-        /// Lowest catalog tag id shared between the ability's <see cref="AbilityDefinition.CatalogTags"/>
+        /// Lowest catalog tag id shared between the ability's <see cref="AbilityDefinition.Categories"/>
         /// and <paramref name="mask"/>; 0 when the ability is unknown, has no catalog tags, or none match.
         /// In-place probe (no definition copy); hot path for panel aggregation (RFC-0065 DEC-10).
         /// </summary>
-        public int FirstCatalogTagIntersection(int abilityId, in GameplayTagContainer mask)
+        public int FirstCategoryIntersection(int abilityId, in GameplayTagContainer mask)
         {
             if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
             {
@@ -296,7 +296,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             ref readonly AbilityDefinition definition = ref _items[abilityId];
-            return definition.HasCatalogTags ? definition.CatalogTags.FirstCommonTag(in mask) : 0;
+            return definition.HasCategories ? definition.Categories.FirstCommonTag(in mask) : 0;
         }
 
         public void RegisterFromEntity(World world, Entity templateEntity, int abilityId)

@@ -749,7 +749,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in tpl.PhaseGraphBindings,
                 tpl.PresetTypeId,
-                tpl.TagId,
+                tpl.CategoryId,
                 templateId,
                 in mergedConfig,
                 builtinRuntime,
@@ -843,7 +843,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 ref var buf = ref World.Get<EffectPhaseListenerBuffer>(entity);
                 if (!buf.TryAdd(
-                    setup.ListenTagIds[i],
+                    setup.ListenCategoryIds[i],
                     setup.ListenEffectIds[i],
                     (EffectPhaseId)setup.Phases[i],
                     scope,

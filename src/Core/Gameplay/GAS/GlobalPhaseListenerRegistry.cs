@@ -13,7 +13,7 @@ namespace Ludots.Core.Gameplay.GAS
         public const int MAX_LISTENERS = GasConstants.GLOBAL_PHASE_LISTENER_MAX;
 
         private int _count;
-        private readonly int[] _listenTagIds = new int[MAX_LISTENERS];
+        private readonly int[] _listenCategoryIds = new int[MAX_LISTENERS];
         private readonly int[] _listenEffectIds = new int[MAX_LISTENERS];
         private readonly byte[] _phases = new byte[MAX_LISTENERS];
         private readonly byte[] _actionFlags = new byte[MAX_LISTENERS];
@@ -24,11 +24,11 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>
         /// Register a global listener. Returns false if capacity is full.
         /// </summary>
-        public bool Register(int listenTagId, int listenEffectId, EffectPhaseId phase,
+        public bool Register(int listenCategoryId, int listenEffectId, EffectPhaseId phase,
                              PhaseListenerActionFlags flags, int graphProgramId, int eventTagId, int priority)
         {
             EffectPhaseListenerContract.RequireValidRegistration(
-                listenTagId,
+                listenCategoryId,
                 listenEffectId,
                 phase,
                 PhaseListenerScope.Target,
@@ -37,7 +37,7 @@ namespace Ludots.Core.Gameplay.GAS
                 eventTagId);
             if (_count >= MAX_LISTENERS) return false;
             int idx = _count;
-            _listenTagIds[idx] = listenTagId;
+            _listenCategoryIds[idx] = listenCategoryId;
             _listenEffectIds[idx] = listenEffectId;
             _phases[idx] = (byte)phase;
             _actionFlags[idx] = (byte)flags;
@@ -51,12 +51,12 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>
         /// Unregister by matching tag + effect + phase. Removes first match.
         /// </summary>
-        public bool Unregister(int listenTagId, int listenEffectId, EffectPhaseId phase)
+        public bool Unregister(int listenCategoryId, int listenEffectId, EffectPhaseId phase)
         {
             byte phaseB = (byte)phase;
             for (int i = 0; i < _count; i++)
             {
-                if (_listenTagIds[i] == listenTagId && _listenEffectIds[i] == listenEffectId && _phases[i] == phaseB)
+                if (_listenCategoryIds[i] == listenCategoryId && _listenEffectIds[i] == listenEffectId && _phases[i] == phaseB)
                 {
                     RemoveAt(i);
                     return true;
@@ -81,7 +81,7 @@ namespace Ludots.Core.Gameplay.GAS
             for (int i = 0; i < _count; i++)
             {
                 if (PhaseListenerMatcher.Matches(
-                    _phases[i], _listenTagIds[i], _listenEffectIds[i],
+                    _phases[i], _listenCategoryIds[i], _listenEffectIds[i],
                     phaseB, effectTagId, effectTemplateId))
                 {
                     return true;
@@ -99,7 +99,7 @@ namespace Ludots.Core.Gameplay.GAS
             byte phaseB = (byte)phase;
             for (int i = 0; i < _count; i++)
             {
-                if (!PhaseListenerMatcher.Matches(_phases[i], _listenTagIds[i], _listenEffectIds[i],
+                if (!PhaseListenerMatcher.Matches(_phases[i], _listenCategoryIds[i], _listenEffectIds[i],
                                                   phaseB, effectTagId, effectTemplateId)) continue;
 
                 if (collected < output.Length)
@@ -130,7 +130,7 @@ namespace Ludots.Core.Gameplay.GAS
             int last = _count - 1;
             if (index < last)
             {
-                _listenTagIds[index] = _listenTagIds[last];
+                _listenCategoryIds[index] = _listenCategoryIds[last];
                 _listenEffectIds[index] = _listenEffectIds[last];
                 _phases[index] = _phases[last];
                 _actionFlags[index] = _actionFlags[last];

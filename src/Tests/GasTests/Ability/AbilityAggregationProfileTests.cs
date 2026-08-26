@@ -444,8 +444,8 @@ namespace Ludots.Tests.GAS
                 var def = new AbilityDefinition();
                 if (catalogTag != null)
                 {
-                    def.HasCatalogTags = true;
-                    def.CatalogTags.AddTag(TagRegistry.Register(catalogTag));
+                    def.HasCategories = true;
+                    def.Categories.AddTag(AbilityCategoryRegistry.Register(catalogTag));
                 }
 
                 registry.Register(abilityId, in def);

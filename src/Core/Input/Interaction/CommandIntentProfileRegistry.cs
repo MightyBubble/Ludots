@@ -334,7 +334,7 @@ namespace Ludots.Core.Input.Interaction
                 {
                     continue;
                 }
-                if (slot.AbilityId > 0 && _abilityDefinitions.HasCatalogTag(slot.AbilityId, catalogTagId))
+                if (slot.AbilityId > 0 && _abilityDefinitions.HasCategory(slot.AbilityId, catalogTagId))
                 {
                     return true;
                 }
@@ -419,7 +419,7 @@ namespace Ludots.Core.Input.Interaction
                 rule.HasActorAnyTags = TryBuildMask(profileId, actor.AnyTags, ref rule.ActorAnyTags);
                 if (!string.IsNullOrWhiteSpace(actor.HasAbilityWithTag))
                 {
-                    rule.ActorAbilityCatalogTagId = ResolveTagId(profileId, actor.HasAbilityWithTag);
+                    rule.ActorAbilityCatalogTagId = ResolveAbilityCategoryId(profileId, actor.HasAbilityWithTag);
                 }
             }
 
@@ -481,7 +481,7 @@ namespace Ludots.Core.Input.Interaction
                     ruleIndex,
                     orderTypeId,
                     CommandIntentRouteKinds.ByAbilityTag,
-                    ResolveTagId(profileId, tagName));
+                    ResolveAbilityCategoryId(profileId, tagName));
             }
 
             if (slot.StartsWith(ContextGroupSelectorPrefix, StringComparison.Ordinal))
@@ -543,8 +543,21 @@ namespace Ludots.Core.Input.Interaction
                     $"Command intent profile '{profileId}' references unknown tag '{tagName}' (tag registry is frozen).");
             }
 
-            // Load-time declaration into the shared tag id space (same precedent as FilterProfileRegistry).
+            // Entity gameplay tags may be authored on intent predicates before other tables freeze.
             return TagRegistry.Register(tagName);
+        }
+
+        private static int ResolveAbilityCategoryId(string profileId, string categoryName)
+        {
+            int id = AbilityCategoryRegistry.GetId(categoryName);
+            if (id != AbilityCategoryRegistry.InvalidId)
+            {
+                return id;
+            }
+
+            throw new InvalidOperationException(
+                $"Command intent profile '{profileId}' references unknown ability category '{categoryName}'. " +
+                "Declare it on an ability's categories[] before command intent profiles are loaded.");
         }
 
         /// <summary>Compiled rule row (SoA within the profile); all predicate data is ids and bitsets.</summary>

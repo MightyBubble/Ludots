@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.Showcase.CapabilityStaticPresenter.RandomDrift",
-    "tags": [
-      "Effect.Showcase.CapabilityStaticPresenter.RandomDrift"
-    ],
     "presetType": "DoT",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -16,13 +13,13 @@
       "OnPeriod": {
         "post": "Graph.Showcase.CapabilityStaticPresenter.RandomDrift"
       }
-    }
+    },
+    "categories": [
+      "Effect.Showcase.CapabilityStaticPresenter.RandomDrift"
+    ]
   },
   {
     "id": "Effect.Showcase.CapabilityStaticPresenter.SetDurabilityIntact",
-    "tags": [
-      "Effect.Showcase.CapabilityStaticPresenter.Control"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -35,13 +32,13 @@
       "OnApply": {
         "post": "Graph.Showcase.CapabilityStaticPresenter.SetDurabilityIntact"
       }
-    }
+    },
+    "categories": [
+      "Effect.Showcase.CapabilityStaticPresenter.Control"
+    ]
   },
   {
     "id": "Effect.Showcase.CapabilityStaticPresenter.SetDurabilityDamaged",
-    "tags": [
-      "Effect.Showcase.CapabilityStaticPresenter.Control"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -54,13 +51,13 @@
       "OnApply": {
         "post": "Graph.Showcase.CapabilityStaticPresenter.SetDurabilityDamaged"
       }
-    }
+    },
+    "categories": [
+      "Effect.Showcase.CapabilityStaticPresenter.Control"
+    ]
   },
   {
     "id": "Effect.Showcase.CapabilityStaticPresenter.SetDurabilityRuined",
-    "tags": [
-      "Effect.Showcase.CapabilityStaticPresenter.Control"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -73,6 +70,9 @@
       "OnApply": {
         "post": "Graph.Showcase.CapabilityStaticPresenter.SetDurabilityRuined"
       }
-    }
+    },
+    "categories": [
+      "Effect.Showcase.CapabilityStaticPresenter.Control"
+    ]
   }
 ]

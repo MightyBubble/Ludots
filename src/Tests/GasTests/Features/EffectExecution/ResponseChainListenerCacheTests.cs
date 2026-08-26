@@ -25,7 +25,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var templates = new EffectTemplateRegistry();
             templates.Register(effectTemplateId, new EffectTemplateData
             {
-                TagId = effectTagId,
+                CategoryId = effectTagId,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
                 ParticipatesInResponse = true,
