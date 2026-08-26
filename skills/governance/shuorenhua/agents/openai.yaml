@@ -1,0 +1,4 @@
+interface:
+  display_name: "说人话"
+  short_description: "去 AI 味改写：保事实、分场景、改完可直接发"
+  default_prompt: "用 $shuorenhua 按 docs 场景改写下面这段中文：先判 Tier 与档位，划 protected spans，再给单一推荐版本；不要增删事实。"

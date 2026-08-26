@@ -62,6 +62,16 @@
 3. 填写 `references/self-review-checklist.md` 模板，写入 `artifacts/gas-composition-gate.md`。
 4. 实现 PR 须链接该自审产物或等效填写内容。
 
+### 4.6 面向人的中文（与 skill 绑定）
+
+适用：写或改 `gitbook/` 正式文档、showcase 设计说明、门户说明、PR/Issue 里给人看的段落。
+
+1. 加载共享 skill `shuorenhua`（`skills/governance/shuorenhua/`）。
+2. 按该 skill 的固定顺序处理：判场景 → 划 protected spans → Tier → 档位 → 改写 → 回读。
+3. 默认场景是 `docs`；README / release note / issue 回复等走对应 Scene Pack。
+4. 保事实、术语、路径、命令与责任主体；禁止为了「顺口」改掉合同含义。
+5. 给用户的最终说明也按同一标准：能用业务话讲清的，不要堆实现腔。
+
 ## 5 现有能力速查
 
 优先复用这些正式基础设施：
