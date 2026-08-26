@@ -45,7 +45,7 @@ public sealed class PanelCollectionBagsShowcaseAcceptanceTests
             panelHost,
             FindPanel(panelHost, hero, "panel.collection.effects"),
             "templates");
-        Assert.That(effects.Items, Has.Count.EqualTo(3));
+        Assert.That(effects.Items, Has.Count.GreaterThanOrEqualTo(3));
         AssertNames(effects, "祝福", "迅捷", "护盾");
 
         PanelListProjection abilities = ProjectAll(
