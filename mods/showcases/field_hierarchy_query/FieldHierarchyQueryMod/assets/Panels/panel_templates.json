@@ -8,6 +8,12 @@
         "key": "field.hierarchy.panel.stage",
         "mode": "realtime",
         "default": 0
+      },
+      {
+        "name": "mapmode",
+        "key": "field.hierarchy.panel.mapmode",
+        "mode": "realtime",
+        "default": 0
       }
     ]
   }

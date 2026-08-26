@@ -17,6 +17,12 @@
       "type": "int",
       "initial": 0,
       "phase": true
+    },
+    {
+      "name": "mapmode",
+      "type": "int",
+      "initial": 0,
+      "phase": false
     }
   ],
   "TriggerGraphs": [

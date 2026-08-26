@@ -11,6 +11,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.FieldRegions;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
@@ -301,6 +302,8 @@ namespace Ludots.Adapter.Raylib
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
+                var discreteFieldProjector = new FieldDiscreteVisualProjector(
+                    RaylibFieldRenderPresenter.ResolveDiscreteOwnershipColorVector);
                 using var fieldRenderPresenter = new RaylibFieldRenderPresenter();
                 Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer navMeshPresentationBuffer =
                     engine.GetService(CoreServiceKeys.NavMeshPresentationBuffer)
@@ -557,6 +560,18 @@ namespace Ludots.Adapter.Raylib
                             if (engine.TryGetService(CoreServiceKeys.VisionFogFieldStore, out FogFieldStore fogFieldsForProjection))
                             {
                                 fogFieldProjector.Project(fogFieldsForProjection, globalFieldVisualBuffer);
+                            }
+
+                            MapSession? fieldSession = engine.CurrentMapSession;
+                            if (fieldSession?.Fields != null)
+                            {
+                                FieldDiscreteVisualMapMode mapMode = ResolveDiscreteFieldMapMode(fieldSession);
+                                discreteFieldProjector.Project(
+                                    ResolveFieldScopeKeyId(fieldSession.MapId),
+                                    fieldSession.Fields,
+                                    fieldSession.RegionGroups,
+                                    in mapMode,
+                                    globalFieldVisualBuffer);
                             }
                         }
 
@@ -2261,6 +2276,37 @@ namespace Ludots.Adapter.Raylib
                 Math.Abs(a.Green - b.Green) +
                 Math.Abs(a.Blue - b.Blue) +
                 Math.Abs(a.Alpha - b.Alpha);
+        }
+
+        private static FieldDiscreteVisualMapMode ResolveDiscreteFieldMapMode(MapSession session)
+        {
+            if (session.Variables == null || !session.Variables.Contains("mapmode"))
+            {
+                return FieldDiscreteVisualMapMode.Leaf;
+            }
+
+            int mapmode = session.Variables.ReadInt("mapmode");
+            return mapmode switch
+            {
+                0 => FieldDiscreteVisualMapMode.Leaf,
+                > 0 => FieldDiscreteVisualMapMode.AncestorDepth(mapmode),
+                _ => throw new InvalidOperationException(
+                    $"Map '{session.MapId.Value}' has invalid negative mapmode {mapmode}."),
+            };
+        }
+
+        private static int ResolveFieldScopeKeyId(MapId mapId)
+        {
+            uint hash = 2166136261u;
+            string value = mapId.Value;
+            for (int i = 0; i < value.Length; i++)
+            {
+                hash ^= value[i];
+                hash *= 16777619u;
+            }
+
+            int resolved = (int)(hash & 0x7FFFFFFF);
+            return resolved == 0 ? 1 : resolved;
         }
 
         private static double ElapsedMs(long startTicks)

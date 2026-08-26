@@ -6,16 +6,18 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Fields;
 using Ludots.Core.Gameplay.FieldRegions;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// Field hierarchy query acceptance: load map with Fields/hierarchies.json,
-/// resolve chain for zone.a1 via RegionHierarchyBuilder.TryResolveChain.
+/// Field hierarchy query acceptance: load authored leaves and hierarchy rosters,
+/// then prove query-time chains and readonly visual mapmode projection.
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -35,7 +37,7 @@ public sealed class FieldHierarchyQueryAcceptanceTests
     };
 
     [Test]
-    public void HierarchyQuery_ResolveChain_ContainsZoneAndParentGroup()
+    public void HierarchyQuery_ResolveChain_AndMapmodeProjectionRebuildInSameFrame()
     {
         using GameEngine engine = CreateEngine(Mods);
         engine.Start();
@@ -68,6 +70,45 @@ public sealed class FieldHierarchyQueryAcceptanceTests
         Assert.That(chain[0], Is.EqualTo("zone.a1"), "finest region first");
         Assert.That(chain, Is.EqualTo(new[] { "zone.a1", "group.mid", "group.top" }));
 
+        var buffer = new GlobalFieldVisualBuffer(
+            recordCapacity: 4,
+            cellCapacity: 128,
+            dirtyRectCapacity: 16);
+        var projector = new FieldDiscreteVisualProjector();
+        FieldDiscreteVisualMapMode leafMode = FieldDiscreteVisualMapMode.Leaf;
+        FieldDiscreteVisualMapMode parentMode = FieldDiscreteVisualMapMode.AncestorDepth(1);
+        FieldDiscreteVisualMapMode topMode = FieldDiscreteVisualMapMode.AncestorDepth(2);
+
+        byte leafA1 = ProjectAndFind(
+            projector, session, buffer, in leafMode, new FieldCell2D(0, 0));
+        byte parentA1 = ProjectAndFind(
+            projector, session, buffer, in parentMode, new FieldCell2D(0, 0));
+        byte parentA2 = FindByte(buffer, new FieldCell2D(3, 0));
+        byte topA1 = ProjectAndFind(
+            projector, session, buffer, in topMode, new FieldCell2D(0, 0));
+
+        Assert.That(parentA1, Is.EqualTo(parentA2), "siblings share their immediate ancestor color");
+        Assert.That(parentA1, Is.Not.EqualTo(leafA1));
+        Assert.That(topA1, Is.Not.EqualTo(parentA1));
+
+        ProjectAndFind(projector, session, buffer, in parentMode, new FieldCell2D(0, 0));
+        Entity top = session.RegionGroups.GroupByKey["group.top"];
+        RelationOps.SetParent(engine.World, zoneA1, top);
+        session.RegionGroups.RebuildRemaps(engine.World, session);
+
+        byte reparentedA1 = ProjectAndFind(
+            projector, session, buffer, in parentMode, new FieldCell2D(0, 0));
+        byte topB1 = FindByte(buffer, new FieldCell2D(6, 0));
+        Assert.That(reparentedA1, Is.EqualTo(topB1));
+        Assert.That(reparentedA1, Is.Not.EqualTo(parentA1));
+        Assert.That(projector.LastFullProjectionCount, Is.EqualTo(0),
+            "same-runtime remap rebuild marks only affected authored chunks dirty");
+        Assert.That(projector.LastProjectedDirtyRectCount, Is.EqualTo(1));
+
+        chain.Clear();
+        Assert.That(RegionHierarchyBuilder.TryResolveChain(engine.World, zoneA1, chain), Is.True);
+        Assert.That(chain, Is.EqualTo(new[] { "zone.a1", "group.top" }));
+
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
             string.Join("; ", engine.TriggerManager.Errors));
     }
@@ -80,6 +121,7 @@ public sealed class FieldHierarchyQueryAcceptanceTests
         Assert.That(File.Exists(Path.Combine(modRoot, "FieldHierarchyQueryMod.csproj")), Is.False,
             "Hierarchy showcase must stay code-free.");
         Assert.That(File.Exists(Path.Combine(modRoot, "assets", "Fields", "hierarchies.json")), Is.True);
+        Assert.That(File.Exists(Path.Combine(modRoot, "assets", "Input", "default_input.json")), Is.True);
     }
 
     private static GameEngine CreateEngine(string[] mods)
@@ -100,6 +142,48 @@ public sealed class FieldHierarchyQueryAcceptanceTests
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.Tick(DeltaTime);
         }
+    }
+
+    private static byte ProjectAndFind(
+        FieldDiscreteVisualProjector projector,
+        MapSession session,
+        GlobalFieldVisualBuffer buffer,
+        in FieldDiscreteVisualMapMode mode,
+        FieldCell2D cell)
+    {
+        buffer.BeginFrame();
+        projector.Project(
+            scopeKeyId: 1,
+            session.Fields!,
+            session.RegionGroups,
+            in mode,
+            buffer);
+        return FindByte(buffer, cell);
+    }
+
+    private static byte FindByte(GlobalFieldVisualBuffer buffer, FieldCell2D cell)
+    {
+        ReadOnlySpan<GlobalFieldVisualRecord> records = buffer.GetRecords();
+        for (int recordIndex = 0; recordIndex < records.Length; recordIndex++)
+        {
+            ref readonly GlobalFieldVisualRecord record = ref records[recordIndex];
+            if (!record.IsActive ||
+                record.Descriptor.Id.Kind != GlobalFieldVisualKind.DiscreteOwnership)
+            {
+                continue;
+            }
+
+            ReadOnlySpan<GlobalFieldVisualCell> cells = buffer.GetCells(record);
+            for (int cellIndex = 0; cellIndex < cells.Length; cellIndex++)
+            {
+                if (cells[cellIndex].Cell == cell)
+                {
+                    return cells[cellIndex].ByteValue;
+                }
+            }
+        }
+
+        throw new AssertionException($"Projected cell ({cell.X}, {cell.Y}) was not found.");
     }
 
     private static string FindRepoRoot()
