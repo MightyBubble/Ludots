@@ -1,0 +1,44 @@
+[
+  {
+    "id": "story.dialogue_overlay",
+    "backend": "ScreenOverlay",
+    "surfaceKind": "OverlayDialogue",
+    "anchor": "BottomCenter",
+    "width": 760,
+    "offsetY": 28,
+    "waitForInput": true,
+    "dimBackdrop": true,
+    "accentHex": "#F6C56B",
+    "backgroundHex": "#08111BEF",
+    "borderHex": "#5AD7E9FF",
+    "foregroundHex": "#F8FAFC",
+    "mutedHex": "#C6D3DE"
+  },
+  {
+    "id": "story.world_bubble",
+    "backend": "WorldProjected",
+    "surfaceKind": "DialogueBubble",
+    "anchor": "TopLeft",
+    "width": 420,
+    "worldHeadOffsetYCm": 140,
+    "waitForInput": true,
+    "accentHex": "#F0C36B",
+    "backgroundHex": "#0C1622E8",
+    "borderHex": "#49FFFFFF",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#A9B9C9"
+  },
+  {
+    "id": "story.immersive_subtitle",
+    "backend": "ScreenSubtitle",
+    "surfaceKind": "SubtitleBubble",
+    "anchor": "BottomCenter",
+    "width": 720,
+    "offsetY": 84,
+    "accentHex": "#F59E0B",
+    "backgroundHex": "#08121CE8",
+    "borderHex": "#31546B",
+    "foregroundHex": "#F2F6FA",
+    "mutedHex": "#AFC3D4"
+  }
+]

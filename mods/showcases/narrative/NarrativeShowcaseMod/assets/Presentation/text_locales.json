@@ -1,0 +1,21 @@
+{
+  "defaultLocale": "en-US",
+  "locales": {
+    "en-US": {
+      "story.warden.intro.elder": "The lanterns still burn. That means the valley is still waiting for a witness.",
+      "story.warden.intro.shrine": "Wake the shrine, face what it sends, and bring me back a judgment worth keeping.",
+      "story.warden.briefing.001": "The Ember Shrine keeps count of every oath we break. Step close and choose how you want to enter the trial.",
+      "story.player.briefing.lore": "Tell me what the shrine remembers.",
+      "story.player.briefing.accept_now": "I am ready. Open the path.",
+      "story.warden.briefing.lore_reply": "Then listen well: the shrine marks every oath, every mercy, every lie. Carry that ember-memory with you.",
+      "story.player.briefing.accept_after_lore": "Then let the shrine judge me.",
+      "story.warden.briefing.accept": "Go to the shrine. Wake what sleeps beneath it, and return when you can name what should survive.",
+      "story.shrine.reveal.001": "The shrine cracks. Heat rolls out across the flagstones.",
+      "story.warden.return.001": "You came back alive. Now answer plainly: what should this valley remember from the Ashen Beast?",
+      "story.player.return.duty": "Seal the story. Let duty keep the valley safe.",
+      "story.player.return.mercy": "Remember it. Fear without memory will only grow back.",
+      "story.warden.return.duty_outro": "Then the valley keeps its ward, and you leave it stronger than you found it.",
+      "story.warden.return.mercy_outro": "Then the valley keeps a memory instead of a scar."
+    }
+  }
+}

@@ -23,6 +23,8 @@ namespace NarrativeShowcaseMod.Runtime
         public NarrativeShowcaseTemplateConfig Templates { get; set; } = new();
         public NarrativeShowcaseRoutingConfig Routing { get; set; } = new();
         public NarrativeShowcaseVariableConfig[] Variables { get; set; } = Array.Empty<NarrativeShowcaseVariableConfig>();
+        public Dictionary<string, string> EndingLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> SpeakerLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         public static NarrativeShowcaseFrontendConfig Load(Stream stream)
         {
@@ -38,6 +40,48 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             return config;
+        }
+
+        public string ResolveSpeakerLabel(string speakerId)
+        {
+            if (!string.IsNullOrWhiteSpace(speakerId) &&
+                SpeakerLabels.TryGetValue(speakerId, out string? label) &&
+                !string.IsNullOrWhiteSpace(label))
+            {
+                return label;
+            }
+
+            return speakerId ?? string.Empty;
+        }
+
+        public string ResolveEndingLabel(int ending)
+        {
+            if (EndingLabels.TryGetValue(ending.ToString(), out string? label) &&
+                !string.IsNullOrWhiteSpace(label))
+            {
+                return label;
+            }
+
+            return ending.ToString();
+        }
+
+        public IReadOnlyList<string> ResolveChoiceSignals(string choiceId)
+        {
+            if (string.IsNullOrWhiteSpace(choiceId) || Routing.ChoiceSignals == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            for (int i = 0; i < Routing.ChoiceSignals.Length; i++)
+            {
+                NarrativeShowcaseChoiceSignalRoute route = Routing.ChoiceSignals[i];
+                if (string.Equals(route.ChoiceId, choiceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return route.Signals ?? Array.Empty<string>();
+                }
+            }
+
+            return Array.Empty<string>();
         }
     }
 
@@ -83,7 +127,7 @@ namespace NarrativeShowcaseMod.Runtime
         public string TaskActivated { get; set; } = string.Empty;
         public string DialogueEntered { get; set; } = string.Empty;
         public string DialogueChoiceCommitted { get; set; } = string.Empty;
-        public string CinematicEntered { get; set; } = string.Empty;
+        public string SequenceEntered { get; set; } = string.Empty;
         public string TaskCompleted { get; set; } = string.Empty;
         public string Signal { get; set; } = string.Empty;
         public string BeastSpawned { get; set; } = string.Empty;
@@ -92,8 +136,15 @@ namespace NarrativeShowcaseMod.Runtime
 
     internal sealed class NarrativeShowcaseRoutingConfig
     {
-        public string[] TransmissionCinematicIds { get; set; } = Array.Empty<string>();
-        public string[] SubtitleCinematicIds { get; set; } = Array.Empty<string>();
+        public string[] TransmissionSequenceIds { get; set; } = Array.Empty<string>();
+        public string[] SubtitleSequenceIds { get; set; } = Array.Empty<string>();
+        public NarrativeShowcaseChoiceSignalRoute[] ChoiceSignals { get; set; } = Array.Empty<NarrativeShowcaseChoiceSignalRoute>();
+    }
+
+    internal sealed class NarrativeShowcaseChoiceSignalRoute
+    {
+        public string ChoiceId { get; set; } = string.Empty;
+        public string[] Signals { get; set; } = Array.Empty<string>();
     }
 
     internal sealed class NarrativeShowcaseVariableConfig

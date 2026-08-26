@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Providers;
+using Ludots.Core.Gameplay.Story;
 
 namespace Ludots.Core.Gameplay.Tasks
 {
@@ -46,13 +48,20 @@ namespace Ludots.Core.Gameplay.Tasks
 
             for (int i = 0; i < merged.Count; i++)
             {
+                JsonObject node = merged[i].Node;
+                if (node.ContainsKey("on_enter_cinematic_id"))
+                {
+                    throw new InvalidOperationException(
+                        $"Task entry index {i} uses retired field 'on_enter_cinematic_id'. Use 'on_enter_sequence_id'. {LegacyNarrativeConfigGuard.MigrationMessage}");
+                }
+
                 var definition = JsonSerializer.Deserialize<TaskDefinition>(
-                        merged[i].Node.ToJsonString(),
+                        node.ToJsonString(),
                         _jsonOptions)
                     ?? throw new InvalidOperationException(
                         $"Failed to deserialize task definition '{merged[i].Id}'.");
                 definition.Id = string.IsNullOrWhiteSpace(definition.Id) ? merged[i].Id : definition.Id;
-                using (JsonDocument doc = JsonDocument.Parse(merged[i].Node.ToJsonString()))
+                using (JsonDocument doc = JsonDocument.Parse(node.ToJsonString()))
                 {
                     IReadOnlyList<ProviderDefinitionReference> refs =
                         ProviderDefinitionValidator.CollectFromJsonDocument(definition.Id, doc.RootElement);
