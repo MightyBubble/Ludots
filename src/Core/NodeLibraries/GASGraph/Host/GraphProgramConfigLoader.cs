@@ -76,6 +76,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
             var packages = new List<GraphProgramPackage>(sorted.Count);
             var errors = new List<string>();
+            var documents = new Dictionary<string, GraphControlFlowDocument>(StringComparer.OrdinalIgnoreCase);
 
             for (int i = 0; i < sorted.Count; i++)
             {
@@ -83,8 +84,63 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 try
                 {
                     GraphIdRegistry.Register(id);
+                    GraphKind kind = GraphProgramAuthoringFrontDoor.RequireKind(obj, id);
+                    GraphProgramAuthoringFrontDoor.RequireControlFlowAuthoringShape(obj, id, kind);
+                    GraphProgramAuthoringFrontDoor.RequireTriggerGraphEntryShape(obj, id, kind);
+                    GraphControlFlowDocument? doc = obj.Deserialize<GraphControlFlowDocument>(options);
+                    if (doc == null)
+                    {
+                        throw new InvalidOperationException($"Failed to deserialize ControlFlow graph '{id}'.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(doc.Id))
+                    {
+                        doc.Id = id;
+                    }
+
+                    if (!string.Equals(doc.Id, id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Graph id mismatch: '{id}' vs '{doc.Id}'.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(doc.Kind))
+                    {
+                        doc.Kind = kind.ToString();
+                    }
+
+                    documents[id] = doc;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Graph '{id}' in '{relativePath}': {ex.Message}");
+                }
+            }
+
+            if (errors.Count > 0)
+            {
+                throw new AggregateException(
+                    $"[GraphProgramConfigLoader] {errors.Count} graph deserialization error(s) in '{relativePath}'.",
+                    errors.ConvertAll(e => (Exception)new InvalidOperationException(e)));
+            }
+
+            try
+            {
+                TriggerGraphInlineWeaver.ExpandDocuments(documents);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"[GraphProgramConfigLoader] InlineGraph expand failed in '{relativePath}': {ex.Message}",
+                    ex);
+            }
+
+            foreach (KeyValuePair<string, GraphControlFlowDocument> pair in documents)
+            {
+                string id = pair.Key;
+                try
+                {
                     GraphControlFlowCompileResult compiled =
-                        GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options, _eventSchemas, _enums);
+                        GraphControlFlowCompiler.Compile(pair.Value, _eventSchemas, _enums);
                     GraphProgramPackage? pkg = compiled.Package;
                     GraphOutputSchema outputSchema = compiled.OutputSchema;
                     List<GraphDiagnostic> diags = compiled.Diagnostics;
@@ -100,7 +156,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         packages.Add(pkg.Value);
                         _pendingOutputSchemas[id] = outputSchema;
                         _pendingSourceMaps[id] = compiled.SourceMap;
-                        _pendingDocuments.Add(new KeyValuePair<string, GraphControlFlowDocument>(id, compiled.Document));
+                        _pendingDocuments.Add(new KeyValuePair<string, GraphControlFlowDocument>(id, pair.Value));
                     }
                 }
                 catch (Exception ex)

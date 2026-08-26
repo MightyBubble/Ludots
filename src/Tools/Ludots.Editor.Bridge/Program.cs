@@ -1912,6 +1912,17 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
             outputType = GraphValueType.Void.ToString(),
             lowersTo = GraphNodeOp.Jump.ToString(),
         });
+        if (graphKind == GraphKind.TriggerGraph)
+        {
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.InlineGraph,
+                controlOutputPorts = new[] { GraphControlFlowPorts.Next },
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Void.ToString(),
+                lowersTo = "compile-time-splice",
+            });
+        }
     }
 
     return Results.Ok(new

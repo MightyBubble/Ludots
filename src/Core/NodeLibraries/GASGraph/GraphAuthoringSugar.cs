@@ -33,6 +33,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// TriggerGraph entry (MapVariableChanged + filters.varName), never a hidden poll.
         /// </summary>
         public const string FsmState = "FsmState";
+        /// <summary>
+        /// Compile-time macro splice (Unreal Macro style): replace this site with the
+        /// body of another TriggerGraph so AwaitCallback/Yield may appear inside the
+        /// reusable fragment. Never becomes a GraphNodeOp; runtime InvokeGraph stays sync-only.
+        /// </summary>
+        public const string InlineGraph = "InlineGraph";
 
         public static bool IsScriptOnlySugar(string? opName)
         {

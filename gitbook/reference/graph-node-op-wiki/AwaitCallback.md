@@ -39,7 +39,8 @@
 
 - 图种边界：可用于 Script / TriggerGraph；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - 挂起后由 C# 宿主 `Complete` 句柄；Continuation 相位按注册序 resume，不按完成线程顺序。
-- 嵌套 `InvokeScript` / `InvokeGraph` 仍禁止 Yield / AwaitCallback（不做 yield-through）。
+- 嵌套 `InvokeScript` / `InvokeGraph` 仍禁止 Yield / AwaitCallback（同步函数合同，不做运行时穿透）。
+- 可等待的复用片段用编译期糖 `InlineGraph`（虚幻 Macro 风格）：装载前把宏图拼进宿主，Await 落在同一条程序上。
 - 失效句柄、双次完成、死宿主全部失败关闭。
 ## 怎么进
 
