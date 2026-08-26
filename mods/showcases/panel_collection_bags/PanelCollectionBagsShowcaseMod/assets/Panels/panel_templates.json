@@ -131,7 +131,6 @@
           "type": "list",
           "class": "collection-ability-slots",
           "bind": "slots",
-          "present": "grid",
           "viewportHeight": 180,
           "itemExtent": 40
         }
