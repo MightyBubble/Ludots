@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphFormalTextShowcaseMod",
   "version": "1.0.0",
   "description": "Player short-play: graph composes subtitle lines (concat + format) and sinks them to presentation.",
-  "main": "bin/net8.0/CapabilityStandardGraphFormalTextShowcaseMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphFormalTextShowcaseMod.dll",
   "priority": 133,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

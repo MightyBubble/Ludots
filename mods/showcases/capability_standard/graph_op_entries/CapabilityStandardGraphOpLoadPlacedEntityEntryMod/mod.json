@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpLoadPlacedEntityEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp LoadPlacedEntity player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpLoadPlacedEntityEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpLoadPlacedEntityEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
