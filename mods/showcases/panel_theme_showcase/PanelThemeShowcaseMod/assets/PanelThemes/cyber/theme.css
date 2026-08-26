@@ -1,0 +1,61 @@
+/* cyber — 赛博 HUD：九宫格霓虹框 + 三宫格能量条。 */
+.panel {
+  position: relative;
+  overflow: visible;
+  background-color: rgba(6, 14, 26, 220);
+  background-image: url(images/panel_bg.png);
+  border: 0 solid transparent;
+  border-radius: 0;
+  padding: 22px 24px 20px 24px;
+}
+
+.panel-frame {
+  object-fit: fill;
+  image-slice: 56 56 56 56;
+  pointer-events: none;
+}
+
+.panel .title {
+  color: rgb(0, 230, 255);
+  font-family: "Segoe UI", "Consolas", monospace;
+  font-size: 15px;
+  letter-spacing: 3px;
+}
+
+.rows {
+  gap: 8px;
+}
+
+.row {
+  color: rgb(180, 220, 235);
+  font-family: "Segoe UI", "Consolas", monospace;
+  font-size: 13px;
+}
+
+.row-health { color: rgb(255, 110, 70); }
+.row-mana { color: rgb(80, 180, 255); }
+.row-attack { color: rgb(255, 210, 90); }
+
+.bar-host {
+  position: relative;
+  height: 18px;
+  width: 100%;
+  overflow: visible;
+}
+
+.bar-track {
+  object-fit: fill;
+  image-slice: 0 48 0 48;
+  pointer-events: none;
+}
+
+.bar-fill {
+  object-fit: fill;
+  image-slice: 0 28 0 28;
+  pointer-events: none;
+}
+
+.hint {
+  color: rgb(70, 140, 170);
+  font-family: "Segoe UI", "Consolas", monospace;
+}

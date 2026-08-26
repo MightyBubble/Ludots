@@ -1685,6 +1685,34 @@
       }
     },
     {
+      "name": "panel_theme_cyber",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_cyber/PanelThemeCyberMod"
+      }
+    },
+    {
+      "name": "panel_theme_cyber_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_cyber_web/PanelThemeCyberWebMod"
+      }
+    },
+    {
+      "name": "panel_theme_bronze",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_bronze/PanelThemeBronzeMod"
+      }
+    },
+    {
+      "name": "panel_theme_bronze_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_bronze_web/PanelThemeBronzeWebMod"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_SpawnTemplate",
       "target": {
         "type": "path",

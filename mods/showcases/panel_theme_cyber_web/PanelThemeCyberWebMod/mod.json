@@ -1,0 +1,11 @@
+{
+  "name": "PanelThemeCyberWebMod",
+  "version": "1.0.0",
+  "description": "Panel theme showcase variant: cyber on the web skin",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0",
+    "PanelThemeShowcaseMod": "^1.0.0",
+    "PanelSkinWebMod": "^1.0.0"
+  }
+}

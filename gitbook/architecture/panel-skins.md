@@ -71,10 +71,12 @@ launcher 预设：`preset:panel_skin_{markup,compose,reactive,web}_raylib`。
 
 - `theme.css`：类选择器契约 `.panel-<template点转横线>` / `.title` / `.rows` / `.row-<变量名>` / `.row-paired|.row-single` / `.hint`；支持 background-image（url 指包内相对路径，装载器改写绝对路径/data URI）、font-family、颜色/边框/圆角/keyframes。
 - `images/`：切图（PNG/SVG；AI 生图 + `tools/panel_theme/cutout.py` 程序化抠图：边框采样 key、similarity/blend、去溢色、羽化、裁边）。
+- `images/panel_frame.png`（可选）：九宫格框体；装载后自动布局叠一层 `.panel-frame`（`object-fit:fill` + `image-slice`），合同对齐叙事主题框。
+- `images/bar_track.png` + `images/bar_fill_health.png` / `bar_fill_mana.png`（可选）：三宫格血条轨道与填充；成对变量（`health`/`healthBase`）自动改走可视条而非纯文字行。
 - `fonts/`：字体文件经 `UiFontRegistry.RegisterFile` 注册；亦可引系统族（如 KaiTi/Georgia）。
 - web 后端：`PanelWebSkin` 在页面就绪后注入同一份 theme.css（url 改写 data URI）——**同一份 CSS 双吃**。
 
-**三主题 showcase**（`PanelThemeShowcaseMod` + 六个 0-C# 变体壳，预设 `preset:panel_theme_{ink,fantasy,minimal}[_web]_raylib`）：水墨（宣纸纹理/墨字楷体/朱砂印）、西方魔幻（羊皮纸/鎏金边/衬线）、极简（**纯 CSS 零图片**——主题可不带任何切图）。
+**主题 showcase**（`PanelThemeShowcaseMod` + 0-C# 变体壳）：水墨 / 西方魔幻 / 极简（纯 CSS 零图片）/ **赛博**（九宫霓虹框 + 三宫能量条）/ **青铜**（九宫鎏金框 + 三宫珐琅条）。预设 `preset:panel_theme_{ink,fantasy,minimal,cyber,bronze}[_web]_raylib`。
 
 **选择面**：game.json `panelTheme`（全局）；模板/op 级主题覆盖与皮肤同构，后续切片。
 

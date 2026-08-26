@@ -40,6 +40,6 @@ public static class PanelPresentationInstaller
             surfaceHost,
             root,
             engine.MergedConfig?.PanelSkin,
-            theme?.StyleSheet));
+            theme));
     }
 }

@@ -1,0 +1,13 @@
+{
+  "windowTitle": "Ludots - Panel Theme Bronze (Web)",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "panelTheme": "bronze",
+  "panelSkin": "web",
+  "panelWebApp": "PanelSkinWebMod:Assets/overlay-app/index.html",
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  }
+}

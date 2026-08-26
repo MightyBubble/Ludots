@@ -10,5 +10,13 @@
   {
     "id": "minimal",
     "root": "PanelThemeShowcaseMod:assets/PanelThemes/minimal/theme.css"
+  },
+  {
+    "id": "cyber",
+    "root": "PanelThemeShowcaseMod:assets/PanelThemes/cyber/theme.css"
+  },
+  {
+    "id": "bronze",
+    "root": "PanelThemeShowcaseMod:assets/PanelThemes/bronze/theme.css"
   }
 ]

@@ -59,7 +59,7 @@
 ```jsonc
 // game.json：
 "panelSkin": "markup",      // default|markup|compose|reactive|web
-"panelTheme": "ink-wash"    // 水墨|fantasy|极简——CSS/图/字体正交于皮
+"panelTheme": "ink-wash"    // 水墨|fantasy|极简|cyber|bronze——CSS/图/字体正交于皮；cyber/bronze 另带九宫框与三宫条
 ```
 
 ## 下一步
