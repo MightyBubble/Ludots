@@ -43,8 +43,7 @@
         },
         "AbilityFormSetRef": {
           "formSetId": "ability_feature_hammer_forms"
-        },
-        "AbilityFormSlotBuffer": {}
+        }
       }
     },
     {

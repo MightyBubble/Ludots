@@ -107,7 +107,6 @@ def caster_overrides(feature: dict) -> dict:
     }
     if feature.get("formSetId"):
         overrides["AbilityFormSetRef"] = {"formSetId": feature["formSetId"]}
-        overrides["AbilityFormSlotBuffer"] = {}
     if feature.get("needsProgression"):
         overrides["ProgressionScopeBinding"] = {
             "entries": [{"scope": "abilityfeature.self", "hostKey": "ability_feature_board"}]

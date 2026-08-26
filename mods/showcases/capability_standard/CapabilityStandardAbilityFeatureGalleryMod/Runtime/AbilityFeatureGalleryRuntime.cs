@@ -146,7 +146,7 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
         EnsureActors();
         for (int i = 0; i < maxFrames; i++)
         {
-            engine.Tick(FrameStep);
+            engine.Tick(Time.FixedDeltaTime);
             if (_scriptIndex >= _vignette!.Script.Length)
             {
                 return;
@@ -154,7 +154,7 @@ public sealed class AbilityFeatureGalleryRuntime : IDisposable
         }
 
         throw new InvalidOperationException(
-            $"Ability feature '{_feature}' did not settle in {maxFrames} frames; scriptIndex={_scriptIndex}/{_vignette!.Script.Length}; frame={Metrics.Frame}.");
+            $"Ability feature '{_feature}' did not settle in {maxFrames} simulation frames; scriptIndex={_scriptIndex}/{_vignette!.Script.Length}; frame={Metrics.Frame}.");
     }
 
     public static string ResolveAssetsRoot()
