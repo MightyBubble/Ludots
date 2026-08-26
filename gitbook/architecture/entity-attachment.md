@@ -95,7 +95,7 @@ AttachmentPositionSyncSystem
 - 不做平行 Relationship `AttachedTo`。  
 - 不把 Trigger S4/S5、AgentBridge 实机验收塞进 attachment 修复。  
 - 不把 Mass Navigation 系统顺序调整塞进 attachment（除非 ADR 采纳方案 2）。  
-- 热路径不扩容、不 LINQ、不改实体结构飞线；scratch 超容显式失败。
+- 热路径不扩容、不 LINQ、不改实体结构飞线；scratch 容量来自 `gasRuntimeCapacity.attachmentPositionSyncScratchCapacity`，超容显式失败。
 
 ## 6. UAT
 
