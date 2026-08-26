@@ -1,0 +1,14 @@
+Test run for /workspace/src/Tests/GasTests/bin/Debug/net8.0/GasTests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    26, Skipped:     0, Total:    26, Duration: 1 s - GasTests.dll (net8.0)
+Test run for /workspace/src/Tests/GasTests/bin/Debug/net8.0/GasTests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     1, Skipped:     0, Total:     1, Duration: 813 ms - GasTests.dll (net8.0)
