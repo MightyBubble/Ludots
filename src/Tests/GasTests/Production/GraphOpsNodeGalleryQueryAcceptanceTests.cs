@@ -42,6 +42,54 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
     }
 
     [Test]
+    public void QueryCollectEffectTemplates_ListsRegisteredTemplates()
+    {
+        AssertIntIdCollector("QueryCollectEffectTemplates", "说明书");
+    }
+
+    [Test]
+    public void QueryCollectAbilitySlots_ListsSeededSlots()
+    {
+        AssertIntIdCollector("QueryCollectAbilitySlots", "技能格");
+    }
+
+    [Test]
+    public void QueryCollectInventoryItems_ListsSeededItems()
+    {
+        AssertEntityCollector("QueryCollectInventoryItems", "背包");
+    }
+
+    [Test]
+    public void QueryCollectItemDefinitions_ListsRegisteredItems()
+    {
+        AssertIntIdCollector("QueryCollectItemDefinitions", "物品");
+    }
+
+    [Test]
+    public void QueryCollectPresentTags_ListsSeededTags()
+    {
+        AssertIntIdCollector("QueryCollectPresentTags", "印记");
+    }
+
+    [Test]
+    public void QueryCollectActiveTasks_ListsSeededTasks()
+    {
+        AssertEntityCollector("QueryCollectActiveTasks", "差事");
+    }
+
+    [Test]
+    public void QueryCollectProgressionNodes_ListsSeededProgressions()
+    {
+        AssertIntIdCollector("QueryCollectProgressionNodes", "进度");
+    }
+
+    [Test]
+    public void QueryCollectAbilityHolders_ListsSeededHolders()
+    {
+        AssertEntityCollector("QueryCollectAbilityHolders", "会这招");
+    }
+
+    [Test]
     public void QueryAllMapEntities_CountMatchesSeededMapEntities()
     {
         using GraphOpsNodeGalleryRuntime runtime = Play("QueryAllMapEntities");
@@ -289,6 +337,26 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
                 Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), op);
             }
         }
+    }
+
+    private static void AssertIntIdCollector(string op, string expectedCopy)
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play(op);
+        QueryNodeDriver driver = (QueryNodeDriver)runtime.Driver;
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail, op);
+        Assert.That(runtime.Metrics.Detail, Does.Contain(expectedCopy), op);
+        Assert.That(driver.LastIntIdCount, Is.GreaterThan(0), op);
+    }
+
+    private static void AssertEntityCollector(string op, string expectedCopy)
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play(op);
+        QueryNodeDriver driver = (QueryNodeDriver)runtime.Driver;
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail, op);
+        Assert.That(runtime.Metrics.Detail, Does.Contain(expectedCopy), op);
+        Assert.That(driver.LastTargetCount, Is.GreaterThan(0), op);
     }
 
     private static GraphOpsNodeGalleryRuntime Play(string op)

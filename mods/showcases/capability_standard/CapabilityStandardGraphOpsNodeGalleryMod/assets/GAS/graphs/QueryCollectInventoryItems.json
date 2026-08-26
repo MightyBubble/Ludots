@@ -1,0 +1,32 @@
+[
+  {
+    "id": "showcase.graph_op.QueryCollectInventoryItems",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "collect",
+        "op": "QueryCollectInventoryItems"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "collect"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "collect",
+        "toPort": "source"
+      }
+    ]
+  }
+]

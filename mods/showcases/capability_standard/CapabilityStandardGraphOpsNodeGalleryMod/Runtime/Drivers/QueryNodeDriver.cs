@@ -1,9 +1,16 @@
 using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Progression.Registry;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Registry;
 using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
@@ -30,6 +37,7 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
     private float _scanRadius;
 
     public int LastTargetCount { get; private set; }
+    public int LastIntIdCount { get; private set; }
     public int StrongestIndex { get; private set; } = -1;
     public int WeakestIndex { get; private set; } = -1;
     public int UnitCount => _units.Length;
@@ -44,10 +52,52 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         _seeded = true;
         GraphOpsNodeActorBinding.BindHud(ctx);
         BuildScanOrder(ctx);
-        if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectActiveEffects), StringComparison.Ordinal))
+        if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectEffectTemplates), StringComparison.Ordinal))
+        {
+            SeedEffectTemplates(ctx);
+        }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectActiveEffects), StringComparison.Ordinal))
         {
             SeedActiveEffectsOnCaster(ctx);
         }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectAbilitySlots), StringComparison.Ordinal) ||
+                 string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectAbilityHolders), StringComparison.Ordinal))
+        {
+            SeedAbilitySlots(ctx);
+        }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectPresentTags), StringComparison.Ordinal))
+        {
+            SeedPresentTags(ctx);
+        }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectProgressionNodes), StringComparison.Ordinal))
+        {
+            SeedProgressionNodes(ctx);
+        }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectItemDefinitions), StringComparison.Ordinal) ||
+                 string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectInventoryItems), StringComparison.Ordinal))
+        {
+            SeedItemCatalog(ctx);
+        }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectActiveTasks), StringComparison.Ordinal))
+        {
+            SeedActiveTasks(ctx);
+        }
+    }
+
+    private static void SeedEffectTemplates(GraphOpsNodeDriverContext ctx)
+    {
+        EffectTemplateRegistry templates = ctx.EffectTemplates
+            ?? throw new InvalidOperationException("Typed effect-template gallery requires EffectTemplateRegistry.");
+        RegistryMapping[] mappings = EffectTemplateIdRegistry.SnapshotMappings();
+        for (int i = 0; i < mappings.Length; i++)
+        {
+            if (mappings[i].Id > 0 && templates.TryGet(mappings[i].Id, out _))
+            {
+                return;
+            }
+        }
+
+        throw new InvalidOperationException("QueryCollectEffectTemplates gallery requires a registered effect template.");
     }
 
     private static void SeedActiveEffectsOnCaster(GraphOpsNodeDriverContext ctx)
@@ -76,6 +126,135 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         }
     }
 
+    private static void SeedAbilitySlots(GraphOpsNodeDriverContext ctx)
+    {
+        int abilityId = AbilityIdRegistry.GetId(GraphOpsNodeGallerySymbolResolver.GalleryAbility);
+        if (abilityId <= 0)
+        {
+            throw new InvalidOperationException("Typed ability gallery requires its authored ability id.");
+        }
+
+        for (int i = 0; i < ctx.SimActors.Length; i++)
+        {
+            Entity actor = ctx.SimActors[i];
+            if (!ctx.SimWorld.Has<AbilityStateBuffer>(actor))
+            {
+                ctx.SimWorld.Add(actor, new AbilityStateBuffer());
+            }
+
+            ref AbilityStateBuffer slots = ref ctx.SimWorld.Get<AbilityStateBuffer>(actor);
+            if (slots.Count == 0)
+            {
+                slots.AddAbility(abilityId);
+                slots.AddAbility(abilityId);
+            }
+        }
+    }
+
+    private static void SeedPresentTags(GraphOpsNodeDriverContext ctx)
+    {
+        int tagId = TagRegistry.GetId("Enemy");
+        if (tagId <= 0)
+        {
+            throw new InvalidOperationException("Typed tag gallery requires the authored Enemy tag.");
+        }
+
+        Entity caster = ctx.Caster;
+        if (!ctx.SimWorld.Has<TagCountContainer>(caster))
+        {
+            ctx.SimWorld.Add(caster, new TagCountContainer());
+        }
+
+        ref TagCountContainer counts = ref ctx.SimWorld.Get<TagCountContainer>(caster);
+        if (counts.Count == 0 && !counts.AddCount(tagId))
+        {
+            throw new InvalidOperationException("QueryCollectPresentTags gallery could not seed TagCountContainer.");
+        }
+    }
+
+    private static void SeedProgressionNodes(GraphOpsNodeDriverContext ctx)
+    {
+        const string progressionName = "Progression.GraphOps.Gallery";
+        int progressionId = ProgressionIdRegistry.GetId(progressionName);
+        if (progressionId <= 0)
+        {
+            progressionId = ProgressionIdRegistry.Register(progressionName);
+        }
+
+        Entity caster = ctx.Caster;
+        if (!ctx.SimWorld.Has<ProgressionStateBuffer>(caster))
+        {
+            ctx.SimWorld.Add(caster, new ProgressionStateBuffer());
+        }
+
+        ref ProgressionStateBuffer state = ref ctx.SimWorld.Get<ProgressionStateBuffer>(caster);
+        if (state.Count == 0 && !state.TrySetLevel(progressionId, 1))
+        {
+            throw new InvalidOperationException("QueryCollectProgressionNodes gallery could not seed ProgressionStateBuffer.");
+        }
+    }
+
+    private static void SeedItemCatalog(GraphOpsNodeDriverContext ctx)
+    {
+        ItemDefinitionRegistry definitions = ctx.ItemDefinitions
+            ?? throw new InvalidOperationException("Typed item gallery requires ItemDefinitionRegistry.");
+        const string definitionKey = "Item.GraphOps.Gallery";
+        int definitionId = definitions.GetId(definitionKey);
+        if (definitionId <= 0)
+        {
+            definitionId = definitions.Register(definitionKey, new ItemDefinition
+            {
+                Id = definitionKey,
+                DisplayName = "试炼药剂",
+                MaxStack = 20
+            });
+        }
+
+        if (!string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectInventoryItems), StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        OwnershipResolver ownership = ctx.Ownership
+            ?? throw new InvalidOperationException("Typed inventory gallery requires OwnershipResolver.");
+        InventoryRuntimeService inventory = ctx.InventoryRuntime
+            ?? throw new InvalidOperationException("Typed inventory gallery requires InventoryRuntimeService.");
+        Entity container = ctx.SimWorld.Create(new ItemContainerCm
+        {
+            LayoutId = 0,
+            Purpose = ItemContainerPurpose.Backpack
+        });
+        ownership.EnsureOwnership(ctx.Caster, container);
+        Entity item = ctx.SimWorld.Create(
+            new ItemInstanceCm { DefinitionId = definitionId, StackCount = 3 },
+            new ItemLocationCm { Container = container });
+        ownership.EnsureOwnership(container, item);
+        Span<Entity> seededItems = stackalloc Entity[1];
+        if (inventory.CollectOwnedItemInstances(ctx.Caster, seededItems) != 1)
+        {
+            throw new InvalidOperationException("QueryCollectInventoryItems gallery could not seed owned inventory.");
+        }
+    }
+
+    private static void SeedActiveTasks(GraphOpsNodeDriverContext ctx)
+    {
+        ctx.SimWorld.Create(new TaskInstanceCm
+        {
+            DefinitionId = 1,
+            InstanceId = 1,
+            State = TaskInstanceState.Active,
+            ScopeHost = ctx.Caster,
+            Revision = 1
+        });
+    }
+
+    private static bool IsIntIdCollectOp(string op)
+        => op is nameof(GraphNodeOp.QueryCollectEffectTemplates)
+            or nameof(GraphNodeOp.QueryCollectAbilitySlots)
+            or nameof(GraphNodeOp.QueryCollectItemDefinitions)
+            or nameof(GraphNodeOp.QueryCollectPresentTags)
+            or nameof(GraphNodeOp.QueryCollectProgressionNodes);
+
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
         if (!_seeded)
@@ -85,10 +264,12 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
 
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
         LastTargetCount = result.TargetCount;
-        if (LastTargetCount <= 0)
+        LastIntIdCount = result.IntIdCount;
+        int collectionCount = IsIntIdCollectOp(ctx.Vignette.Op) ? LastIntIdCount : LastTargetCount;
+        if (collectionCount <= 0)
         {
             throw new InvalidOperationException(
-                $"Query gallery '{ctx.Vignette.Op}' returned 0 targets; seed or graph failed closed.");
+                $"Query gallery '{ctx.Vignette.Op}' returned 0 members; seed or graph failed closed.");
         }
 
         MarkInRange(ctx);
@@ -723,10 +904,15 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
     {
         return op is nameof(GraphNodeOp.QueryAllMapEntities)
             or nameof(GraphNodeOp.QueryCollectActiveEffects)
+            or nameof(GraphNodeOp.QueryCollectInventoryItems)
+            or nameof(GraphNodeOp.QueryCollectActiveTasks)
+            or nameof(GraphNodeOp.QueryCollectAbilityHolders)
             or nameof(GraphNodeOp.AggSumAttribute)
             or nameof(GraphNodeOp.AggAverageAttribute)
             ? LastTargetCount
-            : FieldHitCount();
+            : IsIntIdCollectOp(op)
+                ? LastIntIdCount
+                : FieldHitCount();
     }
 
     private int FieldHitCount()

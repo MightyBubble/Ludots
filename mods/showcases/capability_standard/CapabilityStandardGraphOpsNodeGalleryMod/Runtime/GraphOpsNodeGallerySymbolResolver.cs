@@ -21,6 +21,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     internal const string SquadCollectionKey = GraphOpsNodeGalleryHost.SquadCollectionKey;
     internal const string SnapCollectionKey = GraphOpsNodeGalleryHost.SnapCollectionKey;
     internal const string TargetToResolvedPreset = GraphOpsNodeGalleryHost.TargetToResolvedPreset;
+    internal const string GalleryAbility = "火球";
 
     private readonly EntityTemplateKeyRegistry _templates;
     private readonly RelationshipTypeRegistry _types;
@@ -216,6 +217,17 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         return id;
     }
 
+    public int ResolveAbility(string name)
+    {
+        int id = AbilityIdRegistry.GetId(name);
+        if (id <= 0)
+        {
+            throw new InvalidOperationException($"Graph references unknown ability '{name}'.");
+        }
+
+        return id;
+    }
+
     public int ResolveRelationshipType(string name) => _types.GetId(name);
     public int ResolveRelationshipMetric(string name) => _metrics.GetId(name);
     public int ResolveRelationshipFlag(string name) => _flags.GetId(name);
@@ -246,6 +258,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     internal static void RegisterAuthoredCompileSymbols(string assetsRoot)
     {
         _ = AttributeRegistry.Register("Health");
+        _ = AbilityIdRegistry.Register(GalleryAbility);
         RegisterTagRules(Path.Combine(assetsRoot, "GAS", "tag_rules.json"));
         RegisterEffectIds(Path.Combine(assetsRoot, "GAS", "effects.json"));
     }
