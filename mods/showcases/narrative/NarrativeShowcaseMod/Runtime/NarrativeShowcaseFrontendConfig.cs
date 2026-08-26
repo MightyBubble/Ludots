@@ -24,6 +24,7 @@ namespace NarrativeShowcaseMod.Runtime
         public NarrativeShowcaseTemplateConfig Templates { get; set; } = new();
         public NarrativeShowcaseRoutingConfig Routing { get; set; } = new();
         public NarrativeShowcaseStageHudConfig StageHud { get; set; } = new();
+        public NarrativeShowcaseBootstrapConfig Bootstrap { get; set; } = new();
         public NarrativeShowcaseVariableConfig[] Variables { get; set; } = Array.Empty<NarrativeShowcaseVariableConfig>();
         public Dictionary<string, string> EndingLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, string> SpeakerLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -165,5 +166,17 @@ namespace NarrativeShowcaseMod.Runtime
         public string VariableId { get; set; } = string.Empty;
         public string Label { get; set; } = string.Empty;
         public string AccentHex { get; set; } = string.Empty;
+    }
+
+    internal sealed class NarrativeShowcaseBootstrapConfig
+    {
+        /// <summary>
+        /// 纯 Story 车道：VirtualCamera 过场 + 完整对话，不挂 Task/Trigger 副作用图。
+        /// 也可由非 story-ember 的 panelTheme 自动启用（主题壳演示换皮）。
+        /// </summary>
+        public bool PureStoryLane { get; set; }
+
+        public string PureIntroSequenceId { get; set; } = "Sequence.Demo.Overture";
+        public string PureBriefingDialogueId { get; set; } = "Dialogue.Demo.Audience";
     }
 }

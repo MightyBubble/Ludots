@@ -446,7 +446,9 @@ internal static class NarrativeFrontendUiComposer
             builder = builder.Background(surface.BackgroundHex);
         }
 
-        if (!string.IsNullOrWhiteSpace(surface.BorderHex))
+        // 有九宫格框图时，边线交给 frame 图；再画 BorderHex 会盖住拟物框。
+        if (string.IsNullOrWhiteSpace(surface.FrameImageSrc) &&
+            !string.IsNullOrWhiteSpace(surface.BorderHex))
         {
             builder = builder.Border(1f, Color(surface.BorderHex));
         }
@@ -465,14 +467,15 @@ internal static class NarrativeFrontendUiComposer
             ? "story-choice-frame"
             : "story-frame";
 
+        // 对齐 UiShowcase 九宫格：框图叠在内容之上（中心透明），内容用 story-framed-body 留出切边内边距。
         return Ui.Panel(
+                content.Class("story-framed-body"),
                 Ui.Image(surface.FrameImageSrc)
                     .Class(frameClass)
                     .Absolute(0f, 0f)
                     .WidthPercent(100f)
                     .HeightPercent(100f)
-                    .ZIndex(0),
-                content)
+                    .ZIndex(40))
             .Class("story-framed");
     }
 

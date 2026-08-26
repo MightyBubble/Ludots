@@ -80,5 +80,82 @@
         "presentationProfile": "story.world_bubble"
       }
     ]
+  },
+  {
+    "id": "Dialogue.Demo.Audience",
+    "displayName": "纯对话：守望者接见",
+    "entryNode": "open",
+    "nodes": [
+      {
+        "id": "open",
+        "lineId": "line.demo.audience.open",
+        "presentationProfile": "story.dialogue_overlay",
+        "cameraId": "Narrative.Intro.Elder",
+        "choices": [
+          {
+            "id": "ask",
+            "lineId": "line.demo.player.ask",
+            "nextNode": "ask_reply"
+          },
+          {
+            "id": "ready",
+            "lineId": "line.demo.player.ready",
+            "nextNode": "ready_reply"
+          }
+        ]
+      },
+      {
+        "id": "ask_reply",
+        "lineId": "line.demo.audience.ask_reply",
+        "presentationProfile": "story.world_bubble",
+        "choices": [
+          {
+            "id": "after_ask",
+            "lineId": "line.demo.player.ready",
+            "nextNode": "standing"
+          }
+        ]
+      },
+      {
+        "id": "ready_reply",
+        "lineId": "line.demo.audience.ready_reply",
+        "presentationProfile": "story.world_bubble",
+        "choices": [
+          {
+            "id": "after_ready",
+            "lineId": "line.demo.player.ready",
+            "nextNode": "standing"
+          }
+        ]
+      },
+      {
+        "id": "standing",
+        "lineId": "line.demo.audience.standing",
+        "presentationProfile": "story.standing_portrait",
+        "cameraId": "Narrative.Return.Close",
+        "choices": [
+          {
+            "id": "duty",
+            "lineId": "line.demo.player.duty",
+            "nextNode": "duty_end"
+          },
+          {
+            "id": "mercy",
+            "lineId": "line.demo.player.mercy",
+            "nextNode": "mercy_end"
+          }
+        ]
+      },
+      {
+        "id": "duty_end",
+        "lineId": "line.demo.audience.duty_end",
+        "presentationProfile": "story.dialogue_overlay"
+      },
+      {
+        "id": "mercy_end",
+        "lineId": "line.demo.audience.mercy_end",
+        "presentationProfile": "story.dialogue_overlay"
+      }
+    ]
   }
 ]

@@ -234,6 +234,17 @@ namespace NarrativeShowcaseMod.Runtime
                     dialogue.StartDialogue(NarrativeShowcaseIds.BriefingDialogueId);
                 }
             }
+            else if (string.Equals(sequenceId, NarrativeShowcaseIds.DemoOvertureSequenceId, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(sequenceId, _frontendConfig.Bootstrap.PureIntroSequenceId, StringComparison.OrdinalIgnoreCase))
+            {
+                if (engine.GetService(CoreServiceKeys.DialogueRuntime) is DialogueRuntime dialogue)
+                {
+                    string dialogueId = string.IsNullOrWhiteSpace(_frontendConfig.Bootstrap.PureBriefingDialogueId)
+                        ? NarrativeShowcaseIds.DemoAudienceDialogueId
+                        : _frontendConfig.Bootstrap.PureBriefingDialogueId;
+                    dialogue.StartDialogue(dialogueId);
+                }
+            }
             else if (string.Equals(sequenceId, NarrativeShowcaseIds.TrialRevealSequenceId, StringComparison.OrdinalIgnoreCase))
             {
                 if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService tasks)
@@ -292,6 +303,34 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// panelTheme 目录下可选覆盖说话人立绘/半身像（standing_*.png / portrait_*.png），证明换皮数据驱动。
+        /// </summary>
+        private static string? ResolveThemeSpeakerImage(GameEngine engine, string speakerId, bool standing)
+        {
+            string themeId = engine.MergedConfig?.PanelTheme?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(themeId) || string.IsNullOrWhiteSpace(speakerId))
+            {
+                return null;
+            }
+
+            string alias = speakerId;
+            const string speakerPrefix = "speaker.";
+            if (alias.StartsWith(speakerPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                alias = alias.Substring(speakerPrefix.Length);
+            }
+
+            if (string.IsNullOrWhiteSpace(alias))
+            {
+                return null;
+            }
+
+            string fileName = standing ? $"standing_{alias}.png" : $"portrait_{alias}.png";
+            string resolved = ResolveThemeImage(engine, themeId, fileName);
+            return string.IsNullOrWhiteSpace(resolved) ? null : resolved;
         }
 
         internal void RebindEntities(GameEngine engine)
@@ -580,9 +619,11 @@ namespace NarrativeShowcaseMod.Runtime
                     $"{kind}|{config.Width}|{anchor}|{offsetX:0.###}|{offsetY:0.###}|{config.Eyebrow}";
             }
 
-            string portraitSrc = standingPortrait
-                ? dialogueView.StandingImageSrc
-                : dialogueView.PortraitImageSrc;
+            string portraitSrc = ResolveThemeSpeakerImage(
+                engine,
+                dialogueView.SpeakerId,
+                standingPortrait)
+                ?? (standingPortrait ? dialogueView.StandingImageSrc : dialogueView.PortraitImageSrc);
             if (standingPortrait && string.IsNullOrWhiteSpace(portraitSrc))
             {
                 throw new InvalidOperationException(
@@ -753,12 +794,30 @@ namespace NarrativeShowcaseMod.Runtime
             sequencer.ResetState();
             tasks.ResetState();
             RebindEntities(engine);
-            tasks.OfferOrStart(NarrativeShowcaseIds.BriefingTaskId);
-            sequencer.Start(NarrativeShowcaseIds.IntroSequenceId);
+
+            if (ShouldUsePureStoryLane(engine))
+            {
+                string sequenceId = string.IsNullOrWhiteSpace(_frontendConfig.Bootstrap.PureIntroSequenceId)
+                    ? NarrativeShowcaseIds.DemoOvertureSequenceId
+                    : _frontendConfig.Bootstrap.PureIntroSequenceId;
+                sequencer.Start(sequenceId);
+            }
+            else
+            {
+                tasks.OfferOrStart(NarrativeShowcaseIds.BriefingTaskId);
+                sequencer.Start(NarrativeShowcaseIds.IntroSequenceId);
+            }
+
             engine.GlobalContext[NarrativeShowcaseIds.BootstrappedKey] = true;
             engine.GlobalContext[NarrativeShowcaseIds.BeastSpawnedKey] = false;
             engine.GlobalContext[NarrativeShowcaseIds.BeastDefeatedKey] = false;
             engine.GlobalContext[NarrativeShowcaseIds.RewardAppliedKey] = false;
+        }
+
+        private bool ShouldUsePureStoryLane(GameEngine engine)
+        {
+            // 纯车道只认 bootstrap 开关；主题壳换皮仍走同一对话 showcase，框体/立绘随 panelTheme 变。
+            return _frontendConfig.Bootstrap.PureStoryLane;
         }
 
         private void EnsureTaskHook(GameEngine engine)
