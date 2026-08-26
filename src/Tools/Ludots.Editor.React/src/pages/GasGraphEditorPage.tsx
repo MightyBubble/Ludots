@@ -104,6 +104,7 @@ type GraphNodeConfig = {
   enumType?: string | null;
   stateVar?: string | null;
   text?: string | null;
+  textKey?: string | null;
   presentationSurface?: string | null;
   pinRegister?: number;
 };
@@ -145,6 +146,13 @@ type EnumTypeView = {
   name: string;
   members: Array<{ name: string; value: number }>;
   source: string;
+};
+
+type TextKeyView = {
+  id: string;
+  argCount: number;
+  source: string;
+  preview?: string | null;
 };
 
 type EditorLayout = {
@@ -313,6 +321,7 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     enumType: n.enumType ?? undefined,
     stateVar: n.stateVar ?? undefined,
     text: n.text ?? undefined,
+    textKey: n.textKey ?? undefined,
     presentationSurface: n.presentationSurface ?? undefined,
     pinRegister: n.pinRegister,
   });
@@ -675,6 +684,7 @@ export const GasGraphEditorPage: React.FC = () => {
   const [payloadKeys, setPayloadKeys] = React.useState<string[]>([]);
   const [eventSchemas, setEventSchemas] = React.useState<EventSchemaView[]>([]);
   const [enumCatalog, setEnumCatalog] = React.useState<EnumTypeView[]>([]);
+  const [textKeyCatalog, setTextKeyCatalog] = React.useState<TextKeyView[]>([]);
   const [mapInstances, setMapInstances] = React.useState<GraphPlacedInstance[]>([]);
   const [nodeSearch, setNodeSearch] = React.useState('');
   const [layout, setLayout] = React.useState<EditorLayout>({});
@@ -831,6 +841,24 @@ export const GasGraphEditorPage: React.FC = () => {
   React.useEffect(() => {
     void loadEnumCatalog();
   }, [loadEnumCatalog]);
+
+  const loadTextKeyCatalog = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/graph/text-keys/${encodeURIComponent(modId)}`);
+      const payload = await res.json();
+      if (!res.ok || !payload.ok || !Array.isArray(payload.textKeys)) {
+        throw new Error(payload.error ?? `Text key catalog load failed (${res.status})`);
+      }
+      setTextKeyCatalog(payload.textKeys as TextKeyView[]);
+    } catch (err) {
+      setTextKeyCatalog([]);
+      setStatus(`Text key catalog unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [modId]);
+
+  React.useEffect(() => {
+    void loadTextKeyCatalog();
+  }, [loadTextKeyCatalog]);
 
   React.useEffect(() => {
     setNodes((previous) => previous.map((node) => {
@@ -2206,6 +2234,35 @@ export const GasGraphEditorPage: React.FC = () => {
                               {options.map((name) => (
                                 <option key={name} value={name}>{name}</option>
                               ))}
+                            </select>
+                          </label>
+                        );
+                      }
+                      if (field.kind === 'textKey' && textKeyCatalog.length > 0) {
+                        const current = raw == null ? '' : String(raw);
+                        const options = current && !textKeyCatalog.some((candidate) => candidate.id === current)
+                          ? [current, ...textKeyCatalog.map((candidate) => candidate.id)]
+                          : textKeyCatalog.map((candidate) => candidate.id);
+                        return (
+                          <label key={field.key} className="block">
+                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <select
+                              value={current}
+                              onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            >
+                              <option value="">Select text key</option>
+                              {options.map((id) => {
+                                const meta = textKeyCatalog.find((candidate) => candidate.id === id);
+                                const suffix = meta?.preview
+                                  ? ` — ${meta.preview}`
+                                  : meta
+                                    ? ` (args=${meta.argCount})`
+                                    : '';
+                                return (
+                                  <option key={id} value={id}>{id}{suffix}</option>
+                                );
+                              })}
                             </select>
                           </label>
                         );

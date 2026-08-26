@@ -2094,6 +2094,107 @@ app.MapGet("/api/graph/enums/{modId}", (string modId) =>
     return Results.Ok(new { ok = true, enums });
 });
 
+app.MapGet("/api/graph/text-keys/{modId}", (string modId) =>
+{
+    // Launcher-wide TextToken vocabulary for LoadTextKey / Story textToken pickers.
+    // modId selects the editing context; the catalog merges every discovered mod (same as enums).
+    _ = modId;
+    var keys = new Dictionary<string, (int ArgCount, string Source, string? Preview)>(StringComparer.Ordinal);
+    var conflicts = new List<string>();
+    try
+    {
+        foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            string tokensPath = Path.Combine(mod.RootPath, "assets", "Presentation", "text_tokens.json");
+            if (!File.Exists(tokensPath))
+            {
+                continue;
+            }
+
+            JsonNode? root = JsonNode.Parse(File.ReadAllText(tokensPath));
+            if (root is not JsonArray array)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation/text_tokens.json in mod '{mod.Id}' must be a JSON array.");
+            }
+
+            string? defaultLocalePreview = null;
+            string localesPath = Path.Combine(mod.RootPath, "assets", "Presentation", "text_locales.json");
+            JsonObject? localeMap = null;
+            if (File.Exists(localesPath))
+            {
+                JsonNode? localesRoot = JsonNode.Parse(File.ReadAllText(localesPath));
+                string? defaultLocale = localesRoot?["defaultLocale"]?.GetValue<string>();
+                if (localesRoot?["locales"] is JsonObject locales &&
+                    !string.IsNullOrWhiteSpace(defaultLocale) &&
+                    locales[defaultLocale] is JsonObject map)
+                {
+                    localeMap = map;
+                    defaultLocalePreview = defaultLocale;
+                }
+            }
+
+            foreach (JsonNode? entry in array)
+            {
+                if (entry is not JsonObject obj)
+                {
+                    continue;
+                }
+
+                string? id = obj["id"]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation/text_tokens.json in mod '{mod.Id}' contains an entry without id.");
+                }
+
+                int argCount = obj["argCount"]?.GetValue<int>() ?? 0;
+                string? preview = localeMap?[id]?.GetValue<string>();
+                if (keys.TryGetValue(id, out var existing))
+                {
+                    if (existing.ArgCount != argCount)
+                    {
+                        conflicts.Add(
+                            $"text key '{id}' argCount conflict: {existing.Source}={existing.ArgCount} vs {mod.Id}={argCount}");
+                    }
+
+                    continue;
+                }
+
+                keys[id] = (argCount, mod.Id, preview);
+            }
+
+            _ = defaultLocalePreview;
+        }
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    if (conflicts.Count > 0)
+    {
+        return Results.BadRequest(new { ok = false, error = string.Join("; ", conflicts) });
+    }
+
+    var textKeys = keys
+        .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+        .Select(kv => new
+        {
+            id = kv.Key,
+            argCount = kv.Value.ArgCount,
+            source = kv.Value.Source,
+            preview = kv.Value.Preview,
+        })
+        .ToArray();
+
+    return Results.Ok(new { ok = true, textKeys });
+});
+
 app.MapGet("/api/graph/event-schemas/{modId}", (string modId) =>
 {
     var sources = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -2202,7 +2303,7 @@ static string[] ControlOutputPorts(GraphNodeOp op)
         GraphNodeOp.Call => new[] { GraphControlFlowPorts.Call, GraphControlFlowPorts.Next },
         GraphNodeOp.JumpIfFalse => new[] { GraphControlFlowPorts.True, GraphControlFlowPorts.False },
         GraphNodeOp.Return or GraphNodeOp.HaltReturnInt => Array.Empty<string>(),
-        GraphNodeOp.ConstInt or GraphNodeOp.ConstFloat or GraphNodeOp.ConstBool or GraphNodeOp.ConstText => Array.Empty<string>(),
+        GraphNodeOp.ConstInt or GraphNodeOp.ConstFloat or GraphNodeOp.ConstBool or GraphNodeOp.ConstText or GraphNodeOp.LoadTextKey => Array.Empty<string>(),
         _ => new[] { GraphControlFlowPorts.Next },
     };
 

@@ -263,6 +263,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         FloatToText = 459,
         /// <summary>Push T[A] to presentation sink; Imm = GraphPresentationTextSurface.</summary>
         SinkPresentationText = 460,
+
+        /// <summary>
+        /// T[Dst] = PresentationTextCatalog template for Imm token id (patched from textKey symbol).
+        /// Zero-arg tokens only in this slice; argCount&gt;0 fails closed.
+        /// </summary>
+        LoadTextKey = 461,
     }
 
     public static class GraphNodeOpParser

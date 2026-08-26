@@ -218,6 +218,8 @@ namespace Ludots.Core.GraphRuntime
         public string? CallbackType { get; set; }
         /// <summary>Literal / FormatText template for formal text ops (ConstText Imm → Symbols; FormatText brace scan).</summary>
         public string? Text { get; set; }
+        /// <summary>Presentation TextToken key for LoadTextKey; patched to token id at load.</summary>
+        public string? TextKey { get; set; }
         /// <summary>Presentation surface for SinkPresentationText: "Subtitle" or "Dialogue".</summary>
         public string? PresentationSurface { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>

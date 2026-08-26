@@ -946,7 +946,8 @@ namespace Ludots.Core.Engine
                 targetDispatchPresetRegistry,
                 MapLoader.EntityTemplateKeys,
                 lookupTables: graphLookupTables,
-                rngPicks: rngPickService);
+                rngPicks: rngPickService,
+                presentationTextCatalog: presentationTextCatalog);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -1105,6 +1106,7 @@ namespace Ludots.Core.Engine
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
             gasGraphApi.BindPanelActivation(panelActivationApi);
             gasGraphApi.BindPresentationTextSink(new GraphPresentationTextSink());
+            gasGraphApi.BindPresentationTextCatalog(presentationTextCatalog);
             gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             gasGraphApi.BindPlacedInstanceIndexResolver(mapId => MapSessions?.GetSession(mapId)?.EntityIndex);
             gasGraphApi.BindRegionCatalogResolver(mapId =>

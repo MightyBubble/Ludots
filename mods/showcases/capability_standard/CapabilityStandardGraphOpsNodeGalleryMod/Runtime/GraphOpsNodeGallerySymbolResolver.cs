@@ -12,6 +12,8 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
@@ -29,6 +31,8 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     private readonly RelationshipReasonRegistry _reasons;
     private readonly TargetDispatchPresetRegistry _dispatchPresets;
     private readonly GraphLookupTableRegistry? _lookupTables;
+    private readonly PresentationTextCatalog? _presentationTextCatalog;
+    private readonly Ludots.Core.Gameplay.Rng.RngPickService? _rngPicks;
 
     public GraphOpsNodeGallerySymbolResolver(
         EntityTemplateKeyRegistry templates,
@@ -38,7 +42,8 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         RelationshipReasonRegistry reasons,
         TargetDispatchPresetRegistry dispatchPresets,
         GraphLookupTableRegistry? lookupTables = null,
-        Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null)
+        Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
+        PresentationTextCatalog? presentationTextCatalog = null)
     {
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _types = types ?? throw new ArgumentNullException(nameof(types));
@@ -48,9 +53,8 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _dispatchPresets = dispatchPresets ?? throw new ArgumentNullException(nameof(dispatchPresets));
         _lookupTables = lookupTables;
         _rngPicks = rngPicks;
+        _presentationTextCatalog = presentationTextCatalog;
     }
-
-    private readonly Ludots.Core.Gameplay.Rng.RngPickService? _rngPicks;
 
     public int ResolveRngDistribution(string name)
     {
@@ -101,7 +105,8 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             reasons,
             presets,
             LoadLookupTables(Path.Combine(assetsRoot, "GraphTables")),
-            LoadDistributionPicks(assetsRoot));
+            LoadDistributionPicks(assetsRoot),
+            LoadPresentationTextCatalog(assetsRoot));
     }
 
     private static Ludots.Core.Gameplay.Rng.RngPickService? LoadDistributionPicks(string assetsRoot)
@@ -181,6 +186,32 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         return new GraphLookupTableLoader(pipeline).Load(catalog);
     }
 
+    internal static PresentationTextCatalog? LoadPresentationTextCatalog(string assetsRoot)
+    {
+        string tokensPath = Path.Combine(assetsRoot, "Presentation", "text_tokens.json");
+        if (!File.Exists(tokensPath))
+        {
+            return null;
+        }
+
+        var vfs = new VirtualFileSystem();
+        vfs.Mount("Gallery", assetsRoot);
+        var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+        modLoader.LoadedModIds.Add("Gallery");
+        var pipeline = new ConfigPipeline(vfs, modLoader);
+        var catalog = new ConfigCatalog();
+        catalog.Add(new ConfigCatalogEntry(
+            "Presentation/text_tokens.json",
+            ConfigMergePolicy.ArrayById,
+            "id",
+            allowEmpty: true));
+        catalog.Add(new ConfigCatalogEntry(
+            "Presentation/text_locales.json",
+            ConfigMergePolicy.DeepObject,
+            allowEmpty: true));
+        return new PresentationTextCatalogLoader(pipeline).Load(catalog);
+    }
+
     public int ResolveTag(string name)
     {
         int id = TagRegistry.GetId(name);
@@ -188,6 +219,24 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         {
             throw new InvalidOperationException(
                 $"Graph references unknown tag '{name}'. Register tags before compiling gallery graphs.");
+        }
+
+        return id;
+    }
+
+    public int ResolveTextToken(string name)
+    {
+        if (_presentationTextCatalog == null)
+        {
+            throw new InvalidOperationException(
+                $"Graph references text token '{name}', but gallery assets ship no Presentation/text_tokens.json.");
+        }
+
+        int id = _presentationTextCatalog.GetTokenId(name);
+        if (id <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Graph references unknown text token '{name}'. Register Presentation/text_tokens.json before compiling gallery graphs.");
         }
 
         return id;

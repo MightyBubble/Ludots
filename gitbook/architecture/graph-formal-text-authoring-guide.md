@@ -11,6 +11,8 @@
 ## 2. 结构
 
 ```text
+查表出句（本地化键）见 [图 TextKey 发现糖](graph-textkey.md) 的 `LoadTextKey`——与下面字面量拼句不要混用。
+
 写死短句 ConstText
     ↓
 拼接 ConcatText（或 FormatText 糖自动降级）
