@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Engine.Randomization;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.MapTriggers;
@@ -40,6 +41,7 @@ namespace Ludots.Core.Persistence
             registry.Register(CreateRngParticipant(engine.GetService(CoreServiceKeys.RngStreamService)));
             registry.Register(CreateTeamParticipant());
             registry.Register(CreateTimeFlowParticipant(engine.GetService(CoreServiceKeys.TimeFlow)));
+            registry.Register(CreateCalendarParticipant(engine.GetService(CoreServiceKeys.CalendarRuntime)));
         }
 
         public static ISaveParticipant CreateGameSessionParticipant(GameSession session)
@@ -55,6 +57,11 @@ namespace Ludots.Core.Persistence
         public static ISaveParticipant CreateTimeFlowParticipant(TimeFlowService service)
         {
             return new TimeFlowSaveParticipant(service);
+        }
+
+        public static ISaveParticipant CreateCalendarParticipant(CalendarRuntime runtime)
+        {
+            return new CalendarSaveParticipant(runtime);
         }
 
         public static ISaveParticipant CreateTeamParticipant()
@@ -328,6 +335,49 @@ namespace Ludots.Core.Persistence
                 }
 
                 _service.RestoreSnapshot(new TimeFlowSnapshot(domains, tokens));
+            }
+        }
+
+        private sealed class CalendarSaveParticipant : ISaveParticipant
+        {
+            private readonly CalendarRuntime _runtime;
+
+            public CalendarSaveParticipant(CalendarRuntime runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public string DomainKey => "calendar";
+
+            public JsonNode CaptureState()
+            {
+                CalendarWorldSnapshot snapshot = _runtime.CaptureSnapshot();
+                return new JsonObject
+                {
+                    ["enabled"] = snapshot.Enabled,
+                    ["dayIndex"] = snapshot.DayIndex,
+                    ["ticksIntoDay"] = snapshot.TicksIntoDay,
+                    ["activeCalendarId"] = snapshot.ActiveCalendarId
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+
+                JsonObject root = state.AsObject();
+                try
+                {
+                    _runtime.RestoreSnapshot(new CalendarWorldSnapshot(
+                        RequireBool(root, "enabled"),
+                        RequireInt(root, "dayIndex"),
+                        RequireInt(root, "ticksIntoDay"),
+                        RequireString(root, "activeCalendarId")));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new SaveContextException($"Calendar save state is invalid: {ex.Message}");
+                }
             }
         }
 

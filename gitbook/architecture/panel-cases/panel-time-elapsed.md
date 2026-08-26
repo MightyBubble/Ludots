@@ -2,7 +2,7 @@
 
 > 状态：🟢 今日可装载——纯展示，图输出 realtime 回读，字段全过白名单（新形状不写 scope）。
 >
-> ⚠️ **基建依赖**：引擎时钟仅有 `time.scale_permille` 缩放与 EntityLocalClock.LocalStep 计数，无“流逝分钟/昼夜相位”推进系统——`Clock.ElapsedMin`/`Clock.DayPhase` 属性无底层系统。
+> ⚠️ **基建依赖**：流逝分钟与昼夜相位已由 `CalendarRuntime.CaptureClockSnapshot` 提供（见 [历法与周期](../calendar-system.md)）。面板仍缺 G3：`Clock.ElapsedMin`/`Clock.DayPhase` 还没有全局实体属性出口。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

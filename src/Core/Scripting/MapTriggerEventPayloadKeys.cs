@@ -29,6 +29,13 @@ namespace Ludots.Core.Scripting
         public const string GroundXCm = "MapTrigger.GroundXCm";                  // float
         public const string GroundYCm = "MapTrigger.GroundYCm";                  // float
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
+        public const string CalendarId = "Calendar.CalendarId";                  // string
+        public const string CalendarDayIndex = "Calendar.DayIndex";              // int
+        public const string CalendarYear = "Calendar.Year";                      // int
+        public const string CalendarEraId = "Calendar.EraId";                    // string
+        public const string CalendarCycleId = "Calendar.CycleId";                // string
+        public const string CalendarPhaseId = "Calendar.PhaseId";                // string
+        public const string CalendarPhaseIndex = "Calendar.PhaseIndex";          // int
 
         /// <summary>
         /// Whether a string is one of the constants above (reflection-built once); the

@@ -52,6 +52,16 @@
     "AllowEmpty": true
   },
   {
+    "Path": "Calendar/calendars.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Calendar/clock.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
     "Path": "AI/target_filters.json",
     "Policy": "ArrayById",
     "IdField": "id",

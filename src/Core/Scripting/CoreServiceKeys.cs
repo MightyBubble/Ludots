@@ -17,6 +17,7 @@ using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Dialogue;
 using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Story;
+using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Tasks;
@@ -110,6 +111,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> HostFrameIndex = new("HostFrameIndex");
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");
         public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
+        public static readonly ServiceKey<CalendarRuntime> CalendarRuntime = new("CalendarRuntime");
+        public static readonly ServiceKey<CalendarDefinitionRegistry> CalendarDefinitionRegistry = new("CalendarDefinitionRegistry");
         public static readonly ServiceKey<Ludots.Core.Engine.Randomization.IRngStreamService> RngStreamService = new("RngStreamService");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");

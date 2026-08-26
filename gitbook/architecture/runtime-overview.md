@@ -24,6 +24,7 @@
 ## 3 当前主线能力域
 
 - TimeFlow：统一时间域、token 与时钟推进
+- Calendar：世界日序、纪年与周期事件，只消费 Step
 - Items：物品、背包、装备、布局与 showcase 套件
 - Story Runtime：Dialogue / Sequencer / Story Line；Quest 独立；屏幕 surface 可由 frontend kit 组合
 - Relationships：关系图谱、指标、回调、协同处理与 showcase

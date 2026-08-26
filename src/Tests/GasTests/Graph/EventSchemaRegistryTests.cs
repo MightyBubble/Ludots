@@ -50,6 +50,11 @@ namespace Ludots.Tests.Gas.Graph
                 GameEvents.RegionEntered.Value,
                 GameEvents.RegionExited.Value,
                 GameEvents.InputActionFired.Value,
+                GameEvents.CalendarDayAdvanced.Value,
+                GameEvents.CalendarCyclePhaseEntered.Value,
+                GameEvents.CalendarCyclePhaseExited.Value,
+                GameEvents.CalendarEraChanged.Value,
+                GameEvents.CalendarDayPhaseChanged.Value,
             };
 
             foreach (string eventName in payloadBearing)

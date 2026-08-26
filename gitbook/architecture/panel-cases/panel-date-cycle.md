@@ -2,7 +2,7 @@
 
 > 状态：🟢 今日可装载——纯展示；年/季/月查表为图内节点。
 >
-> ⚠️ **基建依赖**：无日历/日期推进系统（引擎时钟仅 `time.scale_permille` + LocalStep 计数）；`Clock.DayIndex`/`Clock.Year`/`Clock.Season` 属性无底层系统。
+> ⚠️ **基建依赖**：世界日序已由 `CalendarRuntime` 推进并投影（见 [历法与周期](../calendar-system.md)）。面板仍缺 G3（global scope）：`Clock.DayIndex`/`Clock.Year`/`Clock.Season` 还没有全局实体属性出口，值图暂不能 `LoadSelfAttribute`。读日期走 `CalendarRuntime.Project` / `CaptureClockSnapshot`。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

@@ -1,0 +1,6 @@
+flowchart TD
+    A[Step consumed] --> B[ticksIntoDay / ticksPerDay]
+    B --> C[dayIndex + 1]
+    C --> D[calendar.solar360 season/month/xun/solarTerm]
+    C --> E[calendar.regnal era overlay]
+    D --> F[Calendar.DayAdvanced / CyclePhaseEntered]
