@@ -41,8 +41,8 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
         Assert.That(panelHost.Count, Is.EqualTo(3), "classroom shows list + grid + column");
 
         Entity hero = FindEntity(engine.World, "试炼者");
-        AssertPanel(panelHost, hero, "panel.kit.effect.list", PanelPresentMode.List);
-        AssertPanel(panelHost, hero, "panel.kit.effect.grid", PanelPresentMode.Grid);
+        AssertBag(panelHost, hero, "panel.kit.effect.list", PanelPresentMode.List);
+        AssertBag(panelHost, hero, "panel.kit.effect.grid", PanelPresentMode.Grid);
         AssertBag(panelHost, hero, "panel.kit.effect.column", PanelPresentMode.Column);
 
         UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
