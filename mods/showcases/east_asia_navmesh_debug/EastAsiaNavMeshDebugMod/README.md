@@ -29,7 +29,7 @@ dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav bake-vhtm `
   --estimateHash <hash printed by the first run>
 ```
 
-Export the world-aligned walkability texture (land walkable + blocked water in red):
+Export the world-aligned walkability texture:
 
 ```powershell
 dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav export-walkability-texture `
@@ -43,7 +43,6 @@ dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav export-walk
   --minZcm -257329152 `
   --maxXcm 450326016 `
   --maxZcm 257329152 `
-  --paintLandBlockedWater true `
   --vhtm mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm `
   --seaLevelCm 0
 ```

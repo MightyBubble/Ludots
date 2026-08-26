@@ -11,11 +11,11 @@
   "encoding": {
     "format": "RGBA8",
     "row0": "maxZcm",
-    "alpha": "0=outside-sample,220=blocked-water,255=walkable-land",
-    "rgb": "walkable=TriAreaIds palette; blocked-water=fixed land-blocked red"
+    "alpha": "0=not-covered-or-blocked,255=walkable",
+    "rgb": "deterministic TriAreaIds palette"
   },
   "sourceTileCount": 448,
-  "triangleCount": 6613,
-  "blockedWaterPixelCount": 1231946,
-  "contentHash": "sha256:6ee89a7d139f2ccda33314f15ef53c6a84a31ac4daa4cd06ef20b70fb838fbbe"
+  "triangleCount": 6708,
+  "blockedWaterPixelCount": 0,
+  "contentHash": "sha256:f31750982e617c8bfd94ec621b1d66b08f62b79784e602971c7e4004e1dd5723"
 }

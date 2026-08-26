@@ -96,11 +96,9 @@ public sealed class EastAsiaNavMeshDebugContractTests
         Assert.That(bounds.GetProperty("maxX").GetInt32(), Is.EqualTo(450326016));
         Assert.That(bounds.GetProperty("maxZ").GetInt32(), Is.EqualTo(257329152));
         Assert.That(root.GetProperty("sourceTileCount").GetInt32(), Is.EqualTo(448));
-        Assert.That(root.GetProperty("blockedWaterPixelCount").GetInt32(), Is.GreaterThan(0));
+        Assert.That(root.GetProperty("triangleCount").GetInt32(), Is.GreaterThan(0));
         Assert.That(root.GetProperty("contentHash").GetString(), Is.EqualTo("sha256:" + hash));
-        Assert.That(
-            root.GetProperty("encoding").GetProperty("alpha").GetString(),
-            Does.Contain("blocked-water"));
+        Assert.That(root.GetProperty("encoding").GetProperty("alpha").GetString(), Does.Contain("walkable"));
     }
 
     [Test]
