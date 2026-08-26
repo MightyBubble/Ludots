@@ -1,0 +1,10 @@
+{
+  "name": "PanelCollectionBagsShowcaseMod",
+  "version": "1.0.0",
+  "description": "Player-facing typed collection bags: effect templates, ability slots, and present tags",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "main": "bin/net8.0/PanelCollectionBagsShowcaseMod.dll"
+}
