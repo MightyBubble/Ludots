@@ -7,6 +7,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\CapabilityStandardGraphBehaviorCommon\CapabilityStandardGraphBehaviorCommon.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
   </ItemGroup>
 </Project>
