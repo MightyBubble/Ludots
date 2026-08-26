@@ -23,6 +23,7 @@ namespace Ludots.Tests.GasTests.UI
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
+            EffectTemplateIdRegistry.Clear();
         }
 
         [TearDown]
@@ -30,6 +31,7 @@ namespace Ludots.Tests.GasTests.UI
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
+            EffectTemplateIdRegistry.Clear();
         }
 
         [Test]
@@ -113,6 +115,235 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(lists[0].Items[0].Floats["health"], Is.EqualTo(90f));
             Assert.That(lists[0].Items[1].Strings["displayName"], Is.EqualTo("B"));
             Assert.That(lists[0].Items[1].Bools["stunned"], Is.True);
+        }
+
+        [Test]
+        public void Project_EffectTemplateCollection_UsesIntIdStoreAndRegistryName()
+        {
+            int effectTemplateId = EffectTemplateIdRegistry.Register("效果.祝福");
+            PanelTemplate element = PanelTemplateLoader.Load("""
+            {
+              "id": "panel.effect.template.chip",
+              "subject": "EffectTemplate",
+              "graph": "g.effect.template",
+              "pins": [ { "name": "selected", "key": "effect.template.selected", "default": 0 } ],
+              "layout": { "controls": [ { "type": "label", "bind": "displayName" } ] }
+            }
+            """);
+            PanelTemplate host = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.effect.templates",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "templates",
+                  "source": "selfGraph",
+                  "collectionKey": "tests.effect.templates",
+                  "template": "panel.effect.template.chip"
+                }
+              ]
+            }
+            """);
+            Bind(host, element);
+
+            using World world = World.Create();
+            Entity owner = world.Create();
+            var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
+            var entityStore = new EntityCollectionStore(keyRegistry, 8, 16);
+            var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
+            var descriptor = IntIdCollectionDescriptor.Create(
+                "tests.effect.templates",
+                EntityCollectionSourceKind.GasGraphResult,
+                EntityCollectionRoleKind.Display);
+            intIdStore.Replace(owner, descriptor, new[] { effectTemplateId });
+            var values = new GraphOutputValueStore(
+                new StringIntRegistry(8, 1, 0, StringComparer.Ordinal),
+                8);
+            var projector = new PanelListProjector(
+                world,
+                entityStore,
+                intIdStore,
+                new ItemDefinitionRegistry(),
+                new PanelProjectionReader(world, values));
+
+            IReadOnlyList<PanelListProjection> lists = projector.Project(owner, host);
+
+            Assert.That(lists[0].Items, Has.Count.EqualTo(1));
+            Assert.That(lists[0].Items[0].MemberIntId, Is.EqualTo(effectTemplateId));
+            Assert.That(lists[0].Items[0].Strings["displayName"], Is.EqualTo("效果.祝福"));
+        }
+
+        [Test]
+        public void Project_SourceInput_UsesParentOutputKeyOnHostScope()
+        {
+            PanelTemplate element = PanelTemplateLoader.Load("""
+            {
+              "id": "panel.input.unit",
+              "subject": "Entity",
+              "graph": "g.input.unit",
+              "pins": [ { "name": "selected", "key": "input.unit.selected", "default": 0 } ],
+              "layout": { "controls": [ { "type": "label", "bind": "displayName" } ] }
+            }
+            """);
+            PanelTemplate host = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.input",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "inputs": [
+                {
+                  "name": "visibleUnits",
+                  "from": { "space": "parent", "output": "parent.visible.units" },
+                  "type": "EntityCollection"
+                }
+              ],
+              "collections": [
+                {
+                  "name": "units",
+                  "source": "input",
+                  "input": "visibleUnits",
+                  "template": "panel.input.unit"
+                }
+              ]
+            }
+            """);
+            Bind(host, element);
+
+            using World world = World.Create();
+            Entity hostScope = world.Create();
+            Entity unit = CreateUnit(world, "来源输入");
+            var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
+            var entityStore = new EntityCollectionStore(keyRegistry, 8, 16);
+            var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
+            entityStore.Replace(
+                hostScope,
+                EntityCollectionDescriptor.Create(
+                    "parent.visible.units",
+                    EntityCollectionSourceKind.GasGraphResult,
+                    EntityCollectionRoleKind.Display),
+                new[] { unit });
+            var values = new GraphOutputValueStore(
+                new StringIntRegistry(8, 1, 0, StringComparer.Ordinal),
+                8);
+            var projector = new PanelListProjector(
+                world,
+                entityStore,
+                intIdStore,
+                new ItemDefinitionRegistry(),
+                new PanelProjectionReader(world, values));
+
+            IReadOnlyList<PanelListProjection> lists = projector.Project(hostScope, host);
+
+            Assert.That(lists[0].Items, Has.Count.EqualTo(1));
+            Assert.That(lists[0].Items[0].Strings["displayName"], Is.EqualTo("来源输入"));
+        }
+
+        [Test]
+        public void Project_NestedCollection_StoresChildProjectionOnParentItem()
+        {
+            PanelTemplate child = PanelTemplateLoader.Load("""
+            {
+              "id": "panel.nested.child",
+              "subject": "Entity",
+              "graph": "g.nested.child",
+              "pins": [ { "name": "value", "key": "nested.child.value", "default": 0 } ],
+              "layout": { "controls": [ { "type": "label", "bind": "displayName" } ] }
+            }
+            """);
+            PanelTemplate parent = PanelTemplateLoader.Load("""
+            {
+              "id": "panel.nested.parent",
+              "subject": "Entity",
+              "graph": "g.nested.parent",
+              "pins": [ { "name": "value", "key": "nested.parent.value", "default": 0 } ],
+              "collections": [
+                {
+                  "name": "children",
+                  "source": "selfGraph",
+                  "collectionKey": "nested.children",
+                  "template": "panel.nested.child"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "label", "bind": "displayName" },
+                  { "type": "list", "bind": "children" }
+                ]
+              }
+            }
+            """);
+            PanelTemplate host = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.nested",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "parents",
+                  "source": "selfGraph",
+                  "collectionKey": "nested.parents",
+                  "template": "panel.nested.parent"
+                }
+              ]
+            }
+            """);
+            var registry = new PanelTemplateRegistry();
+            registry.Register(child);
+            registry.Register(parent);
+            registry.Register(host);
+            registry.Freeze();
+            PanelListProjector.BindElements(host, registry);
+
+            using World world = World.Create();
+            Entity hostScope = world.Create();
+            Entity parentEntity = CreateUnit(world, "父");
+            Entity childEntity = CreateUnit(world, "子");
+            var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
+            var entityStore = new EntityCollectionStore(keyRegistry, 8, 16);
+            var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
+            entityStore.Replace(
+                hostScope,
+                EntityCollectionDescriptor.Create(
+                    "nested.parents",
+                    EntityCollectionSourceKind.GasGraphResult,
+                    EntityCollectionRoleKind.Display),
+                new[] { parentEntity });
+            entityStore.Replace(
+                parentEntity,
+                EntityCollectionDescriptor.Create(
+                    "nested.children",
+                    EntityCollectionSourceKind.GasGraphResult,
+                    EntityCollectionRoleKind.Display),
+                new[] { childEntity });
+            var values = new GraphOutputValueStore(
+                new StringIntRegistry(8, 1, 0, StringComparer.Ordinal),
+                8);
+            var projector = new PanelListProjector(
+                world,
+                entityStore,
+                intIdStore,
+                new ItemDefinitionRegistry(),
+                new PanelProjectionReader(world, values));
+
+            IReadOnlyList<PanelListProjection> lists = projector.Project(hostScope, host);
+
+            PanelListItemProjection parentItem = lists[0].Items[0];
+            Assert.That(parentItem.NestedLists, Has.Count.EqualTo(1));
+            Assert.That(parentItem.NestedLists[0].Name, Is.EqualTo("children"));
+            Assert.That(parentItem.NestedLists[0].Items, Has.Count.EqualTo(1));
+            Assert.That(
+                parentItem.NestedLists[0].Items[0].Strings["displayName"],
+                Is.EqualTo("子"));
+        }
+
+        private static void Bind(PanelTemplate host, PanelTemplate element)
+        {
+            var registry = new PanelTemplateRegistry();
+            registry.Register(element);
+            registry.Register(host);
+            registry.Freeze();
+            PanelListProjector.BindElements(host, registry);
         }
 
         private static Entity CreateUnit(World world, string name)

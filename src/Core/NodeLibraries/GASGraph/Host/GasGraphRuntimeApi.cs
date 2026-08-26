@@ -50,8 +50,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityCollectionStore entityCollections,
             EntitySetQueryRuntime entityQueries,
-            InventoryRuntimeService inventory,
-            ItemDefinitionRegistry itemDefinitions,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
             IClock clock,
@@ -73,8 +71,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             EntityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             EntityQueries = entityQueries ?? throw new ArgumentNullException(nameof(entityQueries));
-            Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
-            ItemDefinitions = itemDefinitions ?? throw new ArgumentNullException(nameof(itemDefinitions));
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -99,8 +95,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public GraphLookupTableRegistry? LookupTables { get; }
 
         public EntitySetQueryRuntime EntityQueries { get; }
-        public InventoryRuntimeService Inventory { get; }
-        public ItemDefinitionRegistry ItemDefinitions { get; }
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
         public IClock Clock { get; }
@@ -189,8 +183,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
-                RequireService(services, CoreServiceKeys.InventoryRuntimeService),
-                RequireService(services, CoreServiceKeys.ItemDefinitionRegistry),
                 RequireService(services, CoreServiceKeys.ControlDomainQuery),
                 RequireService(services, CoreServiceKeys.KnowledgeProjectionResolver),
                 RequireService(services, CoreServiceKeys.Clock),
@@ -221,13 +213,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.EntityCollections,
                 services.EntityQueries,
                 lookupTables: services.LookupTables,
-                inventory: services.Inventory,
+                inventory: services.InventoryRuntime,
                 itemDefinitions: services.ItemDefinitions);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
                 services.Clock);
-            api.BindInventoryRuntime(services.InventoryRuntime, services.ItemDefinitions);
             return api;
         }
 
@@ -1296,20 +1287,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 return 0;
             }
 
-            if (!_world.Has<TagCountContainer>(owner) ||
-                !_world.Has<GameplayTagContainer>(owner))
+            if (_world.Has<TagCountContainer>(owner))
+            {
+                ref TagCountContainer counts = ref _world.Get<TagCountContainer>(owner);
+                return counts.CopyTagIds(buffer);
+            }
+
+            if (!_world.Has<GameplayTagContainer>(owner))
             {
                 return 0;
             }
 
-            ref TagCountContainer counts = ref _world.Get<TagCountContainer>(owner);
             ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(owner);
-            int count = counts.CopyTagIds(buffer);
+            RegistryMapping[] mappings = TagRegistry.SnapshotMappings();
+            Array.Sort(mappings, static (left, right) => left.Id.CompareTo(right.Id));
             int written = 0;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < mappings.Length && written < buffer.Length; i++)
             {
-                int tagId = buffer[i];
-                if (RequireTagOps().HasTag(ref tags, tagId, TagSense.Present))
+                int tagId = mappings[i].Id;
+                if (tagId > 0 && RequireTagOps().HasTag(ref tags, tagId, TagSense.Present))
                 {
                     buffer[written++] = tagId;
                 }
@@ -1337,7 +1333,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         return written;
                     }
 
-                    if (tasks[index].ScopeHost == owner)
+                    if (tasks[index].ScopeHost == owner &&
+                        tasks[index].State == TaskInstanceState.Active)
                     {
                         buffer[written++] = Unsafe.Add(ref first, index);
                     }

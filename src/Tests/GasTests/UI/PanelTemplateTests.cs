@@ -198,6 +198,35 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
+        public void Load_AggregatePresentMode_ParsesOnListControl()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.aggregate",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "effects",
+                  "source": "selfGraph",
+                  "collectionKey": "effects",
+                  "template": "panel.effect.chip"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "effects", "present": "aggregate" }
+                ]
+              }
+            }
+            """);
+
+            Assert.That(
+                template.Layout!.Controls[0].Present,
+                Is.EqualTo(PanelPresentMode.Aggregate));
+        }
+
+        [Test]
         public void Load_ElementDeclaresSubjectAndGraph()
         {
             const string json = """
