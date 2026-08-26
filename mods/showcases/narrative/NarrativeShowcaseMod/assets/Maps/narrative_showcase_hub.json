@@ -6,7 +6,12 @@
     { "name": "trust", "type": "int", "initial": 0 },
     { "name": "lore", "type": "int", "initial": 0 },
     { "name": "ending", "type": "int", "initial": 0 },
-    { "name": "trial_phase", "type": "int", "initial": 0 }
+    { "name": "trial_phase", "type": "int", "initial": 0 },
+    { "name": "story.await_confirmed", "type": "int", "initial": 0 },
+    { "name": "narrative.arcweaver_health", "type": "float", "initial": 0 }
+  ],
+  "TriggerGraphs": [
+    { "graph": "Graph.Narrative.Flow.AwaitStoryConfirm", "scopeInstanceId": "narrative_arcweaver" }
   ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",

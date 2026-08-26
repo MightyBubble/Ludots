@@ -132,6 +132,52 @@
     ]
   },
   {
+    "id": "Graph.Narrative.Flow.AwaitStoryConfirm",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "ask", "op": "AwaitCallback", "callbackType": "DialogConfirm" },
+      { "id": "gate", "op": "JumpIfFalse" },
+      { "id": "confirmedOne", "op": "ConstInt", "intValue": 1 },
+      { "id": "writeConfirmed", "op": "WriteMapVarInt", "var": "story.await_confirmed" },
+      { "id": "readArcweaver", "op": "LoadPlacedEntity", "instanceId": "narrative_arcweaver" },
+      { "id": "readHealth", "op": "LoadAttribute", "attribute": "Health" },
+      { "id": "writeHealth", "op": "WriteMapVarFloat", "var": "narrative.arcweaver_health" },
+      { "id": "haltConfirmed", "op": "HaltReturnInt" },
+      { "id": "declinedZero", "op": "ConstInt", "intValue": 0 },
+      { "id": "writeDeclined", "op": "WriteMapVarInt", "var": "story.await_confirmed" },
+      { "id": "haltDeclined", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "ask" },
+      { "from": "ask", "fromPort": "next", "to": "gate" },
+      { "from": "gate", "fromPort": "true", "to": "confirmedOne" },
+      { "from": "gate", "fromPort": "false", "to": "declinedZero" },
+      { "from": "confirmedOne", "fromPort": "next", "to": "writeConfirmed" },
+      { "from": "writeConfirmed", "fromPort": "next", "to": "readArcweaver" },
+      { "from": "readArcweaver", "fromPort": "next", "to": "readHealth" },
+      { "from": "readHealth", "fromPort": "next", "to": "writeHealth" },
+      { "from": "writeHealth", "fromPort": "next", "to": "haltConfirmed" },
+      { "from": "declinedZero", "fromPort": "next", "to": "writeDeclined" },
+      { "from": "writeDeclined", "fromPort": "next", "to": "haltDeclined" }
+    ],
+    "valueEdges": [
+      { "from": "ask", "fromPort": "value", "to": "gate", "toPort": "condition" },
+      { "from": "scope", "fromPort": "value", "to": "writeConfirmed", "toPort": "source" },
+      { "from": "confirmedOne", "fromPort": "value", "to": "writeConfirmed", "toPort": "value" },
+      { "from": "readArcweaver", "fromPort": "value", "to": "readHealth", "toPort": "source" },
+      { "from": "scope", "fromPort": "value", "to": "writeHealth", "toPort": "source" },
+      { "from": "readHealth", "fromPort": "value", "to": "writeHealth", "toPort": "value" },
+      { "from": "confirmedOne", "fromPort": "value", "to": "haltConfirmed", "toPort": "value" },
+      { "from": "scope", "fromPort": "value", "to": "writeDeclined", "toPort": "source" },
+      { "from": "declinedZero", "fromPort": "value", "to": "writeDeclined", "toPort": "value" },
+      { "from": "declinedZero", "fromPort": "value", "to": "haltDeclined", "toPort": "value" }
+    ]
+  },
+  {
     "id": "Graph.Narrative.Action.SetEndingMercy",
     "kind": "TriggerGraph",
     "entries": [
