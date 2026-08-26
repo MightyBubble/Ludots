@@ -51,10 +51,17 @@
   "layout": {
     "controls": [
       { "type": "label", "prefix": "在编 ", "bind": "rowCount" },
-      { "type": "list", "bind": "units" }
+      {
+        "type": "list",
+        "bind": "units",
+        "viewportHeight": 120,
+        "itemExtent": 56,
+        "virtualize": true,
+        "overscan": 2
+      }
     ]
   }
 }
 ```
 
-30 秒预期：名单跟容器图走；每一行以该实体为 scope 跑元素图；换 grid 可复用同一元素。
+30 秒预期：名单跟容器图走；每一行以该实体为 scope 跑元素图；`viewportHeight` 可滚；`virtualize` 只画视口附近行；换 grid 可复用同一元素。千人压测见 `PanelListVirtualizationPerfTests`（窗口行数/分配量远低于全量）。

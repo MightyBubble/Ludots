@@ -91,7 +91,14 @@
   "layout": {
     "controls": [
       { "type": "label", "prefix": "在编 ", "bind": "rowCount" },
-      { "type": "list", "bind": "units" }
+      {
+        "type": "list",
+        "bind": "units",
+        "viewportHeight": 120,
+        "itemExtent": 56,
+        "virtualize": true,
+        "overscan": 2
+      }
     ]
   }
 }
@@ -102,6 +109,17 @@
 | `collections[].collectionKey` | 容器图写出的集合 |
 | `collections[].template` | 元素模板 id（必须带匹配的 `subject`） |
 | `list` / 日后 `grid` | 只编排；**禁止** `itemControls` |
+
+#### list 滚动与虚拟窗口
+
+| 字段 | 含义 |
+|---|---|
+| `viewportHeight` | 可视高度；有值则包进 `ScrollView`，可滚 |
+| `itemExtent` | 行高（虚拟化用）；`virtualize` 时必填或默认 56 |
+| `virtualize` | 只对可见窗（+ `overscan`）跑元素图并挂 spacer；**禁止**每帧全量投影 |
+| `overscan` | 窗外缓冲行数，默认 2 |
+
+`virtualize: true` 必须带 `viewportHeight`。名册人数仍来自集合 `TotalCount` / 面板 pin，不因虚拟窗口变少。
 
 装载期：`template.subject` 与集合种类必须相容（本切片：`EntityCollection` ↔ `Entity`）。
 
@@ -127,9 +145,11 @@
 ### 3.4 运行时
 
 1. 容器图 eval → 集合 + 面板 pin  
-2. 对集合每个成员：元素图 eval(scope=成员) → 读 pins；按 subject 附带表面（Entity→displayName）  
-3. 用元素 `layout` 画每一行/格  
+2. 非虚拟列表：对集合每个成员跑元素图 → pins + subject 表面  
+3. 虚拟列表：只对可见窗（+ overscan）成员跑元素图；UI 用 spacer + ScrollView  
 4. 结构错误 fail-closed；图失败 → pin 缺省，不炸面板  
+
+压测基线（`PanelListVirtualizationPerfTests`）：1000 成员时，窗口投影行数与分配量须显著低于全量。
 
 ## 4. 场景
 
@@ -165,7 +185,15 @@ Feature: 元素自己声明解什么，并自己跑图
     When 装载或绑定
     Then 失败并指出不相容
 
-  Scenario: 命名不使用 item 前缀
-    Given 元素 id 为 panel.unit.roster
-    Then 配置与目录中不出现 item.* 作为正式命名
+  Scenario: 千人名单也能滚得动
+    Given 名册集合有一千个单位且 list 开启 virtualize
+    When 我打开名册并向下滚动
+    Then 同一时间只画出视口附近的行
+    And 名单人数仍显示一千
+
+  Scenario: 短视口可以滚动名册
+    Given 名册 list 配置了 viewportHeight 且行总高超过视口
+    When 我向下滚动名单
+    Then 滚动偏移更新且集合总人数不变
+    And 晕眩徽标仍能在可见窗内找到
 ```
