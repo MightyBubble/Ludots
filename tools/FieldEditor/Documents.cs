@@ -158,6 +158,58 @@ namespace Ludots.Tools.FieldEditor
             }
         }
 
+        public void RenameRegion(string from, string to)
+        {
+            RequireCanonicalKey(JsonValue.Create(to), "<rename>");
+            if (!Regions.ContainsKey(from))
+            {
+                throw new InvalidOperationException($"Region '{from}' does not exist.");
+            }
+
+            if (Regions.ContainsKey(to))
+            {
+                throw new InvalidOperationException($"Region '{to}' already exists.");
+            }
+
+            Regions.Remove(from);
+            Regions[to] = to;
+            foreach (var cell in Cells.Where(pair => string.Equals(pair.Value, from, StringComparison.Ordinal)).Select(pair => pair.Key).ToList())
+            {
+                Cells[cell] = to;
+            }
+        }
+
+        public CellsDocument CloneSnapshot()
+        {
+            var clone = new CellsDocument(LayerKey);
+            foreach (string key in Regions.Keys)
+            {
+                clone.Regions[key] = key;
+            }
+
+            foreach (var pair in Cells)
+            {
+                clone.Cells[pair.Key] = pair.Value;
+            }
+
+            return clone;
+        }
+
+        public void RestoreFrom(CellsDocument other)
+        {
+            Regions.Clear();
+            Cells.Clear();
+            foreach (string key in other.Regions.Keys)
+            {
+                Regions[key] = key;
+            }
+
+            foreach (var pair in other.Cells)
+            {
+                Cells[pair.Key] = pair.Value;
+            }
+        }
+
         public void Validate(int maxRegionIds)
         {
             if (Regions.Count > maxRegionIds)
@@ -330,6 +382,66 @@ namespace Ludots.Tools.FieldEditor
             }
 
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Session undo/redo beside a cells asset. History is local editor state (not engine format).
+    /// </summary>
+    public static class HistoryStore
+    {
+        private static readonly Dictionary<string, StackSnapshot> Stacks = new(StringComparer.Ordinal);
+
+        public static void Push(string assetPath, CellsDocument current)
+        {
+            StackSnapshot stack = Get(assetPath);
+            stack.Undo.Push(current.CloneSnapshot());
+            stack.Redo.Clear();
+        }
+
+        public static CellsDocument? Undo(string assetPath, CellsDocument current)
+        {
+            StackSnapshot stack = Get(assetPath);
+            if (stack.Undo.Count == 0)
+            {
+                return null;
+            }
+
+            stack.Redo.Push(current.CloneSnapshot());
+            CellsDocument previous = stack.Undo.Pop();
+            current.RestoreFrom(previous);
+            return current;
+        }
+
+        public static CellsDocument? Redo(string assetPath, CellsDocument current)
+        {
+            StackSnapshot stack = Get(assetPath);
+            if (stack.Redo.Count == 0)
+            {
+                return null;
+            }
+
+            stack.Undo.Push(current.CloneSnapshot());
+            CellsDocument next = stack.Redo.Pop();
+            current.RestoreFrom(next);
+            return current;
+        }
+
+        private static StackSnapshot Get(string assetPath)
+        {
+            if (!Stacks.TryGetValue(assetPath, out StackSnapshot? stack))
+            {
+                stack = new StackSnapshot();
+                Stacks[assetPath] = stack;
+            }
+
+            return stack;
+        }
+
+        private sealed class StackSnapshot
+        {
+            public Stack<CellsDocument> Undo { get; } = new();
+            public Stack<CellsDocument> Redo { get; } = new();
         }
     }
 }

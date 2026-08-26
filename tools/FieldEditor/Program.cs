@@ -21,6 +21,14 @@ try
             return RegionsAdd(args);
         case "regions-remove":
             return RegionsRemove(args);
+        case "regions-rename":
+            return RegionsRename(args);
+        case "cell":
+            return Cell(args);
+        case "undo":
+            return UndoRedo(args, redo: false);
+        case "redo":
+            return UndoRedo(args, redo: true);
         case "rect":
             return Rect(args, erase: false);
         case "erase":
@@ -51,13 +59,16 @@ static void PrintUsage()
     regions       --mod <dir> --layer <layerKey>
     regions-add   --mod <dir> --layer <layerKey> --key <regionKey>
     regions-remove--mod <dir> --layer <layerKey> --key <regionKey>
+    regions-rename--mod <dir> --layer <layerKey> --from <oldKey> --to <newKey>
+    cell          --mod <dir> --layer <layerKey> --at x,y [--key <regionKey>|--erase]
     rect          --mod <dir> --layer <layerKey> --key <regionKey> --from x0,y0 --to x1,y1
     erase         --mod <dir> --layer <layerKey> --from x0,y0 --to x1,y1
+    undo|redo     --mod <dir> --layer <layerKey>
     render        --mod <dir> --layer <layerKey> [--bounds x0,y0,x1,y1]
     save          --mod <dir> --layer <layerKey>
 
-    Every mutating command writes the cells document immediately (atomic temp+move);
-    'save' additionally validates against the catalog capacity.
+    new-layer accepts optional --map <mapId> to append the layer into Maps/<mapId>.json Fields.Layers.
+    Mutating commands keep a session undo stack beside the cells asset (.field-editor-history.json).
     """);
 }
 
@@ -111,17 +122,72 @@ static int NewLayer(string[] args)
 {
     string mod = ModAssetsRoot(args);
     string id = RequireOption(args, "--id");
-    int cellSize = int.Parse(RequireOption(args, "--cell-size"));
-    int chunk = int.Parse(RequireOption(args, "--chunk"));
-    int maxRegions = int.Parse(RequireOption(args, "--max-regions"));
-    string writerDomain = RequireOption(args, "--writer");
+    int cellSize = TryOption(args, "--cell-size", "500");
+    int chunk = TryOption(args, "--chunk", "16");
+    int maxRegions = TryOption(args, "--max-regions", "256");
+    string writerDomain = TryOptionString(args, "--writer", "map.field");
 
     string path = CatalogDocument.AssetPath(mod);
     JsonArray catalog = CatalogDocument.LoadOrNew(path);
     CatalogDocument.AppendLayer(catalog, id, cellSize, chunk, maxRegions, writerDomain);
     CatalogDocument.Save(path, catalog);
     Console.WriteLine($"Layer '{id}' appended to {path}.");
+
+    string? mapId = TryOptionString(args, "--map", null);
+    if (!string.IsNullOrWhiteSpace(mapId))
+    {
+        string mapPath = Path.Combine(mod, "assets", "Maps", $"{mapId}.json");
+        if (!File.Exists(mapPath))
+        {
+            throw new InvalidOperationException($"Map asset '{mapPath}' does not exist; create the map before --map.");
+        }
+
+        JsonObject map = JsonNode.Parse(File.ReadAllText(mapPath)) as JsonObject
+            ?? throw new InvalidOperationException($"'{mapPath}' must be a JSON object.");
+        if (map["Fields"] is not JsonObject fields)
+        {
+            fields = new JsonObject();
+            map["Fields"] = fields;
+        }
+
+        if (fields["Layers"] is not JsonArray layers)
+        {
+            layers = new JsonArray();
+            fields["Layers"] = layers;
+        }
+
+        bool already = layers.Any(node => string.Equals(node?.GetValue<string>(), id, StringComparison.Ordinal));
+        if (!already)
+        {
+            layers.Add(id);
+            string temp = mapPath + ".tmp";
+            File.WriteAllText(temp, map.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }) + "\n");
+            File.Move(temp, mapPath, overwrite: true);
+            Console.WriteLine($"Enabled '{id}' on map '{mapId}'.");
+        }
+        else
+        {
+            Console.WriteLine($"Map '{mapId}' already enables '{id}'.");
+        }
+    }
+
     return 0;
+}
+
+static int TryOption(string[] args, string name, string fallback) =>
+    int.Parse(TryOptionString(args, name, fallback)!);
+
+static string? TryOptionString(string[] args, string name, string? fallback)
+{
+    for (int i = 1; i < args.Length - 1; i++)
+    {
+        if (string.Equals(args[i], name, StringComparison.Ordinal))
+        {
+            return args[i + 1];
+        }
+    }
+
+    return fallback;
 }
 
 static int Regions(string[] args)
@@ -139,6 +205,7 @@ static int Regions(string[] args)
 static int RegionsAdd(string[] args)
 {
     (CellsDocument document, int max, string path) = OpenDocument(args);
+    HistoryStore.Push(path, document);
     string key = document.AddRegion(RequireOption(args, "--key"));
     document.Save(path, max);
     Console.WriteLine($"Region '{key}' added.");
@@ -148,9 +215,73 @@ static int RegionsAdd(string[] args)
 static int RegionsRemove(string[] args)
 {
     (CellsDocument document, int max, string path) = OpenDocument(args);
+    HistoryStore.Push(path, document);
     document.RemoveRegion(RequireOption(args, "--key"));
     document.Save(path, max);
     Console.WriteLine("Region removed (its cells were cleared).");
+    return 0;
+}
+
+static int RegionsRename(string[] args)
+{
+    (CellsDocument document, int max, string path) = OpenDocument(args);
+    string from = RequireOption(args, "--from");
+    string to = RequireOption(args, "--to");
+    HistoryStore.Push(path, document);
+    document.RenameRegion(from, to);
+    document.Save(path, max);
+    Console.WriteLine($"Region '{from}' renamed to '{to}'.");
+    return 0;
+}
+
+static int Cell(string[] args)
+{
+    (CellsDocument document, int max, string path) = OpenDocument(args);
+    (int x, int y) = ParseCoord(RequireOption(args, "--at"));
+    bool erase = args.Any(arg => string.Equals(arg, "--erase", StringComparison.Ordinal));
+    if (erase)
+    {
+        HistoryStore.Push(path, document);
+        document.EraseRect(x, y, x, y);
+        document.Save(path, max);
+        Console.WriteLine($"Erased cell ({x},{y}).");
+        return 0;
+    }
+
+    if (args.Any(arg => string.Equals(arg, "--key", StringComparison.Ordinal)))
+    {
+        HistoryStore.Push(path, document);
+        string key = RequireOption(args, "--key");
+        document.PaintRect(key, x, y, x, y);
+        document.Save(path, max);
+        Console.WriteLine($"Painted cell ({x},{y}) = {key}.");
+        return 0;
+    }
+
+    if (document.Cells.TryGetValue((x, y), out string? existing))
+    {
+        Console.WriteLine($"{existing}");
+    }
+    else
+    {
+        Console.WriteLine("(empty)");
+    }
+
+    return 0;
+}
+
+static int UndoRedo(string[] args, bool redo)
+{
+    (CellsDocument document, int max, string path) = OpenDocument(args);
+    CellsDocument? restored = redo ? HistoryStore.Redo(path, document) : HistoryStore.Undo(path, document);
+    if (restored == null)
+    {
+        Console.WriteLine(redo ? "(nothing to redo)" : "(nothing to undo)");
+        return 0;
+    }
+
+    restored.Save(path, max);
+    Console.WriteLine(redo ? "Redo applied." : "Undo applied.");
     return 0;
 }
 
@@ -170,6 +301,7 @@ static int Rect(string[] args, bool erase)
     (CellsDocument document, int max, string path) = OpenDocument(args);
     (int x0, int y0) = ParseCoord(RequireOption(args, "--from"));
     (int x1, int y1) = ParseCoord(RequireOption(args, "--to"));
+    HistoryStore.Push(path, document);
     if (erase)
     {
         document.EraseRect(x0, y0, x1, y1);

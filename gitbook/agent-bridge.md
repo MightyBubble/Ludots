@@ -66,6 +66,11 @@ curl -s -X POST http://127.0.0.1:47921/rpc \
 | 触发一个游戏事件 | `ludots.events.fire` | `{event:"GameStart"}` 等；与引擎生命周期同分发路径；返回 `triggerErrors` 计数——**配 logs.tail 组成"发事件→看反应"闭环** |
 | 看订单管线吞吐 | `ludots.orders.inspect` | 准入/终态缓冲、单实体 OrderBuffer；响应附 `orderTypes` 合法键清单（id/key/label） |
 | 看 GAS 诊断事件 | `ludots.gas.diagnostics` | 当帧 system/metric/count 转储 |
+| 看当前图有哪些场层 / 区域 | `ludots.field.layers` | 无参；需已加载启用 Fields 的地图 |
+| 问某格归属与层级链 | `ludots.field.cell` / `ludots.field.hierarchy` | `{layer, worldXCm, worldYCm}` 或 `{cellX,cellY}`；hierarchy 也可直接给 `regionKey` |
+| 调试改一格归属（不回写资产） | `ludots.field.writeCell` | `{layer, cellX, cellY, regionKey?}`；空 key = 擦除 |
+
+MapField 作者与展厅见 [MapField 作者手册](architecture/mapfield-howto.md)、[Field Editor CLI](architecture/field-editor.md)。
 
 ## 实测会话摘录（agent-demo · 可直接复制的形状）
 

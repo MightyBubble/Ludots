@@ -33,6 +33,7 @@
     <Compile Include="..\TestCommon\ClientLocalSeatTestBindings.cs" Link="ClientLocalSeatTestBindings.cs" />
     <Compile Include="..\TestCommon\AuthorityCameraAccess.cs" Link="AuthorityCameraAccess.cs" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\tools\FieldEditor\FieldEditor.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />

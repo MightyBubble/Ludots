@@ -42,6 +42,10 @@ namespace AgentBridgeMod
                 tools.Register(new TimeGetTool(time));
                 tools.Register(new TimeControlTool(time));
                 tools.Register(new EntitiesQueryTool());
+                tools.Register(new FieldLayersTool());
+                tools.Register(new FieldCellTool());
+                tools.Register(new FieldWriteCellTool());
+                tools.Register(new FieldHierarchyTool());
                 tools.Register(new UiTreeTool());
                 tools.Register(new UiQueryTool());
                 tools.Register(new UiClickTool());

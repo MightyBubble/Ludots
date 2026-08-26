@@ -17,11 +17,15 @@ dotnet run --project tools/FieldEditor -- <command> --mod <ModAssetsOrModRoot>
 | `layers` | 列出已声明层 |
 | `new-layer` | 追加一条 discreteId 层到 `layers.json` |
 | `regions` | 列出某层区域 key 及占格数 |
-| `regions-add` / `regions-remove` | 增删区域（删区会清其格） |
+| `regions-add` / `regions-remove` / `regions-rename` | 增删改区域 key（删区会清其格） |
+| `cell` | 读/写/擦单格（`--at x,y`，写用 `--key`，擦用 `--erase`） |
 | `rect` | 用区域 key 填充闭区间矩形并立刻写出 |
 | `erase` | 擦除矩形（回到 default） |
+| `undo` / `redo` | 会话内撤销重做（内存栈，进程级） |
 | `render` | ASCII 预览当前笔画 |
 | `save` | 再校验容量并写出（突变命令本身已 atomic 写出） |
+
+`new-layer` 可选 `--map <mapId>`：把层 id 写入 `Maps/<mapId>.json` 的 `Fields.Layers`。
 
 ## 示例：从空 Mod 画出两色地
 
