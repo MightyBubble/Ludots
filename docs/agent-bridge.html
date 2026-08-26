@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent 调试桥 — Ludots</title>
-<meta name="description" content="Ludots Agent 调试桥：任意 AI coding agent 经 HTTP JSON-RPC / MCP 操控运行中的游戏进程。使用手册、RFC-0066 与运行演示。">
+<meta name="description" content="Ludots Agent 调试桥：可视化 Inspector 工具页、HTTP/CLI/MCP 共用同一套工具目录。使用手册、RFC-0066 与运行演示。">
 <link rel="stylesheet" href="site-assets/site.css">
 <style>
   .docs-layout {
@@ -61,6 +61,27 @@
   }
   .md-body hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
   .docs-loading { color: var(--faint); padding: 40px 0; text-align: center; }
+  .tool-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px; margin: 16px 0 8px;
+  }
+  .tool-chip {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; background: var(--bg-soft); font-size: 13px;
+  }
+  .tool-chip strong {
+    display: block; font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent); margin-bottom: 4px;
+  }
+  .tool-chip span { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+  .callout {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; background: var(--bg-soft); margin: 18px 0;
+  }
+  .callout .label {
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    color: var(--muted); margin-bottom: 8px;
+  }
 
   @media (max-width: 960px) {
     .docs-layout { grid-template-columns: 1fr; }
@@ -77,7 +98,9 @@
     <aside class="docs-tree" id="bridge-tree">
       <div class="tree-title">Agent 调试桥</div>
       <a data-doc="manual" href="#doc/manual">使用手册</a>
+      <a data-doc="inspector" href="#doc/inspector">可视化调试面板</a>
       <a data-doc="arch" href="#doc/arch">架构页</a>
+      <a data-doc="graph" href="#doc/graph">Graph Live Debug</a>
       <a data-doc="rfc" href="#doc/rfc">RFC-0066</a>
       <a data-doc="demo" href="#doc/demo">运行演示</a>
       <a data-doc="asset" href="#doc/asset">Raylib 资产验收台</a>
@@ -93,7 +116,7 @@
 
 <footer class="site-footer">
   <div class="inner">
-    <span>Ludots Agent 调试桥 · 写作源 gitbook/architecture/agent-debug-bridge.md · 设计 SSOT docs/rfcs/RFC-0066</span>
+    <span>Ludots Agent 调试桥 · 写作源 gitbook/agent-bridge.md · 设计 SSOT docs/rfcs/RFC-0066</span>
     <span>桥本体仅绑定 127.0.0.1 · 无鉴权调试接口 · 发布于 GitHub Pages</span>
   </div>
 </footer>
@@ -108,21 +131,58 @@
   var DOCS = {
     manual: { path: "gitbook/agent-bridge.md", label: "gitbook/agent-bridge.md" },
     arch: { path: "gitbook/architecture/agent-debug-bridge.md", label: "gitbook/architecture/agent-debug-bridge.md" },
+    graph: { path: "gitbook/architecture/graph-editor-and-live-debug.md", label: "gitbook/architecture/graph-editor-and-live-debug.md" },
     rfc: { path: "rfcs/RFC-0066-agent-debug-bridge.md", label: "docs/rfcs/RFC-0066-agent-debug-bridge.md" },
     asset: { path: "gitbook/raylib-asset-acceptance.md", label: "gitbook/raylib-asset-acceptance.md" }
   };
+
+  var INSPECTOR_HTML = "" +
+    "<h1>可视化调试面板</h1>" +
+    "<p>人类 QA 的工具页是 <code>Ludots.Inspector.React</code>：紧凑一屏，左侧选工具、中间填参调用、右侧看该工具自己的 debug。" +
+    "工具列表<strong>不手写</strong>，直接读运行中的 <code>GET /tools</code>，与 CLI / MCP / curl 同一份目录。</p>" +
+    "<div class=\"callout\"><div class=\"label\">一分钟开起来</div>" +
+    "<pre><code>cd src/Tools/Ludots.Inspector.React\nnpm install && npm run dev\n# → http://127.0.0.1:5179 ，默认连桥 47921</code></pre>" +
+    "<p>游戏进程需已加载 <code>AgentBridgeMod</code>（见侧栏「运行演示」）。顶栏连上后应显示 <code>ok · N tools</code>。</p></div>" +
+    "<h2>面板怎么用</h2>" +
+    "<ul>" +
+    "<li><strong>顶栏</strong>：桥地址、连接、活着状态；暂停 / 步进 / 继续（同一套 <code>time.control</code>）。</li>" +
+    "<li><strong>左侧</strong>：按域列出全部工具，可过滤；调过的工具带蓝点。</li>" +
+    "<li><strong>中间</strong>：当前工具参数表单（由 JSON Schema 生成）→ 调用。</li>" +
+    "<li><strong>右侧 debug</strong>：该工具自己的 req / res / 耗时 / 错误；切换工具互不串台。</li>" +
+    "</ul>" +
+    "<h2>工具页按域速览</h2>" +
+    "<p>完整任务表见「使用手册」。下面按域记住入口即可；真源永远是运行时 <code>/tools</code>。</p>" +
+    "<div class=\"tool-grid\">" +
+    "<div class=\"tool-chip\"><strong>session / time</strong><span>判活、暂停步进</span></div>" +
+    "<div class=\"tool-chip\"><strong>camera / logs / events</strong><span>镜头、日志、发事件</span></div>" +
+    "<div class=\"tool-chip\"><strong>entities / spatial / nav</strong><span>找单位、空间探针、寻路</span></div>" +
+    "<div class=\"tool-chip\"><strong>ui</strong><span>面板树、选择器、点击</span></div>" +
+    "<div class=\"tool-chip\"><strong>gas / orders / input</strong><span>属性技能、下单、按键</span></div>" +
+    "<div class=\"tool-chip\"><strong>presenters</strong><span>视觉全链、分歧、席位投影</span></div>" +
+    "<div class=\"tool-chip\"><strong>graph</strong><span>TriggerGraph live trace</span></div>" +
+    "<div class=\"tool-chip\"><strong>screenshot / recording</strong><span>截图与录像取证</span></div>" +
+    "</div>" +
+    "<h2>和别的前端怎么分工</h2>" +
+    "<table><thead><tr><th>你在干什么</th><th>用什么</th></tr></thead><tbody>" +
+    "<tr><td>人手点选工具、看返回</td><td>Inspector（本页）</td></tr>" +
+    "<tr><td>脚本 / Agent 批量调用</td><td>CLI 或 MCP（同一 method 名）</td></tr>" +
+    "<tr><td>图蓝图上高亮节点</td><td>Editor <code>/gas-graphs</code> Live Debug（侧栏专页）</td></tr>" +
+    "</tbody></table>" +
+    "<p>禁止第二套命令协议：所有写操作仍走正式管线包装，Inspector 只是客户端。</p>";
+
   var DEMO_HTML = "" +
     "<h1>运行演示</h1>" +
-    "<p>launch graph 含 <code>AgentBridgeMod</code>（参考 <code>raylib.agent-demo.launch.graph.json</code>）。桥默认 <code>127.0.0.1:47921</code>（占用 +1）。发现文件：<code>artifacts/agent-bridge/sessions/&lt;pid&gt;.json</code>。</p>" +
-    "<h2>启动</h2>" +
+    "<p>launch graph 含 <code>AgentBridgeMod</code>（参考 <code>raylib.agent-demo.launch.graph.json</code>）。" +
+    "桥默认 <code>127.0.0.1:47921</code>（占用自动 +1）。发现文件：<code>artifacts/agent-bridge/sessions/&lt;pid&gt;.json</code>。</p>" +
+    "<h2>1. 启动游戏</h2>" +
     "<pre><code>dotnet run --project src/Apps/Raylib/Ludots.App.Raylib -- launcher.agent-demo.runtime.json</code></pre>" +
     "<p><code>LUDOTS_AGENT_BRIDGE=0</code> 关闭；<code>LUDOTS_AGENT_BRIDGE_PORT</code> 换端口。</p>" +
-    "<h2>HTTP</h2>" +
-    "<pre><code>curl http://127.0.0.1:47921/health\ncurl http://127.0.0.1:47921/tools\ncurl -X POST http://127.0.0.1:47921/rpc -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ludots.session.info\",\"params\":{}}'</code></pre>" +
-    "<h2>CLI / MCP</h2>" +
-    "<pre><code>dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net8.0/Ludots.AgentBridge.Cli.dll tools --names\ndotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921</code></pre>" +
-    "<h2>Inspector</h2>" +
-    "<pre><code>cd src/Tools/Ludots.Inspector.React && npm run dev\n# http://127.0.0.1:5179 — 紧凑面板，每工具独立 debug</code></pre>";
+    "<h2>2. 打开可视化工具页（推荐人手调试）</h2>" +
+    "<pre><code>cd src/Tools/Ludots.Inspector.React && npm install && npm run dev\n# http://127.0.0.1:5179 — 左侧工具目录 = GET /tools</code></pre>" +
+    "<p>连上后顶栏应出现 <code>ok · N tools</code>。先点 <code>session.info</code>，再按任务表选工具。</p>" +
+    "<h2>3. HTTP / CLI / MCP（机器或脚本）</h2>" +
+    "<pre><code>curl http://127.0.0.1:47921/health\ncurl http://127.0.0.1:47921/tools\ncurl -X POST http://127.0.0.1:47921/rpc -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ludots.session.info\",\"params\":{}}'\n\ndotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net8.0/Ludots.AgentBridge.Cli.dll tools --names\ndotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921</code></pre>" +
+    "<p>四端共用 <code>BuiltinAgentTools</code> 注册表；工具个数以运行时目录为准，不要背死数字。</p>";
 
   var currentDoc = null;
 
@@ -144,22 +204,42 @@
         a.setAttribute("href", "#doc/rfc");
         a.removeAttribute("target");
       }
+      if (/graph-editor-and-live-debug/.test(href)) {
+        a.setAttribute("href", "#doc/graph");
+        a.removeAttribute("target");
+      }
+      if (/agent-debug-bridge\.md/.test(href) || /architecture\/agent-debug-bridge/.test(href)) {
+        a.setAttribute("href", "#doc/arch");
+        a.removeAttribute("target");
+      }
     });
   }
 
-  function loadDoc(key) {
+  function loadInline(key, pathLabel, html) {
     currentDoc = key;
     var body = document.getElementById("doc-body");
     var pathEl = document.getElementById("doc-path");
     markActive();
+    pathEl.textContent = pathLabel;
+    body.innerHTML = html;
+    LudotsSite.bindCopyButtons(body);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
 
+  function loadDoc(key) {
     if (key === "demo") {
-      pathEl.textContent = "运行演示 · agent-demo launch graph";
-      body.innerHTML = DEMO_HTML;
-      LudotsSite.bindCopyButtons(body);
-      window.scrollTo({ top: 0, behavior: "auto" });
+      loadInline("demo", "运行演示 · agent-demo + Inspector", DEMO_HTML);
       return;
     }
+    if (key === "inspector") {
+      loadInline("inspector", "可视化调试面板 · Ludots.Inspector.React", INSPECTOR_HTML);
+      return;
+    }
+
+    currentDoc = key;
+    var body = document.getElementById("doc-body");
+    var pathEl = document.getElementById("doc-path");
+    markActive();
 
     var doc = DOCS[key];
     body.innerHTML = '<div class="docs-loading">加载中…</div>';
@@ -180,7 +260,7 @@
     var h = window.location.hash || "";
     var key = null;
     if (h.indexOf("#doc/") === 0) key = h.slice("#doc/".length);
-    if (!key || !DOCS[key] && key !== "demo") key = "manual";
+    if (!key || (!DOCS[key] && key !== "demo" && key !== "inspector")) key = "manual";
     if (key !== currentDoc) loadDoc(key);
   }
 

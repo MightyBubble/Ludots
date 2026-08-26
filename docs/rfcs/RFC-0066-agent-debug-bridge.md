@@ -1,6 +1,6 @@
 # RFC-0066 Agent Debug Bridge（Ludots Harness for AI Agents）
 
-Status: Implemented（已合入 main，PR #1001；2026-08-17 验收通过，见 §8）
+Status: Implemented（已合入 main，PR #1001；2026-08-17 验收通过，见 §8。客户端扩展：CLI / Inspector 工具页见 PR #1242 / epic #1056；工具目录以运行时 `BuiltinAgentTools` + `GET /tools` 为准，不再以本节历史「24」为死数字。）
 
 ## 1 背景与目标
 
@@ -25,20 +25,21 @@ Ludots 目前没有面向 AI Agent 的运行时调试/操控接口。现有相�
 ## 2 架构
 
 ```text
-AI Agent (任意)
-   ├── HTTP 直连:  POST http://127.0.0.1:<port>/rpc   (任何 Agent / curl / 脚本)
-   └── MCP 挂载:   Ludots.AgentBridge.Mcp (stdio) ──► HTTP ──┐
-                                                             ▼
-Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
+客户端（任意）
+   ├── Inspector 工具页:  Ludots.Inspector.React (:5179) ──► HTTP
+   ├── HTTP 直连 / CLI:   POST http://127.0.0.1:<port>/rpc
+   └── MCP 挂载:          Ludots.AgentBridge.Mcp (stdio) ──► HTTP ──┐
+                                                                    ▼
+Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1；CORS 给浏览器)
                   │  enqueue (请求入队, 后台线程绝不触碰 ECS)
                   ▼
              AgentBridgeSystem (游戏线程, 每帧 pump)
                   │  dispatch
                   ▼
-             AgentToolRegistry ──► IAgentTool 实现 (读 World / UiScene / GAS / Input)
+             AgentToolRegistry ← BuiltinAgentTools.RegisterAll
                   │
                   ▼
-             发现文件 artifacts/agent-bridge/session.json (port/pid/version/tools)
+             发现文件 artifacts/agent-bridge/sessions/<pid>.json
 ```
 
 关键约束：
@@ -70,6 +71,8 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 | `Ludots.AgentBridge` | `src/Libraries/Ludots.AgentBridge/` | 平台无关语义层：工具注册表、工具上下文、内置工具、请求泵、HTTP server |
 | `AgentBridgeMod` | `mods/AgentBridgeMod/` | 把一切接进运行时：注册系统、注册内置工具、按配置启停 |
 | `Ludots.AgentBridge.Mcp` | `src/Tools/Ludots.AgentBridge.Mcp/` | 零依赖 MCP stdio → HTTP 适配器（initialize / tools/list / tools/call / ping） |
+| `Ludots.AgentBridge.Cli` | `src/Tools/Ludots.AgentBridge.Cli/` | 终端客户端（health / tools / call）；地址解析走 `AgentBridgeEndpoint` |
+| `Ludots.Inspector.React` | `src/Tools/Ludots.Inspector.React/` | 人类可视化工具页：按 `/tools` schema 填参、每工具独立 debug |
 
 `Ludots.AgentBridge` 引用 `Ludots.Core` 与 `Ludots.UI`（平台无关模型层）；不引用 Skia/Raylib/CEF。截屏等 host 能力通过 `CoreServiceKeys` 扩展键由宿主适配器注入，缺失时工具显式报 `capability.unavailable`。
 
@@ -130,7 +133,7 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 
 - `LUDOTS_AGENT_BRIDGE=0` 强制关闭（即使 Mod 已加载）
 - `LUDOTS_AGENT_BRIDGE_PORT=<port>` 覆盖端口（默认 47921；占用时自动 +1 重试最多 16 次并写入发现文件）
-- 发现文件：`artifacts/agent-bridge/session.json`（`{ port, pid, version, startedAtUtc, tools }`），进程退出时删除
+- 发现文件：`artifacts/agent-bridge/sessions/<pid>.json`（`{ port, pid, version, startedAtUtc, tools }`），进程退出时删除
 
 安全边界：仅绑定 `127.0.0.1`；这是调试接口，不做鉴权——与 `dotnet-dump` / JVM debugging agent 同级别信任模型。
 

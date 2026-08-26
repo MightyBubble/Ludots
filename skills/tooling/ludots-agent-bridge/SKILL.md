@@ -5,14 +5,16 @@ description: 驱动运行中的 Ludots 游戏进程做调试、验收与取证�
 
 # Ludots Agent Bridge 实操
 
-内置工具经 `POST http://127.0.0.1:47921/rpc`（JSON-RPC 2.0，method=工具名）调用；清单以 `GET /tools` 为准（禁止手写平行清单）。`GET /health` 判活。文档：`gitbook/agent-bridge.md` · `gitbook/architecture/agent-debug-bridge.md` · epic #1056。
+内置工具经 `POST http://127.0.0.1:47921/rpc`（JSON-RPC 2.0，method=工具名）调用；清单以 `GET /tools` 为准（禁止手写平行清单）。`GET /health` 判活。文档：`gitbook/agent-bridge.md` · `gitbook/architecture/agent-debug-bridge.md` · 门户 [可视化调试面板](https://mightybubble.github.io/Ludots/agent-bridge.html#doc/inspector) · epic #1056。
 
-优先用 CLI：
+优先用 CLI；人手调试优先开 Inspector 工具页：
 
 ```bash
 dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- health
 dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- tools --names
 dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- call ludots.session.info
+
+cd src/Tools/Ludots.Inspector.React && npm run dev   # http://127.0.0.1:5179
 ```
 
 ## 第 0 步：判活

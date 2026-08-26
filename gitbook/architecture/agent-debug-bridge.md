@@ -7,8 +7,8 @@
 ## 架构一句话
 
 ```
-CLI / MCP / Inspector / curl
-        │ HTTP JSON-RPC
+Inspector 工具页 / CLI / MCP / curl
+        │ HTTP JSON-RPC（method = 工具名）
         ▼
 127.0.0.1:47921（AgentBridgeHttpServer；CORS 给浏览器）
         │ ConcurrentQueue
@@ -21,10 +21,13 @@ TaskCompletionSource 回包
 
 | 客户端 | 路径 |
 |--------|------|
+| Inspector（可视化工具页） | `src/Tools/Ludots.Inspector.React`（`:5179`；目录来自 `/tools`；每工具独立 debug） |
 | CLI | `src/Tools/Ludots.AgentBridge.Cli` |
 | MCP | `src/Tools/Ludots.AgentBridge.Mcp`（stdio → HTTP） |
-| Inspector | `src/Tools/Ludots.Inspector.React`（紧凑面板；每工具独立 debug） |
+| Graph Live Debug | Editor `/gas-graphs`（消费 `ludots.graph.debug`） |
 | 地址解析 | `AgentBridgeEndpoint` |
+
+门户入口：[Agent 调试桥](https://mightybubble.github.io/Ludots/agent-bridge.html)（侧栏「可视化调试面板」）。
 
 ## 启用
 
@@ -93,7 +96,8 @@ dotnet build src/Tools/Ludots.AgentBridge.Mcp/Ludots.AgentBridge.Mcp.csproj -c R
 dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
 
 cd src/Tools/Ludots.Inspector.React && npm install && npm run dev
-# → http://127.0.0.1:5179 ；每工具独立 debug（req/res），非全屏壳
+# → http://127.0.0.1:5179 ；工具目录 = GET /tools；每工具独立 debug（req/res）
+# 门户说明：https://mightybubble.github.io/Ludots/agent-bridge.html#doc/inspector
 ```
 
 ## 扩展
