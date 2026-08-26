@@ -1,0 +1,4 @@
+{
+  "startupMapId": "deterministic_replay",
+  "defaultInputContext": "DeterministicReplayShowcase.Controls"
+}

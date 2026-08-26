@@ -19,6 +19,7 @@ public sealed class SavePanelRuntime
     private SaveSlotStore? _slots;
     private AutosaveSlotPolicy? _autosave;
     private ISaveStorage? _storage;
+    private int _autosaveRetention = DefaultAutosaveRetention;
     private string _status = "按 F5 打开存档面板。存/读/删走正式槽位链路。";
     private string? _error;
     private string? _selectedSlot;
@@ -32,7 +33,21 @@ public sealed class SavePanelRuntime
     public string? SelectedSlot => _selectedSlot;
     public string ManualName => _manualName;
     public bool HasPendingCapture => _pending != null;
-    public int AutosaveRetention => _autosave?.RetentionCount ?? DefaultAutosaveRetention;
+    public int AutosaveRetention => _autosave?.RetentionCount ?? _autosaveRetention;
+
+    public void SetAutosaveRetention(int retentionCount)
+    {
+        if (retentionCount <= 0)
+        {
+            Fail("自动存档保留数必须大于 0。");
+            return;
+        }
+
+        _autosaveRetention = retentionCount;
+        _autosave = new AutosaveSlotPolicy(retentionCount);
+        ClearError();
+        SetStatus($"自动存档保留数已设为 {retentionCount}。");
+    }
 
     public void BindEngine(GameEngine engine)
     {
@@ -40,7 +55,7 @@ public sealed class SavePanelRuntime
         {
             _storage = storage;
             _slots = new SaveSlotStore(storage);
-            _autosave ??= new AutosaveSlotPolicy(DefaultAutosaveRetention);
+            _autosave ??= new AutosaveSlotPolicy(_autosaveRetention);
             ClearError();
             if (!_inputContextPushed)
             {

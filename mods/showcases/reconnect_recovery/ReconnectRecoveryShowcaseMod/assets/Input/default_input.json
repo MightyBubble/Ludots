@@ -1,0 +1,31 @@
+{
+  "actions": [
+    { "id": "Reconnect.Checkpoint", "name": "Reconnect_Checkpoint", "type": "Button" },
+    { "id": "Reconnect.Disconnect", "name": "Reconnect_Disconnect", "type": "Button" },
+    { "id": "Reconnect.Authority", "name": "Reconnect_Authority", "type": "Button" },
+    { "id": "Reconnect.LocalReset", "name": "Reconnect_LocalReset", "type": "Button" },
+    { "id": "Reconnect.InjectMissing", "name": "Reconnect_InjectMissing", "type": "Button" },
+    { "id": "Reconnect.InjectDuplicate", "name": "Reconnect_InjectDuplicate", "type": "Button" },
+    { "id": "Reconnect.InjectStale", "name": "Reconnect_InjectStale", "type": "Button" },
+    { "id": "Reconnect.InjectOutOfOrder", "name": "Reconnect_InjectOutOfOrder", "type": "Button" },
+    { "id": "Reconnect.AdvanceAuthority", "name": "Reconnect_AdvanceAuthority", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "ReconnectRecoveryShowcase.Controls",
+      "name": "Reconnect Recovery Controls",
+      "priority": 90,
+      "bindings": [
+        { "actionId": "Reconnect.Checkpoint", "path": "<Keyboard>/f5" },
+        { "actionId": "Reconnect.Disconnect", "path": "<Keyboard>/f11" },
+        { "actionId": "Reconnect.Authority", "path": "<Keyboard>/f12" },
+        { "actionId": "Reconnect.LocalReset", "path": "<Keyboard>/r" },
+        { "actionId": "Reconnect.InjectMissing", "path": "<Keyboard>/1" },
+        { "actionId": "Reconnect.InjectDuplicate", "path": "<Keyboard>/2" },
+        { "actionId": "Reconnect.InjectStale", "path": "<Keyboard>/3" },
+        { "actionId": "Reconnect.InjectOutOfOrder", "path": "<Keyboard>/4" },
+        { "actionId": "Reconnect.AdvanceAuthority", "path": "<Keyboard>/n" }
+      ]
+    }
+  ]
+}

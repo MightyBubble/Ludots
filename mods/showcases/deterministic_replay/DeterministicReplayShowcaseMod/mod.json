@@ -1,0 +1,15 @@
+{
+  "name": "DeterministicReplayShowcaseMod",
+  "version": "1.0.0",
+  "description": "确定性回放 showcase.",
+  "main": "bin/net8.0/DeterministicReplayShowcaseMod.dll",
+  "priority": 132,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0",
+    "RtsCncTrainingShowcaseMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase","replay","determinism"]
+}

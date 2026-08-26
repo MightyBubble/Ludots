@@ -1,0 +1,40 @@
+{
+  "Id": "deterministic_replay",
+  "Tags": ["deterministic_replay"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 9800,
+    "TargetYCm": 22600,
+    "Yaw": 200,
+    "Pitch": 54,
+    "DistanceCm": 12400,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_ra2_war_factory",
+      "InstanceId": "deterministic_replay_factory",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9800, "Y": 22600 } },
+        "Name": { "Value": "Replay Factory" }
+      }
+    },
+    {
+      "Template": "rts_ra2_rhino",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 10900, "Y": 21950 } },
+        "Name": { "Value": "Replay Armor" }
+      }
+    }
+  ],
+  "Teams": [ { "TeamId": 1, "RepresentativeInstanceId": "deterministic_replay_factory" } ],
+  "Players": [ { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "deterministic_replay_factory" } ],
+  "ParticipantRelationships": {
+    "Teams": [ { "TeamA": 1, "TeamB": 1, "TypeId": "RtsDemo.Participant", "Attitude": "Friendly", "Symmetric": true } ],
+    "Players": [],
+    "PlayerTeams": [ { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsDemo.Participant", "Symmetric": false } ]
+  }
+}

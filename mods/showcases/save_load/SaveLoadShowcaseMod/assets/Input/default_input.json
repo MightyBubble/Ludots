@@ -1,0 +1,29 @@
+{
+  "actions": [
+    { "id": "SaveLoad.AblateReset", "name": "SaveLoad_AblateReset", "type": "Button" },
+    { "id": "SaveLoad.AblateRestore", "name": "SaveLoad_AblateRestore", "type": "Button" },
+    { "id": "SaveLoad.TamperSlot", "name": "SaveLoad_TamperSlot", "type": "Button" },
+    { "id": "SaveLoad.ToggleExclude", "name": "SaveLoad_ToggleExclude", "type": "Button" },
+    { "id": "SaveLoad.NudgeWorld", "name": "SaveLoad_NudgeWorld", "type": "Button" },
+    { "id": "SaveLoad.ColdStartStory", "name": "SaveLoad_ColdStartStory", "type": "Button" },
+    { "id": "SaveLoad.RetentionDown", "name": "SaveLoad_RetentionDown", "type": "Button" },
+    { "id": "SaveLoad.RetentionUp", "name": "SaveLoad_RetentionUp", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "SaveLoadShowcase.Controls",
+      "name": "Save Load Showcase Controls",
+      "priority": 90,
+      "bindings": [
+        { "actionId": "SaveLoad.NudgeWorld", "path": "<Keyboard>/n" },
+        { "actionId": "SaveLoad.AblateReset", "path": "<Keyboard>/1" },
+        { "actionId": "SaveLoad.AblateRestore", "path": "<Keyboard>/2" },
+        { "actionId": "SaveLoad.TamperSlot", "path": "<Keyboard>/t" },
+        { "actionId": "SaveLoad.ToggleExclude", "path": "<Keyboard>/x" },
+        { "actionId": "SaveLoad.ColdStartStory", "path": "<Keyboard>/c" },
+        { "actionId": "SaveLoad.RetentionDown", "path": "<Keyboard>/minus" },
+        { "actionId": "SaveLoad.RetentionUp", "path": "<Keyboard>/equals" }
+      ]
+    }
+  ]
+}

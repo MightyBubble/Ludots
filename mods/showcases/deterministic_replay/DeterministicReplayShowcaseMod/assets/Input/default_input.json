@@ -1,0 +1,35 @@
+{
+  "actions": [
+    { "id": "DetReplay.Checkpoint", "name": "DetReplay_Checkpoint", "type": "Button" },
+    { "id": "DetReplay.StartRecording", "name": "DetReplay_StartRecording", "type": "Button" },
+    { "id": "DetReplay.StopRecording", "name": "DetReplay_StopRecording", "type": "Button" },
+    { "id": "DetReplay.Play", "name": "DetReplay_Play", "type": "Button" },
+    { "id": "DetReplay.Pause", "name": "DetReplay_Pause", "type": "Button" },
+    { "id": "DetReplay.Step", "name": "DetReplay_Step", "type": "Button" },
+    { "id": "DetReplay.Reset", "name": "DetReplay_Reset", "type": "Button" },
+    { "id": "DetReplay.Speed", "name": "DetReplay_Speed", "type": "Button" },
+    { "id": "DetReplay.JumpMid", "name": "DetReplay_JumpMid", "type": "Button" },
+    { "id": "DetReplay.InjectDuringPlay", "name": "DetReplay_InjectDuringPlay", "type": "Button" },
+    { "id": "DetReplay.SnapshotAblation", "name": "DetReplay_SnapshotAblation", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "DeterministicReplayShowcase.Controls",
+      "name": "Deterministic Replay Controls",
+      "priority": 90,
+      "bindings": [
+        { "actionId": "DetReplay.Checkpoint", "path": "<Keyboard>/f5" },
+        { "actionId": "DetReplay.StartRecording", "path": "<Keyboard>/f8" },
+        { "actionId": "DetReplay.StopRecording", "path": "<Keyboard>/f9" },
+        { "actionId": "DetReplay.Play", "path": "<Keyboard>/f10" },
+        { "actionId": "DetReplay.Pause", "path": "<Keyboard>/f1" },
+        { "actionId": "DetReplay.Step", "path": "<Keyboard>/f2" },
+        { "actionId": "DetReplay.Reset", "path": "<Keyboard>/f3" },
+        { "actionId": "DetReplay.Speed", "path": "<Keyboard>/f4" },
+        { "actionId": "DetReplay.JumpMid", "path": "<Keyboard>/j" },
+        { "actionId": "DetReplay.InjectDuringPlay", "path": "<Keyboard>/i" },
+        { "actionId": "DetReplay.SnapshotAblation", "path": "<Keyboard>/a" }
+      ]
+    }
+  ]
+}
