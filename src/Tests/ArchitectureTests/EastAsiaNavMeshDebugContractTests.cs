@@ -89,8 +89,8 @@ public sealed class EastAsiaNavMeshDebugContractTests
         JsonElement bounds = root.GetProperty("boundsCm");
         string hash = Convert.ToHexString(SHA256.HashData(png)).ToLowerInvariant();
 
-        Assert.That(root.GetProperty("width").GetInt32(), Is.EqualTo(2048));
-        Assert.That(root.GetProperty("height").GetInt32(), Is.EqualTo(1170));
+        Assert.That(root.GetProperty("width").GetInt32(), Is.EqualTo(4096));
+        Assert.That(root.GetProperty("height").GetInt32(), Is.EqualTo(2341));
         Assert.That(bounds.GetProperty("minX").GetInt32(), Is.EqualTo(-450326016));
         Assert.That(bounds.GetProperty("minZ").GetInt32(), Is.EqualTo(-257329152));
         Assert.That(bounds.GetProperty("maxX").GetInt32(), Is.EqualTo(450326016));

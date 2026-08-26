@@ -38,7 +38,7 @@ dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav export-walk
   --profile Small `
   --repoRoot . `
   --out mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod/assets/Textures/nav_walkability.png `
-  --width 2048 `
+  --width 4096 `
   --minXcm -450326016 `
   --minZcm -257329152 `
   --maxXcm 450326016 `

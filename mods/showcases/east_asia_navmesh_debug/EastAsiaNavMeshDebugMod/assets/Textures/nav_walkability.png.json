@@ -6,8 +6,8 @@
     "maxX": 450326016,
     "maxZ": 257329152
   },
-  "width": 2048,
-  "height": 1170,
+  "width": 4096,
+  "height": 2341,
   "encoding": {
     "format": "RGBA8",
     "row0": "maxZcm",
@@ -17,5 +17,5 @@
   "sourceTileCount": 448,
   "triangleCount": 6708,
   "blockedWaterPixelCount": 0,
-  "contentHash": "sha256:f31750982e617c8bfd94ec621b1d66b08f62b79784e602971c7e4004e1dd5723"
+  "contentHash": "sha256:37e4d7dabb7083a3d8cf34e34dfee355423fb0dc2a8cc6389a50e3264c1246ab"
 }
