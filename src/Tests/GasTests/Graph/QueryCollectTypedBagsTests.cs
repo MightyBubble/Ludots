@@ -135,7 +135,7 @@ namespace Ludots.Tests.GasTests.Graph
                 document.Nodes.Add(all);
                 document.Nodes.Add(collect);
                 document.ControlEdges.Add(new(all.Id, GraphControlFlowPorts.Next, collect.Id));
-                document.ValueEdges.Add(new(all.Id, GraphControlFlowPorts.Value, collect.Id, GraphControlFlowPorts.List));
+                document.ValueEdges.Add(new(all.Id, GraphControlFlowPorts.List, collect.Id, GraphControlFlowPorts.List));
             }
             else
             {
