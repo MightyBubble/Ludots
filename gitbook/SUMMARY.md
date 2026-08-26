@@ -46,6 +46,8 @@
   - [图分层：Flow / Script 与行为调度](architecture/graph-layering-flow-and-behavior.md)
   - [图能力唯一入口](architecture/graph-capability-status.md)
   - [Graph 编辑器与 Live Debug 上手](architecture/graph-editor-and-live-debug.md)
+  - [图 Codegen 产品化](architecture/graph-codegen-productization.md)
+  - [图编成代码还能对得上](acceptance/graph-codegen-parity.md)
   - [图正式文字](architecture/graph-formal-text.md)
   - [图正式文字：作者拼句指南](architecture/graph-formal-text-authoring-guide.md)
   - [图 TextKey 发现糖](architecture/graph-textkey.md)

@@ -90,6 +90,9 @@ Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标�
 
 TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面量轨分离：可保存 op `LoadTextKey`、Bridge `/api/graph/text-keys/{modId}`、编辑器 `textKey` 选择器。合同正本见 [图 TextKey 发现糖](graph-textkey.md)。本切片零参；带参 `FormatTextKey`、ActiveLocale 对齐、生产 Dialogue drain sink 另线。
 
+**图 Codegen 产品化（新开线，终态全覆盖）。**  
+测试尖峰（#860 R0/Track C，约八个整数 op）升格为正式可替换执行后端：同一作者格式、同一 L0 IR、同一 `IGraphRuntimeApi`，禁止平行 opcode。产品终态要求每个可执行 `GraphNodeOp` 有发射策略 + 解释对拍 + coverage `codegenStatus`；编辑器 Codegen 面板提供预览 C#、资格红灯、一键对拍；Live Debug 标注后端。合同正本 [图 Codegen 产品化](graph-codegen-productization.md)；验收 [图编成代码还能对得上](../acceptance/graph-codegen-parity.md)；自审 `artifacts/gas-composition-gate-graph-codegen-productization.md`。实现按 CG-0…CG-6 切片推进，**不得**把「尖峰还能跑」写成产品完成。未覆盖 op 在强制 codegen 模式失败关闭，禁止静默回落解释器。
+
 作者面还开着的债，不要当成新发现再审：执行线没下一步就该结束，但先改“必须显式停下”的合同 https://github.com/MightyBubble/Ludots/issues/1107 。蓝图变量面板 MapVariable 作者面已随 Narrative PR #1222 / Bridge 进主干，#1109 只剩关单。#1108 要对齐的是「地图上具体 InstanceId（单位/区域）当变量拖取」——单实体 `LoadPlacedEntity` + 区域 `LoadPlacedRegion` + 锚点 `LoadPlacedAnchor`（InstanceId 含 `anchor`）+ Placed 栏 / Bridge `kind` 已落地；不是数组/映射集合类型。事件入口露出本次载荷（#1106）、放置实体读、地图变量变更事件（#1113）、图互调/跨图派发/全局订阅与 hook（#1115/#1116/#1123/#1124）、纯数据枚举（#1125）、图↔代码 AwaitCallback 续跑（#1126）已随 night-raid 大包进主干（PR #1239）；合入后把对应票改成关单卫生，不要再派实现票。#1126 落地范围：`AwaitCallback=455` + `GraphCallbackService` + `SystemGroup.Continuation` 按注册序 Drain；TriggerGraph 挂载可直接挂起；嵌套 `InvokeScript`/`InvokeGraph` 仍禁 Yield/AwaitCallback（同步函数）。可等待复用走编译期糖 `InlineGraph`（`TriggerGraphInlineWeaver`，虚幻 Macro 风格，Await 落在宿主程序）。Dialogue 宿主 Completer 已接线：玩家确认选项/推进台词时 `TryCompleteByCallbackType(DialogConfirm)`，不另造第二套等待。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
 
 **分层：架子有了，墙没有。**  
