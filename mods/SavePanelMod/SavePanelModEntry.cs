@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using SavePanelMod.Runtime;
@@ -25,8 +26,7 @@ public sealed class SavePanelModEntry : IMod
 
     private static Task InstallAsync(IModContext modContext, ScriptContext context)
     {
-        var engine = context.GetEngine();
-        if (engine == null)
+        if (context.Get(CoreServiceKeys.Engine) is not GameEngine engine)
         {
             return Task.CompletedTask;
         }
