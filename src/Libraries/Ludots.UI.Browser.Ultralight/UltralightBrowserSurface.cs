@@ -44,7 +44,7 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 		_messages = new UltralightBrowserMessageBridge(this);
 		_messages.MessageReceived += OnBridgeMessageReceived;
 
-		_view = UltralightProcessRuntime.Renderer.CreateView(
+		_view = UltralightProcessRuntime.CreateView(
 			(uint)Math.Max(1, viewport.Width),
 			(uint)Math.Max(1, viewport.Height),
 			new ULViewConfig
@@ -53,10 +53,13 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 				IsTransparent = true,
 				InitialFocus = true
 			});
-		_view.OnAddConsoleMessage += OnConsoleMessage;
-		_view.OnDOMReady += OnDomReady;
-		_view.OnFinishLoading += OnFinishLoading;
-		_view.OnFailLoading += OnFailLoading;
+		UltralightProcessRuntime.Run(() =>
+		{
+			_view.OnAddConsoleMessage += OnConsoleMessage;
+			_view.OnDOMReady += OnDomReady;
+			_view.OnFinishLoading += OnFinishLoading;
+			_view.OnFailLoading += OnFailLoading;
+		});
 		_pumpTask = Task.Run(() => PumpLoopAsync(_pumpCts.Token));
 	}
 
@@ -86,17 +89,20 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 		ThrowIfDisposed();
 
 		string navigationUrl = await ResolveNavigationUrlAsync(request.Uri, cancellationToken).ConfigureAwait(false);
-		_lastNavigationFailure = null;
-		_view.URL = navigationUrl;
-		await WaitUntilIdleAsync(cancellationToken).ConfigureAwait(false);
-		if (!string.IsNullOrWhiteSpace(_lastNavigationFailure))
+		await UltralightProcessRuntime.RunAsync(() =>
 		{
-			throw new InvalidOperationException(
-				$"Ultralight navigation to '{navigationUrl}' failed: {_lastNavigationFailure}");
-		}
+			_lastNavigationFailure = null;
+			_view.URL = navigationUrl;
+			WaitUntilIdle();
+			if (!string.IsNullOrWhiteSpace(_lastNavigationFailure))
+			{
+				throw new InvalidOperationException(
+					$"Ultralight navigation to '{navigationUrl}' failed: {_lastNavigationFailure}");
+			}
 
-		QueueFacadeInjection();
-		CaptureFrame();
+			InjectFacade();
+			CaptureFrame();
+		}, cancellationToken).ConfigureAwait(false);
 	}
 
 	public ValueTask ResizeAsync(BrowserViewport viewport, CancellationToken cancellationToken = default)
@@ -117,10 +123,12 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 
 		uint width = (uint)Math.Max(1, viewport.Width);
 		uint height = (uint)Math.Max(1, viewport.Height);
-		_view.Resize(in width, in height);
-		UltralightProcessRuntime.UpdateAndRender();
-		CaptureFrame();
-		return ValueTask.CompletedTask;
+		return new ValueTask(UltralightProcessRuntime.RunAsync(() =>
+		{
+			_view.Resize(in width, in height);
+			UltralightProcessRuntime.UpdateAndRender();
+			CaptureFrame();
+		}, cancellationToken));
 	}
 
 	public ValueTask SendInputAsync(BrowserInputEvent inputEvent, CancellationToken cancellationToken = default)
@@ -129,39 +137,41 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 		cancellationToken.ThrowIfCancellationRequested();
 		ThrowIfDisposed();
 
-		switch (inputEvent)
+		return new ValueTask(UltralightProcessRuntime.RunAsync(() =>
 		{
-			case BrowserPointerEvent pointer:
-				_view.FireMouseEvent(UltralightBrowserInputTranslator.ToMouseEvent(pointer));
-				break;
-			case BrowserWheelEvent wheel:
-				_view.FireScrollEvent(UltralightBrowserInputTranslator.ToScrollEvent(wheel));
-				break;
-			case BrowserKeyEvent key:
-				_view.FireKeyEvent(UltralightBrowserInputTranslator.ToKeyEvent(key));
-				break;
-			case BrowserFocusEvent focus:
-				if (focus.IsFocused)
-				{
-					_view.Focus();
-				}
-				else
-				{
-					_view.Unfocus();
-				}
-				break;
-			case BrowserTextInputEvent textInput:
-				_view.FireKeyEvent(UltralightBrowserInputTranslator.ToTextInputEvent(textInput.Text));
-				break;
-			case BrowserImeCompositionEvent:
-				break;
-			default:
-				throw new ArgumentOutOfRangeException(nameof(inputEvent), inputEvent, "Unsupported browser input event.");
-		}
+			switch (inputEvent)
+			{
+				case BrowserPointerEvent pointer:
+					_view.FireMouseEvent(UltralightBrowserInputTranslator.ToMouseEvent(pointer));
+					break;
+				case BrowserWheelEvent wheel:
+					_view.FireScrollEvent(UltralightBrowserInputTranslator.ToScrollEvent(wheel));
+					break;
+				case BrowserKeyEvent key:
+					_view.FireKeyEvent(UltralightBrowserInputTranslator.ToKeyEvent(key));
+					break;
+				case BrowserFocusEvent focus:
+					if (focus.IsFocused)
+					{
+						_view.Focus();
+					}
+					else
+					{
+						_view.Unfocus();
+					}
+					break;
+				case BrowserTextInputEvent textInput:
+					_view.FireKeyEvent(UltralightBrowserInputTranslator.ToTextInputEvent(textInput.Text));
+					break;
+				case BrowserImeCompositionEvent:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(inputEvent), inputEvent, "Unsupported browser input event.");
+			}
 
-		UltralightProcessRuntime.UpdateAndRender();
-		CaptureFrame();
-		return ValueTask.CompletedTask;
+			UltralightProcessRuntime.UpdateAndRender();
+			CaptureFrame();
+		}, cancellationToken));
 	}
 
 	public BrowserFrame? TryGetLatestFrame()
@@ -208,11 +218,22 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 		{
 		}
 
-		_view.OnAddConsoleMessage -= OnConsoleMessage;
-		_view.OnDOMReady -= OnDomReady;
-		_view.OnFinishLoading -= OnFinishLoading;
-		_view.OnFailLoading -= OnFailLoading;
-		_view.Dispose();
+		try
+		{
+			UltralightProcessRuntime.Run(() =>
+			{
+				_view.OnAddConsoleMessage -= OnConsoleMessage;
+				_view.OnDOMReady -= OnDomReady;
+				_view.OnFinishLoading -= OnFinishLoading;
+				_view.OnFailLoading -= OnFailLoading;
+				_view.Dispose();
+			});
+		}
+		catch (ObjectDisposedException)
+		{
+			// Host exit already shut down the Ultralight dispatcher/renderer.
+		}
+
 		_pumpCts.Dispose();
 		return ValueTask.CompletedTask;
 	}
@@ -232,16 +253,18 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		ThrowIfDisposed();
-		string? exception;
-		_ = _view.EvaluateScript(script, out exception);
-		if (!string.IsNullOrWhiteSpace(exception))
+		return new ValueTask(UltralightProcessRuntime.RunAsync(() =>
 		{
-			throw new InvalidOperationException($"Ultralight script execution failed: {exception}");
-		}
+			string? exception;
+			_ = _view.EvaluateScript(script, out exception);
+			if (!string.IsNullOrWhiteSpace(exception))
+			{
+				throw new InvalidOperationException($"Ultralight script execution failed: {exception}");
+			}
 
-		UltralightProcessRuntime.UpdateAndRender();
-		CaptureFrame();
-		return ValueTask.CompletedTask;
+			UltralightProcessRuntime.UpdateAndRender();
+			CaptureFrame();
+		}, cancellationToken));
 	}
 
 	private async Task PumpLoopAsync(CancellationToken cancellationToken)
@@ -250,8 +273,16 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 		{
 			try
 			{
-				UltralightProcessRuntime.UpdateAndRender();
-				CaptureFrame();
+				await UltralightProcessRuntime.RunAsync(() =>
+				{
+					if (_disposed)
+					{
+						return;
+					}
+
+					UltralightProcessRuntime.UpdateAndRender();
+					CaptureFrame();
+				}, cancellationToken).ConfigureAwait(false);
 				await Task.Delay(16, cancellationToken).ConfigureAwait(false);
 			}
 			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -265,18 +296,17 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 		}
 	}
 
-	private async Task WaitUntilIdleAsync(CancellationToken cancellationToken)
+	private void WaitUntilIdle()
 	{
 		for (int i = 0; i < 180; i++)
 		{
-			cancellationToken.ThrowIfCancellationRequested();
 			UltralightProcessRuntime.UpdateAndRender();
 			if (!_view.IsLoading)
 			{
 				return;
 			}
 
-			await Task.Delay(16, cancellationToken).ConfigureAwait(false);
+			Thread.Sleep(16);
 		}
 	}
 
@@ -284,7 +314,7 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 	{
 		if (isMainFrame)
 		{
-			QueueFacadeInjection();
+			InjectFacade();
 		}
 	}
 
@@ -292,7 +322,7 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 	{
 		if (isMainFrame)
 		{
-			QueueFacadeInjection();
+			InjectFacade();
 			CaptureFrame();
 		}
 	}
@@ -389,23 +419,13 @@ internal sealed class UltralightBrowserSurface : IBrowserSurface, IBrowserShared
 		}
 	}
 
-	private void QueueFacadeInjection()
+	private void InjectFacade()
 	{
-		_ = InjectFacadeAsync();
-	}
-
-	private async Task InjectFacadeAsync()
-	{
-		try
+		string? exception;
+		_ = _view.EvaluateScript(UltralightDataPlaneFacadeScript.Create(_surfaceKey), out exception);
+		if (!string.IsNullOrWhiteSpace(exception))
 		{
-			await ExecuteScriptAsync(UltralightDataPlaneFacadeScript.Create(_surfaceKey), CancellationToken.None)
-				.ConfigureAwait(false);
-		}
-		catch (ObjectDisposedException) when (_disposed)
-		{
-		}
-		catch (InvalidOperationException) when (_disposed)
-		{
+			throw new InvalidOperationException($"Ultralight facade injection failed: {exception}");
 		}
 	}
 

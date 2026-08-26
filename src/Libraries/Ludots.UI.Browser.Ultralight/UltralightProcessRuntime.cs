@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -14,35 +15,27 @@ namespace Ludots.UI.Browser.Ultralight;
 
 internal static class UltralightProcessRuntime
 {
-	private static readonly object Sync = new();
+	private static readonly object Gate = new();
+	private static readonly ConcurrentQueue<UltralightWorkItem> Work = new();
+	private static readonly AutoResetEvent WorkSignal = new(false);
 
+	private static Thread? _ultralightThread;
+	private static int _ultralightThreadId;
+	private static volatile bool _dispatcherRunning;
+	private static volatile bool _dispatcherStopped;
 	private static int _runtimeOwnerCount;
 	private static bool _hostExitShutdownRequested;
 	private static string? _runtimeRootPath;
 	private static string? _resourceDirectoryPath;
 	private static Renderer? _renderer;
 
-	public static Renderer Renderer
-	{
-		get
-		{
-			lock (Sync)
-			{
-				return _renderer
-					?? throw new InvalidOperationException("Ultralight process runtime has not been acquired.");
-			}
-		}
-	}
-
 	public static string ResourceDirectoryPath
 	{
 		get
 		{
-			lock (Sync)
-			{
-				return _resourceDirectoryPath
-					?? throw new InvalidOperationException("Ultralight resource directory has not been acquired.");
-			}
+			string? path = _resourceDirectoryPath;
+			return path
+				?? throw new InvalidOperationException("Ultralight resource directory has not been acquired.");
 		}
 	}
 
@@ -50,7 +43,8 @@ internal static class UltralightProcessRuntime
 	{
 		ArgumentNullException.ThrowIfNull(options);
 		UltralightRuntimeLayoutPreflight.EnsureComplete(options.RuntimeRootPath);
-		lock (Sync)
+		EnsureDispatcherStarted();
+		Invoke(() =>
 		{
 			if (_hostExitShutdownRequested)
 			{
@@ -73,6 +67,7 @@ internal static class UltralightProcessRuntime
 				ULPlatform.SetDefaultFontLoader = true;
 				ULPlatform.SetDefaultFileSystem = true;
 				ULPlatform.ErrorMissingResources = true;
+				ULPlatform.ErrorWrongThread = true;
 				AppCoreMethods.SetPlatformFontLoader();
 				AppCoreMethods.ulEnablePlatformFileSystem(fileSystemRoot);
 				AppCoreMethods.ulEnableDefaultLogger(Path.Combine(_resourceDirectoryPath, "ultralight.log"));
@@ -92,32 +87,72 @@ internal static class UltralightProcessRuntime
 			}
 
 			_runtimeOwnerCount++;
-		}
+		});
 	}
 
 	public static void ReleaseRuntimeOwner()
 	{
-		lock (Sync)
+		Invoke(() =>
 		{
 			if (_runtimeOwnerCount > 0)
 			{
 				_runtimeOwnerCount--;
 			}
-		}
+		});
+	}
+
+	public static View CreateView(uint width, uint height, ULViewConfig viewConfig)
+	{
+		return Invoke(() =>
+		{
+			Renderer renderer = _renderer
+				?? throw new InvalidOperationException("Ultralight process runtime has not been acquired.");
+			return renderer.CreateView(width, height, viewConfig);
+		});
 	}
 
 	public static void UpdateAndRender()
 	{
-		lock (Sync)
+		Invoke(() =>
 		{
 			_renderer?.Update();
 			_renderer?.Render();
-		}
+		});
+	}
+
+	public static void Run(Action action)
+	{
+		ArgumentNullException.ThrowIfNull(action);
+		Invoke(action);
+	}
+
+	public static T Run<T>(Func<T> func)
+	{
+		ArgumentNullException.ThrowIfNull(func);
+		return Invoke(func);
+	}
+
+	public static Task RunAsync(Action action, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(action);
+		return InvokeAsync(action, cancellationToken);
+	}
+
+	public static Task<T> RunAsync<T>(Func<T> func, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(func);
+		return InvokeAsync(func, cancellationToken);
 	}
 
 	public static void ShutdownForHostExit()
 	{
-		lock (Sync)
+		if (_dispatcherStopped)
+		{
+			return;
+		}
+
+		EnsureDispatcherStarted();
+		Invoke(() =>
 		{
 			if (_hostExitShutdownRequested)
 			{
@@ -130,7 +165,182 @@ internal static class UltralightProcessRuntime
 			_renderer = null;
 			_runtimeRootPath = null;
 			_resourceDirectoryPath = null;
+		});
+
+		lock (Gate)
+		{
+			_dispatcherStopped = true;
+			_dispatcherRunning = false;
+			WorkSignal.Set();
+			Thread? thread = _ultralightThread;
+			_ultralightThread = null;
+			if (thread != null && thread.ManagedThreadId != Environment.CurrentManagedThreadId)
+			{
+				if (!thread.Join(TimeSpan.FromSeconds(5)))
+				{
+					throw new TimeoutException("Ultralight dispatcher thread did not exit within 5 seconds during host shutdown.");
+				}
+			}
 		}
+	}
+
+	private static void EnsureDispatcherStarted()
+	{
+		lock (Gate)
+		{
+			if (_dispatcherStopped)
+			{
+				throw new ObjectDisposedException(
+					nameof(UltralightProcessRuntime),
+					"Ultralight dispatcher has already been shut down for host exit.");
+			}
+
+			if (_dispatcherRunning && _ultralightThread != null)
+			{
+				return;
+			}
+
+			_dispatcherRunning = true;
+			_ultralightThread = new Thread(DispatcherLoop)
+			{
+				IsBackground = true,
+				Name = "Ludots.Ultralight"
+			};
+			_ultralightThread.Start();
+		}
+	}
+
+	private static void DispatcherLoop()
+	{
+		_ultralightThreadId = Environment.CurrentManagedThreadId;
+		while (_dispatcherRunning)
+		{
+			while (Work.TryDequeue(out UltralightWorkItem? item))
+			{
+				item.Execute();
+			}
+
+			WorkSignal.WaitOne(16);
+		}
+
+		while (Work.TryDequeue(out UltralightWorkItem? item))
+		{
+			item.Execute();
+		}
+	}
+
+	private static void ThrowIfDispatcherStopped()
+	{
+		if (_dispatcherStopped || _hostExitShutdownRequested)
+		{
+			throw new ObjectDisposedException(
+				nameof(UltralightProcessRuntime),
+				"Ultralight dispatcher has already been shut down for host exit.");
+		}
+	}
+
+	private static void Invoke(Action action)
+	{
+		if (Environment.CurrentManagedThreadId == _ultralightThreadId)
+		{
+			action();
+			return;
+		}
+
+		ThrowIfDispatcherStopped();
+		var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		Work.Enqueue(new UltralightWorkItem(() =>
+		{
+			try
+			{
+				action();
+				completion.TrySetResult();
+			}
+			catch (Exception ex)
+			{
+				completion.TrySetException(ex);
+			}
+		}));
+		WorkSignal.Set();
+		completion.Task.GetAwaiter().GetResult();
+	}
+
+	private static T Invoke<T>(Func<T> func)
+	{
+		if (Environment.CurrentManagedThreadId == _ultralightThreadId)
+		{
+			return func();
+		}
+
+		ThrowIfDispatcherStopped();
+		var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+		Work.Enqueue(new UltralightWorkItem(() =>
+		{
+			try
+			{
+				completion.TrySetResult(func());
+			}
+			catch (Exception ex)
+			{
+				completion.TrySetException(ex);
+			}
+		}));
+		WorkSignal.Set();
+		return completion.Task.GetAwaiter().GetResult();
+	}
+
+	private static Task InvokeAsync(Action action, CancellationToken cancellationToken)
+	{
+		if (Environment.CurrentManagedThreadId == _ultralightThreadId)
+		{
+			action();
+			return Task.CompletedTask;
+		}
+
+		ThrowIfDispatcherStopped();
+		cancellationToken.ThrowIfCancellationRequested();
+		var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		Work.Enqueue(new UltralightWorkItem(() =>
+		{
+			try
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				action();
+				completion.TrySetResult();
+			}
+			catch (Exception ex)
+			{
+				completion.TrySetException(ex);
+			}
+		}));
+		WorkSignal.Set();
+		return completion.Task.WaitAsync(cancellationToken);
+	}
+
+	private static Task<T> InvokeAsync<T>(Func<T> func, CancellationToken cancellationToken)
+	{
+		if (Environment.CurrentManagedThreadId == _ultralightThreadId)
+		{
+			return Task.FromResult(func());
+		}
+
+		ThrowIfDispatcherStopped();
+		cancellationToken.ThrowIfCancellationRequested();
+		var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+		Work.Enqueue(new UltralightWorkItem(() =>
+		{
+			try
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				completion.TrySetResult(func());
+			}
+			catch (Exception ex)
+			{
+				completion.TrySetException(ex);
+			}
+		}));
+		WorkSignal.Set();
+		return completion.Task.WaitAsync(cancellationToken);
 	}
 
 	private static void PrepareNativeSearchPath(string runtimeRootPath)
@@ -239,6 +449,18 @@ internal static class UltralightProcessRuntime
 		{
 			stream.CopyTo(output);
 		}
+	}
+
+	private sealed class UltralightWorkItem
+	{
+		private readonly Action _action;
+
+		public UltralightWorkItem(Action action)
+		{
+			_action = action;
+		}
+
+		public void Execute() => _action();
 	}
 }
 

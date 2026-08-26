@@ -6,8 +6,8 @@ internal static class UltralightDataPlaneFacadeScript
 	{
 		return $$"""
 			(function installLudotsUltralightFacades() {
-			  const surfaceKey = {{System.Text.Json.JsonSerializer.Serialize(surfaceKey)}};
-			  const messagePrefix = '__LUDOTS_MSG__:';
+			  var surfaceKey = {{System.Text.Json.JsonSerializer.Serialize(surfaceKey)}};
+			  var messagePrefix = '__LUDOTS_MSG__:';
 			  window.__ludotsSharedReadPending = window.__ludotsSharedReadPending || Object.create(null);
 
 			  function postBrowserMessage(message) {
@@ -20,10 +20,10 @@ internal static class UltralightDataPlaneFacadeScript
 			      provider: 'ultralight',
 			      surfaceKey: surfaceKey,
 			      postMessage: postBrowserMessage,
-			      addEventListener(type, listener, options) {
+			      addEventListener: function (type, listener, options) {
 			        window.addEventListener(type, listener, options);
 			      },
-			      removeEventListener(type, listener, options) {
+			      removeEventListener: function (type, listener, options) {
 			        window.removeEventListener(type, listener, options);
 			      }
 			    };
@@ -38,25 +38,49 @@ internal static class UltralightDataPlaneFacadeScript
 			      throw new TypeError('Shared-buffer descriptor is required.');
 			    }
 
+			    var byteOffset = descriptor.byteOffset;
+			    if (byteOffset === undefined || byteOffset === null) {
+			      byteOffset = descriptor.ByteOffset;
+			    }
+			    if (byteOffset === undefined || byteOffset === null) {
+			      byteOffset = 0;
+			    }
+
+			    var byteLength = descriptor.byteLength;
+			    if (byteLength === undefined || byteLength === null) {
+			      byteLength = descriptor.ByteLength;
+			    }
+			    if (byteLength === undefined || byteLength === null) {
+			      byteLength = 0;
+			    }
+
+			    var sequence = descriptor.sequence;
+			    if (sequence === undefined || sequence === null) {
+			      sequence = descriptor.Sequence;
+			    }
+			    if (sequence === undefined || sequence === null) {
+			      sequence = 0;
+			    }
+
 			    return {
 			      bufferId: String(descriptor.bufferId || descriptor.BufferId || ''),
-			      byteOffset: Number(descriptor.byteOffset ?? descriptor.ByteOffset ?? 0),
-			      byteLength: Number(descriptor.byteLength ?? descriptor.ByteLength ?? 0),
-			      sequence: Number(descriptor.sequence ?? descriptor.Sequence ?? 0)
+			      byteOffset: Number(byteOffset),
+			      byteLength: Number(byteLength),
+			      sequence: Number(sequence)
 			    };
 			  }
 
 			  function decodeBase64(base64) {
-			    const binary = atob(base64);
-			    const bytes = new Uint8Array(binary.length);
-			    for (let i = 0; i < binary.length; i++) {
+			    var binary = atob(base64);
+			    var bytes = new Uint8Array(binary.length);
+			    for (var i = 0; i < binary.length; i++) {
 			      bytes[i] = binary.charCodeAt(i);
 			    }
 			    return bytes;
 			  }
 
 			  window.__ludotsResolveSharedRead = function resolveSharedRead(requestId, base64, error) {
-			    const pending = window.__ludotsSharedReadPending[requestId];
+			    var pending = window.__ludotsSharedReadPending[requestId];
 			    if (!pending) {
 			      return;
 			    }
@@ -71,12 +95,12 @@ internal static class UltralightDataPlaneFacadeScript
 			  window.ludotsDataplane = {
 			    name: 'ludots.dataplane',
 			    mode: 'ultralight-message-bridge',
-			    postMessage(message) {
+			    postMessage: function (message) {
 			      window.ludotsBrowser.postMessage(message);
 			    },
-			    readSharedBuffer(descriptor) {
-			      const normalized = normalizeDescriptor(descriptor);
-			      const requestId = 'ul-shared-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+			    readSharedBuffer: function (descriptor) {
+			      var normalized = normalizeDescriptor(descriptor);
+			      var requestId = 'ul-shared-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
 			      return new Promise(function (resolve, reject) {
 			        window.__ludotsSharedReadPending[requestId] = { resolve: resolve, reject: reject };
 			        postBrowserMessage({
@@ -91,10 +115,10 @@ internal static class UltralightDataPlaneFacadeScript
 			        });
 			      });
 			    },
-			    addEventListener(type, listener, options) {
+			    addEventListener: function (type, listener, options) {
 			      window.addEventListener(type, listener, options);
 			    },
-			    removeEventListener(type, listener, options) {
+			    removeEventListener: function (type, listener, options) {
 			      window.removeEventListener(type, listener, options);
 			    }
 			  };
