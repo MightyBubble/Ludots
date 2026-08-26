@@ -6,7 +6,7 @@
     "width": 980,
     "offsetY": 140,
     "zIndex": 55,
-    "title": "Narrative Showcase",
+    "title": "Story Showcase",
     "backgroundHex": "#08121CE8",
     "borderHex": "#2D4F69",
     "foregroundHex": "#F5F7FA",
@@ -18,7 +18,7 @@
     "zIndex": 40,
     "eyebrow": "Task Tracker",
     "title": "Ashen Oath",
-    "footer": "Task, objective, and hint all come from NarrativeDirector state plus showcase config.",
+    "footer": "Task, objective, and hint come from TaskRuntime plus showcase config.",
     "backgroundHex": "#0B1520E6",
     "borderHex": "#294259",
     "foregroundHex": "#F5F7FA",
@@ -30,8 +30,8 @@
     "width": 420,
     "zIndex": 42,
     "eyebrow": "Flow Review",
-    "title": "Narrative Log",
-    "footer": "Task, dialogue, cinematic, signal, GAS reward, and trigger callbacks accumulate here.",
+    "title": "Story Log",
+    "footer": "Task, dialogue, sequence, signal, GAS reward, and trigger callbacks accumulate here.",
     "backgroundHex": "#09131DE6",
     "borderHex": "#243C53",
     "foregroundHex": "#F5F7FA",
@@ -44,8 +44,8 @@
     "offsetY": 214,
     "zIndex": 41,
     "eyebrow": "Branch State",
-    "title": "Variables",
-    "footer": "Conditions and branch outcomes stay fully data-driven.",
+    "title": "Map Variables",
+    "footer": "Conditions and branch outcomes stay data-driven through Graph + MapVariable.",
     "backgroundHex": "#0B1520E6",
     "borderHex": "#2E4B63",
     "foregroundHex": "#F5F7FA",
@@ -58,7 +58,7 @@
     "offsetY": 28,
     "zIndex": 60,
     "eyebrow": "Overlay Dialogue",
-    "footer": "Enter advances | Number keys commit choices | Tab skips cinematics",
+    "footer": "Enter advances | Number keys commit choices | Tab skips sequences",
     "backgroundHex": "#08111BEF",
     "borderHex": "#5AD7E9FF",
     "foregroundHex": "#F8FAFC",
@@ -71,8 +71,8 @@
     "offsetX": 28,
     "offsetY": 12,
     "zIndex": 58,
-    "eyebrow": "Bubble Dialogue",
-    "footer": "This node is rendered as an in-world bubble style panel instead of a full overlay.",
+    "eyebrow": "World Bubble",
+    "footer": "This node uses story.world_bubble with optional IScreenProjector head follow.",
     "backgroundHex": "#0C1622E8",
     "borderHex": "#49FFFFFF",
     "foregroundHex": "#F5F7FA",
@@ -84,8 +84,8 @@
     "width": 720,
     "offsetY": 84,
     "zIndex": 59,
-    "eyebrow": "Auto Bubble",
-    "footer": "Auto-advance subtitle bubbles can still be skipped through gameplay input.",
+    "eyebrow": "Immersive Subtitle",
+    "footer": "Sequencer subtitle tracks can still be skipped through StorySkip.",
     "backgroundHex": "#08121CE8",
     "borderHex": "#31546B",
     "foregroundHex": "#F2F6FA",
@@ -99,7 +99,7 @@
     "zIndex": 61,
     "eyebrow": "Choice Grid",
     "title": "Available Responses",
-    "footer": "Choice availability comes from narrative conditions, not UI-side branching.",
+    "footer": "Choice availability comes from Query Graph conditions, not UI-side branching.",
     "backgroundHex": "#0A1220E8",
     "borderHex": "#2F4358",
     "foregroundHex": "#F8FAFC",
@@ -112,7 +112,7 @@
     "offsetY": 236,
     "zIndex": 56,
     "eyebrow": "Transmission",
-    "footer": "Cinematic callouts can occupy a separate overlay channel from dialogue and objectives.",
+    "footer": "Intro sequence callouts can occupy a separate overlay channel from dialogue and objectives.",
     "backgroundHex": "#08121CE0",
     "borderHex": "#2A536B",
     "foregroundHex": "#E7F5FF",
@@ -120,13 +120,13 @@
     "accentHex": "#7DD3FC"
   },
   "hints": {
-    "promptTitle": "Narrative Showcase",
+    "promptTitle": "Story Showcase",
     "explorePrompt": "Select Arcweaver, move to the shrine with RMB, and press E to wake the trial.",
     "choicePrompt": "Overlay dialogue is active: use 1/2/3 for choices or Enter to advance non-choice nodes.",
     "combatPrompt": "The Ashen Beast is loose: right-click to approach, then use Q/W/E/R/Space to engage through ECS + GAS.",
     "returnPrompt": "The trial is resolved: go back to Warden Mirelle and choose the ending branch.",
-    "skipPrompt": "Tab skips the current cinematic if you already understand the beat.",
-    "autoAdvancePrompt": "This subtitle bubble is auto-advancing; progress is driven by runtime elapsed time."
+    "skipPrompt": "Tab skips the current sequence if you already understand the beat.",
+    "autoAdvancePrompt": "This subtitle bubble is driven by Sequencer elapsed time."
   },
   "templates": {
     "objectiveTitleFormat": "{task}",
@@ -134,19 +134,36 @@
     "taskActivated": "Task activated -> {bodyText}",
     "dialogueEntered": "{speaker}: {bodyText}",
     "dialogueChoiceCommitted": "Choice locked -> {bodyText}",
-    "cinematicEntered": "Cinematic beat -> {speaker}: {bodyText}",
+    "sequenceEntered": "Sequence beat -> {speaker}: {bodyText}",
     "taskCompleted": "Task completed -> {taskId}",
     "signal": "Signal -> {signalId}",
     "beastSpawned": "Runtime entity queue delivered the Ashen Beast into the shrine arena.",
     "rewardApplied": "Reward signal resolved into healing + movement blessing through GAS effects."
   },
   "routing": {
-    "transmissionCinematicIds": [ "Cinematic.Narrative.Intro" ],
-    "subtitleCinematicIds": [ "Cinematic.Narrative.TrialReveal" ]
+    "transmissionSequenceIds": [ "Sequence.Narrative.Intro" ],
+    "subtitleSequenceIds": [ "Sequence.Narrative.TrialReveal" ],
+    "choiceSignals": [
+      { "choiceId": "briefing_accept_now", "signals": [ "showcase.briefing_accepted" ] },
+      { "choiceId": "briefing_accept_after_lore", "signals": [ "showcase.briefing_accepted" ] },
+      { "choiceId": "return_duty", "signals": [ "showcase.reward_apply", "showcase.verdict_delivered" ] },
+      { "choiceId": "return_mercy", "signals": [ "showcase.reward_apply", "showcase.verdict_delivered" ] }
+    ]
   },
   "variables": [
     { "variableId": "trust", "label": "Trust", "accentHex": "#A7F3D0" },
     { "variableId": "lore", "label": "Lore", "accentHex": "#93C5FD" },
-    { "variableId": "ending", "label": "Ending", "accentHex": "#FDE68A" }
-  ]
+    { "variableId": "ending", "label": "Ending", "accentHex": "#FDE68A" },
+    { "variableId": "trial_phase", "label": "Trial Phase", "accentHex": "#FDBA74" }
+  ],
+  "endingLabels": {
+    "0": "Unwritten",
+    "1": "Duty",
+    "2": "Mercy"
+  },
+  "speakerLabels": {
+    "speaker.warden": "Warden Mirelle",
+    "speaker.shrine": "Ember Shrine",
+    "speaker.player": "Arcweaver"
+  }
 }

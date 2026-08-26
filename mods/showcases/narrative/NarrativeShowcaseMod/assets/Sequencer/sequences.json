@@ -1,0 +1,57 @@
+[
+  {
+    "id": "Sequence.Narrative.Intro",
+    "displayName": "Ashen Oath Intro",
+    "clearCameraOnComplete": true,
+    "clock": { "rate": 1.0, "pausePolicy": "Independent" },
+    "tracks": [
+      {
+        "type": "Camera",
+        "profile": "Narrative.Intro.Elder",
+        "start": 0.0,
+        "duration": 2.0
+      },
+      {
+        "type": "Subtitle",
+        "lineId": "line.warden.intro.elder",
+        "presentationProfile": "story.immersive_subtitle",
+        "start": 0.0,
+        "duration": 1.8
+      },
+      {
+        "type": "Camera",
+        "profile": "Narrative.Intro.Shrine",
+        "start": 2.0,
+        "duration": 2.0
+      },
+      {
+        "type": "Subtitle",
+        "lineId": "line.warden.intro.shrine",
+        "presentationProfile": "story.immersive_subtitle",
+        "start": 2.0,
+        "duration": 1.8
+      }
+    ]
+  },
+  {
+    "id": "Sequence.Narrative.TrialReveal",
+    "displayName": "Ashen Oath Trial Reveal",
+    "clearCameraOnComplete": true,
+    "clock": { "rate": 1.0, "pausePolicy": "Independent" },
+    "tracks": [
+      {
+        "type": "Camera",
+        "profile": "Narrative.Trial.Reveal",
+        "start": 0.0,
+        "duration": 1.2
+      },
+      {
+        "type": "Subtitle",
+        "lineId": "line.shrine.reveal.001",
+        "presentationProfile": "story.immersive_subtitle",
+        "start": 0.15,
+        "duration": 0.9
+      }
+    ]
+  }
+]

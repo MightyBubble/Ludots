@@ -1,11 +1,11 @@
 {
   "actions": [
-    { "id": "NarrativeInteract", "name": "Narrative_Interact", "type": "Button" },
-    { "id": "NarrativeAdvance", "name": "Narrative_Advance", "type": "Button" },
-    { "id": "NarrativeSkip", "name": "Narrative_Skip", "type": "Button" },
-    { "id": "NarrativeChoice1", "name": "Narrative_Choice1", "type": "Button" },
-    { "id": "NarrativeChoice2", "name": "Narrative_Choice2", "type": "Button" },
-    { "id": "NarrativeChoice3", "name": "Narrative_Choice3", "type": "Button" }
+    { "id": "StoryInteract", "name": "Story_Interact", "type": "Button" },
+    { "id": "StoryAdvance", "name": "Story_Advance", "type": "Button" },
+    { "id": "StorySkip", "name": "Story_Skip", "type": "Button" },
+    { "id": "StoryChoice1", "name": "Story_Choice1", "type": "Button" },
+    { "id": "StoryChoice2", "name": "Story_Choice2", "type": "Button" },
+    { "id": "StoryChoice3", "name": "Story_Choice3", "type": "Button" }
   ],
   "contexts": [
     {
@@ -13,12 +13,12 @@
       "name": "Narrative Showcase Controls",
       "priority": 110,
       "bindings": [
-        { "actionId": "NarrativeInteract", "path": "<Keyboard>/e" },
-        { "actionId": "NarrativeAdvance", "path": "<Keyboard>/enter" },
-        { "actionId": "NarrativeSkip", "path": "<Keyboard>/tab" },
-        { "actionId": "NarrativeChoice1", "path": "<Keyboard>/1" },
-        { "actionId": "NarrativeChoice2", "path": "<Keyboard>/2" },
-        { "actionId": "NarrativeChoice3", "path": "<Keyboard>/3" }
+        { "actionId": "StoryInteract", "path": "<Keyboard>/e" },
+        { "actionId": "StoryAdvance", "path": "<Keyboard>/enter" },
+        { "actionId": "StorySkip", "path": "<Keyboard>/tab" },
+        { "actionId": "StoryChoice1", "path": "<Keyboard>/1" },
+        { "actionId": "StoryChoice2", "path": "<Keyboard>/2" },
+        { "actionId": "StoryChoice3", "path": "<Keyboard>/3" }
       ]
     }
   ]
