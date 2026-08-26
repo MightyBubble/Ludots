@@ -1081,9 +1081,7 @@ namespace Ludots.Core.Engine
             gasGraphApi.BindGraphCallbackService(graphCallbackService);
             gasGraphApi.BindRngPickService(rngPickService);
             _gasGraphRuntimeApi = gasGraphApi;
-            var panelItemTemplates = new PanelItemTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(
-                panelItemTemplates, ConfigCatalog, ConfigConflictReport);
+            var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,
@@ -1091,11 +1089,17 @@ namespace Ludots.Core.Engine
                 graphHandlers,
                 entityCollectionStore,
                 graphOutputValueStore);
+            var panelProjectionReader = new PanelProjectionReader(World, graphOutputValueStore);
+            var panelGraphEvaluator = new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi);
             var panelHost = new PanelHost(
                 panelTemplates,
-                new PanelProjectionReader(World, graphOutputValueStore),
-                new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi),
-                new Ludots.Core.UI.PanelProjection.PanelListProjector(World, entityCollectionStore));
+                panelProjectionReader,
+                panelGraphEvaluator,
+                new Ludots.Core.UI.PanelProjection.PanelListProjector(
+                    World,
+                    entityCollectionStore,
+                    panelProjectionReader,
+                    panelGraphEvaluator));
             gasGraphApi.BindPanelHost(panelHost);
             var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);

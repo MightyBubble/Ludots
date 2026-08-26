@@ -1,5 +1,52 @@
 [
   {
+    "id": "panel.unit.roster",
+    "subject": "Entity",
+    "graph": "Graph.Unit.RosterCard",
+    "pins": [
+      {
+        "name": "health",
+        "key": "unit.roster.health",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "healthMax",
+        "key": "unit.roster.healthMax",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "stunned",
+        "key": "unit.roster.stunned",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "unit-name",
+          "bind": "displayName"
+        },
+        {
+          "type": "progressBar",
+          "class": "unit-health",
+          "current": "health",
+          "max": "healthMax"
+        },
+        {
+          "type": "badge",
+          "class": "unit-stunned",
+          "bind": "stunned",
+          "text": "晕眩",
+          "showWhen": true
+        }
+      ]
+    }
+  },
+  {
     "id": "panel.entity.list",
     "graph": "Graph.Entity.List",
     "pins": [
@@ -14,7 +61,7 @@
       {
         "name": "units",
         "collectionKey": "panel.roster.units",
-        "item": "item.unit.roster"
+        "template": "panel.unit.roster"
       }
     ],
     "layout": {

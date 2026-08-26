@@ -95,8 +95,8 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
             who: "关卡作者 / 玩家",
             what: "左侧名册按血量降序列出存活单位，晕眩卫士带徽标",
             where: "screen.topLeft panel.entity.list",
-            why: "验证独立 item 模板 + list 容器引用编排",
-            how: "查询图 EntityCollection；item.unit.roster 管一行；panel.entity.list 只引用 item");
+            why: "验证元素 subject+graph 透传与 list 编排",
+            how: "容器图 EntityCollection；panel.unit.roster subject=Entity 自解；list 只引用 template");
     }
 
     private static GameEngine CreateEngine(string repoRoot)

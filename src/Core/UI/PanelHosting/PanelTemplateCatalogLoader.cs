@@ -23,13 +23,8 @@ namespace Ludots.Core.UI.PanelHosting
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
         }
 
-        public PanelTemplateRegistry Load(
-            PanelItemTemplateRegistry itemTemplates,
-            ConfigCatalog? catalog = null,
-            ConfigConflictReport? report = null)
+        public PanelTemplateRegistry Load(ConfigCatalog? catalog = null, ConfigConflictReport? report = null)
         {
-            ArgumentNullException.ThrowIfNull(itemTemplates);
-
             var registry = new PanelTemplateRegistry();
             var entry = ConfigPipeline.RequireEntry(catalog, ConfigPath, ConfigMergePolicy.ArrayById, "id");
             IReadOnlyList<MergedConfigEntry> nodes = _configs.MergeArrayByIdFromCatalog(in entry, report);
@@ -46,8 +41,6 @@ namespace Ludots.Core.UI.PanelHosting
             registry.Freeze();
             foreach (PanelTemplate template in registry.Snapshot())
             {
-                // Unregistered graph is a data-plane miss, not a structural error: pins stay
-                // on their defaults (no error, no empty) until the graph ships.
                 int graphId = NodeLibraries.GASGraph.Host.GraphIdRegistry.GetId(template.Graph);
                 if (graphId == NodeLibraries.GASGraph.Host.GraphIdRegistry.InvalidId)
                 {
@@ -55,7 +48,10 @@ namespace Ludots.Core.UI.PanelHosting
                 }
 
                 template.GraphId = graphId;
-                PanelItemTemplateBinder.Bind(template, itemTemplates);
+                if (template.Collections.Count > 0)
+                {
+                    PanelListProjector.BindElements(template, registry);
+                }
             }
 
             return registry;

@@ -3,45 +3,55 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.UI.PanelHosting;
 
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Binds EntityCollection rows to scalar columns declared by the collection's item template.
-    /// Membership and order come from the query graph; this type does not filter or sort.
+    /// For each collection member, evaluates the element template graph with that
+    /// member as scope and materializes pin bags. Membership/order come from the
+    /// query graph; this type does not filter or sort.
     /// </summary>
     public sealed class PanelListProjector
     {
         private readonly World _world;
         private readonly EntityCollectionStore _collections;
+        private readonly PanelProjectionReader _reader;
+        private readonly IPanelGraphEvaluator? _graphEvaluator;
 
-        public PanelListProjector(World world, EntityCollectionStore collections)
+        public PanelListProjector(
+            World world,
+            EntityCollectionStore collections,
+            PanelProjectionReader reader,
+            IPanelGraphEvaluator? graphEvaluator = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
+            _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+            _graphEvaluator = graphEvaluator;
         }
 
-        public static void BindSymbols(PanelTemplate template)
+        public static void BindElements(PanelTemplate host, PanelTemplateRegistry templates)
         {
-            ArgumentNullException.ThrowIfNull(template);
-            foreach (PanelCollectionBinding collection in template.Collections)
-            {
-                PanelItemTemplate item = collection.Item
-                    ?? throw new InvalidOperationException(
-                        $"Panel template '{template.Id}' collection '{collection.Name}' item '{collection.ItemTemplateId}' is not bound.");
+            ArgumentNullException.ThrowIfNull(host);
+            ArgumentNullException.ThrowIfNull(templates);
 
-                foreach (PanelItemField field in item.Fields)
+            foreach (PanelCollectionBinding collection in host.Collections)
+            {
+                PanelTemplate element = templates.Require(collection.TemplateId);
+                if (element.Subject == PanelSubjectKind.None)
                 {
-                    field.SymbolId = field.Kind switch
-                    {
-                        PanelItemFieldKind.Attribute or PanelItemFieldKind.AttributeBase =>
-                            AttributeRegistry.GetId(field.Symbol!),
-                        PanelItemFieldKind.Tag => TagRegistry.GetId(field.Symbol!),
-                        _ => -1,
-                    };
+                    throw new InvalidOperationException(
+                        $"Panel '{host.Id}' collection '{collection.Name}' template '{collection.TemplateId}' must declare subject (Entity/Task/Ability).");
                 }
+
+                if (element.Subject is not PanelSubjectKind.Entity)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel '{host.Id}' collection '{collection.Name}' template '{collection.TemplateId}' subject '{PanelSubjectKinds.ToId(element.Subject)}' is not wired for EntityCollection yet.");
+                }
+
+                collection.Template = element;
             }
         }
 
@@ -63,9 +73,9 @@ namespace Ludots.Core.UI.PanelProjection
 
         private PanelListProjection ProjectCollection(Entity scope, PanelCollectionBinding collection)
         {
-            PanelItemTemplate itemTemplate = collection.Item
+            PanelTemplate element = collection.Template
                 ?? throw new InvalidOperationException(
-                    $"Collection '{collection.Name}' item '{collection.ItemTemplateId}' is not bound.");
+                    $"Collection '{collection.Name}' template '{collection.TemplateId}' is not bound.");
 
             var items = new List<PanelListItemProjection>(16);
             if (_collections.TryGet(scope, collection.CollectionKey, out EntityCollectionHandle handle) &&
@@ -80,70 +90,46 @@ namespace Ludots.Core.UI.PanelProjection
                         continue;
                     }
 
-                    items.Add(ProjectItem(entity, itemTemplate.Fields));
+                    items.Add(ProjectElement(entity, element));
                 }
             }
 
             return new PanelListProjection(collection.Name, items);
         }
 
-        private PanelListItemProjection ProjectItem(Entity entity, IReadOnlyList<PanelItemField> fields)
+        private PanelListItemProjection ProjectElement(Entity member, PanelTemplate element)
         {
+            if (_graphEvaluator != null && element.GraphId >= 0)
+            {
+                try
+                {
+                    _graphEvaluator.Evaluate(element.GraphId, member);
+                }
+                catch (Exception ex)
+                {
+                    Diagnostics.Log.Error(
+                        in Diagnostics.LogChannels.Engine,
+                        $"[PanelListProjector] element graph '{element.Graph}' failed for '{element.Id}': {ex.Message}");
+                }
+            }
+
             var floats = new Dictionary<string, float>(StringComparer.Ordinal);
             var bools = new Dictionary<string, bool>(StringComparer.Ordinal);
             var strings = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            for (int i = 0; i < fields.Count; i++)
+            foreach (PanelPin pin in element.Pins)
             {
-                PanelItemField field = fields[i];
-                switch (field.Kind)
-                {
-                    case PanelItemFieldKind.Attribute:
-                        floats[field.Name] = ReadAttribute(entity, field.SymbolId);
-                        break;
-                    case PanelItemFieldKind.AttributeBase:
-                        floats[field.Name] = ReadAttributeBase(entity, field.SymbolId);
-                        break;
-                    case PanelItemFieldKind.Tag:
-                        bools[field.Name] = HasTag(entity, field.SymbolId);
-                        break;
-                    case PanelItemFieldKind.Name:
-                        strings[field.Name] = ReadName(entity);
-                        break;
-                }
+                PanelProjectionValue value = _reader.Resolve(member, pin);
+                floats[pin.Name] = value.FloatValue;
+                bools[pin.Name] = value.FloatValue != 0f;
+            }
+
+            if (element.Subject == PanelSubjectKind.Entity)
+            {
+                strings[PanelSubjectKinds.EntityDisplayName] = ReadName(member);
             }
 
             return new PanelListItemProjection(floats, bools, strings);
-        }
-
-        private float ReadAttribute(Entity entity, int attributeId)
-        {
-            if (attributeId < 0 || !_world.IsAlive(entity) || !_world.Has<AttributeBuffer>(entity))
-            {
-                return 0f;
-            }
-
-            return _world.Get<AttributeBuffer>(entity).GetCurrent(attributeId);
-        }
-
-        private float ReadAttributeBase(Entity entity, int attributeId)
-        {
-            if (attributeId < 0 || !_world.IsAlive(entity) || !_world.Has<AttributeBuffer>(entity))
-            {
-                return 0f;
-            }
-
-            return _world.Get<AttributeBuffer>(entity).GetBase(attributeId);
-        }
-
-        private bool HasTag(Entity entity, int tagId)
-        {
-            if (tagId <= 0 || !_world.IsAlive(entity) || !_world.Has<GameplayTagContainer>(entity))
-            {
-                return false;
-            }
-
-            return _world.Get<GameplayTagContainer>(entity).HasTag(tagId);
         }
 
         private string ReadName(Entity entity)

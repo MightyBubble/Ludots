@@ -20,11 +20,6 @@
     "IdField": "id"
   },
   {
-    "Path": "Panels/item_templates.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
     "Path": "Presentation/mesh_assets.json",
     "Policy": "ArrayById",
     "IdField": "id"

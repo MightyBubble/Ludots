@@ -342,9 +342,14 @@ public sealed class PanelPresentationSystem : ISystem<float>
         PanelCollectionBinding collection = FindCollection(template, control.Bind!)
             ?? throw new InvalidOperationException(
                 $"Panel '{template.Id}' list bind '{control.Bind}' has no matching collection.");
-        PanelItemTemplate itemTemplate = collection.Item
+        PanelTemplate elementTemplate = collection.Template
             ?? throw new InvalidOperationException(
-                $"Panel '{template.Id}' collection '{collection.Name}' item is not bound.");
+                $"Panel '{template.Id}' collection '{collection.Name}' template is not bound.");
+        if (elementTemplate.Layout == null)
+        {
+            throw new InvalidOperationException(
+                $"Element template '{elementTemplate.Id}' requires layout.");
+        }
 
         PanelListProjection? projection = FindList(lists, control.Bind!);
         var rows = new List<UiElementBuilder>();
@@ -362,7 +367,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     .Background(new UiColor(28, 28, 48, 180))
                     .Radius(4)
                     .Children(
-                        BuildDeclaredControls(template, itemTemplate.Layout.Controls, values, lists, item)));
+                        BuildDeclaredControls(template, elementTemplate.Layout.Controls, values, lists, item)));
             }
         }
 

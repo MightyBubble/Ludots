@@ -28,7 +28,7 @@
   - [确定性随机与加权分布](architecture/deterministic-rng.md)
   - [UI 渲染控制与 Surface 所有权](architecture/ui-rendering-and-surface-ownership.md)
   - [四皮面板：工程结构与换肤合同](architecture/panel-skins.md)
-  - [面板视图投影：独立 Item 模板 · 容器只编排](architecture/panel-view-projection.md)
+  - [面板视图投影：元素模板 · 主体类型 · 容器只编排](architecture/panel-view-projection.md)
   - [面板快速上手：10 分钟加一个血条](architecture/panel-quickstart.md)
   - [面板目录设计：配置形状与线框](architecture/panel-catalog-designs.md)
   - [面板典型案例全设计](architecture/panel-case-designs.md)

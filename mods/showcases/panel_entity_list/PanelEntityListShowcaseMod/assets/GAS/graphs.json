@@ -70,5 +70,47 @@
         "key": "panel.roster.rowCount"
       }
     ]
+  },
+  {
+    "id": "Graph.Unit.RosterCard",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      { "id": "hp", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "hpMax", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "stunned", "op": "HasTag", "tag": "Status.Stunned" }
+    ],
+    "controlEdges": [
+      { "from": "hp", "fromPort": "next", "to": "hpMax" },
+      { "from": "hpMax", "fromPort": "next", "to": "caster" },
+      { "from": "caster", "fromPort": "next", "to": "stunned" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "stunned", "toPort": "source" }
+    ],
+    "outputs": [
+      {
+        "id": "health",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hp",
+        "key": "unit.roster.health"
+      },
+      {
+        "id": "healthMax",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hpMax",
+        "key": "unit.roster.healthMax"
+      },
+      {
+        "id": "stunned",
+        "destination": "Summary",
+        "type": "Bool",
+        "source": "stunned",
+        "key": "unit.roster.stunned"
+      }
+    ]
   }
 ]

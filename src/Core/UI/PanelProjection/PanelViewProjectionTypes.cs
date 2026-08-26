@@ -3,13 +3,16 @@ using System.Collections.Generic;
 
 namespace Ludots.Core.UI.PanelProjection
 {
-    /// <summary>Item field leaf kind: always produces a scalar for controls.</summary>
-    public enum PanelItemFieldKind : byte
+    /// <summary>
+    /// What a collection element template resolves against.
+    /// Host panels use <see cref="None"/>.
+    /// </summary>
+    public enum PanelSubjectKind : byte
     {
-        Attribute = 0,
-        AttributeBase = 1,
-        Tag = 2,
-        Name = 3,
+        None = 0,
+        Entity = 1,
+        Task = 2,
+        Ability = 3,
     }
 
     public enum PanelLayoutControlType : byte
@@ -20,87 +23,26 @@ namespace Ludots.Core.UI.PanelProjection
         List = 3,
     }
 
-    public sealed class PanelItemField
-    {
-        public PanelItemField(string name, PanelItemFieldKind kind, string? symbol)
-        {
-            Name = name;
-            Kind = kind;
-            Symbol = symbol;
-        }
-
-        public string Name { get; }
-        public PanelItemFieldKind Kind { get; }
-        public string? Symbol { get; }
-        public int SymbolId { get; internal set; } = -1;
-    }
-
     /// <summary>
-    /// Reusable one-entity presentation template. Does not know list/grid parents
-    /// or which collection it will be bound to.
-    /// </summary>
-    public sealed class PanelItemTemplate
-    {
-        public PanelItemTemplate(string id, IReadOnlyList<PanelItemField> fields, PanelLayout layout)
-        {
-            if (string.IsNullOrWhiteSpace(id))
-            {
-                throw new ArgumentException("Item template id is required.", nameof(id));
-            }
-
-            if (fields == null || fields.Count == 0)
-            {
-                throw new ArgumentException($"Item template '{id}' must declare at least one field.", nameof(fields));
-            }
-
-            if (layout == null || layout.Controls.Count == 0)
-            {
-                throw new ArgumentException($"Item template '{id}' requires a non-empty layout.", nameof(layout));
-            }
-
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (PanelItemField field in fields)
-            {
-                if (field == null)
-                {
-                    throw new ArgumentException($"Item template '{id}' has a null field.", nameof(fields));
-                }
-
-                if (!seen.Add(field.Name))
-                {
-                    throw new ArgumentException($"Item template '{id}' declares duplicate field '{field.Name}'.", nameof(fields));
-                }
-            }
-
-            Id = id.Trim();
-            Fields = fields;
-            Layout = layout;
-        }
-
-        public string Id { get; }
-        public IReadOnlyList<PanelItemField> Fields { get; }
-        public PanelLayout Layout { get; }
-    }
-
-    /// <summary>
-    /// Container binding: graph collection + which reusable item template fills each row.
-    /// Membership and order are owned by the query graph.
+    /// Container binding: graph collection + reusable element template id.
+    /// Membership/order come from the query graph; each member is passed through
+    /// as the element template's evaluation scope.
     /// </summary>
     public sealed class PanelCollectionBinding
     {
-        public PanelCollectionBinding(string name, string collectionKey, string itemTemplateId)
+        public PanelCollectionBinding(string name, string collectionKey, string templateId)
         {
             Name = name;
             CollectionKey = collectionKey;
-            ItemTemplateId = itemTemplateId;
+            TemplateId = templateId;
         }
 
         public string Name { get; }
         public string CollectionKey { get; }
-        public string ItemTemplateId { get; }
+        public string TemplateId { get; }
 
-        /// <summary>Resolved after catalog load; null until <see cref="PanelItemTemplateBinder"/> runs.</summary>
-        public PanelItemTemplate? Item { get; internal set; }
+        /// <summary>Resolved after catalog load.</summary>
+        public PanelTemplate? Template { get; internal set; }
     }
 
     public sealed class PanelLayoutControl
@@ -145,7 +87,6 @@ namespace Ludots.Core.UI.PanelProjection
         public IReadOnlyList<PanelLayoutControl> Controls { get; }
     }
 
-    /// <summary>One projected list item: scalar bags only (no Entity exposed to controls).</summary>
     public sealed class PanelListItemProjection
     {
         public PanelListItemProjection(
@@ -173,5 +114,36 @@ namespace Ludots.Core.UI.PanelProjection
 
         public string Name { get; }
         public IReadOnlyList<PanelListItemProjection> Items { get; }
+    }
+
+    public static class PanelSubjectKinds
+    {
+        public static PanelSubjectKind Parse(string text, string context)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"{context} subject is required.");
+            }
+
+            return text.Trim() switch
+            {
+                "Entity" => PanelSubjectKind.Entity,
+                "Task" => PanelSubjectKind.Task,
+                "Ability" => PanelSubjectKind.Ability,
+                _ => throw new InvalidOperationException(
+                    $"{context} subject '{text}' is unknown (allowed: Entity, Task, Ability)."),
+            };
+        }
+
+        public static string ToId(PanelSubjectKind kind) => kind switch
+        {
+            PanelSubjectKind.Entity => "Entity",
+            PanelSubjectKind.Task => "Task",
+            PanelSubjectKind.Ability => "Ability",
+            _ => "None",
+        };
+
+        /// <summary>Entity subject surface available to layout binds (not graph pins).</summary>
+        public const string EntityDisplayName = "displayName";
     }
 }

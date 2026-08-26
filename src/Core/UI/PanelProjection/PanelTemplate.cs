@@ -21,7 +21,8 @@ namespace Ludots.Core.UI.PanelProjection
             IReadOnlyList<PanelIntentMapEntry>? intents = null,
             string? skin = null,
             IReadOnlyList<PanelCollectionBinding>? collections = null,
-            PanelLayout? layout = null)
+            PanelLayout? layout = null,
+            PanelSubjectKind subject = PanelSubjectKind.None)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -54,6 +55,13 @@ namespace Ludots.Core.UI.PanelProjection
 
             List<PanelCollectionBinding> safeCollections =
                 new List<PanelCollectionBinding>(collections ?? Array.Empty<PanelCollectionBinding>());
+            if (subject != PanelSubjectKind.None && safeCollections.Count > 0)
+            {
+                throw new ArgumentException(
+                    $"Panel template '{id}' declares subject '{PanelSubjectKinds.ToId(subject)}' and cannot also declare collections.",
+                    nameof(collections));
+            }
+
             var collectionNames = new HashSet<string>(StringComparer.Ordinal);
             foreach (PanelCollectionBinding collection in safeCollections)
             {
@@ -118,6 +126,7 @@ namespace Ludots.Core.UI.PanelProjection
             Skin = string.IsNullOrWhiteSpace(skin) ? null : skin.Trim();
             Collections = safeCollections;
             Layout = layout;
+            Subject = subject;
         }
 
         public string Id { get; }
@@ -128,7 +137,13 @@ namespace Ludots.Core.UI.PanelProjection
         public IReadOnlyList<PanelTemplateEvent> Events { get; }
         public IReadOnlyList<PanelIntentMapEntry> Intents { get; }
 
-        /// <summary>Collection slots: graph EntityCollection + reusable item template id.</summary>
+        /// <summary>
+        /// Element subject kind. <see cref="PanelSubjectKind.None"/> = host panel;
+        /// non-None = embeddable element that resolves that payload type.
+        /// </summary>
+        public PanelSubjectKind Subject { get; }
+
+        /// <summary>Collection slots: graph collection + reusable element template id.</summary>
         public IReadOnlyList<PanelCollectionBinding> Collections { get; }
 
         /// <summary>Optional builtin control tree; null keeps legacy auto-row layout.</summary>

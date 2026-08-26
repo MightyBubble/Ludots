@@ -14,12 +14,12 @@ namespace Ludots.Core.UI.PanelProjection
     {
         private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal)
         {
-            "id", "skin", "graph", "pins", "events", "intents", "collections", "layout"
+            "id", "skin", "graph", "pins", "events", "intents", "collections", "layout", "subject"
         };
         private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
         private static readonly HashSet<string> CollectionFields = new(StringComparer.Ordinal)
         {
-            "name", "collectionKey", "item"
+            "name", "collectionKey", "template"
         };
         private static readonly HashSet<string> ControlFields = new(StringComparer.Ordinal)
         {
@@ -106,12 +106,26 @@ namespace Ludots.Core.UI.PanelProjection
                 pins.Add(new PanelPin(pinName, pinKey, realtime: string.Equals(modeText, "realtime", StringComparison.Ordinal), defaultValue));
             }
 
+            PanelSubjectKind subject = PanelSubjectKind.None;
+            if (rootObject["subject"] is not null)
+            {
+                subject = PanelSubjectKinds.Parse(
+                    RequireString(rootObject, "subject", $"panel template '{id}'"),
+                    $"panel template '{id}'");
+            }
+
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
             List<PanelIntentMapEntry> intents = ParseIntents(id, rootObject, events);
             List<PanelCollectionBinding> collections = ParseCollections(id, rootObject);
-            PanelLayout? layout = ParseLayout(id, rootObject, pins, collections);
+            if (subject != PanelSubjectKind.None && collections.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{id}' declares subject and cannot also declare collections.");
+            }
 
-            return new PanelTemplate(id, graph, pins, events, intents, skin, collections, layout);
+            PanelLayout? layout = ParseLayout(id, rootObject, pins, collections, subject);
+
+            return new PanelTemplate(id, graph, pins, events, intents, skin, collections, layout, subject);
         }
 
         private static List<PanelCollectionBinding> ParseCollections(string templateId, JsonObject rootObject)
@@ -138,10 +152,10 @@ namespace Ludots.Core.UI.PanelProjection
                 string name = RequireString(collectionObject, "name", $"panel template '{templateId}' collection");
                 string collectionKey = RequireString(
                     collectionObject, "collectionKey", $"panel template '{templateId}' collection '{name}'");
-                string itemTemplateId = RequireString(
-                    collectionObject, "item", $"panel template '{templateId}' collection '{name}'");
+                string elementTemplateId = RequireString(
+                    collectionObject, "template", $"panel template '{templateId}' collection '{name}'");
 
-                collections.Add(new PanelCollectionBinding(name, collectionKey, itemTemplateId));
+                collections.Add(new PanelCollectionBinding(name, collectionKey, elementTemplateId));
             }
 
             return collections;
@@ -151,7 +165,8 @@ namespace Ludots.Core.UI.PanelProjection
             string templateId,
             JsonObject rootObject,
             IReadOnlyList<PanelPin> pins,
-            IReadOnlyList<PanelCollectionBinding> collections)
+            IReadOnlyList<PanelCollectionBinding> collections,
+            PanelSubjectKind subject)
         {
             if (rootObject["layout"] is null)
             {
@@ -174,16 +189,27 @@ namespace Ludots.Core.UI.PanelProjection
                 pinNames.Add(pin.Name);
             }
 
+            if (subject == PanelSubjectKind.Entity)
+            {
+                pinNames.Add(PanelSubjectKinds.EntityDisplayName);
+            }
+
             var collectionNames = new HashSet<string>(StringComparer.Ordinal);
             foreach (PanelCollectionBinding collection in collections)
             {
                 collectionNames.Add(collection.Name);
             }
 
+            if (subject != PanelSubjectKind.None && collectionNames.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' element subject cannot declare list/grid collections in layout.");
+            }
+
             var controls = new List<PanelLayoutControl>(controlsNode.Count);
             foreach (JsonNode? controlNode in controlsNode)
             {
-                controls.Add(ParseControl(templateId, controlNode, pinNames, collectionNames));
+                controls.Add(ParseControl(templateId, controlNode, pinNames, collectionNames, subject));
             }
 
             return new PanelLayout(controls);
@@ -193,7 +219,8 @@ namespace Ludots.Core.UI.PanelProjection
             string templateId,
             JsonNode? controlNode,
             HashSet<string> pinNames,
-            HashSet<string> collectionNames)
+            HashSet<string> collectionNames,
+            PanelSubjectKind subject)
         {
             if (controlNode is not JsonObject controlObject)
             {
@@ -207,7 +234,10 @@ namespace Ludots.Core.UI.PanelProjection
                 "label" => PanelLayoutControlType.Label,
                 "progressBar" => PanelLayoutControlType.ProgressBar,
                 "badge" => PanelLayoutControlType.Badge,
-                "list" => PanelLayoutControlType.List,
+                "list" => subject == PanelSubjectKind.None
+                    ? PanelLayoutControlType.List
+                    : throw new InvalidOperationException(
+                        $"Panel template '{templateId}' element subject cannot declare arrangement control 'list'."),
                 _ => throw new InvalidOperationException(
                     $"Panel template '{templateId}' layout control type '{typeText}' is unknown."),
             };
