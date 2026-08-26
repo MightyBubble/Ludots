@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Client;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.WebUI.DataPlane;
@@ -257,9 +258,9 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
         private static string ResolveGroupLabel(long groupKey, int representativeAbilityId, List<string> abilityLabels)
         {
             int kind = (int)(groupKey >> 32);
-            if (kind == AbilityAggregationKeyKinds.CatalogTag)
+            if (kind == AbilityAggregationKeyKinds.CatalogCategory)
             {
-                return FormatTagLeaf(TagRegistry.GetName((int)(uint)groupKey));
+                return FormatTagLeaf(AbilityCategoryRegistry.GetName((int)(uint)groupKey));
             }
 
             return abilityLabels.Count > 0
@@ -272,9 +273,9 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
         private string ResolveGroupFamily(long groupKey, int representativeAbilityId)
         {
             int kind = (int)(groupKey >> 32);
-            if (kind == AbilityAggregationKeyKinds.CatalogTag)
+            if (kind == AbilityAggregationKeyKinds.CatalogCategory)
             {
-                return FormatTagLeaf(TagRegistry.GetName((int)(uint)groupKey));
+                return FormatTagLeaf(AbilityCategoryRegistry.GetName((int)(uint)groupKey));
             }
 
             if (representativeAbilityId <= 0)
@@ -282,13 +283,22 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
                 return string.Empty;
             }
 
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
+            var definitions = _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
+            if (definitions == null)
             {
-                string tag = TagRegistry.GetName(tagId);
-                if (tag.StartsWith("castFamily.", StringComparison.Ordinal) &&
-                    _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)?.HasCategory(representativeAbilityId, tagId) == true)
+                return string.Empty;
+            }
+
+            RegistryMapping[] mappings = AbilityCategoryRegistry.SnapshotMappings();
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                string name = mappings[i].Name;
+                int categoryId = mappings[i].Id;
+                if (categoryId > 0 &&
+                    name.StartsWith("castFamily.", StringComparison.Ordinal) &&
+                    definitions.HasCategory(representativeAbilityId, categoryId))
                 {
-                    return FormatTagLeaf(tag);
+                    return FormatTagLeaf(name);
                 }
             }
 

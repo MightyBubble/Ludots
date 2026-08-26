@@ -547,9 +547,9 @@ namespace Ludots.Tests.GAS
             transaction.Begin();
             api.BeginEffectSideEffectTransaction(transaction);
 
-            // Execute OnApply with effectTagId=10 (non-zero to trigger dispatch)
+            // Execute OnApply with effectCategoryId=10 (non-zero to trigger dispatch)
             executor.ExecutePhase(world, api, caster, target, default, default,
-                EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
+                EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectCategoryId: 10, effectTemplateId: 1);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);
 
@@ -626,7 +626,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
@@ -673,7 +673,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
@@ -873,7 +873,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(EffectPhaseExecutor.MissingListenerEventBusError));
@@ -942,7 +942,7 @@ namespace Ludots.Tests.GAS
                     default,
                     default,
                     EffectPhaseId.OnApply,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(EffectPhaseSideEffectTransaction.CapacityExceededError));
@@ -1000,7 +1000,7 @@ namespace Ludots.Tests.GAS
                     default,
                     default,
                     EffectPhaseId.OnApply,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             eventBus.Update();
@@ -1053,7 +1053,7 @@ namespace Ludots.Tests.GAS
                 executor.ExecutePhase(
                     world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
-                    effectTagId: 1, effectTemplateId: 1);
+                    effectCategoryId: 1, effectTemplateId: 1);
                 transaction.Commit();
                 api.EndEffectSideEffectTransaction(transaction);
             }
@@ -1129,7 +1129,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(EffectPhaseExecutor.ListenerTransactionRequiredError));
@@ -1188,7 +1188,7 @@ namespace Ludots.Tests.GAS
                 executor.ExecutePhase(
                     world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
-                    effectTagId: 1, effectTemplateId: 1))!;
+                    effectCategoryId: 1, effectTemplateId: 1))!;
             api.EndEffectSideEffectTransaction(transaction);
             transaction.Rollback();
 
@@ -1239,7 +1239,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1));
 
             That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(100f));
@@ -1316,7 +1316,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnPropose,
                 in behavior,
                 EffectPresetType.None,
-                effectTagId: 1,
+                effectCategoryId: 1,
                 effectTemplateId: 1,
                 in mergedParams);
 
@@ -1383,7 +1383,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnPropose,
                 in behavior,
                 EffectPresetType.None,
-                effectTagId: 1,
+                effectCategoryId: 1,
                 effectTemplateId: 1,
                 in mergedParams);
 
@@ -1431,7 +1431,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnCalculate,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
@@ -1474,7 +1474,7 @@ namespace Ludots.Tests.GAS
             api.BeginEffectSideEffectTransaction(transaction);
 
             executor.ExecutePhase(world, api, caster, target, default, default,
-                EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
+                EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectCategoryId: 10, effectTemplateId: 1);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);
 
@@ -1595,7 +1595,7 @@ namespace Ludots.Tests.GAS
                             EffectPhaseId.OnPropose,
                             in behavior,
                             EffectPresetType.None,
-                            effectTagId: 1,
+                            effectCategoryId: 1,
                             effectTemplateId: 1,
                             in mergedParams);
                     }
@@ -1603,7 +1603,7 @@ namespace Ludots.Tests.GAS
                     {
                         executor.ExecutePhase(world, api, caster, targets[i], default, default,
                             (EffectPhaseId)phase, in behavior, EffectPresetType.None,
-                            effectTagId: 1, effectTemplateId: 1);
+                            effectCategoryId: 1, effectTemplateId: 1);
                     }
                 }
             }

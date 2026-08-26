@@ -38,8 +38,8 @@ namespace Ludots.Tests.GAS
         private const string CollectionSourceId = "gas.collection-ability-slots";
         private const string AnyQueryId = "tests.command.aggregation-any";
 
-        private const string StimFamilyTag = "castFamily.stimpack";
-        private const string ChargeFamilyTag = "castFamily.charge_shot";
+        private const string StimFamilyCategory = "castFamily.stimpack";
+        private const string ChargeFamilyCategory = "castFamily.charge_shot";
 
         private const int StimAbilityId = 101;
         private const int TankChargeAbilityId = 201;
@@ -324,11 +324,11 @@ namespace Ludots.Tests.GAS
 
             public static SelectionFixture Create(GameEngine engine)
             {
-                RegisterAbility(engine, StrikeAbilityId, "Strike", "Strike detail", catalogTag: null);
-                RegisterAbility(engine, StimAbilityId, "Stimpack", "Stim detail", StimFamilyTag);
-                RegisterAbility(engine, TankChargeAbilityId, "Tank Charge", "Tank charge detail", ChargeFamilyTag);
-                RegisterAbility(engine, EliteChargeAbilityId, "Elite Charge", "Elite charge detail", ChargeFamilyTag);
-                RegisterAbility(engine, FormVariantAbilityId, "Form Variant", "Form variant detail", catalogTag: null);
+                RegisterAbility(engine, StrikeAbilityId, "Strike", "Strike detail", categoryName: null);
+                RegisterAbility(engine, StimAbilityId, "Stimpack", "Stim detail", StimFamilyCategory);
+                RegisterAbility(engine, TankChargeAbilityId, "Tank Charge", "Tank charge detail", ChargeFamilyCategory);
+                RegisterAbility(engine, EliteChargeAbilityId, "Elite Charge", "Elite charge detail", ChargeFamilyCategory);
+                RegisterAbility(engine, FormVariantAbilityId, "Form Variant", "Form variant detail", categoryName: null);
 
                 Entity marine1 = CreateActor(engine.World, "Marine 1", MarineTemplateKeyId, StrikeAbilityId, StimAbilityId);
                 Entity marine2 = CreateActor(engine.World, "Marine 2", MarineTemplateKeyId, StrikeAbilityId, StimAbilityId);
@@ -409,8 +409,8 @@ namespace Ludots.Tests.GAS
 
         private static void InstallTestAggregationProfiles(GameEngine engine)
         {
-            TagRegistry.Register(StimFamilyTag);
-            TagRegistry.Register(ChargeFamilyTag);
+            AbilityCategoryRegistry.Register(StimFamilyCategory);
+            AbilityCategoryRegistry.Register(ChargeFamilyCategory);
 
             var profileIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var registry = new AbilityAggregationProfileRegistry(profileIds);
@@ -436,7 +436,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, registry);
         }
 
-        private static void RegisterAbility(GameEngine engine, int abilityId, string label, string detail, string? catalogTag)
+        private static void RegisterAbility(GameEngine engine, int abilityId, string label, string detail, string? categoryName)
         {
             var registry = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
                 ?? throw new InvalidOperationException("AbilityDefinitionRegistry missing.");
@@ -449,10 +449,10 @@ namespace Ludots.Tests.GAS
                     HintText = detail
                 }
             };
-            if (catalogTag != null)
+            if (categoryName != null)
             {
                 definition.HasCategories = true;
-                definition.Categories.AddTag(AbilityCategoryRegistry.Register(catalogTag));
+                definition.Categories.AddTag(AbilityCategoryRegistry.Register(categoryName));
             }
 
             registry.Register(abilityId, in definition, "CollectionGasEntityCommandPanelAggregationTests");

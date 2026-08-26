@@ -61,7 +61,7 @@ namespace Ludots.Tests.GAS
             Assert.That(routed, Is.True);
             Assert.That(route.RuleIndex, Is.EqualTo(0), "priority 30 (garrison) must be the unique winner over 20.");
             Assert.That(route.OrderTypeId, Is.EqualTo(harness.CastAbilityOrderId));
-            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityTag));
+            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityCategory));
             Assert.That(route.RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId(GarrisonAbilityTag)));
         }
 
@@ -206,7 +206,7 @@ namespace Ludots.Tests.GAS
                     {
                         Priority = 40,
                         Target = new CommandIntentTargetPredicateDefinition { AnyTags = new List<string> { DestructibleTag } },
-                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = "byAbilityTag:ability.catalog.nonexistent" },
+                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = "byAbilityCategory:ability.catalog.nonexistent" },
                     },
                     new()
                     {
@@ -228,7 +228,7 @@ namespace Ludots.Tests.GAS
             Assert.That(routed, Is.True);
             Assert.That(route.RuleIndex, Is.EqualTo(0), "winning is final: no fall-through to the lower-priority moveTo rule.");
             Assert.That(route.OrderTypeId, Is.EqualTo(harness.CastAbilityOrderId));
-            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityTag));
+            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityCategory));
             Assert.That(route.RouteParamId, Is.EqualTo(AbilityCategoryRegistry.GetId("ability.catalog.nonexistent")),
                 "slot landing is downstream work; the evaluator returns the winning route as-is.");
         }
@@ -531,24 +531,24 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Priority = 30,
-                            Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithTag = GarrisonAbilityTag },
+                            Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithCategory = GarrisonAbilityTag },
                             Target = new CommandIntentTargetPredicateDefinition
                             {
                                 AllTags = new List<string> { GarrisonableTag },
                                 Stance = new List<string> { "Neutral", "Friendly" },
                             },
-                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityTag:{GarrisonAbilityTag}" },
+                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityCategory:{GarrisonAbilityTag}" },
                         },
                         new()
                         {
                             Priority = 20,
-                            Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithTag = WeaponAbilityTag },
+                            Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithCategory = WeaponAbilityTag },
                             Target = new CommandIntentTargetPredicateDefinition
                             {
                                 AnyTags = new List<string> { DestructibleTag },
                                 Stance = new List<string> { "Hostile", "Neutral" },
                             },
-                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityTag:{WeaponAbilityTag}" },
+                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityCategory:{WeaponAbilityTag}" },
                         },
                         new()
                         {

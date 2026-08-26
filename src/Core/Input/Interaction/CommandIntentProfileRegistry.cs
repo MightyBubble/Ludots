@@ -44,7 +44,7 @@ namespace Ludots.Core.Input.Interaction
 
         private CompiledProfile[] _profiles = new CompiledProfile[8];
 
-        private const string ByAbilityTagSelectorPrefix = "byAbilityTag:";
+        private const string ByAbilityCategorySelectorPrefix = "byAbilityCategory:";
         private const string ContextGroupSelectorPrefix = "contextGroup:";
 
         public CommandIntentProfileRegistry(
@@ -247,7 +247,7 @@ namespace Ludots.Core.Input.Interaction
                 }
             }
 
-            if (rule.ActorAbilityCatalogTagId != 0 && !HasAbilityWithCatalogTag(actorEntity, rule.ActorAbilityCatalogTagId))
+            if (rule.ActorAbilityCategoryId != 0 && !HasAbilityWithCategory(actorEntity, rule.ActorAbilityCategoryId))
             {
                 return false;
             }
@@ -304,7 +304,7 @@ namespace Ludots.Core.Input.Interaction
             return true;
         }
 
-        private bool HasAbilityWithCatalogTag(Entity actor, int catalogTagId)
+        private bool HasAbilityWithCategory(Entity actor, int abilityCategoryId)
         {
             if (!_world.IsAlive(actor) || !_world.Has<AbilityStateBuffer>(actor))
             {
@@ -334,7 +334,7 @@ namespace Ludots.Core.Input.Interaction
                 {
                     continue;
                 }
-                if (slot.AbilityId > 0 && _abilityDefinitions.HasCategory(slot.AbilityId, catalogTagId))
+                if (slot.AbilityId > 0 && _abilityDefinitions.HasCategory(slot.AbilityId, abilityCategoryId))
                 {
                     return true;
                 }
@@ -417,9 +417,9 @@ namespace Ludots.Core.Input.Interaction
             {
                 rule.HasActorAllTags = TryBuildMask(profileId, actor.AllTags, ref rule.ActorAllTags);
                 rule.HasActorAnyTags = TryBuildMask(profileId, actor.AnyTags, ref rule.ActorAnyTags);
-                if (!string.IsNullOrWhiteSpace(actor.HasAbilityWithTag))
+                if (!string.IsNullOrWhiteSpace(actor.HasAbilityWithCategory))
                 {
-                    rule.ActorAbilityCatalogTagId = ResolveAbilityCategoryId(profileId, actor.HasAbilityWithTag);
+                    rule.ActorAbilityCategoryId = ResolveAbilityCategoryId(profileId, actor.HasAbilityWithCategory);
                 }
             }
 
@@ -468,20 +468,26 @@ namespace Ludots.Core.Input.Interaction
                 return new CommandIntentRoute(ruleIndex, orderTypeId, CommandIntentRouteKinds.None, 0);
             }
 
-            if (slot.StartsWith(ByAbilityTagSelectorPrefix, StringComparison.Ordinal))
+            if (slot.StartsWith("byAbilityTag:", StringComparison.Ordinal))
             {
-                string tagName = slot[ByAbilityTagSelectorPrefix.Length..];
-                if (string.IsNullOrWhiteSpace(tagName))
+                throw new InvalidOperationException(
+                    $"Command intent profile '{profileId}' slot selector '{slot}' uses removed prefix 'byAbilityTag:'; rename to 'byAbilityCategory:'.");
+            }
+
+            if (slot.StartsWith(ByAbilityCategorySelectorPrefix, StringComparison.Ordinal))
+            {
+                string categoryName = slot[ByAbilityCategorySelectorPrefix.Length..];
+                if (string.IsNullOrWhiteSpace(categoryName))
                 {
                     throw new InvalidOperationException(
-                        $"Command intent profile '{profileId}' slot selector '{slot}' is missing the ability catalog tag.");
+                        $"Command intent profile '{profileId}' slot selector '{slot}' is missing the ability category name.");
                 }
 
                 return new CommandIntentRoute(
                     ruleIndex,
                     orderTypeId,
-                    CommandIntentRouteKinds.ByAbilityTag,
-                    ResolveAbilityCategoryId(profileId, tagName));
+                    CommandIntentRouteKinds.ByAbilityCategory,
+                    ResolveAbilityCategoryId(profileId, categoryName));
             }
 
             if (slot.StartsWith(ContextGroupSelectorPrefix, StringComparison.Ordinal))
@@ -511,7 +517,7 @@ namespace Ludots.Core.Input.Interaction
             // DEC-14: semantic routing forbids bare slot indices (bySlotIndex / slotN / anything else).
             throw new InvalidOperationException(
                 $"Command intent profile '{profileId}' slot selector '{slot}' is not a semantic selector; " +
-                $"only '{ByAbilityTagSelectorPrefix}<tag>' and '{ContextGroupSelectorPrefix}<id>' are allowed.");
+                $"only '{ByAbilityCategorySelectorPrefix}<tag>' and '{ContextGroupSelectorPrefix}<id>' are allowed.");
         }
 
         private static bool TryBuildMask(string profileId, List<string> tags, ref GameplayTagContainer mask)
@@ -568,7 +574,7 @@ namespace Ludots.Core.Input.Interaction
             public GameplayTagContainer ActorAnyTags;
             public bool HasActorAllTags;
             public bool HasActorAnyTags;
-            public int ActorAbilityCatalogTagId;
+            public int ActorAbilityCategoryId;
             public GameplayTagContainer TargetAllTags;
             public GameplayTagContainer TargetAnyTags;
             public bool HasTargetAllTags;

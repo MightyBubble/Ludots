@@ -122,7 +122,7 @@ namespace Ludots.Tests.GAS
                                 _ = executor.ExecutePhaseWithValidationResult(
                                     world, api, caster, targets[e], default, default,
                                     phase, in behavior, EffectPresetType.None,
-                                    effectTagId: 0, effectTemplateId: 0, mergedParams: default);
+                                    effectCategoryId: 0, effectTemplateId: 0, mergedParams: default);
                             }
                             else
                             {

@@ -246,14 +246,14 @@ namespace Ludots.Core.UI.EntityCommandPanels
         /// <see cref="AbilityCategoryRegistry"/> at install (string work happens once here); evaluation intersects
         /// the ability's categories with the mask in place (zero strings, zero copies).
         /// </summary>
-        private static AbilityAggregationKeySelector CompileCatalogSelector(string tagPrefix)
+        private static AbilityAggregationKeySelector CompileCatalogSelector(string categoryPrefix)
         {
-            if (string.IsNullOrWhiteSpace(tagPrefix))
+            if (string.IsNullOrWhiteSpace(categoryPrefix))
             {
                 throw new InvalidOperationException("groupBy 'catalog.' requires a non-empty category prefix.");
             }
 
-            string dottedPrefix = tagPrefix + ".";
+            string dottedPrefix = categoryPrefix + ".";
             var mask = default(GameplayTagContainer);
             RegistryMapping[] mappings = AbilityCategoryRegistry.SnapshotMappings();
             for (int i = 0; i < mappings.Length; i++)
@@ -273,10 +273,10 @@ namespace Ludots.Core.UI.EntityCommandPanels
             {
                 if (slot.AbilityId > 0)
                 {
-                    int tagId = abilities.FirstCategoryIntersection(slot.AbilityId, in mask);
-                    if (tagId != 0)
+                    int categoryId = abilities.FirstCategoryIntersection(slot.AbilityId, in mask);
+                    if (categoryId != 0)
                     {
-                        return AbilityAggregationKeyKinds.MakeKey(AbilityAggregationKeyKinds.CatalogTag, tagId);
+                        return AbilityAggregationKeyKinds.MakeKey(AbilityAggregationKeyKinds.CatalogCategory, categoryId);
                     }
                 }
 

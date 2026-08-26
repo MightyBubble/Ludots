@@ -14,7 +14,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
 
     /// <summary>
     /// One panel aggregation profile. <c>GroupBy</c> is a key selector expression resolved by prefix
-    /// through the registry's selector table (DEC-10, non-closed enum): <c>catalog.&lt;tagPrefix&gt;</c>,
+    /// through the registry's selector table (DEC-10, non-closed enum): <c>catalog.&lt;categoryPrefix&gt;</c>,
     /// <c>template.id</c>, <c>ability.id</c>, plus any mod-registered prefix. <c>Overflow</c> is an
     /// opaque registry key consumed by the panel router (PNL-3); the kernel never interprets it.
     /// </summary>
@@ -33,8 +33,8 @@ namespace Ludots.Core.UI.EntityCommandPanels
     /// </summary>
     public static class AbilityAggregationKeyKinds
     {
-        /// <summary>Key id is an ability catalog tag id (matched via <c>catalog.&lt;tagPrefix&gt;</c>).</summary>
-        public const int CatalogTag = 1;
+        /// <summary>Key id is an ability category id (matched via <c>catalog.&lt;categoryPrefix&gt;</c>).</summary>
+        public const int CatalogCategory = 1;
 
         /// <summary>Key id is the ability definition id (<see cref="Gameplay.GAS.Registry.AbilityIdRegistry"/> space).</summary>
         public const int AbilityId = 2;

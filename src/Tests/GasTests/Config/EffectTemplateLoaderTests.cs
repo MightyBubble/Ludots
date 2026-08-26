@@ -150,6 +150,41 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_LegacyTagsField_IsRejectedWithRenameGuidance()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.LegacyTags",
+                        "tags": ["Effect.Legacy"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("'tags'"));
+                That(ex.Message, Does.Contain("categories"));
+                That(EffectCategoryRegistry.GetId("Effect.Legacy"), Is.EqualTo(EffectCategoryRegistry.InvalidId));
+                That(TagRegistry.GetId("Effect.Legacy"), Is.EqualTo(TagRegistry.InvalidId));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_TargetFilterWithoutRelationFilter_IsRejected()
         {
             string root = CreateTempRoot();

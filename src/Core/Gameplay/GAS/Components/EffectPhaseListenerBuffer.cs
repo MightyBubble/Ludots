@@ -6,20 +6,20 @@ namespace Ludots.Core.Gameplay.GAS.Components
 {
     /// <summary>
     /// Shared matching predicate for phase listener collection.
-    /// Single source of truth for tag-wildcard and effectId-wildcard semantics.
+    /// Single source of truth for category-wildcard and effectId-wildcard semantics.
     /// </summary>
     internal static class PhaseListenerMatcher
     {
         /// <summary>
         /// Returns true if a stored listener entry matches the given query parameters.
-        /// A stored value of 0 for tagId or effectId acts as a wildcard (matches everything).
+        /// A stored value of 0 for categoryId or effectId acts as a wildcard (matches everything).
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Matches(byte storedPhase, int storedTagId, int storedEffectId,
-                                   byte queryPhase, int effectTagId, int effectTemplateId)
+        public static bool Matches(byte storedPhase, int storedCategoryId, int storedEffectId,
+                                   byte queryPhase, int effectCategoryId, int effectTemplateId)
         {
             if (storedPhase != queryPhase) return false;
-            if (storedTagId != 0 && storedTagId != effectTagId) return false;
+            if (storedCategoryId != 0 && storedCategoryId != effectCategoryId) return false;
             if (storedEffectId != 0 && storedEffectId != effectTemplateId) return false;
             return true;
         }
@@ -276,7 +276,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool HasMatch(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope)
+        public bool HasMatch(int effectCategoryId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope)
         {
             EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
             byte phaseB = (byte)phase;
@@ -286,7 +286,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 if (Scopes[i] == scopeB &&
                     PhaseListenerMatcher.Matches(
                         Phases[i], ListenCategoryIds[i], ListenEffectIds[i],
-                        phaseB, effectTagId, effectTemplateId))
+                        phaseB, effectCategoryId, effectTemplateId))
                 {
                     return true;
                 }
@@ -326,13 +326,13 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// Collect all matching entries into <paramref name="output"/> for dispatch.
         /// Returns the number of collected actions.
         /// </summary>
-        public int Collect(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
+        public int Collect(int effectCategoryId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
                            Span<PhaseListenerCollectedAction> output)
         {
-            return Collect(effectTagId, effectTemplateId, phase, scope, output, out _);
+            return Collect(effectCategoryId, effectTemplateId, phase, scope, output, out _);
         }
 
-        public int Collect(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
+        public int Collect(int effectCategoryId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
                            Span<PhaseListenerCollectedAction> output, out int dropped)
         {
             EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
@@ -344,7 +344,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
             {
                 if (Scopes[i] != scopeB) continue;
                 if (!PhaseListenerMatcher.Matches(Phases[i], ListenCategoryIds[i], ListenEffectIds[i],
-                                                  phaseB, effectTagId, effectTemplateId)) continue;
+                                                  phaseB, effectCategoryId, effectTemplateId)) continue;
 
                 if (collected < output.Length)
                 {

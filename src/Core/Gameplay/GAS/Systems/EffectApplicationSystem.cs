@@ -727,7 +727,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         /// <summary>
         /// Execute a phase graph for an effect entity, reading its template for behavior and config.
-        /// Passes effectTagId and effectTemplateId for Phase Listener matching.
+        /// Passes effectCategoryId and effectTemplateId for Phase Listener matching.
         /// </summary>
         private void ExecutePhaseForEffect(Entity effectEntity, in EffectContext context, in EffectTemplateData tpl, EffectPhaseId phase, BuiltinHandlerExecutionContext? builtinRuntime = null)
         {

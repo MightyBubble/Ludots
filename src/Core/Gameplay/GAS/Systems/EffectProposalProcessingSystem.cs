@@ -505,7 +505,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     if (rootTpl.ParticipatesInResponse)
                     {
-                        EnqueueResponsesForEffect(proposalIndex: 0, effectTagId: rootTpl.CategoryId);
+                        EnqueueResponsesForEffect(proposalIndex: 0, firingCategoryId: rootTpl.CategoryId);
                         if (_budget != null) _budget.ResponseWindows++;
                     }
 
@@ -1265,7 +1265,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             OrderSpatialPayloadOps.Release(World, in order);
         }
 
-        private unsafe int CountResponsesForEffect(int effectTagId)
+        private unsafe int CountResponsesForEffect(int firingCategoryId)
         {
             int matched = 0;
             for (int li = 0; li < _listeners.Count; li++)
@@ -1284,8 +1284,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 for (int i = 0; i < listener.Count; i++)
                 {
-                    int effectCategoryId = listener.EffectCategoryIds[i];
-                    if (effectCategoryId != 0 && effectTagId != effectCategoryId)
+                    int listenCategoryId = listener.EffectCategoryIds[i];
+                    if (listenCategoryId != 0 && firingCategoryId != listenCategoryId)
                     {
                         continue;
                     }
@@ -1344,7 +1344,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private unsafe void EnqueueResponsesForEffect(int proposalIndex, int effectTagId)
+        private unsafe void EnqueueResponsesForEffect(int proposalIndex, int firingCategoryId)
         {
             for (int li = 0; li < _listeners.Count; li++)
             {
@@ -1355,8 +1355,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (!hasListener) continue;
                 for (int i = 0; i < listener.Count; i++)
                 {
-                    int effectCategoryId = listener.EffectCategoryIds[i];
-                    if (effectCategoryId != 0 && effectTagId != effectCategoryId) continue;
+                    int listenCategoryId = listener.EffectCategoryIds[i];
+                    if (listenCategoryId != 0 && firingCategoryId != listenCategoryId) continue;
 
                     var responseType = (ResponseType)listener.ResponseTypes[i];
                     if (!_responseQueue.TryEnqueue(new ProposalResponseItem
@@ -1373,7 +1373,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         if (_budget != null) _budget.ResponseQueueOverflowDropped++;
                         throw new InvalidOperationException(
-                            $"{ResponseQueueOverflowError}: proposalIndex={proposalIndex}, effectTagId={effectTagId}, responseType={responseType}, capacity={GasConstants.MAX_RESPONSES_PER_WINDOW}.");
+                            $"{ResponseQueueOverflowError}: proposalIndex={proposalIndex}, effectCategoryId={firingCategoryId}, responseType={responseType}, capacity={GasConstants.MAX_RESPONSES_PER_WINDOW}.");
                     }
                 }
             }
