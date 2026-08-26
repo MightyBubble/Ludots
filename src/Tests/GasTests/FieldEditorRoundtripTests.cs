@@ -157,6 +157,27 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RegionKeyChanges_ReindexFieldWithoutChangingPaintedMeaning()
+        {
+            var document = new CellsDocument("layer.reindex");
+            document.AddRegion("zulu");
+            document.PaintCell("zulu", 4, 5);
+
+            document.AddRegion("alpha");
+            Assert.That(document.TryGetCellKey(4, 5, out string? afterAdd), Is.True);
+            Assert.That(afterAdd, Is.EqualTo("zulu"));
+
+            document.RenameRegion("zulu", "bravo");
+            Assert.That(document.TryGetCellKey(4, 5, out string? afterRename), Is.True);
+            Assert.That(afterRename, Is.EqualTo("bravo"));
+
+            document.RemoveRegion("alpha");
+            Assert.That(document.TryGetCellKey(4, 5, out string? afterRemove), Is.True);
+            Assert.That(afterRemove, Is.EqualTo("bravo"));
+            Assert.That(document.Field.Get(new FieldCell2D(4, 5)), Is.EqualTo(1));
+        }
+
+        [Test]
         public void RegionColors_StayInEditorSidecar_AndEngineAssetRemainsStrict()
         {
             string root = CreateTempRoot();

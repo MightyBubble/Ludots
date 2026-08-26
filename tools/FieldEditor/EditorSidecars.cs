@@ -12,8 +12,19 @@ namespace Ludots.Tools.FieldEditor
 
         public static void Push(string assetPath, CellsDocument snapshot)
         {
-            HistoryState state = Load(assetPath, snapshot.LayerKey);
-            state.Undo.Add(snapshot.ToSnapshotJson());
+            PushSnapshot(assetPath, snapshot.LayerKey, CaptureSnapshot(snapshot));
+        }
+
+        internal static JsonObject CaptureSnapshot(CellsDocument document) =>
+            document.ToSnapshotJson();
+
+        internal static void PushSnapshot(
+            string assetPath,
+            string layerKey,
+            JsonObject snapshot)
+        {
+            HistoryState state = Load(assetPath, layerKey);
+            state.Undo.Add(snapshot);
             state.Redo.Clear();
             Save(assetPath, state);
         }

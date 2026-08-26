@@ -262,7 +262,7 @@ static int Regions(string[] commandArgs)
 static int RegionsAdd(string[] commandArgs)
 {
     (CellsDocument document, int max, string path) = OpenDocument(commandArgs);
-    CellsDocument before = PrepareMutation(path, document);
+    JsonObject before = PrepareMutation(path, document);
     string key = document.AddRegion(RequireOption(commandArgs, "--key"));
     CommitMutation(path, max, document, before);
     Console.WriteLine($"Region '{key}' added.");
@@ -274,7 +274,7 @@ static int RegionsRemove(string[] commandArgs)
     (CellsDocument document, int max, string path) = OpenDocument(commandArgs);
     string key = RequireOption(commandArgs, "--key");
     FieldEditorMetadataStore.GetColors(path, document);
-    CellsDocument before = PrepareMutation(path, document);
+    JsonObject before = PrepareMutation(path, document);
     document.RemoveRegion(key);
     CommitMutation(path, max, document, before);
     FieldEditorMetadataStore.RemoveRegion(path, document.LayerKey, key);
@@ -289,7 +289,7 @@ static int RegionsRename(string[] commandArgs)
     string from = RequireOption(commandArgs, "--from");
     string to = RequireOption(commandArgs, "--to");
     FieldEditorMetadataStore.GetColors(path, document);
-    CellsDocument before = PrepareMutation(path, document);
+    JsonObject before = PrepareMutation(path, document);
     document.RenameRegion(from, to);
     CommitMutation(path, max, document, before);
     FieldEditorMetadataStore.RenameRegion(path, document.LayerKey, from, to);
@@ -333,7 +333,7 @@ static int Cell(string[] commandArgs)
     (int x, int y) = ParseCoord(RequireOption(commandArgs, "--at"));
     if (HasOption(commandArgs, "--erase"))
     {
-        CellsDocument before = PrepareMutation(path, document);
+        JsonObject before = PrepareMutation(path, document);
         document.EraseRect(x, y, x, y);
         CommitMutation(path, max, document, before);
         Console.WriteLine($"Erased cell ({x},{y}).");
@@ -342,7 +342,7 @@ static int Cell(string[] commandArgs)
 
     if (HasOption(commandArgs, "--key"))
     {
-        CellsDocument before = PrepareMutation(path, document);
+        JsonObject before = PrepareMutation(path, document);
         string key = RequireOption(commandArgs, "--key");
         document.PaintCell(key, x, y);
         CommitMutation(path, max, document, before);
@@ -380,7 +380,7 @@ static int Brush(string[] commandArgs)
     string key = ResolveBrushKey(commandArgs, path, document);
     (int x0, int y0, int x1, int y1) = SquareBounds(x, y, radius);
 
-    CellsDocument before = PrepareMutation(path, document);
+    JsonObject before = PrepareMutation(path, document);
     document.PaintRect(key, x0, y0, x1, y1);
     CommitMutation(path, max, document, before);
     Console.WriteLine(
@@ -412,7 +412,7 @@ static int Rect(string[] commandArgs, bool erase)
     (int x1, int y1) = ParseCoord(RequireOption(commandArgs, "--to"));
     string? key = erase ? null : ResolveBrushKey(commandArgs, path, document);
 
-    CellsDocument before = PrepareMutation(path, document);
+    JsonObject before = PrepareMutation(path, document);
     if (erase)
     {
         document.EraseRect(x0, y0, x1, y1);
@@ -510,7 +510,16 @@ static int Session(string[] commandArgs)
             return 0;
         }
 
-        string[] tokens = SplitCommandLine(line);
+        string[] tokens;
+        try
+        {
+            tokens = SplitCommandLine(line);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            continue;
+        }
         if (tokens.Length == 0)
         {
             continue;
@@ -535,20 +544,20 @@ static int Session(string[] commandArgs)
     }
 }
 
-static CellsDocument PrepareMutation(string path, CellsDocument document)
+static JsonObject PrepareMutation(string path, CellsDocument document)
 {
     HistoryStore.GetActiveBrushKey(path, document.LayerKey);
-    return document.CloneSnapshot();
+    return HistoryStore.CaptureSnapshot(document);
 }
 
 static void CommitMutation(
     string path,
     int maxRegionIds,
     CellsDocument document,
-    CellsDocument before)
+    JsonObject before)
 {
     document.Save(path, maxRegionIds);
-    HistoryStore.Push(path, before);
+    HistoryStore.PushSnapshot(path, document.LayerKey, before);
 }
 
 static string ResolveBrushKey(
