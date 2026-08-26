@@ -53,6 +53,7 @@ internal sealed class ReconnectRecoveryShowcasePanelController
             Ui.Text(s.Summary).FontSize(12f).Color("#D6E0EA").WhiteSpace(UiWhiteSpace.Normal),
             Ui.Text(s.Controls).FontSize(10f).Color("#8AD7FF").WhiteSpace(UiWhiteSpace.Normal),
             Ui.Text($"消融：{s.Ablation} · 连接：{(s.Disconnected ? "断线" : "在线")}").FontSize(12f).Bold().Color("#F0C36B"),
+            Ui.Text(s.Timeline).FontSize(11f).Bold().Color("#FFB38A").WhiteSpace(UiWhiteSpace.Normal),
             Ui.Text($"权威 tick {s.AuthorityTick}  |  客户端 tick {s.ClientTick}  |  下一帧 seq {s.NextSequence}").FontSize(12f).Color("#8DE3AE"),
             Ui.Text($"恢复来源：{s.RecoverySource}").FontSize(11f).Color("#C7D0DD").WhiteSpace(UiWhiteSpace.Normal),
             Ui.Text($"最近故障：{s.LastFault}").FontSize(11f).Color("#EE5EDC").WhiteSpace(UiWhiteSpace.Normal),

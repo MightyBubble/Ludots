@@ -53,7 +53,10 @@ namespace Ludots.Tests.Gas
             Assert.That(result["slot"]!.GetValue<string>(), Is.EqualTo("manual/contract-a"));
             string savedDigest = result["worldDigest"]!.GetValue<string>();
             int savedTick = result["tick"]!.GetValue<int>();
+            string path = result["path"]!.GetValue<string>();
             Assert.That(savedTick, Is.GreaterThan(0));
+            Assert.That(path, Does.Contain(_root));
+            Assert.That(File.Exists(path), Is.True, path);
 
             var slots = new SaveSlotsTool();
             JsonObject listing = slots.ExecuteObject(null, _context);

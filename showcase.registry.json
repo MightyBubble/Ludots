@@ -68,7 +68,7 @@
       "readmePath": null,
       "acceptanceTest": "SaveLoadShowcaseAcceptanceTests",
       "artifactDir": "artifacts/acceptance/save-load",
-      "screenshot": null,
+      "screenshot": "artifacts/acceptance/save-load/save-load-surprise.png",
       "status": "active"
     },
     {
@@ -90,7 +90,7 @@
       "readmePath": null,
       "acceptanceTest": "DeterministicReplayShowcaseAcceptanceTests",
       "artifactDir": "artifacts/acceptance/deterministic-replay",
-      "screenshot": null,
+      "screenshot": "artifacts/acceptance/deterministic-replay/replay-compare.png",
       "status": "active"
     },
     {
@@ -112,7 +112,7 @@
       "readmePath": null,
       "acceptanceTest": "ReconnectRecoveryShowcaseAcceptanceTests",
       "artifactDir": "artifacts/acceptance/reconnect-recovery",
-      "screenshot": null,
+      "screenshot": "artifacts/acceptance/reconnect-recovery/reconnect-catchup.png",
       "status": "active"
     },
     {

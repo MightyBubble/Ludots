@@ -1,2 +1,4 @@
-# Migrated from persistence-online-replay (Epic #1208)
-历史复合 showcase 资产见 artifacts/archive/persistence-online-replay/。本目录承接存档读档验收产物。
+# save_load 验收资产
+
+- `battle-report.md` / `trace.jsonl`：Bridge 五时序冷启动闭环（由 `SaveColdStartEvidenceTests` 生成）
+- `save-load-surprise.png`：惊喜时刻封面（读档归位；历史复合条目同场景帧迁移）

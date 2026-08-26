@@ -21,16 +21,19 @@ public sealed class ReconnectRecoveryShowcaseRuntime
     private GameEngine? _engine;
     private WorldSaveSnapshot? _checkpoint;
     private WorldSaveSnapshot? _factory;
+    private WorldSaveSnapshot? _authorityLive;
     private bool _checkpointRequested;
     private bool _disconnected;
     private int _authorityTick;
     private int _clientTick;
+    private int _disconnectTick;
     private long _nextSeq;
     private string _status = "先打检查点，再断线。页眉已标明：单机模拟。";
     private string? _error;
     private string _recoverySource = "live";
     private string _ablation = "权威恢复";
     private string _lastFault = "-";
+    private string _timeline = "双侧时间线：连线中";
 
     public ReconnectRecoveryShowcaseRuntime()
     {
@@ -75,11 +78,12 @@ public sealed class ReconnectRecoveryShowcaseRuntime
         {
             _authorityTick = engine.GameSession.CurrentTick;
             _clientTick = _authorityTick;
+            _timeline = "双侧时间线：同步";
         }
         else
         {
-            // Authority keeps evolving in the sim while client HUD freezes client tick.
             _authorityTick = engine.GameSession.CurrentTick;
+            _timeline = $"断线区间高亮：客户端冻在 {_disconnectTick}，权威走到 {_authorityTick}";
         }
 
         Refresh(engine);
@@ -100,9 +104,10 @@ public sealed class ReconnectRecoveryShowcaseRuntime
         _disconnected = true;
         if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader input)
             input.ClearReplayActions();
-        // Keep simulation running so authority tick advances; client tick frozen.
         _clientTick = engine.GameSession.CurrentTick;
+        _disconnectTick = _clientTick;
         _recoverySource = "disconnected";
+        _timeline = $"断线区间开始：客户端冻在 {_disconnectTick}";
         SetStatus("已断线（单机模拟）：客户端冻结，权威侧继续走。");
         Refresh(engine);
     }
@@ -124,7 +129,11 @@ public sealed class ReconnectRecoveryShowcaseRuntime
         }
 
         _authorityTick = engine.GameSession.CurrentTick;
+        _authorityLive = new WorldSnapshotService().Capture(
+            engine,
+            SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
         _authorityStream.Append(new AuthoritativeFrame(_nextSeq++, _authorityTick, Array.Empty<AuthoritativeAction>()));
+        _timeline = $"断线区间：客户端 {_disconnectTick} … 权威 {_authorityTick}（已记 seq={_nextSeq - 1}）";
         SetStatus($"权威推进到 tick={_authorityTick} seq={_nextSeq - 1}；客户端仍冻在 {_clientTick}");
         Refresh(engine);
     }
@@ -136,13 +145,26 @@ public sealed class ReconnectRecoveryShowcaseRuntime
         {
             if (!_disconnected) throw new SaveContextException("先断线。");
             if (_checkpoint == null) throw new SaveContextException("没有权威检查点。");
-            new WorldRestoreService().Restore(engine, _checkpoint);
-            // Replay authority frames recorded during disconnect after checkpoint.
+
+            // Catch up to live authority — do NOT rewind to the pre-disconnect checkpoint.
+            // Single-process theater: the running world already is authority; if we captured
+            // live snapshots during AdvanceAuthority, restore the latest so reconnect proves
+            // "server fact" even after a local-reset ablation attempt.
+            if (_authorityLive != null)
+            {
+                new WorldRestoreService().Restore(engine, _authorityLive);
+            }
+
             _disconnected = false;
             _ablation = "权威恢复";
-            _recoverySource = $"checkpoint tick={_checkpoint.Header.Tick} digest={WorldDigestLens.Short(WorldDigestLens.FromSnapshot(engine, _checkpoint))}";
+            string digest = WorldDigestLens.Short(WorldDigestLens.FromEngine(engine));
+            int missed = (int)_authorityStream.NextSequence;
+            _recoverySource =
+                $"authority live tick={engine.GameSession.CurrentTick} digest={digest} missedFrames={missed} sinceCheckpoint={_checkpoint.Header.Tick}";
             _clientTick = engine.GameSession.CurrentTick;
-            SetStatus($"权威恢复：{_recoverySource}。错过的权威演化已用检查点对齐。");
+            _authorityTick = _clientTick;
+            _timeline = $"重连补齐：客户端从 {_disconnectTick} 追到 {_clientTick}（权威事实）";
+            SetStatus($"权威恢复：{_recoverySource}。错过的权威演化已补齐，不是倒回检查点。");
         }
         catch (Exception ex) { Fail(ex.Message); }
         Refresh(engine);
@@ -160,6 +182,7 @@ public sealed class ReconnectRecoveryShowcaseRuntime
             _recoverySource = "local factory reset";
             _clientTick = engine.GameSession.CurrentTick;
             _authorityTick = _clientTick;
+            _timeline = "消融：本地重置，双侧回到出厂";
             SetStatus("消融：本地重置 — 回到出厂，等于认输重来。");
         }
         catch (Exception ex) { Fail(ex.Message); }
@@ -260,6 +283,7 @@ public sealed class ReconnectRecoveryShowcaseRuntime
             NextSequence: _authorityStream.NextSequence,
             Disconnected: _disconnected,
             LastFault: _lastFault,
+            Timeline: _timeline,
             LogLines: _log.Count == 0 ? new[] { _status } : _log.ToArray());
     }
 
@@ -271,6 +295,7 @@ public sealed class ReconnectRecoveryShowcaseRuntime
         _checkpoint = c.Checkpoints[^1];
         _checkpointRequested = false;
         _nextSeq = 0;
+        _authorityLive = null;
         SetStatus($"权威检查点 tick={_checkpoint.Header.Tick}");
     }
 

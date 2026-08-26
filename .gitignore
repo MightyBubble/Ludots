@@ -101,6 +101,9 @@ artifacts/evidence/raylib_asset_acceptance_*/*
 # acceptance evidence already force-tracked historically; keep pattern open
 !artifacts/acceptance/
 !artifacts/acceptance/**
+# archived showcase acceptance assets (retired entries keep evidence reachable)
+!artifacts/archive/
+!artifacts/archive/**
 BrowserRuntime/
 _temp_export/
 .codex_out/

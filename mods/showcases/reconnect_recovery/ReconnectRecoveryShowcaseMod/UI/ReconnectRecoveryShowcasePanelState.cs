@@ -17,6 +17,7 @@ public sealed record ReconnectRecoveryShowcasePanelState(
     long NextSequence,
     bool Disconnected,
     string LastFault,
+    string Timeline,
     IReadOnlyList<string> LogLines)
 {
     public bool Equals(ReconnectRecoveryShowcasePanelState? other)
@@ -24,8 +25,9 @@ public sealed record ReconnectRecoveryShowcasePanelState(
         if (other is null) return false;
         return Status == other.Status && Error == other.Error && AuthorityTick == other.AuthorityTick
             && ClientTick == other.ClientTick && Disconnected == other.Disconnected
-            && RecoverySource == other.RecoverySource && LastFault == other.LastFault;
+            && RecoverySource == other.RecoverySource && LastFault == other.LastFault
+            && Timeline == other.Timeline;
     }
 
-    public override int GetHashCode() => HashCode.Combine(Status, AuthorityTick, ClientTick, Disconnected, LastFault);
+    public override int GetHashCode() => HashCode.Combine(Status, AuthorityTick, ClientTick, Disconnected, LastFault, Timeline);
 }

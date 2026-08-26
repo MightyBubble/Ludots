@@ -116,27 +116,12 @@ public sealed class SaveLoadShowcaseRuntime
             if (string.IsNullOrWhiteSpace(panel.SelectedSlot))
             {
                 panel.SetManualName("showcase");
-                // Prefer selected; if empty try restore showcase name by selecting first.
+                panel.SelectSlot("manual/showcase");
             }
 
             CaptureBefore(engine);
-            if (string.IsNullOrWhiteSpace(panel.SelectedSlot))
-            {
-                // Use formal store to restore manual/showcase if present
-                if (!engine.TryGetService(CoreServiceKeys.SaveStorage, out ISaveStorage? storage) || storage == null)
-                {
-                    throw new SaveContextException("缺存档存储服务。");
-                }
-
-                var slots = new SaveSlotStore(storage);
-                WorldSaveSnapshot snap = slots.ReadSlot(SaveSlotId.Manual("showcase"));
-                new WorldRestoreService().Restore(engine, snap);
-            }
-            else
-            {
-                panel.RestoreSelected(engine);
-                if (panel.Error != null) throw new SaveContextException(panel.Error);
-            }
+            panel.RestoreSelected(engine);
+            if (panel.Error != null) throw new SaveContextException(panel.Error);
 
             _ablation = "有存档恢复";
             CaptureAfter(engine);

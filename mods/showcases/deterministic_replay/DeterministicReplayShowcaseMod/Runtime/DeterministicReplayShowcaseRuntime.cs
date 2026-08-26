@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Numerics;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Pacemaker;
@@ -8,6 +8,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using DeterministicReplayShowcaseMod.UI;
 using SaveShowcasesShared;
@@ -16,10 +17,14 @@ namespace DeterministicReplayShowcaseMod.Runtime;
 
 public sealed class DeterministicReplayShowcaseRuntime
 {
+    private const string ArchiveStorageKey = "replays/showcase.ldreplay";
+
     private readonly DeterministicReplayShowcasePanelController _panel;
     private readonly List<string> _log = new(10);
     private readonly List<AuthoritativeAction> _actionBuffer = new(16);
-    private readonly List<string> _hashRows = new(32);
+    private readonly List<string> _recordingHashRows = new(32);
+    private readonly List<string> _playbackHashRows = new(32);
+    private readonly List<string> _recordingDigests = new(32);
     private GameEngine? _engine;
     private ReplayRecorder? _recorder;
     private ReplayArchive? _archive;
@@ -40,8 +45,10 @@ public sealed class DeterministicReplayShowcaseRuntime
     private string? _error;
     private string _recordingDigest = "-";
     private string _playbackDigest = "-";
+    private string _midCompare = "未比较中途";
     private string _compare = "未比较";
     private string _mode = "录制管线";
+    private string _archiveDisplay = ArchiveStorageKey;
 
     private static readonly int[] Speeds = { 1, 2, 4 };
 
@@ -61,7 +68,7 @@ public sealed class DeterministicReplayShowcaseRuntime
 
         _engine = engine;
         engine.GetService(CoreServiceKeys.InputHandler)?.PushContext(DeterministicReplayShowcaseIds.InputContext);
-        TryLoadArchive();
+        TryLoadArchive(engine);
         Refresh(engine);
         return Task.CompletedTask;
     }
@@ -91,7 +98,9 @@ public sealed class DeterministicReplayShowcaseRuntime
         {
             input.CopyAuthoritativeActions(_actionBuffer);
             _recorder.Record(new AuthoritativeFrame(_nextSequence++, engine.GameSession.CurrentTick, _actionBuffer.ToArray()));
-            _hashRows.Add($"rec tick={engine.GameSession.CurrentTick} digest={WorldDigestLens.Short(WorldDigestLens.FromEngine(engine))}");
+            string digest = WorldDigestLens.FromEngine(engine);
+            _recordingDigests.Add(digest);
+            _recordingHashRows.Add($"rec i={_recordingDigests.Count - 1} tick={engine.GameSession.CurrentTick} digest={WorldDigestLens.Short(digest)}");
         }
 
         if (_playing && !_paused)
@@ -142,11 +151,10 @@ public sealed class DeterministicReplayShowcaseRuntime
             if (_recorder == null || !_recording) throw new SaveContextException("没有进行中的录制。");
             _archive = _recorder.BuildArchive();
             _recordingDigest = WorldDigestLens.FromEngine(engine);
-            Directory.CreateDirectory(Path.GetDirectoryName(ArchivePath())!);
-            File.WriteAllBytes(ArchivePath(), new ReplayArchiveCodec().Encode(_archive));
+            PersistArchive(engine, _archive);
             _recording = false;
             _compare = "已录制，待回放";
-            SetStatus($"录制完成 {_archive.Frames.Count} 帧 → {ArchivePath()} schema={_archive.Header.SchemaVersion}");
+            SetStatus($"录制完成 {_archive.Frames.Count} 帧 → {_archiveDisplay} schema={_archive.Header.SchemaVersion}");
         }
         catch (Exception ex) { Fail(ex.Message); }
         Refresh(engine);
@@ -163,7 +171,6 @@ public sealed class DeterministicReplayShowcaseRuntime
             {
                 _mode = "快照跳终点";
                 new WorldRestoreService().Restore(engine, _archive.Checkpoint);
-                // Jump to end without replaying frames — ablation contrast.
                 _playing = false;
                 _playbackDigest = WorldDigestLens.FromEngine(engine);
                 _compare = "快照消融：只证明终点，不证明过程";
@@ -179,21 +186,25 @@ public sealed class DeterministicReplayShowcaseRuntime
             _replayFrames = 0;
             _playing = true;
             _paused = false;
-            _hashRows.Clear();
+            _playbackHashRows.Clear();
             if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader replayInput)
             {
                 replayInput.SetReplayInputIsolation(true);
             }
 
-            // Fast-forward mid: apply frames before mid without UI
             while (_replayFrames < _replayIndex)
             {
                 QueueFrame(engine);
                 ConsumeQueued(engine);
             }
 
+            if (fromMid)
+            {
+                AssertMidDigest();
+            }
+
             QueueFrame(engine);
-            SetStatus(fromMid ? $"从中途帧 {_replayIndex} 续播。" : "回放开始；输入已隔离。");
+            SetStatus(fromMid ? $"从中途帧 {_replayIndex} 续播。{_midCompare}" : "回放开始；输入已隔离。");
         }
         catch (Exception ex) { Fail(ex.Message); }
         Refresh(engine);
@@ -259,9 +270,27 @@ public sealed class DeterministicReplayShowcaseRuntime
                 throw new SaveContextException("输入隔离未打开。");
             }
 
-            // Attempting to clear isolation mid-play would pollute; we refuse the inject instead.
-            Fail("回放输入隔离中：实时注入被拒绝，轨迹不被污染。");
-            SetStatus("惊喜：播放中注入被拒绝。");
+            _paused = true;
+            input.ClearReplayActions();
+            _frameQueued = false;
+            input.SetActionValue("inject_pollute", new Vector3(9f, 0f, 0f));
+            if (engine.Pacemaker is TurnBasedPacemaker pace)
+            {
+                pace.Step();
+                engine.Tick(1f);
+            }
+
+            input.CopyAuthoritativeActions(_actionBuffer);
+            for (int i = 0; i < _actionBuffer.Count; i++)
+            {
+                if (string.Equals(_actionBuffer[i].ActionId, "inject_pollute", StringComparison.Ordinal))
+                {
+                    throw new SaveContextException("实时注入污染了权威快照——输入隔离失守。");
+                }
+            }
+
+            Fail("回放输入隔离中：实时注入已被权威快照系统丢弃，轨迹不被污染。");
+            SetStatus("惊喜：播放中注入被正式拒绝。");
         }
         catch (Exception ex) { Fail(ex.Message); }
         Refresh(engine);
@@ -284,6 +313,20 @@ public sealed class DeterministicReplayShowcaseRuntime
         bool match = string.Equals(_recordingDigest, _playbackDigest, StringComparison.Ordinal)
                      && _recordingDigest != "-";
 
+        var rows = new List<string>(_recordingHashRows.Count + _playbackHashRows.Count + 2);
+        if (_recordingHashRows.Count == 0 && _playbackHashRows.Count == 0)
+        {
+            rows.Add("录制/回放指纹将在此并排滚动");
+        }
+        else
+        {
+            rows.Add("--- 录制 ---");
+            rows.AddRange(_recordingHashRows);
+            rows.Add("--- 回放 ---");
+            if (_playbackHashRows.Count == 0) rows.Add("(尚未回放)");
+            else rows.AddRange(_playbackHashRows);
+        }
+
         return new DeterministicReplayShowcasePanelState(
             Header: "确定性回放",
             Summary: "同一段操作，重放一模一样。看两条指纹并排。",
@@ -291,7 +334,7 @@ public sealed class DeterministicReplayShowcaseRuntime
             Status: _status,
             Error: _error,
             Mode: _mode,
-            ArchivePath: ArchivePath(),
+            ArchivePath: _archiveDisplay,
             SchemaVersion: _archive?.Header.SchemaVersion ?? 0,
             Tick: tick,
             TotalFrames: frames,
@@ -302,8 +345,8 @@ public sealed class DeterministicReplayShowcaseRuntime
             Paused: _paused,
             RecordingDigest: WorldDigestLens.Short(_recordingDigest),
             PlaybackDigest: WorldDigestLens.Short(_playbackDigest),
-            Compare: match ? "一致（绿）" : _compare,
-            HashRows: _hashRows.Count == 0 ? new[] { "录制/回放指纹将在此滚动" } : _hashRows.ToArray(),
+            Compare: match ? $"一致（绿） · {_midCompare}" : $"{_compare} · {_midCompare}",
+            HashRows: rows.ToArray(),
             LogLines: _log.Count == 0 ? new[] { _status } : _log.ToArray());
     }
 
@@ -322,7 +365,9 @@ public sealed class DeterministicReplayShowcaseRuntime
             _recorder.SetCheckpoint(_checkpoint);
             _nextSequence = 0;
             _recording = true;
-            _hashRows.Clear();
+            _recordingHashRows.Clear();
+            _recordingDigests.Clear();
+            _playbackHashRows.Clear();
             SetStatus($"开始录制，原点 tick={_checkpoint.Header.Tick}");
         }
     }
@@ -340,7 +385,8 @@ public sealed class DeterministicReplayShowcaseRuntime
         _replayIndex++;
         _frameQueued = false;
         _playbackDigest = WorldDigestLens.FromEngine(engine);
-        _hashRows.Add($"play i={_replayIndex} tick={engine.GameSession.CurrentTick} digest={WorldDigestLens.Short(_playbackDigest)}");
+        int i = _replayIndex - 1;
+        _playbackHashRows.Add($"play i={i} tick={engine.GameSession.CurrentTick} digest={WorldDigestLens.Short(_playbackDigest)}");
         if (_replayIndex >= (_archive?.Frames.Count ?? 0))
         {
             FinishReplay(engine);
@@ -377,26 +423,65 @@ public sealed class DeterministicReplayShowcaseRuntime
 
         _playbackDigest = WorldDigestLens.FromEngine(engine);
         bool ok = string.Equals(_playbackDigest, _recordingDigest, StringComparison.Ordinal);
-        _compare = ok ? "一致（绿）" : "分叉（红）";
-        SetStatus($"回放结束：{_compare} 录制={WorldDigestLens.Short(_recordingDigest)} 回放={WorldDigestLens.Short(_playbackDigest)}");
+        _compare = ok ? "终点一致（绿）" : "终点分叉（红）";
+        SetStatus($"回放结束：{_compare} 录制={WorldDigestLens.Short(_recordingDigest)} 回放={WorldDigestLens.Short(_playbackDigest)} · {_midCompare}");
         if (!ok) Fail("回放与录制终点指纹不一致。");
     }
 
-    private void TryLoadArchive()
+    private void AssertMidDigest()
+    {
+        int i = Math.Max(0, _replayIndex - 1);
+        if (i >= _recordingDigests.Count)
+        {
+            _midCompare = "中途：录制指纹不足，跳过";
+            return;
+        }
+
+        bool ok = string.Equals(_playbackDigest, _recordingDigests[i], StringComparison.Ordinal);
+        _midCompare = ok
+            ? $"中途一致（绿） i={i}"
+            : $"中途分叉（红） i={i}";
+        if (!ok) Fail(_midCompare);
+    }
+
+    private void PersistArchive(GameEngine engine, ReplayArchive archive)
+    {
+        ISaveStorage storage = RequireStorage(engine);
+        byte[] bytes = new ReplayArchiveCodec().Encode(archive);
+        storage.WriteAllBytes(ArchiveStorageKey, bytes);
+        _archiveDisplay = string.IsNullOrWhiteSpace(storage.DisplayRoot)
+            ? ArchiveStorageKey
+            : System.IO.Path.Combine(storage.DisplayRoot, ArchiveStorageKey.Replace('/', System.IO.Path.DirectorySeparatorChar));
+    }
+
+    private void TryLoadArchive(GameEngine engine)
     {
         try
         {
-            string path = ArchivePath();
-            if (!File.Exists(path)) return;
-            _archive = new ReplayArchiveCodec().Decode(File.ReadAllBytes(path)).Validate();
-            SetStatus($"已加载回放资产 {_archive.Frames.Count} 帧");
+            if (!engine.TryGetService(CoreServiceKeys.SaveStorage, out ISaveStorage? storage) || storage == null)
+            {
+                return;
+            }
+
+            _archiveDisplay = string.IsNullOrWhiteSpace(storage.DisplayRoot)
+                ? ArchiveStorageKey
+                : System.IO.Path.Combine(storage.DisplayRoot, ArchiveStorageKey.Replace('/', System.IO.Path.DirectorySeparatorChar));
+            if (!storage.Exists(ArchiveStorageKey)) return;
+            _archive = new ReplayArchiveCodec().Decode(storage.ReadAllBytes(ArchiveStorageKey)).Validate();
+            SetStatus($"已加载回放资产 {_archive.Frames.Count} 帧 ← {_archiveDisplay}");
         }
         catch (Exception ex) { Fail(ex.Message); }
     }
 
-    private static string ArchivePath() =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Ludots", "deterministic-replay", "replays", "showcase.ldreplay");
+    private static ISaveStorage RequireStorage(GameEngine engine)
+    {
+        if (!engine.TryGetService(CoreServiceKeys.SaveStorage, out ISaveStorage? storage) || storage == null)
+        {
+            throw new SaveContextException("缺存档存储服务；回放资产必须走 ISaveStorage，禁止私有文件路径。");
+        }
+
+        return storage;
+    }
 
     private void Refresh(GameEngine engine)
     {

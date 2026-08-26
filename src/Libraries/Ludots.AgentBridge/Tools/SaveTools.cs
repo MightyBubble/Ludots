@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -118,6 +119,8 @@ namespace Ludots.AgentBridge.Tools
                 throw new AgentToolException(AgentBridgeErrorCodes.ToolFailed, $"Write slot '{id.Value}' failed: {ex.Message}");
             }
 
+            string key = id.ToStorageKey();
+            string path = SaveToolSupport.AbsoluteSlotPath(context.Engine, key);
             return new JsonObject
             {
                 ["slot"] = id.Value,
@@ -125,6 +128,8 @@ namespace Ludots.AgentBridge.Tools
                 ["name"] = id.Name,
                 ["tick"] = snapshot.Header.Tick,
                 ["bytes"] = SaveToolSupport.SlotByteSize(context.Engine, id),
+                ["storageKey"] = key,
+                ["path"] = path,
                 ["worldDigest"] = SaveToolSupport.ComputeWorldDigest(context.Engine, snapshot),
             };
         }
@@ -284,6 +289,23 @@ namespace Ludots.AgentBridge.Tools
 
             string key = id.ToStorageKey();
             return storage.Exists(key) ? storage.ReadAllBytes(key).Length : 0;
+        }
+
+        public static string AbsoluteSlotPath(GameEngine engine, string storageKey)
+        {
+            if (!engine.TryGetService(CoreServiceKeys.SaveStorage, out ISaveStorage? storage) || storage == null)
+            {
+                return storageKey;
+            }
+
+            if (string.IsNullOrWhiteSpace(storage.DisplayRoot))
+            {
+                return storageKey;
+            }
+
+            return Path.Combine(
+                storage.DisplayRoot,
+                storageKey.Replace('/', Path.DirectorySeparatorChar));
         }
 
         public static string ComputeWorldDigest(GameEngine engine, WorldSnapshotService snapshots)

@@ -43,7 +43,7 @@
 ## 门户资产
 
 - 封面取「读档瞬间绿标归位」；
-- 预览/文案与 `assets/Maps/save_load.json`、面板状态同源；
+- 预览/文案与 `mods/showcases/save_load/SaveLoadShowcaseMod/assets/Maps/save_load.json`、面板状态同源；
 - 本文即设计 SSOT。
 
 ## 反向 API 审计

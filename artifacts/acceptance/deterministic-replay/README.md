@@ -1,2 +1,4 @@
-# Migrated from persistence-online-replay (Epic #1208)
-历史复合 showcase 资产见 artifacts/archive/persistence-online-replay/。本目录承接确定性回放验收产物。
+# deterministic_replay 验收资产
+
+- `battle-report.md` / `trace.jsonl`：`ISaveStorage` 回放资产落盘证据
+- `replay-compare.png`：指纹对照封面帧（历史复合条目同场景帧迁移）
