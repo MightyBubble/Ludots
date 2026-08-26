@@ -602,7 +602,7 @@ def build(out_dir: Path) -> int:
     print("-- 结构自验")
     required = [
         "index.html", "gallery.html", "tests.html", "diagrams.html", "panels.html",
-        "graph-op-wiki.html", "raylib-engine.html", "agent-bridge.html",
+        "graph-op-wiki.html", "raylib-engine.html", "agent-bridge.html", "save-persistence.html",
         "site-assets/site.css", "site-assets/site.js",
         "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/graph-op-nav.js",
         "site-assets/panels-nav.js",

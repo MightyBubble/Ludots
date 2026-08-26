@@ -24,6 +24,7 @@
 - [时间体系](time-system.md)
 - [Exchange Operations](exchange-operations.md)
 - [Quest Core Infrastructure](../../docs/architecture/quest_core_infra.md)
+- [存档 · 回放 · 联机（门户一级入口）](save-persistence-showcases/README.md)
 - [通用存档系统](save-system.md)
 - [AI Utility Autocast 契约](ai-utility-autocast-contract.md)
 - [实体仿真分层与车道](entity-simulation-layering.md)

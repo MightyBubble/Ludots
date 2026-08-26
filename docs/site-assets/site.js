@@ -28,6 +28,7 @@
   var NAV_ITEMS = [
     { href: "index.html", label: "门户", page: "home" },
     { href: "index.html#docs", label: "文档", page: "home", hash: "#docs" },
+    { href: "save-persistence.html", label: "存档 · 回放 · 联机", page: "savepersistence" },
     { href: "raylib-engine.html", label: "Raylib 引擎画廊", page: "raylibengine" },
     { href: "graph-op-wiki.html", label: "Graph 节点画廊", page: "graphop" },
     { href: "agent-bridge.html", label: "Agent 调试桥", page: "agentbridge" },
