@@ -55,6 +55,9 @@ namespace AgentBridgeMod
                 tools.Register(new ScreenshotTool(runtime));
                 tools.Register(new RecordingStartTool(recording, runtime));
                 tools.Register(new RecordingStopTool(recording));
+                tools.Register(new PresentersQueryTool());
+                tools.Register(new PresentersDesyncTool());
+                tools.Register(new PresentersScreenTool());
                 tools.Register(new GraphDebugTool());
 
                 engine.SetService(ToolRegistryKey, tools);
