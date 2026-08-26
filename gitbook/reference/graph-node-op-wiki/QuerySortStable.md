@@ -3,7 +3,7 @@
 每波点名，五个人 1 到 5 的编号顺序一模一样，灰影对得上。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QuerySortStable/poster.png" src="artifacts/evidence/capability_standard_graph_op_QuerySortStable/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QuerySortStable/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_QuerySortStable/play.mp4。
 </video>
 
 ## 作者写法

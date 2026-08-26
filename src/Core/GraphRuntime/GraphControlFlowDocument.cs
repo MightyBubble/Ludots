@@ -216,6 +216,10 @@ namespace Ludots.Core.GraphRuntime
         public string? Scope { get; set; }
         /// <summary>#1126 AwaitCallback catalog name (Imm symbol); required on AwaitCallback nodes.</summary>
         public string? CallbackType { get; set; }
+        /// <summary>Literal / FormatText template for formal text ops (ConstText Imm → Symbols; FormatText brace scan).</summary>
+        public string? Text { get; set; }
+        /// <summary>Presentation surface for SinkPresentationText: "Subtitle" or "Dialogue".</summary>
+        public string? PresentationSurface { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>
         public string? ArgKey { get; set; }
         public string? QueryCapacityPolicy { get; set; }
@@ -327,9 +331,17 @@ namespace Ludots.Core.GraphRuntime
         public const string Default = "default";
         /// <summary>Control port prefix for SwitchInt arms; full port is case:{int}.</summary>
         public const string CasePrefix = "case:";
+        /// <summary>Value port prefix for FormatText brace pins; full port is arg:{indexOrName}.</summary>
+        public const string ArgPrefix = "arg:";
 
         public static string Case(int caseValue)
             => CasePrefix + caseValue.ToString(CultureInfo.InvariantCulture);
+
+        public static string Arg(int index)
+            => ArgPrefix + index.ToString(CultureInfo.InvariantCulture);
+
+        public static string Arg(string name)
+            => ArgPrefix + name;
 
         public static bool TryParseCasePort(string port, out int caseValue)
         {

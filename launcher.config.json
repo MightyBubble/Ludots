@@ -503,6 +503,14 @@
       }
     },
     {
+      "name": "capability_standard_graph_formal_text",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphFormalTextShowcaseMod",
+        "projectPath": "CapabilityStandardGraphFormalTextShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "raylib_client_parity",
       "target": {
         "type": "path",
@@ -1846,6 +1854,46 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedRegionEntryMod",
         "projectPath": "CapabilityStandardGraphOpLoadPlacedRegionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ConcatText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConcatTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpConcatTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ConstText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpConstTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_FloatToText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFloatToTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFloatToTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_IntToText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIntToTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIntToTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SinkPresentationText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSinkPresentationTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSinkPresentationTextEntryMod.csproj"
       }
     }
   ],

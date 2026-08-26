@@ -69,6 +69,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Span<Entity> Targets;
         public GraphTargetList TargetList;
         public Span<int> CallStack;
+        public GraphTextHeap Text;
         public int CallStackCount;
         public int ReturnInt;
         public GraphExecutionStatus Status;

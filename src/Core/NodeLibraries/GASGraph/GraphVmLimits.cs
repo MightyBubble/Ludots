@@ -6,6 +6,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const int MaxIntRegisters = 32;
         public const int MaxBoolRegisters = 32;
         public const int MaxEntityRegisters = 32;
+        public const int MaxTextRegisters = 8;
+        public const int MaxTextCharsPerRegister = 128;
         public const int MaxTargets = 256;
         public const int MaxCallStackDepth = 16;
 

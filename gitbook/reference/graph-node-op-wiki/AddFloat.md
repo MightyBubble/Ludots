@@ -3,7 +3,7 @@
 30 的一段先摆上，12 的一段接在尾巴上，接成的一整段有多长，木桩就掉多少血。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AddFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4。
 </video>
 
 ## 作者写法

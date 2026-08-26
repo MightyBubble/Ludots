@@ -3,7 +3,7 @@
 茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_JumpIfFalse/poster.png" src="artifacts/evidence/capability_standard_graph_op_JumpIfFalse/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_JumpIfFalse/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_JumpIfFalse/play.mp4。
 </video>
 
 ## 作者写法

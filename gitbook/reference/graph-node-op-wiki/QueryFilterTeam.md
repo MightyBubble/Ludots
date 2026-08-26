@@ -3,7 +3,7 @@
 红的一排留圈，蓝的退成灰影。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4。
 </video>
 
 ## 作者写法

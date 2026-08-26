@@ -17,7 +17,8 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         string[] ops =
         [
             "Jump", "JumpIfFalse", "Call", "Return", "Yield", "AwaitCallback",
-            "HaltReturnInt", "InvokeScript", "MoveInt"
+            "HaltReturnInt", "InvokeScript", "MoveInt",
+            "ConstText", "ConcatText", "IntToText", "FloatToText", "SinkPresentationText"
         ];
         string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();
         foreach (string op in ops)
@@ -75,6 +76,23 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         {
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
         }
+    }
+
+    [TestCase("ConstText")]
+    [TestCase("ConcatText")]
+    [TestCase("IntToText")]
+    [TestCase("FloatToText")]
+    [TestCase("SinkPresentationText")]
+    public void FormalTextOp_CompilesFeaturedOpcode(string op)
+    {
+        string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();
+        GraphOpsNodeVignette vignette = GraphOpsNodeVignetteLoader.Load(assets, op);
+        var compiled = GraphOpsNodeGraphCompiler.Compile(assets, vignette);
+        Assert.That(compiled.Succeeded, Is.True, string.Join(Environment.NewLine, compiled.Diagnostics));
+        Assert.That(
+            compiled.Program.Any(i => i.Op == (ushort)Enum.Parse<GraphNodeOp>(op)),
+            Is.True,
+            $"{op} compiled program must emit the featured opcode.");
     }
 
     [Test]

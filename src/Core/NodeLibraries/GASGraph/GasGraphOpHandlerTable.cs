@@ -310,7 +310,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.StoreArgFloat or
                 GraphNodeOp.StoreArgEntity or
                 GraphNodeOp.DispatchMapEvent or
-                GraphNodeOp.AwaitCallback
+                GraphNodeOp.AwaitCallback or
+                GraphNodeOp.ConstText or
+                GraphNodeOp.ConcatText or
+                GraphNodeOp.IntToText or
+                GraphNodeOp.FloatToText or
+                GraphNodeOp.SinkPresentationText
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -353,6 +358,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Status = GraphExecutionStatus.Running
             };
 
+            EnsureTextHeap(ref state);
             GraphSliceResult result = ExecuteSliceCore(
                 ref state,
                 program,
@@ -396,7 +402,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"ExecuteSlice requires a call stack span of at least {GraphVmLimits.MaxCallStackDepth} that outlives the slice.");
             }
 
+            EnsureTextHeap(ref state);
             return ExecuteSliceCore(ref state, program, handlers, ref cursor, budgetSteps);
+        }
+
+        /// <summary>
+        /// Root execution entry binds the thread-local text heap when the caller omitted it.
+        /// Nested Invoke* already pass a non-null heap and must not reset here.
+        /// </summary>
+        private static void EnsureTextHeap(ref GraphExecutionState state)
+        {
+            if (state.Text == null)
+            {
+                state.Text = GraphTextHeap.ForCurrentThreadCleared();
+            }
         }
 
         private static GraphSliceResult ExecuteSliceCore(
@@ -841,6 +860,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.StoreArgEntity, HandleStoreArgEntity, "StoreArgEntity graph opcode.");
             Register(GraphNodeOp.DispatchMapEvent, HandleDispatchMapEvent, "DispatchMapEvent graph opcode.");
             Register(GraphNodeOp.AwaitCallback, HandleAwaitCallback, "AwaitCallback graph opcode.");
+            Register(GraphNodeOp.ConstText, HandleConstText, "ConstText graph opcode.");
+            Register(GraphNodeOp.ConcatText, HandleConcatText, "ConcatText graph opcode.");
+            Register(GraphNodeOp.IntToText, HandleIntToText, "IntToText graph opcode.");
+            Register(GraphNodeOp.FloatToText, HandleFloatToText, "FloatToText graph opcode.");
+            Register(GraphNodeOp.SinkPresentationText, HandleSinkPresentationText, "SinkPresentationText graph opcode.");
         }
 
         // ── Value Ops ──
@@ -858,6 +882,71 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleConstFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.F[ins.Dst] = ins.ImmF;
+        }
+
+        private static void HandleConstText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            GraphTextHeap text = RequireTextHeap(ref s);
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    "ConstText requires a registered program so Symbols[Imm] can supply the literal.");
+            }
+
+            if ((uint)ins.Imm >= (uint)registration.Symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ConstText Imm {ins.Imm} is outside program symbol table length {registration.Symbols.Length}.");
+            }
+
+            text.Write(ins.Dst, registration.Symbols[ins.Imm].AsSpan());
+        }
+
+        private static void HandleConcatText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            RequireTextHeap(ref s).Concat(ins.Dst, ins.A, ins.B);
+        }
+
+        private static void HandleIntToText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Span<char> buffer = stackalloc char[GraphVmLimits.MaxTextCharsPerRegister];
+            if (!s.I[ins.A].TryFormat(buffer, out int written, provider: System.Globalization.CultureInfo.InvariantCulture))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphTextHeap.OverflowError}: IntToText could not format I[{ins.A}] into MaxTextCharsPerRegister.");
+            }
+
+            RequireTextHeap(ref s).Write(ins.Dst, buffer.Slice(0, written));
+        }
+
+        private static void HandleFloatToText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Span<char> buffer = stackalloc char[GraphVmLimits.MaxTextCharsPerRegister];
+            if (!s.F[ins.A].TryFormat(buffer, out int written, format: "0.###", provider: System.Globalization.CultureInfo.InvariantCulture))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphTextHeap.OverflowError}: FloatToText could not format F[{ins.A}] into MaxTextCharsPerRegister.");
+            }
+
+            RequireTextHeap(ref s).Write(ins.Dst, buffer.Slice(0, written));
+        }
+
+        private static void HandleSinkPresentationText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!Enum.IsDefined(typeof(GraphPresentationTextSurface), (byte)ins.Imm))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphPresentationTextSink.SurfaceError}: Imm={ins.Imm} is not a GraphPresentationTextSurface.");
+            }
+
+            var surface = (GraphPresentationTextSurface)ins.Imm;
+            s.Api.PushPresentationText(surface, RequireTextHeap(ref s).Get(ins.A));
+        }
+
+        private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)
+        {
+            return s.Text ?? throw new InvalidOperationException("Graph execution requires GraphTextHeap.");
         }
 
         // ── Entity Loading ──
@@ -981,36 +1070,46 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             e[1] = s.ExplicitTarget;
             e[2] = s.E.Length > 2 ? s.E[2] : default;
 
-            var child = new GraphExecutionState
+            GraphTextHeap text = s.Text ?? throw new InvalidOperationException("InvokeScript requires GraphExecutionState.Text.");
+            text.PushFrame();
+            try
             {
-                World = s.World,
-                Caster = s.Caster,
-                ExplicitTarget = s.ExplicitTarget,
-                TargetContext = s.TargetContext,
-                Viewer = s.Viewer,
-                EventPayload = s.EventPayload,
-                TargetPosCm = s.TargetPosCm,
-                RandomSeed = s.RandomSeed,
-                Api = s.Api,
-                Programs = s.Programs,
-                F = f,
-                I = i,
-                B = b,
-                E = e,
-                Targets = targets,
-                TargetList = targetList,
-                CallStack = callStack,
-                Status = GraphExecutionStatus.Running,
-                InvokeDepth = s.InvokeDepth + 1,
-                TreeSteps = s.TreeSteps,
-                CurrentGraphId = graphId,
-                DebugTrace = s.DebugTrace,
-                MapScope = s.MapScope
-            };
+                var child = new GraphExecutionState
+                {
+                    World = s.World,
+                    Caster = s.Caster,
+                    ExplicitTarget = s.ExplicitTarget,
+                    TargetContext = s.TargetContext,
+                    Viewer = s.Viewer,
+                    EventPayload = s.EventPayload,
+                    TargetPosCm = s.TargetPosCm,
+                    RandomSeed = s.RandomSeed,
+                    Api = s.Api,
+                    Programs = s.Programs,
+                    F = f,
+                    I = i,
+                    B = b,
+                    E = e,
+                    Targets = targets,
+                    TargetList = targetList,
+                    CallStack = callStack,
+                    Text = text,
+                    Status = GraphExecutionStatus.Running,
+                    InvokeDepth = s.InvokeDepth + 1,
+                    TreeSteps = s.TreeSteps,
+                    CurrentGraphId = graphId,
+                    DebugTrace = s.DebugTrace,
+                    MapScope = s.MapScope
+                };
 
-            Execute(ref child, childProgram, Instance);
-            s.TreeSteps = child.TreeSteps;
-            s.I[ins.Dst] = child.ReturnInt;
+                Execute(ref child, childProgram, Instance);
+                s.TreeSteps = child.TreeSteps;
+                s.I[ins.Dst] = child.ReturnInt;
+            }
+            finally
+            {
+                text.PopFrame();
+            }
         }
 
         private static void HandleMoveInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1100,38 +1199,48 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             e[0] = s.Caster;
             e[1] = s.ExplicitTarget;
 
-            var child = new GraphExecutionState
+            GraphTextHeap text = s.Text ?? throw new InvalidOperationException("InvokeGraph requires GraphExecutionState.Text.");
+            text.PushFrame();
+            try
             {
-                World = s.World,
-                Caster = s.Caster,
-                ExplicitTarget = s.ExplicitTarget,
-                TargetContext = s.TargetContext,
-                Viewer = s.Viewer,
-                EventPayload = s.EventPayload,
-                EntryPayload = s.InvokeArgs,
-                TargetPosCm = s.TargetPosCm,
-                RandomSeed = s.RandomSeed,
-                Api = s.Api,
-                Programs = s.Programs,
-                F = f,
-                I = i,
-                B = b,
-                E = e,
-                Targets = targets,
-                TargetList = targetList,
-                CallStack = callStack,
-                Status = GraphExecutionStatus.Running,
-                InvokeDepth = s.InvokeDepth + 1,
-                TreeSteps = s.TreeSteps,
-                CurrentGraphId = graphId,
-                DebugTrace = s.DebugTrace,
-                MapScope = s.MapScope
-            };
+                var child = new GraphExecutionState
+                {
+                    World = s.World,
+                    Caster = s.Caster,
+                    ExplicitTarget = s.ExplicitTarget,
+                    TargetContext = s.TargetContext,
+                    Viewer = s.Viewer,
+                    EventPayload = s.EventPayload,
+                    EntryPayload = s.InvokeArgs,
+                    TargetPosCm = s.TargetPosCm,
+                    RandomSeed = s.RandomSeed,
+                    Api = s.Api,
+                    Programs = s.Programs,
+                    F = f,
+                    I = i,
+                    B = b,
+                    E = e,
+                    Targets = targets,
+                    TargetList = targetList,
+                    CallStack = callStack,
+                    Text = text,
+                    Status = GraphExecutionStatus.Running,
+                    InvokeDepth = s.InvokeDepth + 1,
+                    TreeSteps = s.TreeSteps,
+                    CurrentGraphId = graphId,
+                    DebugTrace = s.DebugTrace,
+                    MapScope = s.MapScope
+                };
 
-            Execute(ref child, childProgram, Instance, startPc);
-            s.TreeSteps = child.TreeSteps;
-            s.I[ins.Dst] = child.ReturnInt;
-            s.InvokeArgs?.Clear();
+                Execute(ref child, childProgram, Instance, startPc);
+                s.TreeSteps = child.TreeSteps;
+                s.I[ins.Dst] = child.ReturnInt;
+                s.InvokeArgs?.Clear();
+            }
+            finally
+            {
+                text.PopFrame();
+            }
         }
 
         /// <summary>

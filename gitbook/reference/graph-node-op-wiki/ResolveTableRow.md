@@ -3,7 +3,7 @@
 报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ResolveTableRow/poster.png" src="artifacts/evidence/capability_standard_graph_op_ResolveTableRow/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ResolveTableRow/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ResolveTableRow/play.mp4。
 </video>
 
 ## 作者写法

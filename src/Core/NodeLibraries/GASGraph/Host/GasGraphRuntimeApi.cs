@@ -109,6 +109,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.Rng.RngPickService? _rngPickService;
         private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
+        private GraphPresentationTextSink? _presentationTextSink;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
@@ -383,6 +384,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void DestroyPanel(int templateKeyId, Entity scope)
         {
             RequirePanelHost().DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
+        }
+
+        public void PushPresentationText(GraphPresentationTextSurface surface, ReadOnlySpan<char> text)
+        {
+            GraphPresentationTextSink sink = _presentationTextSink
+                ?? throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
+            sink.Push(surface, text);
+        }
+
+        public GraphPresentationTextSink? PresentationTextSink => _presentationTextSink;
+
+        public void BindPresentationTextSink(GraphPresentationTextSink sink)
+        {
+            _presentationTextSink = sink ?? throw new ArgumentNullException(nameof(sink));
         }
 
         private string ResolvePanelTypeName(int panelTypeId)

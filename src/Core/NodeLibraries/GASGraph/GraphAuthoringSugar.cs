@@ -39,6 +39,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// reusable fragment. Never becomes a GraphNodeOp; runtime InvokeGraph stays sync-only.
         /// </summary>
         public const string InlineGraph = "InlineGraph";
+        /// <summary>
+        /// Formal-text authoring sugar: template in <c>text</c> with <c>{0}</c>/<c>{name}</c>
+        /// holes becomes ConstText + ConcatText (brace ports are Text). Never a GraphNodeOp.
+        /// </summary>
+        public const string FormatText = "FormatText";
 
         public static bool IsScriptOnlySugar(string? opName)
         {

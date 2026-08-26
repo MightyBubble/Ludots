@@ -595,6 +595,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_formal_text_raylib",
+      "name": "拼一句上字幕",
+      "selectors": [
+        "$capability_standard_graph_formal_text"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "raylib_client_parity_raylib",
       "name": "Raylib Client Parity",
       "selectors": [
@@ -2495,6 +2504,51 @@
       "name": "Graph Op LoadPlacedRegion Raylib",
       "selectors": [
         "$capability_standard_graph_op_LoadPlacedRegion"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConcatText_raylib",
+      "name": "Graph Op ConcatText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConcatText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConstText_raylib",
+      "name": "Graph Op ConstText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConstText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FloatToText_raylib",
+      "name": "Graph Op FloatToText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FloatToText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IntToText_raylib",
+      "name": "Graph Op IntToText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IntToText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SinkPresentationText_raylib",
+      "name": "Graph Op SinkPresentationText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SinkPresentationText"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

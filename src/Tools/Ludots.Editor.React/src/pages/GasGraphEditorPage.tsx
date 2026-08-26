@@ -103,6 +103,8 @@ type GraphNodeConfig = {
   argKey?: string | null;
   enumType?: string | null;
   stateVar?: string | null;
+  text?: string | null;
+  presentationSurface?: string | null;
   pinRegister?: number;
 };
 
@@ -310,6 +312,8 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     argKey: n.argKey ?? undefined,
     enumType: n.enumType ?? undefined,
     stateVar: n.stateVar ?? undefined,
+    text: n.text ?? undefined,
+    presentationSurface: n.presentationSurface ?? undefined,
     pinRegister: n.pinRegister,
   });
 }
@@ -331,6 +335,43 @@ function dispatchParamPorts(
     ? schema.parameters.filter((param) => param.type !== 'String').map((param) => param.name)
     : [];
   return { op, controlOutputPorts: ['next'], valueInputPorts: ports, outputType: 'Void', lowersTo: 'DispatchMapEvent' };
+}
+
+/** FormatText brace auto-pins: `{0}` / `{name}` → arg:0 / arg:name Text inputs. */
+function formatTextPorts(
+  op: string,
+  text: string | null | undefined,
+): { op: string; controlOutputPorts: string[]; valueInputPorts: string[]; outputType: string; lowersTo: string } | null {
+  if (op !== 'FormatText') return null;
+  const ports: string[] = [];
+  const seen = new Set<string>();
+  const source = text ?? '';
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    if (ch === '{' && source[i + 1] === '{') {
+      i++;
+      continue;
+    }
+    if (ch === '}' && source[i + 1] === '}') {
+      i++;
+      continue;
+    }
+    if (ch !== '{') continue;
+    const close = source.indexOf('}', i + 1);
+    if (close < 0) break;
+    const raw = source.slice(i + 1, close);
+    if (!raw || raw.includes(':')) {
+      i = close;
+      continue;
+    }
+    const port = `arg:${raw}`;
+    if (!seen.has(port)) {
+      seen.add(port);
+      ports.push(port);
+    }
+    i = close;
+  }
+  return { op, controlOutputPorts: ['next'], valueInputPorts: ports, outputType: 'Text', lowersTo: 'ConcatText' };
 }
 
 function resolveControlOutputPorts(op: string, descriptor?: GraphDescriptor, sugar?: GraphSugarDescriptor): string[] {
@@ -376,6 +417,8 @@ function graphToFlow(
   }
   const nodes: Node<GasNodeData>[] = graph.nodes.map((n, index) => {
     const dispatchSugar = dispatchParamPorts(n.op, n.event, schemaFor);
+    const formatSugar = formatTextPorts(n.op, n.text);
+    const dynamicSugar = dispatchSugar ?? formatSugar;
     return {
     id: n.id,
     type: 'gas',
@@ -385,9 +428,9 @@ function graphToFlow(
       role: 'op',
       label: n.id,
       descriptor: descriptors[n.op],
-      sugar: dispatchSugar ?? sugars[n.op],
-      controlOutputPorts: dispatchSugar
-        ? dispatchSugar.controlOutputPorts
+      sugar: dynamicSugar ?? sugars[n.op],
+      controlOutputPorts: dynamicSugar
+        ? dynamicSugar.controlOutputPorts
         : [...resolveControlOutputPorts(n.op, descriptors[n.op], sugars[n.op]), ...(switchPorts.get(n.id) ?? [])],
     },
   };
@@ -801,6 +844,15 @@ export const GasGraphEditorPage: React.FC = () => {
         return {
           ...node,
           data: { ...node.data, sugar: dispatchSugar, controlOutputPorts: dispatchSugar.controlOutputPorts },
+        };
+      }
+
+      if (node.data.op === 'FormatText') {
+        const formatSugar = formatTextPorts(node.data.op, node.data.text);
+        if (!formatSugar) return node;
+        return {
+          ...node,
+          data: { ...node.data, sugar: formatSugar, controlOutputPorts: formatSugar.controlOutputPorts },
         };
       }
 

@@ -263,6 +263,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
 
+            GraphFormatTextExpander.ExpandInPlace(document);
+
             var diagnostics = new List<GraphDiagnostic>();
             string graphId = document.Id ?? string.Empty;
             GraphKind graphKind = ParseControlFlowKind(document, graphId, diagnostics);
@@ -1355,6 +1357,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         or GraphNodeOp.LoadViewer
                         => registers.BindEntityPreset(ops[i].NodeOp),
                     GraphValueType.Entity => registers.Alloc(GraphValueType.Entity, graphId, nodes[i].Id, diagnostics),
+                    GraphValueType.Text => registers.Alloc(GraphValueType.Text, graphId, nodes[i].Id, diagnostics),
                     _ => (byte)0
                 };
             }

@@ -10,7 +10,7 @@
 
 打开编辑器后，节点联想和控制输出端口只来自 Bridge 投影的运行时 descriptor / 作者糖，不在前端自造 op。游戏进程加载 `AgentBridgeMod` 后，编辑器右侧 Live Debug 能列出已挂载的 TriggerGraph 条目，开启固定容量 trace，并按 sequence 增量拉取变化。
 
-当前收口：控制流端口、作者糖（含 `FsmState` / `SelectByEnum` / `InlineGraph` 等 Bridge 投影项）、删节点清悬挂边、source map 缺失失败关闭。未收口：字符串模板 / Concat（无 text value 合同前不开放假节点）。
+当前收口：控制流端口、作者糖（含 `FsmState` / `SelectByEnum` / `InlineGraph` / `FormatText` 等 Bridge 投影项）、删节点清悬挂边、source map 缺失失败关闭。正式文字合同已齐：`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText` 与 `FormatText` 花括号自动引脚进入 descriptor / 糖名册（见 [图正式文字](graph-formal-text.md)）。
 
 ---
 
@@ -81,10 +81,10 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 
 ## 5. 边界
 
-- 编辑器不得自造运行时 op 或隐式 `next` 端口。
+- 正式文字节点与 FormatText 糖只来自运行时 descriptor / 糖名册；未登记前不得展示可保存假节点。
 - Live Debug 依赖真实挂载与 source map；无游戏进程时面板应明示 Bridge 错误，不得假装有事件。
-- 文本花括号引脚 / Concat 未进 descriptor 名册前不得在编辑器展示可保存假节点。
 - 本页不替代 [Agent 调试桥](agent-debug-bridge.md) 的全工具手册。
+- 文字值容量与表现出口细则见 [图正式文字](graph-formal-text.md)。
 
 ---
 

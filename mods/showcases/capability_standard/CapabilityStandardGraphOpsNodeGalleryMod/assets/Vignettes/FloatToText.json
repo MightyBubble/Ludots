@@ -1,0 +1,22 @@
+{
+  "op": "FloatToText",
+  "driver": "script",
+  "title": "把小数念成字",
+  "beat": "小数 1.5 先变成文字，再送进字幕口。",
+  "detailTemplate": "文字出口已收到拼好的句子。",
+  "assertDetailContains": ["文字"],
+  "featuredNodeId": "featured",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "作者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}
