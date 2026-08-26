@@ -80,9 +80,9 @@ internal static class NarrativeFrontendUiComposer
     {
         string surfaceClass = subtitle ? "story-subtitle-bubble" : "story-dialogue-bubble";
 
-        // Card must be Absolute root: Absolute+Column with Height:Auto measures as 0x0 in Flex.
+        // Surface root must be Absolute: Absolute+Column with Height:Auto measures as 0x0 in Flex.
         return ApplyAuthorChrome(
-                Ui.Card(
+                Ui.Column(
                         BuildBubbleTail(surface),
                         BuildEyebrow(surface),
                         BuildPortraitTitleRow(surface),
@@ -106,7 +106,7 @@ internal static class NarrativeFrontendUiComposer
         float standingWidth = standingHeight * (1024f / 1536f);
 
         var dialogueCard = ApplyAuthorChrome(
-            Ui.Card(
+            Ui.Column(
                     BuildEyebrow(surface),
                     BuildTitle(surface, fontSize: 24f),
                     BuildBody(surface, fontSize: 16f),
@@ -131,7 +131,7 @@ internal static class NarrativeFrontendUiComposer
     private static UiElementBuilder BuildOverlayDialogue(NarrativeFrontendSurfaceModel surface)
     {
         return ApplyAuthorChrome(
-            Ui.Card(
+            Ui.Column(
                     BuildEyebrow(surface),
                     BuildPortraitTitleRow(surface),
                     BuildBody(surface, fontSize: 15f),
@@ -165,7 +165,7 @@ internal static class NarrativeFrontendUiComposer
     private static UiElementBuilder BuildCard(NarrativeFrontendSurfaceModel surface, string extraClass)
     {
         return ApplyAuthorChrome(
-            Ui.Card(
+            Ui.Column(
                     BuildEyebrow(surface),
                     BuildTitle(surface, fontSize: 16f),
                     string.IsNullOrWhiteSpace(surface.Body)
@@ -211,7 +211,7 @@ internal static class NarrativeFrontendUiComposer
         items.Add(BuildMetaRow(surface));
 
         return ApplyAuthorChrome(
-            Ui.Card(items.ToArray())
+            Ui.Column(items.ToArray())
                 .Classes("story-choice-list", "story-card")
                 .Gap(8f),
             surface);
@@ -244,7 +244,7 @@ internal static class NarrativeFrontendUiComposer
     private static UiElementBuilder BuildEventCard(NarrativeFrontendSurfaceModel surface)
     {
         return ApplyAuthorChrome(
-            Ui.Card(
+            Ui.Column(
                     BuildEyebrow(surface),
                     BuildTitle(surface, fontSize: 18f),
                     BuildBody(surface, fontSize: 13f),
@@ -269,7 +269,7 @@ internal static class NarrativeFrontendUiComposer
     private static UiElementBuilder BuildThreatBanner(NarrativeFrontendSurfaceModel surface)
     {
         return ApplyAuthorChrome(
-            Ui.Card(
+            Ui.Column(
                     BuildEyebrow(surface),
                     BuildTitle(surface, fontSize: 18f),
                     BuildBody(surface, fontSize: 13f),
@@ -282,7 +282,7 @@ internal static class NarrativeFrontendUiComposer
     private static UiElementBuilder BuildTransmission(NarrativeFrontendSurfaceModel surface)
     {
         return ApplyAuthorChrome(
-            Ui.Card(
+            Ui.Column(
                     BuildEyebrow(surface),
                     BuildTitle(surface, fontSize: 15f),
                     BuildBody(surface, fontSize: 12f),
