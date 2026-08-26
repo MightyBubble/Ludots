@@ -2209,6 +2209,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "panel_collection_bags_raylib",
+      "name": "Panel Collection Bags Raylib",
+      "selectors": [
+        "$panel_collection_bags"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_skin_markup_raylib",
       "name": "Panel Markup Skin Raylib",
       "selectors": [
