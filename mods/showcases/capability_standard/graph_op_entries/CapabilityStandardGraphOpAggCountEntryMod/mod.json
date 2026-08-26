@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpAggCountEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp AggCount player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpAggCountEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpAggCountEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

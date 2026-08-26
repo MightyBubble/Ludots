@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpDestroyPanelEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp DestroyPanel player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpDestroyPanelEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpDestroyPanelEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

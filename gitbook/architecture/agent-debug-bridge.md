@@ -86,11 +86,12 @@ TaskCompletionSource 回包
 
 ```bash
 dotnet build src/Tools/Ludots.AgentBridge.Cli/Ludots.AgentBridge.Cli.csproj -c Release
-dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net8.0/Ludots.AgentBridge.Cli.dll tools --names
-dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net8.0/Ludots.AgentBridge.Cli.dll call ludots.session.info
+dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net9.0/Ludots.AgentBridge.Cli.dll tools --names
+dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net9.0/Ludots.AgentBridge.Cli.dll call ludots.session.info
 
+# stdio 适配器（零依赖）；桥地址解析顺序：argv > LUDOTS_AGENT_BRIDGE_URL > 发现文件 > 默认端口
 dotnet build src/Tools/Ludots.AgentBridge.Mcp/Ludots.AgentBridge.Mcp.csproj -c Release
-dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
+dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net9.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
 
 cd src/Tools/Ludots.Inspector.React && npm install && npm run dev
 # → http://127.0.0.1:5179 ；每工具独立 debug（req/res），非全屏壳

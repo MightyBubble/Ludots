@@ -13,8 +13,8 @@
 dotnet build src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj -c Debug
 dotnet build mods/AgentBridgeMod/AgentBridgeMod.csproj -c Debug
 
-# 2. 启动（orderedModIds 含 AgentBridgeMod）
-cd src/Apps/Raylib/Ludots.App.Raylib/bin/Debug/net8.0
+# 2. 启动（launch graph 的 orderedModIds 含 AgentBridgeMod 即启用）
+cd src/Apps/Raylib/Ludots.App.Raylib/bin/Debug/net9.0
 dotnet Ludots.App.Raylib.dll launcher.agent-demo.runtime.json
 
 # 3. 判活 + 列工具
@@ -136,7 +136,7 @@ npm install && npm run dev   # http://127.0.0.1:5179 ，默认连 47921
 ```bash
 dotnet build src/Tools/Ludots.AgentBridge.Cli/Ludots.AgentBridge.Cli.csproj -c Release
 dotnet build src/Tools/Ludots.AgentBridge.Mcp/Ludots.AgentBridge.Mcp.csproj -c Release
-dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
+dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net9.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
 ```
 
 MCP 客户端配置片段（Claude Code / pi 等 stdio server 通用）：
@@ -146,7 +146,7 @@ MCP 客户端配置片段（Claude Code / pi 等 stdio server 通用）：
   "mcpServers": {
     "ludots": {
       "command": "dotnet",
-      "args": ["exec", "<仓库>/src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll"]
+      "args": ["exec", "<仓库>/src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net9.0/Ludots.AgentBridge.Mcp.dll"]
     }
   }
 }

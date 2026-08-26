@@ -2,7 +2,7 @@
   "name": "CapabilityStandardPresenterCommandExtensionShowcaseMod",
   "version": "1.0.0",
   "description": "Capability-standard showcase proving a Mod can define and run its own presenter command kind from data rules.",
-  "main": "bin/net8.0/CapabilityStandardPresenterCommandExtensionShowcaseMod.dll",
+  "main": "bin/net9.0/CapabilityStandardPresenterCommandExtensionShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpRelationshipAggMaxEntityByMetricEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp RelationshipAggMaxEntityByMetric player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpRelationshipAggMaxEntityByMetricEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpRelationshipAggMaxEntityByMetricEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

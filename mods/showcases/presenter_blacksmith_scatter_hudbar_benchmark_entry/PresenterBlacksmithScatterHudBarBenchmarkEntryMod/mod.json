@@ -2,7 +2,7 @@
   "name": "PresenterBlacksmithScatterHudBarBenchmarkEntryMod",
   "version": "1.0.0",
   "description": "Direct launcher entry for the presenter blacksmith scatter HUD-bar benchmark showcase.",
-  "main": "bin/net8.0/PresenterBlacksmithScatterHudBarBenchmarkEntryMod.dll",
+  "main": "bin/net9.0/PresenterBlacksmithScatterHudBarBenchmarkEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "PresenterBlacksmithShowcaseMod": "^1.0.0"

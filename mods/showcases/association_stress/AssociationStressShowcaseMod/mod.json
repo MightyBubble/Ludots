@@ -2,7 +2,7 @@
   "name": "AssociationStressShowcaseMod",
   "version": "1.0.0",
   "description": "Playable association stress showcase for the shared EntityKeyedSoaTable base, knowledge projections, and entity collections.",
-  "main": "bin/net8.0/AssociationStressShowcaseMod.dll",
+  "main": "bin/net9.0/AssociationStressShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

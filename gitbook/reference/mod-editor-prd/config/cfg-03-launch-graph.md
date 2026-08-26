@@ -75,7 +75,7 @@
 ## 6. 实例
 
 - 绑定与预设正本：`launcher.config.json`、`launcher.presets.json`
-- 生成计划（构建产物，不入版本控制）：`artifacts/launcher` 目录下的 `raylib.launch.graph.json`；锚：Ludots.App.Raylib 构建输出目录（bin 下的 Release/net8.0）中的 `launcher.runtime.json`
+- 生成计划（构建产物，不入版本控制）：`artifacts/launcher` 目录下的 `raylib.launch.graph.json`；锚：Ludots.App.Raylib 构建输出目录（bin 下的 Release/net9.0）中的 `launcher.runtime.json`
 - CLI 全集：`gitbook/reference/cli-runbook.md`
 
 **相关文档**：[cfg-03 PRD](../prd/cfg-03-launch-graph.md) · [cfg-01 配置说明](cfg-01-mod-manifest.md) · [cfg-05 配置说明](cfg-05-config-pipeline.md)

@@ -2,7 +2,7 @@
   "name": "CapabilityStandardPhysics2DMod",
   "version": "1.0.0",
   "description": "Capability Standard pure Physics2D showcase for static colliders, restitution, force input, damping, and kinematic rotation.",
-  "main": "bin/net8.0/CapabilityStandardPhysics2DMod.dll",
+  "main": "bin/net9.0/CapabilityStandardPhysics2DMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

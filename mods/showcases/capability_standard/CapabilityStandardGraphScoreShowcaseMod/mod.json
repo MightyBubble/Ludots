@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphScoreShowcaseMod",
   "version": "1.0.0",
   "description": "Player short-play: missing-health Score graph picks the wounded dummy.",
-  "main": "bin/net8.0/CapabilityStandardGraphScoreShowcaseMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphScoreShowcaseMod.dll",
   "priority": 132,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

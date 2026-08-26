@@ -2,7 +2,7 @@
   "name": "CapabilityStandardEffectPresetTypeCodeShowcaseMod",
   "version": "1.0.0",
   "description": "Capability-standard showcase proving Mod-authored C# effect preset behavior is composed through preset_types data.",
-  "main": "bin/net8.0/CapabilityStandardEffectPresetTypeCodeShowcaseMod.dll",
+  "main": "bin/net9.0/CapabilityStandardEffectPresetTypeCodeShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

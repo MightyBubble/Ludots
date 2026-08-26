@@ -82,7 +82,9 @@ dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- health
 
 ```bash
 dotnet build src/Tools/Ludots.AgentBridge.Mcp/Ludots.AgentBridge.Mcp.csproj -c Release
-dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll
+dotnet exec <仓库>/src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net9.0/Ludots.AgentBridge.Mcp.dll
 ```
+
+不想手写 HTTP 时，把上述 stdio 适配器注册为 MCP server（地址解析：argv > `LUDOTS_AGENT_BRIDGE_URL` > 发现文件 > 47921）。`tools/list` 与 HTTP 目录一致。
 
 Inspector：`cd src/Tools/Ludots.Inspector.React && npm run dev` → `http://127.0.0.1:5179`（默认 `47921`；紧凑面板；每工具独立 debug）。

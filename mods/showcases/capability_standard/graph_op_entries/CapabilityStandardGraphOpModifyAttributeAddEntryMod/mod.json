@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpModifyAttributeAddEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp ModifyAttributeAdd player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpModifyAttributeAddEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpModifyAttributeAddEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

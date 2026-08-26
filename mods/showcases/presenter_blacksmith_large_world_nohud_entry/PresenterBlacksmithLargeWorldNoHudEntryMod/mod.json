@@ -2,7 +2,7 @@
   "name": "PresenterBlacksmithLargeWorldNoHudEntryMod",
   "version": "1.0.0",
   "description": "A/B launcher entry for the presenter blacksmith large-world minimap marker showcase without WorldHud or GAS drift.",
-  "main": "bin/net8.0/PresenterBlacksmithLargeWorldNoHudEntryMod.dll",
+  "main": "bin/net9.0/PresenterBlacksmithLargeWorldNoHudEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "PresenterBlacksmithShowcaseMod": "^1.0.0"

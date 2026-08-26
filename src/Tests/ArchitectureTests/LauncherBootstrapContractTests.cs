@@ -166,7 +166,7 @@ namespace Ludots.Tests.Architecture
                         "buildPipeline": "dotnet",
                         "runtimeBootstrapSchema": "launcher.runtime.v1",
                         "appProjectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
-                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0",
                         "clientProjectDirectory": "",
                         "clientDistributionDirectory": "",
                         "launchUrl": "",
@@ -187,7 +187,7 @@ namespace Ludots.Tests.Architecture
                           "id": "LudotsCoreMod",
                           "rootPath": "{{modRoot.Replace("\\", "\\\\")}}",
                           "projectPath": "{{Path.Combine(modRoot, "LudotsCoreMod.csproj").Replace("\\", "\\\\")}}",
-                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net8.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
+                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net9.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
                           "kind": 2,
                           "buildState": 4,
                           "bindingNames": []
@@ -197,8 +197,8 @@ namespace Ludots.Tests.Architecture
                         "bootstrapArtifactStrategy": "file",
                         "bootstrapArtifactPath": "{{bootstrapPath.Replace("\\", "\\\\")}}",
                         "graphArtifactPath": "{{graphPath.Replace("\\", "\\\\")}}",
-                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
-                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll",
+                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0",
+                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/Ludots.App.Raylib.dll",
                         "launchUrl": ""
                       },
                       "diagnostics": {
@@ -270,7 +270,7 @@ namespace Ludots.Tests.Architecture
                         "buildPipeline": "dotnet",
                         "runtimeBootstrapSchema": "launcher.runtime.v1",
                         "appProjectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
-                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0",
                         "clientProjectDirectory": "",
                         "clientDistributionDirectory": "",
                         "launchUrl": "",
@@ -291,7 +291,7 @@ namespace Ludots.Tests.Architecture
                           "id": "LudotsCoreMod",
                           "rootPath": "{{modRoot.Replace("\\", "\\\\")}}",
                           "projectPath": "{{Path.Combine(modRoot, "LudotsCoreMod.csproj").Replace("\\", "\\\\")}}",
-                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net8.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
+                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net9.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
                           "kind": 2,
                           "buildState": 4,
                           "bindingNames": []
@@ -301,8 +301,8 @@ namespace Ludots.Tests.Architecture
                         "bootstrapArtifactStrategy": "file",
                         "bootstrapArtifactPath": "{{bootstrapPath.Replace("\\", "\\\\")}}",
                         "graphArtifactPath": "{{graphPath.Replace("\\", "\\\\")}}",
-                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
-                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll",
+                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0",
+                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/Ludots.App.Raylib.dll",
                         "launchUrl": ""
                       },
                       "diagnostics": {
@@ -352,7 +352,7 @@ namespace Ludots.Tests.Architecture
                 "Ludots.App.Raylib",
                 "bin",
                 "Release",
-                "net8.0",
+                "net9.0",
                 "launcher.runtime.json");
             var originalGraph = CaptureFile(graphPath);
             var originalBootstrap = CaptureFile(bootstrapPath);
@@ -435,7 +435,7 @@ namespace Ludots.Tests.Architecture
                         "buildPipeline": "dotnet",
                         "runtimeBootstrapSchema": "launcher.runtime.v1",
                         "appProjectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
-                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0",
                         "clientProjectDirectory": "",
                         "clientDistributionDirectory": "",
                         "launchUrl": "",
@@ -456,7 +456,7 @@ namespace Ludots.Tests.Architecture
                           "id": "LudotsCoreMod",
                           "rootPath": "{{coreRoot.Replace("\\", "\\\\")}}",
                           "projectPath": "{{Path.Combine(coreRoot, "LudotsCoreMod.csproj").Replace("\\", "\\\\")}}",
-                          "mainAssemblyPath": "{{Path.Combine(coreRoot, "bin", "net8.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
+                          "mainAssemblyPath": "{{Path.Combine(coreRoot, "bin", "net9.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
                           "kind": 2,
                           "buildState": 4,
                           "bindingNames": []
@@ -466,8 +466,8 @@ namespace Ludots.Tests.Architecture
                         "bootstrapArtifactStrategy": "file",
                         "bootstrapArtifactPath": "{{bootstrapPath.Replace("\\", "\\\\")}}",
                         "graphArtifactPath": "{{graphPath.Replace("\\", "\\\\")}}",
-                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
-                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll",
+                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0",
+                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/Ludots.App.Raylib.dll",
                         "launchUrl": ""
                       },
                       "diagnostics": {
@@ -856,7 +856,7 @@ namespace Ludots.Tests.Architecture
                         "buildPipeline": "dotnet",
                         "runtimeBootstrapSchema": "launcher.runtime.v1",
                         "appProjectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
-                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0",
                         "clientProjectDirectory": "",
                         "clientDistributionDirectory": "",
                         "launchUrl": "",
@@ -878,7 +878,7 @@ namespace Ludots.Tests.Architecture
                           "id": "LudotsCoreMod",
                           "rootPath": "{{modRoot.Replace("\\", "\\\\")}}",
                           "projectPath": "{{Path.Combine(modRoot, "LudotsCoreMod.csproj").Replace("\\", "\\\\")}}",
-                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net8.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
+                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net9.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
                           "kind": 2,
                           "buildState": 4,
                           "bindingNames": []
@@ -888,8 +888,8 @@ namespace Ludots.Tests.Architecture
                         "bootstrapArtifactStrategy": "file",
                         "bootstrapArtifactPath": "{{bootstrapPath.Replace("\\", "\\\\")}}",
                         "graphArtifactPath": "{{graphPath.Replace("\\", "\\\\")}}",
-                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
-                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll",
+                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0",
+                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/Ludots.App.Raylib.dll",
                         "launchUrl": ""
                       },
                       "diagnostics": {
@@ -1282,7 +1282,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(plan.AppAssemblyPath, Is.EqualTo(Path.Combine(
                     repoRoot,
                     "src", "Apps", "Raylib", "Ludots.App.RaylibEngineGallery",
-                    "bin", "Release", "net8.0", "Ludots.App.RaylibEngineGallery.dll")));
+                    "bin", "Release", "net9.0", "Ludots.App.RaylibEngineGallery.dll")));
             }
             finally
             {

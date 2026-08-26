@@ -2,7 +2,7 @@
   "name": "ChampionSkillSandboxMod",
   "version": "1.0.0",
   "description": "Minimal champion skill sandbox with Ezreal, Garen, Jayce, generic GAS abilities, and cast mode switching.",
-  "main": "bin/net8.0/ChampionSkillSandboxMod.dll",
+  "main": "bin/net9.0/ChampionSkillSandboxMod.dll",
   "priority": 200,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

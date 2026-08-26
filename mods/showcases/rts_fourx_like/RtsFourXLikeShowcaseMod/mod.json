@@ -2,7 +2,7 @@
   "name": "RtsFourXLikeShowcaseMod",
   "version": "1.0.0",
   "description": "Thin root mod for the 4X city-production RTS browser showcase.",
-  "main": "bin/net8.0/RtsFourXLikeShowcaseMod.dll",
+  "main": "bin/net9.0/RtsFourXLikeShowcaseMod.dll",
   "priority": 220,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

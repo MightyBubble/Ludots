@@ -99,6 +99,8 @@
   - [Core Minimap Authoring](architecture/core-minimap-authoring.md)
 - [参考资料](reference/README.md)
   - [Launcher CLI Runbook](reference/cli-runbook.md)
+  - [玩家发行链（零安装）](reference/player-build.md)
+  - [零环境/零网络契约](reference/zero-env-setup.md)
   - [图节点词典（Graph 节点画廊 Wiki）](reference/graph-node-op-wiki/README.md)
   - [引擎画廊 Wiki（Raylib 引擎能力场景）](reference/engine-gallery-wiki/README.md)
   - [MassNavigation 用户教学书](reference/mass-navigation-user-book.md)

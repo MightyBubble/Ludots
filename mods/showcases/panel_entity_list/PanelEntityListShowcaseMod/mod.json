@@ -6,5 +6,5 @@
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"
   },
-  "main": "bin/net8.0/PanelEntityListShowcaseMod.dll"
+  "main": "bin/net9.0/PanelEntityListShowcaseMod.dll"
 }

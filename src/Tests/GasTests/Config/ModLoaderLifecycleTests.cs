@@ -372,8 +372,8 @@ namespace GasTests
                 consumerName,
                 providerDirectory,
                 consumerDirectory,
-                Path.Combine(providerDirectory, "bin", "net8.0", providerName + ".dll"),
-                Path.Combine(consumerDirectory, "bin", "net8.0", consumerName + ".dll"),
+                Path.Combine(providerDirectory, "bin", "net9.0", providerName + ".dll"),
+                Path.Combine(consumerDirectory, "bin", "net9.0", consumerName + ".dll"),
                 unloadLogPath);
         }
 
@@ -401,7 +401,7 @@ namespace GasTests
             var projectXml = $$"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
-                <TargetFramework>net8.0</TargetFramework>
+                <TargetFramework>net9.0</TargetFramework>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <Nullable>enable</Nullable>
                 <BaseOutputPath>bin\</BaseOutputPath>
@@ -444,7 +444,7 @@ namespace GasTests
               "name": "{{modName}}",
               "version": "1.0.0",
               "description": "temp process shared dependency mod",
-              "main": "bin/net8.0/{{modName}}.dll",
+              "main": "bin/net9.0/{{modName}}.dll",
               "priority": 0,
               "dependencies": {},
               "processSharedAssemblies": [
@@ -469,7 +469,7 @@ namespace GasTests
             var projectXml = $$"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
-                <TargetFramework>net8.0</TargetFramework>
+                <TargetFramework>net9.0</TargetFramework>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <Nullable>enable</Nullable>
                 <AssemblyName>{{assemblyName}}</AssemblyName>
@@ -496,7 +496,7 @@ namespace GasTests
             var projectXml = $$"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
-                <TargetFramework>net8.0</TargetFramework>
+                <TargetFramework>net9.0</TargetFramework>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <Nullable>enable</Nullable>
                 <BaseOutputPath>bin\</BaseOutputPath>
@@ -530,7 +530,7 @@ namespace GasTests
               "name": "{{modName}}",
               "version": "1.0.0",
               "description": "temp code mod",
-              "main": "bin/net8.0/{{modName}}.dll",
+              "main": "bin/net9.0/{{modName}}.dll",
               "priority": 0,
               "dependencies": {
             """;

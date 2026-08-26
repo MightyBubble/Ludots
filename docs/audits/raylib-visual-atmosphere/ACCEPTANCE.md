@@ -31,7 +31,7 @@ Playable showcase binding `raylib_visual_atmosphere` (category `demo` in `showca
 export LD_LIBRARY_PATH=src/Platforms/Desktop:$LD_LIBRARY_PATH
 export LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY=1
 export LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY=1
-dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll \
+dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net9.0/Ludots.Launcher.Cli.dll \
   launch raylib_visual_atmosphere --adapter raylib --build auto
 ```
 

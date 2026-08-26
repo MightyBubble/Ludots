@@ -2,7 +2,7 @@
   "name": "UiSkinShowcaseMod",
   "version": "1.0.0",
   "description": "Dedicated UI showcase mod.",
-  "main": "bin/net8.0/UiSkinShowcaseMod.dll",
+  "main": "bin/net9.0/UiSkinShowcaseMod.dll",
   "priority": 0,
   "dependencies": {}
 }

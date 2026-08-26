@@ -2,7 +2,7 @@
   "name": "FormationCapabilityShowcaseMod",
   "version": "1.0.0",
   "description": "Direct launcher entry for the Formation Capability Showcase movement showcase.",
-  "main": "bin/net8.0/FormationCapabilityShowcaseMod.dll",
+  "main": "bin/net9.0/FormationCapabilityShowcaseMod.dll",
   "priority": -2000,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

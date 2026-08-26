@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpKnowledgeHasProjectionEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp KnowledgeHasProjection player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpKnowledgeHasProjectionEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpKnowledgeHasProjectionEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

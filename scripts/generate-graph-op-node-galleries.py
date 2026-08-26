@@ -224,7 +224,7 @@ def write_map(
 
 ENTRY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>{ns}</RootNamespace>
@@ -250,7 +250,7 @@ ENTRY_MOD_JSON = """{{
   "name": "{ns}",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp {op} player gallery.",
-  "main": "bin/net8.0/{ns}.dll",
+  "main": "bin/net9.0/{ns}.dll",
   "priority": 0,
   "dependencies": {{
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

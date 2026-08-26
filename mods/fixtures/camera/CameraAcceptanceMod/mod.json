@@ -2,7 +2,7 @@
   "name": "CameraAcceptanceMod",
   "version": "1.0.0",
   "description": "Focused camera acceptance scenarios for projection, behavior composition, blend, follow, and stack.",
-  "main": "bin/net8.0/CameraAcceptanceMod.dll",
+  "main": "bin/net9.0/CameraAcceptanceMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

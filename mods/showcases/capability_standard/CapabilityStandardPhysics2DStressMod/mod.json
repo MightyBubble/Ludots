@@ -2,7 +2,7 @@
   "name": "CapabilityStandardPhysics2DStressMod",
   "version": "1.0.0",
   "description": "Capability Standard Physics2D stress UAT showcase for throughput and steady-state allocation checks.",
-  "main": "bin/net8.0/CapabilityStandardPhysics2DStressMod.dll",
+  "main": "bin/net9.0/CapabilityStandardPhysics2DStressMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

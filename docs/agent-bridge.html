@@ -120,9 +120,12 @@
     "<h2>HTTP</h2>" +
     "<pre><code>curl http://127.0.0.1:47921/health\ncurl http://127.0.0.1:47921/tools\ncurl -X POST http://127.0.0.1:47921/rpc -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ludots.session.info\",\"params\":{}}'</code></pre>" +
     "<h2>CLI / MCP</h2>" +
-    "<pre><code>dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net8.0/Ludots.AgentBridge.Cli.dll tools --names\ndotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921</code></pre>" +
+    "<pre><code>dotnet exec src/Tools/Ludots.AgentBridge.Cli/bin/Release/net9.0/Ludots.AgentBridge.Cli.dll tools --names\ndotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net9.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921</code></pre>" +
+    "<p>在 MCP 客户端（Claude Code、pi 等）把 MCP 命令注册为 stdio server，<code>tools/list</code> 与 HTTP 目录一致。</p>" +
     "<h2>Inspector</h2>" +
-    "<pre><code>cd src/Tools/Ludots.Inspector.React && npm run dev\n# http://127.0.0.1:5179 — 紧凑面板，每工具独立 debug</code></pre>";
+    "<pre><code>cd src/Tools/Ludots.Inspector.React && npm run dev\n# http://127.0.0.1:5179 — 紧凑面板，每工具独立 debug</code></pre>" +
+    "<h2>已验证的闭环</h2>" +
+    "<p>pi coding agent + deepseek-v4-flash（无多模态）仅凭 <code>GET /tools</code> 自描述完成全调试闭环：列工具 → 会话快照 → 镜头内实体 → UI 树 → 单实体 GAS → pause/step/resume → 订单闭环，并自发用 <code>ui.click</code> 转镜头。详见 RFC §8。</p>";
 
   var currentDoc = null;
 
