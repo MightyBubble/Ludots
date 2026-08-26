@@ -29,7 +29,7 @@ public sealed class PanelEntityListShowcaseModEntry : IMod
 
             engine.RegisterSystem(
                 new ApplyRosterSeedTagsSystem(engine.World),
-                SystemGroup.Continuation);
+                SystemGroup.SchemaUpdate);
 
             return Task.CompletedTask;
         });

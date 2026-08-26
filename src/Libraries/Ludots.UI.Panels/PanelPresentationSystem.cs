@@ -90,6 +90,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
             anchorStack[anchorKey] = stackIndex + 1;
 
             string key = $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}";
+            PanelTemplate template = _templates.Require(info.TemplateId);
+            bool declaredLayout = template.Layout != null;
             if (!_mounted.TryGetValue(key, out MountedPanel? mounted))
             {
                 UiRect rect = ResolvePanelRect(info.Handle, anchorKey, stackIndex);
@@ -100,11 +102,24 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
                     () => BuildPanel(info.Handle, rect, skin),
                     styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
-                mounted = new MountedPanel(lease);
+                mounted = new MountedPanel(lease, declaredLayout);
                 _mounted[key] = mounted;
             }
+            else if (mounted.DeclaredLayout)
+            {
+                // Declared list layouts change row/badge structure when projections move.
+                // Invalidate alone only marks dirty; headless hosts never Render(), so
+                // republish to rebuild the retained scene from current projections.
+                UiRect rect = ResolvePanelRect(info.Handle, anchorKey, stackIndex);
+                _surfaceHost.Publish(mounted.Lease, UiSurfaceContribution.FromBuilder(
+                    () => BuildPanel(info.Handle, rect, skin),
+                    styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
+            }
+            else
+            {
+                _surfaceHost.Invalidate(mounted.Lease);
+            }
 
-            _surfaceHost.Invalidate(mounted.Lease);
             liveKeys.Add(key);
         }
 
@@ -553,5 +568,5 @@ public sealed class PanelPresentationSystem : ISystem<float>
         return new UiRect(x, y, PanelWidth, contentHeight);
     }
 
-    private sealed record MountedPanel(UiSurfaceLeaseHandle Lease);
+    private sealed record MountedPanel(UiSurfaceLeaseHandle Lease, bool DeclaredLayout);
 }
