@@ -12,7 +12,6 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
-using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
@@ -189,27 +188,146 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     internal static PresentationTextCatalog? LoadPresentationTextCatalog(string assetsRoot)
     {
         string tokensPath = Path.Combine(assetsRoot, "Presentation", "text_tokens.json");
-        if (!File.Exists(tokensPath))
+        string localesPath = Path.Combine(assetsRoot, "Presentation", "text_locales.json");
+        if (!File.Exists(tokensPath) || !File.Exists(localesPath))
         {
             return null;
         }
 
-        var vfs = new VirtualFileSystem();
-        vfs.Mount("Gallery", assetsRoot);
-        var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
-        modLoader.LoadedModIds.Add("Gallery");
-        var pipeline = new ConfigPipeline(vfs, modLoader);
-        var catalog = new ConfigCatalog();
-        catalog.Add(new ConfigCatalogEntry(
-            "Presentation/text_tokens.json",
-            ConfigMergePolicy.ArrayById,
-            "id",
-            allowEmpty: true));
-        catalog.Add(new ConfigCatalogEntry(
-            "Presentation/text_locales.json",
-            ConfigMergePolicy.DeepObject,
-            allowEmpty: true));
-        return new PresentationTextCatalogLoader(pipeline).Load(catalog);
+        using JsonDocument tokensDoc = JsonDocument.Parse(File.ReadAllText(tokensPath));
+        if (tokensDoc.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"Gallery text tokens '{tokensPath}' must be a JSON array.");
+        }
+
+        var orderedKeys = new List<(string Key, byte ArgCount)>();
+        foreach (JsonElement entry in tokensDoc.RootElement.EnumerateArray())
+        {
+            string? id = entry.GetProperty("id").GetString();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new InvalidOperationException($"Gallery text tokens '{tokensPath}' contains an entry without id.");
+            }
+
+            byte argCount = 0;
+            if (entry.TryGetProperty("argCount", out JsonElement argNode))
+            {
+                argCount = checked((byte)argNode.GetInt32());
+            }
+
+            orderedKeys.Add((id, argCount));
+        }
+
+        orderedKeys.Sort((left, right) => StringComparer.Ordinal.Compare(left.Key, right.Key));
+
+        var tokenIds = new Ludots.Core.Registry.StringIntRegistry(
+            capacity: Math.Max(4, orderedKeys.Count + 1),
+            startId: 1,
+            invalidId: 0,
+            comparer: StringComparer.Ordinal);
+        var tokenDefinitions = new PresentationTextTokenDefinition[Math.Max(2, orderedKeys.Count + 1)];
+        for (int i = 0; i < orderedKeys.Count; i++)
+        {
+            (string key, byte argCount) = orderedKeys[i];
+            int tokenId = tokenIds.Register(key);
+            if (tokenId >= tokenDefinitions.Length)
+            {
+                Array.Resize(ref tokenDefinitions, tokenId + 1);
+            }
+
+            tokenDefinitions[tokenId] = new PresentationTextTokenDefinition
+            {
+                TokenId = tokenId,
+                Key = key,
+                ArgCount = argCount,
+            };
+        }
+
+        tokenIds.Freeze();
+
+        using JsonDocument localesDoc = JsonDocument.Parse(File.ReadAllText(localesPath));
+        string? defaultLocale = localesDoc.RootElement.GetProperty("defaultLocale").GetString();
+        if (string.IsNullOrWhiteSpace(defaultLocale))
+        {
+            throw new InvalidOperationException($"Gallery text locales '{localesPath}' require defaultLocale.");
+        }
+
+        if (!localesDoc.RootElement.TryGetProperty("locales", out JsonElement localesNode) ||
+            localesNode.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException($"Gallery text locales '{localesPath}' require locales object.");
+        }
+
+        var orderedLocales = new List<string>();
+        foreach (JsonProperty locale in localesNode.EnumerateObject())
+        {
+            orderedLocales.Add(locale.Name);
+        }
+
+        orderedLocales.Sort(StringComparer.Ordinal);
+
+        var localeIds = new Ludots.Core.Registry.StringIntRegistry(
+            capacity: Math.Max(4, orderedLocales.Count + 1),
+            startId: 1,
+            invalidId: 0,
+            comparer: StringComparer.Ordinal);
+        var localeTables = new PresentationTextLocaleTable[Math.Max(2, orderedLocales.Count + 1)];
+
+        for (int i = 0; i < orderedLocales.Count; i++)
+        {
+            string localeKey = orderedLocales[i];
+            JsonElement tokenMap = localesNode.GetProperty(localeKey);
+            int localeId = localeIds.Register(localeKey);
+            if (localeId >= localeTables.Length)
+            {
+                Array.Resize(ref localeTables, localeId + 1);
+            }
+
+            var templates = new PresentationTextTemplate[tokenDefinitions.Length];
+            foreach (JsonProperty tokenEntry in tokenMap.EnumerateObject())
+            {
+                int tokenId = tokenIds.GetId(tokenEntry.Name);
+                if (tokenId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Gallery locale '{localeKey}' references unknown token '{tokenEntry.Name}'.");
+                }
+
+                string source = tokenEntry.Value.GetString() ?? string.Empty;
+                templates[tokenId] = new PresentationTextTemplate(
+                    source,
+                    new[]
+                    {
+                        new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, source, 0),
+                    });
+            }
+
+            for (int tokenId = 1; tokenId < tokenDefinitions.Length; tokenId++)
+            {
+                if (tokenDefinitions[tokenId] == null)
+                {
+                    continue;
+                }
+
+                if (templates[tokenId] == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Gallery locale '{localeKey}' is missing token '{tokenDefinitions[tokenId].Key}'.");
+                }
+            }
+
+            localeTables[localeId] = new PresentationTextLocaleTable(localeId, localeKey, templates);
+        }
+
+        localeIds.Freeze();
+        int defaultLocaleId = localeIds.GetId(defaultLocale);
+        if (defaultLocaleId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Gallery default locale '{defaultLocale}' is not defined in '{localesPath}'.");
+        }
+
+        return new PresentationTextCatalog(tokenIds, tokenDefinitions, localeIds, localeTables, defaultLocaleId);
     }
 
     public int ResolveTag(string name)
