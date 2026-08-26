@@ -89,6 +89,13 @@ public sealed class RaylibVisualHeightmapRendererTests
                 seaLevelCm: 0f,
                 absolutePeakSpanCm: 5_000f),
             Is.EqualTo(2_132f));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                heightCm: -6_000f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.EqualTo(0f),
+            "Authored bathymetry below sea must flatten under absolute display so continental scale does not dig ocean pits.");
     }
 
     [Test]

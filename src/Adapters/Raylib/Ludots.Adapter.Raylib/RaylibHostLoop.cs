@@ -668,6 +668,7 @@ namespace Ludots.Adapter.Raylib
                             {
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
                                 visualHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                visualHeightmapRenderer.DisplayHeightScale = reflectSource.RenderProfile.DisplayHeightScale;
                                 visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
                             }
                             else
@@ -694,6 +695,7 @@ namespace Ludots.Adapter.Raylib
                             {
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
                                 visualHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                visualHeightmapRenderer.DisplayHeightScale = refractSource.RenderProfile.DisplayHeightScale;
                                 visualHeightmapRenderer.Render(refractSource, activeCamera);
                             }
                             else
@@ -737,6 +739,8 @@ namespace Ludots.Adapter.Raylib
                             // reflective water pass is off; water FBO still overrides sea from the plane.
                             visualHeightmapRenderer.AbsoluteColorPeakSpanCm =
                                 visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                            visualHeightmapRenderer.DisplayHeightScale =
+                                visualTerrainSource.RenderProfile.DisplayHeightScale;
                             visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterOnVisualHeightmap
                                 ? waterPass.WaterPlaneY * 100f
                                 : visualTerrainSource.RenderProfile.SeaLevelCm;
@@ -793,9 +797,11 @@ namespace Ludots.Adapter.Raylib
                                 out IVisualHeightmap? fieldHeightSampleSource))
                         {
                             fieldRenderPresenter.HeightSampleSource = fieldHeightSampleSource;
-                            // Match RaylibVisualHeightmapRenderer mesh Y (heightCm * 0.01f) — that path
-                            // does not multiply DisplayHeightScale, so neither does the drape.
-                            fieldRenderPresenter.HeightSampleDisplayScale = 1f;
+                            // Match RaylibVisualHeightmapRenderer mesh Y (heightCm * DisplayHeightScale * 0.01f).
+                            fieldRenderPresenter.HeightSampleDisplayScale =
+                                fieldHeightSampleSource is IVisualHeightmapRenderSource fieldRenderSource
+                                    ? fieldRenderSource.RenderProfile.DisplayHeightScale
+                                    : 1f;
                         }
                         else
                         {

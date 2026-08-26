@@ -90,6 +90,7 @@ namespace Ludots.Raylib.Render
 
         private float? _absoluteColorSeaLevelCm;
         private float _absoluteColorPeakSpanCm = 3600f;
+        private float _displayHeightScale = 1f;
 
         /// <summary>
         /// When set, terrain vertex colors use absolute elevation relative to this sea level (cm)
@@ -123,6 +124,29 @@ namespace Ludots.Raylib.Render
                 }
 
                 _absoluteColorPeakSpanCm = clamped;
+                ClearChunkGpuCache();
+            }
+        }
+
+        /// <summary>
+        /// Multiplies authored height samples for mesh Y only (colors still use raw cm).
+        /// Continental boards need a large scale so relief reads at overview distance.
+        /// </summary>
+        public float DisplayHeightScale
+        {
+            get => _displayHeightScale;
+            set
+            {
+                float clamped = Math.Clamp(
+                    value,
+                    VisualHeightmapRenderProfile.MinDisplayHeightScale,
+                    VisualHeightmapRenderProfile.MaxDisplayHeightScale);
+                if (MathF.Abs(_displayHeightScale - clamped) <= 1e-4f)
+                {
+                    return;
+                }
+
+                _displayHeightScale = clamped;
                 ClearChunkGpuCache();
             }
         }
@@ -397,10 +421,14 @@ namespace Ludots.Raylib.Render
                 long buildStart = Stopwatch.GetTimestamp();
                 EnsureOverviewMesh(source, heightSampleSource, profile.OverviewVertexLimit);
                 ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
+                // Continental overview filters high-frequency albedo/control/nav into mud; draw absolute vertex colors.
+                ApplyOverviewVertexColorUniforms();
                 RaylibMatrix identity = RaylibMatrix.Identity;
                 Rl.rlDisableBackfaceCulling();
                 Rl.DrawMesh(_overviewMesh, _terrainMaterial, identity);
                 Rl.rlEnableBackfaceCulling();
+                ApplyAlbedoUniforms();
+                ApplyNavWalkabilityUniforms();
                 DrawnChunkCountLastFrame = 1;
                 TerrainVertexCountLastFrame = _overviewMesh.vertexCount;
                 EvictUnusedChunks(240);
@@ -685,6 +713,31 @@ namespace Ludots.Raylib.Render
                 _locControlBounds,
                 &controlBounds,
                 (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
+        private void ApplyOverviewVertexColorUniforms()
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            int off = 0;
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseTerrainAlbedo,
+                &off,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseControlMap,
+                &off,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseNavWalkability,
+                &off,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
         }
 
         private void ApplyAlbedoMaterialMaps()
@@ -1120,6 +1173,7 @@ namespace Ludots.Raylib.Render
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
+            float displayHeightScale = _displayHeightScale;
             for (int y = 0; y < rows; y++)
             {
                 int sourceY = ResolveChunkSourceSampleIndex(y, chunk.SampleRows, sampleStride);
@@ -1130,11 +1184,9 @@ namespace Ludots.Raylib.Render
                     float worldXCm = chunk.Bounds.Left + (sourceX * stepXCm);
                     float worldYCm = chunk.Bounds.Top + (sourceY * stepYCm);
                     chunk.TryReadHeightCm(sourceX, sourceY, out float heightCm);
-                    Vector3 normal = ComputeNormal(in chunk, sourceX, sourceY, stepXCm, stepYCm);
                     float displayHeightCm = heightCm;
                     int f = vertex * 3;
                     int c = vertex * 4;
-                    float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
                     float heightBand;
                     byte red;
                     byte green;
@@ -1143,16 +1195,33 @@ namespace Ludots.Raylib.Render
                     {
                         heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
                         displayHeightCm = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, absolutePeakSpanCm);
-                        ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
                     else
                     {
                         heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
+                    }
+
+                    Vector3 normal = ComputeNormal(
+                        in chunk,
+                        sourceX,
+                        sourceY,
+                        stepXCm,
+                        stepYCm,
+                        displayHeightScale,
+                        absoluteSeaCm,
+                        absolutePeakSpanCm);
+                    float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
+                    if (absoluteSeaCm is float)
+                    {
+                        ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+                    else
+                    {
                         ResolveTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
 
                     mesh.vertices[f + 0] = worldXCm * 0.01f;
-                    mesh.vertices[f + 1] = displayHeightCm * 0.01f;
+                    mesh.vertices[f + 1] = displayHeightCm * displayHeightScale * 0.01f;
                     mesh.vertices[f + 2] = worldYCm * 0.01f;
                     mesh.normals[f + 0] = normal.X;
                     mesh.normals[f + 1] = normal.Y;
@@ -1253,7 +1322,9 @@ namespace Ludots.Raylib.Render
         {
             float peakSpanCm = MathF.Max(1f, absolutePeakSpanCm);
             float relative = (heightCm - seaLevelCm) / peakSpanCm;
-            return relative > 1f ? seaLevelCm : heightCm;
+            // Absolute tint treats open water (below sea) and overshoot sentinels as a flat sea plane.
+            // Continental DisplayHeightScale would otherwise excavate multi-kilometer ocean pits.
+            return relative <= 0f || relative > 1f ? seaLevelCm : heightCm;
         }
 
         private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
@@ -1299,7 +1370,15 @@ namespace Ludots.Raylib.Render
             blue = ClampToByte(color.Z * shade);
         }
 
-        private static Vector3 ComputeNormal(in VisualHeightmapRenderChunk chunk, int x, int y, float stepXCm, float stepYCm)
+        private static Vector3 ComputeNormal(
+            in VisualHeightmapRenderChunk chunk,
+            int x,
+            int y,
+            float stepXCm,
+            float stepYCm,
+            float displayHeightScale,
+            float? absoluteSeaCm,
+            float absolutePeakSpanCm)
         {
             int left = Math.Max(0, x - 1);
             int right = Math.Min(chunk.SampleColumns - 1, x + 1);
@@ -1309,10 +1388,19 @@ namespace Ludots.Raylib.Render
             chunk.TryReadHeightCm(right, y, out float hRight);
             chunk.TryReadHeightCm(x, top, out float hTop);
             chunk.TryReadHeightCm(x, bottom, out float hBottom);
+            if (absoluteSeaCm is float seaCm)
+            {
+                hLeft = ResolveAbsoluteDisplayHeightCm(hLeft, seaCm, absolutePeakSpanCm);
+                hRight = ResolveAbsoluteDisplayHeightCm(hRight, seaCm, absolutePeakSpanCm);
+                hTop = ResolveAbsoluteDisplayHeightCm(hTop, seaCm, absolutePeakSpanCm);
+                hBottom = ResolveAbsoluteDisplayHeightCm(hBottom, seaCm, absolutePeakSpanCm);
+            }
 
+            float scale = MathF.Max(VisualHeightmapRenderProfile.MinDisplayHeightScale, displayHeightScale);
             float dx = MathF.Max(1f, (right - left) * stepXCm);
             float dz = MathF.Max(1f, (bottom - top) * stepYCm);
-            Vector3 normal = Vector3.Normalize(new Vector3(-(hRight - hLeft) / dx, 1f, -(hBottom - hTop) / dz));
+            Vector3 normal = Vector3.Normalize(
+                new Vector3(-(hRight - hLeft) * scale / dx, 1f, -(hBottom - hTop) * scale / dz));
             return float.IsFinite(normal.X) && float.IsFinite(normal.Y) && float.IsFinite(normal.Z)
                 ? normal
                 : Vector3.UnitY;
@@ -1407,9 +1495,11 @@ namespace Ludots.Raylib.Render
             float stepZCm = rows > 1 ? bounds.Height / (float)(rows - 1) : 0f;
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
+            float displayHeightScale = _displayHeightScale;
             float minHeightCm = float.PositiveInfinity;
             float maxHeightCm = float.NegativeInfinity;
             var heights = new float[vertexCount];
+            var displayHeights = new float[vertexCount];
             for (int y = 0; y < rows; y++)
             {
                 float worldYCm = bounds.Top + (y * stepZCm);
@@ -1426,11 +1516,12 @@ namespace Ludots.Raylib.Render
                         ? ResolveAbsoluteDisplayHeightCm(heightCm, seaForDisplay, absolutePeakSpanCm)
                         : heightCm;
                     heights[vertex] = heightCm;
+                    displayHeights[vertex] = displayHeightCm;
                     minHeightCm = MathF.Min(minHeightCm, heightCm);
                     maxHeightCm = MathF.Max(maxHeightCm, heightCm);
                     int f = vertex * 3;
                     mesh.vertices[f + 0] = worldXCm * 0.01f;
-                    mesh.vertices[f + 1] = displayHeightCm * 0.01f;
+                    mesh.vertices[f + 1] = displayHeightCm * displayHeightScale * 0.01f;
                     mesh.vertices[f + 2] = worldYCm * 0.01f;
                     mesh.normals[f + 0] = 0f;
                     mesh.normals[f + 1] = 1f;
@@ -1451,13 +1542,14 @@ namespace Ludots.Raylib.Render
                 {
                     int vertex = (y * columns) + x;
                     float heightCm = heights[vertex];
-                    float hL = heights[(y * columns) + Math.Max(0, x - 1)];
-                    float hR = heights[(y * columns) + Math.Min(columns - 1, x + 1)];
-                    float hT = heights[(Math.Max(0, y - 1) * columns) + x];
-                    float hB = heights[(Math.Min(rows - 1, y + 1) * columns) + x];
+                    float hL = displayHeights[(y * columns) + Math.Max(0, x - 1)];
+                    float hR = displayHeights[(y * columns) + Math.Min(columns - 1, x + 1)];
+                    float hT = displayHeights[(Math.Max(0, y - 1) * columns) + x];
+                    float hB = displayHeights[(Math.Min(rows - 1, y + 1) * columns) + x];
                     float dx = MathF.Max(1f, stepXCm);
                     float dz = MathF.Max(1f, stepZCm);
-                    Vector3 normal = Vector3.Normalize(new Vector3(-(hR - hL) / dx, 1f, -(hB - hT) / dz));
+                    Vector3 normal = Vector3.Normalize(
+                        new Vector3(-(hR - hL) * displayHeightScale / dx, 1f, -(hB - hT) * displayHeightScale / dz));
                     if (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z))
                     {
                         normal = Vector3.UnitY;
