@@ -135,25 +135,28 @@
 
 装载期：`template.subject` 与集合种类必须相容（今日：`EntityCollection` ↔ `Entity`；扩展见集合输出合同）。
 
-### 3.3 复合：显式 inputs 与子名单
+### 3.3 复合：显式 inputs 与 collections.source（与集合输出合同同字）
 
-跨层数据必须明文接线，装载期强校验（细则见[查询图集合输出 §2.4 · §3.7.2](query-graph-collection-outputs.md)）。
+跨层接线 **正表** 在[查询图集合输出 §2.4](query-graph-collection-outputs.md)；本页只列消费侧必写字段，字段名不得另起同义词。
 
-| 字段（示意） | 含义 |
-|---|---|
-| `inputs[]` | 子模板声明消费的父级空间引脚 |
-| `inputs[].from.space` | 本切片仅 `parent` |
-| `inputs[].from.output` | 父 graph 的 collectionKey 或 Summary key |
-| `inputs[].type` | 期望类型（如 `EntityCollection`）；与父 output 对账 |
-| `collections[].source` | `selfGraph`（本元素图输出）或绑到某条 input 名 |
+| 字段 | 必填 | 含义 |
+|---|---|---|
+| `inputs[].name` | 用 inputs 时 | 子空间逻辑名 |
+| `inputs[].from.space` | 用 inputs 时 | 仅 `parent` |
+| `inputs[].from.output` | 用 inputs 时 | 父 graph output id / collectionKey / Summary key |
+| `inputs[].type` | 用 inputs 时 | 与父 output 装载期强校验 |
+| `collections[].source` | 是（复合袋） | 仅 `selfGraph` \| `input` |
+| `collections[].collectionKey` | `source=selfGraph` | 本图 Collection output 键 |
+| `collections[].input` | `source=input` | 指向 `inputs[].name` |
+| list `bind` | 是 | 仅 `collections[].name`（或合同允许时的 input 名） |
 
 | 规则 | |
 |---|---|
-| 子袋数据 | 来源唯一且可追溯：selfGraph output **或** 已校验的 parent input |
-| 子元素 `subject` | 与子袋类型相容 |
-| 过滤排序 | 仍只在图内；面板只编排与接线 |
-| 嵌套深度 | 本切片建议 ≤ 2；更深另立合同 |
-| 禁止 | 同名 key 隐式撞袋；控件私扫世界 |
+| 子袋来源 | 唯一：selfGraph **或** 已校验 input；禁止只写 key 不写 source |
+| subject 相容 | 消费该袋的元素 subject ↔ 集合类型 |
+| 过滤排序 | 只在图内 |
+| 嵌套深度 | 建议 ≤ 2 |
+| 禁止 | 同名撞袋；控件私扫世界 |
 
 ### 3.4 元素图示例（Entity）
 
