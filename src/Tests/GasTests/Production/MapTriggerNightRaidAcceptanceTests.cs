@@ -147,6 +147,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         var context = engine.CreateContext();
         context.Set(CoreServiceKeys.MapId, engine.CurrentMapSession!.MapId);
         context.Set(CoreServiceKeys.MapSession, engine.CurrentMapSession);
+        context.Set("NightRaid.KillTarget", FindHero(engine.World));
         for (int i = 1; i <= 3; i++)
         {
             engine.TriggerManager.FireMapCustomEvent(
@@ -180,6 +181,16 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.That(variables.ReadInt("override_active"), Is.EqualTo(1),
             "The stacked override graph must run on MapLoaded alongside the base graph.");
 
+        EventSchemaRegistry eventSchemas = engine.GetService(CoreServiceKeys.EventSchemaRegistry)
+            ?? throw new InvalidOperationException("EventSchemaRegistry missing.");
+        Assert.That(eventSchemas.TryGet("NightRaidOverride.ToolProbe.Used", out EventSchema probeSchema), Is.True,
+            "The override mod's param-declaring custom event must load into the schema registry.");
+        Assert.That(probeSchema!.Scope, Is.EqualTo(EventScope.Map));
+        Assert.That(probeSchema.Params.Select(p => p.Name).ToArray(),
+            Is.EqualTo(new[] { "toolUser", "probeTag" }),
+            "The declared params keep their authored order and names.");
+        Assert.That(probeSchema.Params[1].PayloadKey, Is.EqualTo("NightRaidOverride.ProbeTag"));
+
         Entity hero = FindHero(world);
         world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(0, 0) });
         TickUntil(engine, () => variables.ReadInt("stage") == 2, HeartbeatIntervalTicks * 3,
@@ -187,6 +198,10 @@ public sealed class MapTriggerNightRaidAcceptanceTests
 
         TickUntil(engine, () => CountTeamEntities(world, teamId: 2) == 3, HeartbeatIntervalTicks * 3,
             () => "The override flow must also materialize wave 1 before the first kill.");
+        TickUntil(engine, () => variables.ReadInt("probe_last_count") == 3, HeartbeatIntervalTicks * 3,
+            () => $"LoadEntryPayloadInt(MapTrigger.Count) must read the named payload captured at EntityAliveCountChanged entry start. Errors: {string.Join("; ", engine.TriggerManager.Errors.Select(e => e.Exception.Message))}");
+        Assert.That(variables.ReadInt("probe_hero_entered"), Is.EqualTo(1),
+            "RegionEntered with filters.instanceId=night_raid_hero must fire only for the hero entering the circle.");
 
         KillOneTeamEntity(world, teamId: 2, maxKills: 1);
         TickUntil(engine, () => variables.ReadInt("kill_count") == 1, HeartbeatIntervalTicks * 3,

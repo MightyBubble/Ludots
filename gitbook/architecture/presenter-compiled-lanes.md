@@ -4,9 +4,9 @@
 
 本文是 [Presenter-as-Actor 架构总览](presenter-as-actor-architecture.md) §9.4 的实现展开。不改变 Presenter 的语义模型（PresenterDefinition / BehaviorSlot / PresenterCommand / presenters.json schema 全部不变），只改变执行模型。
 
-> **落地状态（相对 #924 / #930，以当前 `main` 为准）**  
-> - 已落地：Prefab 删除、SplineRibbon、typed request lanes、`CompiledBinding[]`、Lifecycle / Dirty Sync / Continuous Tick / Visible Projection 基础分车道、entity-backed `PresenterEntityRuntime`（旧 `PresenterInstanceBuffer` 已删除，见 §8.4）。  
-> - 未收口：上帝类继续拆分、Material/Sound 车道化补齐、LOD children pruning、30K→150K / 60FPS 全量性能门禁与完整 UAT 证据。  
+> **落地状态（#924 / #930 Epic 刀序已收口，以当前 `main` 为准）**  
+> - Epic 范围已落地并具备守卫：Prefab 删除、通用投影贴花、SplineRibbon、typed request lanes、`CompiledBinding[]`、Lifecycle / Dirty Sync / Continuous Tick / Visible Projection 基础分车道、entity-backed `PresenterEntityRuntime`（旧 `PresenterInstanceBuffer` 已删除，见 §8.4）。  
+> - 后续优化债（不阻塞 Epic 关闭）：上帝类继续拆薄、Material/Sound 车道化补齐、LOD children pruning、30K→150K / 60FPS 全量性能门禁加严。  
 > - 下文 §1「当前瓶颈」保留为历史动机；实现对照以 §8.4 与仓库代码为准，勿再把已删 buffer 当作现役入口。
 
 ---

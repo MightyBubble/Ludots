@@ -1,0 +1,116 @@
+[
+  {
+    "id": "Graph.EntityList.Panel.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.entity.list", "panelAnchor": "screen.topLeft" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.entity.list" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.Entity.List",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      { "id": "all", "op": "QueryAllMapEntities" },
+      { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
+      { "id": "minHp", "op": "ConstFloat", "floatValue": 0.001 },
+      { "id": "maxHp", "op": "ConstFloat", "floatValue": 999999 },
+      { "id": "alive", "op": "QueryFilterAttributeRange", "attribute": "Health" },
+      { "id": "sorted", "op": "QuerySortByAttribute", "attribute": "Health", "descending": true },
+      { "id": "rowCount", "op": "AggCount" }
+    ],
+    "controlEdges": [
+      { "from": "all", "fromPort": "next", "to": "team" },
+      { "from": "team", "fromPort": "next", "to": "minHp" },
+      { "from": "minHp", "fromPort": "next", "to": "maxHp" },
+      { "from": "maxHp", "fromPort": "next", "to": "alive" },
+      { "from": "alive", "fromPort": "next", "to": "sorted" },
+      { "from": "sorted", "fromPort": "next", "to": "rowCount" }
+    ],
+    "valueEdges": [
+      { "from": "all", "fromPort": "list", "to": "team", "toPort": "list" },
+      { "from": "team", "fromPort": "list", "to": "alive", "toPort": "list" },
+      { "from": "minHp", "fromPort": "value", "to": "alive", "toPort": "min" },
+      { "from": "maxHp", "fromPort": "value", "to": "alive", "toPort": "max" },
+      { "from": "alive", "fromPort": "list", "to": "sorted", "toPort": "list" },
+      { "from": "sorted", "fromPort": "list", "to": "rowCount", "toPort": "list" }
+    ],
+    "outputs": [
+      {
+        "id": "units",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.roster.units",
+        "role": "Display",
+        "title": "Roster Units",
+        "summary": "Alive team-1 units sorted by Health descending."
+      },
+      {
+        "id": "rowCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "rowCount",
+        "key": "panel.roster.rowCount"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Unit.RosterCard",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      { "id": "hp", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "hpMax", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "stunned", "op": "HasTag", "tag": "Status.Stunned" }
+    ],
+    "controlEdges": [
+      { "from": "hp", "fromPort": "next", "to": "hpMax" },
+      { "from": "hpMax", "fromPort": "next", "to": "caster" },
+      { "from": "caster", "fromPort": "next", "to": "stunned" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "stunned", "toPort": "source" }
+    ],
+    "outputs": [
+      {
+        "id": "health",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hp",
+        "key": "unit.roster.health"
+      },
+      {
+        "id": "healthMax",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hpMax",
+        "key": "unit.roster.healthMax"
+      },
+      {
+        "id": "stunned",
+        "destination": "Summary",
+        "type": "Bool",
+        "source": "stunned",
+        "key": "unit.roster.stunned"
+      }
+    ]
+  }
+]

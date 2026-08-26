@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
 using Ludots.Core.UI.PanelProjection;
@@ -162,6 +163,178 @@ namespace Ludots.Tests.GasTests.UI
 
             Assert.That(setA.Get("ore.total"), Is.EqualTo(100f));
             Assert.That(setB.Get("ore.total"), Is.EqualTo(900f));
+        }
+
+        [Test]
+        public void Load_CollectionsReferenceElementTemplateId()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.roster",
+              "graph": "tests.graph.roster",
+              "pins": [ { "name": "rowCount", "key": "k.count", "mode": "realtime", "default": 0 } ],
+              "collections": [
+                {
+                  "name": "units",
+                  "collectionKey": "tests.collection.units",
+                  "template": "panel.unit.roster"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "label", "prefix": "在编 ", "bind": "rowCount" },
+                  { "type": "list", "bind": "units" }
+                ]
+              }
+            }
+            """;
+
+            PanelTemplate template = PanelTemplateLoader.Load(json);
+            Assert.That(template.Collections.Count, Is.EqualTo(1));
+            Assert.That(template.Collections[0].TemplateId, Is.EqualTo("panel.unit.roster"));
+            Assert.That(template.Subject, Is.EqualTo(PanelSubjectKind.None));
+            Assert.That(template.Layout!.Controls[1].Type, Is.EqualTo(PanelLayoutControlType.List));
+        }
+
+        [Test]
+        public void Load_ElementDeclaresSubjectAndGraph()
+        {
+            const string json = """
+            {
+              "id": "panel.unit.roster",
+              "subject": "Entity",
+              "graph": "Graph.Unit.RosterCard",
+              "pins": [
+                { "name": "health", "key": "unit.roster.health", "default": 0 }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "label", "bind": "displayName" },
+                  { "type": "progressBar", "current": "health", "max": "health" }
+                ]
+              }
+            }
+            """;
+
+            PanelTemplate element = PanelTemplateLoader.Load(json);
+            Assert.That(element.Subject, Is.EqualTo(PanelSubjectKind.Entity));
+            Assert.That(element.Collections.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Load_UnknownSubject_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "panel.bad",
+              "subject": "Widget",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ]
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("subject"));
+        }
+
+        [Test]
+        public void Load_InlineItemControls_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.inline",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                { "name": "units", "collectionKey": "c", "template": "panel.unit.roster" }
+              ],
+              "layout": {
+                "controls": [
+                  {
+                    "type": "list",
+                    "bind": "units",
+                    "itemControls": [ { "type": "label", "text": "x" } ]
+                  }
+                ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("itemControls"));
+        }
+
+        [Test]
+        public void Load_LegacyListsRoot_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.legacy",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "lists": []
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("lists"));
+        }
+
+        [Test]
+        public void Load_ListControlBindUnknown_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.badlist",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "missing" }
+                ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("list"));
+        }
+
+        [Test]
+        public void BindElements_RequiresMatchingSubject()
+        {
+            PanelTemplate element = PanelTemplateLoader.Load("""
+            {
+              "id": "panel.unit.roster",
+              "subject": "Entity",
+              "graph": "g",
+              "pins": [ { "name": "health", "key": "k" } ],
+              "layout": { "controls": [ { "type": "label", "text": "x" } ] }
+            }
+            """);
+
+            PanelTemplate host = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.roster",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                { "name": "units", "collectionKey": "c", "template": "panel.unit.roster" }
+              ],
+              "layout": { "controls": [ { "type": "list", "bind": "units" } ] }
+            }
+            """);
+
+            var registry = new Ludots.Core.UI.PanelHosting.PanelTemplateRegistry();
+            registry.Register(element);
+            registry.Register(host);
+            registry.Freeze();
+            PanelListProjector.BindElements(host, registry);
+            Assert.That(host.Collections[0].Template, Is.SameAs(element));
         }
     }
 }

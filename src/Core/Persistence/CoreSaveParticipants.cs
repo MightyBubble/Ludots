@@ -10,7 +10,8 @@ using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.MapTriggers;
-using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Dialogue;
+using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Tasks;
@@ -33,7 +34,8 @@ namespace Ludots.Core.Persistence
             registry.Register(CreateMapSessionsParticipant(engine.MapSessions));
             registry.Register(CreateActivityParticipant(engine.GetService(CoreServiceKeys.ActivityRuntimeService)));
             registry.Register(CreateTaskParticipant(engine.GetService(CoreServiceKeys.TaskRuntimeService)));
-            registry.Register(CreateNarrativeParticipant(engine.GetService(CoreServiceKeys.NarrativeDirector)));
+            registry.Register(CreateDialogueParticipant(engine.GetService(CoreServiceKeys.DialogueRuntime)));
+            registry.Register(CreateSequencerParticipant(engine.GetService(CoreServiceKeys.SequencerRuntime)));
             registry.Register(CreateRelationshipParticipant(engine.GetService(CoreServiceKeys.RelationshipRuntime)));
             registry.Register(CreateRngParticipant(engine.GetService(CoreServiceKeys.RngStreamService)));
             registry.Register(CreateTeamParticipant());
@@ -65,9 +67,14 @@ namespace Ludots.Core.Persistence
             return new MapSessionsSaveParticipant(manager);
         }
 
-        public static ISaveParticipant CreateNarrativeParticipant(NarrativeDirector director)
+        public static ISaveParticipant CreateDialogueParticipant(DialogueRuntime runtime)
         {
-            return new NarrativeSaveParticipant(director);
+            return new DialogueSaveParticipant(runtime);
+        }
+
+        public static ISaveParticipant CreateSequencerParticipant(SequencerRuntime runtime)
+        {
+            return new SequencerSaveParticipant(runtime);
         }
 
         public static ISaveParticipant CreateActivityParticipant(ActivityRuntimeService runtime)
@@ -472,30 +479,24 @@ namespace Ludots.Core.Persistence
             }
         }
 
-        private sealed class NarrativeSaveParticipant : ISaveParticipant
+        private sealed class DialogueSaveParticipant : ISaveParticipant
         {
-            private readonly NarrativeDirector _director;
+            private readonly DialogueRuntime _runtime;
 
-            public NarrativeSaveParticipant(NarrativeDirector director)
+            public DialogueSaveParticipant(DialogueRuntime runtime)
             {
-                _director = director ?? throw new ArgumentNullException(nameof(director));
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             }
 
-            public string DomainKey => "narrative";
+            public string DomainKey => "dialogue";
 
             public JsonNode CaptureState()
             {
-                NarrativeDirectorSnapshot snapshot = _director.CaptureSnapshot();
-                var variables = new JsonObject();
-                foreach (KeyValuePair<string, NarrativeValue> pair in snapshot.Variables)
-                {
-                    variables[pair.Key] = WriteNarrativeValue(pair.Value);
-                }
-
+                DialogueRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
                 var bindings = new JsonArray();
                 for (int i = 0; i < snapshot.Bindings.Count; i++)
                 {
-                    NarrativeEntityBindingSnapshot binding = snapshot.Bindings[i];
+                    DialogueBindingSnapshot binding = snapshot.Bindings[i];
                     bindings.Add(new JsonObject
                     {
                         ["alias"] = binding.Alias,
@@ -505,40 +506,92 @@ namespace Ludots.Core.Persistence
 
                 return new JsonObject
                 {
-                    ["variables"] = variables,
                     ["bindings"] = bindings,
-                    ["activeDialogue"] = WriteNarrativeDialogue(snapshot.ActiveDialogue),
-                    ["activeCinematic"] = WriteNarrativeCinematic(snapshot.ActiveCinematic)
+                    ["activeDialogue"] = WriteDialogueSession(snapshot.ActiveDialogue)
                 };
             }
 
             public void RestoreState(JsonNode state)
             {
                 if (state == null) throw new ArgumentNullException(nameof(state));
-
                 JsonObject root = state.AsObject();
-                var variables = new Dictionary<string, NarrativeValue>(StringComparer.OrdinalIgnoreCase);
-                JsonObject variableObject = RequireObject(root["variables"], "variables");
-                foreach (KeyValuePair<string, JsonNode?> pair in variableObject)
-                {
-                    variables[pair.Key] = ReadNarrativeValue(RequireObject(pair.Value, $"variables.{pair.Key}"));
-                }
-
                 JsonArray bindingArray = RequireArray(root, "bindings");
-                var bindings = new List<NarrativeEntityBindingSnapshot>(bindingArray.Count);
+                var bindings = new List<DialogueBindingSnapshot>(bindingArray.Count);
                 for (int i = 0; i < bindingArray.Count; i++)
                 {
                     JsonObject binding = RequireObject(bindingArray[i], $"bindings[{i}]");
-                    bindings.Add(new NarrativeEntityBindingSnapshot(
+                    bindings.Add(new DialogueBindingSnapshot(
                         RequireString(binding, "alias"),
                         ReadEntity(RequireObject(binding["entity"], $"bindings[{i}].entity"))));
                 }
 
-                _director.RestoreSnapshot(new NarrativeDirectorSnapshot(
-                    variables,
+                _runtime.RestoreSnapshot(new DialogueRuntimeSnapshot(
                     bindings,
-                    ReadNarrativeDialogue(root["activeDialogue"]),
-                    ReadNarrativeCinematic(root["activeCinematic"])));
+                    ReadDialogueSession(root["activeDialogue"])));
+            }
+        }
+
+        private sealed class SequencerSaveParticipant : ISaveParticipant
+        {
+            private readonly SequencerRuntime _runtime;
+
+            public SequencerSaveParticipant(SequencerRuntime runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public string DomainKey => "sequencer";
+
+            public JsonNode CaptureState()
+            {
+                SequencerSessionSnapshot? snapshot = _runtime.CaptureSnapshot();
+                if (snapshot == null)
+                {
+                    return new JsonObject { ["active"] = null };
+                }
+
+                var fired = new JsonArray();
+                for (int i = 0; i < snapshot.FiredSignalTrackIndices.Count; i++)
+                {
+                    fired.Add(snapshot.FiredSignalTrackIndices[i]);
+                }
+
+                return new JsonObject
+                {
+                    ["active"] = new JsonObject
+                    {
+                        ["sequenceId"] = snapshot.SequenceId,
+                        ["time"] = snapshot.Time,
+                        ["rate"] = snapshot.Rate,
+                        ["paused"] = snapshot.Paused,
+                        ["firedSignals"] = fired
+                    }
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+                JsonObject root = state.AsObject();
+                if (root["active"] is not JsonObject active)
+                {
+                    _runtime.RestoreSnapshot(null);
+                    return;
+                }
+
+                JsonArray firedArray = RequireArray(active, "firedSignals");
+                var fired = new List<int>(firedArray.Count);
+                for (int i = 0; i < firedArray.Count; i++)
+                {
+                    fired.Add(RequireIntValue(firedArray[i], $"firedSignals[{i}]"));
+                }
+
+                _runtime.RestoreSnapshot(new SequencerSessionSnapshot(
+                    RequireString(active, "sequenceId"),
+                    RequireSingle(active, "time"),
+                    RequireSingle(active, "rate"),
+                    RequireBool(active, "paused"),
+                    fired));
             }
         }
 
@@ -872,33 +925,33 @@ namespace Ludots.Core.Persistence
             throw new SaveContextException("GameSession global number has unsupported numeric storage.");
         }
 
-        private static JsonObject WriteNarrativeValue(NarrativeValue value)
+        private static JsonNode? WriteDialogueSession(DialogueSessionSnapshot? dialogue)
         {
+            if (dialogue == null)
+            {
+                return null;
+            }
+
             return new JsonObject
             {
-                ["kind"] = value.Kind.ToString(),
-                ["intValue"] = value.IntValue,
-                ["floatValue"] = value.FloatValue,
-                ["boolValue"] = value.BoolValue,
-                ["stringValue"] = value.StringValue
+                ["dialogueId"] = dialogue.DialogueId,
+                ["nodeId"] = dialogue.NodeId,
+                ["elapsedSeconds"] = dialogue.ElapsedSeconds
             };
         }
 
-        private static NarrativeValue ReadNarrativeValue(JsonObject value)
+        private static DialogueSessionSnapshot? ReadDialogueSession(JsonNode? node)
         {
-            string kindText = RequireString(value, "kind");
-            if (!Enum.TryParse(kindText, ignoreCase: false, out NarrativeValueKind kind) ||
-                !string.Equals(kind.ToString(), kindText, StringComparison.Ordinal))
+            if (node == null || node.GetValueKind() == System.Text.Json.JsonValueKind.Null)
             {
-                throw new SaveContextException($"Narrative value kind '{kindText}' is invalid.");
+                return null;
             }
 
-            return new NarrativeValue(
-                kind,
-                RequireInt(value, "intValue"),
-                RequireSingle(value, "floatValue"),
-                RequireBool(value, "boolValue"),
-                RequireString(value, "stringValue"));
+            JsonObject obj = RequireObject(node, "activeDialogue");
+            return new DialogueSessionSnapshot(
+                RequireString(obj, "dialogueId"),
+                RequireString(obj, "nodeId"),
+                RequireSingle(obj, "elapsedSeconds"));
         }
 
         private static JsonObject WriteEntity(Arch.Core.Entity entity)
@@ -917,66 +970,6 @@ namespace Ludots.Core.Persistence
                 RequireInt(entity, "id"),
                 RequireInt(entity, "worldId"),
                 RequireInt(entity, "version"));
-        }
-
-        private static JsonNode? WriteNarrativeDialogue(NarrativeDialogueSnapshot dialogue)
-        {
-            if (dialogue == null)
-            {
-                return null;
-            }
-
-            return new JsonObject
-            {
-                ["dialogueId"] = dialogue.DialogueId,
-                ["nodeId"] = dialogue.NodeId,
-                ["elapsedSeconds"] = dialogue.ElapsedSeconds
-            };
-        }
-
-        private static NarrativeDialogueSnapshot ReadNarrativeDialogue(JsonNode? node)
-        {
-            if (node == null || node.GetValueKind() == JsonValueKind.Null)
-            {
-                return null;
-            }
-
-            JsonObject dialogue = RequireObject(node, "activeDialogue");
-            return new NarrativeDialogueSnapshot(
-                RequireString(dialogue, "dialogueId"),
-                RequireString(dialogue, "nodeId"),
-                RequireSingle(dialogue, "elapsedSeconds"));
-        }
-
-        private static JsonNode? WriteNarrativeCinematic(NarrativeCinematicSnapshot cinematic)
-        {
-            if (cinematic == null)
-            {
-                return null;
-            }
-
-            return new JsonObject
-            {
-                ["cinematicId"] = cinematic.CinematicId,
-                ["stepIndex"] = cinematic.StepIndex,
-                ["elapsedSeconds"] = cinematic.ElapsedSeconds,
-                ["advanceRequested"] = cinematic.AdvanceRequested
-            };
-        }
-
-        private static NarrativeCinematicSnapshot ReadNarrativeCinematic(JsonNode? node)
-        {
-            if (node == null || node.GetValueKind() == JsonValueKind.Null)
-            {
-                return null;
-            }
-
-            JsonObject cinematic = RequireObject(node, "activeCinematic");
-            return new NarrativeCinematicSnapshot(
-                RequireString(cinematic, "cinematicId"),
-                RequireInt(cinematic, "stepIndex"),
-                RequireSingle(cinematic, "elapsedSeconds"),
-                RequireBool(cinematic, "advanceRequested"));
         }
 
         private static JsonObject RequireObject(JsonNode? node, string field)

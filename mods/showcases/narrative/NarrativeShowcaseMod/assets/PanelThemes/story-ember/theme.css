@@ -1,0 +1,218 @@
+/* story-ember — Story Runtime theme. Chrome lives here; Composer only lays out structure.
+   Images: panel_wash.png (fill) + ornament.png (from tools/panel_theme/cutout.py on magenta key).
+   Do NOT use filter:drop-shadow — native resolver maps filter to blur and milks a dark plate. */
+
+.story-root {
+  font-family: "Palatino Linotype", "Book Antiqua", "Georgia", serif;
+}
+
+.story-card {
+  background-color: rgba(36, 22, 14, 235);
+  background-image: url(images/panel_wash.png);
+  background-size: cover;
+  background-position: center;
+  border: 0 solid rgb(201, 150, 72);
+  border-radius: 4px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+  padding: 16px;
+}
+
+.story-overlay-dialogue {
+  border-color: rgb(232, 188, 110);
+  border-width: 0;
+  border-radius: 2px;
+  padding: 22px 24px 28px 24px;
+  background-color: rgba(42, 26, 16, 240);
+  background-image: url(images/panel_wash.png), url(images/ornament.png);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, right 6px bottom 6px;
+  background-size: cover, 104px auto;
+}
+
+.story-standing-dialogue {
+  border-color: rgb(240, 196, 120);
+  border-width: 0;
+  border-radius: 2px;
+  min-width: 420px;
+  padding: 24px 28px 30px 24px;
+  background-color: rgba(40, 24, 14, 242);
+  background-image: url(images/panel_wash.png), url(images/ornament.png);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, right 8px bottom 8px;
+  background-size: cover, 120px auto;
+}
+
+.story-dialogue-bubble {
+  border-radius: 2px 16px 16px 16px;
+  border-color: rgba(246, 197, 107, 0.9);
+  border-width: 2px;
+  padding: 14px 16px;
+  background-color: rgba(24, 16, 12, 220);
+  background-image: url(images/panel_wash.png);
+  background-size: cover;
+}
+
+.story-subtitle-bubble {
+  border-radius: 16px 16px 2px 16px;
+  border-color: rgb(245, 158, 11);
+  border-width: 2px;
+  padding: 12px 18px;
+  background-color: rgba(18, 12, 8, 200);
+  background-image: none;
+}
+
+.story-choice-list {
+  border-color: rgb(168, 110, 48);
+  border-width: 2px;
+  border-radius: 6px;
+  padding: 14px;
+  background-color: rgba(30, 18, 12, 230);
+  background-image: url(images/panel_wash.png);
+  background-size: cover;
+}
+
+.story-choice-item {
+  background-color: rgba(16, 12, 10, 170);
+  border: 1px solid rgba(201, 150, 72, 0.4);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+.story-choice-item-active {
+  background-color: rgba(56, 32, 14, 220);
+  border-color: rgb(240, 186, 110);
+}
+
+.story-objective,
+.story-history,
+.story-status,
+.story-relationship,
+.story-inspect,
+.story-flow-review {
+  border-radius: 4px;
+}
+
+.story-history {
+  border-color: rgb(160, 130, 90);
+}
+
+.story-objective {
+  border-color: rgb(120, 180, 200);
+}
+
+.story-portrait {
+  border-radius: 3px;
+  border: 0 solid rgb(201, 150, 72);
+  background-color: transparent;
+}
+
+.story-standing-portrait-row {
+  align-items: flex-end;
+}
+
+.story-standing-portrait {
+  border-radius: 0;
+  background-color: transparent;
+  border-width: 0;
+}
+
+.story-title {
+  color: rgb(255, 236, 196);
+  letter-spacing: 0.6px;
+  font-family: "Palatino Linotype", "Book Antiqua", "Georgia", serif;
+}
+
+.story-body {
+  color: rgb(236, 220, 196);
+  line-height: 1.5;
+}
+
+.story-muted {
+  color: rgb(176, 150, 120);
+}
+
+.story-eyebrow {
+  color: rgb(28, 16, 8);
+  background-color: rgb(240, 186, 110);
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-weight: 700;
+}
+
+.story-prompt-ribbon {
+  background-color: rgba(12, 10, 8, 220);
+  border: 1px solid rgb(120, 84, 48);
+  border-radius: 999px;
+  padding: 12px;
+  background-image: none;
+}
+
+.story-threat-banner {
+  background-color: rgba(78, 22, 16, 232);
+  border: 0 solid rgb(255, 184, 138);
+  border-radius: 4px;
+  padding: 16px;
+  background-image: none;
+}
+
+.story-transmission {
+  background-color: rgba(12, 18, 28, 220);
+  border: 1px solid rgb(90, 140, 170);
+  border-radius: 4px;
+  padding: 14px;
+  background-image: none;
+}
+
+.story-event-card {
+  background-color: rgb(246, 197, 107);
+  border: 1px solid rgb(255, 246, 208);
+  border-radius: 6px;
+  padding: 18px;
+  background-image: none;
+}
+
+.story-notification {
+  background-color: rgba(12, 16, 22, 230);
+  border: 1px solid rgba(201, 150, 72, 0.45);
+  border-radius: 6px;
+  padding: 12px;
+  background-image: none;
+}
+
+.story-item-row {
+  background-color: rgba(14, 12, 10, 150);
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.story-item-row-active {
+  background-color: rgba(36, 24, 14, 200);
+}
+
+.story-bubble-tail {
+  background-color: rgba(24, 16, 12, 220);
+}
+
+/* Nine-slice ornate frame — images/panel_frame.png + choice_frame.png (0-code theme assets). */
+.story-frame {
+  object-fit: fill;
+  image-slice: 48 48 48 48;
+  pointer-events: none;
+}
+
+.story-choice-frame {
+  object-fit: fill;
+  image-slice: 36 36 36 36;
+  pointer-events: none;
+}
+
+.story-framed {
+  position: relative;
+  overflow: visible;
+}
+
+/* 内容让出切边，避免字压在拟物框金边上 */
+.story-framed-body {
+  position: relative;
+  padding: 22px 24px 26px 24px;
+}

@@ -36,7 +36,13 @@ public static class GraphOpsNodeGraphCompiler
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
         JsonObject obj = ParseSingleGraphShard(path);
         string graphId = GraphOpsNodeIds.GraphId(opName);
-        GraphControlFlowCompileResult compiled = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, graphId, options);
+        // Builtin event schemas cover the DispatchMapEvent vignette (MapHeartbeat);
+        // every other op never consults the registry.
+        GraphControlFlowCompileResult compiled = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(
+            obj,
+            graphId,
+            options,
+            new Ludots.Core.Scripting.EventSchemaRegistry());
         if (!compiled.Succeeded)
         {
             string message = string.Join("; ", compiled.Diagnostics.Select(d => d.Message));

@@ -48,6 +48,8 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 作者节点名 SSOT：`GraphAuthoringSugar`（非 `GraphNodeOp`）。`BranchBool` 可用于 **Script / Effect**（`IsBranchBoolAuthorable`）；`SwitchInt` / `Wait` / `While` / `Until` 仅 **Script**。Query / Score / Validation / Derived 使用上述糖名必须失败关闭。运行时仍是同一套 L0 handler 表，不新增 While/Switch opcode。
 
+BT 组合糖（`BtSequence` / `BtSelector` / `BtDecorator`，仅 Script）同属这张名册：整棵行为树在编译期内联成**单个 Script 程序**——组合节点降级为 `Call`/`Return` + `CompareEqInt` + `JumpIfFalse`（子状态走共享 int 寄存器，0=Failure / 1=Success / 2=Running，见 `GraphBtStatusCodes`），叶子链终端按产出类型降级为状态尾声（Int→`MoveInt`、Bool→分支写 0/1、Void→恒 1），只有树根出口 `HaltReturnInt`；嵌套深度受 `MaxCallStackDepth`（16，与 BT `MaxStackDepth` 对齐）静态与运行时双重失败关闭。`GraphBehaviorTreeHost` 只做 per-agent 帧驻留与 think wave `ExecuteSlice` 续跑（Yield 叶跨波恢复天然复用 callStack），不自带树遍历；旧 C# 解释器（`BehaviorTreeWorld`）保留为旧数据路径，图路径不得调用其遍历/PopAndPropagate。
+
 | 节点 | 端口 | 降级为 L0 | Kind |
 |------|------|-----------|------|
 | `BranchBool` | `condition`（bool 值边）；`true` / `false`（控制边） | `JumpIfFalse` + `Jump` | Script, Effect |
@@ -55,6 +57,9 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 | `Wait` | `next`（控制边） | 作者别名 → `Yield` | Script only |
 | `While` | `condition`（bool）；`body` / `next`（控制边） | `JumpIfFalse(cond)→next` + `Jump→body`（回边由作者边闭合） | Script only |
 | `Until` | `condition`（bool）；`body` / `next`（控制边） | `JumpIfFalse(cond)→body` + `Jump→next`（条件为真时退出） | Script only |
+| `BtSequence` | `child:{N}`（控制边，按序） | 每子 `Call` + 失败/Running 检查（`ConstInt`+`CompareEqInt`+`JumpIfFalse`+`Jump`），出口写状态寄存器后 `Return`（根则 `HaltReturnInt`） | Script only |
+| `BtSelector` | `child:{N}` | 对偶：成功短路；全失败→Failure；Running 同 Sequence | Script only |
+| `BtDecorator` | `child:0`；字段 `decoratorKind`（`inverter`/`forceSuccess`/`forceFailure`） | `Call` 子 + 状态改写检查；Running 原样透传 | Script only |
 
 步数硬顶：`GraphVmLimits.MaxInstructionsPerExecution`（失控循环失败关闭，禁止静默截断当成功）。
 
@@ -83,7 +88,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 - **HFSM Yield**：禁止。OnTick 是 think-wave 节拍；含 Yield 的 `Hfsm` 条目在 ActionLib 加载期失败关闭。
 - **行为入口**：L2 叶子 / 切片宿主解析 ActionLib 名或已登记 GraphId；勿使用已标 obsolete 的 `GraphRegistryScriptResolver.RequireId(string)` 字符串旁路。
 - **FuncLib / ActionLib 合同**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。
-- 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM
+- 拓扑合同（BT-1 修订）：组合语义（BT 的 Sequence/Selector/Decorator）以作者面糖在编译期内联进图指令（SwitchInt 同款，糖永不成为 opcode）；L2 宿主（`GraphBehaviorTreeHost`）只负责 per-agent 帧与 think wave 驱动，不得自带第二套图 VM 或树遍历解释器。C# `BehaviorTreeWorld` 保留为旧 JSON 树数据路径。一期边界：Parallel 不支持（单 cursor 单 pc，显式 `InvalidOperationException`/文档记边界）；子树跨图复用（InvokeGraph 挂子树）等 BT-2；showcase 迁移（arena 真图化）另开活。
 
 ### L2 TriggerGraph 时序合同
 
@@ -92,7 +97,8 @@ TriggerGraph 的域与事件时序以 [Trigger Guide](../../docs/architecture/tr
 ## 4. 场景
 
 - 技能复用一段通用「结算脚本」→ Effect/`InvokeScript` → Script
-- 角色 AI 行为树叶子「巡逻一步」→ BT scheduler → Script（可 Yield 跨拍）
+- 角色 AI 行为树整树写成 Script 图（`BtSequence`/`BtSelector`/`BtDecorator` 糖 + 真实 op 叶子），`GraphBehaviorTreeHost` 按 think wave 逐拍 `ExecuteSlice`；叶子内 `Yield` 跨拍恢复
+- 角色 AI 行为树叶子「巡逻一步」→ BT scheduler → Script（可 Yield 跨拍；旧 JSON 树数据路径保留）
 - 关卡流「进圈开袭、清场过波、Boss 阵亡翻阶段」→ TriggerGraph（MapConfig.TriggerGraphs 挂载，思考波续跑）
 - 聚落反应「居民受击、根实体统计、根死亡收束」→ TriggerGraph（EntityTemplate.TriggerGraphs，attachment 子树作用域）
 - 技能反应「命中事件叠层、施法完成结算」→ TriggerGraph（abilities.json.triggerGraphs，施法者作用域）

@@ -695,6 +695,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     relativePath,
                     "relation.localPose.inheritParentFacing");
                 attachOffsetRotation = ParseAttachedOffsetRotation(cfg.LocalPose.OffsetRotation, ownerId, relativePath);
+                if (attachInheritParentFacing &&
+                    attachOffsetRotation == Ludots.Core.Components.AttachedOffsetRotation.OwnFacing)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: relation.localPose.inheritParentFacing=true 与 offsetRotation=OwnFacing 互斥（朝向同时随父又随子无定义）。");
+                }
             }
 
             Ludots.Core.Gameplay.Attachment.DetachPlacement detachPlacement =

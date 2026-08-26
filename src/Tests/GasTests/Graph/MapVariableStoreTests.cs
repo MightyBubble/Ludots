@@ -160,12 +160,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void Parse_ValidDeclarations_TrimNamesAndKeepPhaseFlag()
+        public void Parse_ValidDeclarations_TrimsNames()
         {
             JsonNode node = JsonNode.Parse(
                 """
                 [
-                  { "name": " kills ", "type": "int", "initial": 2, "phase": true },
+                  { "name": " kills ", "type": "int", "initial": 2 },
                   { "name": "ammo", "type": "float", "initial": 1.5 }
                 ]
                 """);
@@ -176,13 +176,24 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(declarations[0].Name, Is.EqualTo("kills"));
             Assert.That(declarations[0].Type, Is.EqualTo(MapVariableType.Int));
             Assert.That(declarations[0].Initial, Is.EqualTo(2));
-            Assert.That(declarations[0].Phase, Is.True);
             Assert.That(declarations[1].Type, Is.EqualTo(MapVariableType.Float));
             Assert.That(declarations[1].Initial, Is.EqualTo(1.5));
-            Assert.That(declarations[1].Phase, Is.False);
         }
 
-        // ── Store fail-closed + revisions + phase events ──
+        [Test]
+        public void Parse_PhaseField_IsRemovedAndRejected()
+        {
+            JsonNode node = JsonNode.Parse(
+                """
+                [ { "name": "kills", "type": "int", "initial": 2, "phase": true } ]
+                """);
+
+            Assert.That(
+                () => MapVariableDeclarations.Parse(node, MapIdValue),
+                Throws.InvalidOperationException.With.Message.Contains("phase"));
+        }
+
+        // ── Store fail-closed + revisions + change events ──
 
         [Test]
         public void Store_UndeclaredRead_ThrowsNamingMapAndVar()
@@ -249,22 +260,30 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void Store_PhaseChanged_FiresOnChangeOnly_AndNotForNonPhaseVars()
+        public void Store_VariableChanged_FiresOnChangeOnly_ForEveryDeclaredVariable()
         {
             MapVariableStore store = MapVariableStore.Create(new MapId(MapIdValue), new[]
             {
-                new MapVariableDeclaration { Name = "phase", Type = MapVariableType.Int, Initial = 0, Phase = true },
+                new MapVariableDeclaration { Name = "counter", Type = MapVariableType.Int, Initial = 0 },
                 new MapVariableDeclaration { Name = "plain", Type = MapVariableType.Int, Initial = 0 },
+                new MapVariableDeclaration { Name = "ammo", Type = MapVariableType.Float, Initial = 1.5f },
             });
-            var changes = new List<(string Name, int Value)>();
-            store.PhaseChangedDispatcher = (_, name, value) => changes.Add((name, value));
+            var changes = new List<(string Name, MapVariableType Type, int OldInt, int NewInt, float OldFloat, float NewFloat)>();
+            store.VariableChangedDispatcher = (_, name, type, oldInt, newInt, oldFloat, newFloat) =>
+                changes.Add((name, type, oldInt, newInt, oldFloat, newFloat));
 
-            store.WriteInt("phase", 1);
-            store.WriteInt("phase", 1);
+            store.WriteInt("counter", 1);
+            store.WriteInt("counter", 1);
             store.WriteInt("plain", 5);
-            store.WriteInt("phase", 2);
+            store.WriteFloat("ammo", 2.5f);
+            store.WriteFloat("ammo", 2.5f);
 
-            Assert.That(changes, Is.EqualTo(new[] { ("phase", 1), ("phase", 2) }));
+            Assert.That(changes, Is.EqualTo(new[]
+            {
+                ("counter", MapVariableType.Int, 0, 1, 0f, 0f),
+                ("plain", MapVariableType.Int, 0, 5, 0f, 0f),
+                ("ammo", MapVariableType.Float, 0, 0, 1.5f, 2.5f),
+            }));
         }
 
         // ── Session lifecycle ──
@@ -306,7 +325,7 @@ namespace Ludots.Tests.Gas.Graph
         // ── Graph ops end-to-end through the TriggerGraph front door ──
 
         [Test]
-        public void TriggerGraph_ReadAddWrite_RunsFromEntryPc_AndFiresPhaseChangedWithPayload()
+        public void TriggerGraph_ReadAddWrite_RunsFromEntryPc_AndFiresMapVariableChangedWithPayload()
         {
             using var fixture = MapVarEngineFixture.Create(includeMount: true);
             using GameEngine engine = fixture.CreateEngine();
@@ -330,20 +349,25 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(store.ReadInt("probe.kills"), Is.EqualTo(1), "entry must run read → +1 → write");
             Assert.That(store.GetRevision("probe.kills"), Is.EqualTo(1u));
 
-            var probe = new PhaseChangedProbeTrigger();
+            var probe = new MapVariableChangedProbeTrigger();
             var combined = new List<Trigger>(engine.CurrentMapSession.Triggers) { probe };
             engine.TriggerManager.RegisterMapTriggers(new MapId(MapIdValue), combined);
 
             store.WriteInt("probe.kills", 2);
 
-            Assert.That(probe.Fires, Is.EqualTo(1), "PhaseChanged must be map-scoped and dispatched through TriggerManager");
+            Assert.That(probe.Fires, Is.EqualTo(1), "MapVariableChanged must be map-scoped and dispatched through TriggerManager");
             Assert.That(probe.LastContext!.Get<string>(MapVariableStore.PayloadKeyVarName), Is.EqualTo("probe.kills"));
-            Assert.That(probe.LastContext.Get<int>(MapVariableStore.PayloadKeyPhase), Is.EqualTo(2));
-            Assert.That(probe.LastContext.Get<int>(MapVariableStore.PayloadKeyVarValueInt), Is.EqualTo(2));
+            Assert.That(probe.LastContext.Get<int>(MapVariableStore.PayloadKeyOldValueInt), Is.EqualTo(1));
+            Assert.That(probe.LastContext.Get<int>(MapVariableStore.PayloadKeyNewValueInt), Is.EqualTo(2));
 
             store.WriteInt("probe.kills", 2);
+            Assert.That(probe.Fires, Is.EqualTo(1), "same-value writes must not fire");
+
             store.WriteFloat("probe.ammo", 2.5f);
-            Assert.That(probe.Fires, Is.EqualTo(1), "same-value writes and non-phase vars must not fire PhaseChanged");
+            Assert.That(probe.Fires, Is.EqualTo(2), "float value changes must fire too");
+            Assert.That(probe.LastContext!.Get<string>(MapVariableStore.PayloadKeyVarName), Is.EqualTo("probe.ammo"));
+            Assert.That(probe.LastContext.Get<float>(MapVariableStore.PayloadKeyOldValueFloat), Is.EqualTo(1.5f).Within(0.0001f));
+            Assert.That(probe.LastContext.Get<float>(MapVariableStore.PayloadKeyNewValueFloat), Is.EqualTo(2.5f).Within(0.0001f));
         }
 
         [Test]
@@ -473,14 +497,14 @@ namespace Ludots.Tests.Gas.Graph
             }
             """;
 
-        private sealed class PhaseChangedProbeTrigger : Trigger
+        private sealed class MapVariableChangedProbeTrigger : Trigger
         {
             public ScriptContext? LastContext { get; private set; }
             public int Fires { get; private set; }
 
-            public PhaseChangedProbeTrigger()
+            public MapVariableChangedProbeTrigger()
             {
-                EventKey = new EventKey(MapVariableStore.PhaseChangedEventName);
+                EventKey = GameEvents.MapVariableChanged;
                 Priority = 0;
             }
 
@@ -598,7 +622,7 @@ namespace Ludots.Tests.Gas.Graph
                     """);
                 string variables = variablesJson ?? """
                     [
-                      { "name": "probe.kills", "type": "int", "initial": 0, "phase": true },
+                      { "name": "probe.kills", "type": "int", "initial": 0 },
                       { "name": "probe.ammo", "type": "float", "initial": 1.5 }
                     ]
                     """;

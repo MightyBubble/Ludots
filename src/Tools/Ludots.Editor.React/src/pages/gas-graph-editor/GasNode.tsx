@@ -1,0 +1,284 @@
+import React from 'react';
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+
+export type GasNodeViewEntry = {
+  label: string;
+  event: string;
+  start: string;
+  once?: boolean;
+  refire?: string | null;
+  filters?: {
+    region?: string | null;
+    tag?: string | null;
+    team?: number | null;
+    threshold?: number | null;
+    direction?: string | null;
+    action?: string | null;
+    instanceId?: string | null;
+    varName?: string | null;
+  } | null;
+};
+
+export type EventSchemaParam = {
+  name: string;
+  type: 'Entity' | 'Int' | 'Float' | 'String';
+  key: string;
+  optional: boolean;
+};
+
+export type EventSchemaView = {
+  name: string;
+  scope: string;
+  parameters: EventSchemaParam[];
+};
+
+export type GasNodeViewData = {
+  id: string;
+  op: string;
+  role?: 'op' | 'event-entry';
+  entry?: GasNodeViewEntry;
+  intValue?: number;
+  floatValue?: number;
+  boolValue?: boolean;
+  var?: string | null;
+  template?: string | null;
+  panelType?: string | null;
+  event?: string | null;
+  argKey?: string | null;
+  entryLabel?: string | null;
+  schema?: EventSchemaView | null;
+  descriptor?: {
+    linearInputPorts: string[];
+    queryInputPorts: string[];
+    scriptInputPorts: string[];
+    queryOutputType: string;
+    linearOutputType: string;
+  };
+  sugar?: { valueInputPorts: string[] };
+  controlOutputPorts?: string[];
+};
+
+export function isPureValueOp(op: string): boolean {
+  return op === 'ConstInt' || op === 'ConstFloat' || op === 'ConstBool';
+}
+
+function literalText(data: GasNodeViewData): string | null {
+  if (data.op === 'ConstInt') return String(data.intValue ?? 0);
+  if (data.op === 'ConstFloat') return String(data.floatValue ?? 0);
+  if (data.op === 'ConstBool') return data.boolValue ? 'true' : 'false';
+  return null;
+}
+
+function authoredCaption(data: GasNodeViewData): string | null {
+  if (data.var) return data.var;
+  if (data.template) return data.template;
+  if (data.panelType) return data.panelType;
+  if (data.event) return data.event;
+  if (data.argKey) return `arg ${data.argKey}`;
+  if (data.op === 'InvokeGraph' && data.entryLabel) return `@${data.entryLabel}`;
+  if (data.op === 'HaltReturnInt') return 'end this run';
+  if (data.op === 'Yield') return 'wait one tick';
+  return null;
+}
+
+function collectInputPorts(data: GasNodeViewData): string[] {
+  return Array.from(new Set([
+    ...(data.descriptor?.linearInputPorts ?? []),
+    ...(data.descriptor?.queryInputPorts ?? []),
+    ...(data.descriptor?.scriptInputPorts ?? []),
+    ...(data.sugar?.valueInputPorts ?? []),
+  ]));
+}
+
+function outputPorts(data: GasNodeViewData): { id: string; label: string; kind: 'exec' | 'value' | 'list' }[] {
+  const ports: { id: string; label: string; kind: 'exec' | 'value' | 'list' }[] = [];
+  if (!isPureValueOp(data.op)) {
+    for (const port of data.controlOutputPorts ?? []) {
+      ports.push({ id: port, label: port === 'next' ? 'Then' : port, kind: 'exec' });
+    }
+  }
+  const outputType = data.descriptor?.queryOutputType !== 'Void'
+    ? data.descriptor?.queryOutputType
+    : data.descriptor?.linearOutputType;
+  if (outputType && outputType !== 'Void' && outputType !== 'TargetList') {
+    ports.push({ id: 'value', label: 'Value', kind: 'value' });
+  }
+  if (outputType === 'TargetList') {
+    ports.push({ id: 'list', label: 'List', kind: 'list' });
+  }
+  return ports;
+}
+
+function filterChips(entry?: GasNodeViewEntry): string[] {
+  if (!entry?.filters) return [];
+  const chips: string[] = [];
+  const filters = entry.filters;
+  if (filters.instanceId) chips.push(`@${filters.instanceId}`);
+  if (filters.varName) chips.push(`$${filters.varName}`);
+  if (filters.region) chips.push(filters.region);
+  if (filters.action) chips.push(filters.action);
+  if (filters.tag) chips.push(filters.tag);
+  if (filters.team != null) chips.push(`team ${filters.team}`);
+  if (filters.direction) chips.push(filters.direction);
+  if (filters.threshold != null) chips.push(`< ${filters.threshold}`);
+  if (entry.once) chips.push('once');
+  if (entry.refire) chips.push(entry.refire);
+  return chips;
+}
+
+function pinClass(kind: 'exec' | 'value' | 'list'): string {
+  if (kind === 'value') return 'text-violet-300';
+  if (kind === 'list') return 'text-emerald-300';
+  return 'text-sky-300';
+}
+
+export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
+  const isEvent = data.role === 'event-entry';
+  const inputs = collectInputPorts(data);
+  const outputs = outputPorts(data);
+
+  if (isEvent) {
+    const params = data.schema?.parameters.filter((param) => param.type !== 'String') ?? [];
+    return (
+      <div
+        className={`min-w-[220px] overflow-hidden rounded-md border shadow-lg ${
+          selected ? 'border-rose-200' : 'border-rose-800'
+        }`}
+      >
+        <div className="bg-rose-700 px-3 py-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-[.18em] text-rose-100">Event</div>
+          <div className="text-sm font-semibold text-white">{data.entry?.event ?? 'Event'}</div>
+        </div>
+        <div className="relative bg-slate-950 px-3 py-2">
+          <div className="text-[11px] text-rose-100">{data.entry?.label}</div>
+          {filterChips(data.entry).length > 0 ? (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {filterChips(data.entry).map((chip) => (
+                <span key={chip} className="rounded bg-rose-950 px-1 text-[9px] text-rose-100">{chip}</span>
+              ))}
+            </div>
+          ) : null}
+          <div className="mt-2 space-y-1">
+            <div className="flex h-5 items-center text-[10px] font-medium text-amber-200">
+              <Handle
+                id="owner"
+                type="source"
+                position={Position.Right}
+                className={`gas-pin gas-pin-right ${pinClass('exec')}`}
+              />
+              owner (mount)
+            </div>
+            <div className="flex h-5 items-center text-[10px] font-medium text-amber-200">
+              <Handle
+                id="caster"
+                type="source"
+                position={Position.Right}
+                className={`gas-pin gas-pin-right ${pinClass('exec')}`}
+              />
+              caster (event actor)
+            </div>
+            {params.map((param) => (
+              <div key={param.key} className="flex h-5 items-center text-[10px] font-medium text-violet-200">
+                <Handle
+                  id={`payload:${param.key}`}
+                  type="source"
+                  position={Position.Right}
+                  className={`gas-pin gas-pin-right ${pinClass('value')}`}
+                />
+                {param.name}
+                <span className="ml-1 text-[8px] uppercase text-slate-500">{param.type}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center justify-end text-[10px] font-medium text-sky-200">
+            Then
+            <Handle
+              id="exec"
+              type="source"
+              position={Position.Right}
+              className={`gas-pin gas-pin-right ${pinClass('exec')}`}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPureValueOp(data.op)) {
+    return (
+      <div
+        className={`min-w-[140px] overflow-hidden rounded-md border shadow-lg ${
+          selected ? 'border-violet-300' : 'border-violet-800'
+        }`}
+      >
+        <div className="bg-violet-800 px-3 py-1.5">
+          <div className="text-sm font-semibold text-white">{data.op}</div>
+        </div>
+        <div className="relative bg-slate-950 px-3 py-2">
+          <div className="text-lg font-semibold tabular-nums text-violet-100">{literalText(data)}</div>
+          <div className="mt-2 flex items-center justify-end text-[10px] font-medium text-violet-200">
+            Value
+            <Handle
+              id="value"
+              type="source"
+              position={Position.Right}
+              className={`gas-pin gas-pin-right ${pinClass('value')}`}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`min-w-[210px] overflow-hidden rounded-md border shadow-lg ${
+        selected ? 'border-sky-300' : 'border-slate-600'
+      }`}
+    >
+      <div className="bg-slate-700 px-3 py-1.5">
+        <div className="text-sm font-semibold text-white">{data.op}</div>
+        {authoredCaption(data) ? (
+          <div className="mt-0.5 truncate text-[10px] text-amber-200">{authoredCaption(data)}</div>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 bg-slate-950 px-3 py-2">
+        <div className="space-y-1">
+          <div className="flex h-5 items-center text-[10px] font-medium text-sky-200">
+            <Handle
+              id="control-in"
+              type="target"
+              position={Position.Left}
+              className={`gas-pin gas-pin-left ${pinClass('exec')}`}
+            />
+            Exec
+          </div>
+          {inputs.map((port) => (
+            <div key={port} className="flex h-5 items-center text-[10px] font-medium text-emerald-200">
+              <Handle
+                id={port}
+                type="target"
+                position={Position.Left}
+                className={`gas-pin gas-pin-left ${pinClass('list')}`}
+              />
+              {port}
+            </div>
+          ))}
+        </div>
+        <div className="space-y-1">
+          {outputs.map((port) => (
+            <div key={port.id} className={`flex h-5 items-center justify-end text-[10px] font-medium ${pinClass(port.kind)}`}>
+              {port.label}
+              <Handle
+                id={port.id}
+                type="source"
+                position={Position.Right}
+                className={`gas-pin gas-pin-right ${pinClass(port.kind)}`}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

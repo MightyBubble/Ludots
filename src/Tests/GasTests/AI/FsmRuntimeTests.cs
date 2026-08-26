@@ -40,6 +40,49 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
+        public void GetLeafStateName_TracksAuthoredId_RegardlessOfPackingOrder()
+        {
+            // Same machine authored with the alert/retreat children swapped: the packed
+            // indices differ, the authored names must not drift with them.
+            var ordered = new[]
+            {
+                new HfsmState(HfsmStateKind.Leaf, -1, 0, 0, 0, name: "idle"),
+                new HfsmState(HfsmStateKind.Leaf, 0, 0, 0, 0, name: "alert"),
+                new HfsmState(HfsmStateKind.Leaf, 0, 0, 0, 0, name: "combat"),
+            };
+            // Same machine with the children authored in a different order plus an
+            // extra state: "alert" lands at a different packed index, its name must not.
+            var swapped = new[]
+            {
+                new HfsmState(HfsmStateKind.Leaf, -1, 0, 0, 0, name: "idle"),
+                new HfsmState(HfsmStateKind.Leaf, 0, 0, 0, 0, name: "combat"),
+                new HfsmState(HfsmStateKind.Leaf, 0, 0, 0, 0, name: "retreat"),
+                new HfsmState(HfsmStateKind.Leaf, 0, 0, 0, 0, name: "alert"),
+            };
+            var transitions = new[]
+            {
+                new HfsmTransition(0, 1, HfsmTransitionPredicate.Always, 0),
+            };
+            var orderedWorld = new HfsmWorld(new HfsmDefinition("hfsm.names.a", ordered, rootIndex: 0, transitions), 1);
+            var swappedWorld = new HfsmWorld(new HfsmDefinition("hfsm.names.b", swapped, rootIndex: 0,
+                new[] { new HfsmTransition(0, 3, HfsmTransitionPredicate.Always, 0) }), 1);
+            orderedWorld.AddAgent();
+            swappedWorld.AddAgent();
+
+            Assert.That(orderedWorld.GetLeafStateName(0), Is.EqualTo("idle"));
+            Assert.That(swappedWorld.GetLeafStateName(0), Is.EqualTo("idle"));
+
+            orderedWorld.LatchStimulus(0);
+            swappedWorld.LatchStimulus(0);
+            orderedWorld.TickAll();
+            swappedWorld.TickAll();
+            Assert.That(orderedWorld.GetLeafState(0), Is.EqualTo(1));
+            Assert.That(swappedWorld.GetLeafState(0), Is.EqualTo(3));
+            Assert.That(orderedWorld.GetLeafStateName(0), Is.EqualTo("alert"));
+            Assert.That(swappedWorld.GetLeafStateName(0), Is.EqualTo("alert"));
+        }
+
+        [Test]
         public void TransitionConditionGraph_AndStateLifecycleGraphs_AreInvoked()
         {
             // Idle --Always+cond(10)--> Alert; Alert has OnEnter(1) OnTick(2) OnExit(3)

@@ -1,0 +1,41 @@
+{
+  "op": "LoadPlacedEntity",
+  "driver": "placedEntity",
+  "title": "点名放置的木桩，名册一翻就到",
+  "beat": "记录官翻出名册一点名，放置的木桩大王立刻在岗应答；倒下后名册读出空位。",
+  "detailTemplate": "点名：{name}{state}，名册记的血量 {health}。",
+  "assertDetailContains": [
+    "名册"
+  ],
+  "featuredNodeId": "readBoss",
+  "graphKind": "TriggerGraph",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "记录官",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "boss_camp",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩大王",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "variables": [
+    {
+      "name": "gallery.boss_health",
+      "type": "float",
+      "initial": 0
+    }
+  ]
+}

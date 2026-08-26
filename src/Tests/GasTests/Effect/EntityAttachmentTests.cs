@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Attachment;
@@ -428,6 +429,115 @@ namespace Ludots.Tests.GAS
             transaction.Rollback();
             Assert.That(world.Get<ChildOf>(child).Parent, Is.EqualTo(parent));
             Assert.That(world.Has<AttachedLocalPose>(child), Is.True);
+        }
+
+        [Test]
+        public void GasEffectPath_AttachThenDetach_CommitsRealRelationPoseAndAuthority()
+        {
+            // Cucumber: 玩家通过效果触发上车/下车——断言真实关系与位姿，不是日志。
+            using World world = World.Create();
+            Entity vehicle = world.Create(
+                WorldPositionCm.FromCm(2000, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(2000, 0) },
+                new FacingDirection { AngleRad = 0f });
+            Entity rider = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.Zero },
+                new PoseAuthority { Value = PoseAuthorityKind.Nav });
+            var arbiter = new PoseAuthorityArbiter();
+            using var commitSystem = new PoseAuthorityCommitSystem(world, arbiter);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world, null, null, null, null, attributeEntityCapacity: 4, poseAuthorityArbiter: arbiter);
+
+            AttachedLocalPose seat = OffsetPose(0, -140);
+            transaction.Begin();
+            transaction.StageAttach(rider, vehicle, seat);
+            transaction.Commit();
+            commitSystem.Update(1f / 60f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<ChildOf>(rider).Parent, Is.EqualTo(vehicle));
+                Assert.That(world.Get<AttachedLocalPose>(rider).OffsetCm, Is.EqualTo(Fix64Vec2.FromInt(0, -140)));
+                Assert.That(world.Get<WorldPositionCm>(rider).Value, Is.EqualTo(Fix64Vec2.FromInt(2000, -140)));
+                Assert.That(world.Get<PoseAuthority>(rider).Value, Is.EqualTo(PoseAuthorityKind.Attached));
+            });
+
+            transaction.Begin();
+            transaction.StageDetach(rider, DetachPlacement.ParentPerimeterRing, 260);
+            transaction.Commit();
+            commitSystem.Update(1f / 60f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Has<ChildOf>(rider), Is.False);
+                Assert.That(world.Has<AttachedLocalPose>(rider), Is.False);
+                Assert.That(world.Get<PoseAuthority>(rider).Value, Is.EqualTo(PoseAuthorityKind.Nav));
+                Assert.That(world.Get<WorldPositionCm>(rider).Value.X.ToFloat(), Is.EqualTo(2260f).Within(1f));
+                Assert.That(world.Get<WorldPositionCm>(rider).Value.Y.ToFloat(), Is.EqualTo(0f).Within(1f));
+            });
+        }
+
+        [Test]
+        public void Detach_WhenPerimeterSlotsExhaustedInSameTransaction_FailsClosed()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity first = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.Zero });
+            Entity second = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.Zero });
+            AttachDirect(world, new PoseAuthorityArbiter(), first, parent, OffsetPose(0, 0));
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world, null, null, null, null, attributeEntityCapacity: 8);
+
+            transaction.Begin();
+            transaction.StageDetach(first, DetachPlacement.ParentPerimeterRing, 200);
+            // 首次 detach 把环槽总数定格为 1；同事务再挂上第二子后再次周界 detach 必须显式报槽位耗尽。
+            transaction.StageAttach(second, parent, OffsetPose(10, 0));
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => transaction.StageDetach(second, DetachPlacement.ParentPerimeterRing, 200))!;
+            transaction.Rollback();
+
+            Assert.That(error.Message, Does.Contain("DetachRingSlots"));
+            Assert.That(error.Message, Does.Contain("all"));
+            Assert.That(world.Get<ChildOf>(first).Parent, Is.EqualTo(parent));
+            Assert.That(world.Has<ChildOf>(second), Is.False);
+        }
+
+        [Test]
+        public void MapTriggersSources_DoNotCallAttachmentOps()
+        {
+            string root = FindRepoRoot();
+            string mapTriggersDir = Path.Combine(root, "src", "Core", "Gameplay", "MapTriggers");
+            Assert.That(Directory.Exists(mapTriggersDir), Is.True);
+            foreach (string path in Directory.EnumerateFiles(mapTriggersDir, "*.cs", SearchOption.AllDirectories))
+            {
+                string text = File.ReadAllText(path);
+                Assert.That(
+                    text.Contains("AttachmentOps.", StringComparison.Ordinal),
+                    Is.False,
+                    $"Trigger must not write attachment edges directly: {path}");
+            }
+        }
+
+        private static string FindRepoRoot()
+        {
+            var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+            while (directory != null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "assets", "game.json")) &&
+                    Directory.Exists(Path.Combine(directory.FullName, "src", "Core")))
+                {
+                    return directory.FullName;
+                }
+
+                directory = directory.Parent;
+            }
+
+            throw new InvalidOperationException("Repository root not found from test directory.");
         }
     }
 }

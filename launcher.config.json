@@ -1561,6 +1561,14 @@
       }
     },
     {
+      "name": "panel_entity_list",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_entity_list/PanelEntityListShowcaseMod",
+        "projectPath": "PanelEntityListShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",
@@ -1633,14 +1641,6 @@
       "target": {
         "type": "path",
         "value": "mods/showcases/map_trigger_night_raid_override/NightRaidOverrideMod"
-      }
-    },
-    {
-      "name": "agent_bridge",
-      "target": {
-        "type": "path",
-        "value": "mods/AgentBridgeMod",
-        "projectPath": "AgentBridgeMod.csproj"
       }
     },
     {
@@ -1722,6 +1722,114 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
         "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DispatchMapEvent",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchMapEventEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDispatchMapEventEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_InvokeGraph",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpInvokeGraphEntryMod",
+        "projectPath": "CapabilityStandardGraphOpInvokeGraphEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPlacedEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPlacedEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AwaitCallback",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAwaitCallbackEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAwaitCallbackEntryMod.csproj"
+      }
+    },
+    {
+      "name": "narrative",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative/NarrativeShowcaseMod"
+      }
+    },
+    {
+      "name": "narrative_theme_sanguo",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_sanguo/NarrativeThemeSanguoMod"
+      }
+    },
+    {
+      "name": "narrative_theme_fantasy",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_fantasy/NarrativeThemeFantasyMod"
+      }
+    },
+    {
+      "name": "narrative_theme_acnh",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_acnh/NarrativeThemeAcnhMod"
       }
     }
   ],

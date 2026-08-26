@@ -1,0 +1,78 @@
+.gas-graph-flow .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: #020617;
+  border: 2px solid currentColor;
+  box-shadow: 0 0 0 1px #020617;
+}
+
+.gas-graph-flow .gas-pin {
+  position: relative !important;
+  top: auto !important;
+  transform: none !important;
+}
+
+.gas-graph-flow .gas-pin-left {
+  left: -16px !important;
+}
+
+.gas-graph-flow .gas-pin-right {
+  left: auto !important;
+  right: -16px !important;
+}
+
+.gas-graph-flow .gas-pin-hidden {
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+}
+
+.gas-graph-flow .react-flow__handle-connecting,
+.gas-graph-flow .react-flow__handle-valid {
+  background: #020617;
+}
+
+.gas-graph-flow .react-flow__edge-textbg {
+  fill: #0f172a;
+}
+
+.gas-graph-flow .react-flow__edge-text {
+  fill: #e2e8f0;
+}
+
+.gas-graph-flow .react-flow__edgelabel-renderer {
+  color: #e2e8f0;
+}
+
+.gas-graph-flow .react-flow__edge-label {
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.gas-graph-flow .react-flow__minimap {
+  background-color: #020617 !important;
+  border: 1px solid #334155;
+  --xy-minimap-background-color-props: #020617;
+  --xy-minimap-mask-background-color-props: rgba(2, 6, 23, 0.35);
+  --xy-minimap-node-background-color: #38bdf8;
+}
+
+.gas-graph-flow .react-flow__minimap-mask {
+  fill: rgba(2, 6, 23, 0.35) !important;
+}
+
+.gas-graph-flow .react-flow__selection {
+  background: rgb(56 189 248 / 0.14);
+  border: 1px solid #38bdf8;
+}
+
+.gas-graph-flow .react-flow__nodesselection-rect {
+  background: rgb(56 189 248 / 0.08);
+  border: 1px solid #7dd3fc;
+}

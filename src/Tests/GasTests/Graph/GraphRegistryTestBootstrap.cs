@@ -46,8 +46,10 @@ namespace Ludots.Tests.Gas.Graph
             configCatalog.Add(new ConfigCatalogEntry("GAS/action_lib.json", ConfigMergePolicy.ArrayById, "name"));
             configCatalog.Add(new ConfigCatalogEntry("AI/behavior_trees.json", ConfigMergePolicy.ArrayById, "id"));
             configCatalog.Add(new ConfigCatalogEntry("AI/hfsm.json", ConfigMergePolicy.ArrayById, "id"));
+            configCatalog.Add(new ConfigCatalogEntry("Enums/enums.json", ConfigMergePolicy.ArrayById, "id", arrayAppendFields: new[] { "members" }, allowEmpty: true));
+            EnumCatalog enums = new EnumCatalogLoader(pipeline).Load(configCatalog);
 
-            List<GraphProgramPackage> graphPackages = LoadScriptGraphs(programs, repoRoot);
+            List<GraphProgramPackage> graphPackages = LoadScriptGraphs(programs, repoRoot, enums);
 
             var graphConfigLoader = new GraphProgramConfigLoader(pipeline, programs, new BootstrapGraphSymbolResolver());
             new GraphFunctionCatalogLoader(pipeline, catalog, programs).Load(configCatalog);
@@ -58,7 +60,7 @@ namespace Ludots.Tests.Gas.Graph
             return programs;
         }
 
-        private static List<GraphProgramPackage> LoadScriptGraphs(GraphProgramRegistry programs, string repoRoot)
+        private static List<GraphProgramPackage> LoadScriptGraphs(GraphProgramRegistry programs, string repoRoot, EnumCatalog enums)
         {
             string graphsPath = Path.Combine(repoRoot, "assets", "GAS", "graphs.json");
             JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
@@ -75,7 +77,9 @@ namespace Ludots.Tests.Gas.Graph
                 string id = el.GetProperty("id").GetString()
                     ?? throw new InvalidOperationException("Script graph missing id.");
                 var obj = JsonNode.Parse(el.GetRawText())!.AsObject();
-                var (pkg, _, diags) = GraphProgramAuthoringFrontDoor.CompileJsonObject(obj, id, options);
+                GraphControlFlowCompileResult compiled = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options, eventSchemas: null, enums);
+                var diags = compiled.Diagnostics;
+                var pkg = compiled.Package;
                 foreach (var d in diags)
                 {
                     if (d.Severity == GraphDiagnosticSeverity.Error)
@@ -88,6 +92,10 @@ namespace Ludots.Tests.Gas.Graph
                 {
                     throw new InvalidOperationException($"Compile {id} produced no package.");
                 }
+
+                // Map-var / event symbols lower to symbol-table indices at compile time;
+                // patch them to ConfigKeyRegistry ids exactly like GraphProgramConfigLoader does.
+                GraphProgramSymbolPatcher.Patch(pkg.Value.Symbols, pkg.Value.Program, new BootstrapGraphSymbolResolver());
 
                 int graphId = GraphIdRegistry.Register(id);
                 programs.Register(graphId, pkg.Value.Program, GraphKind.Script, GraphInstructionSourceMap.Empty, pkg.Value.Symbols);

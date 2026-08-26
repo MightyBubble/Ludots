@@ -10,6 +10,7 @@ public enum SystemGroup
     RuntimeEntityBinding,
     AttributeCalculation,
     DeferredTriggerCollection,
+    Continuation,
     Cleanup,
     EventDispatch,
     ClearPresentationFlags,

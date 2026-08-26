@@ -52,20 +52,22 @@ TaskCompletionSource 回包
 | 域 | 工具 | 能力 |
 |----|------|------|
 | 会话 | `ludots.session.info` | tick / 地图 / Mod 清单 / 相机 / 分辨率 |
-| 时间 | `ludots.time.get` · `ludots.time.control` | pause / step N / resume |
-| 相机 | `ludots.camera.control` | get / set / follow / unfollow |
-| 日志 | `ludots.logs.tail` | 进程内日志环形缓冲（桥激活时挂入） |
-| 事件 | `ludots.events.fire` | 经正式 Trigger 路径发事件 |
-| 空间 | `ludots.entities.pick` · `ludots.spatial.query` | 点选 + radius/aabb/cone/rect/line |
-| 导航 | `ludots.nav.project` · `ludots.nav.findPath` | 投影 / 寻路 |
-| 实体 | `ludots.entities.query` | 屏占比、过滤、分页 |
-| UI | `ludots.ui.tree` · `ludots.ui.query` · `ludots.ui.click` | 树 / 选择器 / 点击 |
-| GAS | `ludots.gas.entity` · `ludots.gas.diagnostics` | 属性槽 / 诊断缓冲 |
-| 订单 | `ludots.orders.inspect` · `ludots.orders.issue` | 观测 / 正式 intake 下发 |
-| 输入 | `ludots.input.state` · `ludots.input.inject` · `ludots.input.raw` | 状态 / 语义注入 / 窗口层注入 |
-| 图调试 | `ludots.graph.debug` | GraphDebugTrace list / configure / drain |
-| 帧捕获 | `ludots.screenshot` · `ludots.recording.start/stop` | PNG / 序列录制 |
-| Presenter | `ludots.presenters.query` · `.desync` · `.screen` | 视觉代理全链 / 分歧 / 席位投影 |
+| 时间 | `ludots.time.get` · `ludots.time.control` | pause（换绑 TurnBasedPacemaker）/ step N（响应带 `targetTick`）/ resume |
+| 相机 | `ludots.camera.control` | `get` 姿态与活动虚拟相机；`set` 部分姿态（经 `ApplyPose` 持久）；`follow {entityId}` / `unfollow` 实体跟随 |
+| 日志 | `ludots.logs.tail` | 进程内日志环形缓冲（激活时经 `Log.AddBackend` 挂入）；`count/minLevel/channel/contains` 过滤 |
+| 事件 | `ludots.events.fire` | 经 `TriggerManager.FireEventAsync` 发送任意事件键，响应带本次 `triggerErrors` |
+| 空间 | `ludots.entities.pick` · `ludots.spatial.query` | 屏幕点选实体（生产 `CommandSourcePointerHitResolver` 同算法）；radius/aabb/cone/rect/line 探针（生产 `ISpatialQueryService`） |
+| 导航 | `ludots.nav.project` · `ludots.nav.findPath` | 世界点 → 可行走三角形投影；A→B 寻路 + 路径点 + 代价（生产 `NavQueryService`） |
+| 实体 | `ludots.entities.query` | 世界坐标→屏幕投影 rect、**屏幕占比**、可见性；`offset/limit/nameFilter/onScreenOnly` |
+| Presenter | `ludots.presenters.query` · `ludots.presenters.desync` · `ludots.presenters.screen` | 逻辑→视觉→presenter→emit 全链只读观测；四跳 desync（hop1–4）；按 seat 投影屏内清单；可选 seat×knowledge `shouldSee`/`actualDrawn` 差异（#1062） |
+| UI | `ludots.ui.tree` · `ludots.ui.query` · `ludots.ui.click` | 统一 UiScene 遍历（markup / composite / reactive 三写法归一，browser canvas 节点有标注）；CSS 选择器；elementId 或坐标点击 |
+| GAS | `ludots.gas.entity` · `ludots.gas.diagnostics` | tags（名称解析）/ attributes / active effects / ability 槽位；诊断事件缓冲转储 |
+| 订单 | `ludots.orders.inspect` · `ludots.orders.issue` | 准入/终态缓冲明细；经正式 intake 路径下发订单，全生命周期可观测 |
+| 输入 | `ludots.input.state` · `ludots.input.inject` · `ludots.input.raw` | 输入状态与 UI 捕获；**语义层**注入（press/release/set，走 `PlayerInputHandler.Inject*`）；**窗口层**注入（pointerMove/click/scroll/press/type，经 `SyntheticInputDevice` 与物理输入同管线） |
+| 图调试 | `ludots.graph.debug` | `list` / `configure` / `drain`：挂载的 TriggerGraph 条目与固定容量 live trace（sequence 增量、gap/dropped） |
+| 帧捕获 | `ludots.screenshot` · `ludots.recording.start/stop` | 经 `IHostFrameCapture` 端口抓帧 PNG；录屏为 PNG 序列 + manifest.json，agent 可抽帧阅读 |
+
+单根快路径同步资格以 owner 载荷 `PresentationOwnerHasPresenterPayload` 为唯一决策点（发证与消费同读该结果，#1066）；多根拥有者不得误入无人服务的快路径。
 
 ### 输入两层模型
 

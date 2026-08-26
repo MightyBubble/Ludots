@@ -1,0 +1,4 @@
+[
+  { "id": "roster.unit_box", "type": "Primitive", "primitiveKind": "Cube" },
+  { "id": "roster.enemy_box", "type": "Primitive", "primitiveKind": "Cube" }
+]

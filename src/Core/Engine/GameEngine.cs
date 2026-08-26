@@ -19,7 +19,10 @@ using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
-using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Dialogue;
+using Ludots.Core.Gameplay.Sequencer;
+using Ludots.Core.Gameplay.Story;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Tasks;
@@ -616,9 +619,14 @@ namespace Ludots.Core.Engine
 
             if (reloadAi) RebuildAiRuntime();
 
-            bool reloadNarrative = string.IsNullOrWhiteSpace(group)
-                                 || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
-                                 || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
+            bool reloadStory = string.IsNullOrWhiteSpace(group)
+                                 || string.Equals(group, "Story", StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(group, "Dialogue", StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(group, "Sequencer", StringComparison.OrdinalIgnoreCase)
+                                 || (!string.IsNullOrWhiteSpace(relativePath) && (
+                                     relativePath.StartsWith("Story/", StringComparison.OrdinalIgnoreCase)
+                                     || relativePath.StartsWith("Dialogue/", StringComparison.OrdinalIgnoreCase)
+                                     || relativePath.StartsWith("Sequencer/", StringComparison.OrdinalIgnoreCase)));
             bool reloadActivities = string.IsNullOrWhiteSpace(group)
                                  || string.Equals(group, "Activities", StringComparison.OrdinalIgnoreCase)
                                  || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Activities/", StringComparison.OrdinalIgnoreCase));
@@ -646,30 +654,54 @@ namespace Ludots.Core.Engine
                 taskRuntime.ResetState();
             }
 
-            if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
+            if (reloadStory)
             {
-                new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-                if (GetService(CoreServiceKeys.NarrativeDirector) is NarrativeDirector narrativeDirector)
+                Ludots.Core.Gameplay.Story.LegacyNarrativeConfigGuard.RejectIfPresent(ConfigCatalog);
+                if (GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry storyDefinitions)
                 {
-                    narrativeDirector.ResetNarrativeState();
+                    new StoryConfigLoader(ConfigPipeline, storyDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                }
+
+                if (GetService(CoreServiceKeys.DialogueDefinitions) is DialogueDefinitionRegistry dialogueDefinitions)
+                {
+                    new DialogueConfigLoader(ConfigPipeline, dialogueDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                }
+
+                if (GetService(CoreServiceKeys.SequenceDefinitions) is SequenceDefinitionRegistry sequenceDefinitions)
+                {
+                    new SequencerConfigLoader(ConfigPipeline, sequenceDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                }
+
+                if (GetService(CoreServiceKeys.DialogueRuntime) is DialogueRuntime dialogueRuntime)
+                {
+                    dialogueRuntime.ResetState();
+                }
+
+                if (GetService(CoreServiceKeys.SequencerRuntime) is SequencerRuntime sequencerRuntime)
+                {
+                    sequencerRuntime.ResetState();
                 }
             }
 
-            if (GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry loadedNarrativeDefinitions)
-            {
-                ValidateTaskNarrativeReferences(loadedNarrativeDefinitions);
-            }
+            ValidateTaskStoryReferences();
 
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
         }
 
-        private void ValidateTaskNarrativeReferences(NarrativeDefinitionRegistry narrativeDefinitions)
+        private void ValidateTaskStoryReferences()
         {
             if (GetService(CoreServiceKeys.TaskDefinitionRegistry) is not TaskDefinitionRegistry taskDefinitions)
             {
-                throw new InvalidOperationException("Task definition registry is required before validating narrative references.");
+                throw new InvalidOperationException("Task definition registry is required before validating story references.");
+            }
+
+            DialogueDefinitionRegistry? dialogues = GetService(CoreServiceKeys.DialogueDefinitions);
+            SequenceDefinitionRegistry? sequences = GetService(CoreServiceKeys.SequenceDefinitions);
+            if (dialogues == null || sequences == null)
+            {
+                throw new InvalidOperationException("Dialogue and Sequencer definition registries are required before validating story references.");
             }
 
             foreach (TaskDefinition task in taskDefinitions.Definitions)
@@ -681,87 +713,17 @@ namespace Ludots.Core.Engine
                 }
 
                 if (!string.IsNullOrWhiteSpace(task.OnEnterDialogueId) &&
-                    !narrativeDefinitions.TryGetDialogue(task.OnEnterDialogueId, out _))
+                    !dialogues.TryGet(task.OnEnterDialogueId, out _))
                 {
                     throw new InvalidOperationException(
-                        $"Task '{task.Id}' references missing narrative dialogue '{task.OnEnterDialogueId}'.");
+                        $"Task '{task.Id}' references missing dialogue '{task.OnEnterDialogueId}'.");
                 }
 
-                if (!string.IsNullOrWhiteSpace(task.OnEnterCinematicId) &&
-                    !narrativeDefinitions.TryGetCinematic(task.OnEnterCinematicId, out _))
+                if (!string.IsNullOrWhiteSpace(task.OnEnterSequenceId) &&
+                    !sequences.TryGet(task.OnEnterSequenceId, out _))
                 {
                     throw new InvalidOperationException(
-                        $"Task '{task.Id}' references missing narrative cinematic '{task.OnEnterCinematicId}'.");
-                }
-            }
-
-            foreach (NarrativeDialogueDefinition dialogue in narrativeDefinitions.Dialogues)
-            {
-                foreach (NarrativeDialogueNodeDefinition node in dialogue.Nodes)
-                {
-                    ValidateNarrativeActions(dialogue.Id, node.OnEnter, taskDefinitions, narrativeDefinitions);
-                    foreach (NarrativeDialogueChoiceDefinition choice in node.Choices)
-                    {
-                        ValidateNarrativeConditions(dialogue.Id, choice.Conditions, taskDefinitions);
-                        ValidateNarrativeActions(dialogue.Id, choice.Actions, taskDefinitions, narrativeDefinitions);
-                    }
-                }
-            }
-
-            foreach (NarrativeCinematicDefinition cinematic in narrativeDefinitions.Cinematics)
-            {
-                foreach (NarrativeCinematicStepDefinition step in cinematic.Steps)
-                {
-                    ValidateNarrativeActions(cinematic.Id, step.OnEnter, taskDefinitions, narrativeDefinitions);
-                }
-            }
-        }
-
-        private static void ValidateNarrativeConditions(
-            string ownerId,
-            IReadOnlyList<NarrativeConditionDefinition> conditions,
-            TaskDefinitionRegistry taskDefinitions)
-        {
-            foreach (NarrativeConditionDefinition condition in conditions)
-            {
-                if (condition.Kind == NarrativeConditionKind.TaskState &&
-                    !taskDefinitions.TryGet(condition.TaskId, out _))
-                {
-                    throw new InvalidOperationException(
-                        $"Narrative '{ownerId}' references missing task '{condition.TaskId}' in a condition.");
-                }
-            }
-        }
-
-        private static void ValidateNarrativeActions(
-            string ownerId,
-            IReadOnlyList<NarrativeActionDefinition> actions,
-            TaskDefinitionRegistry taskDefinitions,
-            NarrativeDefinitionRegistry narrativeDefinitions)
-        {
-            foreach (NarrativeActionDefinition action in actions)
-            {
-                if (action.Kind is NarrativeActionKind.StartTask or NarrativeActionKind.CompleteTask or NarrativeActionKind.FailTask)
-                {
-                    if (!taskDefinitions.TryGet(action.TaskId, out _))
-                    {
-                        throw new InvalidOperationException(
-                            $"Narrative '{ownerId}' references missing task '{action.TaskId}' in an action.");
-                    }
-                }
-
-                if (action.Kind == NarrativeActionKind.StartDialogue &&
-                    !narrativeDefinitions.TryGetDialogue(action.DialogueId, out _))
-                {
-                    throw new InvalidOperationException(
-                        $"Narrative '{ownerId}' references missing dialogue '{action.DialogueId}' in an action.");
-                }
-
-                if (action.Kind == NarrativeActionKind.StartCinematic &&
-                    !narrativeDefinitions.TryGetCinematic(action.CinematicId, out _))
-                {
-                    throw new InvalidOperationException(
-                        $"Narrative '{ownerId}' references missing cinematic '{action.CinematicId}' in an action.");
+                        $"Task '{task.Id}' references missing sequence '{task.OnEnterSequenceId}'.");
                 }
             }
         }
@@ -926,8 +888,14 @@ namespace Ludots.Core.Engine
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
-            var customEventRegistry = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventRegistry);
+            // Enums load before events (#1125): custom event params may annotate enumType
+            // against this catalog, and graph compilation resolves enum-bound sugar through it.
+            var enumCatalog = new Ludots.Core.Scripting.EnumCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.EnumCatalog, enumCatalog);
+            var customEventCatalog = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport, enumCatalog);
+            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventCatalog.Names);
+            SetService(CoreServiceKeys.EventSchemaRegistry, customEventCatalog.Schemas);
+            TriggerManager.EventSchemas = customEventCatalog.Schemas;
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var scopeResolver = new ScopeResolver(World, progressionScopeKeys, entityCollectionStore, relationshipRuntime);
@@ -987,7 +955,9 @@ namespace Ludots.Core.Engine
                 graphOutputValueKeyRegistry,
                 entityCollectionStore,
                 graphOps,
-                builtinHandlers);
+                builtinHandlers,
+                customEventCatalog.Schemas,
+                enumCatalog);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -1106,6 +1076,9 @@ namespace Ludots.Core.Engine
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
+            var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
+            SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
+            gasGraphApi.BindGraphCallbackService(graphCallbackService);
             gasGraphApi.BindRngPickService(rngPickService);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -1116,15 +1089,23 @@ namespace Ludots.Core.Engine
                 graphHandlers,
                 entityCollectionStore,
                 graphOutputValueStore);
+            var panelProjectionReader = new PanelProjectionReader(World, graphOutputValueStore);
+            var panelGraphEvaluator = new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi);
             var panelHost = new PanelHost(
                 panelTemplates,
-                new PanelProjectionReader(World, graphOutputValueStore),
-                new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi));
+                panelProjectionReader,
+                panelGraphEvaluator,
+                new Ludots.Core.UI.PanelProjection.PanelListProjector(
+                    World,
+                    entityCollectionStore,
+                    panelProjectionReader,
+                    panelGraphEvaluator));
             gasGraphApi.BindPanelHost(panelHost);
             var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
             gasGraphApi.BindPanelActivation(panelActivationApi);
             gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
+            gasGraphApi.BindPlacedInstanceIndexResolver(mapId => MapSessions?.GetSession(mapId)?.EntityIndex);
             var progressionEvaluator = new ProgressionRequirementEvaluator(
                 World,
                 progressionRequirements,
@@ -1830,6 +1811,19 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             SetService(CoreServiceKeys.PresentationTextCatalog, presentationTextCatalog);
             SetService(CoreServiceKeys.PresentationTextLocaleSelection, presentationTextLocaleSelection);
+            var presentationSemanticMaps = new PresentationSemanticMapCatalogLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var presentationImageAssets = new PresentationImageAssetCatalogLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var presentationDisplayResolver = new PresentationDisplayResolver(
+                presentationTextCatalog,
+                presentationTextLocaleSelection,
+                presentationSemanticMaps,
+                presentationImageAssets,
+                VFS);
+            SetService(CoreServiceKeys.PresentationSemanticMapCatalog, presentationSemanticMaps);
+            SetService(CoreServiceKeys.PresentationImageAssetCatalog, presentationImageAssets);
+            SetService(CoreServiceKeys.PresentationDisplayResolver, presentationDisplayResolver);
             var screenHudBuffer = new ScreenHudBatchBuffer(presentationConfig.ScreenHudCapacity);
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
             SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
@@ -1897,12 +1891,32 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
-            var narrativeDefinitions = new NarrativeDefinitionRegistry();
-            new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            ValidateTaskNarrativeReferences(narrativeDefinitions);
-            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, taskRuntime);
-            SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
-            SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
+            LegacyNarrativeConfigGuard.RejectIfPresent(ConfigCatalog);
+            var storyDefinitions = new StoryDefinitionRegistry();
+            new StoryConfigLoader(ConfigPipeline, storyDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            var dialogueDefinitions = new DialogueDefinitionRegistry();
+            new DialogueConfigLoader(ConfigPipeline, dialogueDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            var sequenceDefinitions = new SequenceDefinitionRegistry();
+            new SequencerConfigLoader(ConfigPipeline, sequenceDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.StoryDefinitions, storyDefinitions);
+            SetService(CoreServiceKeys.DialogueDefinitions, dialogueDefinitions);
+            SetService(CoreServiceKeys.SequenceDefinitions, sequenceDefinitions);
+            ValidateTaskStoryReferences();
+            var storyGraphs = new StoryGraphInvoker(this);
+            PresentationTextCatalog? textCatalog = GetService(CoreServiceKeys.PresentationTextCatalog);
+            PresentationDisplayResolver? displayResolver = GetService(CoreServiceKeys.PresentationDisplayResolver);
+            var dialogueRuntime = new DialogueRuntime(
+                this,
+                dialogueDefinitions,
+                storyDefinitions,
+                storyGraphs,
+                taskRuntime,
+                textCatalog,
+                displayResolver);
+            var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog);
+            SetService(CoreServiceKeys.StoryGraphInvoker, storyGraphs);
+            SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
+            SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
             AttributeRegistry.Freeze();
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
@@ -1924,7 +1938,7 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
-            RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
+            RegisterSystem(new StoryRuntimeSystem(dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
@@ -1936,7 +1950,10 @@ namespace Ludots.Core.Engine
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
             var poseAuthorityArbiter = new PoseAuthorityArbiter();
             SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
-            var attachmentPositionSyncSystem = new Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem(World, poseAuthorityArbiter);
+            var attachmentPositionSyncSystem = new Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem(
+                World,
+                poseAuthorityArbiter,
+                MergedConfig.GasRuntimeCapacity.AttachmentPositionSyncScratchCapacity);
             SetService(CoreServiceKeys.AttachmentPositionSync, attachmentPositionSyncSystem);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
@@ -2099,6 +2116,13 @@ namespace Ludots.Core.Engine
                     () => GetService(CoreServiceKeys.AuthoritativeInput),
                     inputTriggerActions),
                 SystemGroup.DeferredTriggerCollection);
+
+            // Phase 5.5: Continuation (#1126 AwaitCallback drain — registration order)
+            RegisterSystem(
+                new Ludots.Core.GraphRuntime.GraphCallbackContinuationSystem(
+                    GetService(CoreServiceKeys.GraphCallbackService)
+                    ?? throw new InvalidOperationException("GraphCallbackService missing before Continuation phase registration.")),
+                SystemGroup.Continuation);
 
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
@@ -2427,7 +2451,7 @@ namespace Ludots.Core.Engine
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
-                WireMapVariablePhaseDispatcher(session);
+                WireMapVariableChangedDispatcher(session);
                 // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
                 session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
                 session.VisualHeightmap = visualHeightmap;
@@ -2476,11 +2500,7 @@ namespace Ludots.Core.Engine
                 var definition = ((MapManager)MapManager).GetDefinition(mid);
                 var triggers = InstantiateMapTriggers(definition, mapConfig, session);
                 ApplyTriggerDecorators(triggers);
-                if (triggers.Count > 0)
-                {
-                    foreach (var t in triggers) session.AddTrigger(t);
-                    TriggerManager.RegisterMapTriggers(mid, triggers);
-                }
+                RegisterSessionTriggers(mid, session, triggers);
 
                 if (pendingMapLoadStarted)
                 {
@@ -2596,7 +2616,7 @@ namespace Ludots.Core.Engine
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = mapSessions.CreateSession(inner, mapConfig, parentCtx);
-            WireMapVariablePhaseDispatcher(session);
+            WireMapVariableChangedDispatcher(session);
             session.VisualHeightmap = visualHeightmap;
             BindStructureCollisionSession(session, visualHeightmap, structureCollision);
 
@@ -2658,11 +2678,7 @@ namespace Ludots.Core.Engine
             var definition = ((MapManager)MapManager).GetDefinition(inner);
             var triggers = InstantiateMapTriggers(definition, mapConfig, session);
             ApplyTriggerDecorators(triggers);
-            if (triggers.Count > 0)
-            {
-                foreach (var t in triggers) session.AddTrigger(t);
-                TriggerManager.RegisterMapTriggers(inner, triggers);
-            }
+            RegisterSessionTriggers(inner, session, triggers);
 
             if (pendingMapLoadStarted)
             {
@@ -2898,8 +2914,64 @@ namespace Ludots.Core.Engine
             }
         }
 
+        /// <summary>
+        /// Registration exit for a loaded map's trigger batch (#1123 scope routing): the
+        /// session owns every instance, while dispatch registration splits by subscription
+        /// scope — schema-declared Global entries go to the TriggerManager global table,
+        /// everything else (legacy triggers, map-domain entries, resume companions,
+        /// entity mounts) goes to the map table.
+        /// </summary>
+        private void RegisterSessionTriggers(MapId mapId, MapSession session, List<Trigger> triggers)
+        {
+            if (triggers.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var t in triggers) session.AddTrigger(t);
+
+            List<Trigger>? globalTriggers = null;
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is Gameplay.MapTriggers.TriggerGraphMountTrigger
+                    {
+                        SubscriptionScope: Ludots.Core.Scripting.EventScope.Global
+                    })
+                {
+                    (globalTriggers ??= new List<Trigger>()).Add(triggers[i]);
+                }
+            }
+
+            if (globalTriggers == null)
+            {
+                TriggerManager.RegisterMapTriggers(mapId, triggers);
+                return;
+            }
+
+            var mapTriggers = new List<Trigger>(triggers.Count - globalTriggers.Count);
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is not Gameplay.MapTriggers.TriggerGraphMountTrigger
+                    {
+                        SubscriptionScope: Ludots.Core.Scripting.EventScope.Global
+                    })
+                {
+                    mapTriggers.Add(triggers[i]);
+                }
+            }
+
+            TriggerManager.RegisterMapTriggers(mapId, mapTriggers);
+            TriggerManager.RegisterGlobalTriggers(mapId, globalTriggers);
+        }
+
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
         {
+            // Same suspension boundary drives global-scope subscriptions (#1123): a
+            // suspended map (lost focus, or still mid-load) detaches its global
+            // subscriptions wholesale so FireGlobalEvent never dispatches into an
+            // inactive map; resume reattaches them in priority order.
+            TriggerManager.SetGlobalTriggersSuspended(mapId, suspended);
+
             var entities = new List<Entity>();
             World.Query(in _mapEntitySuspendQuery, (Entity entity, ref MapEntity mapEntity) =>
             {
@@ -3307,7 +3379,8 @@ namespace Ludots.Core.Engine
                 GetService(CoreServiceKeys.GraphProgramRegistry),
                 EntityTriggerGraphMounts,
                 GetService(CoreServiceKeys.CustomEventNameRegistry),
-                GetService(CoreServiceKeys.AbilityDefinitionRegistry)));
+                GetService(CoreServiceKeys.AbilityDefinitionRegistry),
+                TriggerManager.EventSchemas));
 
             // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));

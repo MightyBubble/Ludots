@@ -69,6 +69,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public GraphDebugTrace? DebugTrace;
         public int GraphId;
         public MapId? MapScope;
+        public GraphEntryPayloadTable? EntryPayload;
+        public GraphEntryPayloadTable? InvokeArgs;
 
         public static GraphFrame Bind(
             GraphKind kind,
@@ -89,7 +91,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             uint randomSeed = 0,
             GraphEventPayload eventPayload = default,
             GraphDebugTrace? debugTrace = null,
-            MapId? mapScope = null)
+            MapId? mapScope = null,
+            GraphEntryPayloadTable? entryPayload = null,
+            GraphEntryPayloadTable? invokeArgs = null)
         {
             if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
             {
@@ -151,7 +155,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Cursor = cursor,
                 DebugTrace = debugTrace,
                 GraphId = 0,
-                MapScope = mapScope
+                MapScope = mapScope,
+                EntryPayload = entryPayload,
+                InvokeArgs = invokeArgs
             };
         }
 
@@ -182,7 +188,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Status = GraphExecutionStatus.Running,
                 CurrentGraphId = GraphId,
                 DebugTrace = DebugTrace,
-                MapScope = MapScope
+                MapScope = MapScope,
+                EntryPayload = EntryPayload,
+                InvokeArgs = InvokeArgs
             };
         }
     }
