@@ -1,0 +1,13 @@
+{
+  "op": "QueryCollectAbilityHolders",
+  "driver": "query",
+  "title": "谁会这招",
+  "beat": "会这招的人被点名线牵住。",
+  "detailTemplate": "点到{count}个会这招的人。",
+  "assertDetailContains": [
+    "会这招"
+  ],
+  "featuredNodeId": "collect",
+  "graphKind": "Query",
+  "field": "query"
+}
