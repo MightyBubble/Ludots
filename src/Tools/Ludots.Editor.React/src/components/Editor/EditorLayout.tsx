@@ -14,6 +14,18 @@ export const EditorLayout: React.FC = () => {
             >
                 Panel Authoring →
             </Link>
+            <Link
+                to="/story-authoring"
+                className="absolute bottom-4 right-44 z-50 rounded-md border border-amber-500/40 bg-black/80 px-3 py-2 font-mono text-xs text-amber-300 hover:bg-amber-500/10"
+            >
+                叙事配置 →
+            </Link>
+            <Link
+                to="/gas-graphs"
+                className="absolute bottom-4 right-96 z-50 rounded-md border border-sky-500/40 bg-black/80 px-3 py-2 font-mono text-xs text-sky-300 hover:bg-sky-500/10"
+            >
+                Graph Editor →
+            </Link>
         </div>
     );
 };

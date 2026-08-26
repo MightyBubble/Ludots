@@ -13,14 +13,17 @@ namespace NarrativeShowcaseMod
         public const string ElderAlias = "elder";
         public const string ShrineAlias = "shrine";
         public const string BeastAlias = "beast";
+        public const string WardenSpeakerId = "speaker.warden";
+        public const string ShrineSpeakerId = "speaker.shrine";
+        public const string PlayerSpeakerId = "speaker.player";
 
         public const string BriefingTaskId = "Task.Narrative.AshenOath.Briefing";
         public const string TrialTaskId = "Task.Narrative.AshenOath.Trial";
         public const string ReturnTaskId = "Task.Narrative.AshenOath.Return";
         public const string BriefingDialogueId = "Dialogue.Narrative.Briefing";
         public const string ReturnDialogueId = "Dialogue.Narrative.Return";
-        public const string IntroCinematicId = "Cinematic.Narrative.Intro";
-        public const string TrialRevealCinematicId = "Cinematic.Narrative.TrialReveal";
+        public const string IntroSequenceId = "Sequence.Narrative.Intro";
+        public const string TrialRevealSequenceId = "Sequence.Narrative.TrialReveal";
 
         public const string SpawnBeastSignal = "showcase.spawn_beast";
         public const string BeastDefeatedSignal = "showcase.beast_defeated";
@@ -29,6 +32,16 @@ namespace NarrativeShowcaseMod
         public const string TrustVariableId = "trust";
         public const string LoreVariableId = "lore";
         public const string EndingVariableId = "ending";
+        public const string TrialPhaseVariableId = "trial_phase";
+
+        public const int EndingUnwritten = 0;
+        public const int EndingDuty = 1;
+        public const int EndingMercy = 2;
+
+        public const string PresentationDialogueOverlay = "story.dialogue_overlay";
+        public const string PresentationWorldBubble = "story.world_bubble";
+        public const string PresentationImmersiveSubtitle = "story.immersive_subtitle";
+        public const string PresentationStandingPortrait = "story.standing_portrait";
 
         public const string ActiveMapKey = "NarrativeShowcase.ActiveMap";
         public const string BootstrappedKey = "NarrativeShowcase.Bootstrapped";

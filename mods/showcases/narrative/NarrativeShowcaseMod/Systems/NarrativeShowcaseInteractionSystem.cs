@@ -4,8 +4,9 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Dialogue;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Scripting;
 using NarrativeShowcaseMod.Runtime;
@@ -30,86 +31,97 @@ namespace NarrativeShowcaseMod.Systems
 
         public void Update(in float dt)
         {
-            if (!_runtime.IsShowcaseActive(_engine) || _engine.GetService(CoreServiceKeys.NarrativeDirector) is not NarrativeDirector director)
+            if (!_runtime.IsShowcaseActive(_engine) ||
+                _engine.GetService(CoreServiceKeys.DialogueRuntime) is not DialogueRuntime dialogue ||
+                _engine.GetService(CoreServiceKeys.SequencerRuntime) is not SequencerRuntime sequencer ||
+                _engine.GetService(CoreServiceKeys.TaskRuntimeService) is not TaskRuntimeService tasks)
             {
                 return;
             }
 
             _runtime.RebindEntities(_engine);
-            TrackBeastDefeat(director);
+            TrackBeastDefeat(dialogue, tasks);
 
             var input = _engine.GetService(CoreServiceKeys.AuthoritativeInput);
-            if (input == null || !input.PressedThisFrame(NarrativeInputActionIds.Interact) || director.HasActiveDialogue || director.HasActiveCinematic)
+            if (input == null ||
+                !input.PressedThisFrame(DialogueInputActionIds.Interact) ||
+                dialogue.HasActiveDialogue ||
+                sequencer.HasActiveSequence)
             {
                 return;
             }
 
-            if (!director.TryResolveEntity(NarrativeShowcaseIds.PlayerAlias, out Entity player) ||
+            if (!dialogue.TryResolveEntity(NarrativeShowcaseIds.PlayerAlias, out Entity player) ||
                 !_engine.World.TryGet(player, out WorldPositionCm playerPos))
             {
                 return;
             }
 
-            if (TryInteractElder(director, playerPos))
+            if (TryInteractElder(dialogue, tasks, playerPos))
             {
                 return;
             }
 
-            TryInteractShrine(director, playerPos);
+            TryInteractShrine(dialogue, sequencer, tasks, playerPos);
         }
 
-        private bool TryInteractElder(NarrativeDirector director, WorldPositionCm playerPos)
+        private bool TryInteractElder(DialogueRuntime dialogue, TaskRuntimeService tasks, WorldPositionCm playerPos)
         {
-            if (!director.TryResolveEntity(NarrativeShowcaseIds.ElderAlias, out Entity elder) ||
+            if (!dialogue.TryResolveEntity(NarrativeShowcaseIds.ElderAlias, out Entity elder) ||
                 !_engine.World.TryGet(elder, out WorldPositionCm elderPos) ||
                 !IsNear(playerPos, elderPos, 420f))
             {
                 return false;
             }
 
-            if (director.TryGetTaskState(NarrativeShowcaseIds.BriefingTaskId, out var briefingState) &&
+            if (tasks.TryGetState(NarrativeShowcaseIds.BriefingTaskId, out var briefingState) &&
                 briefingState == TaskInstanceState.Active)
             {
-                director.StartDialogue(NarrativeShowcaseIds.BriefingDialogueId);
+                dialogue.StartDialogue(NarrativeShowcaseIds.BriefingDialogueId);
                 return true;
             }
 
-            if (director.TryGetTaskState(NarrativeShowcaseIds.ReturnTaskId, out var returnState) &&
+            if (tasks.TryGetState(NarrativeShowcaseIds.ReturnTaskId, out var returnState) &&
                 returnState == TaskInstanceState.Active)
             {
-                director.StartDialogue(NarrativeShowcaseIds.ReturnDialogueId);
+                dialogue.StartDialogue(NarrativeShowcaseIds.ReturnDialogueId);
                 return true;
             }
 
             return false;
         }
 
-        private void TryInteractShrine(NarrativeDirector director, WorldPositionCm playerPos)
+        private void TryInteractShrine(
+            DialogueRuntime dialogue,
+            SequencerRuntime sequencer,
+            TaskRuntimeService tasks,
+            WorldPositionCm playerPos)
         {
             if (_runtime.BeastSpawned(_engine))
             {
                 return;
             }
 
-            if (!director.TryGetTaskState(NarrativeShowcaseIds.TrialTaskId, out var trialState) ||
+            if (!tasks.TryGetState(NarrativeShowcaseIds.TrialTaskId, out var trialState) ||
                 trialState != TaskInstanceState.Active)
             {
                 return;
             }
 
-            if (!director.TryResolveEntity(NarrativeShowcaseIds.ShrineAlias, out Entity shrine) ||
+            if (!dialogue.TryResolveEntity(NarrativeShowcaseIds.ShrineAlias, out Entity shrine) ||
                 !_engine.World.TryGet(shrine, out WorldPositionCm shrinePos) ||
                 !IsNear(playerPos, shrinePos, 360f))
             {
                 return;
             }
 
-            director.StartCinematic(NarrativeShowcaseIds.TrialRevealCinematicId);
+            sequencer.Start(NarrativeShowcaseIds.TrialRevealSequenceId);
         }
 
-        private void TrackBeastDefeat(NarrativeDirector director)
+        private void TrackBeastDefeat(DialogueRuntime dialogue, TaskRuntimeService tasks)
         {
-            if (_runtime.BeastDefeated(_engine) || !director.TryResolveEntity(NarrativeShowcaseIds.BeastAlias, out Entity beast))
+            if (_runtime.BeastDefeated(_engine) ||
+                !dialogue.TryResolveEntity(NarrativeShowcaseIds.BeastAlias, out Entity beast))
             {
                 return;
             }
@@ -120,10 +132,11 @@ namespace NarrativeShowcaseMod.Systems
             }
 
             int healthId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Health");
-            if (healthId != Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.InvalidId && attributes.GetCurrent(healthId) <= 0f)
+            if (healthId != Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.InvalidId &&
+                attributes.GetCurrent(healthId) <= 0f)
             {
                 _runtime.MarkBeastDefeated(_engine);
-                director.EmitSignal(NarrativeShowcaseIds.BeastDefeatedSignal);
+                _runtime.EmitShowcaseSignal(_engine, tasks, NarrativeShowcaseIds.BeastDefeatedSignal);
             }
         }
 

@@ -1,0 +1,47 @@
+{
+  "defaultLocale": "en-US",
+  "locales": {
+    "en-US": {
+      "story.speaker.warden.name": "Warden Mirelle",
+      "story.speaker.player.name": "Arcweaver",
+      "story.speaker.shrine.name": "Ember Shrine",
+      "story.ending.mercy": "Mercy",
+      "story.ending.duty": "Duty",
+      "story.warden.intro.elder": "The lanterns still burn. That means the valley is still waiting for a witness.",
+      "story.warden.intro.shrine": "Wake the shrine, face what it sends, and bring me back a judgment worth keeping.",
+      "story.warden.briefing.001": "The Ember Shrine keeps count of every oath we break. Step close and choose how you want to enter the trial.",
+      "story.player.briefing.lore": "Tell me what the shrine remembers.",
+      "story.player.briefing.accept_now": "I am ready. Open the path.",
+      "story.warden.briefing.lore_reply": "Then listen well: the shrine marks every oath, every mercy, every lie. Carry that ember-memory with you.",
+      "story.player.briefing.accept_after_lore": "Then let the shrine judge me.",
+      "story.warden.briefing.accept": "Go to the shrine. Wake what sleeps beneath it, and return when you can name what should survive.",
+      "story.shrine.reveal.001": "The shrine cracks. Heat rolls out across the flagstones.",
+      "story.warden.return.001": "You came back alive. Now answer plainly: what should this valley remember from the Ashen Beast?",
+      "story.player.return.duty": "Seal the story. Let duty keep the valley safe.",
+      "story.player.return.mercy": "Remember it. Fear without memory will only grow back.",
+      "story.warden.return.duty_outro": "Then the valley keeps its ward, and you leave it stronger than you found it.",
+      "story.warden.return.mercy_outro": "Then the valley keeps a memory instead of a scar."
+    },
+    "zh-CN": {
+      "story.speaker.warden.name": "看守米蕾尔",
+      "story.speaker.player.name": "织弧者",
+      "story.speaker.shrine.name": "余烬神龛",
+      "story.ending.mercy": "仁慈",
+      "story.ending.duty": "职责",
+      "story.warden.intro.elder": "灯火仍在燃烧。这说明山谷仍在等待一位见证者。",
+      "story.warden.intro.shrine": "唤醒神龛，面对它派出的存在，再带给我一个值得铭记的裁决。",
+      "story.warden.briefing.001": "余烬神龛会记下我们打破的每一份誓言。靠近它，并选择你进入试炼的方式。",
+      "story.player.briefing.lore": "告诉我神龛记得什么。",
+      "story.player.briefing.accept_now": "我准备好了。打开道路。",
+      "story.warden.briefing.lore_reply": "那就仔细听：神龛铭记每一份誓言、每一次仁慈、每一个谎言。把那份余烬记忆带在身上。",
+      "story.player.briefing.accept_after_lore": "那就让神龛审判我。",
+      "story.warden.briefing.accept": "去神龛。唤醒沉睡其下的东西，等你能说出什么应当留下时再回来。",
+      "story.shrine.reveal.001": "神龛开裂。热浪翻过石板。",
+      "story.warden.return.001": "你活着回来了。现在直说：这座山谷该从灰烬兽身上记住什么？",
+      "story.player.return.duty": "封存这段故事。让职责守住山谷。",
+      "story.player.return.mercy": "记住它。没有记忆的恐惧只会再次生长。",
+      "story.warden.return.duty_outro": "那么山谷守住它的防线，你留下的比你找到时更坚固。",
+      "story.warden.return.mercy_outro": "那么山谷留下的是记忆，而不是伤疤。"
+    }
+  }
+}

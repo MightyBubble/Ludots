@@ -5122,20 +5122,22 @@
       "id": "narrative",
       "path": "mods/showcases/narrative/NarrativeShowcaseMod",
       "projectPath": "NarrativeShowcaseMod.csproj",
-      "title": "叙事对话演出",
-      "summary": "叙事基建（对话/演出/变量/条件/动作）集成 showcase，可玩验收覆盖。",
+      "title": "叙事：对话 + 演出",
+      "summary": "开场 Sequencer 镜头字幕、对话选项、试炼演出轨与立绘同台。一幕一屏。换肤用 narrative_theme_*（含九宫格框图）。",
       "tier": "T2",
       "category": "capability",
-      "binding": null,
-      "preset": null,
+      "binding": "narrative",
+      "preset": "narrative_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "NarrativeShowcasePlayableAcceptanceTests",
-      "artifactDir": null,
+      "artifactDir": "artifacts/acceptance/narrative-showcase",
       "screenshot": null,
       "status": "active",
       "tags": [
-        "narrative"
+        "narrative",
+        "dialogue",
+        "sequencer"
       ]
     },
     {
@@ -8038,6 +8040,75 @@
       "video": "artifacts/evidence/capability_standard_graph_op_AwaitCallback/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "narrative_theme_sanguo",
+      "path": "mods/showcases/narrative_theme_sanguo/NarrativeThemeSanguoMod",
+      "projectPath": null,
+      "title": "叙事换肤·三国",
+      "summary": "0 代码壳：panelTheme=story-sanguo（朱砂乌木 + 九宫格框）。玩法复用 NarrativeShowcaseMod。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "narrative_theme_sanguo",
+      "preset": "narrative_theme_sanguo_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/narrative_theme_sanguo",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "narrative",
+        "panelTheme",
+        "zero-code",
+        "nineslice"
+      ]
+    },
+    {
+      "id": "narrative_theme_fantasy",
+      "path": "mods/showcases/narrative_theme_fantasy/NarrativeThemeFantasyMod",
+      "projectPath": null,
+      "title": "叙事换肤·奇幻",
+      "summary": "0 代码壳：panelTheme=story-fantasy（羊皮鎏金 + 九宫格框）。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "narrative_theme_fantasy",
+      "preset": "narrative_theme_fantasy_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/narrative_theme_fantasy",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "narrative",
+        "panelTheme",
+        "zero-code",
+        "nineslice"
+      ]
+    },
+    {
+      "id": "narrative_theme_acnh",
+      "path": "mods/showcases/narrative_theme_acnh/NarrativeThemeAcnhMod",
+      "projectPath": null,
+      "title": "叙事换肤·动森",
+      "summary": "0 代码壳：panelTheme=story-acnh（软圆角薄荷绿 + 九宫格框）。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "narrative_theme_acnh",
+      "preset": "narrative_theme_acnh_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/narrative_theme_acnh",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "narrative",
+        "panelTheme",
+        "zero-code",
+        "nineslice"
+      ]
     }
   ]
 }

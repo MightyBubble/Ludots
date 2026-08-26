@@ -1,41 +1,30 @@
 {
   "ownerId": "NarrativeShowcase",
-  "backdropHex": "#04070C08",
+  "backdropHex": "#05080FCC",
   "promptRibbon": {
     "anchor": "BottomCenter",
     "width": 980,
     "offsetY": 140,
     "zIndex": 55,
-    "title": "Narrative Showcase",
-    "backgroundHex": "#08121CE8",
-    "borderHex": "#2D4F69",
-    "foregroundHex": "#F5F7FA",
+    "title": "灰烬谷",
     "accentHex": "#F6C56B"
   },
   "objectiveTracker": {
     "anchor": "TopLeft",
     "width": 390,
     "zIndex": 40,
-    "eyebrow": "Task Tracker",
-    "title": "Ashen Oath",
-    "footer": "Task, objective, and hint all come from NarrativeDirector state plus showcase config.",
-    "backgroundHex": "#0B1520E6",
-    "borderHex": "#294259",
-    "foregroundHex": "#F5F7FA",
-    "mutedHex": "#B5C5D3",
+    "eyebrow": "任务",
+    "title": "灰烬誓约",
+    "footer": "跟着眼前这一步走就行。",
     "accentHex": "#76D8FF"
   },
   "historyJournal": {
     "anchor": "TopRight",
     "width": 420,
     "zIndex": 42,
-    "eyebrow": "Flow Review",
-    "title": "Narrative Log",
-    "footer": "Task, dialogue, cinematic, signal, GAS reward, and trigger callbacks accumulate here.",
-    "backgroundHex": "#09131DE6",
-    "borderHex": "#243C53",
-    "foregroundHex": "#F5F7FA",
-    "mutedHex": "#B2C1D0",
+    "eyebrow": "回顾",
+    "title": "刚才发生了什么",
+    "footer": "演过的对话与演出会出现在这里。",
     "accentHex": "#8BE9FD"
   },
   "variablesPanel": {
@@ -43,13 +32,9 @@
     "width": 390,
     "offsetY": 214,
     "zIndex": 41,
-    "eyebrow": "Branch State",
-    "title": "Variables",
-    "footer": "Conditions and branch outcomes stay fully data-driven.",
-    "backgroundHex": "#0B1520E6",
-    "borderHex": "#2E4B63",
-    "foregroundHex": "#F5F7FA",
-    "mutedHex": "#B2C2CF",
+    "eyebrow": "状态",
+    "title": "剧情进度",
+    "footer": "分支会写在这里。",
     "accentHex": "#A7F3D0"
   },
   "overlayDialogue": {
@@ -57,12 +42,8 @@
     "width": 760,
     "offsetY": 28,
     "zIndex": 60,
-    "eyebrow": "Overlay Dialogue",
-    "footer": "Enter advances | Number keys commit choices | Tab skips cinematics",
-    "backgroundHex": "#08111BEF",
-    "borderHex": "#5AD7E9FF",
-    "foregroundHex": "#F8FAFC",
-    "mutedHex": "#C6D3DE",
+    "eyebrow": "交谈",
+    "footer": "回车继续 · 1/2/3 选回复",
     "accentHex": "#F6C56B"
   },
   "dialogueBubble": {
@@ -71,25 +52,27 @@
     "offsetX": 28,
     "offsetY": 12,
     "zIndex": 58,
-    "eyebrow": "Bubble Dialogue",
-    "footer": "This node is rendered as an in-world bubble style panel instead of a full overlay.",
-    "backgroundHex": "#0C1622E8",
-    "borderHex": "#49FFFFFF",
-    "foregroundHex": "#F5F7FA",
-    "mutedHex": "#A9B9C9",
+    "eyebrow": "附近",
+    "footer": "",
     "accentHex": "#F0C36B"
+  },
+  "standingPortrait": {
+    "anchor": "BottomLeft",
+    "width": 1180,
+    "offsetX": 24,
+    "offsetY": 20,
+    "zIndex": 62,
+    "eyebrow": "立绘",
+    "footer": "回车继续 · 1/2/3 选回复",
+    "accentHex": "#F6C56B"
   },
   "subtitleBubble": {
     "anchor": "BottomCenter",
     "width": 720,
     "offsetY": 84,
     "zIndex": 59,
-    "eyebrow": "Auto Bubble",
-    "footer": "Auto-advance subtitle bubbles can still be skipped through gameplay input.",
-    "backgroundHex": "#08121CE8",
-    "borderHex": "#31546B",
-    "foregroundHex": "#F2F6FA",
-    "mutedHex": "#AFC3D4",
+    "eyebrow": "旁白",
+    "footer": "Tab 跳过这段",
     "accentHex": "#F59E0B"
   },
   "choiceList": {
@@ -97,13 +80,9 @@
     "width": 440,
     "offsetY": 12,
     "zIndex": 61,
-    "eyebrow": "Choice Grid",
-    "title": "Available Responses",
-    "footer": "Choice availability comes from narrative conditions, not UI-side branching.",
-    "backgroundHex": "#0A1220E8",
-    "borderHex": "#2F4358",
-    "foregroundHex": "#F8FAFC",
-    "mutedHex": "#B7C5D2",
+    "eyebrow": "回复",
+    "title": "你怎么说？",
+    "footer": "",
     "accentHex": "#F6C56B"
   },
   "transmissionOverlay": {
@@ -111,42 +90,98 @@
     "width": 420,
     "offsetY": 236,
     "zIndex": 56,
-    "eyebrow": "Transmission",
-    "footer": "Cinematic callouts can occupy a separate overlay channel from dialogue and objectives.",
-    "backgroundHex": "#08121CE0",
-    "borderHex": "#2A536B",
-    "foregroundHex": "#E7F5FF",
-    "mutedHex": "#A7C6D8",
+    "eyebrow": "传讯",
+    "footer": "",
     "accentHex": "#7DD3FC"
   },
   "hints": {
-    "promptTitle": "Narrative Showcase",
-    "explorePrompt": "Select Arcweaver, move to the shrine with RMB, and press E to wake the trial.",
-    "choicePrompt": "Overlay dialogue is active: use 1/2/3 for choices or Enter to advance non-choice nodes.",
-    "combatPrompt": "The Ashen Beast is loose: right-click to approach, then use Q/W/E/R/Space to engage through ECS + GAS.",
-    "returnPrompt": "The trial is resolved: go back to Warden Mirelle and choose the ending branch.",
-    "skipPrompt": "Tab skips the current cinematic if you already understand the beat.",
-    "autoAdvancePrompt": "This subtitle bubble is auto-advancing; progress is driven by runtime elapsed time."
+    "promptTitle": "灰烬谷",
+    "explorePrompt": "选中织弧者，右键走到神龛旁，按 E 开启试炼。",
+    "choicePrompt": "有人在等你回话：按 1/2/3 选择，或回车继续。",
+    "combatPrompt": "灰烬兽已经出现：右键靠近，用 Q/W/E/R/空格应战。",
+    "returnPrompt": "试炼结束了：回到守望者米蕾勒身边，选一个结局。",
+    "skipPrompt": "这段演出可以用 Tab 跳过。",
+    "autoAdvancePrompt": "这句旁白会按时推进。"
   },
   "templates": {
     "objectiveTitleFormat": "{task}",
     "variableCaptionFormat": "{label}: {value}",
-    "taskActivated": "Task activated -> {bodyText}",
-    "dialogueEntered": "{speaker}: {bodyText}",
-    "dialogueChoiceCommitted": "Choice locked -> {bodyText}",
-    "cinematicEntered": "Cinematic beat -> {speaker}: {bodyText}",
-    "taskCompleted": "Task completed -> {taskId}",
-    "signal": "Signal -> {signalId}",
-    "beastSpawned": "Runtime entity queue delivered the Ashen Beast into the shrine arena.",
-    "rewardApplied": "Reward signal resolved into healing + movement blessing through GAS effects."
+    "taskActivated": "新任务：{bodyText}",
+    "dialogueEntered": "{speaker}：{bodyText}",
+    "dialogueChoiceCommitted": "你选择了：{bodyText}",
+    "sequenceEntered": "{speaker}：{bodyText}",
+    "taskCompleted": "完成：{taskId}",
+    "signal": "信号：{signalId}",
+    "beastSpawned": "灰烬兽走进了神龛场地。",
+    "rewardApplied": "你感到伤口愈合，脚步也轻了一点。"
   },
   "routing": {
-    "transmissionCinematicIds": [ "Cinematic.Narrative.Intro" ],
-    "subtitleCinematicIds": [ "Cinematic.Narrative.TrialReveal" ]
+    "transmissionSequenceIds": [
+      "Sequence.Narrative.Intro"
+    ],
+    "subtitleSequenceIds": [
+      "Sequence.Narrative.TrialReveal"
+    ],
+    "choiceSignals": [
+      {
+        "choiceId": "briefing_accept_now",
+        "signals": [
+          "showcase.briefing_accepted"
+        ]
+      },
+      {
+        "choiceId": "briefing_accept_after_lore",
+        "signals": [
+          "showcase.briefing_accepted"
+        ]
+      },
+      {
+        "choiceId": "return_duty",
+        "signals": [
+          "showcase.reward_apply",
+          "showcase.verdict_delivered"
+        ]
+      },
+      {
+        "choiceId": "return_mercy",
+        "signals": [
+          "showcase.reward_apply",
+          "showcase.verdict_delivered"
+        ]
+      }
+    ]
   },
   "variables": [
-    { "variableId": "trust", "label": "Trust", "accentHex": "#A7F3D0" },
-    { "variableId": "lore", "label": "Lore", "accentHex": "#93C5FD" },
-    { "variableId": "ending", "label": "Ending", "accentHex": "#FDE68A" }
-  ]
+    {
+      "variableId": "trust",
+      "label": "信任",
+      "accentHex": "#A7F3D0"
+    },
+    {
+      "variableId": "lore",
+      "label": "见闻",
+      "accentHex": "#93C5FD"
+    },
+    {
+      "variableId": "ending",
+      "label": "结局",
+      "accentHex": "#FDE68A"
+    },
+    {
+      "variableId": "trial_phase",
+      "label": "试炼阶段",
+      "accentHex": "#FDBA74"
+    }
+  ],
+  "endingLabels": {
+    "0": "未定",
+    "1": "职责",
+    "2": "仁慈"
+  },
+  "stageHud": {
+    "showHistoryAlways": false,
+    "showVariablesAlways": false,
+    "showObjectiveWithDialogue": false,
+    "showObjectiveWithSequence": false
+  }
 }

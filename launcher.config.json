@@ -1795,6 +1795,34 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAwaitCallbackEntryMod",
         "projectPath": "CapabilityStandardGraphOpAwaitCallbackEntryMod.csproj"
       }
+    },
+    {
+      "name": "narrative",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative/NarrativeShowcaseMod"
+      }
+    },
+    {
+      "name": "narrative_theme_sanguo",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_sanguo/NarrativeThemeSanguoMod"
+      }
+    },
+    {
+      "name": "narrative_theme_fantasy",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_fantasy/NarrativeThemeFantasyMod"
+      }
+    },
+    {
+      "name": "narrative_theme_acnh",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_acnh/NarrativeThemeAcnhMod"
+      }
     }
   ],
   "adapters": {

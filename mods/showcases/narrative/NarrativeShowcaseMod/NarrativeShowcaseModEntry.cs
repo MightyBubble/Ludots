@@ -1,4 +1,5 @@
-using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Dialogue;
+using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -17,13 +18,11 @@ namespace NarrativeShowcaseMod
             context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);
-            context.OnEvent(TaskEventKeys.Activated, runtime.HandleTaskActivatedAsync);
-            context.OnEvent(TaskEventKeys.Completed, runtime.HandleTaskCompletedAsync);
-            context.OnEvent(NarrativeEventKeys.DialogueNodeEntered, runtime.HandleDialogueNodeEnteredAsync);
-            context.OnEvent(NarrativeEventKeys.DialogueChoiceCommitted, runtime.HandleDialogueChoiceCommittedAsync);
-            context.OnEvent(NarrativeEventKeys.CinematicStepEntered, runtime.HandleCinematicStepEnteredAsync);
-            context.OnEvent(TaskEventKeys.Signal, runtime.HandleTaskSignalAsync);
-            context.OnEvent(NarrativeEventKeys.CinematicCompleted, runtime.HandleCinematicCompletedAsync);
+            context.OnEvent(DialogueEventKeys.NodeEntered, runtime.HandleDialogueNodeEnteredAsync);
+            context.OnEvent(DialogueEventKeys.ChoiceCommitted, runtime.HandleDialogueChoiceCommittedAsync);
+            context.OnEvent(SequencerEventKeys.SectionEntered, runtime.HandleSequencerSectionEnteredAsync);
+            context.OnEvent(SequencerEventKeys.Completed, runtime.HandleSequencerCompletedAsync);
+            context.OnEvent(SequencerEventKeys.SignalFired, runtime.HandleSequencerSignalFiredAsync);
         }
 
         public void OnUnload()

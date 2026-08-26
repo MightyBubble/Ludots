@@ -14,7 +14,9 @@ using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
-using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Dialogue;
+using Ludots.Core.Gameplay.Sequencer;
+using Ludots.Core.Gameplay.Story;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Tasks;
@@ -195,8 +197,12 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TaskDefinitionRegistry> TaskDefinitionRegistry = new("TaskDefinitionRegistry");
         public static readonly ServiceKey<TaskRuntimeService> TaskRuntimeService = new("TaskRuntimeService");
         public static readonly ServiceKey<TaskPresentationBuffer> TaskPresentationBuffer = new("TaskPresentationBuffer");
-        public static readonly ServiceKey<NarrativeDefinitionRegistry> NarrativeDefinitions = new("NarrativeDefinitions");
-        public static readonly ServiceKey<NarrativeDirector> NarrativeDirector = new("NarrativeDirector");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Story.StoryDefinitionRegistry> StoryDefinitions = new("StoryDefinitions");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Dialogue.DialogueDefinitionRegistry> DialogueDefinitions = new("DialogueDefinitions");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Sequencer.SequenceDefinitionRegistry> SequenceDefinitions = new("SequenceDefinitions");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Dialogue.DialogueRuntime> DialogueRuntime = new("DialogueRuntime");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Sequencer.SequencerRuntime> SequencerRuntime = new("SequencerRuntime");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Story.StoryGraphInvoker> StoryGraphInvoker = new("StoryGraphInvoker");
 
         // --- GAS Core ---
         public static readonly ServiceKey<IClock> Clock = new("Clock");
@@ -369,6 +375,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
         public static readonly ServiceKey<PresentationTextLocaleSelection> PresentationTextLocaleSelection = new("PresentationTextLocaleSelection");
+        public static readonly ServiceKey<PresentationSemanticMapCatalog> PresentationSemanticMapCatalog = new("PresentationSemanticMapCatalog");
+        public static readonly ServiceKey<PresentationImageAssetCatalog> PresentationImageAssetCatalog = new("PresentationImageAssetCatalog");
+        public static readonly ServiceKey<PresentationDisplayResolver> PresentationDisplayResolver = new("PresentationDisplayResolver");
         public static readonly ServiceKey<ScreenHudBatchBuffer> PresentationScreenHudBuffer = new("PresentationScreenHudBuffer");
         public static readonly ServiceKey<ScreenOverlayBuffer> ScreenOverlayBuffer = new("ScreenOverlayBuffer");
         public static readonly ServiceKey<MinimapRuntime> MinimapRuntime = new("MinimapRuntime");

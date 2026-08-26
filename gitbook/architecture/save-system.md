@@ -90,7 +90,8 @@ public interface ISaveParticipant
 - `gameSession`
 - `inventory`
 - `mapSessions`
-- `narrative`
+- `dialogue`
+- `sequencer`
 - `relationships`
 - `rng`
 - `task`

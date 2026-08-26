@@ -445,6 +445,125 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/variables", async (string modId, stri
     }
 });
 
+app.MapGet("/api/mods/{modId}/story/catalogs", (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    var catalogs = new List<object>();
+    foreach (KeyValuePair<string, string> pair in EditorRepo.StoryCatalogFiles)
+    {
+        string path = EditorRepo.ResolveWritableStoryCatalogPath(ctx, pair.Value);
+        catalogs.Add(new
+        {
+            id = pair.Key,
+            relativePath = pair.Value,
+            path,
+            exists = File.Exists(path),
+        });
+    }
+
+    return Results.Ok(new { ok = true, catalogs });
+});
+
+app.MapGet("/api/mods/{modId}/story/catalogs/{catalogId}", (string modId, string catalogId) =>
+{
+    if (!EditorRepo.StoryCatalogFiles.TryGetValue(catalogId, out string? relative))
+    {
+        return Results.BadRequest(new
+        {
+            ok = false,
+            error = $"Unknown story catalog '{catalogId}'. Known: {string.Join(", ", EditorRepo.StoryCatalogFiles.Keys)}",
+        });
+    }
+
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    string path = EditorRepo.ResolveWritableStoryCatalogPath(ctx, relative);
+    if (!File.Exists(path))
+    {
+        return Results.NotFound(new { ok = false, error = $"Catalog file missing: {relative}", path });
+    }
+
+    string text = File.ReadAllText(path);
+    JsonNode? node;
+    try { node = JsonNode.Parse(text); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = ex.Message, path }); }
+
+    return Results.Ok(new { ok = true, id = catalogId, relativePath = relative, path, items = node });
+});
+
+app.MapPut("/api/mods/{modId}/story/catalogs/{catalogId}", async (string modId, string catalogId, HttpRequest req) =>
+{
+    if (!EditorRepo.StoryCatalogFiles.TryGetValue(catalogId, out string? relative))
+    {
+        return Results.BadRequest(new
+        {
+            ok = false,
+            error = $"Unknown story catalog '{catalogId}'. Known: {string.Join(", ", EditorRepo.StoryCatalogFiles.Keys)}",
+        });
+    }
+
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    JsonNode? root;
+    try { root = JsonNode.Parse(string.IsNullOrWhiteSpace(body) ? "null" : body); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed JSON: {ex.Message}" }); }
+    if (root is not JsonObject payload || payload["items"] is null)
+    {
+        return Results.BadRequest(new { ok = false, error = "Body must be { items: <array|object> }." });
+    }
+
+    JsonNode items = payload["items"]!.DeepClone();
+    if (items is not JsonArray && items is not JsonObject)
+    {
+        return Results.BadRequest(new { ok = false, error = "items must be a JSON array or object." });
+    }
+
+    if (items is JsonArray array)
+    {
+        for (int i = 0; i < array.Count; i++)
+        {
+            if (array[i] is not JsonObject row ||
+                row["id"]?.GetValue<string>() is not { Length: > 0 })
+            {
+                return Results.BadRequest(new { ok = false, error = $"items[{i}] must be an object with non-empty id." });
+            }
+        }
+    }
+
+    string path = EditorRepo.ResolveWritableStoryCatalogPath(ctx, relative);
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    string previous = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+    try
+    {
+        File.WriteAllText(
+            path,
+            items.ToJsonString(new JsonSerializerOptions { WriteIndented = true }),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return Results.Ok(new { ok = true, id = catalogId, relativePath = relative, path });
+    }
+    catch (Exception ex)
+    {
+        if (!string.IsNullOrEmpty(previous))
+        {
+            File.WriteAllText(path, previous);
+        }
+
+        return Results.BadRequest(new { ok = false, error = ex.Message, path });
+    }
+});
+
 app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
 {
     string repoRoot = FindAssetsRoot();
@@ -2993,6 +3112,25 @@ static string ToEditorUploadSourceUri(string fileName)
 static class EditorRepo
 {
     private const int EagerEmptyTerrainFileMacroTileLimit = 16;
+
+    public static readonly Dictionary<string, string> StoryCatalogFiles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["lines"] = "Story/lines.json",
+        ["speakers"] = "Story/speakers.json",
+        ["presentation_profiles"] = "Story/presentation_profiles.json",
+        ["dialogues"] = "Dialogue/dialogues.json",
+        ["sequences"] = "Sequencer/sequences.json",
+        ["text_tokens"] = "Presentation/text_tokens.json",
+        ["semantic_maps"] = "Presentation/semantic_maps.json",
+        ["image_assets"] = "Presentation/image_assets.json",
+    };
+
+    public static string ResolveWritableStoryCatalogPath(ModContext ctx, string relativePath)
+    {
+        var mod = ctx.ModsById[ctx.TargetModId];
+        string rel = relativePath.TrimStart('\\', '/').Replace('/', Path.DirectorySeparatorChar);
+        return Path.Combine(mod.RootPath, "assets", rel);
+    }
 
     public sealed record ModInfo(
         string Id, string Name, string Version, int Priority,

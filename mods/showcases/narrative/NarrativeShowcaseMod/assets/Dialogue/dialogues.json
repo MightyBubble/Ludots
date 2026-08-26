@@ -1,0 +1,84 @@
+[
+  {
+    "id": "Dialogue.Narrative.Briefing",
+    "displayName": "Ashen Oath Briefing",
+    "entryNode": "briefing_intro",
+    "nodes": [
+      {
+        "id": "briefing_intro",
+        "lineId": "line.warden.briefing.001",
+        "presentationProfile": "story.dialogue_overlay",
+        "cameraId": "Narrative.Intro.Elder",
+        "choices": [
+          {
+            "id": "briefing_lore",
+            "lineId": "line.player.briefing.lore",
+            "actionGraphId": "Graph.Narrative.Action.AddLoreAndTrust",
+            "nextNode": "briefing_lore_reply"
+          },
+          {
+            "id": "briefing_accept_now",
+            "lineId": "line.player.briefing.accept_now",
+            "nextNode": "briefing_accept"
+          }
+        ]
+      },
+      {
+        "id": "briefing_lore_reply",
+        "lineId": "line.warden.briefing.lore_reply",
+        "presentationProfile": "story.world_bubble",
+        "choices": [
+          {
+            "id": "briefing_accept_after_lore",
+            "lineId": "line.player.briefing.accept_after_lore",
+            "nextNode": "briefing_accept"
+          }
+        ]
+      },
+      {
+        "id": "briefing_accept",
+        "lineId": "line.warden.briefing.accept",
+        "presentationProfile": "story.world_bubble",
+        "onEnterActionGraphId": "Graph.Narrative.Action.AcceptBriefing"
+      }
+    ]
+  },
+  {
+    "id": "Dialogue.Narrative.Return",
+    "displayName": "Ashen Oath Return",
+    "entryNode": "return_intro",
+    "nodes": [
+      {
+        "id": "return_intro",
+        "lineId": "line.warden.return.001",
+        "presentationProfile": "story.standing_portrait",
+        "cameraId": "Narrative.Return.Close",
+        "choices": [
+          {
+            "id": "return_duty",
+            "lineId": "line.player.return.duty",
+            "actionGraphId": "Graph.Narrative.Action.SetEndingDuty",
+            "nextNode": "return_duty_outro"
+          },
+          {
+            "id": "return_mercy",
+            "lineId": "line.player.return.mercy",
+            "conditionGraphId": "Graph.Narrative.Condition.LoreKnown",
+            "actionGraphId": "Graph.Narrative.Action.SetEndingMercy",
+            "nextNode": "return_mercy_outro"
+          }
+        ]
+      },
+      {
+        "id": "return_duty_outro",
+        "lineId": "line.warden.return.duty_outro",
+        "presentationProfile": "story.world_bubble"
+      },
+      {
+        "id": "return_mercy_outro",
+        "lineId": "line.warden.return.mercy_outro",
+        "presentationProfile": "story.world_bubble"
+      }
+    ]
+  }
+]
