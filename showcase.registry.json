@@ -7401,30 +7401,6 @@
       ]
     },
     {
-      "id": "panel_collection_bags",
-      "path": "mods/showcases/panel_collection_bags/PanelCollectionBagsShowcaseMod",
-      "projectPath": "PanelCollectionBagsShowcaseMod.csproj",
-      "title": "名册墙",
-      "summary": "效果图鉴、技能格与身上印记：三个 typed collection bags 同屏投影",
-      "tier": "T2",
-      "category": "panel",
-      "binding": "panel_collection_bags",
-      "preset": "panel_collection_bags_raylib",
-      "docsPath": "gitbook/architecture/query-graph-collection-outputs.md",
-      "readmePath": null,
-      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelCollectionBagsShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/acceptance/panel_collection_bags",
-      "screenshot": "artifacts/acceptance/panel_collection_bags/screens/001_typed-collection-bags.png",
-      "status": "active",
-      "tags": [
-        "panel",
-        "ui",
-        "typed-collection",
-        "showcase",
-        "g12"
-      ]
-    },
-    {
       "id": "panel_skin_markup",
       "path": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod",
       "title": "Panel Markup Skin",
