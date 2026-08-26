@@ -65,6 +65,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Span<Entity> Targets;
         public GraphTargetList TargetList;
         public Span<int> CallStack;
+        public GraphTextHeap Text;
         public GraphExecutionCursor Cursor;
         public GraphDebugTrace? DebugTrace;
         public int GraphId;
@@ -152,6 +153,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
                 CallStack = callStack,
+                Text = GraphTextHeap.ForCurrentThreadCleared(),
                 Cursor = cursor,
                 DebugTrace = debugTrace,
                 GraphId = 0,
@@ -182,6 +184,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Targets = Targets,
                 TargetList = TargetList,
                 CallStack = CallStack,
+                Text = Text ?? throw new InvalidOperationException("Graph frame requires a GraphTextHeap."),
                 CallStackCount = Cursor.CallStackCount,
                 ReturnInt = Cursor.ReturnInt,
                 InvokeDepth = Cursor.InvokeDepth,

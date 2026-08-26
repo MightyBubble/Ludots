@@ -1920,6 +1920,15 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
             outputType = GraphValueType.Void.ToString(),
             lowersTo = GraphNodeOp.Jump.ToString(),
         });
+        authoringSugars.Add(new
+        {
+            op = GraphAuthoringSugar.FormatText,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Next },
+            valueInputPorts = Array.Empty<string>(),
+            outputType = GraphValueType.Text.ToString(),
+            lowersTo = nameof(GraphNodeOp.ConcatText),
+            braceAutoPins = true,
+        });
         if (graphKind == GraphKind.TriggerGraph)
         {
             authoringSugars.Add(new
@@ -2193,7 +2202,7 @@ static string[] ControlOutputPorts(GraphNodeOp op)
         GraphNodeOp.Call => new[] { GraphControlFlowPorts.Call, GraphControlFlowPorts.Next },
         GraphNodeOp.JumpIfFalse => new[] { GraphControlFlowPorts.True, GraphControlFlowPorts.False },
         GraphNodeOp.Return or GraphNodeOp.HaltReturnInt => Array.Empty<string>(),
-        GraphNodeOp.ConstInt or GraphNodeOp.ConstFloat or GraphNodeOp.ConstBool => Array.Empty<string>(),
+        GraphNodeOp.ConstInt or GraphNodeOp.ConstFloat or GraphNodeOp.ConstBool or GraphNodeOp.ConstText => Array.Empty<string>(),
         _ => new[] { GraphControlFlowPorts.Next },
     };
 

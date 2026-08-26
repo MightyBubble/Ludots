@@ -1,0 +1,25 @@
+[
+  {
+    "id": "showcase.graph_op.ConcatText",
+    "kind": "Script",
+    "entry": "left",
+    "nodes": [
+      { "id": "left", "op": "ConstText", "text": "左" },
+      { "id": "right", "op": "ConstText", "text": "右" },
+      { "id": "featured", "op": "ConcatText" },
+      { "id": "sink", "op": "SinkPresentationText", "presentationSurface": "Subtitle" },
+      { "id": "done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "left", "fromPort": "next", "to": "right" },
+      { "from": "right", "fromPort": "next", "to": "featured" },
+      { "from": "featured", "fromPort": "next", "to": "sink" },
+      { "from": "sink", "fromPort": "next", "to": "done" }
+    ],
+    "valueEdges": [
+      { "from": "left", "fromPort": "value", "to": "featured", "toPort": "a" },
+      { "from": "right", "fromPort": "value", "to": "featured", "toPort": "b" },
+      { "from": "featured", "fromPort": "value", "to": "sink", "toPort": "a" }
+    ]
+  }
+]

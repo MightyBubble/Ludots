@@ -1,0 +1,22 @@
+{
+  "op": "ConstText",
+  "driver": "script",
+  "title": "写死一句字幕",
+  "beat": "作者把「你好」钉在图上；跑完，字幕口吐出同样三个字。",
+  "detailTemplate": "文字出口已收到拼好的句子。",
+  "assertDetailContains": ["文字"],
+  "featuredNodeId": "featured",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "作者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

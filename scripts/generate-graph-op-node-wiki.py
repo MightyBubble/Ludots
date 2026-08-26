@@ -121,6 +121,7 @@ TYPE_LABELS = {
     "GraphValueType.Int": "Int → 整数寄存器",
     "GraphValueType.Bool": "Bool → 布尔槽",
     "GraphValueType.TargetList": "TargetList → 目标名单",
+    "GraphValueType.Text": "Text → 固定容量文字槽",
 }
 
 ROLE_LABELS = {

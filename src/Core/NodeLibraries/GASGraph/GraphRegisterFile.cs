@@ -35,6 +35,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private readonly RegisterBank _bools;
         private readonly RegisterBank _floats;
         private readonly RegisterBank _entities;
+        private readonly RegisterBank _texts;
         private readonly List<GraphRegisterReservation> _reservations = new(8);
 
         private GraphRegisterFile(GraphKind kind)
@@ -44,6 +45,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             _bools = new RegisterBank(GraphVmLimits.MaxBoolRegisters);
             _floats = new RegisterBank(GraphVmLimits.MaxFloatRegisters);
             _entities = new RegisterBank(GraphVmLimits.MaxEntityRegisters);
+            _texts = new RegisterBank(GraphVmLimits.MaxTextRegisters);
         }
 
         public GraphKind Kind { get; }
@@ -165,12 +167,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private RegisterBank RequireAllocatableBank(GraphValueType type)
         {
-            if (type is GraphValueType.Int or GraphValueType.Bool or GraphValueType.Float or GraphValueType.Entity)
+            if (type is GraphValueType.Int or GraphValueType.Bool or GraphValueType.Float or GraphValueType.Entity or GraphValueType.Text)
             {
                 return RequireBank(type);
             }
 
-            throw new ArgumentOutOfRangeException(nameof(type), type, "Register allocation requires Int, Bool, Float, or Entity.");
+            throw new ArgumentOutOfRangeException(nameof(type), type, "Register allocation requires Int, Bool, Float, Entity, or Text.");
         }
 
         private RegisterBank RequireBank(GraphValueType type)
@@ -191,6 +193,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphValueType.Bool => _bools,
                 GraphValueType.Float => _floats,
                 GraphValueType.Entity => _entities,
+                GraphValueType.Text => _texts,
                 _ => null
             };
             return bank != null;

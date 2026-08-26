@@ -9,7 +9,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Int = 2,
         Float = 3,
         Entity = 4,
-        TargetList = 5
+        TargetList = 5,
+        Text = 6,
     }
 
     public enum GraphNodeOp : ushort
@@ -250,6 +251,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// in the Continuation phase (registration order).
         /// </summary>
         AwaitCallback = 455,
+
+        // ── Formal text (456-460): fixed-capacity Text registers + presentation sink ──
+        /// <summary>T[Dst] = program Symbols[Imm] (Imm is symbol index; never symbol-patched).</summary>
+        ConstText = 456,
+        /// <summary>T[Dst] = T[A] + T[B]; overflow fails closed.</summary>
+        ConcatText = 457,
+        /// <summary>T[Dst] = invariant format of I[A].</summary>
+        IntToText = 458,
+        /// <summary>T[Dst] = invariant format of F[A].</summary>
+        FloatToText = 459,
+        /// <summary>Push T[A] to presentation sink; Imm = GraphPresentationTextSurface.</summary>
+        SinkPresentationText = 460,
     }
 
     public static class GraphNodeOpParser

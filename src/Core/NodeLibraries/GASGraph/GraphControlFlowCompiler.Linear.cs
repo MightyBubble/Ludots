@@ -479,6 +479,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.CallbackType, "callbackType", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.ConstText:
+                    if (node.Text == null)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a text field (empty string is allowed).", node.Id));
+                    }
+
+                    break;
+
+                case GraphNodeOp.ConcatText:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Text, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Text, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.IntToText:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FloatToText:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SinkPresentationText:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Text, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (!TryParsePresentationSurface(node.PresentationSurface, out _))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"SinkPresentationText node '{node.Id}' requires presentationSurface 'Subtitle' or 'Dialogue'.",
+                            node.Id));
+                    }
+
+                    break;
+
                 case GraphNodeOp.DispatchMapEvent:
                 {
                     if (dispatchSchemas == null || !dispatchSchemas.TryGetValue(node.Id, out Ludots.Core.Scripting.EventSchema schema))
@@ -1335,6 +1368,53 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Imm = RequireSymbol(node.CallbackType, "callbackType", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.ConstText:
+                    if (node.Text == null)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a text field (empty string is allowed).", node.Id));
+                        return;
+                    }
+
+                    instruction.Imm = Intern(symbolToIndex, symbols, node.Text);
+                    break;
+
+                case GraphNodeOp.ConcatText:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Text,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Text,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.IntToText:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FloatToText:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SinkPresentationText:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Text,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    if (!TryParsePresentationSurface(node.PresentationSurface, out GraphPresentationTextSurface surface))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"SinkPresentationText node '{node.Id}' requires presentationSurface 'Subtitle' or 'Dialogue'.",
+                            node.Id));
+                        return;
+                    }
+
+                    instruction.Imm = (int)surface;
+                    break;
+
                 case GraphNodeOp.DispatchMapEvent:
                 {
                     if (dispatchSchemas == null || !dispatchSchemas.TryGetValue(node.Id, out Ludots.Core.Scripting.EventSchema schema))
@@ -1493,6 +1573,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 EmitExplicitHalt(program, sources, bodyIndex + 1, graphId, node);
             }
+        }
+
+        private static bool TryParsePresentationSurface(string? authored, out GraphPresentationTextSurface surface)
+        {
+            surface = default;
+            if (string.IsNullOrWhiteSpace(authored))
+            {
+                return false;
+            }
+
+            string trimmed = authored.Trim();
+            return Enum.TryParse(trimmed, ignoreCase: false, out surface) &&
+                   Enum.IsDefined(typeof(GraphPresentationTextSurface), surface) &&
+                   string.Equals(surface.ToString(), trimmed, StringComparison.Ordinal);
         }
 
         private static int ParseLinearRelationshipFilterMode(

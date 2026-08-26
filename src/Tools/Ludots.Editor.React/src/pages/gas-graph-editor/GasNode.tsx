@@ -40,6 +40,8 @@ export type GasNodeViewData = {
   intValue?: number;
   floatValue?: number;
   boolValue?: boolean;
+  text?: string | null;
+  presentationSurface?: string | null;
   var?: string | null;
   template?: string | null;
   panelType?: string | null;
@@ -59,13 +61,14 @@ export type GasNodeViewData = {
 };
 
 export function isPureValueOp(op: string): boolean {
-  return op === 'ConstInt' || op === 'ConstFloat' || op === 'ConstBool';
+  return op === 'ConstInt' || op === 'ConstFloat' || op === 'ConstBool' || op === 'ConstText';
 }
 
 function literalText(data: GasNodeViewData): string | null {
   if (data.op === 'ConstInt') return String(data.intValue ?? 0);
   if (data.op === 'ConstFloat') return String(data.floatValue ?? 0);
   if (data.op === 'ConstBool') return data.boolValue ? 'true' : 'false';
+  if (data.op === 'ConstText' || data.op === 'FormatText') return data.text ?? '';
   return null;
 }
 

@@ -108,6 +108,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
+        void PushPresentationText(GraphPresentationTextSurface surface, ReadOnlySpan<char> text)
+        {
+            throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
+        }
+
         // ── Map-scoped variables ──
 
         int ReadMapVarInt(int varKeyId, MapId mapId)

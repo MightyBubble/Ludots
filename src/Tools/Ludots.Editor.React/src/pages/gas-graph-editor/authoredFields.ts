@@ -23,7 +23,9 @@ export type AuthoredFieldKey =
   | 'instanceId'
   | 'lookupTable'
   | 'lookupField'
-  | 'teamId';
+  | 'teamId'
+  | 'text'
+  | 'presentationSurface';
 
 export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId' | 'enumType';
 
@@ -58,11 +60,20 @@ const lookupField: AuthoredFieldSpec = { key: 'lookupField', label: 'Lookup fiel
 const payloadKey: AuthoredFieldSpec = { key: 'payloadKey', label: 'Payload key', kind: 'payloadKey' };
 const instanceId: AuthoredFieldSpec = { key: 'instanceId', label: 'Placed instance', kind: 'instanceId' };
 const teamId: AuthoredFieldSpec = { key: 'teamId', label: 'Team', kind: 'int' };
+const text: AuthoredFieldSpec = { key: 'text', label: 'Text', kind: 'string' };
+const presentationSurface: AuthoredFieldSpec = {
+  key: 'presentationSurface',
+  label: 'Surface (Subtitle/Dialogue)',
+  kind: 'string',
+};
 
 const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   ConstInt: [intValue],
   ConstFloat: [floatValue],
   ConstBool: [boolValue],
+  ConstText: [text],
+  FormatText: [text],
+  SinkPresentationText: [presentationSurface],
   CreatePanel: [panelType, panelAnchor, panelSkin, panelZOrder],
   ShowPanel: [panelType],
   HidePanel: [panelType],

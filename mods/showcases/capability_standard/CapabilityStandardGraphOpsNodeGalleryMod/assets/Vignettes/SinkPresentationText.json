@@ -1,0 +1,22 @@
+{
+  "op": "SinkPresentationText",
+  "driver": "script",
+  "title": "句子送进对话框",
+  "beat": "图里写好「字幕到了」，指定对话框通道，口吐出同样一句。",
+  "detailTemplate": "文字出口已收到拼好的句子。",
+  "assertDetailContains": ["文字"],
+  "featuredNodeId": "featured",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "作者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

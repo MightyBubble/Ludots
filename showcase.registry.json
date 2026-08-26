@@ -246,7 +246,7 @@
       "tier": "T2",
       "category": "panel",
       "binding": "browser_minimap_composited_overlay_showcase",
-      "preset": "browser_minimap_composited_overlay_ultralight_raylib",
+      "preset": "browser_minimap_composited_overlay_cef_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "BrowserMinimapWebShellShowcaseAcceptanceTests",
@@ -267,7 +267,7 @@
       "tier": "T3",
       "category": "panel",
       "binding": "browser_react_flow_showcase",
-      "preset": "browser_react_flow_ultralight_raylib",
+      "preset": "browser_react_flow_cef_raylib",
       "docsPath": null,
       "readmePath": "mods/showcases/browser_react_flow/BrowserReactFlowShowcaseMod/README.md",
       "acceptanceTest": null,
@@ -309,7 +309,7 @@
       "tier": "T3",
       "category": "panel",
       "binding": "browser_ui_showcase",
-      "preset": "browser_ui_ultralight_raylib",
+      "preset": "browser_ui_showcase_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": null,
@@ -453,7 +453,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
       "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj",
       "title": "行为树演武场",
-      "summary": "主带真图巡逻树；万人灰点带=无图 BehaviorTreeWorld 压测基线（真图 10k 超预算，不做假装）。",
+      "summary": "独立 BT 万人思考波次演示（不含 HFSM/关卡/技能）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -468,7 +468,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_behavior_tree_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "BT-B: featured=GraphBehaviorTreeHost; crowd=labeled no-graph BehaviorTreeWorld, ScriptSlices==0 honesty gate."
+      "notes": "Headless think-wave acceptance first; visual captures follow."
     },
     {
       "id": "capability_standard_config_shards_showcase",
@@ -547,7 +547,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
       "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj",
       "title": "图行为整合演示",
-      "summary": "旧数据路径合波：BT+HFSM 仍走 BehaviorTreeWorld / HfsmWorld+GraphProgramHfsmHost（非 GraphFsmHost；不是 FSM-1 真图旗舰）。",
+      "summary": "单独的整合演示：BT+HFSM+Level 合波（不是四个单秀的大杂烩合并）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -562,7 +562,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_behavior_integration",
       "screenshot": null,
       "status": "active",
-      "notes": "Explicit old-path dual-track. Retires from graph-claim demos when migrated to GraphBehaviorTreeHost + GraphFsmHost; until then Metrics.Detail must say old-path."
+      "notes": "Headless think-wave acceptance first; visual captures follow."
     },
     {
       "id": "capability_standard_graph_op_AbsFloat",
@@ -3779,13 +3779,12 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
       "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
       "title": "HFSM 岗哨演武场",
-      "summary": "主带 GraphFsmHost+FsmState 哨兵相位；万人灰点带=无图 HfsmWorld 压测基线（不做真图假装）。",
+      "summary": "独立分层状态机万人演示（不含 BT/关卡/技能）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
         "graph",
-        "capability-standard",
-        "fsm"
+        "capability-standard"
       ],
       "binding": "capability_standard_hfsm_sentry_arena",
       "preset": "capability_standard_hfsm_sentry_arena_raylib",
@@ -3795,7 +3794,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "FSM-1 closeout: featured=GraphFsmHost/Graph.FSM.Sentry; crowd=labeled no-graph HfsmWorld(hfsm.sentry), LifecycleRuns==0 honesty gate."
+      "notes": "Headless think-wave acceptance first; visual captures follow."
     },
     {
       "id": "capability_standard_live_skill_workbench",
@@ -8186,6 +8185,141 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion",
       "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_ConcatText",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConcatTextEntryMod",
+      "projectPath": "CapabilityStandardGraphOpConcatTextEntryMod.csproj",
+      "title": "左右两段字接成一句",
+      "summary": "左边「左」、右边「右」并进同一句；字幕口吐出「左右」。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ConcatText"
+      ],
+      "binding": "capability_standard_graph_op_ConcatText",
+      "preset": "capability_standard_graph_op_ConcatText_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ConcatText.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ConcatText",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ConcatText/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ConcatText/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_ConstText",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstTextEntryMod",
+      "projectPath": "CapabilityStandardGraphOpConstTextEntryMod.csproj",
+      "title": "写死一句字幕",
+      "summary": "作者把「你好」钉在图上；跑完，字幕口吐出同样三个字。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ConstText"
+      ],
+      "binding": "capability_standard_graph_op_ConstText",
+      "preset": "capability_standard_graph_op_ConstText_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ConstText.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ConstText",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ConstText/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ConstText/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_FloatToText",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFloatToTextEntryMod",
+      "projectPath": "CapabilityStandardGraphOpFloatToTextEntryMod.csproj",
+      "title": "把小数念成字",
+      "summary": "小数 1.5 先变成文字，再送进字幕口。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "FloatToText"
+      ],
+      "binding": "capability_standard_graph_op_FloatToText",
+      "preset": "capability_standard_graph_op_FloatToText_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/FloatToText.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_FloatToText",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_FloatToText/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_FloatToText/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_IntToText",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIntToTextEntryMod",
+      "projectPath": "CapabilityStandardGraphOpIntToTextEntryMod.csproj",
+      "title": "把整数念成字",
+      "summary": "数字 7 先变成文字，再送进字幕口。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "IntToText"
+      ],
+      "binding": "capability_standard_graph_op_IntToText",
+      "preset": "capability_standard_graph_op_IntToText_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/IntToText.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_IntToText",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_IntToText/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_IntToText/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SinkPresentationText",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSinkPresentationTextEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSinkPresentationTextEntryMod.csproj",
+      "title": "句子送进对话框",
+      "summary": "图里写好「字幕到了」，指定对话框通道，口吐出同样一句。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SinkPresentationText"
+      ],
+      "binding": "capability_standard_graph_op_SinkPresentationText",
+      "preset": "capability_standard_graph_op_SinkPresentationText_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SinkPresentationText.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SinkPresentationText",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SinkPresentationText/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SinkPresentationText/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
