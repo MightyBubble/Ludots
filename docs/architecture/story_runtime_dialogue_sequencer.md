@@ -190,7 +190,7 @@ Task 字段：`on_enter_dialogue_id` 保留；`on_enter_cinematic_id` 改为 `on
 - 肖像与说话者名走 #128 Presentation 图像/语义合同；禁止 showcase 私有明文 speakerLabels
 - `story.world_bubble` 禁止静默退回固定屏幕角落；投影失败必须抛错
 - `story.standing_portrait` 禁止用 bust 肖像顶替全身立绘；缺 `standingImageId` 必须抛错
-- Sequencer ADR S1 人工过评仍属门禁；本交付不假装 ADR 已签
+- Sequencer ADR S1 已由负责人过评通过；实现红线不变（不复用 GAS AbilityExec、不复用 graph yieldable、channel 插值长在 Tweening、演出轨直写 Presenter）。Graph 基建合入跟 #1239（TriggerGraph night-raid）等 PR，不在本 Story 交付里自卡“等过评”
 
 ## 6. UAT
 
