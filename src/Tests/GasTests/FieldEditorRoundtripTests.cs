@@ -190,6 +190,7 @@ namespace Ludots.Tests.GAS
                 document.AddRegion("paint");
                 document.PaintCell("paint", 0, 0);
                 document.Save(path, maxRegionIds: 8);
+                HistoryStore.Push(path, document);
 
                 string color = FieldEditorMetadataStore.SetColor(
                     path,
@@ -202,6 +203,34 @@ namespace Ludots.Tests.GAS
                 Assert.That(cells.ContainsKey("regionColors"), Is.False);
                 Assert.That(File.Exists(FieldEditorMetadataStore.MetadataPath(path)), Is.True);
                 Assert.That(LoadAsset(mod, "layer.colors"), Is.Not.Null);
+
+                CellsDocument colorUndo = CellsDocument.LoadOrNew(path, "layer.colors");
+                HistoryStore.Undo(path, colorUndo);
+                Assert.That(
+                    FieldEditorMetadataStore.GetColors(path, colorUndo),
+                    Is.Empty);
+
+                HistoryStore.Redo(path, colorUndo);
+                Assert.That(
+                    FieldEditorMetadataStore.GetColors(path, colorUndo)["paint"],
+                    Is.EqualTo("#12ABEF"));
+
+                HistoryStore.Push(path, colorUndo);
+                colorUndo.RenameRegion("paint", "renamed");
+                colorUndo.Save(path, maxRegionIds: 8);
+                FieldEditorMetadataStore.RenameRegion(
+                    path,
+                    colorUndo.LayerKey,
+                    "paint",
+                    "renamed");
+
+                CellsDocument renameUndo = CellsDocument.LoadOrNew(path, "layer.colors");
+                HistoryStore.Undo(path, renameUndo);
+                renameUndo.Save(path, maxRegionIds: 8);
+                Assert.That(renameUndo.Regions.Keys, Is.EqualTo(new[] { "paint" }));
+                Assert.That(
+                    FieldEditorMetadataStore.GetColors(path, renameUndo)["paint"],
+                    Is.EqualTo("#12ABEF"));
             }
             finally
             {
