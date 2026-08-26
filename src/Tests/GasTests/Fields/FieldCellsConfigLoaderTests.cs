@@ -40,10 +40,39 @@ namespace Ludots.Tests.GAS
 
                 Assert.That(asset.RegionKeys, Is.EqualTo(new[] { "r1", "r2", "r3" }),
                     "region ids come from the Ordinal-sorted key union");
-                Assert.That(asset.Cells.Length, Is.EqualTo(3));
+                Assert.That(asset.Points.Length, Is.EqualTo(3));
                 Assert.That(
-                    asset.Cells.Select(c => c.RegionKey),
+                    asset.Points.Select(c => c.RegionKey),
                     Is.EquivalentTo(new[] { "r2", "r1", "r3" }));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_SchemaV2_Rects_DoNotExpandIntoPoints()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                WriteCells(root, "Core", """
+                {
+                  "schemaVersion": 2,
+                  "layer": "layerX",
+                  "regions": [ "west", "east" ],
+                  "rects": [ [0, 0, 99, 99, 2], [100, 0, 199, 99, 1] ]
+                }
+                """);
+
+                FieldCellsAsset asset = CreateLoader(root).Load("layerX")!;
+
+                Assert.That(asset.RegionKeys, Is.EqualTo(new[] { "east", "west" }));
+                Assert.That(asset.Rects.Length, Is.EqualTo(2));
+                Assert.That(asset.Points, Is.Empty);
+                Assert.That(asset.Rects[0].RegionKey, Is.EqualTo("west"));
+                Assert.That(asset.Rects[0].X1 - asset.Rects[0].X0 + 1, Is.EqualTo(100));
             }
             finally
             {
@@ -66,7 +95,7 @@ namespace Ludots.Tests.GAS
 
                 FieldCellsAsset asset = CreateLoader(root).Load("layerX")!;
 
-                Assert.That(asset.Cells.Length, Is.EqualTo(2), "same-key duplicates collapse");
+                Assert.That(asset.Points.Length, Is.EqualTo(2), "same-key duplicates collapse");
             }
             finally
             {
@@ -99,6 +128,30 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_OverlappingRectsDifferentRegion_FailsClosed()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                WriteCells(root, "Core", """
+                { "schemaVersion": 2, "layer": "layerX", "regions": [ "r1" ], "rects": [ [0, 0, 10, 10, 1] ] }
+                """);
+                WriteCells(root, "ModA", """
+                { "schemaVersion": 2, "layer": "layerX", "regions": [ "r2" ], "rects": [ [5, 5, 15, 15, 1] ] }
+                """);
+
+                var exception = Assert.Throws<InvalidOperationException>(() => CreateLoader(root).Load("layerX"));
+                Assert.That(exception!.Message, Does.Contain("overlapping"));
+                Assert.That(exception.Message, Does.Contain("r1"));
+                Assert.That(exception.Message, Does.Contain("r2"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_SortOrderIsStable_RegardlessOfFragmentOrder()
         {
             string rootA = CreateTempRoot();
@@ -121,8 +174,8 @@ namespace Ludots.Tests.GAS
                 FieldCellsAsset second = CreateLoader(rootB).Load("layerX")!;
 
                 Assert.That(first.RegionKeys, Is.EqualTo(second.RegionKeys));
-                Assert.That(first.Cells.Select(c => c.RegionKey).OrderBy(k => k, StringComparer.Ordinal),
-                    Is.EqualTo(second.Cells.Select(c => c.RegionKey).OrderBy(k => k, StringComparer.Ordinal)));
+                Assert.That(first.Points.Select(c => c.RegionKey).OrderBy(k => k, StringComparer.Ordinal),
+                    Is.EqualTo(second.Points.Select(c => c.RegionKey).OrderBy(k => k, StringComparer.Ordinal)));
             }
             finally
             {
@@ -145,7 +198,10 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        [TestCase("""{ "schemaVersion": 2, "layer": "layerX", "regions": [ "r1" ], "cells": [] }""", "schemaVersion")]
+        [TestCase("""{ "schemaVersion": 3, "layer": "layerX", "regions": [ "r1" ], "rects": [] }""", "schemaVersion")]
+        [TestCase("""{ "schemaVersion": 2, "layer": "layerX", "regions": [ "r1" ], "cells": [] }""", "forbids 'cells'")]
+        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ "r1" ], "rects": [] }""", "forbids 'rects'")]
+        [TestCase("""{ "schemaVersion": 2, "layer": "layerX", "regions": [ "r1" ] }""", "requires 'rects'")]
         [TestCase("""{ "schemaVersion": 1, "layer": "layerY", "regions": [ "r1" ], "cells": [] }""", "layerY")]
         [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [], "cells": [] }""", "regions")]
         [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ "r1", "r1" ], "cells": [] }""", "duplicate region key 'r1'")]

@@ -89,6 +89,56 @@ namespace Ludots.Core.Fields
         {
             FieldChunk2D<T> chunk = GetOrCreateChunk(Grid.ChunkCoord(cell.X), Grid.ChunkCoord(cell.Y));
             int local = Grid.LocalIndex(cell.X, cell.Y);
+            return WriteLocal(chunk, local, value);
+        }
+
+        /// <summary>
+        /// Inclusive fill. Writes every cell in the rect; callers that already know the area is empty
+        /// still pay per-cell equality checks so NonDefaultCount stays exact.
+        /// </summary>
+        public int FillRect(int x0, int y0, int x1, int y1, T value)
+        {
+            if (x1 < x0 || y1 < y0)
+            {
+                throw new ArgumentException("FillRect ends must not precede starts.");
+            }
+
+            int changed = 0;
+            int chunkMinX = Grid.ChunkCoord(x0);
+            int chunkMaxX = Grid.ChunkCoord(x1);
+            int chunkMinY = Grid.ChunkCoord(y0);
+            int chunkMaxY = Grid.ChunkCoord(y1);
+            int size = Grid.ChunkSizeCells;
+            for (int chunkY = chunkMinY; chunkY <= chunkMaxY; chunkY++)
+            {
+                for (int chunkX = chunkMinX; chunkX <= chunkMaxX; chunkX++)
+                {
+                    FieldChunk2D<T> chunk = GetOrCreateChunk(chunkX, chunkY);
+                    int worldX0 = chunkX * size;
+                    int worldY0 = chunkY * size;
+                    int localX0 = Math.Max(0, x0 - worldX0);
+                    int localY0 = Math.Max(0, y0 - worldY0);
+                    int localX1 = Math.Min(size - 1, x1 - worldX0);
+                    int localY1 = Math.Min(size - 1, y1 - worldY0);
+                    for (int localY = localY0; localY <= localY1; localY++)
+                    {
+                        int row = localY * size;
+                        for (int localX = localX0; localX <= localX1; localX++)
+                        {
+                            if (WriteLocal(chunk, row + localX, value))
+                            {
+                                changed++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return changed;
+        }
+
+        private bool WriteLocal(FieldChunk2D<T> chunk, int local, T value)
+        {
             T current = chunk.Get(local);
             if (_codec.ValueEquals(current, value))
             {
