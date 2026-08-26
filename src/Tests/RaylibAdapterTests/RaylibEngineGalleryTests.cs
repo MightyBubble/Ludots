@@ -29,6 +29,7 @@ namespace Ludots.Tests.RaylibAdapter
             "primitives",
             "lighting",
             "crowd_anim",
+            "slash_trail",
         };
 
         [Test]

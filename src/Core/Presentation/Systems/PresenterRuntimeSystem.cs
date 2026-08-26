@@ -981,7 +981,7 @@ namespace Ludots.Core.Presentation.Systems
 
             if (definition.HasSurfaceAuthoring)
             {
-                _requests.Add(PresentationRequest.RemoveSurfaceSource(state.OwnerEntity, state.StableId));
+                _requests.RemoveSurfaceSource(state.OwnerEntity, state.StableId);
             }
 
             if (!definition.UsesRetainedPresentationRequest ||
@@ -1009,13 +1009,13 @@ namespace Ludots.Core.Presentation.Systems
             {
                 case AssetKind.WorldHud:
                 case AssetKind.WorldText:
-                    _requests.Add(PresentationRequest.RemoveWorldHud(state.OwnerEntity, stableId));
+                    _requests.RemoveWorldHud(state.OwnerEntity, stableId);
                     break;
                 case AssetKind.Spline:
-                    _requests.Add(PresentationRequest.RemoveSplineRibbon(state.OwnerEntity, stableId));
+                    _requests.RemoveSplineRibbon(state.OwnerEntity, stableId);
                     break;
                 case AssetKind.GroundOverlay:
-                    _requests.Add(PresentationRequest.RemoveGroundOverlay(state.OwnerEntity, stableId));
+                    _requests.RemoveGroundOverlay(state.OwnerEntity, stableId);
                     break;
             }
         }

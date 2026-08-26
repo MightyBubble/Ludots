@@ -326,20 +326,19 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 presenterWorldScale,
             float alpha)
         {
-            _requests.Add(PresentationRequest.FromVisualProxy(
-                state.OwnerEntity,
-                BuildVisualProxy(
-                    entity,
-                    in state,
-                    in definition,
-                    in slot,
-                    in asset,
-                    lod,
-                    position,
-                    presenterWorldRotation,
-                    presenterWorldScale,
-                    alpha,
-                    VisualVisibility.Visible)));
+            PresentationVisualProxy proxy = BuildVisualProxy(
+                entity,
+                in state,
+                in definition,
+                in slot,
+                in asset,
+                lod,
+                position,
+                presenterWorldRotation,
+                presenterWorldScale,
+                alpha,
+                VisualVisibility.Visible);
+            _requests.AddVisualProxy(state.OwnerEntity, in proxy);
         }
 
         private void EmitHiddenSnapshotIfVisual(
@@ -359,20 +358,19 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            _requests.Add(PresentationRequest.FromVisualProxy(
-                state.OwnerEntity,
-                BuildVisualProxy(
-                    entity,
-                    in state,
-                    in definition,
-                    in slot,
-                    in asset,
-                    lod,
-                    position,
-                    presenterWorldRotation,
-                    presenterWorldScale,
-                    alpha,
-                    VisualVisibility.Hidden)));
+            PresentationVisualProxy proxy = BuildVisualProxy(
+                entity,
+                in state,
+                in definition,
+                in slot,
+                in asset,
+                lod,
+                position,
+                presenterWorldRotation,
+                presenterWorldScale,
+                alpha,
+                VisualVisibility.Hidden);
+            _requests.AddVisualProxy(state.OwnerEntity, in proxy);
         }
 
         private void RemoveHiddenLaneEntriesIfNeeded(
@@ -472,7 +470,7 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 p1 = ResolveOptionalVector3Param(entity, WellKnownPresenterParamKeys.SplineP1, Vector3.Lerp(p0, p3, 1f / 3f));
             Vector3 p2 = ResolveOptionalVector3Param(entity, WellKnownPresenterParamKeys.SplineP2, Vector3.Lerp(p0, p3, 2f / 3f));
 
-            _requests.Add(PresentationRequest.FromSplineRibbon(state.OwnerEntity, new SplineRibbonRequest
+            SplineRibbonRequest request = new SplineRibbonRequest
             {
                 StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId),
                 P0 = p0,
@@ -483,7 +481,8 @@ namespace Ludots.Core.Presentation.Systems
                 FillColor = fillColor,
                 BorderColor = borderColor,
                 BorderWidth = borderWidth,
-            }, lod));
+            };
+            _requests.AddSplineRibbon(state.OwnerEntity, in request, lod);
         }
 
         private void EmitWorldHudAsset(Entity entity, int definitionId, in PresenterState state, in PresenterDefinition definition, in BehaviorSlot slot, in AssetBindingConfig asset, LODLevel lod, Vector3 position, Vector3 presenterWorldScale, float alpha)
@@ -514,7 +513,7 @@ namespace Ludots.Core.Presentation.Systems
             float width = scale.X > 0f ? scale.X : 40f;
             float height = scale.Y > 0f ? scale.Y : 6f;
 
-            _requests.Add(PresentationRequest.FromWorldHud(state.OwnerEntity, new WorldHudItem
+            WorldHudItem item = new WorldHudItem
             {
                 StableId = HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Bar, definitionId, slot.SlotIndex),
                 DirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, background, foreground),
@@ -525,7 +524,8 @@ namespace Ludots.Core.Presentation.Systems
                 Height = height,
                 Color0 = background,
                 Color1 = foreground,
-            }, phaseResult.LOD));
+            };
+            _requests.AddWorldHud(state.OwnerEntity, in item, phaseResult.LOD);
         }
 
         private void EmitWorldTextAsset(Entity entity, int definitionId, in PresenterState state, in PresenterDefinition definition, in BehaviorSlot slot, in AssetBindingConfig asset, LODLevel lod, Vector3 position, Vector3 presenterWorldScale, float alpha)
@@ -566,7 +566,7 @@ namespace Ludots.Core.Presentation.Systems
             int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
             PresentationTextPacket packet = PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
 
-            _requests.Add(PresentationRequest.FromWorldHud(state.OwnerEntity, new WorldHudItem
+            WorldHudItem item = new WorldHudItem
             {
                 StableId = HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, definitionId, slot.SlotIndex),
                 DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet),
@@ -579,7 +579,8 @@ namespace Ludots.Core.Presentation.Systems
                 FontSize = fontSize,
                 Color0 = color,
                 Text = packet,
-            }, phaseResult.LOD));
+            };
+            _requests.AddWorldHud(state.OwnerEntity, in item, phaseResult.LOD);
         }
 
         private void EmitGroundOverlayAsset(
@@ -640,7 +641,7 @@ namespace Ludots.Core.Presentation.Systems
                 ResolveOptionalFloatParam(entity, WellKnownPresenterParamKeys.OverlayBorderWidth, scale.Z),
                 0f);
 
-            _requests.Add(PresentationRequest.FromGroundOverlay(state.OwnerEntity, new GroundOverlayItem
+            GroundOverlayItem item = new GroundOverlayItem
             {
                 StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, definitionId),
                 Shape = shape,
@@ -654,7 +655,8 @@ namespace Ludots.Core.Presentation.Systems
                 FillColor = fillColor,
                 BorderColor = borderColor,
                 BorderWidth = borderWidth,
-            }, lod));
+            };
+            _requests.AddGroundOverlay(state.OwnerEntity, in item, lod);
         }
 
         private bool ResolveAssetVisibility(Entity entity, in AssetBindingConfig asset)

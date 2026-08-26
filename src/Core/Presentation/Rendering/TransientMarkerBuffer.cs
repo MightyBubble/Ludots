@@ -102,7 +102,7 @@ namespace Ludots.Core.Presentation.Rendering
                 Vector4 color = marker.Color;
                 color.W *= alpha;
 
-                requests.Add(PresentationRequest.FromVisualProxy(marker.Anchor, new PresentationVisualProxy
+                PresentationVisualProxy proxy = new PresentationVisualProxy
                 {
                     ProxyKind = PresentationVisualProxyKind.Presenter,
                     MeshAssetId = marker.MeshAssetId,
@@ -116,7 +116,8 @@ namespace Ludots.Core.Presentation.Rendering
                     Flags = VisualRuntimeFlags.Visible,
                     Visibility = VisualVisibility.Visible,
                     LOD = LODLevel.High,
-                }));
+                };
+                requests.AddVisualProxy(marker.Anchor, in proxy);
 
                 i++;
             }

@@ -49,11 +49,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(_fixture.Requests.Count, Is.EqualTo(0), "sink 前不应有资产请求");
             _fixture.RuntimeSystem.Update(0.016f);
 
-            PresentationRequest request = _fixture.FindSinkVisualRequest(presenter, slot: 0);
-            Assert.That(request.Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(request.VisualProxy.Scale.X, Is.EqualTo(2.5f), "指定 slot 应得到 lane 当前值");
-            Assert.That(request.VisualProxy.Scale.Y, Is.EqualTo(2.5f));
-            Assert.That(request.VisualProxy.Scale.Z, Is.EqualTo(2.5f));
+            PresentationVisualProxy request = _fixture.FindSinkVisualRequest(presenter, slot: 0);
+            Assert.That(request.Scale.X, Is.EqualTo(2.5f), "指定 slot 应得到 lane 当前值");
+            Assert.That(request.Scale.Y, Is.EqualTo(2.5f));
+            Assert.That(request.Scale.Z, Is.EqualTo(2.5f));
         }
 
         [Test]
@@ -209,8 +208,8 @@ namespace Ludots.Tests.Presentation
             _fixture.EnqueueSink(presenter, ParamLane.Float, slot: 0);
             _fixture.RuntimeSystem.Update(0.016f);
 
-            PresentationRequest request = _fixture.FindSinkVisualRequest(presenter, slot: 0);
-            Assert.That(request.VisualProxy.Scale.X, Is.EqualTo(0.5f));
+            PresentationVisualProxy request = _fixture.FindSinkVisualRequest(presenter, slot: 0);
+            Assert.That(request.Scale.X, Is.EqualTo(0.5f));
             Assert.That(_fixture.RuntimeSystem.SinkDiagnostics.TotalRecorded, Is.EqualTo(1));
             Assert.That(_fixture.RuntimeSystem.SinkDiagnostics.GetRecent(0).Accepted, Is.True);
         }
@@ -231,13 +230,18 @@ namespace Ludots.Tests.Presentation
 
             int slotStableId = _fixture.ComposeSlotStableId(presenter, slot: 0);
             int matching = 0;
-            foreach (ref readonly PresentationRequest request in _fixture.Requests.GetSpan())
+            foreach (ref readonly PresentationRequestOp op in _fixture.Requests.Ops)
             {
-                if (request.Kind == PresentationRequestKind.VisualProxy &&
-                    request.VisualProxy.StableId == slotStableId)
+                if (op.Channel != PresentationRequestChannel.VisualProxy)
+                {
+                    continue;
+                }
+
+                ref readonly VisualProxyChannelItem item = ref _fixture.Requests.VisualProxyAt(op.Slot);
+                if (item.VisualProxy.StableId == slotStableId)
                 {
                     matching++;
-                    Assert.That(request.VisualProxy.Scale.X, Is.EqualTo(3.25f), "同帧 emit 不得用旧值覆盖 sink 写入");
+                    Assert.That(item.VisualProxy.Scale.X, Is.EqualTo(3.25f), "同帧 emit 不得用旧值覆盖 sink 写入");
                 }
             }
 
@@ -373,15 +377,20 @@ namespace Ludots.Tests.Presentation
                     state.StableId, slot, AssetKind.Mesh, state.DefId);
             }
 
-            public PresentationRequest FindSinkVisualRequest(Entity presenter, int slot)
+            public PresentationVisualProxy FindSinkVisualRequest(Entity presenter, int slot)
             {
                 int slotStableId = ComposeSlotStableId(presenter, slot);
-                foreach (ref readonly PresentationRequest request in Requests.GetSpan())
+                foreach (ref readonly PresentationRequestOp op in Requests.Ops)
                 {
-                    if (request.Kind == PresentationRequestKind.VisualProxy &&
-                        request.VisualProxy.StableId == slotStableId)
+                    if (op.Channel != PresentationRequestChannel.VisualProxy)
                     {
-                        return request;
+                        continue;
+                    }
+
+                    ref readonly VisualProxyChannelItem item = ref Requests.VisualProxyAt(op.Slot);
+                    if (item.VisualProxy.StableId == slotStableId)
+                    {
+                        return item.VisualProxy;
                     }
                 }
 

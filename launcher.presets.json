@@ -2085,6 +2085,24 @@
       ]
     },
     {
+      "id": "engine_raylib_slash_trail",
+      "name": "引擎画廊·刀光轨迹",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "slash_trail",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_slash_trail/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_slash_trail/stats.json"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_HidePanel_raylib",
       "name": "Graph Op HidePanel Raylib",
       "selectors": [

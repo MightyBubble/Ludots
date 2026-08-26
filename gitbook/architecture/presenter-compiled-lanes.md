@@ -4,17 +4,22 @@
 
 本文是 [Presenter-as-Actor 架构总览](presenter-as-actor-architecture.md) §9.4 的实现展开。不改变 Presenter 的语义模型（PresenterDefinition / BehaviorSlot / PresenterCommand / presenters.json schema 全部不变），只改变执行模型。
 
+> **落地状态（相对 #924 / #930，以当前 `main` 为准）**  
+> - 已落地：Prefab 删除、SplineRibbon、typed request lanes、`CompiledBinding[]`、Lifecycle / Dirty Sync / Continuous Tick / Visible Projection 基础分车道、entity-backed `PresenterEntityRuntime`（旧 `PresenterInstanceBuffer` 已删除，见 §8.4）。  
+> - 未收口：上帝类继续拆分、Material/Sound 车道化补齐、LOD children pruning、30K→150K / 60FPS 全量性能门禁与完整 UAT 证据。  
+> - 下文 §1「当前瓶颈」保留为历史动机；实现对照以 §8.4 与仓库代码为准，勿再把已删 buffer 当作现役入口。
+
 ---
 
 ## 1 动机与问题量化
 
-### 1.1 当前瓶颈
+### 1.1 历史瓶颈（迁移前）
 
-| 热路径 | 当前行为 | 复杂度 |
+| 热路径 | 当时行为 | 复杂度 |
 |--------|---------|--------|
 | `PresenterEmitSystem.ProcessActive()` | 每帧遍历全部 active instances | O(active) |
 | `PresenterBehaviorSystem` | 每帧对每个 active instance 求值全部 behavior | O(active × behaviors) |
-| `PresenterInstanceBuffer.ReleaseDeadEntityAnchors()` | 每帧全 slot 扫描检查 entity 存活 | O(capacity) |
+| `PresenterInstanceBuffer.ReleaseDeadEntityAnchors()`（已删除） | 每帧全 slot 扫描检查 entity 存活 | O(capacity) |
 | Param resolve | 每次 emit 走 Override → Binding → Default 链，无缓存 | O(active × params) |
 | Draw buffer | 8192 容量 AoS，每帧 clear + rebuild | O(visible) |
 
@@ -212,6 +217,16 @@ Transform 后续更新也不是 behavior，而是 runtime system 的 dirty sync 
 | **Animator** | 动画状态推进 | Continuous Tick | 每帧（仅 active + visible candidate） |
 | **Sound** | 声音请求 | Event-Driven | ActivateBehavior / DeactivateBehavior / scope 销毁 |
 | **AssetBinding** | 投影为 mesh/vfx/hud/text/spline/decal | Visible Projection | 每帧（仅 visible），dirty 时重算，stable 时 memcpy |
+| **TrailMesh** | 刀光/拖尾轨迹：激活期采样弧线，逐帧折算 age01 快照 upsert 进 TrailMeshBuffer | Continuous Tick | 每帧（仅 active）；停用后存量样本按 SampleLifetimeSeconds 淡出收尾 |
+
+TrailMesh 行为契约：`PresenterBehaviorSystem`（经 `TrailMeshRuntime`）是 `TrailMeshBuffer` 在 Core 侧的唯一写入方；
+头插/寿命淘汰/age01 折算在 `TrailSampleHistory`（Platform.Abstractions）单一实现，引擎画廊 SlashTrailScene 与
+`TrailMeshRuntime` 共用同一实现，不存在第二套可分叉的采样语义。采样器容量与 buffer.Capacity 严格一致；
+两个存活 presenter 撞同一 stableId 在采样时 fail-fast（buffer 槽位以 stableId 为身份，静默覆盖禁止）。
+缓冲区固定容量来自 `presentation.trailMeshCapacity`（game.json，LudotsCoreMod 64），必须显式配置，
+缺失或非正数在启动校验 fail-fast，buffer 满 upsert 同样 fail-fast。
+每条 trail 的采样条带上限为 `TrailMeshBuffer.MaxSamplesPerTrail`（32），
+实际采样数由 `TrailMeshConfig.MaxSamples` 约束（2..32，运行时同样 fail-fast 校验，不静默 clamp）。
 
 核心区分：
 

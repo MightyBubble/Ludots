@@ -251,6 +251,26 @@ public enum SplineUsage : byte
 }
 ```
 
+#### 4.2.1 BehaviorSlot.activationCondition 作者合同
+
+`activationCondition` 是 **root-presenter 契约**：实例创建时一次性求值，由 loader 编译为 PresenterCreated 规则对（无条件 `DeactivateBehavior` + 条件 `ActivateBehavior`），PresenterRuleSystem 复用现有 ConditionRef 求值路径消费，不新增条件系统。
+
+```jsonc
+{
+  "slot": "sound",
+  "kind": "Sound",
+  "activeByDefault": false,                    // 可选；带 activationCondition 时 loader 强制 false
+  "activationCondition": { "inline": "SourceHasVisualTransform" },
+  "sound": { "soundAssetId": "sfx_cond" }
+}
+```
+
+- **两种条件引用**：`inline`（`InlineConditionKind` 内置谓词，快路径，枚举源 `src/Core/Presentation/Presenters/InlineConditionKind.cs`）或 `graphProgramId`（正整数，必须引用已注册的 `GraphKind.Validation` 图程序）。graph 引用在装载期经 `resolveGraphProgramKind`（如 `GraphProgramRegistry.TryGetKind`）校验：未提供 resolver、未知 id、非 Validation kind 一律抛错终止，无运行时兜底。
+- **条件即唯一权威**：编译出的规则对让条件结果决定槽位最终状态；loader 对带条件的槽强制 `ActiveByDefault=false`，消除创建帧（BehaviorSystem 在同一引擎帧内晚于 RuntimeSystem 运行）条件首次求值前的一帧激活输出。
+- **求值时机与顺序**：PresenterCreated 事件在创建帧发布，规则系统在下一次规则更新中产出命令，运行时随后按序应用到 active mask，行为系统再输出；因此条件为真时首个输出可能晚一帧，条件为假时不会有创建帧泄漏。创建帧先由 `ActiveByDefault=false` 保持关闭。同一事件桶内规则按序执行（无条件 Deactivate 先于条件 Activate），不做运行期对无关事件的通配重评；tag/attribute 驱动的运行时切换走 authored keyed 规则（`TagEffectiveChanged` + `TagGained`/`TagLost`）。
+- **实例隔离**：编译规则只路由到事件携带的 presenter 实例，不扇出到同一 definition 的姐妹实例（多实例场景各实例 mask 独立收敛）。
+- **children 禁止**：子 presenter 创建绕过 PresenterCreated 事件，`children[]` 与 `instanceChildren` 引用的定义不得含 activationCondition 槽（装载期抛错）；`instanceBehaviors` 亦禁止声明该字段。
+
 ### 4.3 PresenterInstance（扩展层级）
 
 详见 [Transform、Grounding 与 Attachment](presenter-transform-and-attachment.md)。
