@@ -465,6 +465,21 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     $"Panel '{template.Id}' list '{control.Bind}' window projection failed for handle {handle.Id}#{handle.Generation}.");
             }
         }
+        else if (parentItem == null)
+        {
+            PanelListViewWindow projectionWindow = control.Present == PanelPresentMode.Aggregate
+                ? new PanelListViewWindow(0, 1)
+                : PanelListViewWindow.All;
+            if (!_panelHost.TryProjectListWindow(
+                    handle,
+                    control.Bind!,
+                    projectionWindow,
+                    out projection))
+            {
+                throw new InvalidOperationException(
+                    $"Panel '{template.Id}' list '{control.Bind}' projection failed for handle {handle.Id}#{handle.Generation}.");
+            }
+        }
         else
         {
             projection = FindList(lists, control.Bind!)

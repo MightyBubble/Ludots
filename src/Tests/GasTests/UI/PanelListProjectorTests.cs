@@ -240,6 +240,68 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
+        public void Project_AbilitySlotGraph_UsesOwnerAndSubjectIntId()
+        {
+            PanelTemplate element = PanelTemplateLoader.Load("""
+            {
+              "id": "panel.ability.slot",
+              "subject": "AbilitySlot",
+              "graph": "g.ability.slot",
+              "pins": [ { "name": "ready", "key": "ability.slot.ready", "default": 0 } ],
+              "layout": { "controls": [ { "type": "label", "bind": "displayName" } ] }
+            }
+            """);
+            element.GraphId = 42;
+            PanelTemplate host = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.ability.slots",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "slots",
+                  "source": "selfGraph",
+                  "collectionKey": "ability.slots",
+                  "template": "panel.ability.slot"
+                }
+              ]
+            }
+            """);
+            Bind(host, element);
+
+            using World world = World.Create();
+            Entity owner = world.Create();
+            var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
+            var entityStore = new EntityCollectionStore(keyRegistry, 8, 16);
+            var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
+            intIdStore.Replace(
+                owner,
+                IntIdCollectionDescriptor.Create(
+                    "ability.slots",
+                    EntityCollectionSourceKind.GasGraphResult,
+                    EntityCollectionRoleKind.Display),
+                new[] { 3 });
+            var values = new GraphOutputValueStore(
+                new StringIntRegistry(8, 1, 0, StringComparer.Ordinal),
+                8);
+            var evaluator = new RecordingPanelGraphEvaluator();
+            var projector = new PanelListProjector(
+                world,
+                entityStore,
+                intIdStore,
+                new ItemDefinitionRegistry(),
+                new PanelProjectionReader(world, values),
+                evaluator);
+
+            IReadOnlyList<PanelListProjection> lists = projector.Project(owner, host);
+
+            Assert.That(evaluator.GraphId, Is.EqualTo(42));
+            Assert.That(evaluator.Owner, Is.EqualTo(owner));
+            Assert.That(evaluator.SubjectIntId, Is.EqualTo(3));
+            Assert.That(lists[0].Items[0].Strings["displayName"], Is.EqualTo("3"));
+        }
+
+        [Test]
         public void Project_NestedCollection_StoresChildProjectionOnParentItem()
         {
             PanelTemplate child = PanelTemplateLoader.Load("""
@@ -257,18 +319,32 @@ namespace Ludots.Tests.GasTests.UI
               "subject": "Entity",
               "graph": "g.nested.parent",
               "pins": [ { "name": "value", "key": "nested.parent.value", "default": 0 } ],
+              "inputs": [
+                {
+                  "name": "sharedChildren",
+                  "from": { "space": "parent", "output": "nested.shared.children" },
+                  "type": "EntityCollection"
+                }
+              ],
               "collections": [
                 {
                   "name": "children",
                   "source": "selfGraph",
                   "collectionKey": "nested.children",
                   "template": "panel.nested.child"
+                },
+                {
+                  "name": "sharedChildren",
+                  "source": "input",
+                  "input": "sharedChildren",
+                  "template": "panel.nested.child"
                 }
               ],
               "layout": {
                 "controls": [
                   { "type": "label", "bind": "displayName" },
-                  { "type": "list", "bind": "children" }
+                  { "type": "list", "bind": "children" },
+                  { "type": "list", "bind": "sharedChildren" }
                 ]
               }
             }
@@ -299,6 +375,7 @@ namespace Ludots.Tests.GasTests.UI
             Entity hostScope = world.Create();
             Entity parentEntity = CreateUnit(world, "父");
             Entity childEntity = CreateUnit(world, "子");
+            Entity sharedChildEntity = CreateUnit(world, "共享子");
             var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
             var entityStore = new EntityCollectionStore(keyRegistry, 8, 16);
             var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
@@ -316,6 +393,13 @@ namespace Ludots.Tests.GasTests.UI
                     EntityCollectionSourceKind.GasGraphResult,
                     EntityCollectionRoleKind.Display),
                 new[] { childEntity });
+            entityStore.Replace(
+                hostScope,
+                EntityCollectionDescriptor.Create(
+                    "nested.shared.children",
+                    EntityCollectionSourceKind.GasGraphResult,
+                    EntityCollectionRoleKind.Display),
+                new[] { sharedChildEntity });
             var values = new GraphOutputValueStore(
                 new StringIntRegistry(8, 1, 0, StringComparer.Ordinal),
                 8);
@@ -329,12 +413,16 @@ namespace Ludots.Tests.GasTests.UI
             IReadOnlyList<PanelListProjection> lists = projector.Project(hostScope, host);
 
             PanelListItemProjection parentItem = lists[0].Items[0];
-            Assert.That(parentItem.NestedLists, Has.Count.EqualTo(1));
+            Assert.That(parentItem.NestedLists, Has.Count.EqualTo(2));
             Assert.That(parentItem.NestedLists[0].Name, Is.EqualTo("children"));
             Assert.That(parentItem.NestedLists[0].Items, Has.Count.EqualTo(1));
             Assert.That(
                 parentItem.NestedLists[0].Items[0].Strings["displayName"],
                 Is.EqualTo("子"));
+            Assert.That(parentItem.NestedLists[1].Name, Is.EqualTo("sharedChildren"));
+            Assert.That(
+                parentItem.NestedLists[1].Items[0].Strings["displayName"],
+                Is.EqualTo("共享子"));
         }
 
         private static void Bind(PanelTemplate host, PanelTemplate element)
@@ -344,6 +432,20 @@ namespace Ludots.Tests.GasTests.UI
             registry.Register(host);
             registry.Freeze();
             PanelListProjector.BindElements(host, registry);
+        }
+
+        private sealed class RecordingPanelGraphEvaluator : IPanelGraphEvaluator
+        {
+            public int GraphId { get; private set; }
+            public Entity Owner { get; private set; }
+            public int SubjectIntId { get; private set; }
+
+            public void Evaluate(int graphId, Entity owner, int subjectIntId = 0)
+            {
+                GraphId = graphId;
+                Owner = owner;
+                SubjectIntId = subjectIntId;
+            }
         }
 
         private static Entity CreateUnit(World world, string name)
