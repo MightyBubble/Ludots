@@ -60,12 +60,21 @@ namespace Ludots.Core.Gameplay.FieldRegions
         private static Dictionary<int, int> CountRegionCells(ChunkedField2D<int> field)
         {
             var counts = new Dictionary<int, int>();
-            var buffer = new FieldCellValue2D<int>[field.NonDefaultCount];
-            field.CopyNonDefaultCells(buffer);
-            foreach (FieldCellValue2D<int> cell in buffer)
+            int cellCount = field.Grid.ChunkSizeCells * field.Grid.ChunkSizeCells;
+            for (int chunkIndex = 0; chunkIndex < field.ChunkCount; chunkIndex++)
             {
-                counts.TryGetValue(cell.Value, out int current);
-                counts[cell.Value] = current + 1;
+                FieldChunk2D<int> chunk = field.GetChunkAt(chunkIndex);
+                for (int local = 0; local < cellCount; local++)
+                {
+                    int regionId = chunk.Get(local);
+                    if (regionId == 0)
+                    {
+                        continue;
+                    }
+
+                    counts.TryGetValue(regionId, out int current);
+                    counts[regionId] = current + 1;
+                }
             }
 
             return counts;
