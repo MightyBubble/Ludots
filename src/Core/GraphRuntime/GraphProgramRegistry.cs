@@ -8,12 +8,12 @@ namespace Ludots.Core.GraphRuntime
     public readonly struct GraphProgramRegistration
     {
         public GraphProgramRegistration(GraphInstruction[] program, GraphKind kind)
-            : this(program, kind, Array.Empty<string>(), Array.Empty<TriggerGraphEntry>())
+            : this(program, kind, Array.Empty<string>(), Array.Empty<TriggerGraphEntry>(), null, null, GraphExecutionBackend.Interpret)
         {
         }
 
         public GraphProgramRegistration(GraphInstruction[] program, GraphKind kind, string[]? symbols)
-            : this(program, kind, symbols, Array.Empty<TriggerGraphEntry>())
+            : this(program, kind, symbols, Array.Empty<TriggerGraphEntry>(), null, null, GraphExecutionBackend.Interpret)
         {
         }
 
@@ -22,12 +22,27 @@ namespace Ludots.Core.GraphRuntime
             GraphKind kind,
             string[]? symbols,
             TriggerGraphEntry[]? triggerGraphEntries)
+            : this(program, kind, symbols, triggerGraphEntries, null, null, GraphExecutionBackend.Interpret)
+        {
+        }
+
+        public GraphProgramRegistration(
+            GraphInstruction[] program,
+            GraphKind kind,
+            string[]? symbols,
+            TriggerGraphEntry[]? triggerGraphEntries,
+            GraphGeneratedExecute? generatedExecute,
+            GraphGeneratedExecuteSlice? generatedExecuteSlice,
+            GraphExecutionBackend executionBackend)
         {
             Program = program ?? Array.Empty<GraphInstruction>();
             Kind = kind;
             Symbols = symbols ?? Array.Empty<string>();
             TriggerGraphEntries = triggerGraphEntries ?? Array.Empty<TriggerGraphEntry>();
             ContainsYield = ProgramContainsYield(Program);
+            GeneratedExecute = generatedExecute;
+            GeneratedExecuteSlice = generatedExecuteSlice;
+            ExecutionBackend = executionBackend;
         }
 
         public GraphInstruction[] Program { get; }
@@ -35,6 +50,28 @@ namespace Ludots.Core.GraphRuntime
         public string[] Symbols { get; }
         public IReadOnlyList<TriggerGraphEntry> TriggerGraphEntries { get; }
         public bool ContainsYield { get; }
+        public GraphGeneratedExecute? GeneratedExecute { get; }
+        public GraphGeneratedExecuteSlice? GeneratedExecuteSlice { get; }
+        public GraphExecutionBackend ExecutionBackend { get; }
+
+        public GraphProgramRegistration WithGenerated(
+            GraphGeneratedExecute execute,
+            GraphGeneratedExecuteSlice? executeSlice,
+            GraphExecutionBackend backend)
+        {
+            ArgumentNullException.ThrowIfNull(execute);
+            TriggerGraphEntry[] entries = TriggerGraphEntries is TriggerGraphEntry[] arr
+                ? arr
+                : new List<TriggerGraphEntry>(TriggerGraphEntries).ToArray();
+            return new GraphProgramRegistration(
+                Program,
+                Kind,
+                Symbols,
+                entries,
+                execute,
+                executeSlice,
+                backend);
+        }
 
         private static bool ProgramContainsYield(GraphInstruction[] program)
         {
@@ -117,6 +154,58 @@ namespace Ludots.Core.GraphRuntime
             }
 
             _version++;
+        }
+
+        /// <summary>
+        /// Attaches a generated execute entry for an already-registered graph.
+        /// Hot replace clears generated entries until rebound.
+        /// </summary>
+        public void AttachGenerated(
+            int graphId,
+            GraphGeneratedExecute execute,
+            GraphGeneratedExecuteSlice? executeSlice,
+            GraphExecutionBackend backend)
+        {
+            if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
+            ArgumentNullException.ThrowIfNull(execute);
+            if (backend == GraphExecutionBackend.Interpret)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(backend),
+                    backend,
+                    "AttachGenerated requires Codegen or Parity backend.");
+            }
+
+            if (!_programs.TryGetValue(graphId, out GraphProgramRegistration existing))
+            {
+                throw new InvalidOperationException(
+                    $"Graph program id {graphId} is not registered; cannot attach generated execute.");
+            }
+
+            _programs[graphId] = existing.WithGenerated(execute, executeSlice, backend);
+            _version++;
+        }
+
+        public GraphExecutionBackend GetExecutionBackend(int graphId)
+        {
+            if (!_programs.TryGetValue(graphId, out GraphProgramRegistration entry))
+            {
+                throw new InvalidOperationException($"Graph program id {graphId} is not registered.");
+            }
+
+            return entry.ExecutionBackend;
+        }
+
+        public IReadOnlyList<KeyValuePair<int, GraphProgramRegistration>> SnapshotRegistrations()
+        {
+            var list = new List<KeyValuePair<int, GraphProgramRegistration>>(_programs.Count);
+            foreach (KeyValuePair<int, GraphProgramRegistration> pair in _programs)
+            {
+                list.Add(pair);
+            }
+
+            list.Sort((a, b) => a.Key.CompareTo(b.Key));
+            return list;
         }
 
         /// <summary>

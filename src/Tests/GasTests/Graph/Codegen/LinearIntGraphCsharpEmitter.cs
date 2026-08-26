@@ -48,7 +48,10 @@ namespace Ludots.Tests.Gas.Graph.Codegen
         {
             try
             {
-                return _inner.CompileSourceAndActivate(source, assemblyMarker, expectTightEntry: source.Contains(GraphCsharpEmitter.GeneratedTightMethodName, StringComparison.Ordinal));
+                return _inner.CompileSourceAndActivate(
+                    source,
+                    assemblyMarker,
+                    expectTightEntry: source.Contains(GraphCsharpEmitter.GeneratedTightMethodName, StringComparison.Ordinal));
             }
             catch (GraphCodegenCompileFailureException ex)
             {

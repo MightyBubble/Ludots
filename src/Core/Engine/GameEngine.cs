@@ -1028,6 +1028,7 @@ namespace Ludots.Core.Engine
             new GraphFunctionCatalogLoader(ConfigPipeline, graphFunctionCatalog, graphProgramRegistry)
                 .Load(ConfigCatalog, ConfigConflictReport);
             graphConfigLoader.ResolveFuncLibInvokes(graphPackages, graphFunctionCatalog);
+            BindGraphCodegenBackend(graphProgramRegistry, config);
             var graphActionCatalog = new GraphActionCatalog();
             new GraphActionCatalogLoader(
                     ConfigPipeline,
@@ -3408,6 +3409,58 @@ namespace Ludots.Core.Engine
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));
 
             return triggers;
+        }
+
+        private void BindGraphCodegenBackend(GraphProgramRegistry programs, GameConfig config)
+        {
+            GraphCodegenLoadMode mode = GraphCodegenLoadModeParser.Parse(config.GraphExecutionBackend);
+            if (mode == GraphCodegenLoadMode.Interpret)
+            {
+                return;
+            }
+
+            IGraphCodegenRuntimeBinder binder = ResolveGraphCodegenRuntimeBinder(mode);
+            binder.BindAll(programs, mode);
+            Diagnostics.Log.Info(
+                in LogChannels.Engine,
+                $"Graph codegen backend bound: mode={mode}, programs={programs.SnapshotRegistrations().Count}");
+        }
+
+        private static IGraphCodegenRuntimeBinder ResolveGraphCodegenRuntimeBinder(GraphCodegenLoadMode mode)
+        {
+            const string typeName = "Ludots.Graph.Codegen.GraphCodegenRuntimeBinder";
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (!string.Equals(assembly.GetName().Name, "Ludots.Graph.Codegen", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Type? type = assembly.GetType(typeName, throwOnError: false);
+                if (type != null)
+                {
+                    return (IGraphCodegenRuntimeBinder)(Activator.CreateInstance(type)
+                        ?? throw new InvalidOperationException("Failed to construct GraphCodegenRuntimeBinder."));
+                }
+            }
+
+            string? coreDir = Path.GetDirectoryName(typeof(GameEngine).Assembly.Location);
+            if (!string.IsNullOrWhiteSpace(coreDir))
+            {
+                string dll = Path.Combine(coreDir, "Ludots.Graph.Codegen.dll");
+                if (File.Exists(dll))
+                {
+                    Assembly assembly = Assembly.LoadFrom(dll);
+                    Type type = assembly.GetType(typeName, throwOnError: true)
+                        ?? throw new InvalidOperationException("GraphCodegenRuntimeBinder type missing after LoadFrom.");
+                    return (IGraphCodegenRuntimeBinder)(Activator.CreateInstance(type)
+                        ?? throw new InvalidOperationException("Failed to construct GraphCodegenRuntimeBinder."));
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"graphExecutionBackend={mode} requires Ludots.Graph.Codegen.dll beside the host (fail-closed). " +
+                "Reference Ludots.Graph.Codegen from the launching project.");
         }
 
         private void InstallModTriggerGraphs(GraphProgramRegistry programs)
