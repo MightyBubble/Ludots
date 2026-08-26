@@ -12,7 +12,6 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -50,8 +49,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     private EffectTemplateRegistry _effectTemplates = null!;
     private BuiltinHandlerRegistry _builtinHandlers = null!;
     private BuiltinHandlerExecutionContext _builtinRuntime = null!;
-    private ItemDefinitionRegistry _itemDefinitions = null!;
-    private InventoryRuntimeService _inventoryRuntime = null!;
     private int _configEffectTemplateId;
 
     public World World => _world ?? throw new InvalidOperationException("Gallery host is not bootstrapped.");
@@ -180,8 +177,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             RelationshipFlags = RelationshipFlags,
             BuiltinHandlers = _builtinHandlers,
             EffectTemplates = _effectTemplates,
-            ItemDefinitions = _itemDefinitions,
-            InventoryRuntime = _inventoryRuntime,
             BuiltinRuntime = _builtinRuntime,
             ConfigEffectTemplateId = _configEffectTemplateId,
             OwnsSimulationWorld = _ownsWorld
@@ -221,7 +216,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     {
         _world = engine.World;
         _ownsWorld = false;
-        _ = AbilityIdRegistry.Register("火球");
         SpatialQueries = engine.SpatialQueries
             ?? throw new InvalidOperationException("Node gallery requires engine SpatialQueries.");
         Coords = engine.SpatialCoords
@@ -257,8 +251,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         Ownership = new OwnershipResolver(Relationships, ownsType);
         BindLifecycleServices(RequireEngineService(engine, CoreServiceKeys.PresentationStableIdAllocator));
         EnsureHostileCasterAndEnemyTeams();
-        _itemDefinitions = RequireEngineService(engine, CoreServiceKeys.ItemDefinitionRegistry);
-        _inventoryRuntime = RequireEngineService(engine, CoreServiceKeys.InventoryRuntimeService);
     }
 
     private static void EnsureHostileCasterAndEnemyTeams()
