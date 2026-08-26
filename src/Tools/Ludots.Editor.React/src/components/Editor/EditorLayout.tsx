@@ -26,6 +26,12 @@ export const EditorLayout: React.FC = () => {
             >
                 Graph Editor →
             </Link>
+            <Link
+                to="/timeline"
+                className="absolute bottom-4 right-[34rem] z-50 rounded-md border border-fuchsia-500/40 bg-black/80 px-3 py-2 font-mono text-xs text-fuchsia-300 hover:bg-fuchsia-500/10"
+            >
+                时间轴 →
+            </Link>
         </div>
     );
 };

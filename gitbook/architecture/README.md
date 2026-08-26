@@ -14,6 +14,7 @@
 - [属性写入权威](attribute-write-authority.md) — **current 直写存活；聚合器只算有效上限；裸写由 IL 守卫收口**
 - [图分层：Flow / Script 与行为调度](graph-layering-flow-and-behavior.md)
 - [图能力唯一入口](graph-capability-status.md) — **进度、还开着的活、不该合的 PR，只认这里**
+- [统一时间轴编辑器](unified-timeline-editor.md) — 演出序列 / 技能 exec / Presenter 计时共用轨道界面，只换上下文适配器
 - [图复用库合同：FuncLib / ActionLib](graph-funclib-actionlib-contract.md) — **纯函数库 vs 可挂起动作库；Effect 时间轴与阶段表达力补丁**
 - [（已废止）TagDisplay 专线查表](tag-display-lookup.md)
 - [通用图查表（ResolveTableRow + TableRead）](graph-table-lookup.md) — **查表 SSOT**

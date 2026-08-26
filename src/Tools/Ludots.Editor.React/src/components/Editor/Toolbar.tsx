@@ -1811,6 +1811,13 @@ export const Toolbar: React.FC = () => {
                     >
                         GAS Graphs
                     </Link>
+                    <Link
+                        to="/timeline"
+                        className="pointer-events-auto ml-2 mt-1 inline-block text-[10px] text-fuchsia-300 underline hover:text-fuchsia-200"
+                        title="Open unified timeline editor"
+                    >
+                        Timeline
+                    </Link>
                 </div>
                 <select
                     value={selectedModId ?? ''}
