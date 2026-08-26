@@ -595,6 +595,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_formal_text_raylib",
+      "name": "拼一句上字幕",
+      "selectors": [
+        "$capability_standard_graph_formal_text"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "raylib_client_parity_raylib",
       "name": "Raylib Client Parity",
       "selectors": [

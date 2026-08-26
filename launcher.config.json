@@ -503,6 +503,14 @@
       }
     },
     {
+      "name": "capability_standard_graph_formal_text",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphFormalTextShowcaseMod",
+        "projectPath": "CapabilityStandardGraphFormalTextShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "raylib_client_parity",
       "target": {
         "type": "path",

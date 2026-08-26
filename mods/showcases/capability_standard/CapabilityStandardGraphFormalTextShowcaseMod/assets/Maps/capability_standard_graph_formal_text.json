@@ -1,0 +1,47 @@
+{
+  "Id": "capability_standard_graph_formal_text",
+  "Tags": ["capability_standard_graph_formal_text", "graph_formal_text", "formal-text"],
+  "DefaultCamera": {
+    "TargetXCm": 5000,
+    "TargetYCm": 5000,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 6400,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 32,
+      "HeightInMacroTiles": 32,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.FormalText.SubtitleBeat",
+      "scopeInstanceId": "graph-formal-text-guard"
+    }
+  ],
+  "Entities": [
+    { "InstanceId": "graph-formal-text-guard", "Template": "graph_formal_text_guard" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "graph-formal-text-guard" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "graph-formal-text-guard" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "GraphFormalText.Participant", "Attitude": "Friendly", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "GraphFormalText.Participant", "Symmetric": false }
+    ]
+  }
+}

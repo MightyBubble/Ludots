@@ -3775,6 +3775,31 @@
       "notes": "Score graph driven by Utility GraphScore; subtitle reads UtilityAiDecisionTrace BestTarget/BestScore. ConstFloat 100 lives only in the authored Score graph."
     },
     {
+      "id": "capability_standard_graph_formal_text",
+      "path": "mods/showcases/capability_standard/CapabilityStandardGraphFormalTextShowcaseMod",
+      "projectPath": "CapabilityStandardGraphFormalTextShowcaseMod.csproj",
+      "title": "拼一句上字幕",
+      "summary": "进图后蓝图拼出「守卫倒下了」和「击杀 1」，字幕只从文字出口吐出这两句。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "formal-text",
+        "subtitle"
+      ],
+      "binding": "capability_standard_graph_formal_text",
+      "preset": "capability_standard_graph_formal_text_raylib",
+      "docsPath": "gitbook/acceptance/graph-formal-text-subtitle.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphFormalTextSubtitleShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_formal_text",
+      "screenshot": null,
+      "status": "active",
+      "notes": "TriggerGraph MapLoaded composes ConstText+Concat and FormatText+IntToText into SinkPresentationText(Subtitle); presentation drains GraphPresentationTextSink only."
+    },
+    {
       "id": "capability_standard_hfsm_sentry_arena",
       "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
       "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
