@@ -63,9 +63,22 @@ public sealed class ModRegistrySet
         Attributes = CreateAttributes();
         AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributes];
     }
-    public void ReplaceAbilityIds() => AbilityIds = CreateAbilityIds();
+    public void ReplaceAbilityIds()
+    {
+        // Ability categories are owned by abilities.json load; reset with ability ids.
+        AbilityIds = CreateAbilityIds();
+        AbilityCategories = CreateAbilityCategories();
+    }
+
     public void ReplaceAbilityCategories() => AbilityCategories = CreateAbilityCategories();
-    public void ReplaceEffectTemplateIds() => EffectTemplateIds = CreateEffectTemplateIds();
+
+    public void ReplaceEffectTemplateIds()
+    {
+        // Effect categories are owned by effects.json load; reset with effect template ids.
+        EffectTemplateIds = CreateEffectTemplateIds();
+        EffectCategories = CreateEffectCategories();
+    }
+
     public void ReplaceEffectCategories() => EffectCategories = CreateEffectCategories();
     public void ReplaceConfigKeys() => ConfigKeys = CreateConfigKeys();
 

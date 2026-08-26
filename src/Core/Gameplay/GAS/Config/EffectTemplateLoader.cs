@@ -76,7 +76,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             _registry.Clear();
             EffectTemplateIdRegistry.Clear();
-            EffectCategoryRegistry.Clear();
             UnitTypeRegistry.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog!, relativePath, ConfigMergePolicy.ArrayById, "id");
