@@ -5,7 +5,8 @@
     { "graph": "Graph.CollectionBags.Panels.Open", "scopeInstanceId": "collection-bags-hero" }
   ],
   "Entities": [
-    { "InstanceId": "collection-bags-hero", "Template": "collection_bags_hero" }
+    { "InstanceId": "collection-bags-hero", "Template": "collection_bags_hero" },
+    { "InstanceId": "collection-bags-apprentice", "Template": "collection_bags_apprentice" }
   ],
   "Teams": [
     { "TeamId": 1, "RepresentativeInstanceId": "collection-bags-hero" }
@@ -20,5 +21,5 @@
     "Players": [],
     "PlayerTeams": []
   },
-  "DefaultCamera": { "TargetXCm": 0, "TargetYCm": 0, "Yaw": 45, "Pitch": 35, "DistanceCm": 900, "FovYDeg": 50 }
+  "DefaultCamera": { "TargetXCm": 110, "TargetYCm": 0, "Yaw": 45, "Pitch": 35, "DistanceCm": 1100, "FovYDeg": 50 }
 }

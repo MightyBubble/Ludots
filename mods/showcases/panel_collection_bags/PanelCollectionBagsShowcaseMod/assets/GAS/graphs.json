@@ -9,27 +9,42 @@
       { "id": "scope", "op": "LoadExplicitTarget" },
       { "id": "createEffects", "op": "CreatePanel", "panelType": "panel.collection.effects", "panelAnchor": "screen.topLeft" },
       { "id": "showEffects", "op": "ShowPanel", "panelType": "panel.collection.effects" },
-      { "id": "createAbilities", "op": "CreatePanel", "panelType": "panel.collection.abilities", "panelAnchor": "screen.topCenter" },
-      { "id": "showAbilities", "op": "ShowPanel", "panelType": "panel.collection.abilities" },
+      { "id": "createRoster", "op": "CreatePanel", "panelType": "panel.collection.roster", "panelAnchor": "screen.topCenter" },
+      { "id": "showRoster", "op": "ShowPanel", "panelType": "panel.collection.roster" },
       { "id": "createTags", "op": "CreatePanel", "panelType": "panel.collection.tags", "panelAnchor": "screen.topRight" },
       { "id": "showTags", "op": "ShowPanel", "panelType": "panel.collection.tags" },
+      { "id": "createSupply", "op": "CreatePanel", "panelType": "panel.collection.supply", "panelAnchor": "screen.bottomLeft" },
+      { "id": "showSupply", "op": "ShowPanel", "panelType": "panel.collection.supply" },
+      { "id": "createQuest", "op": "CreatePanel", "panelType": "panel.collection.questboard", "panelAnchor": "screen.bottomCenter" },
+      { "id": "showQuest", "op": "ShowPanel", "panelType": "panel.collection.questboard" },
+      { "id": "createHolders", "op": "CreatePanel", "panelType": "panel.collection.holders", "panelAnchor": "screen.bottomRight" },
+      { "id": "showHolders", "op": "ShowPanel", "panelType": "panel.collection.holders" },
       { "id": "ok", "op": "ConstInt", "intValue": 1 },
       { "id": "halt", "op": "HaltReturnInt" }
     ],
     "controlEdges": [
       { "from": "scope", "fromPort": "next", "to": "createEffects" },
       { "from": "createEffects", "fromPort": "next", "to": "showEffects" },
-      { "from": "showEffects", "fromPort": "next", "to": "createAbilities" },
-      { "from": "createAbilities", "fromPort": "next", "to": "showAbilities" },
-      { "from": "showAbilities", "fromPort": "next", "to": "createTags" },
+      { "from": "showEffects", "fromPort": "next", "to": "createRoster" },
+      { "from": "createRoster", "fromPort": "next", "to": "showRoster" },
+      { "from": "showRoster", "fromPort": "next", "to": "createTags" },
       { "from": "createTags", "fromPort": "next", "to": "showTags" },
-      { "from": "showTags", "fromPort": "next", "to": "ok" },
+      { "from": "showTags", "fromPort": "next", "to": "createSupply" },
+      { "from": "createSupply", "fromPort": "next", "to": "showSupply" },
+      { "from": "showSupply", "fromPort": "next", "to": "createQuest" },
+      { "from": "createQuest", "fromPort": "next", "to": "showQuest" },
+      { "from": "showQuest", "fromPort": "next", "to": "createHolders" },
+      { "from": "createHolders", "fromPort": "next", "to": "showHolders" },
+      { "from": "showHolders", "fromPort": "next", "to": "ok" },
       { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
       { "from": "scope", "fromPort": "value", "to": "createEffects", "toPort": "source" },
-      { "from": "scope", "fromPort": "value", "to": "createAbilities", "toPort": "source" },
+      { "from": "scope", "fromPort": "value", "to": "createRoster", "toPort": "source" },
       { "from": "scope", "fromPort": "value", "to": "createTags", "toPort": "source" },
+      { "from": "scope", "fromPort": "value", "to": "createSupply", "toPort": "source" },
+      { "from": "scope", "fromPort": "value", "to": "createQuest", "toPort": "source" },
+      { "from": "scope", "fromPort": "value", "to": "createHolders", "toPort": "source" },
       { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
   },
@@ -55,44 +70,21 @@
     ]
   },
   {
-    "id": "Graph.CollectionBags.AbilitySlots",
+    "id": "Graph.CollectionBags.TagsAndActivities",
     "kind": "Query",
     "entry": "caster",
     "nodes": [
       { "id": "caster", "op": "LoadCaster" },
-      { "id": "slots", "op": "QueryCollectAbilitySlots" }
+      { "id": "tags", "op": "QueryCollectPresentTags" },
+      { "id": "activities", "op": "QueryCollectActiveActivities" }
     ],
     "controlEdges": [
-      { "from": "caster", "fromPort": "next", "to": "slots" }
+      { "from": "caster", "fromPort": "next", "to": "tags" },
+      { "from": "tags", "fromPort": "next", "to": "activities" }
     ],
     "valueEdges": [
-      { "from": "caster", "fromPort": "value", "to": "slots", "toPort": "source" }
-    ],
-    "outputs": [
-      {
-        "id": "slots",
-        "destination": "AbilitySlotCollection",
-        "type": "IntIdList",
-        "collectionKey": "panel.collection.abilitySlots",
-        "role": "Display",
-        "title": "技能格",
-        "summary": "名册守望者的有效技能槽"
-      }
-    ]
-  },
-  {
-    "id": "Graph.CollectionBags.PresentTags",
-    "kind": "Query",
-    "entry": "caster",
-    "nodes": [
-      { "id": "caster", "op": "LoadCaster" },
-      { "id": "tags", "op": "QueryCollectPresentTags" }
-    ],
-    "controlEdges": [
-      { "from": "caster", "fromPort": "next", "to": "tags" }
-    ],
-    "valueEdges": [
-      { "from": "caster", "fromPort": "value", "to": "tags", "toPort": "source" }
+      { "from": "caster", "fromPort": "value", "to": "tags", "toPort": "source" },
+      { "from": "caster", "fromPort": "value", "to": "activities", "toPort": "source" }
     ],
     "outputs": [
       {
@@ -103,6 +95,200 @@
         "role": "Display",
         "title": "身上的印记",
         "summary": "名册守望者当前拥有的标签"
+      },
+      {
+        "id": "activities",
+        "destination": "ActivityInstanceCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.collection.activeActivities",
+        "role": "Display",
+        "title": "进行中的活动",
+        "summary": "挂在守望者名下的活动"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Roster",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      { "id": "all", "op": "QueryAllMapEntities" },
+      { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
+      { "id": "minHp", "op": "ConstFloat", "floatValue": 0.001 },
+      { "id": "maxHp", "op": "ConstFloat", "floatValue": 999999 },
+      { "id": "alive", "op": "QueryFilterAttributeRange", "attribute": "Health" }
+    ],
+    "controlEdges": [
+      { "from": "all", "fromPort": "next", "to": "team" },
+      { "from": "team", "fromPort": "next", "to": "minHp" },
+      { "from": "minHp", "fromPort": "next", "to": "maxHp" },
+      { "from": "maxHp", "fromPort": "next", "to": "alive" }
+    ],
+    "valueEdges": [
+      { "from": "all", "fromPort": "list", "to": "team", "toPort": "list" },
+      { "from": "team", "fromPort": "list", "to": "alive", "toPort": "list" },
+      { "from": "minHp", "fromPort": "value", "to": "alive", "toPort": "min" },
+      { "from": "maxHp", "fromPort": "value", "to": "alive", "toPort": "max" }
+    ],
+    "outputs": [
+      {
+        "id": "units",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.collection.rosterUnits",
+        "role": "Display",
+        "title": "编队档案",
+        "summary": "名册厅里活着的队员"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.RosterCard",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "slots", "op": "QueryCollectAbilitySlots" },
+      { "id": "ready", "op": "LoadSelfAttribute", "attribute": "Health" }
+    ],
+    "controlEdges": [
+      { "from": "caster", "fromPort": "next", "to": "slots" },
+      { "from": "slots", "fromPort": "next", "to": "ready" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "slots", "toPort": "source" }
+    ],
+    "outputs": [
+      {
+        "id": "slots",
+        "destination": "AbilitySlotCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.collection.nestedSlots",
+        "role": "Display",
+        "title": "技能格",
+        "summary": "该队员身上的有效技能槽"
+      },
+      {
+        "id": "ready",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "ready",
+        "key": "panel.collection.roster.ready"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Supply",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "items", "op": "QueryCollectInventoryItems" },
+      { "id": "defs", "op": "QueryCollectItemDefinitions" }
+    ],
+    "controlEdges": [
+      { "from": "caster", "fromPort": "next", "to": "items" },
+      { "from": "items", "fromPort": "next", "to": "defs" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "items", "toPort": "source" }
+    ],
+    "outputs": [
+      {
+        "id": "items",
+        "destination": "ItemInstanceCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.collection.inventoryItems",
+        "role": "Display",
+        "title": "背包",
+        "summary": "守望者随身物资实例"
+      },
+      {
+        "id": "defs",
+        "destination": "ItemDefinitionCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.collection.itemDefinitions",
+        "role": "Display",
+        "title": "物品图鉴",
+        "summary": "已登记物品定义"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.QuestBoard",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "tasks", "op": "QueryCollectActiveTasks" },
+      { "id": "progress", "op": "QueryCollectProgressionNodes" }
+    ],
+    "controlEdges": [
+      { "from": "caster", "fromPort": "next", "to": "tasks" },
+      { "from": "tasks", "fromPort": "next", "to": "progress" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "tasks", "toPort": "source" },
+      { "from": "caster", "fromPort": "value", "to": "progress", "toPort": "source" }
+    ],
+    "outputs": [
+      {
+        "id": "tasks",
+        "destination": "TaskInstanceCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.collection.activeTasks",
+        "role": "Display",
+        "title": "进行中的差事",
+        "summary": "挂在守望者名下的任务"
+      },
+      {
+        "id": "progress",
+        "destination": "ProgressionNodeCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.collection.progressionNodes",
+        "role": "Display",
+        "title": "修行进度",
+        "summary": "守望者身上的进度节点"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.HoldersWall",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "slots", "op": "QueryCollectAbilitySlots" },
+      { "id": "map", "op": "QueryAllMapEntities" },
+      { "id": "holders", "op": "QueryCollectAbilityHolders", "ability": "火球术" }
+    ],
+    "controlEdges": [
+      { "from": "caster", "fromPort": "next", "to": "slots" },
+      { "from": "slots", "fromPort": "next", "to": "map" },
+      { "from": "map", "fromPort": "next", "to": "holders" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "slots", "toPort": "source" },
+      { "from": "map", "fromPort": "list", "to": "holders", "toPort": "list" }
+    ],
+    "outputs": [
+      {
+        "id": "slots",
+        "destination": "AbilitySlotCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.collection.holderSlots",
+        "role": "Display",
+        "title": "技能格",
+        "summary": "守望者技能格，旁挂会火球的人"
+      },
+      {
+        "id": "holders",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.collection.fireballHolders",
+        "role": "Display",
+        "title": "会火球的人",
+        "summary": "场上持有火球术的单位"
       }
     ]
   },

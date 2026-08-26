@@ -14,6 +14,19 @@
       {
         "event": { "kind": "EntityDestroyed", "key": "collection_bags_hero" },
         "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntitySpawned", "key": "collection_bags_apprentice" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "collectionbags_apprentice_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "collection_bags_apprentice" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -27,6 +40,21 @@
           "transform": {
             "localPosition": [0, 1.2, 0],
             "localScale": [1.6, 2.2, 1.6]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "collectionbags_apprentice_root",
+    "children": [
+      {
+        "definitionId": "collectionbags_apprentice_mesh",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [0, 1.0, 0],
+            "localScale": [1.2, 1.8, 1.2]
           }
         }
       }
@@ -48,6 +76,26 @@
         },
         "style": {
           "color": [0.82, 0.56, 0.2, 1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "collectionbags_apprentice_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "collectionbags.unit_box",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static"
+        },
+        "style": {
+          "color": [0.45, 0.62, 0.78, 1]
         }
       }
     ]

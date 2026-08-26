@@ -43,5 +43,10 @@
     "Path": "Progression/scopes.json",
     "Policy": "ArrayById",
     "IdField": "id"
+  },
+  {
+    "Path": "Progression/progressions.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
   }
 ]

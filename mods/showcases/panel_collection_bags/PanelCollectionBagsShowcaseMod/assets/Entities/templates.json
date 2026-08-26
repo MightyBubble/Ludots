@@ -20,6 +20,34 @@
       "AbilityStateBuffer": {},
       "GameplayTagContainer": {},
       "TagCountContainer": {},
+      "ProgressionStateBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "collection_bags_apprentice",
+    "components": {
+      "Name": { "Value": "名册学徒" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 220, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "VisionEmitterCm": {
+        "scope": "collectionbags.local",
+        "layers": ["ground"],
+        "polarity": "Reveal",
+        "aperture": { "kind": "Disk", "rangeCm": 800 },
+        "detectionStrength": 1
+      },
+      "AttributeBuffer": {
+        "base": { "Health": 80, "Attack": 8 }
+      },
+      "AbilityStateBuffer": {},
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},

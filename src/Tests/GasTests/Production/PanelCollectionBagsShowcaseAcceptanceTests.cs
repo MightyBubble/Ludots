@@ -21,7 +21,7 @@ public sealed class PanelCollectionBagsShowcaseAcceptanceTests
     private const string MapId = "collection_bags_arena";
 
     [Test]
-    public void PanelCollectionBags_ShowsTypedEffectAbilityAndTagBags()
+    public void PanelCollectionBags_ShowsTypedBagsAcrossSixPanels()
     {
         string repoRoot = FindRepoRoot();
         string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "panel_collection_bags");
@@ -31,36 +31,50 @@ public sealed class PanelCollectionBagsShowcaseAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot);
         engine.Start();
         engine.LoadMap(MapId);
-        Tick(engine, 12);
+        Tick(engine, 20);
 
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
             string.Join(" | ", engine.TriggerManager.Errors));
 
         PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
             ?? throw new InvalidOperationException("PanelHost missing.");
-        Assert.That(panelHost.Count, Is.EqualTo(3));
+        Assert.That(panelHost.Count, Is.EqualTo(6));
 
         Entity hero = FindEntity(engine.World, "名册守望者");
+
         PanelListProjection effects = ProjectAll(
-            panelHost,
-            FindPanel(panelHost, hero, "panel.collection.effects"),
-            "templates");
+            panelHost, FindPanel(panelHost, hero, "panel.collection.effects"), "templates");
         Assert.That(effects.Items, Has.Count.GreaterThanOrEqualTo(3));
         AssertNames(effects, "祝福", "迅捷", "护盾");
 
-        PanelListProjection abilities = ProjectAll(
-            panelHost,
-            FindPanel(panelHost, hero, "panel.collection.abilities"),
-            "slots");
-        Assert.That(abilities.Items, Is.Not.Empty);
-        AssertNames(abilities, "火球术", "闪现", "守护姿态");
+        PanelListProjection roster = ProjectAll(
+            panelHost, FindPanel(panelHost, hero, "panel.collection.roster"), "units");
+        Assert.That(roster.Items, Has.Count.EqualTo(2));
+        AssertNames(roster, "名册守望者", "名册学徒");
+        Assert.That(roster.Items[0].NestedLists, Is.Not.Empty);
+        Assert.That(roster.Items[0].NestedLists[0].Items, Is.Not.Empty);
+        AssertNames(roster.Items[0].NestedLists[0], "火球术");
 
-        PanelListProjection tags = ProjectAll(
-            panelHost,
-            FindPanel(panelHost, hero, "panel.collection.tags"),
-            "tags");
-        Assert.That(tags.Items, Is.Not.Empty);
-        AssertNames(tags, "勇气印记", "洞察印记", "守望印记");
+        PanelInstanceHandle tagsPanel = FindPanel(panelHost, hero, "panel.collection.tags");
+        AssertNames(ProjectAll(panelHost, tagsPanel, "tags"), "勇气印记", "洞察印记", "守望印记");
+        AssertNames(ProjectAll(panelHost, tagsPanel, "activities"), "名册集会");
+
+        PanelInstanceHandle supply = FindPanel(panelHost, hero, "panel.collection.supply");
+        PanelListProjection items = ProjectAll(panelHost, supply, "items");
+        Assert.That(items.TotalCount, Is.EqualTo(3));
+        AssertNames(items, "试炼药剂");
+        PanelListProjection definitions = ProjectAll(panelHost, supply, "definitions");
+        AssertNames(definitions, "试炼药剂", "干粮");
+
+        PanelInstanceHandle quest = FindPanel(panelHost, hero, "panel.collection.questboard");
+        AssertNames(ProjectAll(panelHost, quest, "tasks"), "巡夜差事");
+        AssertNames(ProjectAll(panelHost, quest, "progress"), "名册修行");
+
+        PanelInstanceHandle holders = FindPanel(panelHost, hero, "panel.collection.holders");
+        PanelListProjection slots = ProjectAll(panelHost, holders, "slots");
+        Assert.That(slots.Items, Is.Not.Empty);
+        Assert.That(slots.Items[0].NestedLists, Is.Not.Empty);
+        AssertNames(slots.Items[0].NestedLists[0], "名册守望者", "名册学徒");
 
         UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
             ?? throw new InvalidOperationException("UIRoot missing.");
@@ -69,13 +83,18 @@ public sealed class PanelCollectionBagsShowcaseAcceptanceTests
 
         IReadOnlyList<string> texts = AcceptanceUiEvidenceWriter.ExtractUiText(root);
         Assert.That(texts, Does.Contain("效果图鉴"));
-        Assert.That(texts, Does.Contain("技能格"));
+        Assert.That(texts, Does.Contain("编队档案"));
         Assert.That(texts, Does.Contain("身上的印记"));
+        Assert.That(texts, Does.Contain("物资柜"));
+        Assert.That(texts, Does.Contain("差事板"));
+        Assert.That(texts, Does.Contain("谁会火球"));
         Assert.That(texts, Does.Contain("祝福"));
-        Assert.That(texts, Does.Contain("迅捷"));
-        Assert.That(texts, Does.Contain("护盾"));
         Assert.That(texts, Does.Contain("火球术"));
-        Assert.That(texts, Does.Contain("勇气印记"));
+        Assert.That(texts, Does.Contain("试炼药剂"));
+        Assert.That(texts, Does.Contain("巡夜差事"));
+        Assert.That(texts, Does.Contain("名册修行"));
+        Assert.That(texts, Does.Contain("名册集会"));
+        Assert.That(texts, Has.Some.Matches("×\\s*3"));
 
         AcceptanceUiEvidenceWriter.CaptureFrame(
             root,
@@ -84,10 +103,10 @@ public sealed class PanelCollectionBagsShowcaseAcceptanceTests
             step: "typed-collection-bags",
             when: "地图加载后名册墙已投影",
             who: "玩家",
-            what: "效果图鉴、技能格、身上的印记同时列出真实成员",
-            where: "screen.topLeft / screen.topCenter / screen.topRight",
-            why: "验证三类 typed collection bags 的玩家可见竖切",
-            how: "QueryCollectEffectTemplates、QueryCollectAbilitySlots、QueryCollectPresentTags");
+            what: "六块面板同时展示模板、嵌套技能、印记、聚合背包、差事活动、反查与进度",
+            where: "screen 六锚点",
+            why: "验收查询图集合输出合同 §3.8 项 2–7 玩家可见竖切",
+            how: "typed Collect* + IntId/Entity bags + nested/source=input/aggregate");
     }
 
     private static PanelListProjection ProjectAll(
