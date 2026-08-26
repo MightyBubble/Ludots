@@ -2,6 +2,8 @@
 
 本页是面板「画面只消费一种投影」合同的 SSOT（落实 G12）。与[四皮面板](panel-skins.md)、[面板目录总合同](panel-catalog-designs.md)正交。
 
+**集合从哪来、成员是实例还是模板 id**：上游类型 SSOT 见[查询图集合输出](query-graph-collection-outputs.md)。本页不发明集合种类；只规定元素 `subject` 如何消费已类型化的集合。
+
 ## 1. 概述
 
 | 资产 | 管什么 |
@@ -18,7 +20,7 @@
 ## 2. 结构
 
 ```text
-容器 graph ──► EntityCollection /（日后 Task·Ability 集合）+ pins
+容器 graph ──► 类型化集合（见查询图集合输出）+ pins
                     │
                     ▼ 透传成员为 scope
 元素模板（subject + graph + pins + layout）
@@ -27,6 +29,8 @@
               list / grid 编排
 ```
 
+> 今日已接线：`EntityCollection` ↔ `subject: Entity`。  
+> Effect 实例/模板、Ability 槽/定义、Item 实例/定义等：合同见[查询图集合输出](query-graph-collection-outputs.md)；未接线前配置即 fail-closed。
 ## 3. 详情
 
 ### 3.1 元素模板（可嵌面板模板）
@@ -38,9 +42,8 @@
 
 | subject | 集合侧 | 元素 graph 的 scope | 主体表面（图 Summary 尚不能表达的身份信息） |
 |---|---|---|---|
-| `Entity` | `EntityCollection` | 该实体 | `displayName` ← Name 组件 |
-| `Task` | （预留） | 该任务句柄 | 预留，未落地前引用 fail-closed |
-| `Ability` | （预留） | 该技能句柄 | 预留，未落地前引用 fail-closed |
+| `Entity` | `EntityCollection`（成员=实体实例） | 该实体 | `displayName` ← Name 组件 |
+| `Task` / `Ability` 等 | 见[查询图集合输出](query-graph-collection-outputs.md) 相容表 | 按成员身份透传 | 未接线前引用 fail-closed |
 
 未知 `subject` → 装载失败。
 

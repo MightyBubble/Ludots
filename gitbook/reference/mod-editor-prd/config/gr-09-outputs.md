@@ -33,6 +33,8 @@
 
 硬规则：EntityCollection 必须 TargetList 且 collectionKey 必填；Summary 禁 TargetList。
 
+> **扩展中**：集合类 destination 将按成员身份（实体实例 / 模板 id / 槽位 / tag id …）扩展；设计 SSOT 见 [查询图集合输出](../../../architecture/query-graph-collection-outputs.md)。未接线类型不得静默当成 EntityCollection。
+
 ## 3. 文件结构
 
 outputs 是 graphs.json 文档顶层字段（gr-02），仅 Query 图允许。
