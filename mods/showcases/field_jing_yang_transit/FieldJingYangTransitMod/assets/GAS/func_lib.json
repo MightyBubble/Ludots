@@ -1,0 +1,8 @@
+[
+  {
+    "name": "field.jingyang.jing-fire.region-code",
+    "graph": "Graph.FieldJingYang.JingFire.RegionCode",
+    "kind": "Script",
+    "purity": "pure"
+  }
+]

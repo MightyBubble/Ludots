@@ -6,6 +6,9 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Fields;
 using Ludots.Core.Gameplay.FieldRegions;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -68,10 +71,19 @@ public sealed class FieldJingYangTransitAcceptanceTests
         Assert.That(variables.ReadInt("region_code"), Is.EqualTo(2));
         Assert.That(variables.ReadInt("last_enter_code"), Is.EqualTo(2));
         Assert.That(variables.ReadInt("enter_count"), Is.GreaterThanOrEqualTo(1));
+        Assert.That(variables.ReadInt("fire_scope"), Is.EqualTo(0));
         // Only dirty regions project into EntityCollectionStore; jing has never been entered yet.
         AssertRosterCount(engine, session, layer.LayerId, regionId: 2, expected: 1);
 
         Entity hero = FindHero(engine.World);
+        Assert.That(
+            FieldRegionQueries.TryIsInFieldRegion(engine.World, session, hero, LayerKey, "jing", out bool startsInJing),
+            Is.True);
+        Assert.That(startsInJing, Is.False);
+
+        AbilitySystem abilitySystem = CreateAbilitySystem(engine);
+        Assert.That(abilitySystem.TryActivateAbility(hero, slotIndex: 0), Is.False);
+
         engine.World.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(150, 150) }); // jing cell (1,1)
 
         TickUntil(engine, () => variables.ReadInt("stage") == 3, maxFrames: 12,
@@ -80,6 +92,27 @@ public sealed class FieldJingYangTransitAcceptanceTests
         Assert.That(variables.ReadInt("last_enter_code"), Is.EqualTo(1));
         Assert.That(variables.ReadInt("last_exit_code"), Is.EqualTo(2));
         Assert.That(variables.ReadInt("exit_count"), Is.GreaterThanOrEqualTo(1));
+        Assert.That(variables.ReadInt("fire_scope"), Is.EqualTo(1));
+        Assert.That(
+            FieldRegionQueries.TryIsInFieldRegion(engine.World, session, hero, LayerKey, "jing", out bool enteredJing),
+            Is.True);
+        Assert.That(enteredJing, Is.True);
+        Assert.That(abilitySystem.TryActivateAbility(hero, slotIndex: 0), Is.True);
+
+        var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
+            ?? throw new InvalidOperationException("OrderQueue missing.");
+        Assert.That(orderQueue.TryEnqueue(new Order
+        {
+            OrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"],
+            PlayerId = 1,
+            Actor = hero,
+            Args = new OrderArgs { I0 = 0 },
+            SubmitMode = OrderSubmitMode.Immediate
+        }), Is.True);
+        TickUntil(engine, () => variables.ReadInt("fire_cast_count") == 1, maxFrames: 30,
+            () => $"JingFire must increment fire_cast_count (got {variables.ReadInt("fire_cast_count")}).");
+        Assert.That(variables.ReadInt("fire_last_result"), Is.EqualTo(1));
+
         AssertRosterCount(engine, session, layer.LayerId, regionId: 1, expected: 1);
         AssertRosterCount(engine, session, layer.LayerId, regionId: 2, expected: 0);
 
@@ -87,6 +120,12 @@ public sealed class FieldJingYangTransitAcceptanceTests
         engine.World.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(750, 150) });
         TickUntil(engine, () => variables.ReadInt("region_code") == 2 && variables.ReadInt("last_exit_code") == 1, maxFrames: 12,
             () => "Returning to yang must exit jing and enter yang.");
+        Assert.That(variables.ReadInt("fire_scope"), Is.EqualTo(0));
+        Assert.That(
+            FieldRegionQueries.TryIsInFieldRegion(engine.World, session, hero, LayerKey, "jing", out bool returnedToYang),
+            Is.True);
+        Assert.That(returnedToYang, Is.False);
+        Assert.That(abilitySystem.TryActivateAbility(hero, slotIndex: 0), Is.False);
         AssertRosterCount(engine, session, layer.LayerId, regionId: 2, expected: 1);
         AssertRosterCount(engine, session, layer.LayerId, regionId: 1, expected: 0);
 
@@ -145,6 +184,23 @@ public sealed class FieldJingYangTransitAcceptanceTests
             });
         Assert.That(found, Is.Not.EqualTo(Entity.Null), "TransitHero missing");
         return found;
+    }
+
+    private static AbilitySystem CreateAbilitySystem(GameEngine engine)
+    {
+        return new AbilitySystem(
+            engine.World,
+            engine.GetService(CoreServiceKeys.EffectRequestQueue)
+                ?? throw new InvalidOperationException("EffectRequestQueue missing."),
+            engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
+                ?? throw new InvalidOperationException("AbilityDefinitionRegistry missing."),
+            engine.GetService(CoreServiceKeys.TagOps)
+                ?? throw new InvalidOperationException("TagOps missing."),
+            engine.GetService(CoreServiceKeys.GraphProgramRegistry)
+                ?? throw new InvalidOperationException("GraphProgramRegistry missing."),
+            engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
+                ?? throw new InvalidOperationException("GasGraphRuntimeApi missing."),
+            engine.GetService(CoreServiceKeys.ProgressionRequirementEvaluator));
     }
 
     private static GameEngine CreateEngine(string[] mods)

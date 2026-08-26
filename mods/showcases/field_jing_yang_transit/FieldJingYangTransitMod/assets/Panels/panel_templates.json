@@ -26,6 +26,18 @@
         "key": "field.jingyang.panel.exitCount",
         "mode": "realtime",
         "default": 0
+      },
+      {
+        "name": "fireScope",
+        "key": "field.jingyang.panel.fireScope",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "fireCastCount",
+        "key": "field.jingyang.panel.fireCastCount",
+        "mode": "realtime",
+        "default": 0
       }
     ]
   }

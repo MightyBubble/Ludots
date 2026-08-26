@@ -1,0 +1,23 @@
+[
+  {
+    "id": "Effect.FieldJingYang.JingFire.Cast",
+    "tags": [
+      "Effect.FieldJingYang.JingFire"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "State.FieldJingYang.JingFire.Active",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  }
+]

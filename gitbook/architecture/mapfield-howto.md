@@ -114,6 +114,8 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 | `field_editor_paint` | field-editor 形状资产（paint.a / paint.b）+ 过境 |
 | `field_hierarchy_query` | hierarchies.json + `TryResolveChain` |
 
+`field_jing_yang_transit` 的“荆域火计”把区域状态投影为地图变量，`activationPrecondition` 的 Validation graph 通过纯 `InvokeScript` 读取 `region_code` 并 fail closed；施放成功后，`EventSignal` 经既有 GAS → TriggerGraph bridge 更新 `fire_cast_count`。这是 `HasTag` scope-effect 组合在当前 TriggerGraph 不允许 `ApplyEffectTemplate` / `RemoveEffectTemplate` 时的无 fallback 数据组合。
+
 目录均在 `mods/showcases/field_*/`；数据-only（无 csproj）。启动：
 
 ```powershell

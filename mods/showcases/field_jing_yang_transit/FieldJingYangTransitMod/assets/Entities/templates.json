@@ -10,9 +10,18 @@
       "VisualHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 3.14159 },
       "AttributeBuffer": { "base": { "Health": 100 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.FieldJingYang.JingFire"
+        ]
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
       "FieldTrackedCm": { "layer": "ownership.transit" }
     }
   },
