@@ -1,0 +1,101 @@
+{
+  "Id": "field_editor_paint",
+  "Tags": [
+    "showcase",
+    "mapfield",
+    "field-editor"
+  ],
+  "HeartbeatIntervalTicks": 6,
+  "Fields": {
+    "Layers": [
+      "ownership.paint"
+    ]
+  },
+  "Variables": [
+    {
+      "name": "stage",
+      "type": "int",
+      "initial": 0,
+      "phase": true
+    },
+    {
+      "name": "region_code",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "enter_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "exit_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "last_enter_code",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "last_exit_code",
+      "type": "int",
+      "initial": 0
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.FieldEditorPaint.Flow",
+      "scopeInstanceId": "paint_hero"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "paint_hero",
+      "Template": "field_paint_hero"
+    },
+    {
+      "InstanceId": "marker_paint_a",
+      "Template": "field_paint_marker_a"
+    },
+    {
+      "InstanceId": "marker_paint_b",
+      "Template": "field_paint_marker_b"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "paint_hero"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "paint_hero"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": {
+    "TargetXCm": 500,
+    "TargetYCm": 150,
+    "Yaw": 45,
+    "Pitch": 52,
+    "DistanceCm": 2800,
+    "FovYDeg": 50
+  }
+}

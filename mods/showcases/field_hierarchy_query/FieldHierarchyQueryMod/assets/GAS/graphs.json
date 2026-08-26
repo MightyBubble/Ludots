@@ -1,0 +1,53 @@
+[
+  {
+    "id": "Graph.FieldHierarchyQuery.Flow",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "load_scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      { "id": "load_scope", "op": "LoadExplicitTarget" },
+      { "id": "load_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "write_stage_one", "op": "WriteMapVarInt", "var": "stage" },
+      {
+        "id": "progress_panel",
+        "op": "CreatePanel",
+        "panelType": "panel.field_hierarchy_query.progress",
+        "panelAnchor": "screen.topLeft"
+      },
+      { "id": "progress_show", "op": "ShowPanel", "panelType": "panel.field_hierarchy_query.progress" },
+      { "id": "load_ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "load_done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "load_scope", "fromPort": "next", "to": "load_one" },
+      { "from": "load_one", "fromPort": "next", "to": "write_stage_one" },
+      { "from": "write_stage_one", "fromPort": "next", "to": "progress_panel" },
+      { "from": "progress_panel", "fromPort": "next", "to": "progress_show" },
+      { "from": "progress_show", "fromPort": "next", "to": "load_ok" },
+      { "from": "load_ok", "fromPort": "next", "to": "load_done" }
+    ],
+    "valueEdges": [
+      { "from": "load_one", "fromPort": "value", "to": "write_stage_one", "toPort": "value" },
+      { "from": "load_ok", "fromPort": "value", "to": "load_done", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.FieldHierarchyQuery.Panel.Values",
+    "kind": "Query",
+    "entry": "stage_rd",
+    "nodes": [
+      { "id": "stage_rd", "op": "ReadMapVarInt", "var": "stage" }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": [
+      { "id": "stage", "destination": "Summary", "type": "Int", "source": "stage_rd", "key": "field.hierarchy.panel.stage" }
+    ]
+  }
+]

@@ -1,0 +1,77 @@
+# Field Editor CLI
+
+`tools/FieldEditor` 是离线作者工具：对 Mod 目录下的 `Fields/layers.json` 与 `Fields/cells/<layerKey>.json` 做声明、区域登记与矩形笔画。写出格式与引擎装载格式一致——**schemaVersion 2 + `regions` + `rects`**（可选 `points`），禁止 v1 的 `cells` 数组。
+
+运行（在仓库根，已还原 .NET 8）：
+
+```powershell
+dotnet run --project tools/FieldEditor -- <command> --mod <ModAssetsOrModRoot>
+```
+
+`--mod` 指向含 `assets/Fields/` 的目录（通常是 `.../SomeMod` 或 `.../SomeMod/assets`；工具按 `Fields/layers.json` 相对路径解析）。
+
+## 命令一览
+
+| 命令 | 作用 |
+|------|------|
+| `layers` | 列出已声明层 |
+| `new-layer` | 追加一条 discreteId 层到 `layers.json` |
+| `regions` | 列出某层区域 key 及占格数 |
+| `regions-add` / `regions-remove` | 增删区域（删区会清其格） |
+| `rect` | 用区域 key 填充闭区间矩形并立刻写出 |
+| `erase` | 擦除矩形（回到 default） |
+| `render` | ASCII 预览当前笔画 |
+| `save` | 再校验容量并写出（突变命令本身已 atomic 写出） |
+
+## 示例：从空 Mod 画出两色地
+
+以下与 showcase `field_editor_paint` 同形（key 为 `paint.a` / `paint.b`）。
+
+```powershell
+set MOD=mods/showcases/field_editor_paint/FieldEditorPaintMod
+
+dotnet run --project tools/FieldEditor -- layers --mod %MOD%
+
+dotnet run --project tools/FieldEditor -- new-layer --mod %MOD% ^
+  --id ownership.paint --cell-size 100 --chunk 8 --max-regions 16 --writer map.field.ownership.paint
+
+dotnet run --project tools/FieldEditor -- regions-add --mod %MOD% --layer ownership.paint --key paint.a
+dotnet run --project tools/FieldEditor -- regions-add --mod %MOD% --layer ownership.paint --key paint.b
+
+dotnet run --project tools/FieldEditor -- rect --mod %MOD% --layer ownership.paint ^
+  --key paint.a --from 0,0 --to 3,3
+dotnet run --project tools/FieldEditor -- rect --mod %MOD% --layer ownership.paint ^
+  --key paint.b --from 6,0 --to 9,3
+
+dotnet run --project tools/FieldEditor -- render --mod %MOD% --layer ownership.paint
+dotnet run --project tools/FieldEditor -- save --mod %MOD% --layer ownership.paint
+```
+
+写出后 `assets/Fields/cells/ownership.paint.json` 形如：
+
+```json
+{
+  "schemaVersion": 2,
+  "layer": "ownership.paint",
+  "regions": ["paint.a", "paint.b"],
+  "rects": [
+    [0, 0, 3, 3, 1],
+    [6, 0, 9, 3, 2]
+  ]
+}
+```
+
+地图侧只需 `Fields.Layers: ["ownership.paint"]`，并给英雄挂 `FieldTrackedCm`。完整挂载与过境见 [MapField 作者手册](mapfield-howto.md)。
+
+## 约束
+
+- 只作者 **discreteId** 层；scalar / vector 场不走本 CLI。
+- 区域 key 与层 key 都是 Mod 明文；引擎不做业务词解释。
+- `maxRegionIds` 超限时 `save` / 突变写出失败关闭。
+- 擦除与重画后磁盘始终是压缩 rect 集，不是百万三元组。
+
+## 相关
+
+- 作者总览：[MapField 作者手册](mapfield-howto.md)
+- 运行时存储：[Core Field2D](core-field2d.md)
+- 验收展厅：`field_editor_paint`（`FieldEditorPaintAcceptanceTests`）

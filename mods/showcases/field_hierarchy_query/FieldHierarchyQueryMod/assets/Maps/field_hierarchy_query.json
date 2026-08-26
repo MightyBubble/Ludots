@@ -1,0 +1,80 @@
+{
+  "Id": "field_hierarchy_query",
+  "Tags": [
+    "showcase",
+    "mapfield",
+    "field-hierarchy"
+  ],
+  "HeartbeatIntervalTicks": 6,
+  "Fields": {
+    "Layers": [
+      "ownership.zones"
+    ]
+  },
+  "Variables": [
+    {
+      "name": "stage",
+      "type": "int",
+      "initial": 0,
+      "phase": true
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.FieldHierarchyQuery.Flow",
+      "scopeInstanceId": "hierarchy_hero"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "hierarchy_hero",
+      "Template": "field_hierarchy_hero"
+    },
+    {
+      "InstanceId": "marker_zone_a1",
+      "Template": "field_hierarchy_marker_a1"
+    },
+    {
+      "InstanceId": "marker_zone_a2",
+      "Template": "field_hierarchy_marker_a2"
+    },
+    {
+      "InstanceId": "marker_zone_b1",
+      "Template": "field_hierarchy_marker_b1"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "hierarchy_hero"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "hierarchy_hero"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": {
+    "TargetXCm": 400,
+    "TargetYCm": 50,
+    "Yaw": 45,
+    "Pitch": 52,
+    "DistanceCm": 2800,
+    "FovYDeg": 50
+  }
+}
