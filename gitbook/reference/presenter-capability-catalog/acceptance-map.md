@@ -6,7 +6,7 @@
 
 翻新合同：[Presenter 能力演示集体翻新](../../../docs/architecture/presenter-capability-showcase-refresh.md)。
 
-每条 BehaviorKind / PresenterCommandKind 必须能从本目录跳到 **L1 单能力演示**（一能力一入口）。铁匠铺与大世界压测是 L3，**不能**代替逐条勾选。
+每条 BehaviorKind / PresenterCommandKind 从本目录跳到 **L1 单能力演示**（一能力一入口）。铁匠铺与大世界压测是 L3 故事/压测层；逐条勾选认 L1。
 
 本轮缺口补齐入口：
 
@@ -32,7 +32,7 @@
 
 ## 路线三：铁匠铺集成巡演（串故事，不勾选逐条）
 
-preset `presenter_blacksmith_showcase_raylib` 把「事件 → 规则 → presenter 树 → 行为 → draw buffer → raylib 出画」串成可玩故事。用它感受全链路；**逐条能力是否演示完备，以路线〇 / 本目录各条目的 L1 preset 为准。**
+preset `presenter_blacksmith_showcase_raylib` 把「事件 → 规则 → presenter 树 → 行为 → draw buffer → raylib 出画」串成可玩故事。用它感受全链路。逐条能力是否演示完备，以路线〇 / 本目录各条目的 L1 preset 为准。
 
 ## 路线四：指令层（命令怎么驱动 presenter）
 

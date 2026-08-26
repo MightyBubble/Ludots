@@ -4120,7 +4120,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardPresenterMaterialBehaviorShowcaseMod",
       "projectPath": "CapabilityStandardPresenterMaterialBehaviorShowcaseMod.csproj",
       "title": "标准能力·Presenter Material 行为",
-      "summary": "L1：BehaviorKind.Material 的 swapTable 随参数换材质；C=冷色 W=暖色 Space=切换。画廊 material_binding 是材质实例课，不是本 BehaviorKind。",
+      "summary": "L1：BehaviorKind.Material 的 swapTable 随参数换材质；C=冷色 W=暖色 Space=切换。",
       "tier": "T1",
       "category": "capability",
       "tags": [
@@ -4135,14 +4135,14 @@
       "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "作者路径单能力；勿用 engine_raylib_material_binding 勾选本条。"
+      "notes": "作者路径单能力；渲染课见 engine_raylib_material_binding。"
     },
     {
       "id": "capability_standard_presenter_trailmesh_showcase",
       "path": "mods/showcases/capability_standard/CapabilityStandardPresenterTrailMeshShowcaseMod",
       "projectPath": "CapabilityStandardPresenterTrailMeshShowcaseMod.csproj",
       "title": "标准能力·Presenter TrailMesh",
-      "summary": "L1：presenters.json TrailMesh 行为采样写入 TrailMeshBuffer；运行时只移动/旋转 owner。按 T 开合拖尾。引擎画廊 slash_trail 是 L4，不是本行为作者证明。",
+      "summary": "L1：presenters.json TrailMesh 行为采样写入 TrailMeshBuffer；运行时只移动/旋转 owner。按 T 开合拖尾。",
       "tier": "T1",
       "category": "capability",
       "tags": [
@@ -4157,7 +4157,7 @@
       "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "作者路径单能力；勿用 engine_raylib_slash_trail 勾选本条。"
+      "notes": "作者路径单能力；渲染器验收见 engine_raylib_slash_trail。"
     },
     {
       "id": "capability_standard_time_flow_showcase",
@@ -5571,7 +5571,7 @@
       "path": "mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod",
       "projectPath": "PresenterBlacksmithShowcaseMod.csproj",
       "title": "铁匠铺集成巡演",
-      "summary": "L3 故事集成巡演：开工/昼夜/拆铺串起多条 presenter 能力。逐条学习请用能力目录的 L1 单能力入口，不要用本演示勾选「某 Behavior/Command 已单独验收」。",
+      "summary": "L3 故事集成巡演：开工/昼夜/拆铺串起多条 presenter 能力。逐条学习走能力目录的 L1 单能力入口。",
       "tier": "T3",
       "category": "integration",
       "binding": "presenter_blacksmith_showcase",
@@ -5587,7 +5587,7 @@
         "rendering",
         "integration-tour"
       ],
-      "notes": "大杂烩降级为集成巡演；逐条 SSOT 见 presenter-capability-catalog。"
+      "notes": "职责：集成巡演；逐条 SSOT 见 presenter-capability-catalog。"
     },
     {
       "id": "presenter_blacksmith_large_world_entry",
@@ -7053,7 +7053,7 @@
       "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
       "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
       "title": "引擎能力·材质绑定",
-      "summary": "L4 引擎画廊：材质实例/贴图/自发光课（非 BehaviorKind.Material 作者路径）。作者学 Material 行为请跑 capability_standard_presenter_material_behavior_showcase_raylib。",
+      "summary": "L4 引擎画廊：材质实例/贴图/自发光渲染课。Material BehaviorKind 作者路径见 capability_standard_presenter_material_behavior_showcase_raylib。",
       "tier": "T1",
       "category": "engine",
       "tags": [
@@ -7068,7 +7068,7 @@
       "artifactDir": "artifacts/acceptance/engine_raylib_material_binding",
       "screenshot": "artifacts/acceptance/engine_raylib_material_binding/screen.png",
       "docsPath": "gitbook/architecture/engine-capability-showcases.md",
-      "notes": "L4 渲染证明；L1 Material BehaviorKind 另见 capability_standard_presenter_material_behavior_showcase。"
+      "notes": "L4 渲染证明；作者路径见 capability_standard_presenter_material_behavior_showcase。"
     },
     {
       "id": "engine_raylib_ribbon_overlay",
@@ -7298,7 +7298,7 @@
       "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
       "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
       "title": "引擎能力·刀光轨迹",
-      "summary": "L4 引擎画廊：TrailMeshBuffer 弧形 mesh 拖尾渲染课（非 presenters.json 作者路径）。作者学 TrailMesh 请跑 capability_standard_presenter_trailmesh_showcase_raylib。",
+      "summary": "L4 引擎画廊：TrailMeshBuffer 弧形 mesh 拖尾渲染课。TrailMesh 作者路径见 capability_standard_presenter_trailmesh_showcase_raylib。",
       "tier": "T1",
       "category": "engine",
       "tags": [
@@ -7312,7 +7312,7 @@
       "acceptanceTest": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_slash_trail",
       "docsPath": "gitbook/architecture/engine-capability-showcases.md",
-      "notes": "L4 渲染证明；L1 作者路径另见 capability_standard_presenter_trailmesh_showcase。"
+      "notes": "L4 渲染证明；作者路径见 capability_standard_presenter_trailmesh_showcase。"
     },
     {
       "id": "capability_standard_graph_op_HidePanel",
