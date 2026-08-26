@@ -3,7 +3,7 @@
 打开时什么也不打；再按一次关掉，收尾那一刀打在木桩上。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_ability_feature_ToggleDeactivateExec/poster.png" src="artifacts/evidence/capability_standard_ability_feature_ToggleDeactivateExec/play.mp4">
-这场还没有验收录像。启动器进 `capability_standard_ability_feature_ToggleDeactivateExec` 看现场；采到录像后再补 `artifacts/evidence/capability_standard_ability_feature_ToggleDeactivateExec/play.mp4`。
+这场还没有验收录像。启动器进 `capability_standard_ability_feature_ToggleDeactivateExec` 看现场；采到录像后再补 artifacts/evidence/capability_standard_ability_feature_ToggleDeactivateExec/play.mp4。
 </video>
 
 ## 作者写法
@@ -60,7 +60,7 @@
 
 ## 边界
 
-- 这一场不演其它技能合同。冷却闭环拆成「自己挂印」和「禁招印」两间房。
+- 这一场不演其它技能合同。冷却拆成「自己挂印」和「禁招印」两间房。
 - 配置册上的 `cooldown` 块加载器不收，不在这场假装能用。
 
 ## 怎么进

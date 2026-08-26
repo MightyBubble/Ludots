@@ -33,7 +33,7 @@ def write_page(path: Path, feature: dict, ability: dict) -> None:
     excerpt = json.dumps(ability, ensure_ascii=False, indent=2)
     video_note = (
         f'<video controls playsinline preload="metadata" poster="{media}/poster.png" src="{media}/play.mp4">\n'
-        f"这场还没有验收录像。启动器进 `{sid}` 看现场；采到录像后再补 `{media}/play.mp4`。\n"
+        f"这场还没有验收录像。启动器进 `{sid}` 看现场；采到录像后再补 {media}/play.mp4。\n"
         f"</video>"
     )
     body = f"""# {feature['title']}
@@ -62,7 +62,7 @@ def write_page(path: Path, feature: dict, ability: dict) -> None:
 
 ## 边界
 
-- 这一场不演其它技能合同。冷却闭环拆成「自己挂印」和「禁招印」两间房。
+- 这一场不演其它技能合同。冷却拆成「自己挂印」和「禁招印」两间房。
 - 配置册上的 `cooldown` 块加载器不收，不在这场假装能用。
 
 ## 怎么进
