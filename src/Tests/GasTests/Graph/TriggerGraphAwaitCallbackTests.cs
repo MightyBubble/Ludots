@@ -16,6 +16,12 @@ namespace Ludots.Tests.Gas.Graph
     {
         private const string DialogConfirm = "DialogConfirm";
 
+        [SetUp]
+        public void SetUp()
+        {
+            RecordingTarget.ResetResumeSequence();
+        }
+
         [Test]
         public void AwaitCallback_CompletesInRegistrationOrder_NotCompletionOrder()
         {
@@ -72,6 +78,26 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void NestedResumeTargets_BindInnermostForBeginAwait()
+        {
+            var callbacks = new GraphCallbackService();
+            var outer = new RecordingTarget();
+            var inner = new RecordingTarget();
+
+            callbacks.PushResumeTarget(outer);
+            callbacks.PushResumeTarget(inner);
+            int handle = callbacks.BeginAwait(DialogConfirm, default, Entity.Null, 0);
+            callbacks.PopResumeTarget(inner);
+            callbacks.PopResumeTarget(outer);
+
+            callbacks.Complete(handle, true);
+            callbacks.Drain();
+
+            Assert.That(inner.ResumeOrder, Is.EqualTo(1));
+            Assert.That(outer.ResumeOrder, Is.EqualTo(0), "waiter must bind the innermost PushResumeTarget");
+        }
+
+        [Test]
         public void BeginAwait_WithoutResumeTarget_FailsClosed()
         {
             var callbacks = new GraphCallbackService();
@@ -111,6 +137,8 @@ namespace Ludots.Tests.Gas.Graph
         private sealed class RecordingTarget : IGraphCallbackResumeTarget
         {
             private static int s_resumeSeq;
+
+            public static void ResetResumeSequence() => s_resumeSeq = 0;
 
             public int ResumeOrder { get; private set; }
             public bool Confirmed { get; private set; }

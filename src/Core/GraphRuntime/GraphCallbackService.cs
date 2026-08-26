@@ -23,14 +23,16 @@ namespace Ludots.Core.GraphRuntime
     {
         public const int MaxHandles = 256;
         public const int MaxPendingCompletions = 64;
+        public const int MaxResumeTargetDepth = 16;
 
         private readonly Waiter[] _waiters = new Waiter[MaxHandles + 1];
         private readonly int[] _pendingCompleteHandles = new int[MaxPendingCompletions];
         private readonly bool[] _pendingConfirmed = new bool[MaxPendingCompletions];
+        private readonly IGraphCallbackResumeTarget?[] _resumeTargetStack = new IGraphCallbackResumeTarget?[MaxResumeTargetDepth];
         private int _nextHandle = 1;
         private int _pendingCount;
         private int _registrationSeq;
-        private IGraphCallbackResumeTarget? _currentTarget;
+        private int _resumeTargetDepth;
 
         private struct Waiter
         {
@@ -48,25 +50,29 @@ namespace Ludots.Core.GraphRuntime
         public void PushResumeTarget(IGraphCallbackResumeTarget target)
         {
             ArgumentNullException.ThrowIfNull(target);
-            if (_currentTarget != null)
+            if (_resumeTargetDepth >= MaxResumeTargetDepth)
             {
                 throw new InvalidOperationException(
-                    "GRAPH.CALLBACK.ERR.ResumeTargetNested: AwaitCallback resume target is already bound for this slice.");
+                    $"GRAPH.CALLBACK.ERR.ResumeTargetStackFull: nested AwaitCallback resume targets exceeded {MaxResumeTargetDepth}.");
             }
 
-            _currentTarget = target;
+            _resumeTargetStack[_resumeTargetDepth++] = target;
         }
 
         public void PopResumeTarget(IGraphCallbackResumeTarget target)
         {
-            if (!ReferenceEquals(_currentTarget, target))
+            if (_resumeTargetDepth <= 0 ||
+                !ReferenceEquals(_resumeTargetStack[_resumeTargetDepth - 1], target))
             {
                 throw new InvalidOperationException(
                     "GRAPH.CALLBACK.ERR.ResumeTargetMismatch: PopResumeTarget does not match the bound target.");
             }
 
-            _currentTarget = null;
+            _resumeTargetStack[--_resumeTargetDepth] = null;
         }
+
+        private IGraphCallbackResumeTarget? CurrentResumeTarget
+            => _resumeTargetDepth > 0 ? _resumeTargetStack[_resumeTargetDepth - 1] : null;
 
         /// <summary>
         /// Registers a waiter and returns an opaque handle id. Fail closed when the catalog
@@ -84,7 +90,8 @@ namespace Ludots.Core.GraphRuntime
                     "GRAPH.CALLBACK.ERR.CallbackTypeRequired: AwaitCallback requires a non-empty callbackType.");
             }
 
-            if (_currentTarget == null)
+            IGraphCallbackResumeTarget? currentTarget = CurrentResumeTarget;
+            if (currentTarget == null)
             {
                 throw new InvalidOperationException(
                     "GRAPH.CALLBACK.ERR.NoResumeTarget: AwaitCallback requires a bound resume target for this slice.");
@@ -107,7 +114,7 @@ namespace Ludots.Core.GraphRuntime
                 CallbackType = callbackType.Trim(),
                 MapId = mapId,
                 Scope = scope,
-                Target = _currentTarget,
+                Target = currentTarget,
             };
             return handle;
         }

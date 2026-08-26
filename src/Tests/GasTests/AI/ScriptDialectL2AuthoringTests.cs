@@ -44,15 +44,46 @@ namespace Ludots.Tests.Gas.AI
             Assert.That(tree.Nodes[2].Leaf, Is.EqualTo(BehaviorTreeLeafBinding.ScriptSlice));
             Assert.That(tree.Nodes[2].GraphId, Is.EqualTo(actions.Require("bt.patrol")));
 
+            // De-hollowed seeEnemy/inAttackRange leaves read I[0] as distance cm.
+            // Far target forces the Selector onto the patrol arm (intent 0) instead of attack (2).
+            var sensors = new FarTargetSensors(actions);
             var world = new BehaviorTreeWorld(tree, 1);
             world.AddAgent();
-            for (int i = 0; i < 3; i++)
+            // While a ScriptSlice Yield is in flight, do not RestartThinking: that re-enters
+            // seeEnemy first and clears the suspended patrol cursor / step counter.
+            for (int i = 0; i < 8; i++)
             {
-                world.TickAll(programs, 32, sensors: null);
+                world.TickAll(programs, 32, sensors);
+                if (world.Statuses[0] == BehaviorTreeStatus.Success &&
+                    world.LastScriptReturns[0] == 0)
+                {
+                    break;
+                }
             }
 
             Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
             Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
+        }
+
+        private sealed class FarTargetSensors : IBehaviorTreeSensorFeed
+        {
+            private const int NoTargetCm = 100_000;
+            private readonly int _see;
+            private readonly int _range;
+
+            public FarTargetSensors(GraphActionCatalog actions)
+            {
+                _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
+                _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
+            }
+
+            public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
+            {
+                if (graphId == _see || graphId == _range)
+                {
+                    ints[0] = NoTargetCm;
+                }
+            }
         }
 
         [Test]

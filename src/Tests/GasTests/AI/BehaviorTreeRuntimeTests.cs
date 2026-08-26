@@ -194,7 +194,13 @@ namespace Ludots.Tests.Gas.AI
         {
             for (int i = 0; i < 12; i++)
             {
-                world.RestartThinking(0);
+                // Only restart topology after a terminal leaf. Restarting while a ScriptSlice is
+                // Yielded re-enters seeEnemy first and clears the suspended patrol cursor.
+                if (world.Statuses[0] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
+                {
+                    world.RestartThinking(0);
+                }
+
                 world.TickAll(Programs, 32, sensors);
                 if (world.LastScriptReturns[0] == expectedReturn &&
                     world.Statuses[0] is BehaviorTreeStatus.Success)
@@ -203,6 +209,10 @@ namespace Ludots.Tests.Gas.AI
                 }
             }
 
+            Assert.That(
+                world.Statuses[0],
+                Is.EqualTo(BehaviorTreeStatus.Success),
+                $"BT status after {12} think waves: return={world.LastScriptReturns[0]}");
             Assert.That(
                 world.LastScriptReturns[0],
                 Is.EqualTo(expectedReturn),
