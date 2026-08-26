@@ -138,7 +138,7 @@ namespace ModdingTest
                     if (health == "999" && mana == "50" && name == "Base Unit")
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine("SUCCESS: ModLauncher Architecture & Pipeline Verified!");
+                        Console.WriteLine("SUCCESS: Launcher Architecture & Pipeline Verified!");
                     }
                     else
                     {

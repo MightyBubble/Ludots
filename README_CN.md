@@ -77,7 +77,7 @@ dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Rel
 *   `src/Core`: 引擎核心 (ECS, GAS, Physics, Math)。
 *   `src/Apps`: 应用程序入口 (Desktop/Raylib, Web)。
 *   `mods`: 内置 Mod 和示例 (MobaDemo, RtsDemo)。
-*   `src/Tools`: 开发者工具 (Editor, ModLauncher, NavBake)。
+*   `src/Tools`: 开发者工具 (Launcher CLI、Editor.Bridge、AgentBridge、NavBake)。
 *   `assets`: 游戏资源和配置。
 *   `docs`: 门户站点源码与仓库深度材料（规范、架构、参考、ADR、审计、RFC）。
 

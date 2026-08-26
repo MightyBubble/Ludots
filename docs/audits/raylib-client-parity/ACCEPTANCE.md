@@ -46,10 +46,9 @@ Launcher smoke (`00_launcher_showcase.png` + `.diag.txt`) must show `gpuSkinned`
 
 ```bash
 export LD_LIBRARY_PATH=src/Platforms/Desktop:$LD_LIBRARY_PATH
-dotnet run --project tools/raylib_client_parity_acceptance -c Release -- \
-  /workspace \
-  artifacts/raylib-client-parity/acceptance \
-  /opt/cursor/artifacts/raylib-client-parity/acceptance
+dotnet run --project src/Apps/Raylib/Ludots.App.RaylibEngineGallery -c Release -- \
+  --scene gpu_skinning \
+  --screenshot artifacts/raylib-client-parity/acceptance
 ```
 
 Fail-loud: missing assets, invalid skinning animation, or identical `02_*` frames abort the capture.

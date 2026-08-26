@@ -77,7 +77,7 @@ dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Rel
 *   `src/Core/`: The heart of the engine (ECS, GAS, Physics, Math).
 *   `src/Apps/`: Application entry points (Desktop/Raylib, Web).
 *   `mods/`: 30+ built-in and demo mods (outside `src/` for UGC parity).
-*   `src/Tools/`: Developer tools (Editor, ModLauncher, NavBake).
+*   `src/Tools/`: Developer tools (Launcher CLI, Editor.Bridge, AgentBridge, NavBake).
 *   `src/Libraries/`: Source-integrated third-party (Arch, DotRecast, Raylib-cs).
 *   `docs/`: Portal site source and in-repo deep materials (conventions, architecture, reference, ADR, audits, RFCs).
 
