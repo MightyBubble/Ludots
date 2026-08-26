@@ -69,20 +69,20 @@ namespace Ludots.Core.Gameplay.GAS
         /// Collect all global listeners matching the given effect context.
         /// Returns the number collected.
         /// </summary>
-        public int Collect(EffectPhaseId phase, int effectTagId, int effectTemplateId,
+        public int Collect(EffectPhaseId phase, int effectCategoryId, int effectTemplateId,
                            Span<PhaseListenerCollectedAction> output)
         {
-            return Collect(phase, effectTagId, effectTemplateId, output, out _);
+            return Collect(phase, effectCategoryId, effectTemplateId, output, out _);
         }
 
-        public bool HasMatch(EffectPhaseId phase, int effectTagId, int effectTemplateId)
+        public bool HasMatch(EffectPhaseId phase, int effectCategoryId, int effectTemplateId)
         {
             byte phaseB = (byte)phase;
             for (int i = 0; i < _count; i++)
             {
                 if (PhaseListenerMatcher.Matches(
                     _phases[i], _listenCategoryIds[i], _listenEffectIds[i],
-                    phaseB, effectTagId, effectTemplateId))
+                    phaseB, effectCategoryId, effectTemplateId))
                 {
                     return true;
                 }
@@ -91,7 +91,7 @@ namespace Ludots.Core.Gameplay.GAS
             return false;
         }
 
-        public int Collect(EffectPhaseId phase, int effectTagId, int effectTemplateId,
+        public int Collect(EffectPhaseId phase, int effectCategoryId, int effectTemplateId,
                            Span<PhaseListenerCollectedAction> output, out int dropped)
         {
             int collected = 0;
@@ -100,7 +100,7 @@ namespace Ludots.Core.Gameplay.GAS
             for (int i = 0; i < _count; i++)
             {
                 if (!PhaseListenerMatcher.Matches(_phases[i], _listenCategoryIds[i], _listenEffectIds[i],
-                                                  phaseB, effectTagId, effectTemplateId)) continue;
+                                                  phaseB, effectCategoryId, effectTemplateId)) continue;
 
                 if (collected < output.Length)
                 {

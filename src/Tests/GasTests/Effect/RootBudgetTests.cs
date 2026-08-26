@@ -668,7 +668,7 @@ namespace Ludots.Tests.GAS
                     targetContext: default,
                     targetPos: default,
                     phase: EffectPhaseId.OnApply,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1);
                 transaction.Commit();
                 api.EndEffectSideEffectTransaction(transaction);

@@ -692,7 +692,7 @@ namespace EntityCommandPanelMod.Runtime
         private static string ResolveAggregateDisplayLabel(long groupKey, string fallback)
         {
             int kind = (int)(groupKey >> 32);
-            if (kind != AbilityAggregationKeyKinds.CatalogTag)
+            if (kind != AbilityAggregationKeyKinds.CatalogCategory)
             {
                 return fallback;
             }

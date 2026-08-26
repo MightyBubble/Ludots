@@ -83,7 +83,7 @@ namespace Ludots.Tests.GAS
 
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
-                effectTagId: 1, effectTemplateId: 1,
+                effectCategoryId: 1, effectTemplateId: 1,
                 builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
@@ -134,7 +134,7 @@ namespace Ludots.Tests.GAS
             Assert.Throws<InvalidOperationException>(() =>
                 executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
-                    effectTagId: 1, effectTemplateId: 999));
+                    effectCategoryId: 1, effectTemplateId: 999));
 
             // HP unchanged — exception prevented the handler from running
             float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
@@ -406,7 +406,7 @@ namespace Ludots.Tests.GAS
 
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.ApplyForce2D,
-                effectTagId: 1, effectTemplateId: 1,
+                effectCategoryId: 1, effectTemplateId: 1,
                 builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             ref var buf = ref world.Get<AttributeBuffer>(target);

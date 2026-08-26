@@ -195,16 +195,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 var categories = default(GameplayTagContainer);
                 bool hasCategories = false;
-                foreach (var t in catalogArr)
+                foreach (var entry in catalogArr)
                 {
-                    string? tag = t?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(tag))
+                    string? categoryName = entry?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(categoryName))
                     {
                         throw new InvalidOperationException(
                             $"Ability '{id}' in '{path}' categories entries must be non-empty strings.");
                     }
 
-                    categories.AddTag(AbilityCategoryRegistry.Register(tag));
+                    categories.AddTag(AbilityCategoryRegistry.Register(categoryName));
                     hasCategories = true;
                 }
 

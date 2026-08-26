@@ -106,7 +106,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
             EffectConfigParams mergedParams = default;
-            ExecutePhase(world, api, caster, target, targetContext, targetPos, phase, behavior, (byte)presetType, effectTagId: 0, effectTemplateId: 0, in mergedParams, builtinRuntime);
+            ExecutePhase(world, api, caster, target, targetContext, targetPos, phase, behavior, (byte)presetType, effectCategoryId: 0, effectTemplateId: 0, in mergedParams, builtinRuntime);
         }
 
         /// <summary>
@@ -122,12 +122,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             EffectPresetType presetType,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
             EffectConfigParams mergedParams = default;
-            ExecutePhase(world, api, caster, target, targetContext, targetPos, phase, behavior, (byte)presetType, effectTagId, effectTemplateId, in mergedParams, builtinRuntime);
+            ExecutePhase(world, api, caster, target, targetContext, targetPos, phase, behavior, (byte)presetType, effectCategoryId, effectTemplateId, in mergedParams, builtinRuntime);
         }
 
         public void ExecutePhase(
@@ -140,7 +140,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             EffectPresetType presetType,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime = null,
@@ -157,7 +157,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in behavior,
                 (byte)presetType,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId,
                 in mergedParams,
                 builtinRuntime,
@@ -175,7 +175,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             int presetTypeId,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime = null,
@@ -193,7 +193,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in behavior,
                 presetTypeId,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId,
                 in mergedParams,
                 builtinRuntime,
@@ -213,7 +213,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             int presetTypeId,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime,
@@ -237,7 +237,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     phase,
                     in behavior,
                     presetTypeId,
-                    effectTagId,
+                    effectCategoryId,
                     effectTemplateId,
                     in mergedParams,
                     builtinRuntime,
@@ -262,7 +262,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             int presetTypeId,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime,
@@ -272,8 +272,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref byte validationResult)
         {
             // ① Pre graph (user-defined)
-            int listenerActionCount = effectTagId != 0 || effectTemplateId != 0
-                ? CollectAndPreflightListeners(world, api, caster, target, phase, effectTagId, effectTemplateId)
+            int listenerActionCount = effectCategoryId != 0 || effectTemplateId != 0
+                ? CollectAndPreflightListeners(world, api, caster, target, phase, effectCategoryId, effectTemplateId)
                 : 0;
 
             int preGraphId = behavior.GetGraphId(phase, PhaseSlot.Pre);
@@ -337,7 +337,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             EffectPresetType presetType,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime = null,
@@ -354,7 +354,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in behavior,
                 (byte)presetType,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId,
                 in mergedParams,
                 builtinRuntime,
@@ -372,7 +372,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             int presetTypeId,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime = null,
@@ -390,7 +390,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in behavior,
                 presetTypeId,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId,
                 in mergedParams,
                 builtinRuntime,
@@ -471,7 +471,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             Entity caster,
             Entity target,
             EffectPhaseId phase,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId)
         {
             Span<PhaseListenerCollectedAction> scratch = _collectedActions;
@@ -482,7 +482,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (world.IsAlive(target) && world.Has<EffectPhaseListenerBuffer>(target))
             {
                 ref var buf = ref world.Get<EffectPhaseListenerBuffer>(target);
-                int n = buf.Collect(effectTagId, effectTemplateId, phase, PhaseListenerScope.Target, scratch.Slice(totalCollected), out int dropped);
+                int n = buf.Collect(effectCategoryId, effectTemplateId, phase, PhaseListenerScope.Target, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
                 totalDropped += dropped;
             }
@@ -491,7 +491,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (world.IsAlive(caster) && world.Has<EffectPhaseListenerBuffer>(caster))
             {
                 ref var buf = ref world.Get<EffectPhaseListenerBuffer>(caster);
-                int n = buf.Collect(effectTagId, effectTemplateId, phase, PhaseListenerScope.Source, scratch.Slice(totalCollected), out int dropped);
+                int n = buf.Collect(effectCategoryId, effectTemplateId, phase, PhaseListenerScope.Source, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
                 totalDropped += dropped;
             }
@@ -499,7 +499,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // c. Global listeners
             if (_globalListeners != null)
             {
-                int n = _globalListeners.Collect(phase, effectTagId, effectTemplateId, scratch.Slice(totalCollected), out int dropped);
+                int n = _globalListeners.Collect(phase, effectCategoryId, effectTemplateId, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
                 totalDropped += dropped;
             }
@@ -512,7 +512,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (totalDropped > 0)
             {
                 throw new InvalidOperationException(
-                    $"{PhaseListenerDispatchCapacityExceededError}: capacity={scratch.Length}, dropped={totalDropped}, phase={(int)phase}, effectTagId={effectTagId}, effectTemplateId={effectTemplateId}.");
+                    $"{PhaseListenerDispatchCapacityExceededError}: capacity={scratch.Length}, dropped={totalDropped}, phase={(int)phase}, effectCategoryId={effectCategoryId}, effectTemplateId={effectTemplateId}.");
             }
 
             if (totalCollected == 0) return 0;
@@ -677,13 +677,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             Entity caster,
             Entity target,
             EffectPhaseId phase,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId)
         {
             if (world.IsAlive(target) &&
                 world.Has<EffectPhaseListenerBuffer>(target) &&
                 world.Get<EffectPhaseListenerBuffer>(target).HasMatch(
-                    effectTagId, effectTemplateId, phase, PhaseListenerScope.Target))
+                    effectCategoryId, effectTemplateId, phase, PhaseListenerScope.Target))
             {
                 return true;
             }
@@ -691,12 +691,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (world.IsAlive(caster) &&
                 world.Has<EffectPhaseListenerBuffer>(caster) &&
                 world.Get<EffectPhaseListenerBuffer>(caster).HasMatch(
-                    effectTagId, effectTemplateId, phase, PhaseListenerScope.Source))
+                    effectCategoryId, effectTemplateId, phase, PhaseListenerScope.Source))
             {
                 return true;
             }
 
-            return _globalListeners?.HasMatch(phase, effectTagId, effectTemplateId) == true;
+            return _globalListeners?.HasMatch(phase, effectCategoryId, effectTemplateId) == true;
         }
 
         private static void SortByPriorityDescending(Span<PhaseListenerCollectedAction> actions)
@@ -728,7 +728,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             Entity targetContext,
             IntVector2 targetPos,
             EffectPhaseId phase,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId)
         {
             RequireExecutionMode(phase, trackValidationResult: false);
@@ -739,7 +739,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 caster,
                 target,
                 phase,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId);
             ExecuteCollectedListeners(
                 world,

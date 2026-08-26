@@ -258,7 +258,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
         private static string ResolveGroupLabel(long groupKey, int representativeAbilityId, List<string> abilityLabels)
         {
             int kind = (int)(groupKey >> 32);
-            if (kind == AbilityAggregationKeyKinds.CatalogTag)
+            if (kind == AbilityAggregationKeyKinds.CatalogCategory)
             {
                 return FormatTagLeaf(AbilityCategoryRegistry.GetName((int)(uint)groupKey));
             }
@@ -273,7 +273,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
         private string ResolveGroupFamily(long groupKey, int representativeAbilityId)
         {
             int kind = (int)(groupKey >> 32);
-            if (kind == AbilityAggregationKeyKinds.CatalogTag)
+            if (kind == AbilityAggregationKeyKinds.CatalogCategory)
             {
                 return FormatTagLeaf(AbilityCategoryRegistry.GetName((int)(uint)groupKey));
             }

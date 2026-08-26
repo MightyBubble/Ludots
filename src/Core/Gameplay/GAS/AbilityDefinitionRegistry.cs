@@ -247,8 +247,8 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        /// <summary>In-place catalog tag probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>
-        public bool HasCategory(int abilityId, int tagId)
+        /// <summary>In-place category probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>
+        public bool HasCategory(int abilityId, int categoryId)
         {
             if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
             {
@@ -256,7 +256,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             ref readonly AbilityDefinition definition = ref _items[abilityId];
-            return definition.HasCategories && definition.Categories.HasTag(tagId);
+            return definition.HasCategories && definition.Categories.HasTag(categoryId);
         }
 
         /// <summary>
@@ -284,8 +284,8 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
-        /// Lowest catalog tag id shared between the ability's <see cref="AbilityDefinition.Categories"/>
-        /// and <paramref name="mask"/>; 0 when the ability is unknown, has no catalog tags, or none match.
+        /// Lowest category id shared between the ability's <see cref="AbilityDefinition.Categories"/>
+        /// and <paramref name="mask"/>; 0 when the ability is unknown, has no categories, or none match.
         /// In-place probe (no definition copy); hot path for panel aggregation (RFC-0065 DEC-10).
         /// </summary>
         public int FirstCategoryIntersection(int abilityId, in GameplayTagContainer mask)

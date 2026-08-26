@@ -279,8 +279,8 @@ namespace Ludots.Tests.Architecture
             Assert.Multiple(() =>
             {
                 // DEC-14 whitelist: the only slot selectors the registry compiles are semantic ones.
-                Assert.That(registry, Does.Contain("\"byAbilityTag:\""),
-                    "CommandIntentProfileRegistry must whitelist the byAbilityTag: semantic slot selector.");
+                Assert.That(registry, Does.Contain("\"byAbilityCategory:\""),
+                    "CommandIntentProfileRegistry must whitelist the byAbilityCategory: semantic slot selector.");
                 Assert.That(registry, Does.Contain("\"contextGroup:\""),
                     "CommandIntentProfileRegistry must whitelist the contextGroup: semantic slot selector.");
                 Assert.That(registry, Does.Contain("is not a semantic selector"),
