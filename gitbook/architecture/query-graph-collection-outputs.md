@@ -252,7 +252,7 @@
 1. **outputs 扩展**：destination / type 封闭集按上表增长；编译期校验。  
 2. **枚举 op / 子图**：从活跃效果、库存、技能槽、Tag 计数等 **读域容器 → 填集合**（图能力，不是面板能力）。  
 3. **回写器**：按 destination 写入对应 Store；容量、替换语义对齐今日 EntityCollection（整表替换）。  
-4. **复合查询**：支持「以当前成员为 scope」再写出子集合（嵌套 / 反查）；见 §3.7。  
+4. **复合接线**：父 output → 子 `inputs`（`from`+`type`）；子 `collections.source` ∈ {`selfGraph`,`input`}；见 §2.4 / §3.7。  
 5. **禁止**：为写集合而改 Effect/Ability 生命周期规则；禁止模板 id 伪造成假实体。
 
 ### 3.7 复合结构详解（按 §2.4 正表写满）
