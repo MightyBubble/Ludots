@@ -153,7 +153,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
                 CallStack = callStack,
-                Text = GraphTextHeap.ForCurrentThreadCleared(),
+                Text = GraphTextHeap.ForCurrentThread(),
                 Cursor = cursor,
                 DebugTrace = debugTrace,
                 GraphId = 0,

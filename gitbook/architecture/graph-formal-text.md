@@ -61,7 +61,7 @@
 
 ### 3.2 固定容量怎么传 / 零分配
 
-- 执行入口清空当前线程复用的 `GraphTextHeap`（容量固定，不按次 new）。
+- 执行入口绑定当前线程复用的 `GraphTextHeap`（容量固定，不按次 new）；根帧不每次清空——生产者 Write 覆盖后再读；嵌套 Invoke 用 PushFrame 隔离子帧。
 - ConstText：从程序 `Symbols[Imm]` 拷进目标槽；字面量长于槽容量 → 失败。
 - ConcatText：`T[dst] = T[a] + T[b]`，总长超槽 → 失败。
 - IntToText / FloatToText：`TryFormat` 进栈上缓冲再拷入槽；格式化结果超槽 → 失败。
