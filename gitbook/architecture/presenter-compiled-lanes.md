@@ -4,17 +4,22 @@
 
 本文是 [Presenter-as-Actor 架构总览](presenter-as-actor-architecture.md) §9.4 的实现展开。不改变 Presenter 的语义模型（PresenterDefinition / BehaviorSlot / PresenterCommand / presenters.json schema 全部不变），只改变执行模型。
 
+> **落地状态（相对 #924 / #930，以当前 `main` 为准）**  
+> - 已落地：Prefab 删除、SplineRibbon、typed request lanes、`CompiledBinding[]`、Lifecycle / Dirty Sync / Continuous Tick / Visible Projection 基础分车道、entity-backed `PresenterEntityRuntime`（旧 `PresenterInstanceBuffer` 已删除，见 §8.4）。  
+> - 未收口：上帝类继续拆分、Material/Sound 车道化补齐、LOD children pruning、30K→150K / 60FPS 全量性能门禁与完整 UAT 证据。  
+> - 下文 §1「当前瓶颈」保留为历史动机；实现对照以 §8.4 与仓库代码为准，勿再把已删 buffer 当作现役入口。
+
 ---
 
 ## 1 动机与问题量化
 
-### 1.1 当前瓶颈
+### 1.1 历史瓶颈（迁移前）
 
-| 热路径 | 当前行为 | 复杂度 |
+| 热路径 | 当时行为 | 复杂度 |
 |--------|---------|--------|
 | `PresenterEmitSystem.ProcessActive()` | 每帧遍历全部 active instances | O(active) |
 | `PresenterBehaviorSystem` | 每帧对每个 active instance 求值全部 behavior | O(active × behaviors) |
-| `PresenterInstanceBuffer.ReleaseDeadEntityAnchors()` | 每帧全 slot 扫描检查 entity 存活 | O(capacity) |
+| `PresenterInstanceBuffer.ReleaseDeadEntityAnchors()`（已删除） | 每帧全 slot 扫描检查 entity 存活 | O(capacity) |
 | Param resolve | 每次 emit 走 Override → Binding → Default 链，无缓存 | O(active × params) |
 | Draw buffer | 8192 容量 AoS，每帧 clear + rebuild | O(visible) |
 
