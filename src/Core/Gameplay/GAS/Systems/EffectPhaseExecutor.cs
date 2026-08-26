@@ -842,6 +842,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _entityRegs[2] = targetContext;
 
             Array.Clear(_callStack, 0, _callStack.Length);
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 expectedKind,
                 GraphEntityPreset.TargetContext(targetContext),
@@ -856,6 +857,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _boolRegs,
                 _entityRegs,
                 _targets,
+                intIds,
                 _callStack,
                 randomSeed: BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, randomSeed));
 

@@ -63,6 +63,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryCollectActiveEffects:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryCollectEffectTemplates:
+                case GraphNodeOp.QueryCollectItemDefinitions:
+                    break;
+                case GraphNodeOp.QueryCollectAbilitySlots:
+                case GraphNodeOp.QueryCollectInventoryItems:
+                case GraphNodeOp.QueryCollectPresentTags:
+                case GraphNodeOp.QueryCollectActiveTasks:
+                case GraphNodeOp.QueryCollectProgressionNodes:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryCollectAbilityHolders:
+                    RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.Ability))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a non-empty ability.", node.Id));
+                    }
+
+                    break;
                 case GraphNodeOp.LoadEffectTiming:
                     RequireEffectTimingAttribute(node, graphId, diagnostics);
                     break;
@@ -358,6 +377,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryCollectEffectTemplates:
+                case GraphNodeOp.QueryCollectItemDefinitions:
+                    break;
+                case GraphNodeOp.QueryCollectAbilitySlots:
+                case GraphNodeOp.QueryCollectInventoryItems:
+                case GraphNodeOp.QueryCollectPresentTags:
+                case GraphNodeOp.QueryCollectActiveTasks:
+                case GraphNodeOp.QueryCollectProgressionNodes:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryCollectAbilityHolders:
+                    instruction.Imm = RequireSymbol(node.Ability, "ability", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.LoadEffectTiming:
                     instruction.Flags = ResolveEffectTimingFlags(node, graphId, diagnostics);

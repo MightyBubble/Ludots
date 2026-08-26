@@ -252,6 +252,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.QueryAllMapEntities or
                 GraphNodeOp.QueryFromCollection or
                 GraphNodeOp.QueryCollectActiveEffects or
+                GraphNodeOp.QueryCollectEffectTemplates or
+                GraphNodeOp.QueryCollectAbilitySlots or
+                GraphNodeOp.QueryCollectInventoryItems or
+                GraphNodeOp.QueryCollectItemDefinitions or
+                GraphNodeOp.QueryCollectPresentTags or
+                GraphNodeOp.QueryCollectActiveTasks or
+                GraphNodeOp.QueryCollectProgressionNodes or
+                GraphNodeOp.QueryCollectAbilityHolders or
                 GraphNodeOp.LoadEffectTiming or
                 GraphNodeOp.QueryFilterTeam or
                 GraphNodeOp.QueryFilterTemplate or
@@ -770,6 +778,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.QueryAllMapEntities, HandleQueryAllMapEntities, "QueryAllMapEntities graph opcode.");
             Register(GraphNodeOp.QueryFromCollection, HandleQueryFromCollection, "QueryFromCollection graph opcode.");
             Register(GraphNodeOp.QueryCollectActiveEffects, HandleQueryCollectActiveEffects, "QueryCollectActiveEffects graph opcode.");
+            Register(GraphNodeOp.QueryCollectEffectTemplates, HandleQueryCollectEffectTemplates, "QueryCollectEffectTemplates graph opcode.");
+            Register(GraphNodeOp.QueryCollectAbilitySlots, HandleQueryCollectAbilitySlots, "QueryCollectAbilitySlots graph opcode.");
+            Register(GraphNodeOp.QueryCollectInventoryItems, HandleQueryCollectInventoryItems, "QueryCollectInventoryItems graph opcode.");
+            Register(GraphNodeOp.QueryCollectItemDefinitions, HandleQueryCollectItemDefinitions, "QueryCollectItemDefinitions graph opcode.");
+            Register(GraphNodeOp.QueryCollectPresentTags, HandleQueryCollectPresentTags, "QueryCollectPresentTags graph opcode.");
+            Register(GraphNodeOp.QueryCollectActiveTasks, HandleQueryCollectActiveTasks, "QueryCollectActiveTasks graph opcode.");
+            Register(GraphNodeOp.QueryCollectProgressionNodes, HandleQueryCollectProgressionNodes, "QueryCollectProgressionNodes graph opcode.");
+            Register(GraphNodeOp.QueryCollectAbilityHolders, HandleQueryCollectAbilityHolders, "QueryCollectAbilityHolders graph opcode.");
             Register(GraphNodeOp.LoadEffectTiming, HandleLoadEffectTiming, "LoadEffectTiming graph opcode.");
             Register(GraphNodeOp.QueryFilterTeam, HandleQueryFilterTeam, "QueryFilterTeam graph opcode.");
             Register(GraphNodeOp.QueryFilterTemplate, HandleQueryFilterTemplate, "QueryFilterTemplate graph opcode.");
@@ -1857,6 +1873,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleQueryCollectActiveEffects(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.CollectActiveEffects(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleQueryCollectEffectTemplates(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectEffectTemplateIds(s.IntIds));
+        }
+
+        private static void HandleQueryCollectAbilitySlots(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectAbilitySlots(s.E[ins.A], s.IntIds));
+        }
+
+        private static void HandleQueryCollectInventoryItems(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CollectInventoryItems(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleQueryCollectItemDefinitions(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectItemDefinitionIds(s.IntIds));
+        }
+
+        private static void HandleQueryCollectPresentTags(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectPresentTags(s.E[ins.A], s.IntIds));
+        }
+
+        private static void HandleQueryCollectActiveTasks(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CollectActiveTasks(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleQueryCollectProgressionNodes(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectProgressionNodes(s.E[ins.A], s.IntIds));
+        }
+
+        private static void HandleQueryCollectAbilityHolders(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Span<Entity> candidates = s.TargetList.Span;
+            Span<Entity> scratch = stackalloc Entity[GraphVmLimits.MaxTargets];
+            int count = s.Api.CollectAbilityHolders(ins.Imm, candidates, scratch);
+            scratch.Slice(0, count).CopyTo(s.Targets);
+            s.TargetList.SetCount(count);
         }
 
         private static void HandleLoadEffectTiming(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

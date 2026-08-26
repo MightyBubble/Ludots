@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -843,6 +844,36 @@ namespace Ludots.Core.Gameplay.Items
                     output.Add(entity);
                 }
             });
+        }
+
+        public int CollectOwnedItemInstances(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            foreach (ref var chunk in _world.Query(in ItemQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                Span<ItemLocationCm> locations = chunk.GetSpan<ItemLocationCm>();
+                foreach (int index in chunk)
+                {
+                    if (written >= buffer.Length)
+                    {
+                        return written;
+                    }
+
+                    if (TryResolveOwningActorFromContainer(locations[index].Container, out Entity actor) &&
+                        actor == owner)
+                    {
+                        buffer[written++] = Unsafe.Add(ref first, index);
+                    }
+                }
+            }
+
+            return written;
         }
 
         private int CountStackUnitsInContainer(Entity container, int definitionId)

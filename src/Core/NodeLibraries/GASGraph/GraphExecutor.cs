@@ -297,6 +297,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity explicitTarget = default,
             IGraphRuntimeApi? api = null)
         {
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 GraphKind.Script,
                 GraphEntityPreset.None,
@@ -311,6 +312,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 bools,
                 entities,
                 targets,
+                intIds,
                 callStack,
                 cursor);
             GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps, programAlreadyValidated: true);
@@ -342,6 +344,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphEntryPayloadTable? invokeArgs = null)
         {
             RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
                 GraphEntityPreset.None,
@@ -356,6 +359,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 bools,
                 entities,
                 targets,
+                intIds,
                 callStack,
                 cursor,
                 debugTrace: debugTrace,
@@ -394,6 +398,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
@@ -409,6 +414,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 b,
                 e,
                 targets,
+                intIds,
                 callStack);
             Execute(ref frame, program, handlers: handlers);
         }
@@ -430,6 +436,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             b[0] = 0;
             GraphFrame frame = GraphFrame.Bind(
@@ -446,6 +453,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 b,
                 e,
                 targets,
+                intIds,
                 callStack);
             Execute(ref frame, program, handlers: handlers);
             return frame.B[0] != 0;
@@ -468,6 +476,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
@@ -483,6 +492,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 b,
                 e,
                 targets,
+                intIds,
                 callStack);
             Execute(ref frame, program, handlers: handlers);
             return frame.F[0];

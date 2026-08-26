@@ -302,7 +302,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             PanelLayoutControlType.Label => BuildLabel(control, values, item),
             PanelLayoutControlType.ProgressBar => BuildProgressBar(control, values, item),
             PanelLayoutControlType.Badge => BuildBadge(control, values, item),
-            PanelLayoutControlType.List => BuildList(template, control, values, lists, handle, reactiveContext),
+            PanelLayoutControlType.List => BuildList(template, control, values, lists, item, handle, reactiveContext),
             _ => null,
         };
     }
@@ -400,6 +400,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         PanelLayoutControl control,
         PanelVariableSet values,
         IReadOnlyList<PanelListProjection> lists,
+        PanelListItemProjection? parentItem,
         PanelInstanceHandle handle,
         ReactiveContext<PanelUiState>? reactiveContext)
     {
@@ -449,10 +450,26 @@ public sealed class PanelPresentationSystem : ISystem<float>
             trailing = virtualWindow.TrailingSpacerExtent;
         }
 
-        if (!_panelHost.TryProjectListWindow(handle, control.Bind!, window, out PanelListProjection projection))
+        PanelListProjection projection;
+        if (control.Virtualize)
         {
-            throw new InvalidOperationException(
-                $"Panel '{template.Id}' list '{control.Bind}' window projection failed for handle {handle.Id}#{handle.Generation}.");
+            if (parentItem != null)
+            {
+                throw new InvalidOperationException(
+                    $"Element template '{template.Id}' nested list '{control.Bind}' cannot be virtualized.");
+            }
+
+            if (!_panelHost.TryProjectListWindow(handle, control.Bind!, window, out projection))
+            {
+                throw new InvalidOperationException(
+                    $"Panel '{template.Id}' list '{control.Bind}' window projection failed for handle {handle.Id}#{handle.Generation}.");
+            }
+        }
+        else
+        {
+            projection = FindList(lists, control.Bind!)
+                ?? throw new InvalidOperationException(
+                    $"Panel '{template.Id}' list '{control.Bind}' has no projection.");
         }
 
         var rows = new List<UiElementBuilder>();
@@ -461,29 +478,46 @@ public sealed class PanelPresentationSystem : ISystem<float>
             rows.Add(Ui.Spacer(leading));
         }
 
-        for (int i = 0; i < projection.Items.Count; i++)
+        int projectedItemCount = control.Present == PanelPresentMode.Aggregate
+            ? Math.Min(1, projection.Items.Count)
+            : projection.Items.Count;
+        for (int i = 0; i < projectedItemCount; i++)
         {
             int absoluteIndex = projection.StartIndex + i;
             PanelListItemProjection item = projection.Items[i];
+            var itemChildren = new List<UiElementBuilder>(2)
+            {
+                BuildDeclaredControls(
+                    elementTemplate,
+                    elementTemplate.Layout.Controls,
+                    values,
+                    item.NestedLists,
+                    item,
+                    handle,
+                    reactiveContext: null)
+            };
+            if (control.Present == PanelPresentMode.Aggregate)
+            {
+                itemChildren.Add(new UiElementBuilder(UiNodeKind.Text)
+                    .Class("aggregate-count")
+                    .Text($"×{projection.TotalCount}")
+                    .FontSize(11)
+                    .Bold()
+                    .Color(new UiColor(255, 210, 80)));
+            }
+
             rows.Add(new UiElementBuilder(UiNodeKind.Container)
                 .Column()
                 .Id($"{hostId}-row-{absoluteIndex}")
                 .Class("list-item")
                 .Class($"list-item-{absoluteIndex}")
+                .Class(control.Present == PanelPresentMode.Aggregate ? "list-item-aggregate" : "list-item-list")
                 .Gap(2)
                 .Padding(4)
                 .Height(itemExtent)
                 .Background(new UiColor(28, 28, 48, 180))
                 .Radius(4)
-                .Children(
-                    BuildDeclaredControls(
-                        template,
-                        elementTemplate.Layout.Controls,
-                        values,
-                        lists,
-                        item,
-                        handle,
-                        reactiveContext: null)));
+                .Children(itemChildren.ToArray()));
         }
 
         if (trailing > 0.01f)
@@ -725,14 +759,16 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     continue;
                 }
 
-                int itemCount = 3;
+                int itemCount = control.Present == PanelPresentMode.Aggregate ? 0 : 3;
                 if (_panelHost.TryGetListProjections(handle, out IReadOnlyList<PanelListProjection> lists))
                 {
                     for (int li = 0; li < lists.Count; li++)
                     {
                         if (string.Equals(lists[li].Name, control.Bind, StringComparison.Ordinal))
                         {
-                            itemCount = Math.Max(itemCount, lists[li].TotalCount);
+                            itemCount = control.Present == PanelPresentMode.Aggregate
+                                ? (lists[li].TotalCount > 0 ? 1 : 0)
+                                : Math.Max(itemCount, lists[li].TotalCount);
                         }
                     }
                 }

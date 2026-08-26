@@ -275,9 +275,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                 if (GraphOutputDestinationKinds.IsIntIdBagDestination(binding.Destination))
                 {
-                    StringIntRegistry? keyRegistry = _intIdCollections?.KeyRegistry ?? _entityCollections?.KeyRegistry;
-                    resolved[i] = keyRegistry != null && !string.IsNullOrWhiteSpace(binding.CollectionKey)
-                        ? binding.WithResolvedCollectionKeyId(keyRegistry.Register(binding.CollectionKey))
+                    if (_intIdCollections == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph int-id collection output '{binding.Id}' requires an IntIdCollectionStore.");
+                    }
+
+                    resolved[i] = !string.IsNullOrWhiteSpace(binding.CollectionKey)
+                        ? binding.WithResolvedCollectionKeyId(_intIdCollections.KeyRegistry.Register(binding.CollectionKey))
                         : binding;
                     continue;
                 }

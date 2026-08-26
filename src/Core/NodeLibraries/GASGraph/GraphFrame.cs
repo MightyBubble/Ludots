@@ -90,6 +90,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> bools,
             Span<Entity> entities,
             Span<Entity> targets,
+            Span<int> intIds,
             Span<int> callStack,
             GraphExecutionCursor cursor = default,
             uint randomSeed = 0,
@@ -98,7 +99,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             MapId? mapScope = null,
             GraphEntryPayloadTable? entryPayload = null,
             GraphEntryPayloadTable? invokeArgs = null,
-            Span<int> intIds = default,
             int subjectIntId = 0)
         {
             if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
@@ -111,14 +111,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 bools.Length < GraphVmLimits.MaxBoolRegisters ||
                 entities.Length < GraphVmLimits.MaxEntityRegisters ||
                 targets.Length < GraphVmLimits.MaxTargets ||
+                intIds.Length < GraphVmLimits.MaxIntIds ||
                 callStack.Length < GraphVmLimits.MaxCallStackDepth)
             {
                 throw new ArgumentException("Graph frame register/call-stack spans are smaller than GraphVmLimits.");
-            }
-
-            if (!intIds.IsEmpty && intIds.Length < GraphVmLimits.MaxIntIds)
-            {
-                throw new ArgumentException("Graph frame int-id span is smaller than GraphVmLimits.MaxIntIds.");
             }
 
             entities[0] = caster;

@@ -1076,6 +1076,8 @@ namespace Ludots.Core.Engine
                 controlDomainQuery,
                 knowledgeProjectionResolver,
                 clock,
+                inventoryRuntime,
+                itemDefinitions,
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
@@ -1102,6 +1104,8 @@ namespace Ludots.Core.Engine
                 new Ludots.Core.UI.PanelProjection.PanelListProjector(
                     World,
                     entityCollectionStore,
+                    intIdCollectionStore,
+                    itemDefinitions,
                     panelProjectionReader,
                     panelGraphEvaluator));
             gasGraphApi.BindPanelHost(panelHost);

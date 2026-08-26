@@ -4,9 +4,11 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
+using Ludots.Core.TypedCollections;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
 using NUnit.Framework;
@@ -129,6 +131,7 @@ namespace Ludots.Tests.GasTests.UI
 
             var keyRegistry = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
             var store = new EntityCollectionStore(keyRegistry, 8, 16);
+            var intIdStore = new IntIdCollectionStore(keyRegistry, 8, 16);
             var descriptor = EntityCollectionDescriptor.Create(
                 "tests.effects",
                 EntityCollectionSourceKind.GasGraphResult,
@@ -136,7 +139,13 @@ namespace Ludots.Tests.GasTests.UI
             store.Replace(owner, descriptor, new[] { effect });
 
             var reader = new PanelProjectionReader(world, values);
-            var projector = new PanelListProjector(world, store, reader, graphEvaluator: null);
+            var projector = new PanelListProjector(
+                world,
+                store,
+                intIdStore,
+                new ItemDefinitionRegistry(),
+                reader,
+                graphEvaluator: null);
             var lists = projector.Project(owner, host);
 
             Assert.That(lists[0].Items.Count, Is.EqualTo(1));

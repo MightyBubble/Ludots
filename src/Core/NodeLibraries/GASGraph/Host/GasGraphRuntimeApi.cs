@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
@@ -19,6 +20,10 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Spatial;
+using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -45,9 +50,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityCollectionStore entityCollections,
             EntitySetQueryRuntime entityQueries,
+            InventoryRuntimeService inventory,
+            ItemDefinitionRegistry itemDefinitions,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
             IClock clock,
+            InventoryRuntimeService inventoryRuntime,
+            ItemDefinitionRegistry itemDefinitions,
             GraphLookupTableRegistry? lookupTables = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
@@ -64,9 +73,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             EntityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             EntityQueries = entityQueries ?? throw new ArgumentNullException(nameof(entityQueries));
+            Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+            ItemDefinitions = itemDefinitions ?? throw new ArgumentNullException(nameof(itemDefinitions));
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            InventoryRuntime = inventoryRuntime ?? throw new ArgumentNullException(nameof(inventoryRuntime));
+            ItemDefinitions = itemDefinitions ?? throw new ArgumentNullException(nameof(itemDefinitions));
             LookupTables = lookupTables;
         }
 
@@ -86,14 +99,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public GraphLookupTableRegistry? LookupTables { get; }
 
         public EntitySetQueryRuntime EntityQueries { get; }
+        public InventoryRuntimeService Inventory { get; }
+        public ItemDefinitionRegistry ItemDefinitions { get; }
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
         public IClock Clock { get; }
+        public InventoryRuntimeService InventoryRuntime { get; }
+        public ItemDefinitionRegistry ItemDefinitions { get; }
     }
 
     public sealed class GasGraphRuntimeApi : IDerivedAttributeGraphRuntimeApi
     {
         public const string MissingBlackboardError = "GAS.GRAPH.ERR.MissingBlackboard";
+        private static readonly QueryDescription TaskInstanceQuery = new QueryDescription().WithAll<TaskInstanceCm>();
 
         private readonly World _world;
         private readonly ISpatialQueryService? _spatialQueries;
@@ -106,6 +124,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
         private readonly GraphLookupTableRegistry? _lookupTables;
+        private readonly InventoryRuntimeService? _inventory;
+        private readonly ItemDefinitionRegistry? _itemDefinitions;
         private Gameplay.Rng.RngPickService? _rngPickService;
         private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
@@ -169,9 +189,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
+                RequireService(services, CoreServiceKeys.InventoryRuntimeService),
+                RequireService(services, CoreServiceKeys.ItemDefinitionRegistry),
                 RequireService(services, CoreServiceKeys.ControlDomainQuery),
                 RequireService(services, CoreServiceKeys.KnowledgeProjectionResolver),
-                RequireService(services, CoreServiceKeys.Clock)));
+                RequireService(services, CoreServiceKeys.Clock),
+                RequireService(services, CoreServiceKeys.InventoryRuntimeService),
+                RequireService(services, CoreServiceKeys.ItemDefinitionRegistry)));
         }
 
         public static GasGraphRuntimeApi CreateProduction(GasGraphRuntimeProductionServices services)
@@ -196,11 +220,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.TargetDispatchPresets,
                 services.EntityCollections,
                 services.EntityQueries,
-                lookupTables: services.LookupTables);
+                lookupTables: services.LookupTables,
+                inventory: services.Inventory,
+                itemDefinitions: services.ItemDefinitions);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
                 services.Clock);
+            api.BindInventoryRuntime(services.InventoryRuntime, services.ItemDefinitions);
             return api;
         }
 
@@ -299,7 +326,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null,
-            GraphLookupTableRegistry? lookupTables = null)
+            GraphLookupTableRegistry? lookupTables = null,
+            InventoryRuntimeService? inventory = null,
+            ItemDefinitionRegistry? itemDefinitions = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
@@ -312,6 +341,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
             _lookupTables = lookupTables;
+            _inventory = inventory;
+            _itemDefinitions = itemDefinitions;
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
@@ -1186,6 +1217,169 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
 
                 buffer[written++] = effectEntity;
+            }
+
+            return written;
+        }
+
+        public int CollectEffectTemplateIds(Span<int> buffer)
+        {
+            RegistryMapping[] mappings = EffectTemplateIdRegistry.SnapshotMappings();
+            if (mappings.Length == 0 || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            Array.Sort(mappings, static (a, b) => a.Id.CompareTo(b.Id));
+            int written = 0;
+            for (int i = 0; i < mappings.Length && written < buffer.Length; i++)
+            {
+                if (mappings[i].Id <= 0)
+                {
+                    continue;
+                }
+
+                buffer[written++] = mappings[i].Id;
+            }
+
+            return written;
+        }
+
+        public int CollectAbilitySlots(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int slot = 0; slot < AbilityStateBuffer.CAPACITY && written < buffer.Length; slot++)
+            {
+                if (AbilitySlotResolver.TryResolve(_world, owner, slot, out _))
+                {
+                    buffer[written++] = slot;
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectInventoryItems(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            if (_inventory == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingInventoryRuntime");
+            }
+
+            return _inventory.CollectOwnedItemInstances(owner, buffer);
+        }
+
+        public int CollectItemDefinitionIds(Span<int> buffer)
+        {
+            if (_itemDefinitions == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingItemDefinitionRegistry");
+            }
+
+            return _itemDefinitions.CopyRegisteredIds(buffer);
+        }
+
+        public int CollectPresentTags(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            if (!_world.Has<TagCountContainer>(owner) ||
+                !_world.Has<GameplayTagContainer>(owner))
+            {
+                return 0;
+            }
+
+            ref TagCountContainer counts = ref _world.Get<TagCountContainer>(owner);
+            ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(owner);
+            int count = counts.CopyTagIds(buffer);
+            int written = 0;
+            for (int i = 0; i < count; i++)
+            {
+                int tagId = buffer[i];
+                if (RequireTagOps().HasTag(ref tags, tagId, TagSense.Present))
+                {
+                    buffer[written++] = tagId;
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectActiveTasks(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            foreach (ref var chunk in _world.Query(in TaskInstanceQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                Span<TaskInstanceCm> tasks = chunk.GetSpan<TaskInstanceCm>();
+                foreach (int index in chunk)
+                {
+                    if (written >= buffer.Length)
+                    {
+                        return written;
+                    }
+
+                    if (tasks[index].ScopeHost == owner)
+                    {
+                        buffer[written++] = Unsafe.Add(ref first, index);
+                    }
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectProgressionNodes(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) ||
+                !_world.Has<ProgressionStateBuffer>(owner) ||
+                buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            ref ProgressionStateBuffer state = ref _world.Get<ProgressionStateBuffer>(owner);
+            return state.CopyProgressionIds(buffer);
+        }
+
+        public int CollectAbilityHolders(int abilityId, ReadOnlySpan<Entity> candidates, Span<Entity> buffer)
+        {
+            if (abilityId <= 0 || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int i = 0; i < candidates.Length && written < buffer.Length; i++)
+            {
+                Entity candidate = candidates[i];
+                if (candidate == Entity.Null || !_world.IsAlive(candidate))
+                {
+                    continue;
+                }
+
+                if (AbilitySlotResolver.TryFindAbility(_world, candidate, abilityId, out _))
+                {
+                    buffer[written++] = candidate;
+                }
             }
 
             return written;

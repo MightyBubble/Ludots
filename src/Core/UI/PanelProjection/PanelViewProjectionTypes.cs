@@ -214,6 +214,10 @@ namespace Ludots.Core.UI.PanelProjection
         public int ClampEnd(int totalCount) => Math.Min(EndIndexExclusive, totalCount);
     }
 
+    public readonly record struct PanelProjectionContext(
+        Arch.Core.Entity HostScope,
+        Arch.Core.Entity MemberScope);
+
     public static class PanelSubjectKinds
     {
         public static PanelSubjectKind Parse(string text, string context)

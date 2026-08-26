@@ -177,6 +177,7 @@ namespace Ludots.Core.GraphRuntime
         public string? FunctionName { get; set; }
         public string? Attribute { get; set; }
         public string? Tag { get; set; }
+        public string? Ability { get; set; }
         public string? LookupTable { get; set; }
         public string? LookupField { get; set; }
         /// <summary>Distribution id symbol for WeightedPick; resolved to a key id at patch time.</summary>
