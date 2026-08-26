@@ -5098,7 +5098,7 @@
       "id": "east_asia_navmesh_debug",
       "path": "mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod",
       "title": "East Asia NavMesh Debug",
-      "summary": "Continental CDT NavMesh tiles and world-aligned walkability texture baked from the continuous East Asia VisualHeightmap.",
+      "summary": "Continental Recast NavMesh tiles and world-aligned walkability texture baked from the continuous East Asia VisualHeightmap at logic-cell resolution.",
       "tier": "T2",
       "category": "capability",
       "tags": [

@@ -128,6 +128,29 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 if (rcResult?.Mesh == null || rcResult.MeshDetail == null || rcResult.MeshDetail.ntris <= 0)
                 {
+                    // Strategy-resolution boards feed Recast one triangle per logic cell. When
+                    // DotRecast drops detail (tiny island / single-cell land), the LogicTerrain
+                    // mesh from NavTileBuilder is already the authoritative walkable domain —
+                    // publish it instead of failing the whole offline bake.
+                    if (baseTile.TriangleCount > 0 && baseArtifact.WalkableTriangleCount > 0)
+                    {
+                        tile = baseTile.TileId.Layer == layer
+                            ? baseTile
+                            : NavTileLayerRewriter.WithLayer(baseTile, layer);
+                        detourTileBytes = Array.Empty<byte>();
+                        artifact = new NavBakeArtifact(
+                            tile.TileId,
+                            tile.TileVersion,
+                            NavBakeStage.Serialize,
+                            NavBakeErrorCode.None,
+                            "Recast detail empty; published LogicTerrain strategy mesh.",
+                            baseArtifact.WalkableTriangleCount,
+                            tile.VertexCount,
+                            tile.TriangleCount,
+                            tile.Portals.Length);
+                        return true;
+                    }
+
                     artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.TriangulationFailed, "Recast produced empty detail mesh.", 0, 0, 0, 0);
                     return false;
                 }
@@ -397,13 +420,15 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     "Raise LogicTerrain cell size or shrink the tile footprint; refusing to allocate.");
             }
 
-            int borderSize = RcConfig.CalcBorder(MathF.Max(radius, cellSize), cellSize);
+            int borderSize = RcConfig.CalcBorder(radius, cellSize);
 
             // detail 采样参数是运行时重烤的稳定性约束（NAV-R2）：采样间距过细 +
             // 误差阈值过紧时，BuildPolyDetail 的逐样例插入循环在大多边形上呈平方级
             // 膨胀，量化地形上误差永难收敛 → 单瓦分钟级阻塞。hull 顶点高度本就精确，
             // 粗间距 + 宽误差只损失面内高度细化，不影响寻路拓扑。sampleDist=0 会令
             // 部分多边形 detail 为空、Detour 序列化越界，故必须保持非零。
+            // Continental strategy cells are kilometers across; keep agent radius as-is so
+            // Recast does not erode an entire logic cell away from small landmasses.
             float detailSampleDist = MathF.Max(16f, cellSize);
             float detailSampleMaxError = MathF.Max(4f, cellSize * 0.25f);
             return new RcConfig(
@@ -413,7 +438,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 borderSize,
                 DotRecast.Recast.RcPartition.WATERSHED,
                 cellSize, cellHeight,
-                maxSlope, height, MathF.Max(radius, cellSize * 0.5f), maxClimb,
+                maxSlope, height, radius, maxClimb,
                 8 * 8 * cellSize * cellSize,
                 20 * 20 * cellSize * cellSize,
                 12f, 1.3f,
