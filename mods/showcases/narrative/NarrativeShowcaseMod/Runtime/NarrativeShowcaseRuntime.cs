@@ -816,15 +816,8 @@ namespace NarrativeShowcaseMod.Runtime
 
         private bool ShouldUsePureStoryLane(GameEngine engine)
         {
-            if (_frontendConfig.Bootstrap.PureStoryLane)
-            {
-                return true;
-            }
-
-            // 主题壳只改 panelTheme：非默认余烬皮时走纯过场+对话，用来证明数据驱动换皮。
-            string themeId = engine.MergedConfig?.PanelTheme?.Trim() ?? string.Empty;
-            return !string.IsNullOrWhiteSpace(themeId)
-                && !string.Equals(themeId, "story-ember", StringComparison.OrdinalIgnoreCase);
+            // 纯车道只认 bootstrap 开关；主题壳换皮仍走同一对话 showcase，框体/立绘随 panelTheme 变。
+            return _frontendConfig.Bootstrap.PureStoryLane;
         }
 
         private void EnsureTaskHook(GameEngine engine)

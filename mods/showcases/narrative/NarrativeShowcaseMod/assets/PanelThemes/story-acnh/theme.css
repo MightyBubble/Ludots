@@ -74,4 +74,11 @@
 
 .story-framed {
   position: relative;
+  overflow: visible;
+}
+
+/* 内容让出切边，避免字压在拟物框金边上 */
+.story-framed-body {
+  position: relative;
+  padding: 22px 24px 26px 24px;
 }

@@ -123,6 +123,7 @@ namespace Ludots.Tests.GAS.Production
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             Assert.That(dialogue.TryGetActiveView(out DialogueView introDialogue), Is.True);
             Assert.That(introDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingDialogueId));
+            AssertThemeFrameVisibleOnDialogue(uiRoot);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
             timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
 
@@ -710,6 +711,21 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(composition!.Style.Width.Unit, Is.EqualTo(UiLengthUnit.Pixel));
             Assert.That(composition.Style.Width.Value, Is.GreaterThanOrEqualTo(900f),
                 "Standing portrait composition should span a half-screen-plus dialogue strip.");
+        }
+
+        private static void AssertThemeFrameVisibleOnDialogue(UIRoot uiRoot)
+        {
+            UiNode? frame = FindUiNodeByClass(uiRoot.Scene?.Root, "story-frame");
+            Assert.That(frame, Is.Not.Null, "Dialogue overlay must mount themed nine-slice story-frame.");
+            string src = frame!.Attributes["src"] ?? string.Empty;
+            Assert.That(src, Does.Contain("panel_frame.png").IgnoreCase,
+                $"story-frame src must point at PanelThemes panel_frame.png, got '{src}'.");
+            Assert.That(frame.Style.ImageSlice.Left, Is.GreaterThan(0f),
+                "story-frame must have image-slice so ornate borders nine-slice instead of stretch.");
+            UiNode? framed = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed");
+            Assert.That(framed, Is.Not.Null);
+            UiNode? body = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
+            Assert.That(body, Is.Not.Null, "Framed dialogue content must use story-framed-body inset.");
         }
 
         private static UiNode? FindAncestorByClass(UiNode? node, string className)
