@@ -17,6 +17,7 @@ using Ludots.Core.Gameplay.Dialogue;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -93,6 +94,12 @@ namespace Ludots.Tests.GAS.Production
 
             LoadMap(engine, MapId, frameTimesMs, 8);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            GraphCallbackService callbacks = engine.GetService(CoreServiceKeys.GraphCallbackService)
+                ?? throw new InvalidOperationException("GraphCallbackService was not installed.");
+            Assert.That(
+                callbacks.TryGetOldestLiveHandleByCallbackType(GraphCallbackTypes.DialogConfirm, out _),
+                Is.True,
+                "Graph.Narrative.Flow.AwaitStoryConfirm must park on AwaitCallback(DialogConfirm) once MapLoaded mounts it.");
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             Assert.That(
                 AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text =>
@@ -154,6 +161,15 @@ namespace Ludots.Tests.GAS.Production
             AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId, 1);
             AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId, 2);
             AssertTaskState(tasks, NarrativeShowcaseMod.NarrativeShowcaseIds.TrialTaskId, TaskInstanceState.Active);
+            AssertMapVariable(engine, "story.await_confirmed", 1);
+            AssertMapVariableFloat(
+                engine,
+                "narrative.arcweaver_health",
+                ReadAttribute(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, "Health"));
+            Assert.That(
+                callbacks.TryGetOldestLiveHandleByCallbackType(GraphCallbackTypes.DialogConfirm, out _),
+                Is.False,
+                "The briefing choice commit must Complete the mounted AwaitCallback(DialogConfirm) waiter (Dialogue is the sole Completer).");
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "briefing_branch_complete");
             timeline.Add("[T+003] Took the lore branch via StoryChoice1, wrote MapVariableStore trust/lore, and advanced TaskRuntime into the trial beat.");
 
@@ -507,6 +523,14 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("CurrentMapSession.Variables was not available.");
             Assert.That(variables.Contains(variableId), Is.True, $"Map variable '{variableId}' is not declared.");
             Assert.That(variables.ReadInt(variableId), Is.EqualTo(expected), $"Map variable '{variableId}' mismatch.");
+        }
+
+        private static void AssertMapVariableFloat(GameEngine engine, string variableId, float expected)
+        {
+            MapVariableStore variables = engine.CurrentMapSession?.Variables
+                ?? throw new InvalidOperationException("CurrentMapSession.Variables was not available.");
+            Assert.That(variables.Contains(variableId), Is.True, $"Map variable '{variableId}' is not declared.");
+            Assert.That(variables.ReadFloat(variableId), Is.EqualTo(expected).Within(0.01f), $"Map variable '{variableId}' mismatch.");
         }
 
         private static string BuildStoryStateDiagnostics(DialogueRuntime dialogue, SequencerRuntime sequencer, TaskRuntimeService tasks)
