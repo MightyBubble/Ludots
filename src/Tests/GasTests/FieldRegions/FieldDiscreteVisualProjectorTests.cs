@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Fields;
 using Ludots.Core.Fields.Config;
 using Ludots.Core.Gameplay.FieldRegions;
