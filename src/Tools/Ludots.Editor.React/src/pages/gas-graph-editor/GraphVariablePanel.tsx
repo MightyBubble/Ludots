@@ -16,9 +16,12 @@ export type GraphVariableRow = {
   writes: number;
 };
 
+export type GraphPlacedKind = 'entity' | 'anchor' | 'region';
+
 export type GraphPlacedInstance = {
   instanceId: string;
   template: string;
+  kind: GraphPlacedKind;
   ordinal: number;
 };
 
@@ -51,15 +54,17 @@ export function decodeMapVarDrag(raw: string): { name: string; type: MapVariable
   return { name: parts[1], type };
 }
 
-export function encodePlacedVarDrag(instanceId: string): string {
-  return `${PLACED_VAR_DRAG_PREFIX}\t${instanceId}`;
+export function encodePlacedVarDrag(instanceId: string, kind: GraphPlacedKind): string {
+  return `${PLACED_VAR_DRAG_PREFIX}\t${instanceId}\t${kind}`;
 }
 
-export function decodePlacedVarDrag(raw: string): { instanceId: string } | null {
+export function decodePlacedVarDrag(raw: string): { instanceId: string; kind: GraphPlacedKind } | null {
   const parts = raw.split('\t');
-  if (parts.length !== 2 || parts[0] !== PLACED_VAR_DRAG_PREFIX) return null;
+  if (parts.length !== 3 || parts[0] !== PLACED_VAR_DRAG_PREFIX) return null;
   if (!parts[1]) return null;
-  return { instanceId: parts[1] };
+  const kind = parts[2];
+  if (kind !== 'entity' && kind !== 'anchor' && kind !== 'region') return null;
+  return { instanceId: parts[1], kind };
 }
 
 export function collectionTypeError(kind: MapVariableKind): string | null {
@@ -126,13 +131,15 @@ export function GraphVariablePanel({
                 key={instance.instanceId}
                 draggable
                 onDragStart={(event) => {
-                  event.dataTransfer.setData(MAP_VAR_DRAG_MIME, encodePlacedVarDrag(instance.instanceId));
+                  event.dataTransfer.setData(MAP_VAR_DRAG_MIME, encodePlacedVarDrag(instance.instanceId, instance.kind));
                   event.dataTransfer.effectAllowed = 'copy';
                 }}
                 className="mb-1 flex w-full cursor-grab items-center gap-2 rounded border border-violet-950 bg-violet-950/40 px-2 py-1.5 text-left active:cursor-grabbing"
-                title={instance.template ? `Template ${instance.template}` : undefined}
+                title={instance.template ? `Template ${instance.template}` : instance.kind === 'region' ? 'Map region' : undefined}
               >
-                <span className="w-8 shrink-0 font-mono text-[9px] uppercase text-violet-300">ent</span>
+                <span className="w-8 shrink-0 font-mono text-[9px] uppercase text-violet-300">
+                  {instance.kind === 'region' ? 'reg' : instance.kind === 'anchor' ? 'anc' : 'ent'}
+                </span>
                 <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-violet-100">{instance.instanceId}</span>
                 <span className="shrink-0 text-[9px] text-violet-400/80">#{instance.ordinal}</span>
               </div>

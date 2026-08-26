@@ -1,0 +1,55 @@
+{
+  "op": "LoadPlacedRegion",
+  "driver": "placedRegion",
+  "title": "点名地图区域，名册有没有就报数",
+  "beat": "记录官点名营地圈，地图名册回 1；点名不存在的鬼区，名册回 0。",
+  "detailTemplate": "区域点名：营地圈={yard}，鬼区={ghost}。",
+  "assertDetailContains": [
+    "区域"
+  ],
+  "featuredNodeId": "readYard",
+  "graphKind": "TriggerGraph",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "记录官",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "marker",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "营地标",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "regions": [
+    {
+      "id": "yard",
+      "shape": "circle",
+      "x": 400,
+      "y": 0,
+      "radiusCm": 200
+    }
+  ],
+  "variables": [
+    {
+      "name": "gallery.region_yard",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "gallery.region_ghost",
+      "type": "int",
+      "initial": -1
+    }
+  ]
+}

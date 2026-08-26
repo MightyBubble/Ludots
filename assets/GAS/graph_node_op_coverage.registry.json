@@ -2795,6 +2795,36 @@
       ]
     },
     {
+      "op": "LoadPlacedRegion",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadPlacedRegion",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPlacedRegionAcceptanceTests.LoadPlacedRegion_RollCallReportsYardPresentAndGhostAbsent"
+      ]
+    },
+    {
+      "op": "LoadPlacedAnchor",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadPlacedAnchor",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPlacedRegionAcceptanceTests.LoadPlacedAnchor_RollCallHitsLiveInstanceThenNullAfterKill"
+      ]
+    },
+    {
       "op": "LoadEntryPayloadInt",
       "authorableKinds": [
         "TriggerGraph"

@@ -424,10 +424,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadPlacedEntity:
+                case GraphNodeOp.LoadPlacedRegion:
+                case GraphNodeOp.LoadPlacedAnchor:
                     // The compiler has no map context, so membership in the mounting map's
-                    // placed-instance catalog is validated fail-closed at mount time
+                    // placed-instance / region catalog is validated fail-closed at mount time
                     // (TriggerGraphMounting); here only the non-empty authoring shape is checked.
+                    // LoadPlacedAnchor additionally requires InstanceId to contain "anchor".
                     RequireNonEmpty(node.InstanceId, "instanceId", node, graphId, diagnostics);
+                    if (op.NodeOp == GraphNodeOp.LoadPlacedAnchor &&
+                        !string.IsNullOrWhiteSpace(node.InstanceId) &&
+                        !Ludots.Core.Systems.PlacedInstanceKinds.IsAnchorInstanceId(node.InstanceId))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}' LoadPlacedAnchor instanceId must contain 'anchor' (got '{node.InstanceId}').",
+                            node.Id));
+                    }
+
                     break;
 
                 case GraphNodeOp.InvokeGraph:
@@ -1229,6 +1241,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadPlacedEntity:
+                case GraphNodeOp.LoadPlacedRegion:
+                case GraphNodeOp.LoadPlacedAnchor:
                     instruction.Imm = RequireSymbol(node.InstanceId, "instanceId", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 

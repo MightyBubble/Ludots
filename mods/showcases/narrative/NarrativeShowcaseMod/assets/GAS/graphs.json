@@ -167,5 +167,77 @@
       { "from": "trust_add", "fromPort": "value", "to": "trust_wr", "toPort": "value" },
       { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
+  },
+  {
+    "id": "Graph.Narrative.Macro.AskDialogConfirm",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "macro", "event": "Story.ManualInvoke", "start": "ask", "once": true }
+    ],
+    "nodes": [
+      { "id": "ask", "op": "AwaitCallback", "callbackType": "DialogConfirm" },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "ask", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": []
+  },
+  {
+    "id": "Graph.Narrative.Wire.AwaitDialogConfirm",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "boot_await", "event": "MapHeartbeat", "start": "inline_ask", "once": true }
+    ],
+    "nodes": [
+      {
+        "id": "inline_ask",
+        "op": "InlineGraph",
+        "functionName": "Graph.Narrative.Macro.AskDialogConfirm",
+        "entryLabel": "macro"
+      },
+      { "id": "scope", "op": "LoadCaster" },
+      { "id": "one", "op": "ConstInt", "intValue": 1 },
+      { "id": "ack_wr", "op": "WriteMapVarInt", "var": "dialog_await_ack" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "inline_ask", "fromPort": "then", "to": "scope" },
+      { "from": "scope", "fromPort": "next", "to": "one" },
+      { "from": "one", "fromPort": "next", "to": "ack_wr" },
+      { "from": "ack_wr", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "ack_wr", "toPort": "source" },
+      { "from": "one", "fromPort": "value", "to": "ack_wr", "toPort": "value" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.Narrative.Action.SignalAck",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "story_invoke", "event": "Story.ManualInvoke", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadCaster" },
+      { "id": "one", "op": "ConstInt", "intValue": 1 },
+      { "id": "ack_wr", "op": "WriteMapVarInt", "var": "signal_ack" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "one" },
+      { "from": "one", "fromPort": "next", "to": "ack_wr" },
+      { "from": "ack_wr", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "ack_wr", "toPort": "source" },
+      { "from": "one", "fromPort": "value", "to": "ack_wr", "toPort": "value" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
   }
 ]

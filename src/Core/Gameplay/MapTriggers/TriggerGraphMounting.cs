@@ -89,11 +89,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             string ownerLabel,
             CustomEventNameRegistry customEvents,
             Ludots.Core.Systems.MapLoadEntityIndex? entityIndex = null,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
+            System.Collections.Generic.IReadOnlySet<string>? regionIds = null)
         {
             if (customEvents == null) throw new ArgumentNullException(nameof(customEvents));
             var triggers = new List<Trigger>();
-            AppendEntityMountTriggers(triggers, programs, scope, graph, ownerLabel, customEvents, entityIndex, eventSchemas);
+            AppendEntityMountTriggers(triggers, programs, scope, graph, ownerLabel, customEvents, entityIndex, eventSchemas, regionIds);
             return triggers;
         }
 
@@ -130,7 +131,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 $"Map '{mapId}'",
                 customEvents,
                 entityIndex: session.EntityIndex,
-                eventSchemas: eventSchemas);
+                eventSchemas: eventSchemas,
+                regionIds: CollectRegionIds(session));
         }
 
         private static void AppendEntityMountTriggers(
@@ -141,7 +143,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             string ownerLabel,
             CustomEventNameRegistry customEvents,
             Ludots.Core.Systems.MapLoadEntityIndex? entityIndex,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
+            System.Collections.Generic.IReadOnlySet<string>? regionIds)
         {
             GraphProgramRegistration registration = RequireGraphRegistration(
                 programs,
@@ -160,7 +163,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 ownerLabel,
                 customEvents,
                 entityIndex: entityIndex,
-                eventSchemas: eventSchemas);
+                eventSchemas: eventSchemas,
+                regionIds: regionIds);
         }
 
         public static List<Trigger> BuildAbilityMountTriggers(
@@ -316,7 +320,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             CustomEventNameRegistry? customEvents = null,
             string? modIdFilter = null,
             Ludots.Core.Systems.MapLoadEntityIndex? entityIndex = null,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
+            System.Collections.Generic.IReadOnlySet<string>? regionIds = null)
         {
             IReadOnlyList<TriggerGraphEntry> entries = registration.TriggerGraphEntries;
             if (entries == null || entries.Count == 0)
@@ -325,7 +330,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"{ownerLabel} {fieldName} graph '{graph}' declares no event entries.");
             }
 
-            ValidatePlacedInstanceReads(registration.Program, graph, fieldName, ownerLabel, entityIndex);
+            ValidatePlacedInstanceReads(
+                registration.Program,
+                graph,
+                fieldName,
+                ownerLabel,
+                entityIndex,
+                regionIds);
 
             // Subscription-scope routing (#1123): the table an entry lands in is derived
             // from the event's schema scope, never authored per-entry, so a Map-scope
@@ -439,35 +450,72 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         /// <summary>
         /// #1108 fail-closed contract: the compiler has no map context, so every
-        /// LoadPlacedEntity instanceId must be proven against the mounting map's
-        /// placed-instance catalog here. Programs are symbol-patched before mounting, so
-        /// Imm is a ConfigKeyRegistry id; an unresolvable id is itself a load error.
+        /// LoadPlaced* Imm must be proven against the mounting map's catalogs here.
+        /// Programs are symbol-patched before mounting, so Imm is a ConfigKeyRegistry id;
+        /// an unresolvable id is itself a load error. Regions never enter EntityIndex.
         /// </summary>
         private static void ValidatePlacedInstanceReads(
             GraphInstruction[] program,
             string graph,
             string fieldName,
             string ownerLabel,
-            Ludots.Core.Systems.MapLoadEntityIndex? entityIndex)
+            Ludots.Core.Systems.MapLoadEntityIndex? entityIndex,
+            System.Collections.Generic.IReadOnlySet<string>? regionIds)
         {
             for (int i = 0; i < program.Length; i++)
             {
-                if (program[i].Op != (ushort)GraphNodeOp.LoadPlacedEntity)
+                GraphNodeOp op = (GraphNodeOp)program[i].Op;
+                if (op != GraphNodeOp.LoadPlacedEntity &&
+                    op != GraphNodeOp.LoadPlacedRegion &&
+                    op != GraphNodeOp.LoadPlacedAnchor)
                 {
                     continue;
                 }
 
                 string instanceId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(program[i].Imm)
                     ?? throw new InvalidOperationException(
-                        $"{ownerLabel} {fieldName} graph '{graph}' LoadPlacedEntity at pc {i} references an unregistered instance key id {program[i].Imm}.");
+                        $"{ownerLabel} {fieldName} graph '{graph}' {op} at pc {i} references an unregistered instance key id {program[i].Imm}.");
+
+                if (op == GraphNodeOp.LoadPlacedRegion)
+                {
+                    if (regionIds == null || !regionIds.Contains(instanceId))
+                    {
+                        throw new InvalidOperationException(
+                            $"{ownerLabel} {fieldName} graph '{graph}' LoadPlacedRegion at pc {i} references unknown region " +
+                            $"'{instanceId}' on this map; load fails closed instead of authoring against a ghost (#1108).");
+                    }
+
+                    continue;
+                }
 
                 if (entityIndex == null || !entityIndex.TryGet(instanceId, out _))
                 {
                     throw new InvalidOperationException(
-                        $"{ownerLabel} {fieldName} graph '{graph}' LoadPlacedEntity at pc {i} references unknown placed instance " +
+                        $"{ownerLabel} {fieldName} graph '{graph}' {op} at pc {i} references unknown placed instance " +
                         $"'{instanceId}' on this map; load fails closed instead of authoring against a ghost (#1108).");
                 }
+
+                if (op == GraphNodeOp.LoadPlacedAnchor &&
+                    !Ludots.Core.Systems.PlacedInstanceKinds.IsAnchorInstanceId(instanceId))
+                {
+                    throw new InvalidOperationException(
+                        $"{ownerLabel} {fieldName} graph '{graph}' LoadPlacedAnchor at pc {i} requires InstanceId containing 'anchor' " +
+                        $"(got '{instanceId}'); load fails closed (#1108).");
+                }
             }
+        }
+
+        internal static IReadOnlySet<string> CollectRegionIds(MapSession session)
+        {
+            List<MapRegionDefinition> regions = MapRegionDefinition.ParseList(
+                session.MapConfig?.Regions, session.MapId.Value);
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < regions.Count; i++)
+            {
+                ids.Add(regions[i].Id);
+            }
+
+            return ids;
         }
     }
 }

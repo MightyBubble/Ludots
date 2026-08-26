@@ -3779,12 +3779,13 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
       "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
       "title": "HFSM 岗哨演武场",
-      "summary": "独立分层状态机万人演示（不含 BT/关卡/技能）。",
+      "summary": "哨兵 featured 带走 GraphFsmHost（FsmState 糖 / Graph.FSM.Sentry）；万人 crowd 带是无图 HfsmWorld 压测，不顶 graph 语义。",
       "tier": "T2",
       "category": "capability",
       "tags": [
         "graph",
-        "capability-standard"
+        "capability-standard",
+        "fsm"
       ],
       "binding": "capability_standard_hfsm_sentry_arena",
       "preset": "capability_standard_hfsm_sentry_arena_raylib",
@@ -3794,7 +3795,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "FSM-1a featured=GraphFsmHost; crowd=no-graph HfsmWorld. Acceptance: GraphFsmHostTests + HfsmSentryArena_GateVignette honest band asserts."
     },
     {
       "id": "capability_standard_live_skill_workbench",
@@ -8133,6 +8134,60 @@
         "zero-code",
         "nineslice"
       ]
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedAnchor",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedAnchorEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadPlacedAnchorEntryMod.csproj",
+      "title": "点名预放置锚点，名册一翻就到",
+      "summary": "记录官翻出名册点到锚点，营地锚立刻在岗应答；倒下后名册读出空位。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadPlacedAnchor"
+      ],
+      "binding": "capability_standard_graph_op_LoadPlacedAnchor",
+      "preset": "capability_standard_graph_op_LoadPlacedAnchor_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadPlacedAnchor.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadPlacedAnchor",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadPlacedAnchor/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadPlacedAnchor/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedRegion",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedRegionEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadPlacedRegionEntryMod.csproj",
+      "title": "点名地图区域，名册有没有就报数",
+      "summary": "记录官点名营地圈，地图名册回 1；点名不存在的鬼区，名册回 0。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadPlacedRegion"
+      ],
+      "binding": "capability_standard_graph_op_LoadPlacedRegion",
+      "preset": "capability_standard_graph_op_LoadPlacedRegion_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadPlacedRegion.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadPlacedRegion/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

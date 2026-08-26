@@ -280,6 +280,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadEntryPayloadInt or
                 GraphNodeOp.LoadEntryPayloadFloat or
                 GraphNodeOp.LoadPlacedEntity or
+                GraphNodeOp.LoadPlacedRegion or
+                GraphNodeOp.LoadPlacedAnchor or
                 GraphNodeOp.ControlDomainResolve or
                 GraphNodeOp.ControlDomainControls or
                 GraphNodeOp.KnowledgeHasProjection or
@@ -808,6 +810,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.LoadEntryPayloadInt, HandleLoadEntryPayloadInt, "LoadEntryPayloadInt graph opcode.");
             Register(GraphNodeOp.LoadEntryPayloadFloat, HandleLoadEntryPayloadFloat, "LoadEntryPayloadFloat graph opcode.");
             Register(GraphNodeOp.LoadPlacedEntity, HandleLoadPlacedEntity, "LoadPlacedEntity graph opcode.");
+            Register(GraphNodeOp.LoadPlacedRegion, HandleLoadPlacedRegion, "LoadPlacedRegion graph opcode.");
+            Register(GraphNodeOp.LoadPlacedAnchor, HandleLoadPlacedAnchor, "LoadPlacedAnchor graph opcode.");
             Register(GraphNodeOp.RelationshipHasLink, HandleRelationshipHasLink, "RelationshipHasLink graph opcode.");
             Register(GraphNodeOp.ControlDomainResolve, HandleControlDomainResolve, "ControlDomainResolve graph opcode.");
             Register(GraphNodeOp.ControlDomainControls, HandleControlDomainControls, "ControlDomainControls graph opcode.");
@@ -1916,6 +1920,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // A miss is a readable value, not a throw (#1108 contract): unregistered ids and
             // destroyed entities both write Entity.Null so downstream ops branch on it.
             MapId mapId = RequireMapVariableScopeMap(ref s, s.Caster, nameof(GraphNodeOp.LoadPlacedEntity));
+            s.E[ins.Dst] = s.Api.TryGetPlacedEntity(ins.Imm, mapId, out Entity entity) && s.World.IsAlive(entity)
+                ? entity
+                : Entity.Null;
+        }
+
+        private static void HandleLoadPlacedRegion(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            MapId mapId = RequireMapVariableScopeMap(ref s, s.Caster, nameof(GraphNodeOp.LoadPlacedRegion));
+            s.I[ins.Dst] = s.Api.TryHasPlacedRegion(ins.Imm, mapId) ? 1 : 0;
+        }
+
+        private static void HandleLoadPlacedAnchor(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Runtime channel is identical to LoadPlacedEntity; mount/authoring require the
+            // InstanceId to contain "anchor". Miss / dead → Entity.Null.
+            MapId mapId = RequireMapVariableScopeMap(ref s, s.Caster, nameof(GraphNodeOp.LoadPlacedAnchor));
             s.E[ins.Dst] = s.Api.TryGetPlacedEntity(ins.Imm, mapId, out Entity entity) && s.World.IsAlive(entity)
                 ? entity
                 : Entity.Null;

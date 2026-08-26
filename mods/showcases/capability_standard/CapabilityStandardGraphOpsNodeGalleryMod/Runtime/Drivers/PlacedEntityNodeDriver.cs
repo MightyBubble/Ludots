@@ -18,7 +18,6 @@ namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 public sealed class PlacedEntityNodeDriver : IGraphOpsNodeDriver
 {
     private const int SliceBudget = 64;
-    private const string HealthVarName = "gallery.boss_health";
 
     private readonly float[] _floats = new float[GraphVmLimits.MaxFloatRegisters];
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
@@ -28,6 +27,7 @@ public sealed class PlacedEntityNodeDriver : IGraphOpsNodeDriver
     private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
     private Entity _boss;
     private string _bossName = string.Empty;
+    private string _healthVarName = string.Empty;
     private bool _killed;
 
     public GraphOpsNodeExecuteResult LastResult { get; private set; }
@@ -38,6 +38,7 @@ public sealed class PlacedEntityNodeDriver : IGraphOpsNodeDriver
         _ = GraphOpsNodeActorBinding.RequireRole(ctx, "caster");
         _boss = GraphOpsNodeActorBinding.RequireRole(ctx, "target");
         _bossName = ctx.Vignette.Actors[GraphOpsNodeActorBinding.IndexOf(ctx, _boss)].Name;
+        _healthVarName = RequireHealthVarName(ctx);
         _killed = false;
         GraphOpsNodeActorBinding.SyncHud(ctx);
     }
@@ -133,12 +134,27 @@ public sealed class PlacedEntityNodeDriver : IGraphOpsNodeDriver
     private void ApplyBeat(GraphOpsNodeDriverContext ctx)
     {
         float health = ctx.Api.ReadMapVarFloat(
-            Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(HealthVarName),
+            Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(_healthVarName),
             RequireMapId(ctx));
         var values = ctx.CaptionValues;
         values["name"] = _bossName;
         values["state"] = _killed ? "已倒下，位置空缺" : "在岗应答";
         values["health"] = health.ToString("0.#", CultureInfo.InvariantCulture);
         ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, values);
+    }
+
+    private static string RequireHealthVarName(GraphOpsNodeDriverContext ctx)
+    {
+        for (int i = 0; i < ctx.Vignette.Variables.Length; i++)
+        {
+            GraphOpsNodeVignetteVariable variable = ctx.Vignette.Variables[i];
+            if (string.Equals(variable.Type, "float", StringComparison.OrdinalIgnoreCase))
+            {
+                return variable.Name;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Placed entity gallery '{ctx.Vignette.Op}' requires a float map variable for the mirrored health read.");
     }
 }

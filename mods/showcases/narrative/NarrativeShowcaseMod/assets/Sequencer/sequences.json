@@ -57,6 +57,12 @@
         "presentationProfile": "story.immersive_subtitle",
         "start": 0.15,
         "duration": 0.9
+      },
+      {
+        "type": "Signal",
+        "eventId": "narrative.trial.signal_ack",
+        "actionGraphId": "Graph.Narrative.Action.SignalAck",
+        "start": 0.35
       }
     ]
   },

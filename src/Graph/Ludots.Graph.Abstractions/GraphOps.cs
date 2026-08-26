@@ -156,13 +156,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadEntryPayloadInt    = 414, // I[Dst] = entry payload (Imm: payload key symbol id)
         LoadEntryPayloadFloat  = 415, // F[Dst] = entry payload (Imm: payload key symbol id)
 
-        // ── Placed-entity variable reads (#1108) ──
+        // ── Placed-entity / region / anchor variable reads (#1108) ──
         // E[Dst] = entity registered under the placed InstanceId (Imm: instance id key id)
         // on the mounted map. Unregistered or destroyed instances write Entity.Null —
         // unlike LoadEntryPayload*, a miss is a readable value, not a throw. Compile-time
         // validation is mount-time fail-closed (TriggerGraphMounting) because only the
         // mounting map knows its placed-instance catalog.
         LoadPlacedEntity = 416,
+        // I[Dst] = 1 when Imm region id is in the mounting map's Regions catalog, else 0.
+        // Regions never enter MapLoadEntityIndex.
+        LoadPlacedRegion = 417,
+        // E[Dst] = same runtime as LoadPlacedEntity; authoring/mount require InstanceId
+        // containing "anchor" (SC2/War3-style placed anchors, not panel UI anchors).
+        LoadPlacedAnchor = 418,
 
         // ── Topology predicates (420-422, RFC-0065 DEC-5 viewer-relative semantics) ──
         ControlDomainResolve  = 420, // E[Dst] = control domain rep of E[A], Entity.Null when none

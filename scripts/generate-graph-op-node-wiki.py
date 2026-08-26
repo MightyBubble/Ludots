@@ -41,6 +41,7 @@ DRIVER_LABELS = {
     "entryPayload": "事件载荷捕获",
     "invokeGraph": "子图调用与事件派发",
     "placedEntity": "放置实体名册",
+    "placedRegion": "放置区域名册",
     "sandbox": "组合短剧",
 }
 
@@ -56,6 +57,7 @@ HANDBOOK_BY_DRIVER = {
     "entryPayload": ("map-02-triggers.md", "地图触发器 · map-02"),
     "invokeGraph": ("map-02-triggers.md", "地图触发器 · map-02"),
     "placedEntity": ("map-02-triggers.md", "地图触发器 · map-02"),
+    "placedRegion": ("map-02-triggers.md", "地图触发器 · map-02"),
     "sandbox": ("gr-02-document.md", "图文档写法 · gr-02"),
 }
 
@@ -450,7 +452,7 @@ def write_op_page(path: Path, vignette: dict, sections: list[str]) -> None:
 {beat}
 
 <video controls playsinline preload="metadata" poster="{media}/poster.png" src="{media}/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `{media}/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 {media}/play.mp4。
 </video>
 
 """ + (chr(10) * 2).join(sections) + f"""
@@ -534,7 +536,7 @@ def main() -> int:
         if not args.allow_missing_media:
             require_media(repo, op)
         driver = vignette.get("driver", "sandbox")
-        graph_path = repo / GALLERY_REL / "assets" / "gas" / "graphs" / f"{op}.json"
+        graph_path = repo / GALLERY_REL / "assets" / "GAS" / "graphs" / f"{op}.json"
         doc = find_op_doc(graph_path, op)
         sections = [
             author_section(repo, op, driver, descs[op], doc).rstrip("\n"),

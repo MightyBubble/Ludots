@@ -207,6 +207,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadEntryPayloadInt, TriggerGraphOnly, GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadEntryPayloadFloat, TriggerGraphOnly, GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadPlacedEntity, TriggerGraphOnly, GraphValueType.Entity, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.LoadPlacedRegion, TriggerGraphOnly, GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.LoadPlacedAnchor, TriggerGraphOnly, GraphValueType.Entity, imm: GraphOperandRole.SymbolImm);
             // InvokeGraph Imm is a compile-time graph id literal (not a symbol); Flags bit 0 marks
             // an authored entry label whose symbol index is packed as B | (C << 8).
             Add(rows, GraphNodeOp.InvokeGraph, TriggerGraphOnly, GraphValueType.Int, scriptPorts: noPorts, scriptOut: GraphValueType.Int);

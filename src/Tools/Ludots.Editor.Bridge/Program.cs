@@ -2122,31 +2122,53 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/instances", (string modId, string map
     try
     {
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
-        var seen = new Dictionary<string, string>(StringComparer.Ordinal);
+        var seen = new Dictionary<string, (string Template, string Kind)>(StringComparer.Ordinal);
         IReadOnlyList<string> paths = EditorRepo.ListMapConfigPaths(ctx, mapId);
         for (int i = 0; i < paths.Count; i++)
         {
             JsonNode? root = JsonNode.Parse(File.ReadAllText(paths[i]));
-            if (root is not JsonObject obj || obj["Entities"] is not JsonArray entities)
+            if (root is not JsonObject obj)
             {
                 continue;
             }
 
-            for (int e = 0; e < entities.Count; e++)
+            if (obj["Entities"] is JsonArray entities)
             {
-                if (entities[e] is not JsonObject entity ||
-                    entity["InstanceId"]?.GetValue<string>() is not { } instanceId ||
-                    string.IsNullOrWhiteSpace(instanceId))
+                for (int e = 0; e < entities.Count; e++)
                 {
-                    continue;
-                }
+                    if (entities[e] is not JsonObject entity ||
+                        entity["InstanceId"]?.GetValue<string>() is not { } instanceId ||
+                        string.IsNullOrWhiteSpace(instanceId))
+                    {
+                        continue;
+                    }
 
-                seen[instanceId.Trim()] = entity["Template"]?.GetValue<string>() ?? string.Empty;
+                    string trimmed = instanceId.Trim();
+                    seen[trimmed] = (
+                        entity["Template"]?.GetValue<string>() ?? string.Empty,
+                        Ludots.Core.Systems.PlacedInstanceKinds.KindForEntityInstance(trimmed));
+                }
+            }
+
+            if (obj["Regions"] is JsonArray regions)
+            {
+                for (int r = 0; r < regions.Count; r++)
+                {
+                    if (regions[r] is not JsonObject region ||
+                        region["id"]?.GetValue<string>() is not { } regionId ||
+                        string.IsNullOrWhiteSpace(regionId))
+                    {
+                        continue;
+                    }
+
+                    string trimmed = regionId.Trim();
+                    seen[trimmed] = (string.Empty, Ludots.Core.Systems.PlacedInstanceKinds.Region);
+                }
             }
         }
 
         var instances = seen.OrderBy(kvp => kvp.Key, StringComparer.Ordinal)
-            .Select(kvp => new { instanceId = kvp.Key, template = kvp.Value })
+            .Select(kvp => new { instanceId = kvp.Key, template = kvp.Value.Template, kind = kvp.Value.Kind })
             .ToArray();
         return Results.Ok(new { ok = true, mapId, instances });
     }

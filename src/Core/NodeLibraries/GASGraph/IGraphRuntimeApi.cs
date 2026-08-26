@@ -139,6 +139,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.PlacedIndexUnavailable");
         }
+
+        /// <summary>
+        /// True when Imm region id is present in the mounting map's Regions catalog
+        /// (#1108 LoadPlacedRegion). Regions never enter MapLoadEntityIndex.
+        /// </summary>
+        bool TryHasPlacedRegion(int regionKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RegionCatalogUnavailable");
+        }
         int CollectMapEntities(Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");

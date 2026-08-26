@@ -6,4 +6,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Ludots.AgentBridge.Mcp</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj" />
+  </ItemGroup>
 </Project>
