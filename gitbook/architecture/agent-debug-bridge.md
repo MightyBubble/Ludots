@@ -96,7 +96,8 @@ dotnet build src/Tools/Ludots.AgentBridge.Mcp/Ludots.AgentBridge.Mcp.csproj -c R
 dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
 
 cd src/Tools/Ludots.Inspector.React && npm install && npm run dev
-# → http://127.0.0.1:5179 ；每工具独立 debug（req/res），非全屏壳
+# → http://127.0.0.1:5179 ；工具目录 = GET /tools；每工具独立 debug（req/res）
+# 门户说明：https://mightybubble.github.io/Ludots/agent-bridge.html#doc/inspector
 ```
 
 ## 扩展
