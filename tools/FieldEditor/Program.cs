@@ -34,6 +34,7 @@ static int Execute(string[] commandArgs)
             "render" => Render(commandArgs),
             "save" => Save(commandArgs),
             "session" => Session(commandArgs),
+            "canvas" => Canvas(commandArgs),
             _ => UnknownCommand(commandArgs[0]),
         };
     }
@@ -73,11 +74,13 @@ static void PrintUsage()
     render         --mod <dir> --layer <layerKey> [--bounds x0,y0,x1,y1]
     save           --mod <dir> --layer <layerKey>
     session        --mod <dir> --layer <layerKey>
+    canvas         --mod <dir> --layer <layerKey>
 
     new-layer accepts optional --map <mapId> to append the layer into Maps/<mapId>.json Fields.Layers.
     pick selects the active brush key; rect and brush use it when --key is omitted.
     brush paints a square Chebyshev-radius footprint in cell space.
     Mutating field commands persist undo/redo beside the cells asset.
+    canvas requires a graphical display and writes the cells asset only when S is pressed.
     """);
 }
 
@@ -544,6 +547,13 @@ static int Session(string[] commandArgs)
         AddInheritedOption(inherited, "--layer", layer);
         Execute(inherited.ToArray());
     }
+}
+
+static int Canvas(string[] commandArgs)
+{
+    (CellsDocument document, int maxRegionIds, string assetPath) =
+        OpenDocument(commandArgs);
+    return CanvasApp.Run(document, maxRegionIds, assetPath);
 }
 
 static JsonObject PrepareMutation(string path, CellsDocument document)
