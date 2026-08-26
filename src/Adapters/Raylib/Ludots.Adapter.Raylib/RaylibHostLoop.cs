@@ -733,15 +733,13 @@ namespace Ludots.Adapter.Raylib
                             visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
-                            if (waterOnVisualHeightmap)
-                            {
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
-                            }
-                            else
-                            {
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
-                            }
+                            // Absolute elevation tint keeps continental land readable even when the
+                            // reflective water pass is off; water FBO still overrides sea from the plane.
+                            visualHeightmapRenderer.AbsoluteColorPeakSpanCm =
+                                visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                            visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterOnVisualHeightmap
+                                ? waterPass.WaterPlaneY * 100f
+                                : visualTerrainSource.RenderProfile.SeaLevelCm;
 
                             visualHeightmapRenderer.Render(visualTerrainSource, activeCamera);
 

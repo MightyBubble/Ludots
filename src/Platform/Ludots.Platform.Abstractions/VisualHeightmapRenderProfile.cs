@@ -18,6 +18,12 @@ namespace Ludots.Platform.Abstractions
         public const float MaxColorContrast = 16f;
         public const float MinAbsoluteColorPeakSpanCm = 1f;
         public const float MaxAbsoluteColorPeakSpanCm = 1_000_000f;
+        public const float DefaultOverviewSwitchChunkSpans = 2.5f;
+        public const int DefaultOverviewVertexLimit = 65536;
+        public const float MinOverviewSwitchChunkSpans = 1f;
+        public const float MaxOverviewSwitchChunkSpans = 64f;
+        public const int MinOverviewVertexLimit = 4;
+        public const int MaxOverviewVertexLimit = 65536;
 
         public bool WaterEnabled { get; set; }
 
@@ -28,6 +34,15 @@ namespace Ludots.Platform.Abstractions
         public float ColorContrast { get; set; } = DefaultColorContrast;
 
         public float AbsoluteColorPeakSpanCm { get; set; } = DefaultAbsoluteColorPeakSpanCm;
+
+        /// <summary>
+        /// When the camera footprint exceeds detail radius times this multiplier,
+        /// adapters must draw the overview mesh instead of the near-chunk window.
+        /// </summary>
+        public float OverviewSwitchChunkSpans { get; set; } = DefaultOverviewSwitchChunkSpans;
+
+        /// <summary>Max vertices for the continental overview mesh (Raylib ushort index limit).</summary>
+        public int OverviewVertexLimit { get; set; } = DefaultOverviewVertexLimit;
 
         public static VisualHeightmapRenderProfile CreateDefault()
         {
@@ -43,6 +58,8 @@ namespace Ludots.Platform.Abstractions
                 DisplayHeightScale = DisplayHeightScale,
                 ColorContrast = ColorContrast,
                 AbsoluteColorPeakSpanCm = AbsoluteColorPeakSpanCm,
+                OverviewSwitchChunkSpans = OverviewSwitchChunkSpans,
+                OverviewVertexLimit = OverviewVertexLimit,
             };
         }
 
@@ -64,6 +81,17 @@ namespace Ludots.Platform.Abstractions
                 MinAbsoluteColorPeakSpanCm,
                 MaxAbsoluteColorPeakSpanCm,
                 nameof(AbsoluteColorPeakSpanCm));
+            RequireRange(
+                OverviewSwitchChunkSpans,
+                MinOverviewSwitchChunkSpans,
+                MaxOverviewSwitchChunkSpans,
+                nameof(OverviewSwitchChunkSpans));
+            if (OverviewVertexLimit < MinOverviewVertexLimit || OverviewVertexLimit > MaxOverviewVertexLimit)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(OverviewVertexLimit),
+                    $"{nameof(OverviewVertexLimit)} must be between {MinOverviewVertexLimit} and {MaxOverviewVertexLimit}.");
+            }
 
             return Clone();
         }

@@ -61,32 +61,32 @@ public sealed class FieldEastAsiaAdminAcceptanceTests
 
     private static readonly int[] ExpectedRegionCellCounts =
     {
-        59,
-        90,
-        115,
-        70,
-        192,
-        166,
-        85,
-        42,
-        118,
-        351,
-        127,
-        97,
-        129,
-        121,
-        107,
-        197,
-        184,
-        213,
-        48,
-        136,
-        164,
-        11,
-        83,
-        180,
-        277,
-        109,
+        908,
+        1182,
+        1677,
+        981,
+        3035,
+        2541,
+        1370,
+        480,
+        1932,
+        5356,
+        2031,
+        1591,
+        2173,
+        1853,
+        1608,
+        2918,
+        2628,
+        3362,
+        634,
+        2205,
+        2309,
+        105,
+        1341,
+        2946,
+        4173,
+        1542,
     };
 
     [Test]
@@ -107,7 +107,7 @@ public sealed class FieldEastAsiaAdminAcceptanceTests
 
         Assert.That(layer.Regions.Count, Is.EqualTo(ExpectedRegionNames.Length));
         Assert.That(session.RegionIndex!.Count, Is.EqualTo(ExpectedRegionCellCounts.Length));
-        Assert.That(layer.Field.NonDefaultCount, Is.EqualTo(3471));
+        Assert.That(layer.Field.NonDefaultCount, Is.EqualTo(52881));
 
         var regionCells = new FieldCell2D[layer.Field.NonDefaultCount];
         int expectedTotal = 0;

@@ -24,6 +24,11 @@ namespace Ludots.Raylib.Render
 
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
+        private Mesh _overviewMesh;
+        private int _overviewRevision = int.MinValue;
+        private long _overviewBoundsKey;
+        private int _overviewVertexLimit = -1;
+        private bool _overviewMeshLoaded;
         private readonly IRenderAssetPathResolver? _assetPaths;
         private readonly string _backendId;
         private readonly List<TerrainAlbedoDescriptor> _albedoDescriptors = new();
@@ -372,6 +377,35 @@ namespace Ludots.Raylib.Render
             MissingChunkCountLastFrame = 0;
             TerrainVertexCountLastFrame = 0;
             ChunkBuildMsLastFrame = 0d;
+
+            float aspect = ResolveFrameAspect();
+            VisualHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
+            bool useOverview = ShouldUseOverviewMesh(
+                source,
+                in camera,
+                aspect,
+                VisibleRadiusCm,
+                profile.OverviewSwitchChunkSpans);
+            if (useOverview)
+            {
+                if (source is not IVisualHeightmap heightSampleSource)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibVisualHeightmapRenderer)} overview mesh requires the render source to also implement {nameof(IVisualHeightmap)}.");
+                }
+
+                long buildStart = Stopwatch.GetTimestamp();
+                EnsureOverviewMesh(source, heightSampleSource, profile.OverviewVertexLimit);
+                ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
+                RaylibMatrix identity = RaylibMatrix.Identity;
+                Rl.rlDisableBackfaceCulling();
+                Rl.DrawMesh(_overviewMesh, _terrainMaterial, identity);
+                Rl.rlEnableBackfaceCulling();
+                DrawnChunkCountLastFrame = 1;
+                TerrainVertexCountLastFrame = _overviewMesh.vertexCount;
+                EvictUnusedChunks(240);
+                return;
+            }
 
             int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
@@ -1267,6 +1301,201 @@ namespace Ludots.Raylib.Render
             }
 
             _chunks.Clear();
+            ClearOverviewMesh();
+        }
+
+        private void ClearOverviewMesh()
+        {
+            if (_overviewMeshLoaded && _overviewMesh.vertexCount > 0)
+            {
+                Rl.UnloadMesh(_overviewMesh);
+            }
+
+            _overviewMesh = default;
+            _overviewMeshLoaded = false;
+            _overviewRevision = int.MinValue;
+            _overviewBoundsKey = 0;
+            _overviewVertexLimit = -1;
+        }
+
+        private static float ResolveFrameAspect()
+        {
+            int width = Math.Max(1, Rl.GetScreenWidth());
+            int height = Math.Max(1, Rl.GetScreenHeight());
+            return width / (float)height;
+        }
+
+        private void EnsureOverviewMesh(
+            IVisualHeightmapRenderSource source,
+            IVisualHeightmap heightSampleSource,
+            int overviewVertexLimit)
+        {
+            long boundsKey = PackBoundsKey(source.Bounds);
+            if (_overviewMeshLoaded &&
+                _overviewRevision == source.Revision &&
+                _overviewBoundsKey == boundsKey &&
+                _overviewVertexLimit == overviewVertexLimit)
+            {
+                return;
+            }
+
+            ClearOverviewMesh();
+            _overviewMesh = CreateOverviewMesh(source, heightSampleSource, overviewVertexLimit);
+            _overviewMeshLoaded = true;
+            _overviewRevision = source.Revision;
+            _overviewBoundsKey = boundsKey;
+            _overviewVertexLimit = overviewVertexLimit;
+            BuiltChunkCountLastFrame++;
+        }
+
+        private unsafe Mesh CreateOverviewMesh(
+            IVisualHeightmapRenderSource source,
+            IVisualHeightmap heightSampleSource,
+            int overviewVertexLimit)
+        {
+            int stepChunks = ResolveOverviewStepChunks(source.ChunkColumns, source.ChunkRows, overviewVertexLimit);
+            int columns = ResolveOverviewAxisPointCount(source.ChunkColumns, stepChunks);
+            int rows = ResolveOverviewAxisPointCount(source.ChunkRows, stepChunks);
+            int vertexCount = checked(columns * rows);
+            if (vertexCount > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} overview mesh vertex count {vertexCount} exceeds Raylib ushort index limit.");
+            }
+
+            int indexCount = checked((columns - 1) * (rows - 1) * 6);
+            Mesh mesh = new()
+            {
+                vertexCount = vertexCount,
+                triangleCount = indexCount / 3,
+            };
+
+            int vertexFloatCount = vertexCount * 3;
+            int colorByteCount = vertexCount * 4;
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.colors = (byte*)Rl.MemAlloc(sizeof(byte) * colorByteCount);
+            mesh.indices = (ushort*)Rl.MemAlloc(sizeof(ushort) * indexCount);
+
+            WorldAabbCm bounds = source.Bounds;
+            float stepXCm = columns > 1 ? bounds.Width / (float)(columns - 1) : 0f;
+            float stepZCm = rows > 1 ? bounds.Height / (float)(rows - 1) : 0f;
+            float? absoluteSeaCm = _absoluteColorSeaLevelCm;
+            float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
+            float minHeightCm = float.PositiveInfinity;
+            float maxHeightCm = float.NegativeInfinity;
+            var heights = new float[vertexCount];
+            for (int y = 0; y < rows; y++)
+            {
+                float worldYCm = bounds.Top + (y * stepZCm);
+                for (int x = 0; x < columns; x++)
+                {
+                    float worldXCm = bounds.Left + (x * stepXCm);
+                    int vertex = (y * columns) + x;
+                    if (!heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
+                    {
+                        heightCm = absoluteSeaCm ?? 0f;
+                    }
+
+                    heights[vertex] = heightCm;
+                    minHeightCm = MathF.Min(minHeightCm, heightCm);
+                    maxHeightCm = MathF.Max(maxHeightCm, heightCm);
+                    int f = vertex * 3;
+                    mesh.vertices[f + 0] = worldXCm * 0.01f;
+                    mesh.vertices[f + 1] = heightCm * 0.01f;
+                    mesh.vertices[f + 2] = worldYCm * 0.01f;
+                    mesh.normals[f + 0] = 0f;
+                    mesh.normals[f + 1] = 1f;
+                    mesh.normals[f + 2] = 0f;
+                }
+            }
+
+            if (!float.IsFinite(minHeightCm) || !float.IsFinite(maxHeightCm))
+            {
+                minHeightCm = 0f;
+                maxHeightCm = 1f;
+            }
+
+            float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    int vertex = (y * columns) + x;
+                    float heightCm = heights[vertex];
+                    float hL = heights[(y * columns) + Math.Max(0, x - 1)];
+                    float hR = heights[(y * columns) + Math.Min(columns - 1, x + 1)];
+                    float hT = heights[(Math.Max(0, y - 1) * columns) + x];
+                    float hB = heights[(Math.Min(rows - 1, y + 1) * columns) + x];
+                    float dx = MathF.Max(1f, stepXCm);
+                    float dz = MathF.Max(1f, stepZCm);
+                    Vector3 normal = Vector3.Normalize(new Vector3(-(hR - hL) / dx, 1f, -(hB - hT) / dz));
+                    if (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z))
+                    {
+                        normal = Vector3.UnitY;
+                    }
+
+                    int f = vertex * 3;
+                    mesh.normals[f + 0] = normal.X;
+                    mesh.normals[f + 1] = normal.Y;
+                    mesh.normals[f + 2] = normal.Z;
+
+                    float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
+                    float heightBand;
+                    byte red;
+                    byte green;
+                    byte blue;
+                    if (absoluteSeaCm is float seaCm)
+                    {
+                        heightBand = MathF.Min(1f, (heightCm - seaCm) / absolutePeakSpanCm);
+                        ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+                    else
+                    {
+                        heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
+                        ResolveTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+
+                    int c = vertex * 4;
+                    mesh.colors[c + 0] = red;
+                    mesh.colors[c + 1] = green;
+                    mesh.colors[c + 2] = blue;
+                    mesh.colors[c + 3] = ClampToByte(Math.Clamp(heightBand, 0f, 1f) * 255f);
+                }
+            }
+
+            int cursor = 0;
+            for (int y = 0; y < rows - 1; y++)
+            {
+                for (int x = 0; x < columns - 1; x++)
+                {
+                    int p00 = (y * columns) + x;
+                    int p10 = p00 + 1;
+                    int p01 = p00 + columns;
+                    int p11 = p01 + 1;
+                    mesh.indices[cursor++] = checked((ushort)p00);
+                    mesh.indices[cursor++] = checked((ushort)p01);
+                    mesh.indices[cursor++] = checked((ushort)p10);
+                    mesh.indices[cursor++] = checked((ushort)p11);
+                    mesh.indices[cursor++] = checked((ushort)p10);
+                    mesh.indices[cursor++] = checked((ushort)p01);
+                }
+            }
+
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
+        }
+
+        private static long PackBoundsKey(WorldAabbCm bounds)
+        {
+            unchecked
+            {
+                long key = bounds.Left;
+                key = (key * 397) ^ bounds.Top;
+                key = (key * 397) ^ bounds.Width;
+                key = (key * 397) ^ bounds.Height;
+                return key;
+            }
         }
 
         private void EvictUnusedChunks(int maxAgeFrames)
@@ -1473,6 +1702,7 @@ namespace Ludots.Raylib.Render
             }
 
             _chunks.Clear();
+            ClearOverviewMesh();
             ClearNavWalkabilityOverlay();
             ClearTerrainAlbedo();
             _albedoDescriptors.Clear();

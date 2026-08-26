@@ -570,7 +570,7 @@ namespace Ludots.Client.Raylib.Rendering
             r = (byte)(72 + (hash & 0x7F));
             g = (byte)(72 + ((hash >> 8) & 0x7F));
             b = (byte)(72 + ((hash >> 16) & 0x7F));
-            a = 118;
+            a = 72;
         }
 
         private static byte ToColorByte(float value)
