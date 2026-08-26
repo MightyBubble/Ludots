@@ -174,11 +174,12 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
 
     private static void SeedProgressionNodes(GraphOpsNodeDriverContext ctx)
     {
-        const string progressionName = "Progression.GraphOps.Gallery";
+        const string progressionName = "Progression.Core.TeamRelay";
         int progressionId = ProgressionIdRegistry.GetId(progressionName);
         if (progressionId <= 0)
         {
-            progressionId = ProgressionIdRegistry.Register(progressionName);
+            throw new InvalidOperationException(
+                $"Typed progression gallery requires loaded progression '{progressionName}'.");
         }
 
         Entity caster = ctx.Caster;
