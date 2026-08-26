@@ -28,6 +28,18 @@
           "scopeSource": "Fixed",
           "scopeTag": "pcmd.target.field"
         }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.lamp.refresh" },
+        "command": {
+          "kind": "SinkParamToAsset",
+          "definitionId": "pcmd.lamp_post",
+          "scopeSource": "Fixed",
+          "scopeTag": "pcmd.lamp.pillar.refresh",
+          "targetBehaviorSlot": "body",
+          "paramKey": "pcmd.lamp.color",
+          "paramLane": "Vector"
+        }
       }
     ]
   },
