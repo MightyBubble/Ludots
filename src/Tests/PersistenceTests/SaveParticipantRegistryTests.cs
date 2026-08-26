@@ -86,12 +86,13 @@ public sealed class SaveParticipantRegistryTests
         {
             "activities",
             "clock",
+            "dialogue",
             "gameSession",
             "inventory",
             "mapSessions",
-            "narrative",
             "relationships",
             "rng",
+            "sequencer",
             "tasks",
             "teams",
             "timeFlow"
