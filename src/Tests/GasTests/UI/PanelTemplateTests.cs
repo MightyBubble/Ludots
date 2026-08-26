@@ -163,5 +163,75 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(setA.Get("ore.total"), Is.EqualTo(100f));
             Assert.That(setB.Get("ore.total"), Is.EqualTo(900f));
         }
+
+        [Test]
+        public void Load_ListsAndLayout_ParsesFilterSortFieldsAndControls()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.roster",
+              "graph": "tests.graph.roster",
+              "pins": [ { "name": "rowCount", "key": "k.count", "mode": "realtime", "default": 0 } ],
+              "lists": [
+                {
+                  "name": "units",
+                  "collectionKey": "tests.collection.units",
+                  "filter": [ { "kind": "attribute", "attribute": "Health", "op": "gt", "value": 0 } ],
+                  "sort": [ { "attribute": "Health", "descending": true } ],
+                  "item": {
+                    "fields": [
+                      { "name": "displayName", "kind": "name" },
+                      { "name": "health", "kind": "attribute", "attribute": "Health" },
+                      { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
+                    ]
+                  }
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "label", "prefix": "在编 ", "bind": "rowCount" },
+                  {
+                    "type": "list",
+                    "bind": "units",
+                    "itemControls": [
+                      { "type": "label", "bind": "displayName" },
+                      { "type": "badge", "bind": "stunned", "text": "晕眩", "showWhen": true }
+                    ]
+                  }
+                ]
+              }
+            }
+            """;
+
+            PanelTemplate template = PanelTemplateLoader.Load(json);
+            Assert.That(template.Lists.Count, Is.EqualTo(1));
+            Assert.That(template.Lists[0].Filters[0].Op, Is.EqualTo(PanelAttributeFilterOp.Gt));
+            Assert.That(template.Lists[0].Sorts[0].Descending, Is.True);
+            Assert.That(template.Lists[0].Fields[2].Kind, Is.EqualTo(PanelItemFieldKind.Tag));
+            Assert.That(template.Layout, Is.Not.Null);
+            Assert.That(template.Layout!.Controls[1].Type, Is.EqualTo(PanelLayoutControlType.List));
+            Assert.That(template.Layout.Controls[1].ItemControls[1].ShowWhen, Is.True);
+        }
+
+        [Test]
+        public void Load_ListControlBindUnknown_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.badlist",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "missing", "itemControls": [ { "type": "label", "text": "x" } ] }
+                ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("list"));
+        }
     }
 }

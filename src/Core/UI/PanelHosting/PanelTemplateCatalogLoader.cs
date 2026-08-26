@@ -50,6 +50,7 @@ namespace Ludots.Core.UI.PanelHosting
                 }
 
                 template.GraphId = graphId;
+                PanelListProjector.BindSymbols(template);
             }
 
             return registry;

@@ -1,0 +1,69 @@
+[
+  {
+    "id": "panel.entity.list",
+    "graph": "Graph.Entity.List",
+    "pins": [
+      {
+        "name": "rowCount",
+        "key": "panel.roster.rowCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "lists": [
+      {
+        "name": "units",
+        "collectionKey": "panel.roster.units",
+        "filter": [
+          { "kind": "attribute", "attribute": "Health", "op": "gt", "value": 0 }
+        ],
+        "sort": [
+          { "attribute": "Health", "descending": true }
+        ],
+        "item": {
+          "fields": [
+            { "name": "displayName", "kind": "name" },
+            { "name": "health", "kind": "attribute", "attribute": "Health" },
+            { "name": "healthMax", "kind": "attributeBase", "attribute": "Health" },
+            { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
+          ]
+        }
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "roster-title",
+          "prefix": "在编 ",
+          "bind": "rowCount"
+        },
+        {
+          "type": "list",
+          "class": "roster-list",
+          "bind": "units",
+          "itemControls": [
+            {
+              "type": "label",
+              "class": "unit-name",
+              "bind": "displayName"
+            },
+            {
+              "type": "progressBar",
+              "class": "unit-health",
+              "current": "health",
+              "max": "healthMax"
+            },
+            {
+              "type": "badge",
+              "class": "unit-stunned",
+              "bind": "stunned",
+              "text": "晕眩",
+              "showWhen": true
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

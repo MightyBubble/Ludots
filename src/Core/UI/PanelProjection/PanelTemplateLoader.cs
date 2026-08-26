@@ -11,8 +11,31 @@ namespace Ludots.Core.UI.PanelProjection
     /// </summary>
     public static class PanelTemplateLoader
     {
-        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "skin", "graph", "pins", "events", "intents" };
+        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal)
+        {
+            "id", "skin", "graph", "pins", "events", "intents", "lists", "layout"
+        };
         private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
+        private static readonly HashSet<string> ListFields = new(StringComparer.Ordinal)
+        {
+            "name", "collectionKey", "filter", "sort", "item"
+        };
+        private static readonly HashSet<string> FilterFields = new(StringComparer.Ordinal)
+        {
+            "kind", "attribute", "op", "value"
+        };
+        private static readonly HashSet<string> SortFields = new(StringComparer.Ordinal)
+        {
+            "attribute", "descending"
+        };
+        private static readonly HashSet<string> ItemFieldFields = new(StringComparer.Ordinal)
+        {
+            "name", "kind", "attribute", "tag"
+        };
+        private static readonly HashSet<string> ControlFields = new(StringComparer.Ordinal)
+        {
+            "type", "class", "text", "bind", "prefix", "current", "max", "showWhen", "itemControls"
+        };
 
         public static PanelTemplate Load(string json)
         {
@@ -96,8 +119,349 @@ namespace Ludots.Core.UI.PanelProjection
 
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
             List<PanelIntentMapEntry> intents = ParseIntents(id, rootObject, events);
+            List<PanelListDeclaration> lists = ParseLists(id, rootObject);
+            PanelLayout? layout = ParseLayout(id, rootObject, pins, lists);
 
-            return new PanelTemplate(id, graph, pins, events, intents, skin);
+            return new PanelTemplate(id, graph, pins, events, intents, skin, lists, layout);
+        }
+
+        private static List<PanelListDeclaration> ParseLists(string templateId, JsonObject rootObject)
+        {
+            var lists = new List<PanelListDeclaration>();
+            if (rootObject["lists"] is null)
+            {
+                return lists;
+            }
+
+            if (rootObject["lists"] is not JsonArray listsNode)
+            {
+                throw new InvalidOperationException($"Panel template '{templateId}' lists must be an array.");
+            }
+
+            foreach (JsonNode? listNode in listsNode)
+            {
+                if (listNode is not JsonObject listObject)
+                {
+                    throw new InvalidOperationException($"Panel template '{templateId}' lists entries must be objects.");
+                }
+
+                RejectUnknownFields(listObject, ListFields, $"panel template '{templateId}' list");
+                string name = RequireString(listObject, "name", $"panel template '{templateId}' list");
+                string collectionKey = RequireString(listObject, "collectionKey", $"panel template '{templateId}' list '{name}'");
+
+                var filters = new List<PanelListFilter>();
+                if (listObject["filter"] is JsonArray filterNode)
+                {
+                    foreach (JsonNode? filterEntry in filterNode)
+                    {
+                        if (filterEntry is not JsonObject filterObject)
+                        {
+                            throw new InvalidOperationException(
+                                $"Panel template '{templateId}' list '{name}' filter entries must be objects.");
+                        }
+
+                        RejectUnknownFields(filterObject, FilterFields, $"panel template '{templateId}' list '{name}' filter");
+                        string kind = OptionalString(filterObject, "kind") ?? "attribute";
+                        if (!string.Equals(kind, "attribute", StringComparison.Ordinal))
+                        {
+                            throw new InvalidOperationException(
+                                $"Panel template '{templateId}' list '{name}' filter kind must be 'attribute'.");
+                        }
+
+                        string attribute = RequireString(filterObject, "attribute", $"panel template '{templateId}' list '{name}' filter");
+                        string opText = RequireString(filterObject, "op", $"panel template '{templateId}' list '{name}' filter");
+                        if (!TryParseFilterOp(opText, out PanelAttributeFilterOp op))
+                        {
+                            throw new InvalidOperationException(
+                                $"Panel template '{templateId}' list '{name}' filter op '{opText}' is unknown (gt/gte/lt/lte/eq).");
+                        }
+
+                        if (filterObject["value"] is not JsonValue valueNode ||
+                            !valueNode.TryGetValue<double>(out double valueRaw))
+                        {
+                            throw new InvalidOperationException(
+                                $"Panel template '{templateId}' list '{name}' filter requires numeric 'value'.");
+                        }
+
+                        filters.Add(new PanelListFilter(attribute, op, (float)valueRaw));
+                    }
+                }
+                else if (listObject["filter"] is not null)
+                {
+                    throw new InvalidOperationException($"Panel template '{templateId}' list '{name}' filter must be an array.");
+                }
+
+                var sorts = new List<PanelListSort>();
+                if (listObject["sort"] is JsonArray sortNode)
+                {
+                    foreach (JsonNode? sortEntry in sortNode)
+                    {
+                        if (sortEntry is not JsonObject sortObject)
+                        {
+                            throw new InvalidOperationException(
+                                $"Panel template '{templateId}' list '{name}' sort entries must be objects.");
+                        }
+
+                        RejectUnknownFields(sortObject, SortFields, $"panel template '{templateId}' list '{name}' sort");
+                        string attribute = RequireString(sortObject, "attribute", $"panel template '{templateId}' list '{name}' sort");
+                        bool descending = false;
+                        if (sortObject["descending"] is JsonValue descNode &&
+                            descNode.TryGetValue<bool>(out bool descValue))
+                        {
+                            descending = descValue;
+                        }
+
+                        sorts.Add(new PanelListSort(attribute, descending));
+                    }
+                }
+                else if (listObject["sort"] is not null)
+                {
+                    throw new InvalidOperationException($"Panel template '{templateId}' list '{name}' sort must be an array.");
+                }
+
+                if (listObject["item"] is not JsonObject itemObject)
+                {
+                    throw new InvalidOperationException($"Panel template '{templateId}' list '{name}' requires an 'item' object.");
+                }
+
+                if (itemObject["fields"] is not JsonArray fieldsNode || fieldsNode.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list '{name}' item.fields must be a non-empty array.");
+                }
+
+                var fieldNames = new HashSet<string>(StringComparer.Ordinal);
+                var fields = new List<PanelItemField>(fieldsNode.Count);
+                foreach (JsonNode? fieldNode in fieldsNode)
+                {
+                    if (fieldNode is not JsonObject fieldObject)
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' list '{name}' item.fields entries must be objects.");
+                    }
+
+                    RejectUnknownFields(fieldObject, ItemFieldFields, $"panel template '{templateId}' list '{name}' field");
+                    string fieldName = RequireString(fieldObject, "name", $"panel template '{templateId}' list '{name}' field");
+                    if (!fieldNames.Add(fieldName))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' list '{name}' declares duplicate field '{fieldName}'.");
+                    }
+
+                    string kindText = RequireString(fieldObject, "kind", $"panel template '{templateId}' list '{name}' field '{fieldName}'");
+                    PanelItemFieldKind kind = kindText switch
+                    {
+                        "attribute" => PanelItemFieldKind.Attribute,
+                        "attributeBase" => PanelItemFieldKind.AttributeBase,
+                        "tag" => PanelItemFieldKind.Tag,
+                        "name" => PanelItemFieldKind.Name,
+                        _ => throw new InvalidOperationException(
+                            $"Panel template '{templateId}' list '{name}' field '{fieldName}' kind '{kindText}' is unknown."),
+                    };
+
+                    string? symbol = kind switch
+                    {
+                        PanelItemFieldKind.Attribute or PanelItemFieldKind.AttributeBase =>
+                            RequireString(fieldObject, "attribute", $"panel template '{templateId}' list '{name}' field '{fieldName}'"),
+                        PanelItemFieldKind.Tag =>
+                            RequireString(fieldObject, "tag", $"panel template '{templateId}' list '{name}' field '{fieldName}'"),
+                        _ => null,
+                    };
+
+                    fields.Add(new PanelItemField(fieldName, kind, symbol));
+                }
+
+                lists.Add(new PanelListDeclaration(name, collectionKey, filters, sorts, fields));
+            }
+
+            return lists;
+        }
+
+        private static PanelLayout? ParseLayout(
+            string templateId,
+            JsonObject rootObject,
+            IReadOnlyList<PanelPin> pins,
+            IReadOnlyList<PanelListDeclaration> lists)
+        {
+            if (rootObject["layout"] is null)
+            {
+                return null;
+            }
+
+            if (rootObject["layout"] is not JsonObject layoutObject)
+            {
+                throw new InvalidOperationException($"Panel template '{templateId}' layout must be an object.");
+            }
+
+            if (layoutObject["controls"] is not JsonArray controlsNode)
+            {
+                throw new InvalidOperationException($"Panel template '{templateId}' layout.controls must be an array.");
+            }
+
+            var pinNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelPin pin in pins)
+            {
+                pinNames.Add(pin.Name);
+            }
+
+            var listNames = new HashSet<string>(StringComparer.Ordinal);
+            var listFields = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            foreach (PanelListDeclaration list in lists)
+            {
+                listNames.Add(list.Name);
+                var fieldSet = new HashSet<string>(StringComparer.Ordinal);
+                foreach (PanelItemField field in list.Fields)
+                {
+                    fieldSet.Add(field.Name);
+                }
+
+                listFields[list.Name] = fieldSet;
+            }
+
+            var controls = new List<PanelLayoutControl>(controlsNode.Count);
+            foreach (JsonNode? controlNode in controlsNode)
+            {
+                controls.Add(ParseControl(templateId, controlNode, pinNames, listNames, listFields, itemScope: null));
+            }
+
+            return new PanelLayout(controls);
+        }
+
+        private static PanelLayoutControl ParseControl(
+            string templateId,
+            JsonNode? controlNode,
+            HashSet<string> pinNames,
+            HashSet<string> listNames,
+            Dictionary<string, HashSet<string>> listFields,
+            string? itemScope)
+        {
+            if (controlNode is not JsonObject controlObject)
+            {
+                throw new InvalidOperationException($"Panel template '{templateId}' layout controls must be objects.");
+            }
+
+            RejectUnknownFields(controlObject, ControlFields, $"panel template '{templateId}' layout control");
+            string typeText = RequireString(controlObject, "type", $"panel template '{templateId}' layout control");
+            PanelLayoutControlType type = typeText switch
+            {
+                "label" => PanelLayoutControlType.Label,
+                "progressBar" => PanelLayoutControlType.ProgressBar,
+                "badge" => PanelLayoutControlType.Badge,
+                "list" => PanelLayoutControlType.List,
+                _ => throw new InvalidOperationException(
+                    $"Panel template '{templateId}' layout control type '{typeText}' is unknown."),
+            };
+
+            string? className = OptionalString(controlObject, "class");
+            string? text = OptionalString(controlObject, "text");
+            string? bind = OptionalString(controlObject, "bind");
+            string? prefix = OptionalString(controlObject, "prefix");
+            string? current = OptionalString(controlObject, "current");
+            string? max = OptionalString(controlObject, "max");
+            bool? showWhen = null;
+            if (controlObject["showWhen"] is JsonValue showNode && showNode.TryGetValue<bool>(out bool showValue))
+            {
+                showWhen = showValue;
+            }
+
+            List<PanelLayoutControl>? itemControls = null;
+            if (type == PanelLayoutControlType.List)
+            {
+                if (string.IsNullOrWhiteSpace(bind) || !listNames.Contains(bind))
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list control requires bind to a declared list name.");
+                }
+
+                if (controlObject["itemControls"] is not JsonArray itemControlsNode || itemControlsNode.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list control '{bind}' requires non-empty itemControls.");
+                }
+
+                itemControls = new List<PanelLayoutControl>(itemControlsNode.Count);
+                foreach (JsonNode? child in itemControlsNode)
+                {
+                    itemControls.Add(ParseControl(templateId, child, pinNames, listNames, listFields, itemScope: bind));
+                }
+            }
+            else if (controlObject["itemControls"] is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' control type '{typeText}' cannot declare itemControls.");
+            }
+
+            ValidateControlBindings(templateId, type, bind, current, max, pinNames, listFields, itemScope);
+
+            return new PanelLayoutControl(type, className, text, bind, prefix, current, max, showWhen, itemControls);
+        }
+
+        private static void ValidateControlBindings(
+            string templateId,
+            PanelLayoutControlType type,
+            string? bind,
+            string? current,
+            string? max,
+            HashSet<string> pinNames,
+            Dictionary<string, HashSet<string>> listFields,
+            string? itemScope)
+        {
+            bool InScope(string name)
+            {
+                if (itemScope != null && listFields.TryGetValue(itemScope, out HashSet<string>? fields))
+                {
+                    return fields.Contains(name);
+                }
+
+                return pinNames.Contains(name);
+            }
+
+            switch (type)
+            {
+                case PanelLayoutControlType.Label:
+                case PanelLayoutControlType.Badge:
+                    if (!string.IsNullOrWhiteSpace(bind) && !InScope(bind))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' control bind '{bind}' is not a known pin/field in scope.");
+                    }
+
+                    break;
+                case PanelLayoutControlType.ProgressBar:
+                    if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(max) ||
+                        !InScope(current) || !InScope(max))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' progressBar requires current/max bound to fields in scope.");
+                    }
+
+                    break;
+            }
+        }
+
+        private static bool TryParseFilterOp(string text, out PanelAttributeFilterOp op)
+        {
+            switch (text)
+            {
+                case "gt":
+                    op = PanelAttributeFilterOp.Gt;
+                    return true;
+                case "gte":
+                    op = PanelAttributeFilterOp.Gte;
+                    return true;
+                case "lt":
+                    op = PanelAttributeFilterOp.Lt;
+                    return true;
+                case "lte":
+                    op = PanelAttributeFilterOp.Lte;
+                    return true;
+                case "eq":
+                    op = PanelAttributeFilterOp.Eq;
+                    return true;
+                default:
+                    op = default;
+                    return false;
+            }
         }
 
         private static List<PanelTemplateEvent> ParseEvents(string templateId, JsonObject rootObject)

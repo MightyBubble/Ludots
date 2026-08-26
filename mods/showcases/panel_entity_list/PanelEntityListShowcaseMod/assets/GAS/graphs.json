@@ -1,0 +1,62 @@
+[
+  {
+    "id": "Graph.EntityList.Panel.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.entity.list", "panelAnchor": "screen.topLeft" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.entity.list" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.Entity.List",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      { "id": "all", "op": "QueryAllMapEntities" },
+      { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
+      { "id": "rowCount", "op": "AggCount" }
+    ],
+    "controlEdges": [
+      { "from": "all", "fromPort": "next", "to": "team" },
+      { "from": "team", "fromPort": "next", "to": "rowCount" }
+    ],
+    "valueEdges": [
+      { "from": "all", "fromPort": "list", "to": "team", "toPort": "list" },
+      { "from": "team", "fromPort": "list", "to": "rowCount", "toPort": "list" }
+    ],
+    "outputs": [
+      {
+        "id": "units",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.roster.units",
+        "role": "Display",
+        "title": "Roster Units",
+        "summary": "Team 1 units for the entity list panel."
+      },
+      {
+        "id": "rowCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "rowCount",
+        "key": "panel.roster.rowCount"
+      }
+    ]
+  }
+]

@@ -1,59 +1,90 @@
-#### 案 13：panel.entity.list —— 实体列表（交互选中）
+#### 案 13：panel.entity.list —— 实体列表（展示名册）
 
-> 状态：🔴（配置可装载）——运行链路：G8/$payload、#1015、条目列表依赖 G12（列表型引脚）。
+> 状态：🟢（G12 已落地）——声明式 `lists`/`layout` 驱动过滤、排序、血条与状态徽标；点击行→选中仍属 #1015，本 Showcase 纯展示。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 
 ```mock
-{"type": "text", "text": "▸ 3 单位"}
+{"type": "text", "text": "在编 5 · 指挥官 HP100 · 医师 HP97 · 晕眩卫士[晕眩] · 弓手 HP64"}
 ```
+
+配置合同 SSOT：[面板视图投影](../panel-view-projection.md)。Showcase：`mods/showcases/panel_entity_list/PanelEntityListShowcaseMod`。
 
 ```jsonc
 {
   "id": "panel.entity.list",
-  "graph": "Graph.Entity.List",               // 图内过滤+排序集合 → 行数据
-  "pins": [ { "name": "rowCount", "key": "list.rowCount", "mode": "realtime", "default": 0 } ],
-  "events": [ { "eventId": "entity.pick", "control": "list.entities", "gesture": "click", "payload": { "row": "Int" } } ],
-  "intents": [ { "event": "entity.pick", "intent": "selection.setTarget", "args": { "row": "$payload.row" },
-                 "playerSource": "seat", "actorSource": "commandSource.primary" } ]
+  "graph": "Graph.Entity.List",
+  "pins": [ { "name": "rowCount", "key": "panel.roster.rowCount", "mode": "realtime", "default": 0 } ],
+  "lists": [
+    {
+      "name": "units",
+      "collectionKey": "panel.roster.units",
+      "filter": [ { "kind": "attribute", "attribute": "Health", "op": "gt", "value": 0 } ],
+      "sort": [ { "attribute": "Health", "descending": true } ],
+      "item": {
+        "fields": [
+          { "name": "displayName", "kind": "name" },
+          { "name": "health", "kind": "attribute", "attribute": "Health" },
+          { "name": "healthMax", "kind": "attributeBase", "attribute": "Health" },
+          { "name": "stunned", "kind": "tag", "tag": "Status.Stunned" }
+        ]
+      }
+    }
+  ],
+  "layout": {
+    "controls": [
+      { "type": "label", "prefix": "在编 ", "bind": "rowCount" },
+      {
+        "type": "list", "bind": "units",
+        "itemControls": [
+          { "type": "label", "bind": "displayName" },
+          { "type": "progressBar", "current": "health", "max": "healthMax" },
+          { "type": "badge", "bind": "stunned", "text": "晕眩", "showWhen": true }
+        ]
+      }
+    ]
+  }
 }
 ```
 
 ```jsonc
-// 值图 Graph.Entity.List（kind: Query）
+// 值图 Graph.Entity.List（kind: Query）——图产出队伍全员集合；模板再滤存活并按血量排序
 {
-  "id": "Graph.Entity.List", "kind": "Query", "entry": "caster",
+  "id": "Graph.Entity.List", "kind": "Query", "entry": "all",
   "nodes": [
-    { "id": "caster",  "op": "LoadCaster" },
-    { "id": "all",     "op": "QueryAllMapEntities" },
-    { "id": "team",    "op": "QueryFilterTeam", "teamId": 2147483646 },
-    { "id": "sorted",  "op": "QuerySortByAttribute", "attribute": "Health", "descending": true },
+    { "id": "all", "op": "QueryAllMapEntities" },
+    { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
     { "id": "rowCount", "op": "AggCount" }
   ],
   "controlEdges": [
-    { "from": "caster",  "fromPort": "next", "to": "all" },
-    { "from": "all",     "fromPort": "next", "to": "team" },
-    { "from": "team",    "fromPort": "next", "to": "sorted" },
-    { "from": "sorted",  "fromPort": "next", "to": "rowCount" }
+    { "from": "all", "fromPort": "next", "to": "team" },
+    { "from": "team", "fromPort": "next", "to": "rowCount" }
   ],
   "valueEdges": [
-    { "from": "all",     "fromPort": "list", "to": "team",     "toPort": "list" },
-    { "from": "team",    "fromPort": "list", "to": "sorted",   "toPort": "list" },
-    { "from": "sorted",  "fromPort": "list", "to": "rowCount", "toPort": "list" }
+    { "from": "all", "fromPort": "list", "to": "team", "toPort": "list" },
+    { "from": "team", "fromPort": "list", "to": "rowCount", "toPort": "list" }
   ],
   "outputs": [
-    { "id": "rowCount", "destination": "Summary", "type": "Int", "source": "rowCount", "key": "list.rowCount" }
+    {
+      "id": "units",
+      "destination": "EntityCollection",
+      "type": "TargetList",
+      "collectionKey": "panel.roster.units",
+      "role": "Display"
+    },
+    { "id": "rowCount", "destination": "Summary", "type": "Int", "source": "rowCount", "key": "panel.roster.rowCount" }
   ]
 }
 ```
 
 ```text
-screen.leftCenter ┌──────────────────────┐
-                  │ ▸ 长枪兵    HP 82%   │ 点击行→选中对应实体（行→实体映射在图内）
-                  │ ▸ 弓手      HP 64%   │
-                  │ ▸ 医师      HP 97%   │
-                  └──────────────────────┘
-                  （目标视觉——G12 列表型引脚后可达；今日 pins 仅驱动标量计数）
+screen.topLeft ┌──────────────────────┐
+               │ 在编 5               │
+               │ 指挥官   ████ 100    │
+               │ 医师     ███░  97    │
+               │ 晕眩卫士 ██░░  80 [晕眩]
+               │ 弓手     ██░░  64    │
+               └──────────────────────┘
 ```
 
-30 秒预期：点列表行对应单位被选中并高亮。依赖：G8、#1015。
+30 秒预期：进图即见左侧名册；只列存活单位且按血量从高到低；晕眩单位行上有徽标。点击选中留待 #1015。

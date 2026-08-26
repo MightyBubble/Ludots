@@ -19,7 +19,9 @@ namespace Ludots.Core.UI.PanelProjection
             IReadOnlyList<PanelPin> pins,
             IReadOnlyList<PanelTemplateEvent>? events = null,
             IReadOnlyList<PanelIntentMapEntry>? intents = null,
-            string? skin = null)
+            string? skin = null,
+            IReadOnlyList<PanelListDeclaration>? lists = null,
+            PanelLayout? layout = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -47,6 +49,27 @@ namespace Ludots.Core.UI.PanelProjection
                 if (!seen.Add(pin.Name))
                 {
                     throw new ArgumentException($"Panel template '{id}' declares duplicate pin '{pin.Name}'.", nameof(pins));
+                }
+            }
+
+            List<PanelListDeclaration> safeLists = new List<PanelListDeclaration>(lists ?? Array.Empty<PanelListDeclaration>());
+            var listNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelListDeclaration list in safeLists)
+            {
+                if (list == null)
+                {
+                    throw new ArgumentException($"Panel template '{id}' has a null list entry.", nameof(lists));
+                }
+
+                if (!listNames.Add(list.Name))
+                {
+                    throw new ArgumentException($"Panel template '{id}' declares duplicate list '{list.Name}'.", nameof(lists));
+                }
+
+                if (seen.Contains(list.Name))
+                {
+                    throw new ArgumentException(
+                        $"Panel template '{id}' list '{list.Name}' collides with a pin name.", nameof(lists));
                 }
             }
 
@@ -90,6 +113,8 @@ namespace Ludots.Core.UI.PanelProjection
             Events = safeEvents;
             Intents = safeIntents;
             Skin = string.IsNullOrWhiteSpace(skin) ? null : skin.Trim();
+            Lists = safeLists;
+            Layout = layout;
         }
 
         public string Id { get; }
@@ -99,6 +124,12 @@ namespace Ludots.Core.UI.PanelProjection
         public IReadOnlyList<PanelPin> Pins { get; }
         public IReadOnlyList<PanelTemplateEvent> Events { get; }
         public IReadOnlyList<PanelIntentMapEntry> Intents { get; }
+
+        /// <summary>Homogeneous list projections (#G12 / view-projection SSOT).</summary>
+        public IReadOnlyList<PanelListDeclaration> Lists { get; }
+
+        /// <summary>Optional builtin control tree; null keeps legacy auto-row layout.</summary>
+        public PanelLayout? Layout { get; }
 
         /// <summary>Per-template default skin; instance op param wins, then game.json default.</summary>
         public string? Skin { get; }
