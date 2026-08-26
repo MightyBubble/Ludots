@@ -15,7 +15,7 @@
     "rgb": "deterministic TriAreaIds palette"
   },
   "sourceTileCount": 448,
-  "triangleCount": 6708,
+  "triangleCount": 6940,
   "blockedWaterPixelCount": 0,
-  "contentHash": "sha256:37e4d7dabb7083a3d8cf34e34dfee355423fb0dc2a8cc6389a50e3264c1246ab"
+  "contentHash": "sha256:7f50473454603fe1cff1559473d0eccb25f7e56b2f8865eae8f40728bfb92cdd"
 }
