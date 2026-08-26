@@ -1585,6 +1585,14 @@
       }
     },
     {
+      "name": "panel_collection_bags",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/PanelCollectionBagsShowcaseMod",
+        "projectPath": "PanelCollectionBagsShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",
