@@ -11,7 +11,7 @@
       {
         "id": "collect",
         "op": "QueryCollectAbilityHolders",
-        "ability": "Ability.GraphOps.Gallery"
+        "ability": "火球"
       }
     ],
     "controlEdges": [

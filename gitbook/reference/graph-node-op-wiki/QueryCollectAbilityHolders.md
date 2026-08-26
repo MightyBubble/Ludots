@@ -22,7 +22,7 @@
 真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/QueryCollectAbilityHolders.json`）：
 
 ```json
-{"id": "collect", "op": "QueryCollectAbilityHolders", "ability": "Ability.GraphOps.Gallery"}
+{"id": "collect", "op": "QueryCollectAbilityHolders", "ability": "火球"}
 ```
 
 接线（值边把上一步的结果送进本节点端口）：
