@@ -71,7 +71,8 @@ public sealed record NarrativeFrontendSurfaceModel(
     string ForegroundHex = "",
     string MutedHex = "",
     string PortraitSrc = "",
-    float PortraitSize = 96f);
+    float PortraitSize = 96f,
+    string FrameImageSrc = "");
 
 public sealed record NarrativeFrontendPageState(
     string OwnerId,

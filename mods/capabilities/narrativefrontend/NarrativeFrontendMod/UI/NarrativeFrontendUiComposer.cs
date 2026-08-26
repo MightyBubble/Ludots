@@ -451,7 +451,29 @@ internal static class NarrativeFrontendUiComposer
             builder = builder.Border(1f, Color(surface.BorderHex));
         }
 
-        return builder;
+        return WrapWithThemeFrame(builder, surface);
+    }
+
+    private static UiElementBuilder WrapWithThemeFrame(UiElementBuilder content, NarrativeFrontendSurfaceModel surface)
+    {
+        if (string.IsNullOrWhiteSpace(surface.FrameImageSrc))
+        {
+            return content;
+        }
+
+        string frameClass = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
+            ? "story-choice-frame"
+            : "story-frame";
+
+        return Ui.Panel(
+                Ui.Image(surface.FrameImageSrc)
+                    .Class(frameClass)
+                    .Absolute(0f, 0f)
+                    .WidthPercent(100f)
+                    .HeightPercent(100f)
+                    .ZIndex(0),
+                content)
+            .Class("story-framed");
     }
 
     private static UiElementBuilder ApplyOptionalColor(UiElementBuilder builder, string hex)

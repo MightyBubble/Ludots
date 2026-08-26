@@ -11,7 +11,7 @@
   background-image: url(images/panel_wash.png);
   background-size: cover;
   background-position: center;
-  border: 2px solid rgb(201, 150, 72);
+  border: 0 solid rgb(201, 150, 72);
   border-radius: 4px;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
   padding: 16px;
@@ -19,7 +19,7 @@
 
 .story-overlay-dialogue {
   border-color: rgb(232, 188, 110);
-  border-width: 3px;
+  border-width: 0;
   border-radius: 2px;
   padding: 22px 24px 28px 24px;
   background-color: rgba(42, 26, 16, 240);
@@ -31,7 +31,7 @@
 
 .story-standing-dialogue {
   border-color: rgb(240, 196, 120);
-  border-width: 3px;
+  border-width: 0;
   border-radius: 2px;
   min-width: 420px;
   padding: 24px 28px 30px 24px;
@@ -102,7 +102,7 @@
 
 .story-portrait {
   border-radius: 3px;
-  border: 2px solid rgb(201, 150, 72);
+  border: 0 solid rgb(201, 150, 72);
   background-color: transparent;
 }
 
@@ -149,7 +149,7 @@
 
 .story-threat-banner {
   background-color: rgba(78, 22, 16, 232);
-  border: 2px solid rgb(255, 184, 138);
+  border: 0 solid rgb(255, 184, 138);
   border-radius: 4px;
   padding: 16px;
   background-image: none;
@@ -191,4 +191,21 @@
 
 .story-bubble-tail {
   background-color: rgba(24, 16, 12, 220);
+}
+
+/* Nine-slice ornate frame — images/panel_frame.png + choice_frame.png (0-code theme assets). */
+.story-frame {
+  object-fit: fill;
+  image-slice: 48 48 48 48;
+  pointer-events: none;
+}
+
+.story-choice-frame {
+  object-fit: fill;
+  image-slice: 36 36 36 36;
+  pointer-events: none;
+}
+
+.story-framed {
+  position: relative;
 }

@@ -5,7 +5,7 @@
   background-color: rgba(48, 34, 20, 235);
   background-image: url(images/panel_wash.png);
   background-size: cover;
-  border: 3px solid rgb(201, 166, 90);
+  border: 0 solid rgb(201, 166, 90);
   border-radius: 10px;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
   padding: 16px;
@@ -14,7 +14,7 @@
 .story-overlay-dialogue,
 .story-standing-dialogue {
   border-color: rgb(228, 196, 122);
-  border-width: 3px;
+  border-width: 0;
   border-radius: 8px;
   background-image: url(images/panel_wash.png), url(images/ornament.png);
   background-repeat: no-repeat, no-repeat;
@@ -45,7 +45,7 @@
 .story-muted { color: rgb(170, 140, 100); }
 .story-eyebrow { color: rgb(36, 22, 10); background-color: rgb(228, 196, 122); border-radius: 6px; padding: 6px 8px; font-weight: 700; }
 
-.story-portrait { border: 2px solid rgb(201, 166, 90); border-radius: 8px; background-color: transparent; }
+.story-portrait { border: 0 solid rgb(201, 166, 90); border-radius: 8px; background-color: transparent; }
 .story-standing-portrait { border-radius: 0; background-color: transparent; border-width: 0; }
 .story-prompt-ribbon { background-color: rgba(20, 14, 8, 220); border: 1px solid rgb(140, 100, 50); border-radius: 999px; padding: 12px; background-image: none; }
 .story-objective { border-color: rgb(120, 160, 200); }
@@ -53,7 +53,24 @@
 .story-item-row { background-color: rgba(20, 14, 8, 150); border-radius: 8px; padding: 10px; }
 .story-item-row-active { background-color: rgba(56, 38, 18, 200); }
 .story-bubble-tail { background-color: rgba(48, 34, 20, 235); }
-.story-threat-banner { background-color: rgba(78, 22, 16, 232); border: 2px solid rgb(255, 184, 138); border-radius: 10px; padding: 16px; background-image: none; }
+.story-threat-banner { background-color: rgba(78, 22, 16, 232); border: 0 solid rgb(255, 184, 138); border-radius: 10px; padding: 16px; background-image: none; }
 .story-transmission { background-color: rgba(16, 22, 32, 220); border: 1px solid rgb(90, 140, 170); border-radius: 8px; padding: 14px; background-image: none; }
 .story-event-card { background-color: rgb(228, 196, 122); border: 1px solid rgb(255, 246, 208); border-radius: 10px; padding: 18px; background-image: none; }
 .story-notification { background-color: rgba(20, 14, 8, 230); border: 1px solid rgba(201, 166, 90, 0.45); border-radius: 8px; padding: 12px; background-image: none; }
+
+/* Nine-slice ornate frame — images/panel_frame.png + choice_frame.png (0-code theme assets). */
+.story-frame {
+  object-fit: fill;
+  image-slice: 48 48 48 48;
+  pointer-events: none;
+}
+
+.story-choice-frame {
+  object-fit: fill;
+  image-slice: 36 36 36 36;
+  pointer-events: none;
+}
+
+.story-framed {
+  position: relative;
+}

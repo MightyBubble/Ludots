@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
@@ -46,6 +47,8 @@ namespace NarrativeShowcaseMod.Runtime
         private bool _interactionInputActive;
         private bool _taskHookInstalled;
         private int _historySerial;
+        private string _panelFrameSrc = string.Empty;
+        private string _choiceFrameSrc = string.Empty;
 
         internal NarrativeShowcaseRuntime(IModContext context)
         {
@@ -260,7 +263,35 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             RebindEntities(engine);
+            ResolveThemeFrames(engine);
             frontend.Publish(BuildPage(engine, dialogue, sequencer, tasks));
+        }
+
+        private void ResolveThemeFrames(GameEngine engine)
+        {
+            string themeId = engine.MergedConfig?.PanelTheme?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(themeId))
+            {
+                _panelFrameSrc = string.Empty;
+                _choiceFrameSrc = string.Empty;
+                return;
+            }
+
+            _panelFrameSrc = ResolveThemeImage(engine, themeId, "panel_frame.png");
+            _choiceFrameSrc = ResolveThemeImage(engine, themeId, "choice_frame.png");
+        }
+
+        private static string ResolveThemeImage(GameEngine engine, string themeId, string fileName)
+        {
+            string vfsPath = $"NarrativeShowcaseMod:assets/PanelThemes/{themeId}/images/{fileName}";
+            if (engine.VFS != null &&
+                engine.VFS.TryResolveFullPath(vfsPath, out string resolved) &&
+                File.Exists(resolved))
+            {
+                return resolved;
+            }
+
+            return string.Empty;
         }
 
         internal void RebindEntities(GameEngine engine)
@@ -583,7 +614,8 @@ namespace NarrativeShowcaseMod.Runtime
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
                 PortraitSrc: portraitSrc,
-                PortraitSize: standingPortrait ? 980f : overlay ? 112f : 84f);
+                PortraitSize: standingPortrait ? 980f : overlay ? 112f : 84f,
+                FrameImageSrc: _panelFrameSrc);
         }
 
         private NarrativeFrontendSurfaceModel BuildChoiceSurface(DialogueView dialogue)
@@ -695,7 +727,10 @@ namespace NarrativeShowcaseMod.Runtime
                 BackgroundHex: config.BackgroundHex,
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
-                MutedHex: config.MutedHex);
+                MutedHex: config.MutedHex,
+                FrameImageSrc: kind == NarrativeFrontendSurfaceKind.ChoiceList
+                    ? _choiceFrameSrc
+                    : _panelFrameSrc);
         }
 
         private void EnsureBootstrapped(GameEngine engine)
