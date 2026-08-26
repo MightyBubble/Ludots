@@ -42,6 +42,36 @@ public sealed class GraphFormalTextSubtitleShowcaseAcceptanceTests
             Assert.That(OverlayContainsText(overlay, GraphFormalTextShowcaseContract.CountSentence), Is.True);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
         });
+
+        WriteOverlayEvidence(overlay);
+    }
+
+    private static void WriteOverlayEvidence(ScreenOverlayBuffer overlay)
+    {
+        string repoRoot = FindRepoRoot();
+        string dir = Path.Combine(repoRoot, "artifacts", "evidence", "capability_standard_graph_formal_text");
+        Directory.CreateDirectory(dir);
+        var lines = new List<string>
+        {
+            "showcase=capability_standard_graph_formal_text",
+            $"title={GraphFormalTextShowcaseContract.PlayerTitle}",
+            "source=ScreenOverlayBuffer",
+        };
+        foreach (ref readonly var item in overlay.GetSpan())
+        {
+            if (item.Kind != ScreenOverlayItemKind.Text)
+            {
+                continue;
+            }
+
+            string? text = overlay.GetString(item.StringId);
+            if (!string.IsNullOrEmpty(text))
+            {
+                lines.Add($"overlay={text}");
+            }
+        }
+
+        File.WriteAllLines(Path.Combine(dir, "overlay-captions.txt"), lines);
     }
 
     private static GameEngine CreateEngine()
