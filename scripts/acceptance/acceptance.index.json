@@ -300,6 +300,30 @@
       "hasScreenshotEvidence": false
     },
     {
+      "id": "field_layer_table",
+      "preset": "field_layer_table_raylib",
+      "binding": "field_layer_table",
+      "testFilter": "FieldLayerTableAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "field_editor_paint",
+      "preset": "field_editor_paint_raylib",
+      "binding": "field_editor_paint",
+      "testFilter": "FieldEditorPaintAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "field_hierarchy_query",
+      "preset": "field_hierarchy_query_raylib",
+      "binding": "field_hierarchy_query",
+      "testFilter": "FieldHierarchyQueryAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
       "id": "fog_of_war",
       "preset": "fog_of_war_raylib",
       "binding": "fog_of_war",

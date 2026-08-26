@@ -5104,6 +5104,69 @@
       "status": "active"
     },
     {
+      "id": "field_layer_table",
+      "path": "mods/showcases/field_layer_table/FieldLayerTableMod",
+      "title": "Field Layer Table",
+      "summary": "ownership.table with r1/r2/r3 schema v2 rects; MapLoaded writes layer/region/nonDefault counts to panel. Placeholder English keys only.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-layer",
+        "showcase"
+      ],
+      "binding": "field_layer_table",
+      "preset": "field_layer_table_raylib",
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldLayerTableAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_editor_paint",
+      "path": "mods/showcases/field_editor_paint/FieldEditorPaintMod",
+      "title": "Field Editor Paint",
+      "summary": "field-editor CLI shape assets (schema v2 paint.a/paint.b); FieldRegionEntered on teleport between painted cells.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-editor",
+        "showcase"
+      ],
+      "binding": "field_editor_paint",
+      "preset": "field_editor_paint_raylib",
+      "docsPath": "gitbook/architecture/field-editor.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldEditorPaintAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_hierarchy_query",
+      "path": "mods/showcases/field_hierarchy_query/FieldHierarchyQueryMod",
+      "title": "Field Hierarchy Query",
+      "summary": "ownership.zones + Fields/hierarchies.json; resolve zone.a1 → group.mid → group.top chain after map load.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-hierarchy",
+        "showcase"
+      ],
+      "binding": "field_hierarchy_query",
+      "preset": "field_hierarchy_query_raylib",
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldHierarchyQueryAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "night_raid_showcase",
       "path": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
       "projectPath": "NightRaidShowcaseMod.csproj",

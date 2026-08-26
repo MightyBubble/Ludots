@@ -1,0 +1,14 @@
+[
+  {
+    "id": "panel.field_hierarchy_query.progress",
+    "graph": "Graph.FieldHierarchyQuery.Panel.Values",
+    "pins": [
+      {
+        "name": "stage",
+        "key": "field.hierarchy.panel.stage",
+        "mode": "realtime",
+        "default": 0
+      }
+    ]
+  }
+]

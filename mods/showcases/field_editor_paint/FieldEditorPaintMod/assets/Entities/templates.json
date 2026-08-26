@@ -1,0 +1,41 @@
+[
+  {
+    "id": "field_paint_hero",
+    "components": {
+      "Name": { "Value": "PaintHero" },
+      "Team": { "Id": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 750, "Y": 150 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "OrderBuffer": {},
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "FieldTrackedCm": { "layer": "ownership.paint" }
+    }
+  },
+  {
+    "id": "field_paint_marker_a",
+    "components": {
+      "Name": { "Value": "MarkerPaintA" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 150, "Y": 150 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "field_paint_marker_b",
+    "components": {
+      "Name": { "Value": "MarkerPaintB" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 750, "Y": 150 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {}
+    }
+  }
+]
