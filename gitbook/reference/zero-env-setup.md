@@ -12,7 +12,7 @@
 | 离线 NuGet 源 | 规范闭包 nupkg（含 win/linux/osx 自包含运行时包） | `external/nuget/` | 无 |
 | .NET 9 SDK | 编译仓库源码本身 | 用户自备（唯一前置） | 无 |
 
-根 `nuget.config` 以 `<clear/>` + `LudotsOffline` 本地源接管全部还原：canonical 路径（Core / Raylib / Launcher / 全部维护测试 / mods）**完全离线**。Cef 特例（Chromium natives ~230MB 不入库）在其各自目录（`src/Libraries/Ludots.UI.Browser.Cef`、`src/Tests/BrowserCefTests`）有附加 nuget.config 显式引入 nuget.org——只在首次构建这些特例时联网，之后走包缓存。
+根 `nuget.config` 以 `<clear/>` + `LudotsOffline` 本地源接管全部还原：canonical 路径（Core / Raylib / Launcher / 全部维护测试 / mods）**完全离线**。Cef / Ultralight 特例（原生 natives 不入库）在其各自目录（`src/Libraries/Ludots.UI.Browser.Cef`、`src/Tests/BrowserCefTests`、`src/Libraries/Ludots.UI.Browser.Ultralight`、`src/Tests/BrowserUltralightTests`）有附加 nuget.config 显式引入 nuget.org——只在首次构建这些特例时联网，之后走包缓存。
 
 验证口径：`HTTPS_PROXY` 指向死端口 + 干净 `NUGET_PACKAGES` 下，GasTests / Launcher.Cli / App.Raylib / App.Web / mods 的 `dotnet restore` 全绿即视为离线成立；`./scripts/dev-up.sh build-only` 在 Linux/macOS agent 上应同样绿。
 
