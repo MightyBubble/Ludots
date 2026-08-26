@@ -128,5 +128,16 @@ Recommended regression tests:
 ```text
 dotnet test src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj --filter BrowserRuntimeProviderLoaderTests
 dotnet test src\Tests\BrowserCefTests\BrowserCefTests.csproj --filter "CefBrowserRuntimeHostTests|CefBrowserRuntimeArchitectureTests|CefBrowserRuntimeAssemblyResolutionTests"
+dotnet test src\Tests\BrowserUltralightTests\BrowserUltralightTests.csproj
 dotnet test src\Tests\GasTests\GasTests.csproj --filter "RaylibHost_OwnsTerminalBrowserRuntimeShutdown|RaylibBrowserRuntimeInstaller_ResolvesProviderDependenciesThroughProviderPackage"
 ```
+
+### Ultralight provider notes
+
+- Package: UltralightNet 1.3.0 + AppCore binaries (linux-x64 / win-x64 / osx-x64).
+- Host type: `Ludots.UI.Browser.Ultralight.UltralightBrowserRuntimeHost`.
+- Collectible provider ALC is allowed (`useCollectibleLoadContext: true`).
+- Native work runs on a dedicated `Ludots.Ultralight` dispatcher thread; callers may use async/await freely.
+- Local `ludots-app://` pages are staged to disk and loaded via absolute `file://` URLs. AppCore FileSystem is rooted at the OS volume root with a relative `ResourcePathPrefix` so ICU data and staged apps both resolve.
+- JS facades must stay ES5-compatible for Ultralight's JavaScriptCore (no `??` / `?.`).
+- Do not silently fall back from `cef` to `ultralight`; configure the provider explicitly.
