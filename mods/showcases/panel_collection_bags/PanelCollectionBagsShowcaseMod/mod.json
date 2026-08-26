@@ -1,7 +1,7 @@
 {
   "name": "PanelCollectionBagsShowcaseMod",
   "version": "1.0.0",
-  "description": "Player-facing typed collection bags: effect templates, ability slots, and present tags",
+  "description": "Shared host for per-bag typed collection panel showcases; player entries live under entries/.",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

@@ -141,6 +141,15 @@
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Panels\Ludots.UI.Panels.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\PanelCollectionBagsShowcaseMod\PanelCollectionBagsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelAbilityHoldersEntryMod\PanelAbilityHoldersEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelActiveActivitiesEntryMod\PanelActiveActivitiesEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelActiveTasksEntryMod\PanelActiveTasksEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelEffectTemplatesEntryMod\PanelEffectTemplatesEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelInventoryAggregateEntryMod\PanelInventoryAggregateEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelItemDefinitionsEntryMod\PanelItemDefinitionsEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelPresentTagsEntryMod\PanelPresentTagsEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelProgressionNodesEntryMod\PanelProgressionNodesEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_collection_bags\entries\PanelRosterNestedEntryMod\PanelRosterNestedEntryMod.csproj" />
   </ItemGroup>
 
   <ItemGroup>

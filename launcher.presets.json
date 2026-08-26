@@ -2209,15 +2209,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "panel_collection_bags_raylib",
-      "name": "Panel Collection Bags Raylib",
-      "selectors": [
-        "$panel_collection_bags"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
       "id": "panel_skin_markup_raylib",
       "name": "Panel Markup Skin Raylib",
       "selectors": [
@@ -2666,6 +2657,87 @@
       "name": "Graph Op QueryCollectActiveActivities Raylib",
       "selectors": [
         "$capability_standard_graph_op_QueryCollectActiveActivities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_effect_templates_raylib",
+      "name": "Panel 效果图鉴 Raylib",
+      "selectors": [
+        "$panel_effect_templates"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_roster_nested_raylib",
+      "name": "Panel 编队档案 Raylib",
+      "selectors": [
+        "$panel_roster_nested"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_present_tags_raylib",
+      "name": "Panel 身上的印记 Raylib",
+      "selectors": [
+        "$panel_present_tags"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_inventory_aggregate_raylib",
+      "name": "Panel 背包堆叠 Raylib",
+      "selectors": [
+        "$panel_inventory_aggregate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_item_definitions_raylib",
+      "name": "Panel 物品图鉴 Raylib",
+      "selectors": [
+        "$panel_item_definitions"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_active_tasks_raylib",
+      "name": "Panel 进行中的差事 Raylib",
+      "selectors": [
+        "$panel_active_tasks"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_active_activities_raylib",
+      "name": "Panel 进行中的活动 Raylib",
+      "selectors": [
+        "$panel_active_activities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_ability_holders_raylib",
+      "name": "Panel 谁会火球 Raylib",
+      "selectors": [
+        "$panel_ability_holders"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_progression_nodes_raylib",
+      "name": "Panel 修行进度 Raylib",
+      "selectors": [
+        "$panel_progression_nodes"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

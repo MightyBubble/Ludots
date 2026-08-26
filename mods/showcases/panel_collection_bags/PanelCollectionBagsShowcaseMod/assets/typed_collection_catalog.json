@@ -1,0 +1,118 @@
+[
+  {
+    "slug": "effect_templates",
+    "title": "效果图鉴",
+    "summary": "翻开墙上的效果说明书：只有模板名，没有剩余时间。",
+    "panelType": "panel.collection.effects",
+    "collection": "templates",
+    "assertNames": [
+      "祝福",
+      "迅捷",
+      "护盾"
+    ],
+    "wiki": "panel-effect-templates.md",
+    "beat": "效果模板袋"
+  },
+  {
+    "slug": "roster_nested",
+    "title": "编队档案",
+    "summary": "队员名下嵌着各自的技能格，不是全场技能大杂烩。",
+    "panelType": "panel.collection.roster",
+    "collection": "units",
+    "assertNames": [
+      "名册守望者",
+      "名册学徒"
+    ],
+    "wiki": "panel-roster-nested.md",
+    "beat": "嵌套技能槽"
+  },
+  {
+    "slug": "present_tags",
+    "title": "身上的印记",
+    "summary": "守望者身上现有的印记被点名列出。",
+    "panelType": "panel.collection.tags",
+    "collection": "tags",
+    "assertNames": [
+      "勇气印记",
+      "洞察印记",
+      "守望印记"
+    ],
+    "wiki": "panel-present-tags.md",
+    "beat": "标签袋"
+  },
+  {
+    "slug": "inventory_aggregate",
+    "title": "背包堆叠",
+    "summary": "同类药剂只露出一枚图标和总数。",
+    "panelType": "panel.collection.inventory",
+    "collection": "items",
+    "assertNames": [
+      "试炼药剂"
+    ],
+    "assertTotal": 3,
+    "wiki": "panel-inventory-aggregate.md",
+    "beat": "聚合展示"
+  },
+  {
+    "slug": "item_definitions",
+    "title": "物品图鉴",
+    "summary": "已登记物品定义排成名册，没有堆叠实例。",
+    "panelType": "panel.collection.itemDefinitions",
+    "collection": "definitions",
+    "assertNames": [
+      "试炼药剂",
+      "干粮"
+    ],
+    "wiki": "panel-item-definitions.md",
+    "beat": "物品定义袋"
+  },
+  {
+    "slug": "active_tasks",
+    "title": "进行中的差事",
+    "summary": "挂在守望者名下的差事被点名。",
+    "panelType": "panel.collection.tasks",
+    "collection": "tasks",
+    "assertNames": [
+      "巡夜差事"
+    ],
+    "wiki": "panel-active-tasks.md",
+    "beat": "任务实例袋"
+  },
+  {
+    "slug": "active_activities",
+    "title": "进行中的活动",
+    "summary": "挂在守望者名下的活动被点名。",
+    "panelType": "panel.collection.activities",
+    "collection": "activities",
+    "assertNames": [
+      "名册集会"
+    ],
+    "wiki": "panel-active-activities.md",
+    "beat": "活动实例袋"
+  },
+  {
+    "slug": "ability_holders",
+    "title": "谁会火球",
+    "summary": "技能格旁挂着会这招的人（source=input 反查）。",
+    "panelType": "panel.collection.holders",
+    "collection": "slots",
+    "assertNestedNames": [
+      "名册守望者",
+      "名册学徒"
+    ],
+    "wiki": "panel-ability-holders.md",
+    "beat": "反查持有者"
+  },
+  {
+    "slug": "progression_nodes",
+    "title": "修行进度",
+    "summary": "守望者身上的进度节点排成一行。",
+    "panelType": "panel.collection.progression",
+    "collection": "progress",
+    "assertNames": [
+      "名册修行"
+    ],
+    "wiki": "panel-progression-nodes.md",
+    "beat": "进度节点袋"
+  }
+]

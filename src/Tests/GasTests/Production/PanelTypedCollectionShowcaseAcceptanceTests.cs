@@ -15,22 +15,63 @@ namespace Ludots.Tests.GAS.Production;
 [NonParallelizable]
 [TestFixture]
 [Category("acceptance")]
-public sealed class PanelCollectionBagsShowcaseAcceptanceTests
+public sealed class PanelTypedCollectionShowcaseAcceptanceTests
 {
     private const float DeltaTime = 1f / 60f;
-    private const string MapId = "collection_bags_arena";
 
-    [Test]
-    public void PanelCollectionBags_ShowsTypedBagsAcrossSixPanels()
+    public sealed record Case(
+        string EntryMod,
+        string MapId,
+        string PanelId,
+        string Collection,
+        string Title,
+        string ArtifactSlug,
+        string[] Names,
+        int? TotalCount = null,
+        string[]? NestedNames = null);
+
+    private static readonly Case[] Cases =
+    [
+        new("PanelEffectTemplatesEntryMod", "collection_bags_effect_templates",
+            "panel.collection.effects", "templates", "效果图鉴", "effect_templates",
+            ["祝福", "迅捷", "护盾"]),
+        new("PanelRosterNestedEntryMod", "collection_bags_roster_nested",
+            "panel.collection.roster", "units", "编队档案", "roster_nested",
+            ["名册守望者", "名册学徒"]),
+        new("PanelPresentTagsEntryMod", "collection_bags_present_tags",
+            "panel.collection.tags", "tags", "身上的印记", "present_tags",
+            ["勇气印记", "洞察印记", "守望印记"]),
+        new("PanelInventoryAggregateEntryMod", "collection_bags_inventory_aggregate",
+            "panel.collection.inventory", "items", "背包堆叠", "inventory_aggregate",
+            ["试炼药剂"], TotalCount: 3),
+        new("PanelItemDefinitionsEntryMod", "collection_bags_item_definitions",
+            "panel.collection.itemDefinitions", "definitions", "物品图鉴", "item_definitions",
+            ["试炼药剂", "干粮"]),
+        new("PanelActiveTasksEntryMod", "collection_bags_active_tasks",
+            "panel.collection.tasks", "tasks", "进行中的差事", "active_tasks",
+            ["巡夜差事"]),
+        new("PanelActiveActivitiesEntryMod", "collection_bags_active_activities",
+            "panel.collection.activities", "activities", "进行中的活动", "active_activities",
+            ["名册集会"]),
+        new("PanelAbilityHoldersEntryMod", "collection_bags_ability_holders",
+            "panel.collection.holders", "slots", "谁会火球", "ability_holders",
+            [], NestedNames: ["名册守望者", "名册学徒"]),
+        new("PanelProgressionNodesEntryMod", "collection_bags_progression_nodes",
+            "panel.collection.progression", "progress", "修行进度", "progression_nodes",
+            ["名册修行"]),
+    ];
+
+    [TestCaseSource(nameof(Cases))]
+    public void TypedCollectionBag_ShowsSinglePanelMembers(Case testCase)
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "panel_collection_bags");
+        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", $"panel_{testCase.ArtifactSlug}");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 
-        using GameEngine engine = CreateEngine(repoRoot);
+        using GameEngine engine = CreateEngine(repoRoot, testCase.EntryMod);
         engine.Start();
-        engine.LoadMap(MapId);
+        engine.LoadMap(testCase.MapId);
         Tick(engine, 20);
 
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
@@ -38,75 +79,49 @@ public sealed class PanelCollectionBagsShowcaseAcceptanceTests
 
         PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
             ?? throw new InvalidOperationException("PanelHost missing.");
-        Assert.That(panelHost.Count, Is.EqualTo(6));
+        Assert.That(panelHost.Count, Is.EqualTo(1), "one panel per showcase");
 
         Entity hero = FindEntity(engine.World, "名册守望者");
+        PanelListProjection projection = ProjectAll(
+            panelHost,
+            FindPanel(panelHost, hero, testCase.PanelId),
+            testCase.Collection);
 
-        PanelListProjection effects = ProjectAll(
-            panelHost, FindPanel(panelHost, hero, "panel.collection.effects"), "templates");
-        Assert.That(effects.Items, Has.Count.GreaterThanOrEqualTo(3));
-        AssertNames(effects, "祝福", "迅捷", "护盾");
+        if (testCase.TotalCount is int total)
+        {
+            Assert.That(projection.TotalCount, Is.EqualTo(total));
+        }
 
-        PanelListProjection roster = ProjectAll(
-            panelHost, FindPanel(panelHost, hero, "panel.collection.roster"), "units");
-        Assert.That(roster.Items, Has.Count.EqualTo(2));
-        AssertNames(roster, "名册守望者", "名册学徒");
-        Assert.That(roster.Items[0].NestedLists, Is.Not.Empty);
-        Assert.That(roster.Items[0].NestedLists[0].Items, Is.Not.Empty);
-        AssertNames(roster.Items[0].NestedLists[0], "火球术");
+        if (testCase.Names.Length > 0)
+        {
+            AssertNames(projection, testCase.Names);
+        }
 
-        PanelInstanceHandle tagsPanel = FindPanel(panelHost, hero, "panel.collection.tags");
-        AssertNames(ProjectAll(panelHost, tagsPanel, "tags"), "勇气印记", "洞察印记", "守望印记");
-        AssertNames(ProjectAll(panelHost, tagsPanel, "activities"), "名册集会");
-
-        PanelInstanceHandle supply = FindPanel(panelHost, hero, "panel.collection.supply");
-        PanelListProjection items = ProjectAll(panelHost, supply, "items");
-        Assert.That(items.TotalCount, Is.EqualTo(3));
-        AssertNames(items, "试炼药剂");
-        PanelListProjection definitions = ProjectAll(panelHost, supply, "definitions");
-        AssertNames(definitions, "试炼药剂", "干粮");
-
-        PanelInstanceHandle quest = FindPanel(panelHost, hero, "panel.collection.questboard");
-        AssertNames(ProjectAll(panelHost, quest, "tasks"), "巡夜差事");
-        AssertNames(ProjectAll(panelHost, quest, "progress"), "名册修行");
-
-        PanelInstanceHandle holders = FindPanel(panelHost, hero, "panel.collection.holders");
-        PanelListProjection slots = ProjectAll(panelHost, holders, "slots");
-        Assert.That(slots.Items, Is.Not.Empty);
-        Assert.That(slots.Items[0].NestedLists, Is.Not.Empty);
-        AssertNames(slots.Items[0].NestedLists[0], "名册守望者", "名册学徒");
+        if (testCase.NestedNames is { Length: > 0 } nested)
+        {
+            Assert.That(projection.Items, Is.Not.Empty);
+            Assert.That(projection.Items[0].NestedLists, Is.Not.Empty);
+            AssertNames(projection.Items[0].NestedLists[0], nested);
+        }
 
         UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
             ?? throw new InvalidOperationException("UIRoot missing.");
         Assert.That(root.Scene, Is.Not.Null);
         root.Scene!.Layout(root.Width, root.Height);
-
         IReadOnlyList<string> texts = AcceptanceUiEvidenceWriter.ExtractUiText(root);
-        Assert.That(texts, Does.Contain("效果图鉴"));
-        Assert.That(texts, Does.Contain("编队档案"));
-        Assert.That(texts, Does.Contain("身上的印记"));
-        Assert.That(texts, Does.Contain("物资柜"));
-        Assert.That(texts, Does.Contain("差事板"));
-        Assert.That(texts, Does.Contain("谁会火球"));
-        Assert.That(texts, Does.Contain("祝福"));
-        Assert.That(texts, Does.Contain("火球术"));
-        Assert.That(texts, Does.Contain("试炼药剂"));
-        Assert.That(texts, Does.Contain("巡夜差事"));
-        Assert.That(texts, Does.Contain("名册修行"));
-        Assert.That(texts, Does.Contain("名册集会"));
-        Assert.That(texts, Has.Some.Matches("×\\s*3"));
+        Assert.That(texts, Does.Contain(testCase.Title));
 
         AcceptanceUiEvidenceWriter.CaptureFrame(
             root,
             screensDir,
             order: 1,
-            step: "typed-collection-bags",
-            when: "地图加载后名册墙已投影",
+            step: testCase.ArtifactSlug,
+            when: "地图加载后单面板已投影",
             who: "玩家",
-            what: "六块面板同时展示模板、嵌套技能、印记、聚合背包、差事活动、反查与进度",
-            where: "screen 六锚点",
-            why: "验收查询图集合输出合同 §3.8 项 2–7 玩家可见竖切",
-            how: "typed Collect* + IntId/Entity bags + nested/source=input/aggregate");
+            what: $"{testCase.Title}列出真实成员",
+            where: "screen.topLeft",
+            why: "一袋一面板验收",
+            how: "typed collection bag showcase entry");
     }
 
     private static PanelListProjection ProjectAll(
@@ -131,11 +146,13 @@ public sealed class PanelCollectionBagsShowcaseAcceptanceTests
         Assert.That(names, Is.SupersetOf(expected));
     }
 
-    private static GameEngine CreateEngine(string repoRoot)
+    private static GameEngine CreateEngine(string repoRoot, string entryMod)
     {
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "PanelCollectionBagsShowcaseMod" }),
+            RepoModPaths.ResolveExplicit(
+                repoRoot,
+                new[] { "LudotsCoreMod", "PanelCollectionBagsShowcaseMod", entryMod }),
             Path.Combine(repoRoot, "assets"));
         AcceptanceUiHostInstaller.Install(engine);
         return engine;

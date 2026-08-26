@@ -1,59 +1,13 @@
 [
   {
-    "id": "Graph.CollectionBags.Panels.Open",
-    "kind": "TriggerGraph",
-    "entries": [
-      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
-    ],
-    "nodes": [
-      { "id": "scope", "op": "LoadExplicitTarget" },
-      { "id": "createEffects", "op": "CreatePanel", "panelType": "panel.collection.effects", "panelAnchor": "screen.topLeft" },
-      { "id": "showEffects", "op": "ShowPanel", "panelType": "panel.collection.effects" },
-      { "id": "createRoster", "op": "CreatePanel", "panelType": "panel.collection.roster", "panelAnchor": "screen.topCenter" },
-      { "id": "showRoster", "op": "ShowPanel", "panelType": "panel.collection.roster" },
-      { "id": "createTags", "op": "CreatePanel", "panelType": "panel.collection.tags", "panelAnchor": "screen.topRight" },
-      { "id": "showTags", "op": "ShowPanel", "panelType": "panel.collection.tags" },
-      { "id": "createSupply", "op": "CreatePanel", "panelType": "panel.collection.supply", "panelAnchor": "screen.bottomLeft" },
-      { "id": "showSupply", "op": "ShowPanel", "panelType": "panel.collection.supply" },
-      { "id": "createQuest", "op": "CreatePanel", "panelType": "panel.collection.questboard", "panelAnchor": "screen.bottomCenter" },
-      { "id": "showQuest", "op": "ShowPanel", "panelType": "panel.collection.questboard" },
-      { "id": "createHolders", "op": "CreatePanel", "panelType": "panel.collection.holders", "panelAnchor": "screen.bottomRight" },
-      { "id": "showHolders", "op": "ShowPanel", "panelType": "panel.collection.holders" },
-      { "id": "ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "halt", "op": "HaltReturnInt" }
-    ],
-    "controlEdges": [
-      { "from": "scope", "fromPort": "next", "to": "createEffects" },
-      { "from": "createEffects", "fromPort": "next", "to": "showEffects" },
-      { "from": "showEffects", "fromPort": "next", "to": "createRoster" },
-      { "from": "createRoster", "fromPort": "next", "to": "showRoster" },
-      { "from": "showRoster", "fromPort": "next", "to": "createTags" },
-      { "from": "createTags", "fromPort": "next", "to": "showTags" },
-      { "from": "showTags", "fromPort": "next", "to": "createSupply" },
-      { "from": "createSupply", "fromPort": "next", "to": "showSupply" },
-      { "from": "showSupply", "fromPort": "next", "to": "createQuest" },
-      { "from": "createQuest", "fromPort": "next", "to": "showQuest" },
-      { "from": "showQuest", "fromPort": "next", "to": "createHolders" },
-      { "from": "createHolders", "fromPort": "next", "to": "showHolders" },
-      { "from": "showHolders", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
-    ],
-    "valueEdges": [
-      { "from": "scope", "fromPort": "value", "to": "createEffects", "toPort": "source" },
-      { "from": "scope", "fromPort": "value", "to": "createRoster", "toPort": "source" },
-      { "from": "scope", "fromPort": "value", "to": "createTags", "toPort": "source" },
-      { "from": "scope", "fromPort": "value", "to": "createSupply", "toPort": "source" },
-      { "from": "scope", "fromPort": "value", "to": "createQuest", "toPort": "source" },
-      { "from": "scope", "fromPort": "value", "to": "createHolders", "toPort": "source" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
-    ]
-  },
-  {
     "id": "Graph.CollectionBags.EffectTemplates",
     "kind": "Query",
     "entry": "templates",
     "nodes": [
-      { "id": "templates", "op": "QueryCollectEffectTemplates" }
+      {
+        "id": "templates",
+        "op": "QueryCollectEffectTemplates"
+      }
     ],
     "controlEdges": [],
     "valueEdges": [],
@@ -70,65 +24,82 @@
     ]
   },
   {
-    "id": "Graph.CollectionBags.TagsAndActivities",
-    "kind": "Query",
-    "entry": "caster",
-    "nodes": [
-      { "id": "caster", "op": "LoadCaster" },
-      { "id": "tags", "op": "QueryCollectPresentTags" },
-      { "id": "activities", "op": "QueryCollectActiveActivities" }
-    ],
-    "controlEdges": [
-      { "from": "caster", "fromPort": "next", "to": "tags" },
-      { "from": "tags", "fromPort": "next", "to": "activities" }
-    ],
-    "valueEdges": [
-      { "from": "caster", "fromPort": "value", "to": "tags", "toPort": "source" },
-      { "from": "caster", "fromPort": "value", "to": "activities", "toPort": "source" }
-    ],
-    "outputs": [
-      {
-        "id": "tags",
-        "destination": "TagIdCollection",
-        "type": "IntIdList",
-        "collectionKey": "panel.collection.presentTags",
-        "role": "Display",
-        "title": "身上的印记",
-        "summary": "名册守望者当前拥有的标签"
-      },
-      {
-        "id": "activities",
-        "destination": "ActivityInstanceCollection",
-        "type": "TargetList",
-        "collectionKey": "panel.collection.activeActivities",
-        "role": "Display",
-        "title": "进行中的活动",
-        "summary": "挂在守望者名下的活动"
-      }
-    ]
-  },
-  {
     "id": "Graph.CollectionBags.Roster",
     "kind": "Query",
     "entry": "all",
     "nodes": [
-      { "id": "all", "op": "QueryAllMapEntities" },
-      { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
-      { "id": "minHp", "op": "ConstFloat", "floatValue": 0.001 },
-      { "id": "maxHp", "op": "ConstFloat", "floatValue": 999999 },
-      { "id": "alive", "op": "QueryFilterAttributeRange", "attribute": "Health" }
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "team",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "minHp",
+        "op": "ConstFloat",
+        "floatValue": 0.001
+      },
+      {
+        "id": "maxHp",
+        "op": "ConstFloat",
+        "floatValue": 999999
+      },
+      {
+        "id": "alive",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "Health"
+      }
     ],
     "controlEdges": [
-      { "from": "all", "fromPort": "next", "to": "team" },
-      { "from": "team", "fromPort": "next", "to": "minHp" },
-      { "from": "minHp", "fromPort": "next", "to": "maxHp" },
-      { "from": "maxHp", "fromPort": "next", "to": "alive" }
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "team"
+      },
+      {
+        "from": "team",
+        "fromPort": "next",
+        "to": "minHp"
+      },
+      {
+        "from": "minHp",
+        "fromPort": "next",
+        "to": "maxHp"
+      },
+      {
+        "from": "maxHp",
+        "fromPort": "next",
+        "to": "alive"
+      }
     ],
     "valueEdges": [
-      { "from": "all", "fromPort": "list", "to": "team", "toPort": "list" },
-      { "from": "team", "fromPort": "list", "to": "alive", "toPort": "list" },
-      { "from": "minHp", "fromPort": "value", "to": "alive", "toPort": "min" },
-      { "from": "maxHp", "fromPort": "value", "to": "alive", "toPort": "max" }
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "team",
+        "toPort": "list"
+      },
+      {
+        "from": "team",
+        "fromPort": "list",
+        "to": "alive",
+        "toPort": "list"
+      },
+      {
+        "from": "minHp",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "min"
+      },
+      {
+        "from": "maxHp",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "max"
+      }
     ],
     "outputs": [
       {
@@ -147,16 +118,39 @@
     "kind": "Query",
     "entry": "caster",
     "nodes": [
-      { "id": "caster", "op": "LoadCaster" },
-      { "id": "slots", "op": "QueryCollectAbilitySlots" },
-      { "id": "ready", "op": "LoadSelfAttribute", "attribute": "Health" }
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slots",
+        "op": "QueryCollectAbilitySlots"
+      },
+      {
+        "id": "ready",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      }
     ],
     "controlEdges": [
-      { "from": "caster", "fromPort": "next", "to": "slots" },
-      { "from": "slots", "fromPort": "next", "to": "ready" }
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "slots"
+      },
+      {
+        "from": "slots",
+        "fromPort": "next",
+        "to": "ready"
+      }
     ],
     "valueEdges": [
-      { "from": "caster", "fromPort": "value", "to": "slots", "toPort": "source" }
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "slots",
+        "toPort": "source"
+      }
     ],
     "outputs": [
       {
@@ -178,98 +172,58 @@
     ]
   },
   {
-    "id": "Graph.CollectionBags.Supply",
-    "kind": "Query",
-    "entry": "caster",
-    "nodes": [
-      { "id": "caster", "op": "LoadCaster" },
-      { "id": "items", "op": "QueryCollectInventoryItems" },
-      { "id": "defs", "op": "QueryCollectItemDefinitions" }
-    ],
-    "controlEdges": [
-      { "from": "caster", "fromPort": "next", "to": "items" },
-      { "from": "items", "fromPort": "next", "to": "defs" }
-    ],
-    "valueEdges": [
-      { "from": "caster", "fromPort": "value", "to": "items", "toPort": "source" }
-    ],
-    "outputs": [
-      {
-        "id": "items",
-        "destination": "ItemInstanceCollection",
-        "type": "TargetList",
-        "collectionKey": "panel.collection.inventoryItems",
-        "role": "Display",
-        "title": "背包",
-        "summary": "守望者随身物资实例"
-      },
-      {
-        "id": "defs",
-        "destination": "ItemDefinitionCollection",
-        "type": "IntIdList",
-        "collectionKey": "panel.collection.itemDefinitions",
-        "role": "Display",
-        "title": "物品图鉴",
-        "summary": "已登记物品定义"
-      }
-    ]
-  },
-  {
-    "id": "Graph.CollectionBags.QuestBoard",
-    "kind": "Query",
-    "entry": "caster",
-    "nodes": [
-      { "id": "caster", "op": "LoadCaster" },
-      { "id": "tasks", "op": "QueryCollectActiveTasks" },
-      { "id": "progress", "op": "QueryCollectProgressionNodes" }
-    ],
-    "controlEdges": [
-      { "from": "caster", "fromPort": "next", "to": "tasks" },
-      { "from": "tasks", "fromPort": "next", "to": "progress" }
-    ],
-    "valueEdges": [
-      { "from": "caster", "fromPort": "value", "to": "tasks", "toPort": "source" },
-      { "from": "caster", "fromPort": "value", "to": "progress", "toPort": "source" }
-    ],
-    "outputs": [
-      {
-        "id": "tasks",
-        "destination": "TaskInstanceCollection",
-        "type": "TargetList",
-        "collectionKey": "panel.collection.activeTasks",
-        "role": "Display",
-        "title": "进行中的差事",
-        "summary": "挂在守望者名下的任务"
-      },
-      {
-        "id": "progress",
-        "destination": "ProgressionNodeCollection",
-        "type": "IntIdList",
-        "collectionKey": "panel.collection.progressionNodes",
-        "role": "Display",
-        "title": "修行进度",
-        "summary": "守望者身上的进度节点"
-      }
-    ]
-  },
-  {
     "id": "Graph.CollectionBags.HoldersWall",
     "kind": "Query",
     "entry": "caster",
     "nodes": [
-      { "id": "caster", "op": "LoadCaster" },
-      { "id": "slots", "op": "QueryCollectAbilitySlots" },
-      { "id": "map", "op": "QueryAllMapEntities" },
-      { "id": "holders", "op": "QueryCollectAbilityHolders", "ability": "火球术" }
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slots",
+        "op": "QueryCollectAbilitySlots"
+      },
+      {
+        "id": "map",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "holders",
+        "op": "QueryCollectAbilityHolders",
+        "ability": "火球术"
+      }
     ],
     "controlEdges": [
-      { "from": "caster", "fromPort": "next", "to": "slots" },
-      { "from": "slots", "fromPort": "next", "to": "map" },
-      { "from": "map", "fromPort": "next", "to": "holders" }
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "slots"
+      },
+      {
+        "from": "slots",
+        "fromPort": "next",
+        "to": "map"
+      },
+      {
+        "from": "map",
+        "fromPort": "next",
+        "to": "holders"
+      }
     ],
     "valueEdges": [
-      { "from": "caster", "fromPort": "value", "to": "slots", "toPort": "source" },
-      { "from": "map", "fromPort": "list", "to": "holders", "toPort": "list" }
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "slots",
+        "toPort": "source"
+      },
+      {
+        "from": "map",
+        "fromPort": "list",
+        "to": "holders",
+        "toPort": "list"
+      }
     ],
     "outputs": [
       {
@@ -297,7 +251,11 @@
     "kind": "Query",
     "entry": "ready",
     "nodes": [
-      { "id": "ready", "op": "LoadSelfAttribute", "attribute": "Health" }
+      {
+        "id": "ready",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      }
     ],
     "controlEdges": [],
     "valueEdges": [],
@@ -308,6 +266,901 @@
         "type": "Float",
         "source": "ready",
         "key": "panel.collection.chip.ready"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.PresentTags",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "collect",
+        "op": "QueryCollectPresentTags"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "collect"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "collect",
+        "toPort": "source"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "collect",
+        "destination": "TagIdCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.collection.presentTags",
+        "role": "Display",
+        "title": "身上的印记",
+        "summary": "当前标签"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Inventory",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "collect",
+        "op": "QueryCollectInventoryItems"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "collect"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "collect",
+        "toPort": "source"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "collect",
+        "destination": "ItemInstanceCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.collection.inventoryItems",
+        "role": "Display",
+        "title": "背包",
+        "summary": "物品实例"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.ItemDefinitions",
+    "kind": "Query",
+    "entry": "collect",
+    "nodes": [
+      {
+        "id": "collect",
+        "op": "QueryCollectItemDefinitions"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "collect",
+        "destination": "ItemDefinitionCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.collection.itemDefinitions",
+        "role": "Display",
+        "title": "物品图鉴",
+        "summary": "物品定义"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.ActiveTasks",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "collect",
+        "op": "QueryCollectActiveTasks"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "collect"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "collect",
+        "toPort": "source"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "collect",
+        "destination": "TaskInstanceCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.collection.activeTasks",
+        "role": "Display",
+        "title": "进行中的差事",
+        "summary": "任务实例"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.ActiveActivities",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "collect",
+        "op": "QueryCollectActiveActivities"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "collect"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "collect",
+        "toPort": "source"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "collect",
+        "destination": "ActivityInstanceCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.collection.activeActivities",
+        "role": "Display",
+        "title": "进行中的活动",
+        "summary": "活动实例"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.ProgressionNodes",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "collect",
+        "op": "QueryCollectProgressionNodes"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "collect"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "collect",
+        "toPort": "source"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "collect",
+        "destination": "ProgressionNodeCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.collection.progressionNodes",
+        "role": "Display",
+        "title": "修行进度",
+        "summary": "进度节点"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.effect_templates",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.effects",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.effects"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.roster_nested",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.roster",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.roster"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.present_tags",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.tags",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.tags"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.inventory_aggregate",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.inventory",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.inventory"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.item_definitions",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.itemDefinitions",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.itemDefinitions"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.active_tasks",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.tasks",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.tasks"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.active_activities",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.activities",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.activities"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.ability_holders",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.holders",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.holders"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.CollectionBags.Open.progression_nodes",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.collection.progression",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.collection.progression"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
       }
     ]
   }

@@ -1585,14 +1585,6 @@
       }
     },
     {
-      "name": "panel_collection_bags",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/panel_collection_bags/PanelCollectionBagsShowcaseMod",
-        "projectPath": "PanelCollectionBagsShowcaseMod.csproj"
-      }
-    },
-    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",
@@ -1998,6 +1990,78 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod",
         "projectPath": "CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_effect_templates",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelEffectTemplatesEntryMod",
+        "projectPath": "PanelEffectTemplatesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_roster_nested",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelRosterNestedEntryMod",
+        "projectPath": "PanelRosterNestedEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_present_tags",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelPresentTagsEntryMod",
+        "projectPath": "PanelPresentTagsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_inventory_aggregate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelInventoryAggregateEntryMod",
+        "projectPath": "PanelInventoryAggregateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_item_definitions",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelItemDefinitionsEntryMod",
+        "projectPath": "PanelItemDefinitionsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_active_tasks",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelActiveTasksEntryMod",
+        "projectPath": "PanelActiveTasksEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_active_activities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelActiveActivitiesEntryMod",
+        "projectPath": "PanelActiveActivitiesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_ability_holders",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelAbilityHoldersEntryMod",
+        "projectPath": "PanelAbilityHoldersEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_progression_nodes",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelProgressionNodesEntryMod",
+        "projectPath": "PanelProgressionNodesEntryMod.csproj"
       }
     }
   ],

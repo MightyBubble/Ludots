@@ -45,6 +45,11 @@
       "kind": "csproj",
       "value": "mods/showcases/panel_fireball_shared/FireballSharedMod",
       "reason": "shared fireball gameplay library consumed by all panel skin/theme showcase mods; not a standalone showcase entry"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/panel_collection_bags/PanelCollectionBagsShowcaseMod",
+      "reason": "shared typed collection panel gallery host; player entries are thin mods under entries/"
     }
   ],
   "showcases": [
@@ -7362,7 +7367,7 @@
       "category": "panel",
       "binding": "panel_entity_list",
       "preset": "panel_entity_list_raylib",
-      "docsPath": "gitbook/architecture/panel-view-projection.md",
+      "docsPath": "gitbook/architecture/panel-cases/panel-entity-list.md",
       "readmePath": null,
       "acceptanceTest": "Ludots.Tests.GAS.Production.PanelEntityListShowcaseAcceptanceTests",
       "artifactDir": "artifacts/acceptance/panel_entity_list",
@@ -7386,7 +7391,7 @@
       "category": "panel",
       "binding": "panel_effect_list",
       "preset": "panel_effect_list_raylib",
-      "docsPath": "gitbook/architecture/query-graph-collection-outputs.md",
+      "docsPath": "gitbook/architecture/panel-cases/panel-effect-list.md",
       "readmePath": null,
       "acceptanceTest": "Ludots.Tests.GAS.Production.PanelEffectListShowcaseAcceptanceTests",
       "artifactDir": "artifacts/acceptance/panel_effect_list",
@@ -7398,35 +7403,6 @@
         "effect-list",
         "showcase",
         "g12"
-      ]
-    },
-    {
-      "id": "panel_collection_bags",
-      "path": "mods/showcases/panel_collection_bags/PanelCollectionBagsShowcaseMod",
-      "projectPath": "PanelCollectionBagsShowcaseMod.csproj",
-      "title": "名册墙",
-      "summary": "名册厅六墙：效果图鉴、编队嵌技能、印记、物资聚合、差事活动、火球反查与进度",
-      "tier": "T2",
-      "category": "panel",
-      "binding": "panel_collection_bags",
-      "preset": "panel_collection_bags_raylib",
-      "docsPath": "gitbook/architecture/query-graph-collection-outputs.md",
-      "readmePath": null,
-      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelCollectionBagsShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/acceptance/panel_collection_bags",
-      "screenshot": "artifacts/acceptance/panel_collection_bags/screens/001_typed-collection-bags.png",
-      "status": "active",
-      "tags": [
-        "activity",
-        "aggregate",
-        "g12",
-        "nested",
-        "panel",
-        "progression",
-        "showcase",
-        "source-input",
-        "typed-collection",
-        "ui"
       ]
     },
     {
@@ -8697,6 +8673,278 @@
       "video": "artifacts/evidence/capability_standard_graph_op_QueryCollectActiveActivities/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "panel_effect_templates",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelEffectTemplatesEntryMod",
+      "projectPath": "PanelEffectTemplatesEntryMod.csproj",
+      "title": "效果图鉴",
+      "summary": "翻开墙上的效果说明书：只有模板名，没有剩余时间。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_effect_templates",
+      "preset": "panel_effect_templates_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-effect-templates.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_effect_templates",
+      "screenshot": "artifacts/acceptance/panel_effect_templates/screens/001_effect_templates.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "effect_templates"
+      ]
+    },
+    {
+      "id": "panel_roster_nested",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelRosterNestedEntryMod",
+      "projectPath": "PanelRosterNestedEntryMod.csproj",
+      "title": "编队档案",
+      "summary": "队员名下嵌着各自的技能格，不是全场技能大杂烩。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_roster_nested",
+      "preset": "panel_roster_nested_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-roster-nested.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_roster_nested",
+      "screenshot": "artifacts/acceptance/panel_roster_nested/screens/001_roster_nested.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "roster_nested"
+      ]
+    },
+    {
+      "id": "panel_present_tags",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelPresentTagsEntryMod",
+      "projectPath": "PanelPresentTagsEntryMod.csproj",
+      "title": "身上的印记",
+      "summary": "守望者身上现有的印记被点名列出。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_present_tags",
+      "preset": "panel_present_tags_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-present-tags.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_present_tags",
+      "screenshot": "artifacts/acceptance/panel_present_tags/screens/001_present_tags.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "present_tags"
+      ]
+    },
+    {
+      "id": "panel_inventory_aggregate",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelInventoryAggregateEntryMod",
+      "projectPath": "PanelInventoryAggregateEntryMod.csproj",
+      "title": "背包堆叠",
+      "summary": "同类药剂只露出一枚图标和总数。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_inventory_aggregate",
+      "preset": "panel_inventory_aggregate_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-inventory-aggregate.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_inventory_aggregate",
+      "screenshot": "artifacts/acceptance/panel_inventory_aggregate/screens/001_inventory_aggregate.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "inventory_aggregate"
+      ]
+    },
+    {
+      "id": "panel_item_definitions",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelItemDefinitionsEntryMod",
+      "projectPath": "PanelItemDefinitionsEntryMod.csproj",
+      "title": "物品图鉴",
+      "summary": "已登记物品定义排成名册，没有堆叠实例。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_item_definitions",
+      "preset": "panel_item_definitions_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-item-definitions.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_item_definitions",
+      "screenshot": "artifacts/acceptance/panel_item_definitions/screens/001_item_definitions.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "item_definitions"
+      ]
+    },
+    {
+      "id": "panel_active_tasks",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelActiveTasksEntryMod",
+      "projectPath": "PanelActiveTasksEntryMod.csproj",
+      "title": "进行中的差事",
+      "summary": "挂在守望者名下的差事被点名。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_active_tasks",
+      "preset": "panel_active_tasks_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-active-tasks.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_active_tasks",
+      "screenshot": "artifacts/acceptance/panel_active_tasks/screens/001_active_tasks.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "active_tasks"
+      ]
+    },
+    {
+      "id": "panel_active_activities",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelActiveActivitiesEntryMod",
+      "projectPath": "PanelActiveActivitiesEntryMod.csproj",
+      "title": "进行中的活动",
+      "summary": "挂在守望者名下的活动被点名。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_active_activities",
+      "preset": "panel_active_activities_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-active-activities.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_active_activities",
+      "screenshot": "artifacts/acceptance/panel_active_activities/screens/001_active_activities.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "active_activities"
+      ]
+    },
+    {
+      "id": "panel_ability_holders",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelAbilityHoldersEntryMod",
+      "projectPath": "PanelAbilityHoldersEntryMod.csproj",
+      "title": "谁会火球",
+      "summary": "技能格旁挂着会这招的人（source=input 反查）。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_ability_holders",
+      "preset": "panel_ability_holders_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-ability-holders.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_ability_holders",
+      "screenshot": "artifacts/acceptance/panel_ability_holders/screens/001_ability_holders.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "ability_holders"
+      ]
+    },
+    {
+      "id": "panel_progression_nodes",
+      "path": "mods/showcases/panel_collection_bags/entries/PanelProgressionNodesEntryMod",
+      "projectPath": "PanelProgressionNodesEntryMod.csproj",
+      "title": "修行进度",
+      "summary": "守望者身上的进度节点排成一行。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_progression_nodes",
+      "preset": "panel_progression_nodes_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-progression-nodes.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelTypedCollectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_progression_nodes",
+      "screenshot": "artifacts/acceptance/panel_progression_nodes/screens/001_progression_nodes.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "typed-collection",
+        "showcase",
+        "g12",
+        "progression_nodes"
+      ]
+    }
+  ],
+  "pathExemptions": [
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/shared/RoadNetworkShowcaseData",
+      "reason": "road_network 共享数据库，非独立 showcase 条目"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorCommon",
+      "reason": "shared library for graph-behavior capability showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod",
+      "reason": "shared per-op GraphNodeOp gallery host; player entries are thin mods under graph_op_entries/"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/capability_standard/CapabilityStandardModExtensibleRuntimeShowcaseShared",
+      "reason": "shared panel runtime for extensible-mod-runtime showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "agent_bridge",
+      "reason": "Agent Bridge 基础调试绑定，由多个可运行 showcase 共用"
+    },
+    {
+      "kind": "binding",
+      "value": "panel_theme_showcase",
+      "reason": "shared theme asset library (CSS/art/fonts) for panel theme showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "clash_of_clones",
+      "reason": "parallel-session work in flight (mods/games/coc); replace with a formal entry when it lands"
+    },
+    {
+      "kind": "binding",
+      "value": "agent_bridge",
+      "reason": "AgentBridgeMod 是 AI agent 调试桥工具 mod（loopback HTTP JSON-RPC），非 showcase，不设注册条目"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/panel_fireball_shared/FireballSharedMod",
+      "reason": "shared fireball gameplay library consumed by all panel skin/theme showcase mods; not a standalone showcase entry"
     }
   ]
 }

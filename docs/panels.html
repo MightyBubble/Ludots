@@ -123,8 +123,8 @@
 
 <footer class="site-footer">
   <div class="inner">
-    <span>Ludots 面板矩阵 · 写作源 gitbook/reference/graph-node-op-wiki/（生成器维护，勿手改正文）</span>
-    <span>录像存 artifacts/evidence/capability_standard_graph_op_*/ · 发布于 GitHub Pages</span>
+    <span>Ludots 面板矩阵 · 写作源 gitbook/architecture/panel-cases/（与 Graph / Raylib 画廊同级一级 tab）</span>
+    <span>验收截图存 artifacts/acceptance/panel_*/ · 发布于 GitHub Pages</span>
   </div>
 </footer>
 
@@ -222,7 +222,7 @@
         a.setAttribute("href", stem.toLowerCase() === "readme" ? "#readme" : "#case/" + stem);
         return;
       }
-      var base = "reference/graph-node-op-wiki".split("/");
+      var base = "architecture/panel-cases".split("/");
       decoded.replace(/\.md$/i, "").split("/").forEach(function (seg) {
         if (seg === "" || seg === ".") return;
         if (seg === "..") base.pop(); else base.push(seg);
