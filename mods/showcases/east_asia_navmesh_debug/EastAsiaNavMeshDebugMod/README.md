@@ -1,8 +1,10 @@
 # East Asia NavMesh Debug
 
-This data-only overlay enables the CDT-baked `Small` navigation profile on
-`east_asia_visual_heightmap`. Its 7x4 macro-tile board covers the complete
-900652032x514658304 cm VisualHeightmap at 502596 cm per logic cell.
+This data-only overlay enables the offline Recast-baked `Small` navigation
+profile on `east_asia_visual_heightmap`. Recast voxels follow the board's
+502596 cm logic cells (strategy resolution), not the tactical 5–50 cm agent
+clamp. Its 7x4 macro-tile board covers the complete 900652032x514658304 cm
+VisualHeightmap.
 
 Bake the authoritative continuous VisualHeightmap from the repository root:
 

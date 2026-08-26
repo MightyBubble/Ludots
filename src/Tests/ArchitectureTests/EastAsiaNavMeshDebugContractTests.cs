@@ -16,7 +16,7 @@ public sealed class EastAsiaNavMeshDebugContractTests
     private const string MapId = "east_asia_visual_heightmap";
 
     [Test]
-    public void Overlay_EnablesContinentalCdtNavigationWithoutReplacingVisualHeightmap()
+    public void Overlay_EnablesContinentalRecastNavigationWithoutReplacingVisualHeightmap()
     {
         string root = FindRepoRoot();
         var map = ToolMapConfigResolver.LoadMap(root, MapId, ModId);
@@ -36,7 +36,7 @@ public sealed class EastAsiaNavMeshDebugContractTests
         Assert.That(board.TerrainHeightStepCm, Is.EqualTo(100));
         Assert.That(board.TerrainBlockedAtOrBelowHeightCm, Is.Zero);
         Assert.That(map.Metadata, Does.ContainKey("navWalkabilityOverlay"));
-        Assert.That(nav.Config.ParsedAlgorithm, Is.EqualTo(NavBakeAlgorithmKind.Cdt));
+        Assert.That(nav.Config.ParsedAlgorithm, Is.EqualTo(NavBakeAlgorithmKind.Recast));
         Assert.That(nav.Config.ParsedMode, Is.EqualTo(NavBakeMode.Offline));
         Assert.That(nav.Config.Profiles.Select(profile => profile.Id), Is.EqualTo(new[] { "Small" }));
     }

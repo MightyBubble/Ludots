@@ -106,7 +106,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             try
             {
                 ComputeTileFootprintBounds(terrain, chunkX, chunkY, out float tileMinX, out float tileMinZ, out float tileMaxX, out float tileMaxZ);
-                var rcCfg = BuildRcConfig(agentProfile, navProfile, tileMinX, tileMinZ, tileMaxX, tileMaxZ);
+                var rcCfg = BuildRcConfig(terrain, agentProfile, navProfile, tileMinX, tileMinZ, tileMaxX, tileMaxZ);
                 BuildExpandedRecastTriangleMesh(terrain, chunkX, chunkY, tileVersion, legacyConfig, rcCfg, obstacles, layerId, out var verts, out var tris);
                 if (tris.Count == 0)
                 {
@@ -364,7 +364,13 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             maxZ = localMaxZ;
         }
 
+        // Agent-radius voxel clamp stays for tactical maps. Continental / strategy
+        // boards raise LogicTerrain cell size above that clamp; Recast must follow the
+        // coarser terrain step or a single tile allocates hundreds of thousands of columns.
+        private const int MaxRecastVoxelsPerAxis = 512;
+
         private static RcConfig BuildRcConfig(
+            LogicTerrainField terrain,
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
             float tileMinX,
@@ -377,17 +383,29 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             float maxClimb = navProfile.MaxClimbCm / CmPerMeter;
             float maxSlope = navProfile.MaxSlopeDeg;
 
-            float cellSize = MathF.Max(0.05f, MathF.Min(0.5f, radius / 3f));
-            float cellHeight = cellSize * 0.5f;
+            float agentCellSize = MathF.Max(0.05f, MathF.Min(0.5f, radius / 3f));
+            float terrainCellSize = GetTerrainCellStepMeters(terrain);
+            float cellSize = MathF.Max(agentCellSize, terrainCellSize);
+            float cellHeight = MathF.Max(cellSize * 0.5f, MathF.Max(0.01f, maxClimb));
             int tileSizeX = Math.Max(1, (int)MathF.Ceiling((tileMaxX - tileMinX) / cellSize));
             int tileSizeZ = Math.Max(1, (int)MathF.Ceiling((tileMaxZ - tileMinZ) / cellSize));
-            int borderSize = RcConfig.CalcBorder(radius, cellSize);
+            if (tileSizeX > MaxRecastVoxelsPerAxis || tileSizeZ > MaxRecastVoxelsPerAxis)
+            {
+                throw new InvalidOperationException(
+                    $"Recast voxel grid {tileSizeX}x{tileSizeZ} exceeds {MaxRecastVoxelsPerAxis} per axis " +
+                    $"(cellSize={cellSize:R}m, tile=[{tileMinX:R},{tileMinZ:R}]-[{tileMaxX:R},{tileMaxZ:R}]). " +
+                    "Raise LogicTerrain cell size or shrink the tile footprint; refusing to allocate.");
+            }
+
+            int borderSize = RcConfig.CalcBorder(MathF.Max(radius, cellSize), cellSize);
 
             // detail 采样参数是运行时重烤的稳定性约束（NAV-R2）：采样间距过细 +
             // 误差阈值过紧时，BuildPolyDetail 的逐样例插入循环在大多边形上呈平方级
             // 膨胀，量化地形上误差永难收敛 → 单瓦分钟级阻塞。hull 顶点高度本就精确，
             // 粗间距 + 宽误差只损失面内高度细化，不影响寻路拓扑。sampleDist=0 会令
             // 部分多边形 detail 为空、Detour 序列化越界，故必须保持非零。
+            float detailSampleDist = MathF.Max(16f, cellSize);
+            float detailSampleMaxError = MathF.Max(4f, cellSize * 0.25f);
             return new RcConfig(
                 true,
                 tileSizeX,
@@ -395,12 +413,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 borderSize,
                 DotRecast.Recast.RcPartition.WATERSHED,
                 cellSize, cellHeight,
-                maxSlope, height, radius, maxClimb,
+                maxSlope, height, MathF.Max(radius, cellSize * 0.5f), maxClimb,
                 8 * 8 * cellSize * cellSize,
                 20 * 20 * cellSize * cellSize,
                 12f, 1.3f,
                 6,
-                16f, 4f,
+                detailSampleDist, detailSampleMaxError,
                 true, true, true,
                 new RcAreaModification(RcRecast.RC_WALKABLE_AREA), true);
         }
