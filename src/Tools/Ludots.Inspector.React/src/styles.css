@@ -245,9 +245,27 @@ textarea {
   flex-shrink: 0;
 }
 
+.workspace-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .workspace-head code {
   font-family: var(--mono);
   font-size: 12px;
+}
+
+.workspace-head .tool-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .workspace-head .primary {
@@ -258,6 +276,7 @@ textarea {
   border-radius: 4px;
   border: 1px solid var(--accent);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .workspace-split {

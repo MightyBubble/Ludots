@@ -1,10 +1,12 @@
 # Agent Bridge
 
-环回 HTTP JSON-RPC，操控运行中的 Ludots 进程：查状态、点 UI、下订单、截图取证。工具清单以 `GET /tools`（`BuiltinAgentTools`）为准。
+环回 HTTP JSON-RPC，操控运行中的 Ludots 进程：查状态、点 UI、下订单、截图取证。工具清单以 `GET /tools`（`BuiltinAgentTools`）为准——Inspector / CLI / MCP / curl 共用这一份目录，禁止平行手写清单。
 
 - 实操本页；架构：[Agent 调试桥](architecture/agent-debug-bridge.md)
+- 图上高亮节点：[Graph 编辑器与 Live Debug](architecture/graph-editor-and-live-debug.md)
 - 设计：[RFC-0066](https://github.com/mightyBubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md) · 计划 [epic #1056](https://github.com/MightyBubble/Ludots/issues/1056)
 - 引擎资产验收：[Raylib 资产验收台](raylib-asset-acceptance.md)
+- 门户入口：[Agent 调试桥](https://mightybubble.github.io/Ludots/agent-bridge.html)（含「可视化调试面板」专页）
 
 ## 60 秒上手
 
@@ -17,18 +19,20 @@ dotnet build mods/AgentBridgeMod/AgentBridgeMod.csproj -c Debug
 cd src/Apps/Raylib/Ludots.App.Raylib/bin/Debug/net8.0
 dotnet Ludots.App.Raylib.dll launcher.agent-demo.runtime.json
 
-# 3. 判活 + 列工具
+# 3a. 人手：打开可视化工具页（推荐）
+cd src/Tools/Ludots.Inspector.React && npm install && npm run dev
+# → http://127.0.0.1:5179 ，默认连 47921；顶栏应显示 ok · N tools
+
+# 3b. 脚本 / Agent：判活 + 列工具
 curl -s http://127.0.0.1:47921/health
 curl -s http://127.0.0.1:47921/tools
 dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- tools --names
 
-# 4. 调用
+# 4. 调用（与 Inspector 同一 method）
 curl -s -X POST http://127.0.0.1:47921/rpc \
   -d '{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}'
 dotnet run --project src/Tools/Ludots.AgentBridge.Cli -- call ludots.session.info
 ```
-
-Inspector（浏览器面板）：`cd src/Tools/Ludots.Inspector.React && npm run dev` → `http://127.0.0.1:5179`。
 
 环境变量：`LUDOTS_AGENT_BRIDGE=0` 关闭；`LUDOTS_AGENT_BRIDGE_PORT` 换端口（默认 47921，占用自动 +1）。发现文件 `artifacts/agent-bridge/sessions/<pid>.json`（进程退出删除）。仅 `127.0.0.1`，无鉴权。
 
@@ -75,28 +79,31 @@ Inspector（浏览器面板）：`cd src/Tools/Ludots.Inspector.React && npm run
 | 图运行时调试 | `ludots.graph.debug` | 查/开 GraphDebugTrace |
 | Presenter 全链观测 | `ludots.presenters.query` / `.desync` / `.screen` | 视觉代理实体、四跳分歧、席位投影 |
 
-## 客户端
+## 客户端（同一工具页语义）
 
-| 客户端 | 入口 |
-|--------|------|
-| HTTP | `GET /health` · `GET /tools` · `POST /rpc` |
-| CLI | `src/Tools/Ludots.AgentBridge.Cli` |
-| MCP | `src/Tools/Ludots.AgentBridge.Mcp`（建议 Release） |
-| Inspector | `src/Tools/Ludots.Inspector.React` |
+| 客户端 | 入口 | 适合 |
+|--------|------|------|
+| **Inspector（可视化工具页）** | `src/Tools/Ludots.Inspector.React` → `:5179` | 人手点选、看 debug |
+| HTTP | `GET /health` · `GET /tools` · `POST /rpc` | 任意脚本 |
+| CLI | `src/Tools/Ludots.AgentBridge.Cli` | 终端 / CI |
+| MCP | `src/Tools/Ludots.AgentBridge.Mcp`（建议 Release） | coding agent |
+| Graph Live Debug | Editor `/gas-graphs` + `ludots.graph.debug` | 蓝图上高亮节点 |
 
-### Inspector
+### Inspector 工具页
 
-紧凑面板（非全屏），可与游戏窗口并排：
+紧凑面板（非全屏），可与游戏窗口并排；左侧目录 = 运行时 `/tools`，不维护第二份名单。
 
 ```bash
 cd src/Tools/Ludots.Inspector.React
 npm install && npm run dev   # http://127.0.0.1:5179 ，默认连 47921
 ```
 
-- 左侧：按域列出 `/tools`
-- 中间：当前工具参数表单 → **调用**
-- 右侧：该工具自己的 debug（req / res / 耗时 / 错误）；切工具互不串；调过的左侧有蓝点
-- 顶栏：暂停 / 步进 / 继续
+- 左侧：按域列出工具，可过滤；调过的带蓝点
+- 中间：当前工具说明 + Schema 表单 → **调用**
+- 右侧：该工具自己的 debug（req / res / 耗时 / 错误）；切工具互不串
+- 顶栏：连接状态 · 暂停 / 步进 / 继续
+
+门户「Agent 调试桥 → 可视化调试面板」有同口径说明。
 
 ## 实测会话摘录
 

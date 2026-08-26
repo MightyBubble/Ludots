@@ -281,7 +281,12 @@ export default function App() {
             {selectedTool && session ? (
               <>
                 <div className="workspace-head">
-                  <code>{selectedTool.name}</code>
+                  <div className="workspace-title">
+                    <code>{selectedTool.name}</code>
+                    {selectedTool.description ? (
+                      <p className="tool-desc">{selectedTool.description}</p>
+                    ) : null}
+                  </div>
                   <button
                     type="button"
                     className="primary"
