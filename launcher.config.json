@@ -1561,6 +1561,14 @@
       }
     },
     {
+      "name": "panel_entity_list",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_entity_list/PanelEntityListShowcaseMod",
+        "projectPath": "PanelEntityListShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",

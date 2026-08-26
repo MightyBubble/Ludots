@@ -7328,6 +7328,30 @@
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
+      "id": "panel_entity_list",
+      "path": "mods/showcases/panel_entity_list/PanelEntityListShowcaseMod",
+      "projectPath": "PanelEntityListShowcaseMod.csproj",
+      "title": "实体名册面板",
+      "summary": "声明式 lists/layout：过滤存活、按血量排序、条目血条与晕眩徽标",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_entity_list",
+      "preset": "panel_entity_list_raylib",
+      "docsPath": "gitbook/architecture/panel-view-projection.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelEntityListShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_entity_list",
+      "screenshot": "artifacts/acceptance/panel_entity_list/screens/001_roster-sorted.png",
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "entity-list",
+        "showcase",
+        "g12"
+      ]
+    },
+    {
       "id": "panel_skin_markup",
       "path": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod",
       "title": "Panel Markup Skin",

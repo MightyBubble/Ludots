@@ -33,6 +33,8 @@ public static class PanelPresentationInstaller
             ?? throw new InvalidOperationException("Panel presentation requires UIRoot engine service.");
 
         PanelTheme? theme = PanelThemeCatalog.TryLoad(engine);
+        var textMeasurer = engine.GetService(CoreServiceKeys.UiTextMeasurer) as Ludots.UI.Runtime.IUiTextMeasurer;
+        var imageSizeProvider = engine.GetService(CoreServiceKeys.UiImageSizeProvider) as Ludots.UI.Runtime.IUiImageSizeProvider;
         engine.RegisterPresentationSystem(new PanelPresentationSystem(
             panelHost,
             templates,
@@ -40,6 +42,8 @@ public static class PanelPresentationInstaller
             surfaceHost,
             root,
             engine.MergedConfig?.PanelSkin,
-            theme?.StyleSheet));
+            theme?.StyleSheet,
+            textMeasurer,
+            imageSizeProvider));
     }
 }

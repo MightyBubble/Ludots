@@ -1089,10 +1089,17 @@ namespace Ludots.Core.Engine
                 graphHandlers,
                 entityCollectionStore,
                 graphOutputValueStore);
+            var panelProjectionReader = new PanelProjectionReader(World, graphOutputValueStore);
+            var panelGraphEvaluator = new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi);
             var panelHost = new PanelHost(
                 panelTemplates,
-                new PanelProjectionReader(World, graphOutputValueStore),
-                new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi));
+                panelProjectionReader,
+                panelGraphEvaluator,
+                new Ludots.Core.UI.PanelProjection.PanelListProjector(
+                    World,
+                    entityCollectionStore,
+                    panelProjectionReader,
+                    panelGraphEvaluator));
             gasGraphApi.BindPanelHost(panelHost);
             var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);

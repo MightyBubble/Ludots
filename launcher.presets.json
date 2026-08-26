@@ -2139,6 +2139,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "panel_entity_list_raylib",
+      "name": "Panel Entity List Raylib",
+      "selectors": [
+        "$panel_entity_list"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_skin_markup_raylib",
       "name": "Panel Markup Skin Raylib",
       "selectors": [
