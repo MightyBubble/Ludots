@@ -253,6 +253,7 @@ namespace Ludots.Core.UI.PanelProjection
 
         public static string ToId(PanelSubjectKind kind) => kind switch
         {
+            PanelSubjectKind.None => "None",
             PanelSubjectKind.Entity => "Entity",
             PanelSubjectKind.Task => "Task",
             PanelSubjectKind.Ability => "Ability",
@@ -265,7 +266,7 @@ namespace Ludots.Core.UI.PanelProjection
             PanelSubjectKind.Activity => "Activity",
             PanelSubjectKind.Tag => "Tag",
             PanelSubjectKind.ProgressionNode => "ProgressionNode",
-            _ => "None",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown panel subject kind."),
         };
 
         public static bool IsEntityBagSubject(PanelSubjectKind kind) =>
@@ -294,7 +295,7 @@ namespace Ludots.Core.UI.PanelProjection
         {
             if (string.IsNullOrWhiteSpace(text))
             {
-                return PanelPresentMode.List;
+                throw new InvalidOperationException($"{context} present is required when declared.");
             }
 
             return text.Trim() switch
@@ -308,8 +309,9 @@ namespace Ludots.Core.UI.PanelProjection
 
         public static string ToId(PanelPresentMode mode) => mode switch
         {
+            PanelPresentMode.List => "list",
             PanelPresentMode.Aggregate => "aggregate",
-            _ => "list",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown panel present mode."),
         };
     }
 
@@ -333,8 +335,9 @@ namespace Ludots.Core.UI.PanelProjection
 
         public static string ToId(PanelCollectionSourceKind kind) => kind switch
         {
+            PanelCollectionSourceKind.SelfGraph => "selfGraph",
             PanelCollectionSourceKind.Input => "input",
-            _ => "selfGraph",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown panel collection source kind."),
         };
     }
 }

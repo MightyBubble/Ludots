@@ -320,6 +320,35 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
+        public void Load_EmptyPresentMode_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.empty-present",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "units",
+                  "source": "selfGraph",
+                  "collectionKey": "units",
+                  "template": "panel.unit"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "units", "present": "" }
+                ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("present"));
+        }
+
+        [Test]
         public void Load_InlineItemControls_FailsClosed()
         {
             const string json = """

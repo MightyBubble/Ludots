@@ -414,8 +414,7 @@ namespace Ludots.Core.UI.PanelProjection
             }
 
             PanelPresentMode present = PanelPresentMode.List;
-            string? presentText = OptionalString(controlObject, "present");
-            if (!string.IsNullOrWhiteSpace(presentText))
+            if (controlObject["present"] is not null)
             {
                 if (type != PanelLayoutControlType.List)
                 {
@@ -423,6 +422,10 @@ namespace Ludots.Core.UI.PanelProjection
                         $"Panel template '{templateId}' present is only valid on list controls.");
                 }
 
+                string presentText = RequireString(
+                    controlObject,
+                    "present",
+                    $"panel template '{templateId}' list '{bind}'");
                 present = PanelPresentModes.Parse(presentText, $"panel template '{templateId}' list '{bind}'");
                 if (present == PanelPresentMode.Aggregate && virtualize)
                 {
