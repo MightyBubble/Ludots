@@ -3,7 +3,8 @@
   "Tags": [
     "Feature.NavMesh:On",
     "navmesh",
-    "walkability-texture"
+    "walkability-texture",
+    "transport-waterways"
   ],
   "Boards": [
     {

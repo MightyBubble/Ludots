@@ -6,6 +6,12 @@ profile on `east_asia_visual_heightmap`. Recast voxels follow the board's
 clamp. Its 7x4 macro-tile board covers the complete 900652032x514658304 cm
 VisualHeightmap.
 
+The overlay also authors a simplified East Asia waterway `TransportNetwork`
+(Yangtze corridor, Yellow River corridor, Taihu filled ring) and opts into
+`Navigation/transport_nav_obstacle_sink.json` so bake carves those polygons
+into the same `NavObstacleSet` as map-authored obstacles. Corridor width comes
+from `widthCm`; presentation ribbon width stays on `visualWidthMeters`.
+
 Bake the authoritative continuous VisualHeightmap from the repository root:
 
 ```powershell

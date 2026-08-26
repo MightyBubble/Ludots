@@ -1,0 +1,130 @@
+{
+  "id": "east_asia.waterways",
+  "sampleStepCm": 500000,
+  "defaultVisualWidthMeters": 8.0,
+  "nodes": [
+    { "id": "yangtze_0", "xcm": -150799815, "ycm": 8219532, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_1", "xcm": -103622599, "ycm": -4462003, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_2", "xcm": -66254540, "ycm": -38076896, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_3", "xcm": -45847331, "ycm": -44378603, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_4", "xcm": -29184453, "ycm": -45134222, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_5", "xcm": 8241239, "ycm": -35799718, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_6", "xcm": 35426854, "ycm": -35074062, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_7", "xcm": 57641883, "ycm": -33808723, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_8", "xcm": 71124549, "ycm": -17945825, "kind": "Normal", "tags": [] },
+    { "id": "yangtze_9", "xcm": 93769704, "ycm": -23530160, "kind": "Normal", "tags": [] },
+    { "id": "yellow_0", "xcm": -108771754, "ycm": 16144524, "kind": "Normal", "tags": [] },
+    { "id": "yellow_1", "xcm": -76828292, "ycm": 22204462, "kind": "Normal", "tags": [] },
+    { "id": "yellow_2", "xcm": -47683152, "ycm": 19821822, "kind": "Normal", "tags": [] },
+    { "id": "yellow_3", "xcm": -26408076, "ycm": 33604397, "kind": "Normal", "tags": [] },
+    { "id": "yellow_4", "xcm": -7248657, "ycm": 62762159, "kind": "Normal", "tags": [] },
+    { "id": "yellow_5", "xcm": 7248657, "ycm": 62762159, "kind": "Normal", "tags": [] },
+    { "id": "yellow_6", "xcm": 19485964, "ycm": 8709545, "kind": "Normal", "tags": [] },
+    { "id": "yellow_7", "xcm": 28128124, "ycm": 7000993, "kind": "Normal", "tags": [] },
+    { "id": "yellow_8", "xcm": 64068875, "ycm": 35882704, "kind": "Normal", "tags": [] },
+    { "id": "taihu_0", "xcm": 85455596, "ycm": -24948020, "kind": "Normal", "tags": [] },
+    { "id": "taihu_1", "xcm": 84993664, "ycm": -23909774, "kind": "Normal", "tags": [] },
+    { "id": "taihu_2", "xcm": 83960354, "ycm": -23222251, "kind": "Normal", "tags": [] },
+    { "id": "taihu_3", "xcm": 82632395, "ycm": -23068273, "kind": "Normal", "tags": [] },
+    { "id": "taihu_4", "xcm": 81363346, "ycm": -23488628, "kind": "Normal", "tags": [] },
+    { "id": "taihu_5", "xcm": 80491124, "ycm": -24371605, "kind": "Normal", "tags": [] },
+    { "id": "taihu_6", "xcm": 80249581, "ycm": -25482007, "kind": "Normal", "tags": [] },
+    { "id": "taihu_7", "xcm": 80705707, "ycm": -26522782, "kind": "Normal", "tags": [] },
+    { "id": "taihu_8", "xcm": 81739410, "ycm": -27214132, "kind": "Normal", "tags": [] },
+    { "id": "taihu_9", "xcm": 83073567, "ycm": -27369407, "kind": "Normal", "tags": [] },
+    { "id": "taihu_10", "xcm": 84348421, "ycm": -26946523, "kind": "Normal", "tags": [] },
+    { "id": "taihu_11", "xcm": 85220251, "ycm": -26059720, "kind": "Normal", "tags": [] },
+    { "id": "taihu_12", "xcm": 85455596, "ycm": -24948020, "kind": "Normal", "tags": [] }
+  ],
+  "segments": [
+    {
+      "id": "yangtze",
+      "points": [
+        { "nodeId": "yangtze_0" },
+        { "nodeId": "yangtze_1" },
+        { "nodeId": "yangtze_2" },
+        { "nodeId": "yangtze_3" },
+        { "nodeId": "yangtze_4" },
+        { "nodeId": "yangtze_5" },
+        { "nodeId": "yangtze_6" },
+        { "nodeId": "yangtze_7" },
+        { "nodeId": "yangtze_8" },
+        { "nodeId": "yangtze_9" }
+      ],
+      "sampleStepCm": 0,
+      "direction": "Bidirectional",
+      "flowDirection": "Forward",
+      "areaId": "Transport.Area.River",
+      "tags": [
+        "Transport.Area.Water",
+        "Transport.Area.River",
+        "Nav.CarveGround",
+        "Water.Yangtze"
+      ],
+      "depthCm": 1800,
+      "widthCm": 2500000,
+      "laneCount": 0,
+      "visualWidthMeters": 12.0
+    },
+    {
+      "id": "yellow_river",
+      "points": [
+        { "nodeId": "yellow_0" },
+        { "nodeId": "yellow_1" },
+        { "nodeId": "yellow_2" },
+        { "nodeId": "yellow_3" },
+        { "nodeId": "yellow_4" },
+        { "nodeId": "yellow_5" },
+        { "nodeId": "yellow_6" },
+        { "nodeId": "yellow_7" },
+        { "nodeId": "yellow_8" }
+      ],
+      "sampleStepCm": 0,
+      "direction": "Bidirectional",
+      "flowDirection": "Forward",
+      "areaId": "Transport.Area.River",
+      "tags": [
+        "Transport.Area.Water",
+        "Transport.Area.River",
+        "Nav.CarveGround",
+        "Water.YellowRiver"
+      ],
+      "depthCm": 900,
+      "widthCm": 1800000,
+      "laneCount": 0,
+      "visualWidthMeters": 9.0
+    },
+    {
+      "id": "taihu",
+      "points": [
+        { "nodeId": "taihu_0" },
+        { "nodeId": "taihu_1" },
+        { "nodeId": "taihu_2" },
+        { "nodeId": "taihu_3" },
+        { "nodeId": "taihu_4" },
+        { "nodeId": "taihu_5" },
+        { "nodeId": "taihu_6" },
+        { "nodeId": "taihu_7" },
+        { "nodeId": "taihu_8" },
+        { "nodeId": "taihu_9" },
+        { "nodeId": "taihu_10" },
+        { "nodeId": "taihu_11" },
+        { "nodeId": "taihu_12" }
+      ],
+      "sampleStepCm": 0,
+      "direction": "Bidirectional",
+      "flowDirection": "None",
+      "areaId": "Transport.Area.Lake",
+      "tags": [
+        "Transport.Area.Water",
+        "Transport.Area.Lake",
+        "Nav.CarveGround",
+        "Water.Taihu"
+      ],
+      "depthCm": 400,
+      "widthCm": 0,
+      "laneCount": 0,
+      "visualWidthMeters": 20.0
+    }
+  ]
+}

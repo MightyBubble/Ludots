@@ -1,0 +1,32 @@
+{
+  "rules": [
+    {
+      "id": "carve_rivers",
+      "requiredTagsAll": [
+        "Transport.Area.River",
+        "Nav.CarveGround"
+      ],
+      "forbiddenTagsAny": [],
+      "layerId": "Ground",
+      "widthSource": "widthCm",
+      "minWidthCm": 1,
+      "sampleStepCm": 500000,
+      "capEnds": true,
+      "geometry": "Corridor"
+    },
+    {
+      "id": "carve_lakes",
+      "requiredTagsAll": [
+        "Transport.Area.Lake",
+        "Nav.CarveGround"
+      ],
+      "forbiddenTagsAny": [],
+      "layerId": "Ground",
+      "widthSource": "widthCm",
+      "minWidthCm": 0,
+      "sampleStepCm": 0,
+      "capEnds": false,
+      "geometry": "FilledRing"
+    }
+  ]
+}
