@@ -34,7 +34,7 @@
     ],
     "inputs": [
       {
-        "name": "holders",
+        "name": "holderSource",
         "from": { "space": "parent", "output": "panel.collection.fireballHolders" },
         "type": "EntityCollection"
       }
@@ -43,7 +43,7 @@
       {
         "name": "holders",
         "source": "input",
-        "input": "holders",
+        "input": "holderSource",
         "template": "panel.collection.holder.chip"
       }
     ],

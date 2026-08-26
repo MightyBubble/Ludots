@@ -420,7 +420,7 @@ namespace Ludots.Core.UI.PanelProjection
             return subject switch
             {
                 PanelSubjectKind.EffectTemplate => EffectTemplateIdRegistry.GetName(memberIntId),
-                PanelSubjectKind.ItemDefinition => _itemDefinitions.GetName(memberIntId),
+                PanelSubjectKind.ItemDefinition => ReadItemDefinitionDisplayName(memberIntId),
                 PanelSubjectKind.AbilitySlot => ReadAbilitySlotDisplayName(owner, memberIntId),
                 PanelSubjectKind.AbilityDefinition => AbilityIdRegistry.GetName(memberIntId),
                 PanelSubjectKind.Tag => TagRegistry.GetName(memberIntId),
@@ -428,6 +428,18 @@ namespace Ludots.Core.UI.PanelProjection
                 _ => throw new InvalidOperationException(
                     $"Panel int-id projection does not support subject '{PanelSubjectKinds.ToId(subject)}'."),
             };
+        }
+
+        private string ReadItemDefinitionDisplayName(int definitionId)
+        {
+            if (definitionId > 0 &&
+                _itemDefinitions.TryGet(definitionId, out ItemDefinition definition) &&
+                !string.IsNullOrWhiteSpace(definition.DisplayName))
+            {
+                return definition.DisplayName;
+            }
+
+            return definitionId > 0 ? _itemDefinitions.GetName(definitionId) : string.Empty;
         }
 
         private string ReadAbilitySlotDisplayName(Entity owner, int slotIndex)
@@ -480,7 +492,7 @@ namespace Ludots.Core.UI.PanelProjection
             }
 
             int definitionId = _world.Get<ItemInstanceCm>(itemEntity).DefinitionId;
-            return definitionId > 0 ? _itemDefinitions.GetName(definitionId) : string.Empty;
+            return ReadItemDefinitionDisplayName(definitionId);
         }
 
         private static PanelTemplate RequireElement(PanelCollectionBinding collection)
