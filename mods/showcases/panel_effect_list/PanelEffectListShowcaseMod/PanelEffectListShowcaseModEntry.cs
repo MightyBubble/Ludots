@@ -20,11 +20,6 @@ public sealed class PanelEffectListShowcaseModEntry : IMod
     public void OnLoad(IModContext context)
     {
         context.Log("[PanelEffectListShowcaseMod] Loaded - active effect list panel showcase");
-        for (int i = 0; i < SeedActiveEffectsSystem.TemplateNames.Length; i++)
-        {
-            EffectTemplateIdRegistry.Register(SeedActiveEffectsSystem.TemplateNames[i]);
-        }
-
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             if (ctx.Get(CoreServiceKeys.Engine) is not GameEngine engine)
@@ -45,13 +40,6 @@ public sealed class PanelEffectListShowcaseModEntry : IMod
 
 internal sealed class SeedActiveEffectsSystem : Arch.System.ISystem<float>
 {
-    internal static readonly string[] TemplateNames =
-    {
-        "祝福",
-        "迅捷",
-        "护盾",
-    };
-
     private static readonly (string Name, int Remaining, int Total)[] Seeds =
     {
         ("祝福", 80, 100),

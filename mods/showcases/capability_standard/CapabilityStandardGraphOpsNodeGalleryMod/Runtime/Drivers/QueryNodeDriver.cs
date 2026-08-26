@@ -53,22 +53,22 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
     private static void SeedActiveEffectsOnCaster(GraphOpsNodeDriverContext ctx)
     {
         Entity caster = ctx.Caster;
-        if (!ctx.World.Has<ActiveEffectContainer>(caster))
+        if (!ctx.SimWorld.Has<ActiveEffectContainer>(caster))
         {
-            ctx.World.Add(caster, new ActiveEffectContainer());
+            ctx.SimWorld.Add(caster, new ActiveEffectContainer());
         }
 
-        ref ActiveEffectContainer container = ref ctx.World.Get<ActiveEffectContainer>(caster);
+        ref ActiveEffectContainer container = ref ctx.SimWorld.Get<ActiveEffectContainer>(caster);
         for (int i = 0; i < 3; i++)
         {
             Entity effect = GameplayEffectFactory.CreateEffect(
-                ctx.World,
+                ctx.SimWorld,
                 rootId: i + 1,
                 source: caster,
                 target: caster,
                 durationTicks: 100,
                 lifetimeKind: EffectLifetimeKind.Infinite);
-            ctx.World.Get<GameplayEffect>(effect).State = EffectState.Committed;
+            ctx.SimWorld.Get<GameplayEffect>(effect).State = EffectState.Committed;
             if (!container.Add(effect))
             {
                 throw new InvalidOperationException("QueryCollectActiveEffects gallery could not seed ActiveEffectContainer.");

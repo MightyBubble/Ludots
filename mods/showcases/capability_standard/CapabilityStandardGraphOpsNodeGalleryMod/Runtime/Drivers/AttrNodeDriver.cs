@@ -84,14 +84,14 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         };
         timing.State = EffectState.Committed;
 
-        if (ctx.World.Has<GameplayEffect>(caster))
+        if (ctx.SimWorld.Has<GameplayEffect>(caster))
         {
-            ref GameplayEffect existing = ref ctx.World.Get<GameplayEffect>(caster);
+            ref GameplayEffect existing = ref ctx.SimWorld.Get<GameplayEffect>(caster);
             existing = timing;
             return;
         }
 
-        ctx.World.Add(caster, timing);
+        ctx.SimWorld.Add(caster, timing);
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)
