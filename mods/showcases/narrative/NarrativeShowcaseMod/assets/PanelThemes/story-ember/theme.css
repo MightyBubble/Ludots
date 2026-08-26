@@ -1,30 +1,81 @@
-/* story-ember — Story Runtime dialogue theme (#128 / #1083). Data-driven via panelTheme. */
+/* story-ember — Story Runtime theme. Chrome lives here; Composer only lays out structure. */
 .story-root {
-  font-family: "Segoe UI", "Iosevka", sans-serif;
+  font-family: "Palatino Linotype", "Book Antiqua", "Georgia", serif;
 }
 
 .story-card {
-  background-color: rgba(10, 16, 26, 236);
+  background-color: rgba(28, 18, 12, 230);
   background-image: url(images/panel_wash.png);
   background-size: cover;
-  border: 1px solid rgba(246, 197, 107, 0.55);
-  border-radius: 22px;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
+  background-position: center;
+  border: 2px solid rgb(201, 150, 72);
+  border-radius: 6px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.5);
+  padding: 18px;
 }
 
 .story-overlay-dialogue {
-  border-color: rgba(90, 215, 233, 0.75);
+  border-color: rgb(228, 176, 96);
+  border-width: 3px;
+  border-radius: 4px;
   padding: 22px;
+  background-image: url(images/panel_wash.png), url(images/ornament.png);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, right 8px bottom 8px;
+  background-size: cover, 96px auto;
 }
 
-.story-dialogue-bubble,
+.story-standing-dialogue {
+  border-color: rgb(240, 186, 110);
+  border-width: 3px;
+  border-radius: 4px;
+  min-width: 420px;
+  padding: 24px;
+  background-image: url(images/panel_wash.png), url(images/ornament.png);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, right 10px bottom 10px;
+  background-size: cover, 110px auto;
+}
+
+.story-dialogue-bubble {
+  border-radius: 4px 18px 18px 18px;
+  border-color: rgba(246, 197, 107, 0.85);
+  border-width: 2px;
+  padding: 16px;
+}
+
 .story-subtitle-bubble {
-  border-radius: 24px;
+  border-radius: 18px 18px 4px 18px;
+  border-color: rgba(245, 158, 11, 0.9);
+  border-width: 2px;
+  padding: 14px 18px;
+  background-color: rgba(18, 12, 8, 210);
+}
+
+.story-choice-list {
+  border-color: rgb(168, 110, 48);
+  border-width: 2px;
+  border-radius: 8px;
+  padding: 16px;
+  background-image: url(images/panel_wash.png);
+  background-size: cover;
+}
+
+.story-choice-item {
+  background-color: rgba(16, 12, 10, 180);
+  border: 1px solid rgba(201, 150, 72, 0.35);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.story-choice-item-active {
+  background-color: rgba(48, 28, 14, 210);
+  border-color: rgb(240, 186, 110);
 }
 
 .story-portrait {
-  border-radius: 18px;
-  border: 2px solid rgb(246, 197, 107);
+  border-radius: 4px;
+  border: 2px solid rgb(201, 150, 72);
 }
 
 .story-standing-portrait-row {
@@ -32,25 +83,74 @@
 }
 
 .story-standing-portrait {
-  border-radius: 8px;
+  border-radius: 0;
   filter: drop-shadow(0 28px 48px rgba(0, 0, 0, 0.55));
 }
 
-.story-standing-dialogue {
-  border-color: rgba(90, 215, 233, 0.75);
-  min-width: 420px;
-}
-
 .story-title {
-  color: rgb(248, 250, 252);
-  letter-spacing: 0.4px;
+  color: rgb(255, 236, 196);
+  letter-spacing: 0.6px;
+  font-family: "Palatino Linotype", "Book Antiqua", "Georgia", serif;
 }
 
 .story-body {
-  color: rgb(226, 234, 242);
-  line-height: 1.45;
+  color: rgb(236, 220, 196);
+  line-height: 1.5;
 }
 
-.story-choice-list {
-  border-color: rgba(246, 197, 107, 0.35);
+.story-muted {
+  color: rgb(176, 150, 120);
+}
+
+.story-eyebrow {
+  color: rgb(28, 16, 8);
+  background-color: rgb(240, 186, 110);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-weight: 700;
+}
+
+.story-prompt-ribbon {
+  background-color: rgba(12, 10, 8, 220);
+  border: 1px solid rgb(120, 84, 48);
+  border-radius: 999px;
+  padding: 12px;
+}
+
+.story-threat-banner {
+  background-color: rgba(78, 22, 16, 232);
+  border: 2px solid rgb(255, 184, 138);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.story-transmission {
+  background-color: rgba(12, 18, 28, 220);
+  border: 1px solid rgb(90, 140, 170);
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.story-event-card {
+  background-color: rgb(246, 197, 107);
+  border: 1px solid rgb(255, 246, 208);
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.story-notification {
+  background-color: rgba(12, 16, 22, 230);
+  border: 1px solid rgba(201, 150, 72, 0.45);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.story-item-row {
+  background-color: rgba(14, 12, 10, 160);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.story-item-row-active {
+  background-color: rgba(36, 24, 14, 200);
 }

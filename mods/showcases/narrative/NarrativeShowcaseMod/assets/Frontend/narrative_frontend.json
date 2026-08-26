@@ -7,9 +7,6 @@
     "offsetY": 140,
     "zIndex": 55,
     "title": "Story Showcase",
-    "backgroundHex": "#08121CE8",
-    "borderHex": "#2D4F69",
-    "foregroundHex": "#F5F7FA",
     "accentHex": "#F6C56B"
   },
   "objectiveTracker": {
@@ -19,10 +16,6 @@
     "eyebrow": "Task Tracker",
     "title": "Ashen Oath",
     "footer": "Task, objective, and hint come from TaskRuntime plus showcase config.",
-    "backgroundHex": "#0B1520E6",
-    "borderHex": "#294259",
-    "foregroundHex": "#F5F7FA",
-    "mutedHex": "#B5C5D3",
     "accentHex": "#76D8FF"
   },
   "historyJournal": {
@@ -32,10 +25,6 @@
     "eyebrow": "Flow Review",
     "title": "Story Log",
     "footer": "Task, dialogue, sequence, signal, GAS reward, and trigger callbacks accumulate here.",
-    "backgroundHex": "#09131DE6",
-    "borderHex": "#243C53",
-    "foregroundHex": "#F5F7FA",
-    "mutedHex": "#B2C1D0",
     "accentHex": "#8BE9FD"
   },
   "variablesPanel": {
@@ -46,10 +35,6 @@
     "eyebrow": "Branch State",
     "title": "Map Variables",
     "footer": "Conditions and branch outcomes stay data-driven through Graph + MapVariable.",
-    "backgroundHex": "#0B1520E6",
-    "borderHex": "#2E4B63",
-    "foregroundHex": "#F5F7FA",
-    "mutedHex": "#B2C2CF",
     "accentHex": "#A7F3D0"
   },
   "overlayDialogue": {
@@ -59,10 +44,6 @@
     "zIndex": 60,
     "eyebrow": "Overlay Dialogue",
     "footer": "Enter advances | Number keys commit choices | Tab skips sequences",
-    "backgroundHex": "#08111BEF",
-    "borderHex": "#5AD7E9FF",
-    "foregroundHex": "#F8FAFC",
-    "mutedHex": "#C6D3DE",
     "accentHex": "#F6C56B"
   },
   "dialogueBubble": {
@@ -73,10 +54,6 @@
     "zIndex": 58,
     "eyebrow": "World Bubble",
     "footer": "This node uses story.world_bubble; IScreenProjector head follow is required (fail-closed).",
-    "backgroundHex": "#0C1622E8",
-    "borderHex": "#49FFFFFF",
-    "foregroundHex": "#F5F7FA",
-    "mutedHex": "#A9B9C9",
     "accentHex": "#F0C36B"
   },
   "standingPortrait": {
@@ -87,10 +64,6 @@
     "zIndex": 62,
     "eyebrow": "Standing Portrait",
     "footer": "Half-screen standing figure from speaker standingImageId | Enter advances | Number keys commit choices",
-    "backgroundHex": "#08111BEF",
-    "borderHex": "#5AD7E9FF",
-    "foregroundHex": "#F8FAFC",
-    "mutedHex": "#C6D3DE",
     "accentHex": "#F6C56B"
   },
   "subtitleBubble": {
@@ -100,10 +73,6 @@
     "zIndex": 59,
     "eyebrow": "Immersive Subtitle",
     "footer": "Sequencer subtitle tracks can still be skipped through StorySkip.",
-    "backgroundHex": "#08121CE8",
-    "borderHex": "#31546B",
-    "foregroundHex": "#F2F6FA",
-    "mutedHex": "#AFC3D4",
     "accentHex": "#F59E0B"
   },
   "choiceList": {
@@ -114,10 +83,6 @@
     "eyebrow": "Choice Grid",
     "title": "Available Responses",
     "footer": "Choice availability comes from Query Graph conditions, not UI-side branching.",
-    "backgroundHex": "#0A1220E8",
-    "borderHex": "#2F4358",
-    "foregroundHex": "#F8FAFC",
-    "mutedHex": "#B7C5D2",
     "accentHex": "#F6C56B"
   },
   "transmissionOverlay": {
@@ -127,10 +92,6 @@
     "zIndex": 56,
     "eyebrow": "Transmission",
     "footer": "Intro sequence callouts can occupy a separate overlay channel from dialogue and objectives.",
-    "backgroundHex": "#08121CE0",
-    "borderHex": "#2A536B",
-    "foregroundHex": "#E7F5FF",
-    "mutedHex": "#A7C6D8",
     "accentHex": "#7DD3FC"
   },
   "hints": {
@@ -155,20 +116,62 @@
     "rewardApplied": "Reward signal resolved into healing + movement blessing through GAS effects."
   },
   "routing": {
-    "transmissionSequenceIds": [ "Sequence.Narrative.Intro" ],
-    "subtitleSequenceIds": [ "Sequence.Narrative.TrialReveal" ],
+    "transmissionSequenceIds": [
+      "Sequence.Narrative.Intro"
+    ],
+    "subtitleSequenceIds": [
+      "Sequence.Narrative.TrialReveal"
+    ],
     "choiceSignals": [
-      { "choiceId": "briefing_accept_now", "signals": [ "showcase.briefing_accepted" ] },
-      { "choiceId": "briefing_accept_after_lore", "signals": [ "showcase.briefing_accepted" ] },
-      { "choiceId": "return_duty", "signals": [ "showcase.reward_apply", "showcase.verdict_delivered" ] },
-      { "choiceId": "return_mercy", "signals": [ "showcase.reward_apply", "showcase.verdict_delivered" ] }
+      {
+        "choiceId": "briefing_accept_now",
+        "signals": [
+          "showcase.briefing_accepted"
+        ]
+      },
+      {
+        "choiceId": "briefing_accept_after_lore",
+        "signals": [
+          "showcase.briefing_accepted"
+        ]
+      },
+      {
+        "choiceId": "return_duty",
+        "signals": [
+          "showcase.reward_apply",
+          "showcase.verdict_delivered"
+        ]
+      },
+      {
+        "choiceId": "return_mercy",
+        "signals": [
+          "showcase.reward_apply",
+          "showcase.verdict_delivered"
+        ]
+      }
     ]
   },
   "variables": [
-    { "variableId": "trust", "label": "Trust", "accentHex": "#A7F3D0" },
-    { "variableId": "lore", "label": "Lore", "accentHex": "#93C5FD" },
-    { "variableId": "ending", "label": "Ending", "accentHex": "#FDE68A" },
-    { "variableId": "trial_phase", "label": "Trial Phase", "accentHex": "#FDBA74" }
+    {
+      "variableId": "trust",
+      "label": "Trust",
+      "accentHex": "#A7F3D0"
+    },
+    {
+      "variableId": "lore",
+      "label": "Lore",
+      "accentHex": "#93C5FD"
+    },
+    {
+      "variableId": "ending",
+      "label": "Ending",
+      "accentHex": "#FDE68A"
+    },
+    {
+      "variableId": "trial_phase",
+      "label": "Trial Phase",
+      "accentHex": "#FDBA74"
+    }
   ],
   "endingLabels": {
     "0": "Unwritten",

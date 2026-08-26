@@ -77,10 +77,12 @@
 
 ### 3.4 换肤（故事表面）
 
-- 复用 `PanelThemeCatalog.TryLoad`（`game.json` → `panelTheme`）
+- 复用 `PanelThemeCatalog.TryLoad`（`game.json` → `panelTheme`）；主题包合同见 [panel-skins.md](../../gitbook/architecture/panel-skins.md)（`theme.css` + `images/` + `fonts/`，切图走 `tools/panel_theme/cutout.py`）
 - `NarrativeFrontend` 发布 Overlay 时挂载主题 `StyleSheet`
-- Composer 给表面打稳定 class：`.story-surface` / `.story-overlay-dialogue` / `.story-portrait` / `.story-choice-list` …
-- 主题包可覆盖背景切图、边框、字体；换主题 = 改 `panelTheme` 一行，不写 C#
+- Composer **只负责布局与 class**：`.story-surface` / `.story-overlay-dialogue` / `.story-portrait` / `.story-standing-portrait` / `.story-choice-list` …；禁止在 Composer 里写默认 `Background` / `Radius` / `Border` / `BoxShadow` 平行皮
+- 作者面 `BackgroundHex` / `BorderHex` 仅作显式覆盖；空则主题包全权出皮
+- 肖像 / 半身立绘 PNG 入库前须抠透明底（平色 key → `cutout.py`；复杂实景底一次性 matte 后仍以透明 PNG 为资产 SSOT）
+- 换主题 = 改 `panelTheme` 一行，不写 C#
 
 不把对话塞进 PanelHost 数值模板；数据面仍是 NarrativeFrontend，只共享主题轴。
 
