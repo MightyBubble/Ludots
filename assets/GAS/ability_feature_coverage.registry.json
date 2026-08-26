@@ -142,13 +142,6 @@
       "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
     },
     {
-      "feature": "TriggerGraphs",
-      "showcaseId": "capability_standard_ability_feature_TriggerGraphs",
-      "status": "covered",
-      "family": "trigger",
-      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
-    },
-    {
       "feature": "FormSet",
       "showcaseId": "capability_standard_ability_feature_FormSet",
       "status": "covered",

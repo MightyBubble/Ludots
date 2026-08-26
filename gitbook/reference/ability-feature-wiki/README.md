@@ -56,12 +56,6 @@
 
 - [这一刀打回自己](DispatchTarget.md) — 对着木桩出手，血条掉的是施法者自己，木桩不动。
 
-## 技能自带的图
-
-> 作者语义与全量字段见手册分册 [技能定义骨架 · ab-01](../mod-editor-prd/config/ab-01-definition.md)。
-
-- [出手之后图跟着跑](TriggerGraphs.md) — 出手之后，技能自己带着的图跟着跑起来，字幕报图跑了。
-
 ## 换姿态换栏
 
 > 作者语义与全量字段见手册分册 [形态路由 · ab-07](../mod-editor-prd/config/ab-07-form-sets.md)。

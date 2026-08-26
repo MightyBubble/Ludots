@@ -116,7 +116,7 @@ FEATURES: list[dict] = [
         "ability": ability(
             "Ability.AbilityFeature.EffectClip",
             [
-                {"kind": "EffectClip", "tick": 0, "duration": 36, "template": BURN},
+                {"kind": "EffectClip", "tick": 0, "durationTicks": 36, "template": BURN},
                 end(36),
             ],
             presentation={"displayName": "火还在烧", "iconGlyph": "烧", "hintText": "持续效果。"},
@@ -550,7 +550,7 @@ FEATURES: list[dict] = [
         "family": "dispatch",
         "title": "这一刀打回自己",
         "beat": "对着木桩出手，血条掉的是施法者自己，木桩不动。",
-        "detailTemplate": "施法者血条从 {casterBefore} 掉到 {casterAfter}；木桩仍是 {targetAfter}。",
+        "detailTemplate": "对着木桩出手，掉血的是施法者自己：从 {casterBefore} 掉到 {casterAfter}；木桩仍是 {targetAfter}。",
         "assertDetailContains": ["自己"],
         "abilityId": "Ability.AbilityFeature.DispatchTarget",
         "script": [
@@ -565,26 +565,6 @@ FEATURES: list[dict] = [
                 end(0),
             ],
             presentation={"displayName": "这一刀打回自己", "iconGlyph": "己", "hintText": "效果打在施法者。"},
-        ),
-    },
-    {
-        "feature": "TriggerGraphs",
-        "family": "trigger",
-        "title": "出手之后图跟着跑",
-        "beat": "出手之后，技能自己带着的图跟着跑起来，字幕报图跑了。",
-        "detailTemplate": "技能自己带着的图{graphState}。",
-        "assertDetailContains": ["图"],
-        "abilityId": "Ability.AbilityFeature.TriggerGraphs",
-        "script": [
-            {"atFrame": 12, "op": "cast", "slot": 0, "target": "target"},
-            {"atFrame": 36, "op": "settle"},
-        ],
-        "expect": {"triggerGraphFired": True},
-        "ability": ability(
-            "Ability.AbilityFeature.TriggerGraphs",
-            [end(0)],
-            triggerGraphs=["Graph.AbilityFeature.OnCast"],
-            presentation={"displayName": "出手之后图跟着跑", "iconGlyph": "图", "hintText": "技能自带触发图。"},
         ),
     },
     {

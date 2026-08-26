@@ -25,6 +25,12 @@ def dump(path: Path, data) -> None:
 
 
 def write_vignettes(gallery: Path) -> None:
+    live = {feature["feature"] for feature in FEATURES}
+    vignette_dir = gallery / "assets" / "Vignettes"
+    if vignette_dir.is_dir():
+        for stale in vignette_dir.glob("*.json"):
+            if stale.stem not in live:
+                stale.unlink()
     for feature in FEATURES:
         vignette = {
             "feature": feature["feature"],
@@ -106,6 +112,7 @@ def write_shared(gallery: Path) -> None:
             },
             {
                 "id": "Effect.AbilityFeature.Wave",
+                "presetType": "InstantDamage",
                 "lifetime": "Instant",
                 "participatesInResponse": False,
                 "configParams": {
@@ -140,21 +147,16 @@ def write_shared(gallery: Path) -> None:
                     {"id": "neg", "op": "NegFloat"},
                     {"id": "explicit", "op": "LoadExplicitTarget"},
                     {"id": "hit", "op": "ModifyAttributeAdd", "attribute": "Health"},
-                    {"id": "done", "op": "HaltReturnInt"},
-                    {"id": "ok", "op": "ConstInt", "intValue": 1},
                 ],
                 "controlEdges": [
                     {"from": "cfg", "fromPort": "next", "to": "neg"},
                     {"from": "neg", "fromPort": "next", "to": "explicit"},
                     {"from": "explicit", "fromPort": "next", "to": "hit"},
-                    {"from": "hit", "fromPort": "next", "to": "ok"},
-                    {"from": "ok", "fromPort": "next", "to": "done"},
                 ],
                 "valueEdges": [
                     {"from": "cfg", "fromPort": "value", "to": "neg", "toPort": "value"},
                     {"from": "neg", "fromPort": "value", "to": "hit", "toPort": "value"},
                     {"from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target"},
-                    {"from": "ok", "fromPort": "value", "to": "done", "toPort": "value"},
                 ],
             },
             {
@@ -197,17 +199,11 @@ def write_shared(gallery: Path) -> None:
                         "event": "Event.AbilityFeature.GraphRan",
                         "scope": "map",
                     },
-                    {"id": "ok", "op": "ConstInt", "intValue": 1},
-                    {"id": "done", "op": "HaltReturnInt"},
                 ],
                 "controlEdges": [
                     {"from": "target", "fromPort": "next", "to": "fire"},
-                    {"from": "fire", "fromPort": "next", "to": "ok"},
-                    {"from": "ok", "fromPort": "next", "to": "done"},
                 ],
-                "valueEdges": [
-                    {"from": "ok", "fromPort": "value", "to": "done", "toPort": "value"},
-                ],
+                "valueEdges": [],
             },
         ],
     )
@@ -231,8 +227,6 @@ def write_shared(gallery: Path) -> None:
     dump(
         gallery / "assets" / "Events" / "custom_events.json",
         [
-            {"id": "Event.AbilityFeature.Bell", "scope": "ability", "params": []},
-            {"id": "Event.AbilityFeature.Impact", "scope": "ability", "params": []},
             {"id": "Event.AbilityFeature.GraphRan", "scope": "map", "params": []},
         ],
     )

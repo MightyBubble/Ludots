@@ -2065,14 +2065,6 @@
       }
     },
     {
-      "name": "capability_standard_ability_feature_TriggerGraphs",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureTriggerGraphsEntryMod",
-        "projectPath": "CapabilityStandardAbilityFeatureTriggerGraphsEntryMod.csproj"
-      }
-    },
-    {
       "name": "capability_standard_ability_feature_FormSet",
       "target": {
         "type": "path",

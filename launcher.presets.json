@@ -2743,15 +2743,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_ability_feature_TriggerGraphs_raylib",
-      "name": "出手之后图跟着跑",
-      "selectors": [
-        "$capability_standard_ability_feature_TriggerGraphs"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
       "id": "capability_standard_ability_feature_FormSet_raylib",
       "name": "换姿态换一栏招",
       "selectors": [

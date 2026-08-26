@@ -23,7 +23,7 @@
       {
         "kind": "EffectClip",
         "tick": 0,
-        "duration": 36,
+        "durationTicks": 36,
         "template": "Effect.AbilityFeature.Burn"
       },
       {

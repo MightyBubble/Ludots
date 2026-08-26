@@ -3,7 +3,7 @@
   "family": "dispatch",
   "title": "这一刀打回自己",
   "beat": "对着木桩出手，血条掉的是施法者自己，木桩不动。",
-  "detailTemplate": "施法者血条从 {casterBefore} 掉到 {casterAfter}；木桩仍是 {targetAfter}。",
+  "detailTemplate": "对着木桩出手，掉血的是施法者自己：从 {casterBefore} 掉到 {casterAfter}；木桩仍是 {targetAfter}。",
   "assertDetailContains": [
     "自己"
   ],

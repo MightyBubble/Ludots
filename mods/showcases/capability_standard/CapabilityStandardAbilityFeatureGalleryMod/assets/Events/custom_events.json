@@ -1,15 +1,5 @@
 [
   {
-    "id": "Event.AbilityFeature.Bell",
-    "scope": "ability",
-    "params": []
-  },
-  {
-    "id": "Event.AbilityFeature.Impact",
-    "scope": "ability",
-    "params": []
-  },
-  {
     "id": "Event.AbilityFeature.GraphRan",
     "scope": "map",
     "params": []

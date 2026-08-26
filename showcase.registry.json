@@ -8862,31 +8862,6 @@
       "notes": "Per-feature Ability player gallery. Wiki under ability-feature-wiki; video evidence pending recording."
     },
     {
-      "id": "capability_standard_ability_feature_TriggerGraphs",
-      "path": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureTriggerGraphsEntryMod",
-      "projectPath": "CapabilityStandardAbilityFeatureTriggerGraphsEntryMod.csproj",
-      "title": "出手之后图跟着跑",
-      "summary": "出手之后，技能自己带着的图跟着跑起来，字幕报图跑了。",
-      "tier": "T2",
-      "category": "capability",
-      "tags": [
-        "capability-standard",
-        "gas",
-        "ability",
-        "per-feature",
-        "TriggerGraphs"
-      ],
-      "binding": "capability_standard_ability_feature_TriggerGraphs",
-      "preset": "capability_standard_ability_feature_TriggerGraphs_raylib",
-      "docsPath": "gitbook/reference/ability-feature-wiki/TriggerGraphs.md",
-      "readmePath": null,
-      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_ability_feature_TriggerGraphs",
-      "screenshot": null,
-      "status": "active",
-      "notes": "Per-feature Ability player gallery. Wiki under ability-feature-wiki; video evidence pending recording."
-    },
-    {
       "id": "capability_standard_ability_feature_FormSet",
       "path": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureFormSetEntryMod",
       "projectPath": "CapabilityStandardAbilityFeatureFormSetEntryMod.csproj",

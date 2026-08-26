@@ -1,8 +1,0 @@
-{
-  "startupMapId": "capability_standard_ability_feature_TriggerGraphs",
-  "windowTitle": "Ludots - 出手之后图跟着跑",
-  "targetFps": 60,
-  "windowWidth": 1600,
-  "windowHeight": 900,
-  "windowResizable": true
-}

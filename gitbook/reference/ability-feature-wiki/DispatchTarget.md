@@ -44,7 +44,7 @@
 
 短剧自己出手，不用先学键位。字幕用这场的结果填空：
 
-> 施法者血条从 {casterBefore} 掉到 {casterAfter}；木桩仍是 {targetAfter}。
+> 对着木桩出手，掉血的是施法者自己：从 {casterBefore} 掉到 {casterAfter}；木桩仍是 {targetAfter}。
 
 ## 边界
 

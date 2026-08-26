@@ -81,6 +81,7 @@
   },
   {
     "id": "Effect.AbilityFeature.Wave",
+    "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "configParams": {

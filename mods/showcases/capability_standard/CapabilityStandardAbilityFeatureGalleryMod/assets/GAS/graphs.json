@@ -21,15 +21,6 @@
         "id": "hit",
         "op": "ModifyAttributeAdd",
         "attribute": "Health"
-      },
-      {
-        "id": "done",
-        "op": "HaltReturnInt"
-      },
-      {
-        "id": "ok",
-        "op": "ConstInt",
-        "intValue": 1
       }
     ],
     "controlEdges": [
@@ -47,16 +38,6 @@
         "from": "explicit",
         "fromPort": "next",
         "to": "hit"
-      },
-      {
-        "from": "hit",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "ok",
-        "fromPort": "next",
-        "to": "done"
       }
     ],
     "valueEdges": [
@@ -77,12 +58,6 @@
         "fromPort": "value",
         "to": "hit",
         "toPort": "target"
-      },
-      {
-        "from": "ok",
-        "fromPort": "value",
-        "to": "done",
-        "toPort": "value"
       }
     ]
   },
@@ -170,15 +145,6 @@
         "op": "DispatchMapEvent",
         "event": "Event.AbilityFeature.GraphRan",
         "scope": "map"
-      },
-      {
-        "id": "ok",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "done",
-        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -186,25 +152,8 @@
         "from": "target",
         "fromPort": "next",
         "to": "fire"
-      },
-      {
-        "from": "fire",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "ok",
-        "fromPort": "next",
-        "to": "done"
       }
     ],
-    "valueEdges": [
-      {
-        "from": "ok",
-        "fromPort": "value",
-        "to": "done",
-        "toPort": "value"
-      }
-    ]
+    "valueEdges": []
   }
 ]
