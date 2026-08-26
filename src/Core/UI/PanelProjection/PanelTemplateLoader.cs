@@ -50,7 +50,7 @@ namespace Ludots.Core.UI.PanelProjection
         private static readonly HashSet<string> ControlFields = new(StringComparer.Ordinal)
         {
             "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
-            "viewportHeight", "itemExtent", "virtualize", "overscan"
+            "viewportHeight", "itemExtent", "virtualize", "overscan", "present"
         };
 
         public static PanelTemplate Load(string json)
@@ -305,7 +305,7 @@ namespace Ludots.Core.UI.PanelProjection
                 pinNames.Add(pin.Name);
             }
 
-            if (subject == PanelSubjectKind.Entity || subject == PanelSubjectKind.EffectInstance)
+            if (PanelSubjectKinds.IsEntityBagSubject(subject) || PanelSubjectKinds.IsIntIdBagSubject(subject))
             {
                 pinNames.Add(PanelSubjectKinds.EntityDisplayName);
             }
@@ -413,11 +413,29 @@ namespace Ludots.Core.UI.PanelProjection
                     $"Panel template '{templateId}' itemExtent is only valid on list controls.");
             }
 
+            PanelPresentMode present = PanelPresentMode.List;
+            string? presentText = OptionalString(controlObject, "present");
+            if (!string.IsNullOrWhiteSpace(presentText))
+            {
+                if (type != PanelLayoutControlType.List)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' present is only valid on list controls.");
+                }
+
+                present = PanelPresentModes.Parse(presentText, $"panel template '{templateId}' list '{bind}'");
+                if (present == PanelPresentMode.Aggregate && virtualize)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' list '{bind}' cannot combine present=aggregate with virtualize.");
+                }
+            }
+
             ValidateControlBindings(templateId, type, bind, current, max, pinNames);
 
             return new PanelLayoutControl(
                 type, className, text, bind, prefix, current, max, showWhen,
-                viewportHeight, itemExtent, virtualize, overscan);
+                viewportHeight, itemExtent, virtualize, overscan, present);
         }
 
         private static float? OptionalPositiveFloat(JsonObject controlObject, string field, string templateId)

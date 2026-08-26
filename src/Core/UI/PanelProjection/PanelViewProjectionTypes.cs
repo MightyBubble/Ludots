@@ -15,6 +15,13 @@ namespace Ludots.Core.UI.PanelProjection
         Ability = 3,
         EffectInstance = 4,
         EffectTemplate = 5,
+        ItemInstance = 6,
+        ItemDefinition = 7,
+        AbilitySlot = 8,
+        AbilityDefinition = 9,
+        Activity = 10,
+        Tag = 11,
+        ProgressionNode = 12,
     }
 
     public enum PanelCollectionSourceKind : byte
@@ -29,6 +36,12 @@ namespace Ludots.Core.UI.PanelProjection
         ProgressBar = 1,
         Badge = 2,
         List = 3,
+    }
+
+    public enum PanelPresentMode : byte
+    {
+        List = 0,
+        Aggregate = 1,
     }
 
     /// <summary>
@@ -95,7 +108,8 @@ namespace Ludots.Core.UI.PanelProjection
             float? viewportHeight = null,
             float? itemExtent = null,
             bool virtualize = false,
-            int overscan = 2)
+            int overscan = 2,
+            PanelPresentMode present = PanelPresentMode.List)
         {
             Type = type;
             ClassName = className;
@@ -109,6 +123,7 @@ namespace Ludots.Core.UI.PanelProjection
             ItemExtent = itemExtent;
             Virtualize = virtualize;
             Overscan = overscan;
+            Present = present;
         }
 
         public PanelLayoutControlType Type { get; }
@@ -130,6 +145,9 @@ namespace Ludots.Core.UI.PanelProjection
         public bool Virtualize { get; }
 
         public int Overscan { get; }
+
+        /// <summary>List control presentation: full rows or aggregate head+count.</summary>
+        public PanelPresentMode Present { get; }
     }
 
     public sealed class PanelLayout
@@ -147,16 +165,22 @@ namespace Ludots.Core.UI.PanelProjection
         public PanelListItemProjection(
             Dictionary<string, float> floats,
             Dictionary<string, bool> bools,
-            Dictionary<string, string> strings)
+            Dictionary<string, string> strings,
+            IReadOnlyList<PanelListProjection>? nestedLists = null,
+            int memberIntId = 0)
         {
             Floats = floats;
             Bools = bools;
             Strings = strings;
+            NestedLists = nestedLists ?? Array.Empty<PanelListProjection>();
+            MemberIntId = memberIntId;
         }
 
         public IReadOnlyDictionary<string, float> Floats { get; }
         public IReadOnlyDictionary<string, bool> Bools { get; }
         public IReadOnlyDictionary<string, string> Strings { get; }
+        public IReadOnlyList<PanelListProjection> NestedLists { get; }
+        public int MemberIntId { get; }
     }
 
     public sealed class PanelListProjection
@@ -206,8 +230,15 @@ namespace Ludots.Core.UI.PanelProjection
                 "Ability" => PanelSubjectKind.Ability,
                 "EffectInstance" => PanelSubjectKind.EffectInstance,
                 "EffectTemplate" => PanelSubjectKind.EffectTemplate,
+                "ItemInstance" => PanelSubjectKind.ItemInstance,
+                "ItemDefinition" => PanelSubjectKind.ItemDefinition,
+                "AbilitySlot" => PanelSubjectKind.AbilitySlot,
+                "AbilityDefinition" => PanelSubjectKind.AbilityDefinition,
+                "Activity" => PanelSubjectKind.Activity,
+                "Tag" => PanelSubjectKind.Tag,
+                "ProgressionNode" => PanelSubjectKind.ProgressionNode,
                 _ => throw new InvalidOperationException(
-                    $"{context} subject '{text}' is unknown (allowed: Entity, Task, Ability, EffectInstance, EffectTemplate)."),
+                    $"{context} subject '{text}' is unknown (allowed: Entity, Task, Ability, EffectInstance, EffectTemplate, ItemInstance, ItemDefinition, AbilitySlot, AbilityDefinition, Activity, Tag, ProgressionNode)."),
             };
         }
 
@@ -218,11 +249,59 @@ namespace Ludots.Core.UI.PanelProjection
             PanelSubjectKind.Ability => "Ability",
             PanelSubjectKind.EffectInstance => "EffectInstance",
             PanelSubjectKind.EffectTemplate => "EffectTemplate",
+            PanelSubjectKind.ItemInstance => "ItemInstance",
+            PanelSubjectKind.ItemDefinition => "ItemDefinition",
+            PanelSubjectKind.AbilitySlot => "AbilitySlot",
+            PanelSubjectKind.AbilityDefinition => "AbilityDefinition",
+            PanelSubjectKind.Activity => "Activity",
+            PanelSubjectKind.Tag => "Tag",
+            PanelSubjectKind.ProgressionNode => "ProgressionNode",
             _ => "None",
         };
 
+        public static bool IsEntityBagSubject(PanelSubjectKind kind) =>
+            kind is PanelSubjectKind.Entity
+                or PanelSubjectKind.EffectInstance
+                or PanelSubjectKind.ItemInstance
+                or PanelSubjectKind.Task
+                or PanelSubjectKind.Activity
+                or PanelSubjectKind.Ability;
+
+        public static bool IsIntIdBagSubject(PanelSubjectKind kind) =>
+            kind is PanelSubjectKind.EffectTemplate
+                or PanelSubjectKind.ItemDefinition
+                or PanelSubjectKind.AbilitySlot
+                or PanelSubjectKind.AbilityDefinition
+                or PanelSubjectKind.Tag
+                or PanelSubjectKind.ProgressionNode;
+
         /// <summary>Entity / effect-instance subject surface available to layout binds (not graph pins).</summary>
         public const string EntityDisplayName = "displayName";
+    }
+
+    public static class PanelPresentModes
+    {
+        public static PanelPresentMode Parse(string text, string context)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return PanelPresentMode.List;
+            }
+
+            return text.Trim() switch
+            {
+                "list" => PanelPresentMode.List,
+                "aggregate" => PanelPresentMode.Aggregate,
+                _ => throw new InvalidOperationException(
+                    $"{context} present '{text}' is unknown (allowed: list, aggregate)."),
+            };
+        }
+
+        public static string ToId(PanelPresentMode mode) => mode switch
+        {
+            PanelPresentMode.Aggregate => "aggregate",
+            _ => "list",
+        };
     }
 
     public static class PanelCollectionSources

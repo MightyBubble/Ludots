@@ -959,7 +959,8 @@ namespace Ludots.Core.Engine
                 graphOps,
                 builtinHandlers,
                 customEventCatalog.Schemas,
-                enumCatalog);
+                enumCatalog,
+                intIdCollectionStore);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -1090,6 +1091,7 @@ namespace Ludots.Core.Engine
                 graphOutputSchemas,
                 graphHandlers,
                 entityCollectionStore,
+                intIdCollectionStore,
                 graphOutputValueStore);
             var panelProjectionReader = new PanelProjectionReader(World, graphOutputValueStore);
             var panelGraphEvaluator = new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi);

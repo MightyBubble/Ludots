@@ -11,7 +11,7 @@ namespace Ludots.Core.UI.PanelHosting
     /// </summary>
     public interface IPanelGraphEvaluator
     {
-        void Evaluate(int graphId, Entity owner);
+        void Evaluate(int graphId, Entity owner, int subjectIntId = 0);
     }
 
     public sealed class GraphReturnWriterPanelEvaluator : IPanelGraphEvaluator
@@ -25,7 +25,7 @@ namespace Ludots.Core.UI.PanelHosting
             _api = api ?? throw new ArgumentNullException(nameof(api));
         }
 
-        public void Evaluate(int graphId, Entity owner)
+        public void Evaluate(int graphId, Entity owner, int subjectIntId = 0)
         {
             _writer.ExecuteAndWrite(
                 graphId,
@@ -35,7 +35,8 @@ namespace Ludots.Core.UI.PanelHosting
                 targetContext: Entity.Null,
                 targetPosCm: default,
                 randomSeed: 0u,
-                _api);
+                _api,
+                subjectIntId: subjectIntId);
         }
     }
 }

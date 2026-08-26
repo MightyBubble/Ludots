@@ -1,37 +1,65 @@
-# GAS Composition Gate — 查询集合输出 / Effect 实例袋接线
+## GAS Composition Gate — Self Review
 
-## 任务摘要
+- **Task / Issue**: Query-graph collection outputs §3.8 items 2–7 (templates / items+aggregate / ability slots+nested / reverse+source=input / task·activity / tag·progression) on top of Effect-instance slice (#1272)
+- **Date**: 2026-08-26
+- **Agent / Author**: Cursor Cloud Agent
 
-按已合入合同 `query-graph-collection-outputs.md`，落地：
-1. Query op：从 scope 的 `ActiveEffectContainer` 填充 `TargetList`（效果实例实体）
-2. 面板 `PanelSubjectKind.EffectInstance`（及模板 subject 解析预留）+ 投影表面名走 `EffectTemplateIdRegistry`
-3. 元素图可读效果剩余/总时长（atomic load op，非 profile 开关）
-4. 面板 `inputs` / `collections.source` 装载期强校验
-5. Showcase：单位 buff 条（仿 panel_entity_list）
+### 1. Core judgment
 
-## 判断标准结论
+新变体主要交付物是（A/B/C/D）: **A**
 
-**通过。** 新变体是 **新增 graph 节点（QueryCollectActiveEffects、LoadEffectTiming）** 组合既有 `EntityCollection` 回写与面板投影，**不是** 新增 profile enum / preset 开关。
+结论: **PASS**
 
-## 自审清单
+一句话理由: 新增的是查询图 Collect* 节点、类型化集合 destination（IntId 袋 / 实体袋）、以及面板对已声明 subject·source·present 的消费接线；不新增 profile enum、preset 开关或平行物化管线。
 
-| 项 | 结论 |
-|---|---|
-| 是否用 atomic op / graph 节点表达新行为 | 是：CollectActiveEffects + LoadEffectTiming |
-| 是否避免新 `*_profiles.json` / preset 开关 | 是 |
-| 是否复用 EntityCollection 回写链 | 是（效果实例仍是 Entity；subject 区分语义） |
-| 是否禁止旁路扫容器作 SSOT | 是：正式路径图写出集合 |
-| EffectTemplate 袋 | 本 PR 装载/subject 预留 fail-closed 或最小 Id 集合；优先打通实例袋竖切 |
+### 2. Layer assignment
 
-## 复用 / 新增
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Collect* 读容器/注册表填 TargetList 或 IntIdList | 0 | `GraphNodeOp` + `GasGraphOpHandlerTable` + `IGraphRuntimeApi` |
+| 类型化集合写出 | 1/2 | `GraphReturnWriter` → `EntityCollectionStore` / `IntIdCollectionStore` |
+| 面板 subject / source=input / nested / aggregate | 2 | `PanelListProjector` + `PanelPresentationSystem` + 模板装载 |
+| Showcase 验收 | 2 | showcase mods + acceptance tests |
 
-| 类型 | 项 |
-|---|---|
-| 复用 | GraphReturnWriter、EntityCollectionStore、PanelListProjector 透传、ActiveEffectContainer、EffectTemplateIdRegistry、panel_entity_list 骨架 |
-| 新增 Layer 0/图 op | `QueryCollectActiveEffects`、`LoadEffectTiming`（读 GameplayEffect 时长） |
-| 新增面板 | `EffectInstance` subject 表面；`inputs`/`source` 装载校验 |
-| 禁止 | 新 Effect buff profile DSL；伪造假实体装模板 id |
+### 3. Reuse list
 
-## 若不通过
+- Handlers: 现有 `GasGraphOpHandlerTable` / Query 编译器 / `GraphReturnWriter` 模式（对齐 `QueryCollectActiveEffects`）
+- Queues / Systems: 无新 lifecycle；只读收集
+- Resolvers / Registries: `EffectTemplateIdRegistry`、`AbilitySlotResolver`、`TagRegistry`/`TagOps`、`ProgressionStateBuffer`、`InventoryRuntimeService`、Task/Activity 实例组件
+- Existing presets / graphs: 现有 panel_effect_list 竖切；集合合同 `query-graph-collection-outputs.md`
 
-N/A
+### 4. New Layer 0 ops (if any)
+
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| QueryCollectEffectTemplates | 写出效果模板 id 袋 | 无现成枚举注册表→TargetList/IntIdList 的节点 |
+| QueryCollectAbilitySlots | 写出单位有效技能槽下标 | 槽位不是实体，不能复用 CollectActiveEffects |
+| QueryCollectInventoryItems | 写出背包物品实例实体袋 | 无 span 友好的正式收集节点 |
+| QueryCollectItemDefinitions | 写出物品定义 id 袋 | 同上，定义 id |
+| QueryCollectPresentTags | 写出实体当前标签 id 袋 | 标签不是实体 |
+| QueryCollectActiveTasks | 写出范围内任务实例实体袋 | 需明确 scope 语义的收集节点 |
+| QueryCollectProgressionNodes | 写出实体进度 id 袋 | ProgressionStateBuffer 枚举 |
+| QueryCollectAbilityHolders | 候选实体中筛出持有指定技能者 | 反查样板；约束来自输入/标志 |
+
+（若实现中合并/更名，以最终 `GraphOps.cs` 为准；职责不变。）
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: **无**（只读查询 + 集合替换写出；集合 Replace 自身为整袋替换）
+
+### 6. Config SSOT
+
+行为配置落在: 现有 `graphs.json` outputs + `panel_templates.json` collections/inputs/present；showcase 自有 assets。
+
+是否新增 JSON schema: **NO** — destination / subject / present 为既有合同字段的运行时接线。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（未接线 subject/destination/source 继续 fail-closed）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**

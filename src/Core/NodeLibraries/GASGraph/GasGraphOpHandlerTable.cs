@@ -1068,8 +1068,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
+            var intIdList = new GraphIntIdList(intIds);
             e[0] = s.Caster;
             e[1] = s.ExplicitTarget;
             e[2] = s.E.Length > 2 ? s.E[2] : default;
@@ -1096,6 +1098,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     E = e,
                     Targets = targets,
                     TargetList = targetList,
+                    IntIds = intIds,
+                    IntIdList = intIdList,
+                    SubjectIntId = s.SubjectIntId,
                     CallStack = callStack,
                     Text = text,
                     Status = GraphExecutionStatus.Running,
@@ -1198,8 +1203,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
+            var intIdList = new GraphIntIdList(intIds);
             e[0] = s.Caster;
             e[1] = s.ExplicitTarget;
 
@@ -1226,6 +1233,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     E = e,
                     Targets = targets,
                     TargetList = targetList,
+                    IntIds = intIds,
+                    IntIdList = intIdList,
+                    SubjectIntId = s.SubjectIntId,
                     CallStack = callStack,
                     Text = text,
                     Status = GraphExecutionStatus.Running,

@@ -8,6 +8,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         Summary = 0,
         EntityCollection = 1,
+        EffectTemplateCollection = 2,
+        AbilitySlotCollection = 3,
+        AbilityDefinitionCollection = 4,
+        ItemInstanceCollection = 5,
+        ItemDefinitionCollection = 6,
+        TagIdCollection = 7,
+        TaskInstanceCollection = 8,
+        ActivityInstanceCollection = 9,
+        ProgressionNodeCollection = 10,
     }
 
     public enum GraphOutputValueKind : byte
@@ -17,6 +26,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Float = 3,
         Entity = 4,
         TargetList = 5,
+        IntIdList = 6,
+    }
+
+    public static class GraphOutputDestinationKinds
+    {
+        public static bool IsEntityBagDestination(GraphOutputDestinationKind destination) =>
+            destination is GraphOutputDestinationKind.EntityCollection
+                or GraphOutputDestinationKind.ItemInstanceCollection
+                or GraphOutputDestinationKind.TaskInstanceCollection
+                or GraphOutputDestinationKind.ActivityInstanceCollection;
+
+        public static bool IsIntIdBagDestination(GraphOutputDestinationKind destination) =>
+            destination is GraphOutputDestinationKind.EffectTemplateCollection
+                or GraphOutputDestinationKind.AbilitySlotCollection
+                or GraphOutputDestinationKind.AbilityDefinitionCollection
+                or GraphOutputDestinationKind.ItemDefinitionCollection
+                or GraphOutputDestinationKind.TagIdCollection
+                or GraphOutputDestinationKind.ProgressionNodeCollection;
     }
 
     public readonly struct GraphOutputBinding
@@ -57,7 +84,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string Key { get; }
         public string CollectionKey { get; }
 
-        /// <summary>Resolved from <see cref="CollectionKey"/> through the entity collection key registry at load time; 0 when unresolved.</summary>
+        /// <summary>Resolved from <see cref="CollectionKey"/> through the collection key registry at load time; 0 when unresolved.</summary>
         public int CollectionKeyId { get; }
 
         public EntityCollectionRoleKind CollectionRole { get; }

@@ -160,6 +160,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             frame.Cursor.InvokeDepth = state.InvokeDepth;
             frame.Cursor.Status = state.Status;
             frame.TargetList = state.TargetList;
+            frame.IntIdList = state.IntIdList;
         }
 
         public static GraphSliceResult ExecuteSlice(
@@ -191,6 +192,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 ref frame.Cursor,
                 budgetSteps);
             frame.TargetList = state.TargetList;
+            frame.IntIdList = state.IntIdList;
             return result;
         }
 
