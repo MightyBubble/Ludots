@@ -1,55 +1,630 @@
 {
   "id": "east_asia.waterways",
-  "sampleStepCm": 500000,
-  "defaultVisualWidthMeters": 8.0,
+  "sampleStepCm": 250000,
+  "defaultVisualWidthMeters": 6.0,
   "nodes": [
-    { "id": "yangtze_0", "xcm": -150799815, "ycm": 8219532, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_1", "xcm": -103622599, "ycm": -4462003, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_2", "xcm": -66254540, "ycm": -38076896, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_3", "xcm": -45847331, "ycm": -44378603, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_4", "xcm": -29184453, "ycm": -45134222, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_5", "xcm": 8241239, "ycm": -35799718, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_6", "xcm": 35426854, "ycm": -35074062, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_7", "xcm": 57641883, "ycm": -33808723, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_8", "xcm": 71124549, "ycm": -17945825, "kind": "Normal", "tags": [] },
-    { "id": "yangtze_9", "xcm": 93769704, "ycm": -23530160, "kind": "Normal", "tags": [] },
-    { "id": "yellow_0", "xcm": -108771754, "ycm": 16144524, "kind": "Normal", "tags": [] },
-    { "id": "yellow_1", "xcm": -76828292, "ycm": 22204462, "kind": "Normal", "tags": [] },
-    { "id": "yellow_2", "xcm": -47683152, "ycm": 19821822, "kind": "Normal", "tags": [] },
-    { "id": "yellow_3", "xcm": -26408076, "ycm": 33604397, "kind": "Normal", "tags": [] },
-    { "id": "yellow_4", "xcm": -7248657, "ycm": 62762159, "kind": "Normal", "tags": [] },
-    { "id": "yellow_5", "xcm": 7248657, "ycm": 62762159, "kind": "Normal", "tags": [] },
-    { "id": "yellow_6", "xcm": 19485964, "ycm": 8709545, "kind": "Normal", "tags": [] },
-    { "id": "yellow_7", "xcm": 28128124, "ycm": 7000993, "kind": "Normal", "tags": [] },
-    { "id": "yellow_8", "xcm": 64068875, "ycm": 35882704, "kind": "Normal", "tags": [] },
-    { "id": "taihu_0", "xcm": 85455596, "ycm": -24948020, "kind": "Normal", "tags": [] },
-    { "id": "taihu_1", "xcm": 84993664, "ycm": -23909774, "kind": "Normal", "tags": [] },
-    { "id": "taihu_2", "xcm": 83960354, "ycm": -23222251, "kind": "Normal", "tags": [] },
-    { "id": "taihu_3", "xcm": 82632395, "ycm": -23068273, "kind": "Normal", "tags": [] },
-    { "id": "taihu_4", "xcm": 81363346, "ycm": -23488628, "kind": "Normal", "tags": [] },
-    { "id": "taihu_5", "xcm": 80491124, "ycm": -24371605, "kind": "Normal", "tags": [] },
-    { "id": "taihu_6", "xcm": 80249581, "ycm": -25482007, "kind": "Normal", "tags": [] },
-    { "id": "taihu_7", "xcm": 80705707, "ycm": -26522782, "kind": "Normal", "tags": [] },
-    { "id": "taihu_8", "xcm": 81739410, "ycm": -27214132, "kind": "Normal", "tags": [] },
-    { "id": "taihu_9", "xcm": 83073567, "ycm": -27369407, "kind": "Normal", "tags": [] },
-    { "id": "taihu_10", "xcm": 84348421, "ycm": -26946523, "kind": "Normal", "tags": [] },
-    { "id": "taihu_11", "xcm": 85220251, "ycm": -26059720, "kind": "Normal", "tags": [] },
-    { "id": "taihu_12", "xcm": 85455596, "ycm": -24948020, "kind": "Normal", "tags": [] }
+    {
+      "id": "yangtze_0",
+      "xcm": -143416769,
+      "ycm": 5918744,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_1",
+      "xcm": -130566168,
+      "ycm": 493935,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_2",
+      "xcm": -118617708,
+      "ycm": -12591901,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_3",
+      "xcm": -106563004,
+      "ycm": -27748586,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_4",
+      "xcm": -96642907,
+      "ycm": -49253753,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_5",
+      "xcm": -85603125,
+      "ycm": -75141829,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_6",
+      "xcm": -73996747,
+      "ycm": -89571944,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_7",
+      "xcm": -64291853,
+      "ycm": -92497199,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_8",
+      "xcm": -52084298,
+      "ycm": -68546313,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_9",
+      "xcm": -43359251,
+      "ycm": -67857303,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_10",
+      "xcm": -33490831,
+      "ycm": -61507310,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_11",
+      "xcm": -23556046,
+      "ycm": -47166270,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_12",
+      "xcm": -10353058,
+      "ycm": -46278341,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_13",
+      "xcm": 4717361,
+      "ycm": -48577867,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_14",
+      "xcm": 12264841,
+      "ycm": -48509460,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_15",
+      "xcm": 20829649,
+      "ycm": -51738673,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_16",
+      "xcm": 30294906,
+      "ycm": -51481251,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_17",
+      "xcm": 40629961,
+      "ycm": -49399974,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_18",
+      "xcm": 52363363,
+      "ycm": -56147773,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_19",
+      "xcm": 61282172,
+      "ycm": -46583354,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_20",
+      "xcm": 68149217,
+      "ycm": -37063163,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_21",
+      "xcm": 76067648,
+      "ycm": -30783457,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_22",
+      "xcm": 83367262,
+      "ycm": -29016332,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_23",
+      "xcm": 91565214,
+      "ycm": -27099425,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_24",
+      "xcm": 102323591,
+      "ycm": -31639222,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yangtze_25",
+      "xcm": 110132736,
+      "ycm": -34146173,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_0",
+      "xcm": -125139996,
+      "ycm": 6571696,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_1",
+      "xcm": -111523042,
+      "ycm": 7028477,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_2",
+      "xcm": -97948479,
+      "ycm": 7695163,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_3",
+      "xcm": -83554042,
+      "ycm": 17589831,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_4",
+      "xcm": -71400944,
+      "ycm": 25601737,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_5",
+      "xcm": -60651696,
+      "ycm": 29321581,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_6",
+      "xcm": -54648474,
+      "ycm": 14163933,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_7",
+      "xcm": -45309432,
+      "ycm": 23838640,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_8",
+      "xcm": -34312580,
+      "ycm": 36934708,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_9",
+      "xcm": -23702946,
+      "ycm": 47898702,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_10",
+      "xcm": -12494184,
+      "ycm": 61232123,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_11",
+      "xcm": -1652299,
+      "ycm": 67919217,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_12",
+      "xcm": 8284111,
+      "ycm": 65699924,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_13",
+      "xcm": 16749501,
+      "ycm": 56783830,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_14",
+      "xcm": 20426940,
+      "ycm": 43283817,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_15",
+      "xcm": 15587689,
+      "ycm": 28456926,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_16",
+      "xcm": 7065048,
+      "ycm": 11353154,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_17",
+      "xcm": 2690471,
+      "ycm": -2260266,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_18",
+      "xcm": 13486064,
+      "ycm": -4426538,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_19",
+      "xcm": 26900661,
+      "ycm": -1857952,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_20",
+      "xcm": 40292033,
+      "ycm": -219096,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_21",
+      "xcm": 51523603,
+      "ycm": 7166925,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_22",
+      "xcm": 59851629,
+      "ycm": 15640123,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_23",
+      "xcm": 66360314,
+      "ycm": 22927183,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_24",
+      "xcm": 73522704,
+      "ycm": 31464252,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "yellow_25",
+      "xcm": 78387541,
+      "ycm": 35307760,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_0",
+      "xcm": 99218136,
+      "ycm": -37652671,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_1",
+      "xcm": 98975780,
+      "ycm": -36739198,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_2",
+      "xcm": 98464770,
+      "ycm": -35918277,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_3",
+      "xcm": 97720491,
+      "ycm": -35245475,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_4",
+      "xcm": 96793838,
+      "ycm": -34766188,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_5",
+      "xcm": 95747697,
+      "ycm": -34512675,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_6",
+      "xcm": 94652736,
+      "ycm": -34501957,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_7",
+      "xcm": 93582751,
+      "ycm": -34734736,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_8",
+      "xcm": 92609858,
+      "ycm": -35195344,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_9",
+      "xcm": 91799798,
+      "ycm": -35852766,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_10",
+      "xcm": 91207601,
+      "ycm": -36662653,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_11",
+      "xcm": 90873883,
+      "ycm": -37570219,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_12",
+      "xcm": 90822015,
+      "ycm": -38513870,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_13",
+      "xcm": 91056355,
+      "ycm": -39429332,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_14",
+      "xcm": 91561734,
+      "ycm": -40254022,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_15",
+      "xcm": 92304276,
+      "ycm": -40931362,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_16",
+      "xcm": 93233551,
+      "ycm": -41414739,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_17",
+      "xcm": 94285970,
+      "ycm": -41670800,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_18",
+      "xcm": 95389184,
+      "ycm": -41681838,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_19",
+      "xcm": 96467185,
+      "ycm": -41447070,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_20",
+      "xcm": 97445708,
+      "ycm": -40982693,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_21",
+      "xcm": 98257505,
+      "ycm": -40320733,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_22",
+      "xcm": 98847081,
+      "ycm": -39506757,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_23",
+      "xcm": 99174520,
+      "ycm": -38596644,
+      "kind": "Normal",
+      "tags": []
+    },
+    {
+      "id": "taihu_24",
+      "xcm": 99218136,
+      "ycm": -37652671,
+      "kind": "Normal",
+      "tags": []
+    }
   ],
   "segments": [
     {
       "id": "yangtze",
       "points": [
-        { "nodeId": "yangtze_0" },
-        { "nodeId": "yangtze_1" },
-        { "nodeId": "yangtze_2" },
-        { "nodeId": "yangtze_3" },
-        { "nodeId": "yangtze_4" },
-        { "nodeId": "yangtze_5" },
-        { "nodeId": "yangtze_6" },
-        { "nodeId": "yangtze_7" },
-        { "nodeId": "yangtze_8" },
-        { "nodeId": "yangtze_9" }
+        {
+          "nodeId": "yangtze_0"
+        },
+        {
+          "nodeId": "yangtze_1"
+        },
+        {
+          "nodeId": "yangtze_2"
+        },
+        {
+          "nodeId": "yangtze_3"
+        },
+        {
+          "nodeId": "yangtze_4"
+        },
+        {
+          "nodeId": "yangtze_5"
+        },
+        {
+          "nodeId": "yangtze_6"
+        },
+        {
+          "nodeId": "yangtze_7"
+        },
+        {
+          "nodeId": "yangtze_8"
+        },
+        {
+          "nodeId": "yangtze_9"
+        },
+        {
+          "nodeId": "yangtze_10"
+        },
+        {
+          "nodeId": "yangtze_11"
+        },
+        {
+          "nodeId": "yangtze_12"
+        },
+        {
+          "nodeId": "yangtze_13"
+        },
+        {
+          "nodeId": "yangtze_14"
+        },
+        {
+          "nodeId": "yangtze_15"
+        },
+        {
+          "nodeId": "yangtze_16"
+        },
+        {
+          "nodeId": "yangtze_17"
+        },
+        {
+          "nodeId": "yangtze_18"
+        },
+        {
+          "nodeId": "yangtze_19"
+        },
+        {
+          "nodeId": "yangtze_20"
+        },
+        {
+          "nodeId": "yangtze_21"
+        },
+        {
+          "nodeId": "yangtze_22"
+        },
+        {
+          "nodeId": "yangtze_23"
+        },
+        {
+          "nodeId": "yangtze_24"
+        },
+        {
+          "nodeId": "yangtze_25"
+        }
       ],
       "sampleStepCm": 0,
       "direction": "Bidirectional",
@@ -62,22 +637,91 @@
         "Water.Yangtze"
       ],
       "depthCm": 1800,
-      "widthCm": 2500000,
+      "widthCm": 400000,
       "laneCount": 0,
-      "visualWidthMeters": 12.0
+      "visualWidthMeters": 6.0
     },
     {
       "id": "yellow_river",
       "points": [
-        { "nodeId": "yellow_0" },
-        { "nodeId": "yellow_1" },
-        { "nodeId": "yellow_2" },
-        { "nodeId": "yellow_3" },
-        { "nodeId": "yellow_4" },
-        { "nodeId": "yellow_5" },
-        { "nodeId": "yellow_6" },
-        { "nodeId": "yellow_7" },
-        { "nodeId": "yellow_8" }
+        {
+          "nodeId": "yellow_0"
+        },
+        {
+          "nodeId": "yellow_1"
+        },
+        {
+          "nodeId": "yellow_2"
+        },
+        {
+          "nodeId": "yellow_3"
+        },
+        {
+          "nodeId": "yellow_4"
+        },
+        {
+          "nodeId": "yellow_5"
+        },
+        {
+          "nodeId": "yellow_6"
+        },
+        {
+          "nodeId": "yellow_7"
+        },
+        {
+          "nodeId": "yellow_8"
+        },
+        {
+          "nodeId": "yellow_9"
+        },
+        {
+          "nodeId": "yellow_10"
+        },
+        {
+          "nodeId": "yellow_11"
+        },
+        {
+          "nodeId": "yellow_12"
+        },
+        {
+          "nodeId": "yellow_13"
+        },
+        {
+          "nodeId": "yellow_14"
+        },
+        {
+          "nodeId": "yellow_15"
+        },
+        {
+          "nodeId": "yellow_16"
+        },
+        {
+          "nodeId": "yellow_17"
+        },
+        {
+          "nodeId": "yellow_18"
+        },
+        {
+          "nodeId": "yellow_19"
+        },
+        {
+          "nodeId": "yellow_20"
+        },
+        {
+          "nodeId": "yellow_21"
+        },
+        {
+          "nodeId": "yellow_22"
+        },
+        {
+          "nodeId": "yellow_23"
+        },
+        {
+          "nodeId": "yellow_24"
+        },
+        {
+          "nodeId": "yellow_25"
+        }
       ],
       "sampleStepCm": 0,
       "direction": "Bidirectional",
@@ -90,31 +734,93 @@
         "Water.YellowRiver"
       ],
       "depthCm": 900,
-      "widthCm": 1800000,
+      "widthCm": 250000,
       "laneCount": 0,
-      "visualWidthMeters": 9.0
+      "visualWidthMeters": 4.0
     },
     {
       "id": "taihu",
       "points": [
-        { "nodeId": "taihu_0" },
-        { "nodeId": "taihu_1" },
-        { "nodeId": "taihu_2" },
-        { "nodeId": "taihu_3" },
-        { "nodeId": "taihu_4" },
-        { "nodeId": "taihu_5" },
-        { "nodeId": "taihu_6" },
-        { "nodeId": "taihu_7" },
-        { "nodeId": "taihu_8" },
-        { "nodeId": "taihu_9" },
-        { "nodeId": "taihu_10" },
-        { "nodeId": "taihu_11" },
-        { "nodeId": "taihu_12" }
+        {
+          "nodeId": "taihu_0"
+        },
+        {
+          "nodeId": "taihu_1"
+        },
+        {
+          "nodeId": "taihu_2"
+        },
+        {
+          "nodeId": "taihu_3"
+        },
+        {
+          "nodeId": "taihu_4"
+        },
+        {
+          "nodeId": "taihu_5"
+        },
+        {
+          "nodeId": "taihu_6"
+        },
+        {
+          "nodeId": "taihu_7"
+        },
+        {
+          "nodeId": "taihu_8"
+        },
+        {
+          "nodeId": "taihu_9"
+        },
+        {
+          "nodeId": "taihu_10"
+        },
+        {
+          "nodeId": "taihu_11"
+        },
+        {
+          "nodeId": "taihu_12"
+        },
+        {
+          "nodeId": "taihu_13"
+        },
+        {
+          "nodeId": "taihu_14"
+        },
+        {
+          "nodeId": "taihu_15"
+        },
+        {
+          "nodeId": "taihu_16"
+        },
+        {
+          "nodeId": "taihu_17"
+        },
+        {
+          "nodeId": "taihu_18"
+        },
+        {
+          "nodeId": "taihu_19"
+        },
+        {
+          "nodeId": "taihu_20"
+        },
+        {
+          "nodeId": "taihu_21"
+        },
+        {
+          "nodeId": "taihu_22"
+        },
+        {
+          "nodeId": "taihu_23"
+        },
+        {
+          "nodeId": "taihu_24"
+        }
       ],
       "sampleStepCm": 0,
       "direction": "Bidirectional",
       "flowDirection": "None",
-      "areaId": "Transport.Area.Lake",
+      "areaId": "Transport.Area.River",
       "tags": [
         "Transport.Area.Water",
         "Transport.Area.Lake",
@@ -124,7 +830,7 @@
       "depthCm": 400,
       "widthCm": 0,
       "laneCount": 0,
-      "visualWidthMeters": 20.0
+      "visualWidthMeters": 12.0
     }
   ]
 }

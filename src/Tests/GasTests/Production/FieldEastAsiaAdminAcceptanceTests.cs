@@ -29,12 +29,64 @@ public sealed class FieldEastAsiaAdminAcceptanceTests
         "FieldEastAsiaAdminMod",
     };
 
+    private static readonly string[] ExpectedRegionNames =
+    {
+        "admin.shanghai",
+        "admin.hainan",
+        "admin.ningxia",
+        "admin.chongqing",
+        "admin.liaoning",
+        "admin.jilin",
+        "admin.heilongjiang",
+        "admin.shandong",
+        "admin.jiangsu",
+        "admin.zhejiang",
+        "admin.fujian",
+        "admin.anhui",
+        "admin.jiangxi",
+        "admin.henan",
+        "admin.hubei",
+        "admin.hunan",
+        "admin.guangdong",
+        "admin.guangxi",
+        "admin.hebei",
+        "admin.shanxi",
+        "admin.shaanxi",
+        "admin.guizhou",
+        "admin.yunnan",
+        "admin.sichuan",
+        "admin.gansu_east",
+        "admin.neimenggu_east",
+    };
+
     private static readonly int[] ExpectedRegionCellCounts =
     {
-        1176,
-        1594,
-        2116,
-        3142,
+        11,
+        42,
+        48,
+        90,
+        184,
+        197,
+        351,
+        164,
+        121,
+        109,
+        115,
+        59,
+        107,
+        127,
+        97,
+        129,
+        192,
+        166,
+        118,
+        83,
+        136,
+        85,
+        277,
+        180,
+        70,
+        213,
     };
 
     [Test]
@@ -53,16 +105,16 @@ public sealed class FieldEastAsiaAdminAcceptanceTests
         Assert.That(layerData, Is.InstanceOf<DiscreteIdFieldLayerData>());
         var layer = (DiscreteIdFieldLayerData)layerData;
 
-        Assert.That(layer.Regions.Count, Is.GreaterThanOrEqualTo(3));
+        Assert.That(layer.Regions.Count, Is.EqualTo(ExpectedRegionNames.Length));
         Assert.That(session.RegionIndex!.Count, Is.EqualTo(ExpectedRegionCellCounts.Length));
-        Assert.That(layer.Field.NonDefaultCount, Is.GreaterThan(100));
+        Assert.That(layer.Field.NonDefaultCount, Is.EqualTo(3471));
 
         var regionCells = new FieldCell2D[layer.Field.NonDefaultCount];
         int expectedTotal = 0;
         for (int regionIndex = 0; regionIndex < ExpectedRegionCellCounts.Length; regionIndex++)
         {
             int regionId = regionIndex + 1;
-            Assert.That(layer.Regions.GetName(regionId), Is.EqualTo($"admin.{(char)('a' + regionIndex)}"));
+            Assert.That(layer.Regions.GetName(regionId), Is.EqualTo(ExpectedRegionNames[regionIndex]));
             Assert.That(
                 session.RegionIndex.TryResolve(layer.LayerId, regionId, out Entity regionEntity),
                 Is.True);
