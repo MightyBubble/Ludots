@@ -19,6 +19,8 @@ namespace Ludots.Raylib.Render
         private const int OverviewTextureMinLongEdgePixels = 1024;
         private const int OverviewTextureMaxLongEdgePixels = 3072;
         private const int OverviewTextureScreenScale = 2;
+        private const Rl.MaterialMapIndex NavWalkabilityMaterialSlot = Rl.MaterialMapIndex.MATERIAL_MAP_HEIGHT;
+        private const Rl.ShaderLocationIndex NavWalkabilityShaderSlot = Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT;
 
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
@@ -44,17 +46,24 @@ namespace Ludots.Raylib.Render
         private int _locUseControlMap = -1;
         private int _locControlBounds = -1;
         private int _locControlMap = -1;
+        private int _locUseNavWalkability = -1;
+        private int _locNavWalkabilityBounds = -1;
+        private int _locNavWalkabilityMap = -1;
         private TerrainAlbedoDescriptor? _activeAlbedo;
         private string? _activeAlbedoMapId;
         private IVisualHeightmap? _stampHeightSampleSource;
         private readonly Texture2D[] _albedoTextures = new Texture2D[TerrainAlbedoLayerCount];
         private Texture2D _controlMapTexture;
+        private Texture2D _navWalkabilityTexture;
         private bool _ownsAlbedoTextures;
         private bool _ownsControlMapTexture;
         private bool _albedoEnabled;
         private bool _controlMapEnabled;
+        private bool _navWalkabilityEnabled;
         private float _terrainTileScale = 0.25f;
         private Vector4 _controlBoundsMeters;
+        private Vector4 _navWalkabilityBoundsCm;
+        private string? _navWalkabilityTextureUri;
 
         public int DrawnChunkCountLastFrame { get; private set; }
 
@@ -71,6 +80,8 @@ namespace Ludots.Raylib.Render
         public float VisibleRadiusCm { get; set; } = 120_000f;
 
         public bool TerrainAlbedoActive => _albedoEnabled;
+
+        public bool NavWalkabilityOverlayActive => _navWalkabilityEnabled;
 
         private float? _absoluteColorSeaLevelCm;
         private float _absoluteColorPeakSpanCm = 3600f;
@@ -241,6 +252,82 @@ namespace Ludots.Raylib.Render
             {
                 DetachAlbedoMaterialMaps();
                 ApplyAlbedoUniforms();
+            }
+        }
+
+        public void SetNavWalkabilityOverlay(
+            string textureUri,
+            WorldAabbCm bounds,
+            bool enabled)
+        {
+            if (!enabled)
+            {
+                ClearNavWalkabilityOverlay();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(textureUri) ||
+                !string.Equals(textureUri, textureUri.Trim(), StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"{nameof(SetNavWalkabilityOverlay)} texture URI must be non-empty without surrounding whitespace.",
+                    nameof(textureUri));
+            }
+
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(bounds),
+                    bounds,
+                    $"{nameof(SetNavWalkabilityOverlay)} bounds must have positive extents.");
+            }
+
+            long right = (long)bounds.X + bounds.Width;
+            long bottom = (long)bounds.Y + bounds.Height;
+            if (right > int.MaxValue || bottom > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(bounds),
+                    bounds,
+                    $"{nameof(SetNavWalkabilityOverlay)} bounds maxima must fit Int32 centimeters.");
+            }
+
+            Vector4 boundsCm = new(bounds.Left, bounds.Top, (int)right, (int)bottom);
+            if (_navWalkabilityTexture.id != 0 &&
+                string.Equals(_navWalkabilityTextureUri, textureUri, StringComparison.Ordinal))
+            {
+                _navWalkabilityBoundsCm = boundsCm;
+                _navWalkabilityEnabled = true;
+                ApplyNavWalkabilityMaterialMap();
+                ApplyNavWalkabilityUniforms();
+                return;
+            }
+
+            Texture2D loaded = LoadNavWalkabilityTextureOrThrow(textureUri);
+            UnloadNavWalkabilityTexture();
+            _navWalkabilityTexture = loaded;
+            _navWalkabilityTextureUri = textureUri;
+            _navWalkabilityBoundsCm = boundsCm;
+            _navWalkabilityEnabled = true;
+            ApplyNavWalkabilityMaterialMap();
+            ApplyNavWalkabilityUniforms();
+        }
+
+        public void ClearNavWalkabilityOverlay()
+        {
+            if (!_navWalkabilityEnabled && _navWalkabilityTexture.id == 0)
+            {
+                return;
+            }
+
+            UnloadNavWalkabilityTexture();
+            _navWalkabilityEnabled = false;
+            _navWalkabilityBoundsCm = default;
+            _navWalkabilityTextureUri = null;
+            if (_initialized)
+            {
+                _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
+                ApplyNavWalkabilityUniforms();
             }
         }
 
@@ -448,6 +535,9 @@ namespace Ludots.Raylib.Render
             _locUseControlMap = Rl.GetShaderLocation(_terrainShader, "uUseControlMap");
             _locControlBounds = Rl.GetShaderLocation(_terrainShader, "uControlBounds");
             _locControlMap = Rl.GetShaderLocation(_terrainShader, "uControlMap");
+            _locUseNavWalkability = Rl.GetShaderLocation(_terrainShader, "uUseNavWalkability");
+            _locNavWalkabilityBounds = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityBounds");
+            _locNavWalkabilityMap = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityMap");
             int locSand = Rl.GetShaderLocation(_terrainShader, "texture0");
             int locGrass = Rl.GetShaderLocation(_terrainShader, "texture1");
             int locDirt = Rl.GetShaderLocation(_terrainShader, "texture2");
@@ -458,13 +548,16 @@ namespace Ludots.Raylib.Render
                 _locUseControlMap < 0 ||
                 _locControlBounds < 0 ||
                 _locControlMap < 0 ||
+                _locUseNavWalkability < 0 ||
+                _locNavWalkabilityBounds < 0 ||
+                _locNavWalkabilityMap < 0 ||
                 locSand < 0 ||
                 locGrass < 0 ||
                 locDirt < 0 ||
                 locRock < 0)
             {
                 throw new InvalidOperationException(
-                    "Visual heightmap terrain shader is missing albedo uniforms/samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/texture0..texture3).");
+                    "Visual heightmap terrain shader is missing albedo/nav uniforms or samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/uUseNavWalkability/uNavWalkabilityBounds/uNavWalkabilityMap/texture0..texture3).");
             }
 
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
@@ -478,9 +571,12 @@ namespace Ludots.Raylib.Render
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locRock;
             // DrawMesh binds MATERIAL_MAP_* slots; wire occlusion map slot to explicit uControlMap sampler.
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = _locControlMap;
+            _terrainShader.locs[(int)NavWalkabilityShaderSlot] = _locNavWalkabilityMap;
 
             _initialized = true;
             ApplyAlbedoUniforms();
+            ApplyNavWalkabilityMaterialMap();
+            ApplyNavWalkabilityUniforms();
             ApplyTerrainShadow();
             if (_frameLighting != null)
             {
@@ -500,6 +596,7 @@ namespace Ludots.Raylib.Render
             _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, camera.position);
             ApplyTerrainShadow();
             ApplyAlbedoUniforms();
+            ApplyNavWalkabilityUniforms();
         }
 
         private void ApplySkyIrradianceUniforms()
@@ -572,6 +669,47 @@ namespace Ludots.Raylib.Render
             else
             {
                 _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_OCCLUSION].texture = default;
+            }
+        }
+
+        private void ApplyNavWalkabilityUniforms()
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            int useNavWalkability = _navWalkabilityEnabled ? 1 : 0;
+            Vector4 bounds = _navWalkabilityBoundsCm;
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseNavWalkability,
+                &useNavWalkability,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locNavWalkabilityBounds,
+                &bounds,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
+        private void ApplyNavWalkabilityMaterialMap()
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            if (_navWalkabilityEnabled && _navWalkabilityTexture.id != 0)
+            {
+                Rl.SetMaterialTexture(
+                    ref _terrainMaterial,
+                    (int)NavWalkabilityMaterialSlot,
+                    _navWalkabilityTexture);
+            }
+            else
+            {
+                _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
             }
         }
 
@@ -680,6 +818,42 @@ namespace Ludots.Raylib.Render
             return texture;
         }
 
+        private Texture2D LoadNavWalkabilityTextureOrThrow(string uri)
+        {
+            if (_assetPaths == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot load nav walkability texture without an asset path resolver.");
+            }
+
+            if (!_assetPaths.TryResolveFullPath(uri, out string fullPath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot resolve nav walkability texture URI '{uri}'.");
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} nav walkability texture file missing: uri='{uri}' fullPath='{fullPath}'.");
+            }
+
+            EnsureInitialized();
+            Texture2D texture = Rl.LoadTexture(fullPath);
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                if (texture.id != 0)
+                {
+                    Rl.UnloadTexture(texture);
+                }
+
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} LoadTexture failed for nav walkability texture uri='{uri}' fullPath='{fullPath}'.");
+            }
+
+            return texture;
+        }
+
         private void UnloadOwnedAlbedoTextures()
         {
             if (_ownsAlbedoTextures)
@@ -715,6 +889,16 @@ namespace Ludots.Raylib.Render
             _controlMapTexture = default;
             _ownsControlMapTexture = false;
             _controlMapEnabled = false;
+        }
+
+        private void UnloadNavWalkabilityTexture()
+        {
+            if (_navWalkabilityTexture.id != 0)
+            {
+                Rl.UnloadTexture(_navWalkabilityTexture);
+            }
+
+            _navWalkabilityTexture = default;
         }
 
         private static void ValidateAlbedoTexture(Texture2D texture, string layerName)
@@ -1289,6 +1473,7 @@ namespace Ludots.Raylib.Render
             }
 
             _chunks.Clear();
+            ClearNavWalkabilityOverlay();
             ClearTerrainAlbedo();
             _albedoDescriptors.Clear();
             if (!_initialized)

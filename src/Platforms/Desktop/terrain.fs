@@ -19,11 +19,14 @@ uniform float uTerrainTileScale;
 uniform int uAntiTile;
 uniform int uUseControlMap;
 uniform vec4 uControlBounds;
+uniform int uUseNavWalkability;
+uniform vec4 uNavWalkabilityBounds;
 uniform sampler2D texture0;
 uniform sampler2D texture1;
 uniform sampler2D texture2;
 uniform sampler2D texture3;
 uniform sampler2D uControlMap;
+uniform sampler2D uNavWalkabilityMap;
 // ludo:include shadow_sampling.glsl.inc
 
 out vec4 finalColor;
@@ -132,7 +135,6 @@ vec4 SampleControlWeights(vec3 worldPos)
     return w / sum;
 }
 
-
 void main()
 {
     vec3 albedo = fragColor.rgb;
@@ -146,6 +148,20 @@ void main()
         vec3 textured = BlendLayerAlbedos(uv, weights);
         // Keep biome tint without crushing tiling detail (dark rock vertex RGB was washing maps flat).
         albedo = textured * (0.55 + 0.45 * fragColor.rgb);
+    }
+
+    if (uUseNavWalkability != 0)
+    {
+        vec2 worldCm = fragPos.xz * 100.0;
+        vec2 boundsMin = uNavWalkabilityBounds.xy;
+        vec2 boundsMax = uNavWalkabilityBounds.zw;
+        if (all(greaterThanEqual(worldCm, boundsMin)) && all(lessThanEqual(worldCm, boundsMax)))
+        {
+            vec2 uv = (worldCm - boundsMin) / max(boundsMax - boundsMin, vec2(1e-5));
+            uv.y = 1.0 - uv.y;
+            vec4 navTint = texture(uNavWalkabilityMap, clamp(uv, vec2(0.0), vec2(1.0)));
+            albedo = mix(albedo, navTint.rgb, clamp(navTint.a, 0.0, 1.0));
+        }
     }
 
     vec3 N = normalize(fragNormal);

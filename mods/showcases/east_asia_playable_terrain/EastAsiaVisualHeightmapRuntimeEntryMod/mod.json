@@ -4,7 +4,8 @@
   "description": "Pure-runtime launcher entry for the East Asia continuous VisualHeightmap map (no terrain editor).",
   "priority": 0,
   "dependencies": {
-    "EastAsiaPlayableTerrainMod": "^1.0.0"
+    "EastAsiaPlayableTerrainMod": "^1.0.0",
+    "EastAsiaNavMeshDebugMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": ["east_asia", "terrain", "visual-heightmap", "entry", "runtime"]

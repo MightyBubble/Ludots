@@ -5,6 +5,7 @@
   "priority": 0,
   "dependencies": {
     "EastAsiaPlayableTerrainMod": "^1.0.0",
+    "EastAsiaNavMeshDebugMod": "^1.0.0",
     "VisualTerrainEditorMod": "^1.0.0"
   },
   "author": "Ludots Team",

@@ -408,6 +408,7 @@ namespace Ludots.Adapter.Raylib
                     : 0f;
                 SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
                 int frameIndex = 0;
+                string? navWalkabilityOverlayMapId = null;
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
@@ -598,6 +599,12 @@ namespace Ludots.Adapter.Raylib
                         skyEnvironment.EnsureActiveForMap(activeMapId);
                         waterPass.EnsureActiveForMap(activeMapId);
                         visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
+                        ConfigureNavWalkabilityOverlay(
+                            engine.CurrentMapSession,
+                            engine.VFS,
+                            visualHeightmapRenderer,
+                            renderDebug.DrawNavWalkabilityTexture,
+                            ref navWalkabilityOverlayMapId);
                         Color frameClearColor = skyEnvironment.IsActive
                             ? skyEnvironment.ResolveClearColor()
                             : (activeMapRequestsDeepBackground
@@ -1544,6 +1551,38 @@ namespace Ludots.Adapter.Raylib
             }
 
             throw new InvalidOperationException($"Required service missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
+        }
+
+        internal static void ConfigureNavWalkabilityOverlay(
+            MapSession? session,
+            IRenderAssetPathResolver assetPaths,
+            RaylibVisualHeightmapRenderer renderer,
+            bool enabled,
+            ref string? configuredMapId)
+        {
+            if (!enabled)
+            {
+                renderer.ClearNavWalkabilityOverlay();
+                configuredMapId = null;
+                return;
+            }
+
+            MapConfig mapConfig = session?.MapConfig
+                ?? throw new InvalidOperationException(
+                    "DrawNavWalkabilityTexture requires an active map session.");
+            if (renderer.NavWalkabilityOverlayActive &&
+                string.Equals(configuredMapId, mapConfig.Id, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            NavWalkabilityOverlayDescriptor descriptor =
+                NavWalkabilityOverlayDescriptorResolver.ResolveOrThrow(mapConfig, assetPaths);
+            renderer.SetNavWalkabilityOverlay(
+                descriptor.TextureUri,
+                descriptor.BoundsCm,
+                enabled: true);
+            configuredMapId = mapConfig.Id;
         }
 
         private static UiInputFrameResult UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath, SyntheticInputDevice? syntheticInput)
