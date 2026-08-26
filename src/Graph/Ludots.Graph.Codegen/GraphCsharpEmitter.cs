@@ -137,6 +137,11 @@ namespace Ludots.Graph.Codegen
             sb.AppendLine("    {");
             sb.AppendLine("        GasGraphOpHandlerTable.Instance.RunToHalt(ref state, Instructions);");
             sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    public static Ludots.Core.GraphRuntime.GraphSliceResult ExecuteSlice(ref GraphExecutionState state, ref Ludots.Core.GraphRuntime.GraphExecutionCursor cursor, int budgetSteps)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        return GasGraphOpHandlerTable.Instance.RunSlice(ref state, Instructions, ref cursor, budgetSteps);");
+            sb.AppendLine("    }");
             sb.AppendLine("}");
             return sb.ToString();
         }
@@ -245,6 +250,11 @@ namespace Ludots.Graph.Codegen
                 .AppendLine("(ref GraphExecutionState state)");
             source.AppendLine("    {");
             source.Append(stateBody);
+            source.AppendLine("    }");
+            source.AppendLine();
+            source.AppendLine("    public static Ludots.Core.GraphRuntime.GraphSliceResult ExecuteSlice(ref GraphExecutionState state, ref Ludots.Core.GraphRuntime.GraphExecutionCursor cursor, int budgetSteps)");
+            source.AppendLine("    {");
+            source.AppendLine("        return GasGraphOpHandlerTable.Instance.RunSlice(ref state, Instructions, ref cursor, budgetSteps);");
             source.AppendLine("    }");
             if (tightBody != null)
             {

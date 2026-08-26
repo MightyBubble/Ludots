@@ -13,5 +13,6 @@
   "windowWidth": 1600,
   "windowHeight": 900,
   "targetFps": 60,
-  "panelSkin": "markup"
+  "panelSkin": "markup",
+  "graphExecutionBackend": "codegen"
 }

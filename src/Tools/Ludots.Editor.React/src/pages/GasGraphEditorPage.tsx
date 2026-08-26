@@ -166,6 +166,7 @@ type DebugMount = {
   graphName: string;
   entryLabel: string;
   event: string;
+  executionBackend?: string;
   mode: string;
   latestSequence: number;
   cursor: { pc: number; steps: number; status: string; suspended: boolean };
@@ -2475,12 +2476,18 @@ export const GasGraphEditorPage: React.FC = () => {
               modId={modId}
               graphId={graphId}
               graphBody={flowToGraph(graph, nodes, edges)}
-              executionBackendLabel="Interpret"
+              executionBackendLabel={
+                debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+                ?? debugMounts[0]?.executionBackend
+                ?? 'Interpret'
+              }
             />
           ) : null}
 
           <div className="border-t border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-300">
-            Live Debug
+            Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+              ?? debugMounts[0]?.executionBackend
+              ?? 'Interpret'}
           </div>
           <div className="space-y-2 border-t border-slate-800 p-3 text-xs">
             <div className="flex items-center gap-2">

@@ -36,6 +36,7 @@ namespace Ludots.Graph.Codegen
         private GraphGeneratedAssemblyLoadContext? _activeContext;
         private Assembly? _activeAssembly;
         private GraphGeneratedExecute? _activeExecute;
+        private GraphGeneratedExecuteSlice? _activeExecuteSlice;
         private Func<int>? _activeTightExecute;
         private string? _activeMarker;
         private string? _activeSource;
@@ -49,6 +50,17 @@ namespace Ludots.Graph.Codegen
                 lock (_gate)
                 {
                     return _activeExecute;
+                }
+            }
+        }
+
+        public GraphGeneratedExecuteSlice? ActiveExecuteSlice
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _activeExecuteSlice;
                 }
             }
         }
@@ -159,12 +171,14 @@ namespace Ludots.Graph.Codegen
                 "Ludots.Graph.Generated." + assemblyMarker);
             Assembly nextAssembly;
             GraphGeneratedExecute nextExecute;
+            GraphGeneratedExecuteSlice? nextExecuteSlice;
             Func<int>? nextTightExecute;
             try
             {
                 using var peStream = new MemoryStream(peImage, writable: false);
                 nextAssembly = nextContext.LoadFromStream(peStream);
                 nextExecute = BindExecute(nextAssembly);
+                nextExecuteSlice = BindExecuteSlice(nextAssembly);
                 nextTightExecute = TryBindTightExecute(nextAssembly, expectTightEntry);
             }
             catch
@@ -180,6 +194,7 @@ namespace Ludots.Graph.Codegen
                 _activeContext = nextContext;
                 _activeAssembly = nextAssembly;
                 _activeExecute = nextExecute;
+                _activeExecuteSlice = nextExecuteSlice;
                 _activeTightExecute = nextTightExecute;
                 _activeMarker = assemblyMarker;
                 _activeSource = source;
@@ -204,6 +219,7 @@ namespace Ludots.Graph.Codegen
                 _activeContext = null;
                 _activeAssembly = null;
                 _activeExecute = null;
+                _activeExecuteSlice = null;
                 _activeTightExecute = null;
                 _activeMarker = null;
                 _activeSource = null;
@@ -223,6 +239,7 @@ namespace Ludots.Graph.Codegen
             lock (_gate)
             {
                 _activeExecute = null;
+                _activeExecuteSlice = null;
                 _activeTightExecute = null;
                 _activeAssembly = null;
                 _activeMarker = null;
@@ -258,6 +275,21 @@ namespace Ludots.Graph.Codegen
             }
 
             return method.CreateDelegate<GraphGeneratedExecute>();
+        }
+
+        private static GraphGeneratedExecuteSlice BindExecuteSlice(Assembly assembly)
+        {
+            Type type = RequireGeneratedType(assembly);
+            MethodInfo? method = type.GetMethod(
+                "ExecuteSlice",
+                BindingFlags.Public | BindingFlags.Static);
+            if (method == null)
+            {
+                throw new InvalidOperationException(
+                    $"Generated method 'ExecuteSlice' was not found on '{type.FullName}'.");
+            }
+
+            return method.CreateDelegate<GraphGeneratedExecuteSlice>();
         }
 
         private static Func<int>? TryBindTightExecute(Assembly assembly, bool expectTightEntry)
