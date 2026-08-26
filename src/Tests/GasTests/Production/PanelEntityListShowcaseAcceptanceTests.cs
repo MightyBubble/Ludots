@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -23,6 +24,7 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
     private const float DeltaTime = 1f / 60f;
     private const string MapId = "entity_list_arena";
     private const string PanelTemplateId = "panel.entity.list";
+    private const string ListScrollHostId = "panel-list-panel.entity.list-units";
 
     [Test]
     public void PanelEntityList_FiltersSortsAndShowsStunBadge()
@@ -52,9 +54,12 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
 
         Assert.That(panelHost.TryGetListProjections(panel, out IReadOnlyList<PanelListProjection> lists), Is.True);
         Assert.That(lists.Count, Is.EqualTo(1));
-        PanelListProjection units = lists[0];
-        Assert.That(units.Name, Is.EqualTo("units"));
-        Assert.That(units.Items.Count, Is.EqualTo(4), "Graph already dropped the fallen scout.");
+        Assert.That(lists[0].TotalCount, Is.EqualTo(4), "Graph already dropped the fallen scout.");
+
+        Assert.That(
+            panelHost.TryProjectListWindow(panel, "units", PanelListViewWindow.All, out PanelListProjection units),
+            Is.True);
+        Assert.That(units.Items.Count, Is.EqualTo(4));
 
         string[] expectedOrder = { "指挥官", "医师", "晕眩卫士", "弓手" };
         float[] expectedHealth = { 100f, 97f, 80f, 64f };
@@ -72,8 +77,14 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
         UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
             ?? throw new InvalidOperationException("UIRoot missing.");
         Assert.That(root.Scene, Is.Not.Null);
-        Assert.That(FindNodeByClass(root.Scene!.Root!, "panel-entity-list"), Is.Not.Null);
-        Assert.That(FindNodeByClass(root.Scene.Root!, "roster-list"), Is.Not.Null);
+        root.Scene!.Layout(root.Width, root.Height);
+
+        Assert.That(FindNodeByClass(root.Scene.Root!, "panel-entity-list"), Is.Not.Null);
+        Assert.That(FindNodeByClass(root.Scene.Root!, "roster-list") != null
+            || FindNodeByClass(root.Scene.Root!, "control-list-scroll") != null, Is.True);
+        Assert.That(root.Scene.TryGetVirtualWindow(ListScrollHostId, out UiVirtualWindow windowBefore), Is.True,
+            "Virtualized roster list must register a scroll virtual window.");
+        Assert.That(windowBefore.TotalCount, Is.EqualTo(4));
         Assert.That(FindNodeByClass(root.Scene.Root!, "unit-stunned"), Is.Not.Null,
             "Declared stun badge must mount for the stunned row.");
 
@@ -97,6 +108,33 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
             where: "screen.topLeft panel.entity.list",
             why: "验证元素 subject+graph 透传与 list 编排",
             how: "容器图 EntityCollection；panel.unit.roster subject=Entity 自解；list 只引用 template");
+
+        UiNode scrollHost = root.Scene.FindByElementId(ListScrollHostId)
+            ?? throw new InvalidOperationException($"Scroll host '{ListScrollHostId}' missing.");
+        Assert.That(scrollHost.MaxScrollY, Is.GreaterThan(1f),
+            "Short viewport must make the roster scrollable.");
+
+        float scrolled = ScrollVertical(root, ListScrollHostId, scrollHost.MaxScrollY);
+        Tick(engine, 2);
+        root.Scene.Layout(root.Width, root.Height);
+
+        Assert.That(root.Scene.TryGetVirtualWindow(ListScrollHostId, out UiVirtualWindow windowAfter), Is.True);
+        Assert.That(windowAfter.ScrollOffset, Is.EqualTo(scrolled).Within(0.5f));
+        Assert.That(windowAfter.TotalCount, Is.EqualTo(4), "Scroll must not drop the collection total.");
+        Assert.That(FindNodeByClass(root.Scene.Root!, "unit-stunned"), Is.Not.Null,
+            "Stun badge must remain available while the virtual window follows scroll.");
+
+        AcceptanceUiEvidenceWriter.CaptureFrame(
+            root,
+            screensDir,
+            order: 2,
+            step: "roster-scrolled",
+            when: "玩家向下滚动名册视口",
+            who: "玩家",
+            what: "短视口可滚，虚拟窗口跟着滚动偏移更新",
+            where: "screen.topLeft panel.entity.list list scroll",
+            why: "验收 list 滚动与 virtualize 窗口合同",
+            how: "viewportHeight+virtualize；ScrollView host 改 ScrollOffset 后重投影");
     }
 
     private static GameEngine CreateEngine(string repoRoot)
@@ -115,6 +153,31 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
         {
             engine.Tick(DeltaTime);
         }
+    }
+
+    private static float ScrollVertical(UIRoot root, string elementId, float deltaY)
+    {
+        UiScene scene = root.Scene ?? throw new InvalidOperationException("UIRoot scene missing.");
+        scene.Layout(root.Width, root.Height);
+        UiNode node = scene.FindByElementId(elementId)
+            ?? throw new InvalidOperationException($"Scroll host '{elementId}' missing.");
+
+        MethodInfo setScrollOffset = typeof(UiNode).GetMethod(
+                "SetScrollOffset",
+                BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new MissingMethodException(typeof(UiNode).FullName, "SetScrollOffset");
+        MethodInfo refreshReactiveRuntime = typeof(UiScene).GetMethod(
+                "TryRefreshReactiveRuntimeDependencies",
+                BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new MissingMethodException(typeof(UiScene).FullName, "TryRefreshReactiveRuntimeDependencies");
+
+        float nextOffsetY = MathF.Min(node.MaxScrollY, node.ScrollOffsetY + deltaY);
+        bool changed = (bool)(setScrollOffset.Invoke(node, new object[] { node.ScrollOffsetX, nextOffsetY }) ?? false);
+        Assert.That(changed, Is.True, $"Scroll host '{elementId}' must accept a larger offset.");
+
+        _ = refreshReactiveRuntime.Invoke(scene, Array.Empty<object>());
+        scene.Layout(root.Width, root.Height);
+        return nextOffsetY;
     }
 
     private static PanelInstanceHandle FindPanel(PanelHost host, Entity scope)
