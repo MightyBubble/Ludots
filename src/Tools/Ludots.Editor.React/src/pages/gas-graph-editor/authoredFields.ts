@@ -92,6 +92,8 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   LoadEntryPayloadInt: [payloadKey],
   LoadEntryPayloadFloat: [payloadKey],
   LoadPlacedEntity: [instanceId],
+  LoadPlacedRegion: [instanceId],
+  LoadPlacedAnchor: [instanceId],
   InvokeGraph: [graphId, entryLabel],
   DispatchMapEvent: [eventName, scope],
   SwitchInt: [enumType],

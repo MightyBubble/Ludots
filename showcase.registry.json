@@ -3779,12 +3779,13 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
       "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
       "title": "HFSM 岗哨演武场",
-      "summary": "独立分层状态机万人演示（不含 BT/关卡/技能）。",
+      "summary": "哨兵 featured 带走 GraphFsmHost（FsmState 糖 / Graph.FSM.Sentry）；万人 crowd 带是无图 HfsmWorld 压测，不顶 graph 语义。",
       "tier": "T2",
       "category": "capability",
       "tags": [
         "graph",
-        "capability-standard"
+        "capability-standard",
+        "fsm"
       ],
       "binding": "capability_standard_hfsm_sentry_arena",
       "preset": "capability_standard_hfsm_sentry_arena_raylib",
@@ -3794,7 +3795,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "FSM-1a featured=GraphFsmHost; crowd=no-graph HfsmWorld. Acceptance: GraphFsmHostTests + HfsmSentryArena_GateVignette honest band asserts."
     },
     {
       "id": "capability_standard_live_skill_workbench",

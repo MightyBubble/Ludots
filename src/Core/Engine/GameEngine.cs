@@ -1099,6 +1099,25 @@ namespace Ludots.Core.Engine
             gasGraphApi.BindPanelActivation(panelActivationApi);
             gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             gasGraphApi.BindPlacedInstanceIndexResolver(mapId => MapSessions?.GetSession(mapId)?.EntityIndex);
+            gasGraphApi.BindRegionCatalogResolver(mapId =>
+            {
+                MapSession? session = MapSessions?.GetSession(mapId);
+                if (session?.MapConfig == null)
+                {
+                    return null;
+                }
+
+                List<Ludots.Core.Gameplay.MapTriggers.MapRegionDefinition> regions =
+                    Ludots.Core.Gameplay.MapTriggers.MapRegionDefinition.ParseList(
+                        session.MapConfig.Regions, session.MapId.Value);
+                var ids = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < regions.Count; i++)
+                {
+                    ids.Add(regions[i].Id);
+                }
+
+                return ids;
+            });
             var progressionEvaluator = new ProgressionRequirementEvaluator(
                 World,
                 progressionRequirements,

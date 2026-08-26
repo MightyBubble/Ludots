@@ -79,6 +79,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.LoadEntryPayloadInt:
                     case GraphNodeOp.LoadEntryPayloadFloat:
                     case GraphNodeOp.LoadPlacedEntity:
+                    case GraphNodeOp.LoadPlacedRegion:
+                    case GraphNodeOp.LoadPlacedAnchor:
                     case GraphNodeOp.StoreArgInt:
                     case GraphNodeOp.StoreArgFloat:
                     case GraphNodeOp.StoreArgEntity:

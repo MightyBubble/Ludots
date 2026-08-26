@@ -156,10 +156,21 @@ namespace Ludots.Tests.Gas.Production
             var runtime = new HfsmSentryArenaRuntime();
             runtime.Bind(_programs, _actions, _behavior);
             runtime.EnsureWorld();
+            Assert.That(runtime.FeaturedUsesGraphFsmHost, Is.True,
+                "Featured sentry band must run GraphFsmHost / Graph.FSM.Sentry (FSM-1a), not the legacy interpreter.");
+            Assert.That(runtime.GetSentryStateName(0), Is.EqualTo("idle"));
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.Detail, Does.Contain("HFSM"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("FSM"));
             Assert.That(runtime.SentryCount, Is.GreaterThanOrEqualTo(8));
+            Assert.That(runtime.GetSentryStateName(0), Is.Not.EqualTo("unknown"));
+            if (runtime.CrowdUsesNoGraphHfsmWorld)
+            {
+                Assert.That(runtime.CrowdAgentCount, Is.GreaterThan(0),
+                    "Crowd band exists as no-graph HfsmWorld pressure; do not claim it as GraphFsmHost.");
+            }
+
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
         }

@@ -27,6 +27,7 @@ import {
   decodePlacedVarDrag,
   emptyVariableDraft,
   type GraphPlacedInstance,
+  type GraphPlacedKind,
   type GraphVariableRow,
   type MapVariableDraft,
   type MapVariableScalarType,
@@ -664,6 +665,7 @@ export const GasGraphEditorPage: React.FC = () => {
     name: string;
     type: MapVariableScalarType;
     placed: boolean;
+    placedKind?: GraphPlacedKind;
   } | null>(null);
   const debugPollInFlight = React.useRef(false);
   const reactFlowRef = React.useRef<ReactFlowInstance | null>(null);
@@ -820,11 +822,19 @@ export const GasGraphEditorPage: React.FC = () => {
         }
         // Keep the full row (instanceId + template); template feeds the panel tooltip and
         // the ordinal keeps the Placed section in the endpoint's authored order (#1108).
-        setMapInstances((payload.instances as Array<{ instanceId: string; template?: string }>).map((instance, ordinal) => ({
-          instanceId: instance.instanceId,
-          template: instance.template ?? '',
-          ordinal,
-        })));
+        setMapInstances((payload.instances as Array<{ instanceId: string; template?: string; kind?: string }>).map((instance, ordinal) => {
+          const kindRaw = instance.kind;
+          const kind: GraphPlacedKind =
+            kindRaw === 'anchor' || kindRaw === 'region' || kindRaw === 'entity'
+              ? kindRaw
+              : (instance.instanceId.toLowerCase().includes('anchor') ? 'anchor' : 'entity');
+          return {
+            instanceId: instance.instanceId,
+            template: instance.template ?? '',
+            kind,
+            ordinal,
+          };
+        }));
       } catch {
         if (!cancelled) setMapInstances([]);
       }
@@ -1738,11 +1748,16 @@ export const GasGraphEditorPage: React.FC = () => {
       name: placed ? placed.instanceId : mapVar!.name,
       type: placed ? 'int' : mapVar!.type,
       placed: placed != null,
+      placedKind: placed?.kind,
     });
   };
 
-  const placePlacedEntityAccess = (position: { x: number; y: number }, instanceId: string) => {
-    addAuthoringNode('LoadPlacedEntity', position, { instanceId });
+  const placePlacedAccess = (position: { x: number; y: number }, instanceId: string, kind: GraphPlacedKind) => {
+    const op =
+      kind === 'region' ? 'LoadPlacedRegion' :
+      kind === 'anchor' ? 'LoadPlacedAnchor' :
+      'LoadPlacedEntity';
+    addAuthoringNode(op, position, { instanceId });
   };
 
   return (
@@ -1983,11 +1998,20 @@ export const GasGraphEditorPage: React.FC = () => {
                   {varDropMenu.placed ? (
                     <button
                       type="button"
-                      onClick={() => placePlacedEntityAccess({ x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name)}
+                      onClick={() => placePlacedAccess(
+                        { x: varDropMenu.flowX, y: varDropMenu.flowY },
+                        varDropMenu.name,
+                        varDropMenu.placedKind ?? 'entity')}
                       className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
                     >
                       <span>Get</span>
-                      <span className="font-mono text-[10px] text-slate-500">LoadPlacedEntity</span>
+                      <span className="font-mono text-[10px] text-slate-500">
+                        {(varDropMenu.placedKind ?? 'entity') === 'region'
+                          ? 'LoadPlacedRegion'
+                          : (varDropMenu.placedKind ?? 'entity') === 'anchor'
+                            ? 'LoadPlacedAnchor'
+                            : 'LoadPlacedEntity'}
+                      </span>
                     </button>
                   ) : (
                     <>
@@ -2128,7 +2152,14 @@ export const GasGraphEditorPage: React.FC = () => {
                       }
                       if (field.kind === 'instanceId' && mapInstances.length > 0) {
                         const current = raw == null ? '' : String(raw);
-                        const instanceIds = mapInstances.map((instance) => instance.instanceId);
+                        const selectedOp = selectedData.op ?? '';
+                        const filtered = mapInstances.filter((instance) => {
+                          if (selectedOp === 'LoadPlacedRegion') return instance.kind === 'region';
+                          if (selectedOp === 'LoadPlacedAnchor') return instance.kind === 'anchor';
+                          if (selectedOp === 'LoadPlacedEntity') return instance.kind === 'entity' || instance.kind === 'anchor';
+                          return true;
+                        });
+                        const instanceIds = filtered.map((instance) => instance.instanceId);
                         const options = current && !instanceIds.includes(current)
                           ? [...instanceIds, current]
                           : instanceIds;
