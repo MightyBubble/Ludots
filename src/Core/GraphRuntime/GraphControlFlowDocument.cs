@@ -29,11 +29,123 @@ namespace Ludots.Core.GraphRuntime
         public string Start { get; set; } = string.Empty;
         public bool Once { get; set; }
         public string? Refire { get; set; }
+        /// <summary>Dispatch priority within one event key (#1124): ascending, negative earlier, default 0.</summary>
+        public int Priority { get; set; }
         public TriggerGraphEntryFiltersConfig? Filters { get; set; }
+        /// <summary>Authoring shape of <c>hookAnchor: { graphId, anchor, position }</c> (#1124).</summary>
+        public TriggerGraphHookAnchorConfig? HookAnchor { get; set; }
+        /// <summary>Authoring shape of <c>hookNodeBefore: { graphId, nodeId }</c> (#1124).</summary>
+        public TriggerGraphHookNodeConfig? HookNodeBefore { get; set; }
+        /// <summary>Authoring shape of <c>hookNodeAfter: { graphId, nodeId }</c> (#1124).</summary>
+        public TriggerGraphHookNodeConfig? HookNodeAfter { get; set; }
         /// <summary>Compiled filter struct produced by entry validation; default when no filters are authored.</summary>
         public TriggerGraphEntryFilters ParsedFilters { get; set; }
         /// <summary>Normalized refire policy ("ignore"/"restart"); default "ignore".</summary>
         public string NormalizedRefire { get; set; } = TriggerGraphEntry.RefireIgnore;
+        /// <summary>Normalized hook target produced by entry validation; null = plain dispatch entry.</summary>
+        public TriggerGraphHookTargetConfig? ParsedHook { get; set; }
+    }
+
+    /// <summary>Authoring shape of an entry <c>hookAnchor</c> block: weave before/after a named anchor node.</summary>
+    public sealed class TriggerGraphHookAnchorConfig
+    {
+        public string GraphId { get; set; } = string.Empty;
+        public string Anchor { get; set; } = string.Empty;
+        public string Position { get; set; } = "before";
+    }
+
+    /// <summary>Authoring shape of an entry <c>hookNodeBefore</c>/<c>hookNodeAfter</c> block: weave before/after a node id.</summary>
+    public sealed class TriggerGraphHookNodeConfig
+    {
+        public string GraphId { get; set; } = string.Empty;
+        public string NodeId { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Normalized hook target of a TriggerGraph entry (#1124): the entry body is a
+    /// fragment woven into another graph at compile time instead of dispatching on
+    /// its own event. Exactly one of Anchor / NodeId is set.
+    /// </summary>
+    public sealed class TriggerGraphHookTargetConfig
+    {
+        public TriggerGraphHookTargetConfig(string targetGraphId, string targetNodeId, bool before)
+        {
+            TargetGraphId = targetGraphId;
+            TargetNodeId = targetNodeId;
+            Before = before;
+        }
+
+        public string TargetGraphId { get; }
+        public string TargetNodeId { get; }
+        public bool Before { get; }
+
+        public static bool TryParseAnchor(
+            string targetGraphId,
+            string anchor,
+            string position,
+            string context,
+            out TriggerGraphHookTargetConfig? parsed,
+            out string? error)
+        {
+            return TryParse(targetGraphId, anchor, nodeId: null, position, context, out parsed, out error);
+        }
+
+        public static bool TryParseNode(
+            string targetGraphId,
+            string nodeId,
+            string position,
+            string context,
+            out TriggerGraphHookTargetConfig? parsed,
+            out string? error)
+        {
+            return TryParse(targetGraphId, anchor: null, nodeId, position, context, out parsed, out error);
+        }
+
+        private static bool TryParse(
+            string targetGraphId,
+            string? anchor,
+            string? nodeId,
+            string position,
+            string context,
+            out TriggerGraphHookTargetConfig? parsed,
+            out string? error)
+        {
+            parsed = null;
+            error = null;
+            if (string.IsNullOrWhiteSpace(targetGraphId))
+            {
+                error = $"{context} hook target requires a non-empty 'graphId'.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(anchor) && string.IsNullOrWhiteSpace(nodeId))
+            {
+                error = $"{context} hook target requires an 'anchor' or 'nodeId'.";
+                return false;
+            }
+
+            string trimmedPosition = (position ?? string.Empty).Trim();
+            bool before;
+            if (trimmedPosition == "before")
+            {
+                before = true;
+            }
+            else if (trimmedPosition == "after")
+            {
+                before = false;
+            }
+            else
+            {
+                error = $"{context} hook 'position' must be \"before\" or \"after\" (got '{position ?? "null"}').";
+                return false;
+            }
+
+            parsed = new TriggerGraphHookTargetConfig(
+                targetGraphId.Trim(),
+                (anchor ?? nodeId ?? string.Empty).Trim(),
+                before);
+            return true;
+        }
     }
 
     /// <summary>
@@ -48,6 +160,8 @@ namespace Ludots.Core.GraphRuntime
         public float? Threshold { get; set; }
         public string? Direction { get; set; }
         public string? Action { get; set; }
+        public string? InstanceId { get; set; }
+        public string? VarName { get; set; }
     }
 
     public sealed class GraphControlFlowNode
@@ -90,6 +204,20 @@ namespace Ludots.Core.GraphRuntime
         public string? Flag { get; set; }
         /// <summary>Event payload slot index for LoadEventPayloadInt (0..1) / LoadEventPayloadFloat (0..3).</summary>
         public int Slot { get; set; }
+        /// <summary>Named event payload key (a MapTriggerEventPayloadKeys constant) for LoadEntryPayload* ops.</summary>
+        public string? PayloadKey { get; set; }
+        /// <summary>Placed entity InstanceId for LoadPlacedEntity (#1108); validated fail-closed against the mounting map's catalog at mount time.</summary>
+        public string? InstanceId { get; set; }
+        /// <summary>Optional TriggerGraph entry label for InvokeGraph; omitted → target entry table [0].</summary>
+        public string? EntryLabel { get; set; }
+        /// <summary>Event name for DispatchMapEvent; must resolve in the EventSchemaRegistry.</summary>
+        public string? Event { get; set; }
+        /// <summary>Dispatch domain for DispatchMapEvent: "map" (default), "self", or "global" (#1123).</summary>
+        public string? Scope { get; set; }
+        /// <summary>#1126 AwaitCallback catalog name (Imm symbol); required on AwaitCallback nodes.</summary>
+        public string? CallbackType { get; set; }
+        /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>
+        public string? ArgKey { get; set; }
         public string? QueryCapacityPolicy { get; set; }
         public string? DroppedOutput { get; set; }
         public string? ValidOutput { get; set; }
@@ -110,6 +238,30 @@ namespace Ludots.Core.GraphRuntime
         /// Used for loop-carried values without inventing a second memory space.
         /// </summary>
         public int PinRegister { get; set; } = -1;
+        /// <summary>
+        /// BtDecorator sugar kind: "inverter" (0↔1, Running passes through), "forceSuccess",
+        /// or "forceFailure". Required on BtDecorator nodes; empty or unknown fails closed.
+        /// </summary>
+        public string? DecoratorKind { get; set; }
+        /// <summary>
+        /// Named hook point (#1124): another mod's TriggerGraph entry with a matching
+        /// hookAnchor weaves its body before/after this node at compile time. Anchor
+        /// names must be unique within one graph; empty means "no anchor".
+        /// </summary>
+        public string? Anchor { get; set; }
+        /// <summary>
+        /// Enum type name binding SwitchInt case arms and SelectByEnum candidates to
+        /// Enums/enums.json members; case ports are then authored as case:{memberName}
+        /// and resolved to declaration-order ints at compile time. Unregistered type
+        /// names fail closed.
+        /// </summary>
+        public string? EnumType { get; set; }
+        /// <summary>
+        /// Map variable name for FsmState sugar: the FSM's current-state SSOT. Required
+        /// on FsmState nodes; the compile lowers it to a ReadMapVarInt symbol read and
+        /// transitions happen by WriteMapVarInt on the same name inside arm bodies.
+        /// </summary>
+        public string? StateVar { get; set; }
     }
 
     public sealed class GraphControlFlowEdge
@@ -193,6 +345,28 @@ namespace Ludots.Core.GraphRuntime
                 NumberStyles.Integer,
                 CultureInfo.InvariantCulture,
                 out caseValue);
+        }
+
+        /// <summary>Control port prefix for BtSequence/BtSelector/BtDecorator children; full port is child:{int}.</summary>
+        public const string ChildPrefix = "child:";
+
+        public static string Child(int ordinal)
+            => ChildPrefix + ordinal.ToString(CultureInfo.InvariantCulture);
+
+        public static bool TryParseChildPort(string port, out int ordinal)
+        {
+            ordinal = 0;
+            if (string.IsNullOrEmpty(port) ||
+                !port.StartsWith(ChildPrefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return int.TryParse(
+                port.AsSpan(ChildPrefix.Length),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out ordinal);
         }
     }
 }

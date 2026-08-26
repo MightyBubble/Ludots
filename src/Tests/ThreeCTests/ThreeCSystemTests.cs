@@ -638,14 +638,14 @@ namespace Ludots.Tests.ThreeC
             spatial.Entities.Add(entity);
             ref var cullBefore = ref world.Get<CullState>(entity);
             cullBefore.IsVisible = false;
-            cullBefore.LOD = LODLevel.Culled;
+            cullBefore.LOD = LODLevel.Low;
 
             var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
             system.DisarmPresentBindingCulling();
             system.Update(0.016f);
 
             That(world.Get<CullState>(entity).IsVisible, Is.False);
-            That(world.Get<CullState>(entity).LOD, Is.EqualTo(LODLevel.Culled));
+            That(world.Get<CullState>(entity).LOD, Is.EqualTo(LODLevel.Low));
 
             system.RebindPresentBinding(manager, view);
             system.Update(0.016f);
@@ -841,7 +841,7 @@ namespace Ludots.Tests.ThreeC
             var spatial = new StubSpatialQueryService();
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(50000, 50000),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new Name { Value = "outside" });
 
             using var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, timingDiagnostics: null);
@@ -923,7 +923,7 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(0, 2600),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new PresentationStaticTransform(),
                 new VisualTransform
                 {
@@ -967,7 +967,7 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(5000, 0),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new PresentationStaticTransform(),
                 new VisualTransform
                 {
@@ -1073,7 +1073,7 @@ namespace Ludots.Tests.ThreeC
                 WorldPositionCm.FromCm(100, 200),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(100, 200) },
                 new VisualTransform { Position = sentinel, Rotation = Quaternion.Identity, Scale = Vector3.One },
-                new CullState { IsVisible = false, LOD = LODLevel.Culled }
+                new CullState { IsVisible = false, LOD = LODLevel.Low }
             );
 
             var system = new WorldToVisualSyncSystem(world);
@@ -1100,7 +1100,7 @@ namespace Ludots.Tests.ThreeC
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(100, 200) },
                 new VisualTransform { Position = Vector3.Zero, Rotation = Quaternion.Identity, Scale = Vector3.One },
                 new FacingDirection { AngleRad = MathF.PI * 0.5f },
-                new CullState { IsVisible = false, LOD = LODLevel.Culled }
+                new CullState { IsVisible = false, LOD = LODLevel.Low }
             );
 
             var system = new WorldToVisualSyncSystem(world);

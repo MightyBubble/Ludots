@@ -50,3 +50,7 @@ dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 - [Feature 开发工作流](contributing/feature-development-workflow.md)
 - [AI 辅助开发规范](contributing/ai-assisted-development.md)
 - [架构](architecture/README.md)
+
+## 5 逛 showcase 画廊
+
+想看引擎能力长什么样，从 [Showcase 画廊导览](showcases/README.md) 进：词条 → 专项 → 剧情三层，配一条可逐站启动的作者之旅；在线画廊与验收证据见 <https://mightybubble.github.io/Ludots/gallery.html>。

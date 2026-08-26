@@ -166,6 +166,7 @@ namespace Ludots.Adapter.Raylib
                 emptyBufferWarned = DrawPrimitiveVisuals(in frame, benchmarkDrew, emptyBufferWarned);
                 DrawGroundOverlays(frame.CleanPerformanceMode);
                 DrawSplineRibbons(frame.CleanPerformanceMode);
+                DrawTrailMeshes(frame.CleanPerformanceMode);
                 DrawDebugCommands(in frame);
 
                 EndCoreMode3D();
@@ -434,6 +435,16 @@ namespace Ludots.Adapter.Raylib
             }
 
             _presentationTiming?.ObserveSplineRibbonRender(0d, 0);
+        }
+
+        private void DrawTrailMeshes(bool cleanPerformanceMode)
+        {
+            if (!cleanPerformanceMode &&
+                _engine.TryGetService(CoreServiceKeys.TrailMeshBuffer, out TrailMeshBuffer trails) &&
+                trails.Count > 0)
+            {
+                RaylibTrailMeshRenderer.DrawTrailMeshes(trails);
+            }
         }
 
         private void DrawDebugCommands(in RaylibRenderFrame frame)

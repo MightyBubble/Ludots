@@ -1431,6 +1431,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
             bool hasMinimapMarker = false;
             bool hasExtensionBehavior = false;
+            bool hasTrailMesh = false;
 
             for (int i = 0; i < behaviors.Length; i++)
             {
@@ -1445,6 +1446,7 @@ namespace Ludots.Core.Presentation.Presenters
                 {
                     case BehaviorKind.Sound: hasSound = true; break;
                     case BehaviorKind.Spline: hasSpline = true; break;
+                    case BehaviorKind.TrailMesh: hasTrailMesh = true; break;
                     case BehaviorKind.Grounding:
                         hasGrounding |= GroundingRequiresPresenterTick(entity, in state, in slot.Grounding);
                         break;
@@ -1483,6 +1485,7 @@ namespace Ludots.Core.Presentation.Presenters
                     {
                         case BehaviorKind.Sound: hasSound = true; break;
                         case BehaviorKind.Spline: hasSpline = true; break;
+                        case BehaviorKind.TrailMesh: hasTrailMesh = true; break;
                         case BehaviorKind.Grounding:
                             hasGrounding |= GroundingRequiresPresenterTick(entity, in state, in slot.Grounding);
                             break;
@@ -1514,6 +1517,7 @@ namespace Ludots.Core.Presentation.Presenters
             SyncTickBehaviorMarker<PerfHasGraphParamBinding>(entity, hasGraphParamBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
             SyncTickBehaviorMarker<PerfHasExtensionBehavior>(entity, hasExtensionBehavior);
+            SyncTickBehaviorMarker<PerfHasTrailMesh>(entity, hasTrailMesh);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
             SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
@@ -1695,6 +1699,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PerfHasExtensionBehavior>(entity))
             {
                 RemoveMarker<PerfHasExtensionBehavior>(entity);
+            }
+
+            if (_world.Has<PerfHasTrailMesh>(entity))
+            {
+                RemoveMarker<PerfHasTrailMesh>(entity);
             }
 
             if (_world.Has<PerfTransformSyncTick>(entity))
@@ -2718,6 +2727,7 @@ namespace Ludots.Core.Presentation.Presenters
                 bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
                 bool hasMinimapMarker = false;
                 bool hasExtensionBehavior = false;
+                bool hasTrailMesh = false;
                 for (int i = 0; i < behaviors.Length; i++)
                 {
                     ref readonly BehaviorSlot slot = ref behaviors[i];
@@ -2731,6 +2741,7 @@ namespace Ludots.Core.Presentation.Presenters
                     {
                         case BehaviorKind.Sound: hasSound = true; break;
                         case BehaviorKind.Spline: hasSpline = true; break;
+                        case BehaviorKind.TrailMesh: hasTrailMesh = true; break;
                         case BehaviorKind.Grounding:
                             hasGrounding |= includeGroundingTick &&
                                             slot.Grounding.Mode != GroundingMode.None &&
@@ -2765,6 +2776,7 @@ namespace Ludots.Core.Presentation.Presenters
                 if (hasGraphParamBinding) signature += Component<PerfHasGraphParamBinding>.Signature;
                 if (hasMinimapMarker) signature += Component<PerfHasMinimapMarker>.Signature;
                 if (hasExtensionBehavior) signature += Component<PerfHasExtensionBehavior>.Signature;
+                if (hasTrailMesh) signature += Component<PerfHasTrailMesh>.Signature;
                 if ((definition.HasSurfaceAuthoring || definition.HasAssetBindingBehavior) &&
                     !definition.UsesEventDrivenStaticEmit &&
                     !definition.UsesRetainedPresentationRequest)

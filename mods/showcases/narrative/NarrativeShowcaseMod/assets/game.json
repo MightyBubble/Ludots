@@ -1,5 +1,6 @@
 {
   "startupMapId": "narrative_showcase_hub",
+  "panelTheme": "story-ember",
   "startupLocalSeats": [
     {
       "seatId": "seat.0",

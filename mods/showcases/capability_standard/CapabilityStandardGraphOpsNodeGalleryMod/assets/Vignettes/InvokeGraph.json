@@ -1,0 +1,35 @@
+{
+  "op": "InvokeGraph",
+  "driver": "invokeGraph",
+  "title": "点名子图，指定入口直接回话",
+  "beat": "主图一声令下，子图从 boost 入口出发，把九号命令带回来。",
+  "detailTemplate": "点名入口 {entry}，子图原路回传 {result}。",
+  "assertDetailContains": [
+    "子图",
+    "入口"
+  ],
+  "featuredNodeId": "call",
+  "graphKind": "TriggerGraph",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "传令官",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -1386,6 +1386,52 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        [Test]
+        public void Load_AttachLocalPose_InheritFacingWithOwnFacing_IsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Attach.InvalidFacingCombo",
+                        "tags": ["Effect.Attachment"],
+                        "presetType": "Relation",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "relation": {
+                          "operation": "Attach",
+                          "subject": "Target",
+                          "parent": "Source",
+                          "localPose": {
+                            "offsetXCm": 0,
+                            "offsetYCm": 100,
+                            "facingDeg": 0,
+                            "inheritParentFacing": true,
+                            "offsetRotation": "OwnFacing"
+                          }
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                InvalidOperationException? error = Throws<InvalidOperationException>(
+                    () => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(error, Is.Not.Null);
+                That(error!.Message, Does.Contain("inheritParentFacing=true"));
+                That(error.Message, Does.Contain("OwnFacing"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
         private static string CreateTempRoot()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_EffectTemplateLoaderTests", Guid.NewGuid().ToString("N"));

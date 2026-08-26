@@ -203,7 +203,7 @@
           "enum": [
             "AssetBinding", "AttributeBinding", "TagBinding", "Animator",
             "Attachment", "Sound", "Material", "Spline",
-            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch"
+            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch", "TrailMesh"
           ]
         },
         "activeByDefault": { "type": "boolean" },
@@ -443,6 +443,20 @@
           "required": ["batchAssetId"],
           "properties": {
             "batchAssetId": { "type": "string", "minLength": 1 }
+          }
+        },
+        "trailMesh": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tipOffset"],
+          "properties": {
+            "baseOffset": { "$ref": "#/$defs/vec3" },
+            "tipOffset": { "$ref": "#/$defs/vec3" },
+            "maxSamples": { "type": "integer", "minimum": 2, "maximum": 32 },
+            "sampleIntervalSeconds": { "type": "number", "minimum": 0 },
+            "sampleLifetimeSeconds": { "type": "number", "exclusiveMinimum": 0 },
+            "headColor": { "$ref": "#/$defs/color4" },
+            "tailColor": { "$ref": "#/$defs/color4" }
           }
         },
         "worldText": {

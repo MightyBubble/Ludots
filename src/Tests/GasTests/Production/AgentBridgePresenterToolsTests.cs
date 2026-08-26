@@ -143,6 +143,19 @@ namespace Ludots.Tests.GasTests.Production
                 "knowledge section is explicit about record count even when zero (fail-visible)");
         }
 
+        [Test]
+        public void AgentBridgeModEntry_RegistersPresenterObservabilityTools()
+        {
+            string entryPath = Path.Combine(FindRepoRoot(), "mods", "AgentBridgeMod", "AgentBridgeModEntry.cs");
+            string source = File.ReadAllText(entryPath);
+            Assert.That(source, Does.Contain("new PresentersQueryTool()"),
+                "ludots.presenters.query must stay registered for GET /tools (#1062)");
+            Assert.That(source, Does.Contain("new PresentersDesyncTool()"),
+                "ludots.presenters.desync must stay registered for GET /tools (#1062)");
+            Assert.That(source, Does.Contain("new PresentersScreenTool()"),
+                "ludots.presenters.screen must stay registered for GET /tools (#1062)");
+        }
+
         private static GameEngine CreateEngine()
         {
             string repoRoot = FindRepoRoot();

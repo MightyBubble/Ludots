@@ -39,26 +39,22 @@ internal sealed class HfsmSentryArenaPresentationSystem : ISystem<float>
                 _debugDraw, _runtime.IntruderX, _runtime.IntruderY, 0.55f, GraphShowcaseStagePresenter.EnemyColor, 0.18f);
         }
 
-        var world = _runtime.World;
-        if (world != null)
+        for (int i = 0; i < _runtime.SentryCount; i++)
         {
-            for (int i = 0; i < _runtime.SentryCount; i++)
+            string stateName = _runtime.GetSentryStateName(i);
+            DebugDrawColor color = stateName switch
             {
-                int leaf = world.GetLeafState(i);
-                DebugDrawColor color = leaf switch
-                {
-                    1 => GraphShowcaseStagePresenter.SentryIdle,
-                    3 => GraphShowcaseStagePresenter.SentryAlert,
-                    4 => GraphShowcaseStagePresenter.SentryCombat,
-                    5 => GraphShowcaseStagePresenter.SentryRetreat,
-                    _ => DebugDrawColor.Gray
-                };
-                GraphShowcaseStagePresenter.DrawActor(_debugDraw, _runtime.SentryX[i], _runtime.SentryY[i], 0.48f, color);
-                if (_runtime.IntruderAlive && (leaf == 3 || leaf == 4))
-                {
-                    GraphShowcaseStagePresenter.DrawAggroLine(
-                        _debugDraw, _runtime.SentryX[i], _runtime.SentryY[i], _runtime.IntruderX, _runtime.IntruderY);
-                }
+                "idle" => GraphShowcaseStagePresenter.SentryIdle,
+                "alert" => GraphShowcaseStagePresenter.SentryAlert,
+                "combat" => GraphShowcaseStagePresenter.SentryCombat,
+                "retreat" => GraphShowcaseStagePresenter.SentryRetreat,
+                _ => DebugDrawColor.Gray
+            };
+            GraphShowcaseStagePresenter.DrawActor(_debugDraw, _runtime.SentryX[i], _runtime.SentryY[i], 0.48f, color);
+            if (_runtime.IntruderAlive && (stateName == "alert" || stateName == "combat"))
+            {
+                GraphShowcaseStagePresenter.DrawAggroLine(
+                    _debugDraw, _runtime.SentryX[i], _runtime.SentryY[i], _runtime.IntruderX, _runtime.IntruderY);
             }
         }
 

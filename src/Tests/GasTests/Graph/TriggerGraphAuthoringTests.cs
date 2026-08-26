@@ -250,7 +250,7 @@ namespace Ludots.Tests.Gas.Graph
                 {
                   "kind": "TriggerGraph",
                   "entries": [
-                    { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1", "priority": 1 }
+                    { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1", "prioritee": 1 }
                   ],
                   "nodes": [
                     { "id": "a1", "op": "ConstInt", "intValue": 1 },
@@ -266,7 +266,7 @@ namespace Ludots.Tests.Gas.Graph
                 """,
                 "tests.maptrigger.unknown-entry-field"),
                 Throws.Exception.With.Message.Contains("tests.maptrigger.unknown-entry-field")
-                    .And.Message.Contains("priority")
+                    .And.Message.Contains("prioritee")
                     .And.Message.Contains("entries[0]"));
         }
 
@@ -677,8 +677,31 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ApplyEffectTemplate), Is.False,
                 "effect-transactional ops stay out of the TriggerGraph dialect");
 
+            // #1106: entry payload reads are the TriggerGraph-only extension of the mirror;
+            // they read the mount's entry capture, which no other kind hosts.
+            // #1116/#1115: subgraph invoke + StoreArg staging + structured dispatch are the
+            // second TriggerGraph-only family.
+            // #1108: placed-entity reads resolve against the mounting map's catalog, the
+            // third TriggerGraph-only family.
+            GraphNodeOp[] triggerGraphOnlyOps =
+            {
+                GraphNodeOp.LoadEntryPayloadEntity,
+                GraphNodeOp.LoadEntryPayloadInt,
+                GraphNodeOp.LoadEntryPayloadFloat,
+                GraphNodeOp.InvokeGraph,
+                GraphNodeOp.StoreArgInt,
+                GraphNodeOp.StoreArgFloat,
+                GraphNodeOp.StoreArgEntity,
+                GraphNodeOp.DispatchMapEvent,
+                GraphNodeOp.LoadPlacedEntity,
+            };
             foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(GraphKind.TriggerGraph))
             {
+                if (Array.IndexOf(triggerGraphOnlyOps, op) >= 0)
+                {
+                    continue;
+                }
+
                 bool scriptHas = GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, op);
                 Assert.That(scriptHas, Is.True, $"TriggerGraph authorable op {op} must come from the Script set");
             }

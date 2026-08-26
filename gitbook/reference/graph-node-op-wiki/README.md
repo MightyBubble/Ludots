@@ -24,6 +24,14 @@
 - [读出落点在南北标尺上的读数](LoadTargetPosY.md) — 虚线打到标尺上，亮出 200。
 - [贴到花名册里最近的人](SnapToNearestInCollection.md) — X 标记离开原地，压到花名册里够得着的最近那人身上。
 
+## 事件载荷捕获
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [倒下的是谁，问载荷就知道](LoadEntryPayloadEntity.md) — 木桩倒下那一刻，名册记下了它的名字。
+- [场上还剩几个人，载荷报数](LoadEntryPayloadInt.md) — 清点哨一响，存活数从事件载荷里飞进信件板。
+- [落点读数，小数也不丢](LoadEntryPayloadFloat.md) — 号令一落，东西读数带着小数从事件载荷里飞进信件板。
+
 ## 关系与好感
 
 > 作者语义与全量字段见手册分册 [关系与好感 · gr-op-08](../mod-editor-prd/config/gr-op-08-relationship.md)。
@@ -65,6 +73,16 @@
 - [点名最能扛的](AggMaxEntityByAttribute.md) — 全场退成灰影，满血条那个被点名徽钉住。
 - [照着名册点名](QueryFromCollection.md) — 名册板六格点亮，点名线拉向场上六人。
 
+## 子图调用与事件派发
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [先存参数，再点子图](StoreArgInt.md) — 整数参数放进暂存表，子图按名字取走，回执就是同一数字。
+- [实体参数递过去，子图亲自搬人](StoreArgEntity.md) — 把木桩实体暂存给子图，子图按参数把它搬到新位置。
+- [按事件账本派发心跳](DispatchMapEvent.md) — 载荷按 schema 组装成事件，地图上的监听者按账本收货。
+- [浮点参数过一手，地图变量作回音](StoreArgFloat.md) — 比例系数暂存后交给子图，子图把它写进地图变量当回音。
+- [点名子图，指定入口直接回话](InvokeGraph.md) — 主图一声令下，子图从 boost 入口出发，把九号命令带回来。
+
 ## 属性与效果
 
 > 作者语义与全量字段见手册分册 [属性与效果 · gr-op-04](../mod-editor-prd/config/gr-op-04-attributes.md)。
@@ -86,6 +104,12 @@
 - [账本里的步骤逐条办](InvokeBuiltin.md) — 造出新身体，再把新身体的效果挂架扫净。
 - [这一击的单据上写着打谁](LoadContextTarget.md) — 从这一击自带单据里取出目标，取到木桩，扣 12 血。
 - [连击数加一](AddInt.md) — 两刀打进算式台 2+1，翻牌翻出 3，木桩头顶亮三枚连击火花。
+
+## 放置实体名册
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [点名放置的木桩，名册一翻就到](LoadPlacedEntity.md) — 记录官翻出名册一点名，放置的木桩大王立刻在岗应答；倒下后名册读出空位。
 
 ## 空间圈人
 

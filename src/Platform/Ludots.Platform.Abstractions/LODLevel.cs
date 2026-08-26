@@ -4,7 +4,6 @@ namespace Ludots.Platform.Abstractions
     {
         High = 0,
         Medium = 1,
-        Low = 2,
-        Culled = 255
+        Low = 2
     }
 }

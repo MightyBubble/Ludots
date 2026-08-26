@@ -25,7 +25,7 @@
 
 - TimeFlow：统一时间域、token 与时钟推进
 - Items：物品、背包、装备、布局与 showcase 套件
-- Narrative：quest、dialogue、cinematic 与 frontend kit
+- Story Runtime：Dialogue / Sequencer / Story Line；Quest 独立；屏幕 surface 可由 frontend kit 组合
 - Relationships：关系图谱、指标、回调、协同处理与 showcase
 - Selection / Insight：选择容器、控制组、实体信息面板
 - Order Navigation Movement：move order、nav runtime、多策略路径与路网 showcase
@@ -56,7 +56,8 @@ Cleanup → EventDispatch → ClearPresentationFlags
 - `docs/architecture/order_navigation_movement.md`
 - `docs/architecture/item_inventory_equipment_architecture.md`
 - `docs/architecture/quest_core_infra.md`
-- `docs/architecture/narrative_dialogue_cinematic.md`
-- `docs/architecture/narrative_frontend_kit.md`
+- `docs/architecture/story_runtime_dialogue_sequencer.md`（#1083 SSOT）
+- `docs/architecture/narrative_dialogue_cinematic.md`（已废止）
+- `docs/architecture/narrative_frontend_kit.md`（已废止）
 - `docs/architecture/time_flow.md`
 - `docs/architecture/ui_runtime_architecture.md`

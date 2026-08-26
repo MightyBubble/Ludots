@@ -34,12 +34,12 @@
 表现侧主要通过以下缓冲与注册表解耦“逻辑”与“渲染/平台”：
 
 *   **PresentationEventStream**：事件流，连接逻辑事件与表现规则系统。
-*   **PresentationCommandBuffer**：命令缓冲，表现规则系统写入命令，runtime 系统消费执行。
+*   **PresenterCommandBuffer**：命令缓冲，表现规则系统写入命令，runtime 系统消费执行（旧名 `PresentationCommandBuffer` 已删除）。
 *   **PrimitiveDrawBuffer**：调试/表现图元输出（线、圆、框等）。
 *   **GroundOverlayBuffer**：地面叠加绘制输出。
 *   **WorldHudBatchBuffer**：世界空间 HUD 文本/标记的批量输出。
 *   **PresenterDefinitionRegistry**：Presenter 定义注册表（含内建定义与配置加载）。
-*   **PresenterInstanceBuffer**：Presenter 实例缓冲（活跃实例的运行态）。
+*   **PresenterEntityRuntime**：Presenter 运行态（Arch entity 组件 + 树/生命周期 API；旧 `PresenterInstanceBuffer` 已删除）。
 
 ## 4 ResponseChain 与表现同步
 

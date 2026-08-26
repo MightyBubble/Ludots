@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 45,
+    "runnable": 46,
     "testOnly": 0,
-    "total": 45
+    "total": 46
   },
   "runnable": [
     {
@@ -242,6 +242,14 @@
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_skybox",
       "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_slash_trail",
+      "preset": "engine_raylib_slash_trail",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_slash_trail",
+      "hasScreenshotEvidence": false
     },
     {
       "id": "engine_raylib_terrain_heightmap",

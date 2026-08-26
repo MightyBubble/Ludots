@@ -7,7 +7,7 @@ namespace Ludots.Platform.Abstractions
     /// Word0 stores controller/state/timing/flags; Word1 stores up to 64 bool/trigger bits.
     /// This contract does not contain pose matrices, bone palettes, or GPU skin streams.
     /// </summary>
-    public struct AnimatorPackedState
+    public struct AnimatorPackedState : IEquatable<AnimatorPackedState>
     {
         public const int PackedWordCount = 2;
         public const int PackedByteSize = 16;
@@ -139,5 +139,24 @@ namespace Ludots.Platform.Abstractions
             ulong shiftedMask = mask << shift;
             return (word & ~shiftedMask) | ((value & mask) << shift);
         }
+
+        public readonly bool Equals(AnimatorPackedState other)
+        {
+            return Word0 == other.Word0 && Word1 == other.Word1;
+        }
+
+        public override readonly bool Equals(object? obj)
+        {
+            return obj is AnimatorPackedState other && Equals(other);
+        }
+
+        public override readonly int GetHashCode()
+        {
+            return HashCode.Combine(Word0, Word1);
+        }
+
+        public static bool operator ==(AnimatorPackedState left, AnimatorPackedState right) => left.Equals(right);
+
+        public static bool operator !=(AnimatorPackedState left, AnimatorPackedState right) => !left.Equals(right);
     }
 }

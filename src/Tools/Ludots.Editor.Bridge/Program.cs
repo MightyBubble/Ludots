@@ -1,5 +1,7 @@
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
@@ -369,6 +371,197 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}", async (string modId, string mapId, 
     }
 
     return Results.Ok(new { ok = true, path = outFile });
+});
+
+app.MapGet("/api/mods/{modId}/gas/graphs/{graphId}/map-variables", (string modId, string graphId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var maps = EditorRepo.ListGraphMapVariableHosts(ctx, graphId);
+        return Results.Ok(new { ok = true, graphId, maps });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapPut("/api/mods/{modId}/maps/{mapId}/variables", async (string modId, string mapId, HttpRequest req) =>
+{
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try
+    {
+        ctx = EditorRepo.CreateContext(repoRoot, modId);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    JsonNode? root;
+    try { root = JsonNode.Parse(string.IsNullOrWhiteSpace(body) ? "null" : body); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed variables JSON: {ex.Message}" }); }
+    if (root is not JsonObject payload || payload["variables"] is not JsonNode variablesNode)
+    {
+        return Results.BadRequest(new { ok = false, error = "Body must be an object with a 'variables' array." });
+    }
+
+    List<MapVariableDeclaration> declarations;
+    try
+    {
+        declarations = MapVariableDeclarations.Parse(variablesNode, mapId);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    string outFile = EditorRepo.ResolveWritableMapConfigPath(ctx, mapId);
+    if (!File.Exists(outFile))
+    {
+        return Results.NotFound(new { ok = false, error = $"Writable map file not found: {mapId}", path = outFile });
+    }
+
+    string previous = File.ReadAllText(outFile);
+    try
+    {
+        EditorRepo.WriteMapVariablesSurgical(outFile, declarations);
+        return Results.Ok(new
+        {
+            ok = true,
+            path = outFile,
+            variables = EditorRepo.ProjectMapVariables(declarations),
+        });
+    }
+    catch (Exception ex)
+    {
+        File.WriteAllText(outFile, previous);
+        return Results.BadRequest(new { ok = false, error = ex.Message, path = outFile });
+    }
+});
+
+app.MapGet("/api/mods/{modId}/story/catalogs", (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    var catalogs = new List<object>();
+    foreach (KeyValuePair<string, string> pair in EditorRepo.StoryCatalogFiles)
+    {
+        string path = EditorRepo.ResolveWritableStoryCatalogPath(ctx, pair.Value);
+        catalogs.Add(new
+        {
+            id = pair.Key,
+            relativePath = pair.Value,
+            path,
+            exists = File.Exists(path),
+        });
+    }
+
+    return Results.Ok(new { ok = true, catalogs });
+});
+
+app.MapGet("/api/mods/{modId}/story/catalogs/{catalogId}", (string modId, string catalogId) =>
+{
+    if (!EditorRepo.StoryCatalogFiles.TryGetValue(catalogId, out string? relative))
+    {
+        return Results.BadRequest(new
+        {
+            ok = false,
+            error = $"Unknown story catalog '{catalogId}'. Known: {string.Join(", ", EditorRepo.StoryCatalogFiles.Keys)}",
+        });
+    }
+
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    string path = EditorRepo.ResolveWritableStoryCatalogPath(ctx, relative);
+    if (!File.Exists(path))
+    {
+        return Results.NotFound(new { ok = false, error = $"Catalog file missing: {relative}", path });
+    }
+
+    string text = File.ReadAllText(path);
+    JsonNode? node;
+    try { node = JsonNode.Parse(text); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = ex.Message, path }); }
+
+    return Results.Ok(new { ok = true, id = catalogId, relativePath = relative, path, items = node });
+});
+
+app.MapPut("/api/mods/{modId}/story/catalogs/{catalogId}", async (string modId, string catalogId, HttpRequest req) =>
+{
+    if (!EditorRepo.StoryCatalogFiles.TryGetValue(catalogId, out string? relative))
+    {
+        return Results.BadRequest(new
+        {
+            ok = false,
+            error = $"Unknown story catalog '{catalogId}'. Known: {string.Join(", ", EditorRepo.StoryCatalogFiles.Keys)}",
+        });
+    }
+
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    JsonNode? root;
+    try { root = JsonNode.Parse(string.IsNullOrWhiteSpace(body) ? "null" : body); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed JSON: {ex.Message}" }); }
+    if (root is not JsonObject payload || payload["items"] is null)
+    {
+        return Results.BadRequest(new { ok = false, error = "Body must be { items: <array|object> }." });
+    }
+
+    JsonNode items = payload["items"]!.DeepClone();
+    if (items is not JsonArray && items is not JsonObject)
+    {
+        return Results.BadRequest(new { ok = false, error = "items must be a JSON array or object." });
+    }
+
+    if (items is JsonArray array)
+    {
+        for (int i = 0; i < array.Count; i++)
+        {
+            if (array[i] is not JsonObject row ||
+                row["id"]?.GetValue<string>() is not { Length: > 0 })
+            {
+                return Results.BadRequest(new { ok = false, error = $"items[{i}] must be an object with non-empty id." });
+            }
+        }
+    }
+
+    string path = EditorRepo.ResolveWritableStoryCatalogPath(ctx, relative);
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    string previous = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+    try
+    {
+        File.WriteAllText(
+            path,
+            items.ToJsonString(new JsonSerializerOptions { WriteIndented = true }),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return Results.Ok(new { ok = true, id = catalogId, relativePath = relative, path });
+    }
+    catch (Exception ex)
+    {
+        if (!string.IsNullOrEmpty(previous))
+        {
+            File.WriteAllText(path, previous);
+        }
+
+        return Results.BadRequest(new { ok = false, error = ex.Message, path });
+    }
 });
 
 app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
@@ -1565,6 +1758,54 @@ app.MapDelete("/api/bindings/{name}", (string name) =>
     }
 });
 
+app.MapGet("/api/gas/graph-catalog", () =>
+{
+    var catalog = new List<object>();
+    foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        var graphsPath = Path.Combine(mod.RootPath, "assets", "GAS", "graphs.json");
+        if (!File.Exists(graphsPath))
+            continue;
+
+        if (!TryReadGraphsArray(graphsPath, out var arr, out _))
+        {
+            catalog.Add(new
+            {
+                id = mod.Id,
+                name = string.IsNullOrWhiteSpace(mod.Name) ? mod.Id : mod.Name,
+                path = graphsPath,
+                error = $"graphs.json unreadable: {graphsPath}",
+                graphs = Array.Empty<object>(),
+            });
+            continue;
+        }
+
+        if (!TryCollectCatalogGraphs(arr, graphsPath, out var graphs, out var collectError))
+        {
+            catalog.Add(new
+            {
+                id = mod.Id,
+                name = string.IsNullOrWhiteSpace(mod.Name) ? mod.Id : mod.Name,
+                path = graphsPath,
+                error = collectError,
+                graphs,
+            });
+            continue;
+        }
+
+        catalog.Add(new
+        {
+            id = mod.Id,
+            name = string.IsNullOrWhiteSpace(mod.Name) ? mod.Id : mod.Name,
+            path = graphsPath,
+            error = (string?)null,
+            graphs,
+        });
+    }
+
+    return Results.Ok(new { ok = true, mods = catalog });
+});
+
 app.MapGet("/api/mods/{modId}/gas/graphs", (string modId) =>
 {
     if (!TryResolveModGraphsPath(launcher, modId, out var graphsPath, out var error))
@@ -1573,17 +1814,8 @@ app.MapGet("/api/mods/{modId}/gas/graphs", (string modId) =>
     if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
         return readError!;
 
-    var graphs = new List<object>(arr.Count);
-    for (int i = 0; i < arr.Count; i++)
-    {
-        if (arr[i] is not JsonObject obj)
-            continue;
-        var id = obj["id"]?.GetValue<string>();
-        var kind = obj["kind"]?.GetValue<string>();
-        if (string.IsNullOrWhiteSpace(id))
-            continue;
-        graphs.Add(new { id, kind = kind ?? string.Empty });
-    }
+    if (!TryCollectCatalogGraphs(arr, graphsPath, out var graphs, out var collectError))
+        return Results.BadRequest(new { ok = false, error = collectError, graphs, path = graphsPath });
 
     return Results.Ok(new { ok = true, graphs, path = graphsPath });
 });
@@ -1642,6 +1874,14 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
         });
         authoringSugars.Add(new
         {
+            op = GraphAuthoringSugar.SelectByEnum,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Next },
+            valueInputPorts = new[] { GraphControlFlowPorts.Selector, GraphControlFlowPorts.Default },
+            outputType = GraphValueType.Int.ToString(),
+            lowersTo = GraphNodeOp.CompareEqInt.ToString(),
+        });
+        authoringSugars.Add(new
+        {
             op = GraphAuthoringSugar.Wait,
             controlOutputPorts = new[] { GraphControlFlowPorts.Next },
             valueInputPorts = Array.Empty<string>(),
@@ -1672,9 +1912,248 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
             outputType = GraphValueType.Void.ToString(),
             lowersTo = GraphNodeOp.Jump.ToString(),
         });
+        if (graphKind == GraphKind.TriggerGraph)
+        {
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.InlineGraph,
+                controlOutputPorts = new[] { GraphControlFlowPorts.Next },
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Void.ToString(),
+                lowersTo = "compile-time-splice",
+            });
+        }
     }
 
-    return Results.Ok(new { ok = true, kind = graphKind.ToString(), descriptors, authoringSugars });
+    return Results.Ok(new
+    {
+        ok = true,
+        kind = graphKind.ToString(),
+        descriptors,
+        authoringSugars,
+        panelAnchors = PanelAnchorCatalog.All,
+        payloadKeys = typeof(Ludots.Core.Scripting.MapTriggerEventPayloadKeys)
+            .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(f => f.GetRawConstantValue() is string)
+            .Select(f => (string)f.GetRawConstantValue()!)
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .ToArray(),
+    });
+});
+
+// Aggregate every launcher mod's custom_events.json — cross-mod events need pins
+// too, mirroring the engine's merged-config vocabulary rather than one mod's slice.
+// Also feeds graph compile validation so DispatchMapEvent authoring validates against
+// the same schema SSOT the engine uses.
+Ludots.Core.Scripting.EventSchemaRegistry BuildLauncherEventSchemas(
+    List<string> conflicts,
+    Dictionary<string, string> sources,
+    Ludots.Core.Scripting.EnumCatalog? enums = null)
+{
+    var registry = new Ludots.Core.Scripting.EventSchemaRegistry();
+    foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        string customEventsPath = Path.Combine(mod.RootPath, "assets", Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry.ConfigPath.Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(customEventsPath))
+        {
+            continue;
+        }
+
+        JsonNode? root = JsonNode.Parse(File.ReadAllText(customEventsPath));
+        if (root is JsonArray entries)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i] is not JsonObject node || node["id"]?.GetValue<string>() is not { } name)
+                {
+                    throw new InvalidOperationException($"{customEventsPath} entry #{i} must be an object with 'id'.");
+                }
+
+                if (Ludots.Core.Gameplay.MapTriggers.CustomEventSchemaParser.TryParse(node, name, $"{Path.GetFileName(customEventsPath)} entry '{name}'") is not { } schema)
+                {
+                    continue;
+                }
+
+                if (sources.TryGetValue(name, out string? declaredBy))
+                {
+                    conflicts.Add($"Event '{name}' is declared by both '{declaredBy}' and '{mod.Id}'.");
+                    continue;
+                }
+
+                for (int pi = 0; pi < schema.Params.Count; pi++)
+                {
+                    string? paramEnum = schema.Params[pi].EnumType;
+                    if (paramEnum != null && (enums == null || !enums.TryGet(paramEnum, out _)))
+                    {
+                        throw new InvalidOperationException(
+                            $"{customEventsPath} entry '{name}' param '{schema.Params[pi].Name}' annotates enumType '{paramEnum}' " +
+                            $"which is not registered in any launcher mod's {Ludots.Core.Scripting.EnumCatalogLoader.ConfigPath}.");
+                    }
+                }
+
+                sources[name] = mod.Id;
+                registry.RegisterCustom(schema);
+            }
+        }
+    }
+
+    return registry;
+}
+
+// Aggregate every launcher mod's Enums/enums.json in load order (#1125): first sight of a
+// type name freezes declaration order (the member values); later mods may only append
+// members. The editor's enum pickers and the validate compile resolve against this catalog,
+// mirroring the engine's EnumCatalogLoader instead of one mod's slice.
+Ludots.Core.Scripting.EnumCatalog BuildLauncherEnumCatalog(
+    Dictionary<string, string> sources)
+{
+    var builder = new Ludots.Core.Scripting.EnumCatalog.Builder();
+    foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        string enumsPath = Path.Combine(mod.RootPath, "assets",
+            Ludots.Core.Scripting.EnumCatalogLoader.ConfigPath.Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(enumsPath))
+        {
+            continue;
+        }
+
+        JsonNode? root = JsonNode.Parse(File.ReadAllText(enumsPath));
+        if (root is not JsonArray entries)
+        {
+            throw new InvalidOperationException($"{enumsPath} must be a JSON array.");
+        }
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (entries[i] is not JsonObject node)
+            {
+                throw new InvalidOperationException($"{enumsPath} entry #{i} must be an object.");
+            }
+
+            string? id = node["id"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new InvalidOperationException($"{enumsPath} entry #{i} must define non-empty 'id'.");
+            }
+
+            builder.AddOrAppend(node, $"{enumsPath} entry '{id}'");
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                sources.TryAdd(id.Trim(), mod.Id);
+            }
+        }
+    }
+
+    return builder.ToCatalog();
+}
+
+app.MapGet("/api/graph/enums/{modId}", (string modId) =>
+{
+    var sources = new Dictionary<string, string>(StringComparer.Ordinal);
+    Ludots.Core.Scripting.EnumCatalog catalog;
+    try
+    {
+        catalog = BuildLauncherEnumCatalog(sources);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    var enums = catalog.All
+        .OrderBy(e => e.TypeName, StringComparer.Ordinal)
+        .Select(e => new
+        {
+            name = e.TypeName,
+            members = e.Members.Select((member, value) => new { name = member, value }).ToArray(),
+            source = sources.TryGetValue(e.TypeName, out string? mod) ? mod : "unknown",
+        })
+        .ToArray();
+
+    return Results.Ok(new { ok = true, enums });
+});
+
+app.MapGet("/api/graph/event-schemas/{modId}", (string modId) =>
+{
+    var sources = new Dictionary<string, string>(StringComparer.Ordinal);
+    var conflicts = new List<string>();
+    Ludots.Core.Scripting.EventSchemaRegistry registry;
+    try
+    {
+        registry = BuildLauncherEventSchemas(conflicts, sources);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    var schemas = registry.All
+        .OrderBy(s => s.EventName, StringComparer.Ordinal)
+        .Select(s => new
+        {
+            name = s.EventName,
+            scope = s.Scope.ToString(),
+            parameters = s.Params.Select(p => new
+            {
+                name = p.Name,
+                type = p.Type.ToString(),
+                key = p.PayloadKey,
+                optional = p.Optional,
+                enumType = p.EnumType,
+            }).ToArray(),
+            source = sources.TryGetValue(s.EventName, out string? mod) ? mod : "builtin",
+        })
+        .ToArray();
+
+    return Results.Ok(new { ok = true, schemas, conflicts });
+});
+
+app.MapGet("/api/mods/{modId}/maps/{mapId}/instances", (string modId, string mapId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var seen = new Dictionary<string, string>(StringComparer.Ordinal);
+        IReadOnlyList<string> paths = EditorRepo.ListMapConfigPaths(ctx, mapId);
+        for (int i = 0; i < paths.Count; i++)
+        {
+            JsonNode? root = JsonNode.Parse(File.ReadAllText(paths[i]));
+            if (root is not JsonObject obj || obj["Entities"] is not JsonArray entities)
+            {
+                continue;
+            }
+
+            for (int e = 0; e < entities.Count; e++)
+            {
+                if (entities[e] is not JsonObject entity ||
+                    entity["InstanceId"]?.GetValue<string>() is not { } instanceId ||
+                    string.IsNullOrWhiteSpace(instanceId))
+                {
+                    continue;
+                }
+
+                seen[instanceId.Trim()] = entity["Template"]?.GetValue<string>() ?? string.Empty;
+            }
+        }
+
+        var instances = seen.OrderBy(kvp => kvp.Key, StringComparer.Ordinal)
+            .Select(kvp => new { instanceId = kvp.Key, template = kvp.Value })
+            .ToArray();
+        return Results.Ok(new { ok = true, mapId, instances });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 static string[] ControlOutputPorts(GraphNodeOp op)
@@ -1684,6 +2163,7 @@ static string[] ControlOutputPorts(GraphNodeOp op)
         GraphNodeOp.Call => new[] { GraphControlFlowPorts.Call, GraphControlFlowPorts.Next },
         GraphNodeOp.JumpIfFalse => new[] { GraphControlFlowPorts.True, GraphControlFlowPorts.False },
         GraphNodeOp.Return or GraphNodeOp.HaltReturnInt => Array.Empty<string>(),
+        GraphNodeOp.ConstInt or GraphNodeOp.ConstFloat or GraphNodeOp.ConstBool => Array.Empty<string>(),
         _ => new[] { GraphControlFlowPorts.Next },
     };
 
@@ -1954,7 +2434,7 @@ static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out str
     return true;
 }
 
-static bool TryCompileGasGraph(
+bool TryCompileGasGraph(
     JsonObject graphObj,
     string graphId,
     out GraphProgramPackage? package,
@@ -1966,10 +2446,13 @@ static bool TryCompileGasGraph(
     error = string.Empty;
     try
     {
-        var result = GraphProgramAuthoringFrontDoor.CompileJsonObject(
+        var enumCatalog = BuildLauncherEnumCatalog(new Dictionary<string, string>(StringComparer.Ordinal));
+        var result = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(
             graphObj,
             graphId,
-            StrictJsonOptions.CreateCamelCase(includeFields: true));
+            StrictJsonOptions.CreateCamelCase(includeFields: true),
+            BuildLauncherEventSchemas(new List<string>(), new Dictionary<string, string>(StringComparer.Ordinal), enumCatalog),
+            enumCatalog);
         package = result.Package;
         diagnostics = result.Diagnostics;
         return true;
@@ -2035,6 +2518,31 @@ static bool TryResolveModRoot(LauncherService launcher, string modId, out string
     }
 
     modRoot = mod.RootPath;
+    return true;
+}
+
+static bool TryCollectCatalogGraphs(JsonArray arr, string graphsPath, out List<object> graphs, out string? error)
+{
+    graphs = new List<object>(arr.Count);
+    for (int i = 0; i < arr.Count; i++)
+    {
+        if (arr[i] is not JsonObject obj)
+        {
+            error = $"{graphsPath} graphs[{i}] is not an object.";
+            return false;
+        }
+
+        var id = obj["id"]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            error = $"{graphsPath} graphs[{i}] is missing id.";
+            return false;
+        }
+
+        graphs.Add(new { id, kind = obj["kind"]?.GetValue<string>() ?? string.Empty });
+    }
+
+    error = null;
     return true;
 }
 
@@ -2616,6 +3124,25 @@ static class EditorRepo
 {
     private const int EagerEmptyTerrainFileMacroTileLimit = 16;
 
+    public static readonly Dictionary<string, string> StoryCatalogFiles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["lines"] = "Story/lines.json",
+        ["speakers"] = "Story/speakers.json",
+        ["presentation_profiles"] = "Story/presentation_profiles.json",
+        ["dialogues"] = "Dialogue/dialogues.json",
+        ["sequences"] = "Sequencer/sequences.json",
+        ["text_tokens"] = "Presentation/text_tokens.json",
+        ["semantic_maps"] = "Presentation/semantic_maps.json",
+        ["image_assets"] = "Presentation/image_assets.json",
+    };
+
+    public static string ResolveWritableStoryCatalogPath(ModContext ctx, string relativePath)
+    {
+        var mod = ctx.ModsById[ctx.TargetModId];
+        string rel = relativePath.TrimStart('\\', '/').Replace('/', Path.DirectorySeparatorChar);
+        return Path.Combine(mod.RootPath, "assets", rel);
+    }
+
     public sealed record ModInfo(
         string Id, string Name, string Version, int Priority,
         Dictionary<string, string> Dependencies, string RootPath, string RelativePath, string LayerPath,
@@ -2631,6 +3158,10 @@ static class EditorRepo
     }
 
     public sealed record MergedMapResult(bool Found, Ludots.Core.Config.MapConfig Map, List<string> Sources);
+
+    public sealed record MapVariableAuthoringDto(string Name, string Type, double Initial);
+
+    public sealed record GraphMapVariableHostDto(string MapId, string Path, IReadOnlyList<MapVariableAuthoringDto> Variables);
     public sealed record BoardMutationResult(
         Ludots.Core.Config.MapConfig Map,
         MapInfo MapInfo,
@@ -2952,6 +3483,188 @@ static class EditorRepo
     {
         var mod = ctx.ModsById[ctx.TargetModId];
         return Path.Combine(mod.RootPath, "assets", "Maps", $"{SanitizeId(mapId)}.json");
+    }
+
+    public static List<GraphMapVariableHostDto> ListGraphMapVariableHosts(ModContext ctx, string graphId)
+    {
+        if (string.IsNullOrWhiteSpace(graphId))
+        {
+            throw new InvalidOperationException("Graph id is required.");
+        }
+
+        var hostsByMapId = new Dictionary<string, GraphMapVariableHostDto>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<string> mapIds = DiscoverMaps(ctx);
+        for (int i = 0; i < mapIds.Count; i++)
+        {
+            string mapId = mapIds[i];
+            IReadOnlyList<string> paths = ListMapConfigPaths(ctx, mapId);
+            for (int p = 0; p < paths.Count; p++)
+            {
+                string path = paths[p];
+                JsonNode? root = JsonNode.Parse(File.ReadAllText(path));
+                if (root is not JsonObject obj || !JsonObjectMountsGraph(obj, graphId))
+                {
+                    continue;
+                }
+
+                JsonNode? variablesNode = null;
+                foreach (KeyValuePair<string, JsonNode?> field in obj)
+                {
+                    if (string.Equals(field.Key, "Variables", StringComparison.OrdinalIgnoreCase))
+                    {
+                        variablesNode = field.Value;
+                        break;
+                    }
+                }
+
+                hostsByMapId[mapId] = new GraphMapVariableHostDto(
+                    mapId,
+                    path,
+                    ProjectMapVariables(MapVariableDeclarations.Parse(variablesNode, mapId)));
+            }
+        }
+
+        return hostsByMapId.Values.ToList();
+    }
+
+    public static List<string> ListMapConfigPaths(ModContext ctx, string mapId)
+    {
+        var paths = new List<string>();
+        void Add(string path)
+        {
+            if (File.Exists(path))
+            {
+                paths.Add(path);
+            }
+        }
+
+        Add(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Maps", $"{mapId}.json"));
+        Add(Path.Combine(ctx.RepoRoot, "assets", "Maps", $"{mapId}.json"));
+        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        {
+            var mod = ctx.ModsById[ctx.LoadOrder[i]];
+            Add(Path.Combine(mod.RootPath, "assets", "Configs", "Maps", $"{mapId}.json"));
+            Add(Path.Combine(mod.RootPath, "assets", "Maps", $"{mapId}.json"));
+        }
+
+        return paths;
+    }
+
+    public static IReadOnlyList<MapVariableAuthoringDto> ProjectMapVariables(IReadOnlyList<MapVariableDeclaration>? declarations)
+    {
+        if (declarations == null || declarations.Count == 0)
+        {
+            return Array.Empty<MapVariableAuthoringDto>();
+        }
+
+        var rows = new MapVariableAuthoringDto[declarations.Count];
+        for (int i = 0; i < declarations.Count; i++)
+        {
+            MapVariableDeclaration declaration = declarations[i];
+            rows[i] = new MapVariableAuthoringDto(
+                declaration.Name,
+                declaration.Type == MapVariableType.Float ? "float" : "int",
+                declaration.Initial ?? 0);
+        }
+
+        return rows;
+    }
+
+    public static bool JsonObjectMountsGraph(JsonObject map, string graphId)
+    {
+        JsonNode? mountsNode = null;
+        foreach (KeyValuePair<string, JsonNode?> field in map)
+        {
+            if (string.Equals(field.Key, "TriggerGraphs", StringComparison.OrdinalIgnoreCase))
+            {
+                mountsNode = field.Value;
+                break;
+            }
+        }
+
+        if (mountsNode is not JsonArray mounts)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < mounts.Count; i++)
+        {
+            if (mounts[i] is not JsonObject mount)
+            {
+                continue;
+            }
+
+            if (TryReadObjectString(mount, "graph", out string? mounted) &&
+                string.Equals(mounted, graphId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static void WriteMapVariablesSurgical(string path, IReadOnlyList<MapVariableDeclaration> declarations)
+    {
+        JsonNode? root = JsonNode.Parse(File.ReadAllText(path));
+        if (root is not JsonObject obj)
+        {
+            throw new InvalidOperationException($"Map file '{path}' must be a JSON object.");
+        }
+
+        string key = "Variables";
+        foreach (KeyValuePair<string, JsonNode?> field in obj)
+        {
+            if (string.Equals(field.Key, "Variables", StringComparison.OrdinalIgnoreCase))
+            {
+                key = field.Key;
+                break;
+            }
+        }
+
+        obj[key] = SerializeMapVariables(declarations);
+        File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    public static JsonArray SerializeMapVariables(IReadOnlyList<MapVariableDeclaration> declarations)
+    {
+        var array = new JsonArray();
+        for (int i = 0; i < declarations.Count; i++)
+        {
+            MapVariableDeclaration declaration = declarations[i];
+            var item = new JsonObject
+            {
+                ["name"] = declaration.Name,
+                ["type"] = declaration.Type == MapVariableType.Float ? "float" : "int",
+                ["initial"] = declaration.Initial ?? 0,
+            };
+            array.Add(item);
+        }
+
+        return array;
+    }
+
+    private static bool TryReadObjectString(JsonObject obj, string name, out string? value)
+    {
+        foreach (KeyValuePair<string, JsonNode?> field in obj)
+        {
+            if (!string.Equals(field.Key, name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (field.Value is JsonValue jsonValue && jsonValue.TryGetValue(out string? text))
+            {
+                value = text;
+                return true;
+            }
+
+            value = null;
+            return false;
+        }
+
+        value = null;
+        return false;
     }
 
     public static BoardMutationResult CreateBoard(ModContext ctx, string mapId, BoardCreateRequest request)

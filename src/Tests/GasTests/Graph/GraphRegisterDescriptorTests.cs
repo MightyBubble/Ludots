@@ -74,9 +74,11 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void PinRegister与已分配格子冲突时编译失败()
+        public void PinRegister优先保留_顺排让位到其它槽()
         {
-            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+            // Pins reserve before sequential allocation, so an auto-allocated node
+            // never lands on (or invalidates) a pin declared later in the node list.
+            GraphControlFlowCompileResult reserved = CompileFrontDoor(
                 """
                 {
                   "kind": "Effect",
@@ -91,13 +93,16 @@ namespace Ludots.Tests.Gas.Graph
                   "valueEdges": []
                 }
                 """,
-                "tests.s12.pin-conflict");
+                "tests.s12.pin-reserves");
 
-            Assert.That(compiled.Succeeded, Is.False);
-            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
-                d.Code == GraphDiagnosticCodes.RegisterAliasConflict &&
-                d.NodeId == "pinned" &&
-                d.Message.Contains("conflicts", StringComparison.Ordinal)));
+            Assert.That(reserved.Succeeded, Is.True,
+                string.Join("; ", reserved.Diagnostics.Select(d => d.Message)));
+
+            GraphInstruction[] program = reserved.Package!.Value.Program;
+            GraphInstruction pinned = program.Single(i => i.Op == (ushort)GraphNodeOp.ConstInt && i.Imm == 2);
+            GraphInstruction first = program.Single(i => i.Op == (ushort)GraphNodeOp.ConstInt && i.Imm == 1);
+            Assert.That(pinned.Dst, Is.EqualTo(0), "The pin owns its reserved slot.");
+            Assert.That(first.Dst, Is.Not.EqualTo(0), "Sequential allocation must yield to the reserved pin.");
         }
 
         [Test]

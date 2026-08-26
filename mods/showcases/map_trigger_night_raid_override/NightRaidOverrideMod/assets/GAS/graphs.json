@@ -177,37 +177,138 @@
     ]
   },
   {
-    "id": "Graph.NightRaid.Override.Mod",
+    "id": "Graph.NightRaidOverride.SchemaProbe",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "mod_loaded", "event": "ModLoaded", "start": "loaded_value", "once": true }
+      {
+        "label": "probe_alive_count",
+        "event": "EntityAliveCountChanged",
+        "start": "pc_read"
+      },
+      {
+        "label": "probe_hero_region",
+        "event": "RegionEntered",
+        "start": "pr_scope",
+        "filters": {
+          "instanceId": "night_raid_hero"
+        }
+      }
     ],
     "nodes": [
-      { "id": "loaded_value", "op": "ConstInt", "intValue": 1 },
-      { "id": "loaded", "op": "HaltReturnInt" }
+      {
+        "id": "pc_read",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "MapTrigger.Count"
+      },
+      {
+        "id": "pc_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "pc_write",
+        "op": "WriteMapVarInt",
+        "var": "probe_last_count"
+      },
+      {
+        "id": "pc_done_const",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "pc_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "pr_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "pr_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "pr_write",
+        "op": "WriteMapVarInt",
+        "var": "probe_hero_entered"
+      },
+      {
+        "id": "pr_done_const",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "pr_done",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "loaded_value", "fromPort": "next", "to": "loaded" }
+      {
+        "from": "pc_read",
+        "fromPort": "next",
+        "to": "pc_scope"
+      },
+      {
+        "from": "pc_scope",
+        "fromPort": "next",
+        "to": "pc_write"
+      },
+      {
+        "from": "pc_write",
+        "fromPort": "next",
+        "to": "pc_done_const"
+      },
+      {
+        "from": "pc_done_const",
+        "fromPort": "next",
+        "to": "pc_done"
+      },
+      {
+        "from": "pr_scope",
+        "fromPort": "next",
+        "to": "pr_one"
+      },
+      {
+        "from": "pr_one",
+        "fromPort": "next",
+        "to": "pr_write"
+      },
+      {
+        "from": "pr_write",
+        "fromPort": "next",
+        "to": "pr_done_const"
+      },
+      {
+        "from": "pr_done_const",
+        "fromPort": "next",
+        "to": "pr_done"
+      }
     ],
     "valueEdges": [
-      { "from": "loaded_value", "fromPort": "value", "to": "loaded", "toPort": "value" }
-    ]
-  },
-  {
-    "id": "Graph.NightRaid.Override.GlobalObserver",
-    "kind": "TriggerGraph",
-    "entries": [
-      { "label": "any_map_loaded", "event": "MapLoaded", "start": "loaded_value", "once": false }
-    ],
-    "nodes": [
-      { "id": "loaded_value", "op": "ConstInt", "intValue": 1 },
-      { "id": "loaded", "op": "HaltReturnInt" }
-    ],
-    "controlEdges": [
-      { "from": "loaded_value", "fromPort": "next", "to": "loaded" }
-    ],
-    "valueEdges": [
-      { "from": "loaded_value", "fromPort": "value", "to": "loaded", "toPort": "value" }
+      {
+        "from": "pc_read",
+        "fromPort": "value",
+        "to": "pc_write",
+        "toPort": "value"
+      },
+      {
+        "from": "pc_scope",
+        "fromPort": "value",
+        "to": "pc_write",
+        "toPort": "source"
+      },
+      {
+        "from": "pr_scope",
+        "fromPort": "value",
+        "to": "pr_write",
+        "toPort": "source"
+      },
+      {
+        "from": "pr_one",
+        "fromPort": "value",
+        "to": "pr_write",
+        "toPort": "value"
+      }
     ]
   }
 ]
