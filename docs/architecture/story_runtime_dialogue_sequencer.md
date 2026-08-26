@@ -275,6 +275,15 @@ Feature: 地图变量作者面
 
 ## 8. 提交切片
 
-1. 本文档 + Dialogue runtime + 旧 Narrative 失败关闭/拆除 + Graph invoker
-2. Sequencer runtime（独立 commit）
-3. Showcase / Frontend 投影 / 测试与 UAT
+1. 本文档 + Dialogue runtime + 旧 Narrative 失败关闭/拆除 + Graph invoker — 完成
+2. Sequencer runtime（独立 commit）— 完成
+3. Showcase / Frontend 投影 / 测试与 UAT — 完成
+
+## 9. 交付状态（Story 线）
+
+- DialogueRuntime / SequencerRuntime / 旧 Narrative fail-closed：已合入（PR #1222）
+- Sequencer 时钟 Pause / Resume / SetRate / Seek / Skip：已有运行时 + `StoryRuntimeModernizationTests`
+- #128 语义 TextToken / 肖像 / 立绘 fail-closed：已合入
+- #1217 / #1109 MapVariable 作者面（Bridge + Graph 变量面板）：已合入
+- Epic #1083 剩余 Graph 子树（#1113–#1126）：跟 TriggerGraph PR #1239，不在 Story 交付内自卡
+
