@@ -13,6 +13,14 @@ namespace Ludots.Core.UI.PanelProjection
         Entity = 1,
         Task = 2,
         Ability = 3,
+        EffectInstance = 4,
+        EffectTemplate = 5,
+    }
+
+    public enum PanelCollectionSourceKind : byte
+    {
+        SelfGraph = 0,
+        Input = 1,
     }
 
     public enum PanelLayoutControlType : byte
@@ -24,22 +32,50 @@ namespace Ludots.Core.UI.PanelProjection
     }
 
     /// <summary>
+    /// Explicit parent→child pin (query-graph-collection-outputs §2.4).
+    /// </summary>
+    public sealed class PanelInputBinding
+    {
+        public PanelInputBinding(string name, string fromSpace, string fromOutput, string type)
+        {
+            Name = name;
+            FromSpace = fromSpace;
+            FromOutput = fromOutput;
+            Type = type;
+        }
+
+        public string Name { get; }
+        public string FromSpace { get; }
+        public string FromOutput { get; }
+        public string Type { get; }
+    }
+
+    /// <summary>
     /// Container binding: graph collection + reusable element template id.
     /// Membership/order come from the query graph; each member is passed through
     /// as the element template's evaluation scope.
     /// </summary>
     public sealed class PanelCollectionBinding
     {
-        public PanelCollectionBinding(string name, string collectionKey, string templateId)
+        public PanelCollectionBinding(
+            string name,
+            string collectionKey,
+            string templateId,
+            PanelCollectionSourceKind source = PanelCollectionSourceKind.SelfGraph,
+            string? inputName = null)
         {
             Name = name;
             CollectionKey = collectionKey;
             TemplateId = templateId;
+            Source = source;
+            InputName = inputName;
         }
 
         public string Name { get; }
         public string CollectionKey { get; }
         public string TemplateId { get; }
+        public PanelCollectionSourceKind Source { get; }
+        public string? InputName { get; }
 
         /// <summary>Resolved after catalog load.</summary>
         public PanelTemplate? Template { get; internal set; }
@@ -168,8 +204,10 @@ namespace Ludots.Core.UI.PanelProjection
                 "Entity" => PanelSubjectKind.Entity,
                 "Task" => PanelSubjectKind.Task,
                 "Ability" => PanelSubjectKind.Ability,
+                "EffectInstance" => PanelSubjectKind.EffectInstance,
+                "EffectTemplate" => PanelSubjectKind.EffectTemplate,
                 _ => throw new InvalidOperationException(
-                    $"{context} subject '{text}' is unknown (allowed: Entity, Task, Ability)."),
+                    $"{context} subject '{text}' is unknown (allowed: Entity, Task, Ability, EffectInstance, EffectTemplate)."),
             };
         }
 
@@ -178,10 +216,37 @@ namespace Ludots.Core.UI.PanelProjection
             PanelSubjectKind.Entity => "Entity",
             PanelSubjectKind.Task => "Task",
             PanelSubjectKind.Ability => "Ability",
+            PanelSubjectKind.EffectInstance => "EffectInstance",
+            PanelSubjectKind.EffectTemplate => "EffectTemplate",
             _ => "None",
         };
 
-        /// <summary>Entity subject surface available to layout binds (not graph pins).</summary>
+        /// <summary>Entity / effect-instance subject surface available to layout binds (not graph pins).</summary>
         public const string EntityDisplayName = "displayName";
+    }
+
+    public static class PanelCollectionSources
+    {
+        public static PanelCollectionSourceKind Parse(string text, string context)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"{context} source is required (selfGraph|input).");
+            }
+
+            return text.Trim() switch
+            {
+                "selfGraph" => PanelCollectionSourceKind.SelfGraph,
+                "input" => PanelCollectionSourceKind.Input,
+                _ => throw new InvalidOperationException(
+                    $"{context} source '{text}' is unknown (allowed: selfGraph, input)."),
+            };
+        }
+
+        public static string ToId(PanelCollectionSourceKind kind) => kind switch
+        {
+            PanelCollectionSourceKind.Input => "input",
+            _ => "selfGraph",
+        };
     }
 }

@@ -2200,6 +2200,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "panel_effect_list_raylib",
+      "name": "Panel Effect List Raylib",
+      "selectors": [
+        "$panel_effect_list"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_skin_markup_raylib",
       "name": "Panel Markup Skin Raylib",
       "selectors": [
@@ -2549,6 +2558,24 @@
       "name": "Graph Op SinkPresentationText Raylib",
       "selectors": [
         "$capability_standard_graph_op_SinkPresentationText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEffectTiming_raylib",
+      "name": "Graph Op LoadEffectTiming Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEffectTiming"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveEffects_raylib",
+      "name": "Graph Op QueryCollectActiveEffects Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveEffects"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

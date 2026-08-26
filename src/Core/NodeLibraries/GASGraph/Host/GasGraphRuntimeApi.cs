@@ -1168,6 +1168,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().CopyCollection(_entityCollections, owner, collectionKeyId, buffer);
         }
 
+        public int CollectActiveEffects(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || !_world.Has<ActiveEffectContainer>(owner))
+            {
+                return 0;
+            }
+
+            ref ActiveEffectContainer container = ref _world.Get<ActiveEffectContainer>(owner);
+            int written = 0;
+            for (int i = 0; i < container.Count && written < buffer.Length; i++)
+            {
+                Entity effectEntity = container.GetEntity(i);
+                if (!_world.IsAlive(effectEntity))
+                {
+                    continue;
+                }
+
+                buffer[written++] = effectEntity;
+            }
+
+            return written;
+        }
+
         public int FilterTeam(Span<Entity> entities, int count, int teamId)
         {
             return RequireEntityQueries().FilterTeam(entities, count, teamId);

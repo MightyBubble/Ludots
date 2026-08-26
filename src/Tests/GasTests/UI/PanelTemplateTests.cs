@@ -176,6 +176,7 @@ namespace Ludots.Tests.GasTests.UI
               "collections": [
                 {
                   "name": "units",
+                  "source": "selfGraph",
                   "collectionKey": "tests.collection.units",
                   "template": "panel.unit.roster"
                 }
@@ -247,7 +248,7 @@ namespace Ludots.Tests.GasTests.UI
               "graph": "g",
               "pins": [ { "name": "n", "key": "k" } ],
               "collections": [
-                { "name": "units", "collectionKey": "c", "template": "panel.unit.roster" }
+                { "name": "units", "source": "selfGraph", "collectionKey": "c", "template": "panel.unit.roster" }
               ],
               "layout": {
                 "controls": [
@@ -323,7 +324,7 @@ namespace Ludots.Tests.GasTests.UI
               "graph": "g",
               "pins": [ { "name": "n", "key": "k" } ],
               "collections": [
-                { "name": "units", "collectionKey": "c", "template": "panel.unit.roster" }
+                { "name": "units", "source": "selfGraph", "collectionKey": "c", "template": "panel.unit.roster" }
               ],
               "layout": { "controls": [ { "type": "list", "bind": "units" } ] }
             }

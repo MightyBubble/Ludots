@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.UI.PanelHosting;
 
 namespace Ludots.Core.UI.PanelProjection
@@ -39,14 +41,20 @@ namespace Ludots.Core.UI.PanelProjection
 
             foreach (PanelCollectionBinding collection in host.Collections)
             {
+                if (collection.Source == PanelCollectionSourceKind.Input)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel '{host.Id}' collection '{collection.Name}' source=input is declared but parent→child collection runtime wire is not available yet.");
+                }
+
                 PanelTemplate element = templates.Require(collection.TemplateId);
                 if (element.Subject == PanelSubjectKind.None)
                 {
                     throw new InvalidOperationException(
-                        $"Panel '{host.Id}' collection '{collection.Name}' template '{collection.TemplateId}' must declare subject (Entity/Task/Ability).");
+                        $"Panel '{host.Id}' collection '{collection.Name}' template '{collection.TemplateId}' must declare subject (Entity/EffectInstance/…).");
                 }
 
-                if (element.Subject is not PanelSubjectKind.Entity)
+                if (element.Subject is not (PanelSubjectKind.Entity or PanelSubjectKind.EffectInstance))
                 {
                     throw new InvalidOperationException(
                         $"Panel '{host.Id}' collection '{collection.Name}' template '{collection.TemplateId}' subject '{PanelSubjectKinds.ToId(element.Subject)}' is not wired for EntityCollection yet.");
@@ -184,6 +192,10 @@ namespace Ludots.Core.UI.PanelProjection
             {
                 strings[PanelSubjectKinds.EntityDisplayName] = ReadName(member);
             }
+            else if (element.Subject == PanelSubjectKind.EffectInstance)
+            {
+                strings[PanelSubjectKinds.EntityDisplayName] = ReadEffectDisplayName(member);
+            }
 
             return new PanelListItemProjection(floats, bools, strings);
         }
@@ -197,6 +209,23 @@ namespace Ludots.Core.UI.PanelProjection
 
             string? value = _world.Get<Name>(entity).Value;
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value;
+        }
+
+        private string ReadEffectDisplayName(Entity effectEntity)
+        {
+            if (!_world.IsAlive(effectEntity) || !_world.Has<EffectTemplateRef>(effectEntity))
+            {
+                return string.Empty;
+            }
+
+            int templateId = _world.Get<EffectTemplateRef>(effectEntity).TemplateId;
+            if (templateId <= 0)
+            {
+                return string.Empty;
+            }
+
+            string name = EffectTemplateIdRegistry.GetName(templateId);
+            return string.IsNullOrWhiteSpace(name) ? string.Empty : name;
         }
     }
 }

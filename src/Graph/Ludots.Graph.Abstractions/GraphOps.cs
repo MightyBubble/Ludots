@@ -133,6 +133,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
         RelationshipHasLink = 397,          // B[Dst] = HasLink(E[A], E[B], type=Flags symbol)
+        QueryCollectActiveEffects = 398,    // TargetList = active effect instances on E[A]
+        LoadEffectTiming = 399,             // F[Dst] = RemainingTicks|TotalTicks on caster (Flags)
 
         // ── Entity lifecycle composition (400-401) ──
         BeginLifecycleTransaction = 400,

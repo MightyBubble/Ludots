@@ -31,6 +31,17 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
     ];
 
     [Test]
+    public void QueryCollectActiveEffects_ListsSeededBuffs()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("QueryCollectActiveEffects");
+        QueryNodeDriver driver = (QueryNodeDriver)runtime.Driver;
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Metrics.Detail, Does.Contain("效果"));
+        Assert.That(driver.LastTargetCount, Is.EqualTo(3));
+    }
+
+    [Test]
     public void QueryAllMapEntities_CountMatchesSeededMapEntities()
     {
         using GraphOpsNodeGalleryRuntime runtime = Play("QueryAllMapEntities");

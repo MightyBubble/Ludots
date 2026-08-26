@@ -1,6 +1,8 @@
 using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Platform.Abstractions;
 
@@ -42,6 +44,36 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         _seeded = true;
         GraphOpsNodeActorBinding.BindHud(ctx);
         BuildScanOrder(ctx);
+        if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectActiveEffects), StringComparison.Ordinal))
+        {
+            SeedActiveEffectsOnCaster(ctx);
+        }
+    }
+
+    private static void SeedActiveEffectsOnCaster(GraphOpsNodeDriverContext ctx)
+    {
+        Entity caster = ctx.Caster;
+        if (!ctx.World.Has<ActiveEffectContainer>(caster))
+        {
+            ctx.World.Add(caster, new ActiveEffectContainer());
+        }
+
+        ref ActiveEffectContainer container = ref ctx.World.Get<ActiveEffectContainer>(caster);
+        for (int i = 0; i < 3; i++)
+        {
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                ctx.World,
+                rootId: i + 1,
+                source: caster,
+                target: caster,
+                durationTicks: 100,
+                lifetimeKind: EffectLifetimeKind.Infinite);
+            ctx.World.Get<GameplayEffect>(effect).State = EffectState.Committed;
+            if (!container.Add(effect))
+            {
+                throw new InvalidOperationException("QueryCollectActiveEffects gallery could not seed ActiveEffectContainer.");
+            }
+        }
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)
@@ -97,6 +129,12 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         }
 
         if (string.Equals(op, nameof(GraphNodeOp.QueryFromCollection), StringComparison.Ordinal))
+        {
+            DrawRosterOverlay(ctx, debugDraw, caster);
+            return;
+        }
+
+        if (string.Equals(op, nameof(GraphNodeOp.QueryCollectActiveEffects), StringComparison.Ordinal))
         {
             DrawRosterOverlay(ctx, debugDraw, caster);
             return;
@@ -684,6 +722,7 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
     private int CountFor(string op)
     {
         return op is nameof(GraphNodeOp.QueryAllMapEntities)
+            or nameof(GraphNodeOp.QueryCollectActiveEffects)
             or nameof(GraphNodeOp.AggSumAttribute)
             or nameof(GraphNodeOp.AggAverageAttribute)
             ? LastTargetCount

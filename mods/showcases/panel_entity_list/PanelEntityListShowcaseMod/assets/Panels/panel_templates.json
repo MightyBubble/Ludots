@@ -60,6 +60,7 @@
     "collections": [
       {
         "name": "units",
+        "source": "selfGraph",
         "collectionKey": "panel.roster.units",
         "template": "panel.unit.roster"
       }

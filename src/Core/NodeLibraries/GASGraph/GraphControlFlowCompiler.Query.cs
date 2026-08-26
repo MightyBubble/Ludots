@@ -60,6 +60,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     }
 
                     break;
+                case GraphNodeOp.QueryCollectActiveEffects:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.LoadEffectTiming:
+                    RequireEffectTimingAttribute(node, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.QueryFilterTeam:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     bool hasTeamField = node.TeamId != 0;
@@ -348,6 +354,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryCollectActiveEffects:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.LoadEffectTiming:
+                    instruction.Flags = ResolveEffectTimingFlags(node, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.QueryFilterTeam:
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId)))
                     {
@@ -612,6 +626,48 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
+        }
+
+        private static void RequireEffectTimingAttribute(
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(node.Attribute))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires attribute RemainingTicks or TotalTicks.", node.Id));
+                return;
+            }
+
+            string attr = node.Attribute.Trim();
+            if (!string.Equals(attr, "RemainingTicks", StringComparison.Ordinal) &&
+                !string.Equals(attr, "TotalTicks", StringComparison.Ordinal))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' attribute '{attr}' is unknown (allowed: RemainingTicks, TotalTicks).", node.Id));
+            }
+        }
+
+        private static byte ResolveEffectTimingFlags(
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            string attr = node.Attribute?.Trim() ?? string.Empty;
+            if (string.Equals(attr, "RemainingTicks", StringComparison.Ordinal))
+            {
+                return 0;
+            }
+
+            if (string.Equals(attr, "TotalTicks", StringComparison.Ordinal))
+            {
+                return 1;
+            }
+
+            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                $"Node '{node.Id}' attribute '{attr}' is unknown (allowed: RemainingTicks, TotalTicks).", node.Id));
+            return 0;
         }
     }
 }

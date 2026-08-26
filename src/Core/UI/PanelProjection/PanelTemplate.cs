@@ -22,7 +22,8 @@ namespace Ludots.Core.UI.PanelProjection
             string? skin = null,
             IReadOnlyList<PanelCollectionBinding>? collections = null,
             PanelLayout? layout = null,
-            PanelSubjectKind subject = PanelSubjectKind.None)
+            PanelSubjectKind subject = PanelSubjectKind.None,
+            IReadOnlyList<PanelInputBinding>? inputs = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -53,14 +54,31 @@ namespace Ludots.Core.UI.PanelProjection
                 }
             }
 
+            List<PanelInputBinding> safeInputs =
+                new List<PanelInputBinding>(inputs ?? Array.Empty<PanelInputBinding>());
+            var inputNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelInputBinding input in safeInputs)
+            {
+                if (input == null)
+                {
+                    throw new ArgumentException($"Panel template '{id}' has a null input entry.", nameof(inputs));
+                }
+
+                if (!inputNames.Add(input.Name))
+                {
+                    throw new ArgumentException(
+                        $"Panel template '{id}' declares duplicate input '{input.Name}'.", nameof(inputs));
+                }
+
+                if (seen.Contains(input.Name))
+                {
+                    throw new ArgumentException(
+                        $"Panel template '{id}' input '{input.Name}' collides with a pin name.", nameof(inputs));
+                }
+            }
+
             List<PanelCollectionBinding> safeCollections =
                 new List<PanelCollectionBinding>(collections ?? Array.Empty<PanelCollectionBinding>());
-            if (subject != PanelSubjectKind.None && safeCollections.Count > 0)
-            {
-                throw new ArgumentException(
-                    $"Panel template '{id}' declares subject '{PanelSubjectKinds.ToId(subject)}' and cannot also declare collections.",
-                    nameof(collections));
-            }
 
             var collectionNames = new HashSet<string>(StringComparer.Ordinal);
             foreach (PanelCollectionBinding collection in safeCollections)
@@ -76,11 +94,22 @@ namespace Ludots.Core.UI.PanelProjection
                         $"Panel template '{id}' declares duplicate collection '{collection.Name}'.", nameof(collections));
                 }
 
-                if (seen.Contains(collection.Name))
+                if (seen.Contains(collection.Name) || inputNames.Contains(collection.Name))
                 {
                     throw new ArgumentException(
-                        $"Panel template '{id}' collection '{collection.Name}' collides with a pin name.",
+                        $"Panel template '{id}' collection '{collection.Name}' collides with a pin or input name.",
                         nameof(collections));
+                }
+
+                if (collection.Source == PanelCollectionSourceKind.Input)
+                {
+                    if (string.IsNullOrWhiteSpace(collection.InputName) ||
+                        !inputNames.Contains(collection.InputName))
+                    {
+                        throw new ArgumentException(
+                            $"Panel template '{id}' collection '{collection.Name}' source=input requires a declared inputs[].name.",
+                            nameof(collections));
+                    }
                 }
             }
 
@@ -124,6 +153,7 @@ namespace Ludots.Core.UI.PanelProjection
             Events = safeEvents;
             Intents = safeIntents;
             Skin = string.IsNullOrWhiteSpace(skin) ? null : skin.Trim();
+            Inputs = safeInputs;
             Collections = safeCollections;
             Layout = layout;
             Subject = subject;
@@ -140,8 +170,12 @@ namespace Ludots.Core.UI.PanelProjection
         /// <summary>
         /// Element subject kind. <see cref="PanelSubjectKind.None"/> = host panel;
         /// non-None = embeddable element that resolves that payload type.
+        /// Compound elements may also declare nested collections (explicit source).
         /// </summary>
         public PanelSubjectKind Subject { get; }
+
+        /// <summary>Explicit parent pin inputs (query-graph-collection-outputs §2.4).</summary>
+        public IReadOnlyList<PanelInputBinding> Inputs { get; }
 
         /// <summary>Collection slots: graph collection + reusable element template id.</summary>
         public IReadOnlyList<PanelCollectionBinding> Collections { get; }

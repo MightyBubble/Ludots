@@ -163,6 +163,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity collection runtime is not available.");
         }
 
+        /// <summary>
+        /// Enumerate alive effect-instance entities from the owner's <c>ActiveEffectContainer</c>
+        /// into <paramref name="buffer"/>. Truncates at buffer capacity (same contract as map collect).
+        /// </summary>
+        int CollectActiveEffects(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-effect query runtime is not available.");
+        }
+
         int FilterTeam(Span<Entity> entities, int count, int teamId)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");

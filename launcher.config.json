@@ -1577,6 +1577,14 @@
       }
     },
     {
+      "name": "panel_effect_list",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_effect_list/PanelEffectListShowcaseMod",
+        "projectPath": "PanelEffectListShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",
@@ -1894,6 +1902,22 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSinkPresentationTextEntryMod",
         "projectPath": "CapabilityStandardGraphOpSinkPresentationTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEffectTiming",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEffectTimingEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEffectTimingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveEffects",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveEffectsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveEffectsEntryMod.csproj"
       }
     }
   ],

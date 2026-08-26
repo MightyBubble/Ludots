@@ -1,0 +1,10 @@
+{
+  "name": "PanelEffectListShowcaseMod",
+  "version": "1.0.0",
+  "description": "Active effect buff strip: QueryCollectActiveEffects → EffectInstance rows with remaining time",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "main": "bin/net8.0/PanelEffectListShowcaseMod.dll"
+}

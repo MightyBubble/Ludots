@@ -67,6 +67,7 @@
 - [圈出对面十个](QueryFilterTeam.md) — 红的一排留圈，蓝的退成灰影。
 - [戴敌徽的全圈出来](QueryFilterTagAny.md) — 头顶红徽的九个留圈，没徽的退成灰影。
 - [把场上的人全点名](QueryAllMapEntities.md) — 扫描弧从指挥席扫过全场，点到谁谁亮。
+- [把身上的效果全点名](QueryCollectActiveEffects.md) — 指挥身上三条效果被点名线牵住，头上浮出计数。
 - [按血量从厚到薄排队](QuerySortByAttribute.md) — 最厚的顶着三道杠，箭头顺着血条一路排下去。
 - [摘掉阵亡徽的留下](QueryFilterTagNone.md) — 戴阵亡徽的退成灰影，没戴徽的留着圈。
 - [点名最残的那个](AggMinEntityByAttribute.md) — 全场退成灰影，空血条那个被点名徽钉住。
@@ -98,6 +99,7 @@
 - [把身上的状态摘掉](RemoveEffectTemplate.md) — 木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。
 - [点名谁就打谁](LoadExplicitTarget.md) — 红色准星飞出锁扣木桩，一刀沿线打下，木桩 100 掉到 85。
 - [直接在血条上做加法](ModifyAttributeAdd.md) — 一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。
+- [看效果还剩多久](LoadEffectTiming.md) — 自查线绕回施法者身上的计时，头顶浮出剩余 55。
 - [看自己还剩多少血](LoadSelfAttribute.md) — 自查线绕回施法者自己，头顶浮出 62；木桩满血没人碰。
 - [给木桩挂上看得见的状态](ApplyEffectTemplate.md) — 红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。
 - [血量过线没：过线轻击，没过线全力](CompareLtInt.md) — 木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。

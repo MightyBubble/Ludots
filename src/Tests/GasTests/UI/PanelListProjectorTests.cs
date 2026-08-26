@@ -62,6 +62,7 @@ namespace Ludots.Tests.GasTests.UI
               "collections": [
                 {
                   "name": "units",
+                  "source": "selfGraph",
                   "collectionKey": "tests.roster",
                   "template": "panel.unit.roster"
                 }

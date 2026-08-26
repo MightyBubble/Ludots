@@ -1,0 +1,13 @@
+{
+  "op": "QueryCollectActiveEffects",
+  "driver": "query",
+  "title": "把身上的效果全点名",
+  "beat": "指挥身上三条效果被点名线牵住，头上浮出计数。",
+  "detailTemplate": "身上{count}条效果被点名线牵住。",
+  "assertDetailContains": [
+    "效果"
+  ],
+  "featuredNodeId": "collect",
+  "graphKind": "Query",
+  "field": "query"
+}
