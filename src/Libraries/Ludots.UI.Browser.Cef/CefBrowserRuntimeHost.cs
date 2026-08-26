@@ -35,6 +35,7 @@ public static class CefBrowserRuntimeHost
 			return existingRuntime;
 		}
 
+		CefRuntimeLayoutPreflight.EnsureHostPlatformSupported();
 		CefRuntimeLayoutPreflight.EnsureComplete(runtimeRootPath);
 		var runtime = new CefBrowserRuntime(new CefBrowserRuntimeOptions(runtimeRootPath, cacheRootPath));
 		services[BrowserRuntimeServiceNames.BrowserRuntime] = runtime;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Ludots.UI.Browser.Cef;
 
@@ -45,8 +46,22 @@ internal static class CefRuntimeLayoutPreflight
 		Path.Combine("locales", "en-US.pak")
 	};
 
+	public static void EnsureHostPlatformSupported()
+	{
+		if (OperatingSystem.IsWindows())
+		{
+			return;
+		}
+
+		throw new PlatformNotSupportedException(
+			"Ludots.UI.Browser.Cef ships CefSharp.OffScreen.NETCore win-x64 natives only " +
+			$"(TFM net8.0-windows / RID win-x64). Current OS '{RuntimeInformation.OSDescription}' cannot load libcef.dll. " +
+			"Disable browserRuntime on this host, or register a Linux-capable provider such as Ultralight.");
+	}
+
 	public static void EnsureComplete(string runtimeRootPath)
 	{
+		EnsureHostPlatformSupported();
 		if (string.IsNullOrWhiteSpace(runtimeRootPath))
 		{
 			throw new ArgumentException("CEF runtime root path is required.", nameof(runtimeRootPath));

@@ -1131,6 +1131,15 @@ public sealed class LauncherService
                 $"browserRuntime provider '{runtime.Provider}' is not registered in launcher.config.json browserRuntimeProviders.");
         }
 
+        if (string.Equals(runtime.Provider, "cef", StringComparison.OrdinalIgnoreCase) &&
+            !OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException(
+                "browserRuntime provider 'cef' requires Windows (CefSharp.OffScreen.NETCore win-x64). " +
+                $"Current OS '{System.Runtime.InteropServices.RuntimeInformation.OSDescription}' is unsupported. " +
+                "Disable browserRuntime on this host, or register a Linux-capable provider such as Ultralight.");
+        }
+
         if (!string.IsNullOrWhiteSpace(provider.ProjectPath))
         {
             runtime.ProviderProjectPath = ResolveRepoRelativePath(provider.ProjectPath);
