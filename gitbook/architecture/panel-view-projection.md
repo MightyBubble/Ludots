@@ -17,6 +17,8 @@
 
 **透传（主路径）**：父级不拆列；每一行把集合里的成员交给元素，由元素自己的图解析 pins。
 
+**复合编排**（嵌套名单 / 反查名单 / 聚合 present）：配置形状见[查询图集合输出 §2.3 · §3.7](query-graph-collection-outputs.md)；本页规定面板如何声明子集合与 `present`，仍不发明集合种类。
+
 ## 2. 结构
 
 ```text
@@ -71,7 +73,8 @@
 |---|---|
 | 有 `subject` | 可被 `collections[].template` 引用 |
 | 无 `subject` | 普通宿主面板（CreatePanel），不可作集合元素 |
-| 元素 **禁止** | `collections`（本切片不嵌套集合） |
+| 元素 **可** 声明子 `collections` | **复合切片**：子袋须由图以该成员为 scope/owner 写出；禁止在元素里内联过滤排序 |
+| 平面名册切片 | 无子集合的元素仍合法（今日 `panel.unit.roster`） |
 | 数值 / bool | 一律元素 **graph → pins** |
 | `displayName`（Entity） | 主体表面，layout 可 bind；不是父级拆列 |
 
@@ -112,6 +115,7 @@
 | `collections[].collectionKey` | 容器图写出的集合 |
 | `collections[].template` | 元素模板 id（必须带匹配的 `subject`） |
 | `list` / 日后 `grid` | 只编排；**禁止** `itemControls` |
+| `present` | 消费形态：`list`（默认）/ `grid` / `aggregate`（见下） |
 
 #### list 滚动与虚拟窗口
 
@@ -124,9 +128,25 @@
 
 `virtualize: true` 必须带 `viewportHeight`。名册人数仍来自集合 `TotalCount` / 面板 pin，不因虚拟窗口变少。
 
-装载期：`template.subject` 与集合种类必须相容（本切片：`EntityCollection` ↔ `Entity`）。
+#### 聚合 present（同一集合，不同画面）
 
-### 3.3 元素图示例（Entity）
+`present: "aggregate"` 时仍绑定完整类型化集合；用配置取首位成员外观 + 总数（`TotalCount` 或并行 pin）。  
+空袋不得静默画「有货」图标。形状示意见[查询图集合输出 §3.7.3](query-graph-collection-outputs.md)。
+
+装载期：`template.subject` 与集合种类必须相容（今日：`EntityCollection` ↔ `Entity`；扩展见集合输出合同）。
+
+### 3.3 复合：元素上的子名单
+
+元素模板在复合切片下可声明子 `collections`（嵌套技能栏、反查持有者等）。  
+
+| 规则 | |
+|---|---|
+| 子袋数据 | 必须由图以 **当前元素成员** 为 scope/owner（或显式约束）写出 |
+| 子元素 `subject` | 与子袋类型相容 |
+| 过滤排序 | 仍只在图内；面板只编排 |
+| 嵌套深度 | 本切片建议 ≤ 2（宿主→元素→子名单）；更深另立合同 |
+
+### 3.4 元素图示例（Entity）
 
 ```jsonc
 {
@@ -145,12 +165,14 @@
 
 每行：以该实体为 owner 跑一遍元素图，再读 pins。
 
-### 3.4 运行时
+### 3.5 运行时
 
 1. 容器图 eval → 集合 + 面板 pin  
 2. 非虚拟列表：对集合每个成员跑元素图 → pins + subject 表面  
-3. 虚拟列表：只对可见窗（+ overscan）成员跑元素图；UI 用 spacer + ScrollView  
-4. 结构错误 fail-closed；图失败 → pin 缺省，不炸面板  
+3. 若元素声明子集合：以该成员为 scope 确保子袋已由相关查询写出，再按子 `present` 投影  
+4. 虚拟列表：只对可见窗（+ overscan）成员跑元素图；UI 用 spacer + ScrollView  
+5. `aggregate`：读 TotalCount（或 pin）+ 首位成员表面/图标；不展开全部行  
+6. 结构错误 fail-closed；图失败 → pin 缺省，不炸面板  
 
 压测基线（`PanelListVirtualizationPerfTests`）：1000 成员时，窗口投影行数与分配量须显著低于全量。
 
@@ -158,13 +180,17 @@
 
 - 名册 list + `panel.unit.roster`（Entity）  
 - 日后 grid 引用同一 `panel.unit.roster`  
-- 日后任务条：`subject: "Task"` + 任务集合（合同先占位）  
+- 单位详情嵌技能栏（元素子集合 + Ability 槽袋）  
+- 技能格反查持有者（子集合 + Entity 袋）  
+- 背包堆叠聚合（`present: aggregate`）  
+- 任务条等：subject 与集合类型见[查询图集合输出](query-graph-collection-outputs.md)  
 
 ## 5. 边界
 
 - 不做父级拆列与元素自解对等双轨  
 - 父→子额外参数（非成员本身）本切片不做；需要时另立显式 `params` 合同  
 - Task/Ability/Effect 等集合类型未接线前，配置写了对应 subject/引用 → 装载或绑定 fail-closed（类型表见[查询图集合输出](query-graph-collection-outputs.md)）  
+- 不硬编码 EntityInfo / AbilityIcon / ItemStack 控件；复合靠配置  
 - 点击行选中仍属 #1015  
 - 小地图 marker 不进本投影  
 
