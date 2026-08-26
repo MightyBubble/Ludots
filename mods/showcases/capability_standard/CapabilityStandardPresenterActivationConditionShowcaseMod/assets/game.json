@@ -1,0 +1,12 @@
+{
+  "startupMapId": "capability_standard_presenter_activation_condition_showcase",
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "ActivationConditionShowcase.Controls"
+  ],
+  "windowTitle": "Ludots Engine - Capability Standard Presenter ActivationCondition Showcase",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

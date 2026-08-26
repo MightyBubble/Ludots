@@ -1,0 +1,12 @@
+{
+  "name": "CapabilityStandardPresenterTrailMeshShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard showcase for TrailMesh authoring: presenters.json TrailMesh behavior samples a moving/rotating owner into TrailMeshBuffer without C# writing trail samples.",
+  "main": "bin/net8.0/CapabilityStandardPresenterTrailMeshShowcaseMod.dll",
+  "priority": -2000,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "capability-standard", "presenter", "trailmesh"]
+}

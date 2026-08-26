@@ -4094,6 +4094,72 @@
       "notes": "无音频设备的 CI 走逻辑断言；原生设备测试失败显式 skip。"
     },
     {
+      "id": "capability_standard_presenter_activation_condition_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterActivationConditionShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterActivationConditionShowcaseMod.csproj",
+      "title": "标准能力·Presenter activationCondition",
+      "summary": "BehaviorSlot.activationCondition（inline SourceHasVisualTransform）在 PresenterCreated 时决定发光球是否点亮；左站有 VisualTransform 亮，右站无则灭，按 1/2 重生切换。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "presenter",
+        "activation-condition"
+      ],
+      "binding": "capability_standard_presenter_activation_condition_showcase",
+      "preset": "capability_standard_presenter_activation_condition_showcase_raylib",
+      "docsPath": "gitbook/reference/presenter-capability-catalog/behaviors.md",
+      "readmePath": null,
+      "acceptanceTest": "ActivationConditionShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": null
+    },
+    {
+      "id": "capability_standard_presenter_material_behavior_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterMaterialBehaviorShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterMaterialBehaviorShowcaseMod.csproj",
+      "title": "标准能力·Presenter Material 行为",
+      "summary": "BehaviorKind Material：materialSwapParamKey + swapTable 经 GameplayEvent/SetParam 在 cool/warm 两材质间切换（非 engine gallery material_binding）。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "presenter",
+        "material"
+      ],
+      "binding": "capability_standard_presenter_material_behavior_showcase",
+      "preset": "capability_standard_presenter_material_behavior_showcase_raylib",
+      "docsPath": "gitbook/reference/presenter-capability-catalog/behaviors.md",
+      "readmePath": null,
+      "acceptanceTest": "MaterialBehaviorShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": null
+    },
+    {
+      "id": "capability_standard_presenter_trailmesh_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterTrailMeshShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterTrailMeshShowcaseMod.csproj",
+      "title": "标准能力·Presenter TrailMesh",
+      "summary": "presenters.json TrailMesh 行为：刀刃 AssetBinding + trail 采样；运行时只移动/旋转 owner，不从 C# 直写 TrailMeshBuffer；按 1 开关拖尾。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "presenter",
+        "trailmesh"
+      ],
+      "binding": "capability_standard_presenter_trailmesh_showcase",
+      "preset": "capability_standard_presenter_trailmesh_showcase_raylib",
+      "docsPath": "gitbook/reference/presenter-capability-catalog/behaviors.md",
+      "readmePath": null,
+      "acceptanceTest": "TrailMeshShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": null
+    },
+    {
       "id": "capability_standard_time_flow_showcase",
       "path": "mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod",
       "projectPath": "CapabilityStandardTimeFlowShowcaseMod.csproj",

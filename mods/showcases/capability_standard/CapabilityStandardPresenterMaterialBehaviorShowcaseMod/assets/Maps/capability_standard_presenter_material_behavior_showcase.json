@@ -1,0 +1,13 @@
+{
+  "Id": "capability_standard_presenter_material_behavior_showcase",
+  "Tags": ["showcase", "capability-standard", "presenter", "material"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 100,
+    "DistanceCm": 12000,
+    "Pitch": 40,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

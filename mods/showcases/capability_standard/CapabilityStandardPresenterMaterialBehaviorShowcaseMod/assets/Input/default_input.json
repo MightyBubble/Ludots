@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "MaterialBehaviorShowcase.SelectCool", "name": "MaterialBehaviorShowcase_SelectCool", "type": "Button" },
+    { "id": "MaterialBehaviorShowcase.SelectWarm", "name": "MaterialBehaviorShowcase_SelectWarm", "type": "Button" },
+    { "id": "MaterialBehaviorShowcase.Toggle", "name": "MaterialBehaviorShowcase_Toggle", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "MaterialBehaviorShowcase.Controls",
+      "name": "Material Behavior Showcase Controls",
+      "priority": 140,
+      "bindings": [
+        { "actionId": "MaterialBehaviorShowcase.SelectCool", "path": "<Keyboard>/1" },
+        { "actionId": "MaterialBehaviorShowcase.SelectWarm", "path": "<Keyboard>/2" },
+        { "actionId": "MaterialBehaviorShowcase.Toggle", "path": "<Keyboard>/3" }
+      ]
+    }
+  ]
+}

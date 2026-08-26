@@ -377,6 +377,33 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_presenter_activation_condition_showcase_raylib",
+      "name": "Capability Standard Presenter ActivationCondition Raylib",
+      "selectors": [
+        "$capability_standard_presenter_activation_condition_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_presenter_material_behavior_showcase_raylib",
+      "name": "Capability Standard Presenter Material Behavior Raylib",
+      "selectors": [
+        "$capability_standard_presenter_material_behavior_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_presenter_trailmesh_showcase_raylib",
+      "name": "Capability Standard Presenter TrailMesh Raylib",
+      "selectors": [
+        "$capability_standard_presenter_trailmesh_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_transport_network_raylib",
       "name": "Capability Standard Transport Network Raylib",
       "selectors": [
