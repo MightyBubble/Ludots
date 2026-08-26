@@ -1,0 +1,29 @@
+[
+  {
+    "id": "火球术",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "闪现",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "守护姿态",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  }
+]

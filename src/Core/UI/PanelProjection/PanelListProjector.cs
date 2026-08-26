@@ -294,7 +294,9 @@ namespace Ludots.Core.UI.PanelProjection
             var items = new List<PanelListItemProjection>(Math.Max(0, end - start));
             for (int i = start; i < end; i++)
             {
-                if (!_intIdCollections.TryGetIdAt(handle, i, out int memberIntId) || memberIntId <= 0)
+                if (!_intIdCollections.TryGetIdAt(handle, i, out int memberIntId) ||
+                    memberIntId < 0 ||
+                    (memberIntId == 0 && element.Subject != PanelSubjectKind.AbilitySlot))
                 {
                     continue;
                 }
