@@ -91,6 +91,21 @@ public sealed class DataSchemaAuthoringTool : IAgentTool
             case "injectInvalidBinding":
                 _runtime.InjectInvalidBindingPath(_engine, args["path"]?.GetValue<string>() ?? "does.not.exist");
                 break;
+            case "buildScoutFromScratch":
+                _runtime.AuthoringBuildScoutFromScratch(_engine);
+                break;
+            case "createStruct":
+                _runtime.AuthoringCreateStruct(_engine, RequireString(args, "schemaId"));
+                break;
+            case "createEnum":
+                _runtime.AuthoringCreateEnum(_engine, RequireString(args, "schemaId"));
+                break;
+            case "createRecord":
+                _runtime.AuthoringCreateRecord(_engine, RequireString(args, "recordId"), RequireString(args, "schemaId"));
+                break;
+            case "setEntityRef":
+                _runtime.AuthoringSetEntityRef(_engine, RequireString(args, "path"), RequireString(args, "entity"));
+                break;
             default:
                 throw new InvalidOperationException($"Unknown authoring action '{action}'.");
         }

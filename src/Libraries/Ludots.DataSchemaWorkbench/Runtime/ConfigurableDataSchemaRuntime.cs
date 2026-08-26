@@ -242,6 +242,129 @@ public sealed class ConfigurableDataSchemaRuntime
         MountWorkbench(engine);
     }
 
+    public void AuthoringSelectSchema(GameEngine engine, string schemaId)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SelectSchema(schemaId);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringClearDraftCatalog(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.ClearDraftCatalog();
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringCreateStruct(GameEngine engine, string schemaId)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.CreateStructSchema(schemaId);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringCreateEnum(GameEngine engine, string schemaId)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.CreateEnumSchema(schemaId);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringCreateRecord(GameEngine engine, string recordId, string schemaId)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.CreateRecord(recordId, schemaId);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringBuildScoutFromScratch(GameEngine engine)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.BuildScoutFromScratch();
+        SyncAuthoringPreview(engine);
+        ApplyAuthoringPanelDrafts(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringSetFormString(GameEngine engine, string path, string value)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SetSelectedRecordPathString(path, value);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringNudgeFormNumber(GameEngine engine, string path, double delta)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.NudgeSelectedRecordFloat(path, delta);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringCycleFormEnum(GameEngine engine, string path, string enumRef)
+    {
+        EnsureAuthoringLoaded(engine);
+        string[] names = _authoring.EnumerateEnumNames(enumRef);
+        if (names.Length == 0)
+        {
+            return;
+        }
+
+        _authoring.CycleSelectedRecordEnumAtPath(path, names);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringAddArrayItem(GameEngine engine, string path)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.AddArrayItem(path, "item");
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringRemoveArrayItem(GameEngine engine, string path)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.RemoveLastArrayItem(path);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringMoveArrayItem(GameEngine engine, string path, int index, int delta)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.MoveArrayItem(path, index, delta);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public void AuthoringSetEntityRef(GameEngine engine, string path, string entityName)
+    {
+        EnsureAuthoringLoaded(engine);
+        _authoring.SetSelectedRecordEntityRef(path, entityName);
+        SyncAuthoringPreview(engine);
+        MountWorkbench(engine);
+    }
+
+    public string[] EnumerateNamedEntities(GameEngine engine)
+    {
+        var names = new List<string>();
+        World world = engine.World;
+        var query = new QueryDescription().WithAll<Name>();
+        world.Query(in query, (Entity entity, ref Name name) =>
+        {
+            if (!string.IsNullOrWhiteSpace(name.Value))
+            {
+                names.Add(name.Value);
+            }
+        });
+        names.Sort(StringComparer.Ordinal);
+        return names.ToArray();
+    }
+
     public void AuthoringSelectRecord(GameEngine engine, string recordId)
     {
         EnsureAuthoringLoaded(engine);

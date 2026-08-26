@@ -31,6 +31,19 @@ Feature: 作者用懂 schema 的工作台定义数据并绑定面板
     Then 两类来源的投影数据保持不变
     And 只有外观改变
 
+  Scenario: 从零一键搭好 Scout 套件
+    Given 作者草稿目录是空的
+    When 我使用从零定义 Scout 套件
+    Then 我能看到 point、rarity、unit 三个 schema
+    And 我能看到 unit.scout 记录与绑定到 position.x 的面板引脚
+    And 保存可用
+
+  Scenario: EntityRef 从表单里选实体名
+    Given 当前 record 的 schema 含有 focusTarget 字段
+    When 我在表单里为 focusTarget 选择一个带名字的实体
+    Then 该字段写入实体名
+    And 校验不因 EntityRef 路径失败
+
   Scenario: 校验失败时保存必须可见地失败
     Given 我正在编辑一条原本合法的 record
     When 我删除必填字段、选择未知 enum，或绑到未知路径

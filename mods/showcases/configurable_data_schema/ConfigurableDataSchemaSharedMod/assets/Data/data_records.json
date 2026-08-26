@@ -6,7 +6,8 @@
       "name": "Scout",
       "position": { "x": 12.5, "y": -3 },
       "rarity": "Rare",
-      "tags": ["fast", "visible"]
+      "tags": ["fast", "visible"],
+      "focusTarget": "WorkbenchOwner"
     }
   },
   {
@@ -16,7 +17,8 @@
       "name": "Tank",
       "position": { "x": 0, "y": 4 },
       "rarity": "Common",
-      "tags": ["armored", "slow"]
+      "tags": ["armored", "slow"],
+      "focusTarget": "WorkbenchOwner"
     }
   },
   {
@@ -26,7 +28,8 @@
       "name": "Scout",
       "position": { "x": 12.5, "y": -3 },
       "rarity": "Rare",
-      "tags": ["fast", "visible"]
+      "tags": ["fast", "visible"],
+      "focusTarget": "WorkbenchOwner"
     }
   }
 ]

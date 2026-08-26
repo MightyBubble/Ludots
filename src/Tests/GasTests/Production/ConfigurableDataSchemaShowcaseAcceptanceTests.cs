@@ -31,6 +31,7 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
     {
         "LudotsCoreMod",
         "CoreInputMod",
+        "DataSchemaAuthoringCapabilityMod",
         "ConfigurableDataSchemaSharedMod",
     };
 
@@ -220,6 +221,64 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(source, target, overwrite: true);
         }
+    }
+
+    [Test]
+    public void Authoring_BuildScoutFromScratch_DefinesSchemasRecordAndBinding()
+    {
+        using GameEngine engine = CreateEngine(null);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 8);
+
+        ConfigurableDataSchemaRuntimeProxy runtime = RequireRuntime(engine);
+        string tempRoot = Path.Combine(Path.GetTempPath(), "LudotsDataSchemaFromScratch", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(tempRoot, "assets", "Data"));
+        Directory.CreateDirectory(Path.Combine(tempRoot, "assets", "Panels"));
+        File.WriteAllText(Path.Combine(tempRoot, "assets", "Panels", "panel_templates.json"), "[]");
+        runtime.RedirectAuthoringSaveRoot(engine, tempRoot);
+
+        runtime.BuildScoutFromScratch(engine);
+        Tick(engine, 2);
+
+        Assert.That(runtime.CanSaveToMod, Is.True, runtime.AuthoringError);
+        Assert.That(runtime.SelectedBindingPath, Is.EqualTo("position.x"));
+        runtime.SaveAuthoringToMod(engine);
+
+        string schemas = File.ReadAllText(Path.Combine(tempRoot, "assets", "Data", "data_schemas.json"));
+        string records = File.ReadAllText(Path.Combine(tempRoot, "assets", "Data", "data_records.json"));
+        Assert.That(schemas, Does.Contain("\"id\": \"point\""));
+        Assert.That(schemas, Does.Contain("\"id\": \"rarity\""));
+        Assert.That(schemas, Does.Contain("\"id\": \"unit\""));
+        Assert.That(schemas, Does.Contain("focusTarget").Or.Contain("entityRef"));
+        Assert.That(records, Does.Contain("unit.scout"));
+        Assert.That(records, Does.Contain("WorkbenchOwner"));
+
+        try { Directory.Delete(tempRoot, recursive: true); } catch { }
+    }
+
+    [Test]
+    public void Authoring_FormFieldsIncludeNestedAndArrayPaths()
+    {
+        using GameEngine engine = CreateEngine(null);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 8);
+
+        ConfigurableDataSchemaRuntimeProxy runtime = RequireRuntime(engine);
+        runtime.SetAuthoringLayer(engine, "Record");
+        runtime.AuthoringSelectRecord(engine, "unit.workbench");
+        Tick(engine, 1);
+
+        string[] paths = runtime.EnumerateFormFieldPaths(engine);
+        Assert.That(paths, Does.Contain("name"));
+        Assert.That(paths, Does.Contain("position.x"));
+        Assert.That(paths, Does.Contain("rarity"));
+        Assert.That(paths, Does.Contain("tags"));
+        Assert.That(paths, Does.Contain("focusTarget"));
+
+        string[] bindingPaths = runtime.EnumerateBindingPaths(engine);
+        Assert.That(bindingPaths, Does.Contain("tags[0]").Or.Contain("tags"));
     }
 
     [Test]
@@ -419,6 +478,41 @@ public sealed class ConfigurableDataSchemaShowcaseAcceptanceTests
 
         public void AuthoringSelectBindingPath(GameEngine engine, string path) =>
             _type.GetMethod("AuthoringSelectBindingPath")!.Invoke(_runtime, new object[] { engine, path });
+
+        public void BuildScoutFromScratch(GameEngine engine) =>
+            _type.GetMethod("AuthoringBuildScoutFromScratch")!.Invoke(_runtime, new object[] { engine });
+
+        public void AuthoringSelectRecord(GameEngine engine, string recordId) =>
+            _type.GetMethod("AuthoringSelectRecord")!.Invoke(_runtime, new object[] { engine, recordId });
+
+        public string SelectedBindingPath
+        {
+            get
+            {
+                object snapshot = _type.GetProperty("Snapshot")!.GetValue(_runtime)!;
+                return (string)snapshot.GetType().GetProperty("SelectedBindingPath")!.GetValue(snapshot)!;
+            }
+        }
+
+        public string[] EnumerateFormFieldPaths(GameEngine engine)
+        {
+            object authoring = _type.GetProperty("Authoring")!.GetValue(_runtime)!;
+            object fields = authoring.GetType().GetMethod("EnumerateFormFields")!.Invoke(authoring, null)!;
+            var list = new List<string>();
+            foreach (object field in (System.Collections.IEnumerable)fields)
+            {
+                list.Add((string)field.GetType().GetProperty("Path")!.GetValue(field)!);
+            }
+
+            return list.ToArray();
+        }
+
+        public string[] EnumerateBindingPaths(GameEngine engine)
+        {
+            object authoring = _type.GetProperty("Authoring")!.GetValue(_runtime)!;
+            object paths = authoring.GetType().GetMethod("EnumerateBindingPaths")!.Invoke(authoring, new object[] { "unit" })!;
+            return ((IEnumerable<string>)paths).ToArray();
+        }
 
         public void InjectInvalidBindingPath(GameEngine engine, string path) =>
             _type.GetMethod("InjectInvalidBindingPath")!.Invoke(_runtime, new object[] { engine, path });

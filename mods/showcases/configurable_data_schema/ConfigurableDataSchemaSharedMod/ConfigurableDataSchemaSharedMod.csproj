@@ -10,16 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.DataSchemaWorkbench\Ludots.DataSchemaWorkbench.csproj" />
+    <ProjectReference Include="..\..\..\..\mods\capabilities\data_schema_authoring\DataSchemaAuthoringCapabilityMod\DataSchemaAuthoringCapabilityMod.csproj" />
   </ItemGroup>
-
-  <!-- Ensure the workbench assembly is the mod entry DLL that ModLoader scans. -->
-  <Target Name="PublishWorkbenchAsModMain" AfterTargets="Build">
-    <PropertyGroup>
-      <_WorkbenchDll>$(OutputPath)Ludots.DataSchemaWorkbench.dll</_WorkbenchDll>
-      <_WorkbenchPdb>$(OutputPath)Ludots.DataSchemaWorkbench.pdb</_WorkbenchPdb>
-    </PropertyGroup>
-    <Error Condition="!Exists('$(_WorkbenchDll)')" Text="Expected workbench DLL at $(_WorkbenchDll)" />
-  </Target>
 
 </Project>

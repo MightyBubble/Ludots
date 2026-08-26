@@ -16,7 +16,7 @@
 | 真实作者资产 | Showcase 已交付非空示例 | `ConfigurableDataSchemaSharedMod/assets/Data/data_schemas.json` 与 `data_records.json` |
 | Showcase Mod / preset / 启动入口 | 已交付 | `showcase.registry.json`：`configurable_data_schema` / `_native` / `_web`；preset `configurable_data_schema_*_raylib` |
 | Agent Bridge 实机交互证据 | 领域工具已挂；实机截图按 preset 采证 | `ludots.dataschema.state` / `ludots.dataschema.author`；`artifacts/acceptance/configurable-data-schema-showcase/` |
-| 作者编辑器 | MVP 已交付（宿主在 Showcase 工作台） | 四层 Schema/Record/Binding/Preview；写回 `DataSchemaModAssetWriter`；详见 [data-schema-authoring-workbench-design.md](data-schema-authoring-workbench-design.md) |
+| 作者编辑器 | **已完整交付**（从零 schema、表单、EntityRef、数组路径、独立 capability） | 四层 Schema/Record/Binding/Preview；`DataSchemaAuthoringCapabilityMod` + 写回；详见 [data-schema-authoring-workbench-design.md](data-schema-authoring-workbench-design.md) |
 
 本 Showcase 做成“数据结构工作台”展示，而不是静态单位信息面板。动态轴是：
 

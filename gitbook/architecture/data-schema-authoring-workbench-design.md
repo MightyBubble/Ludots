@@ -1,6 +1,6 @@
 # 可配置数据结构作者编辑器设计
 
-状态：**MVP 已交付（宿主在 Showcase 工作台内）**。四层 Schema / Record / Binding / Preview 可操作；校验失败禁用保存；通过 `DataSchemaModAssetWriter` 写回目标 Mod 的 `Data/*.json` 与 `Panels/panel_templates.json`。完整独立 capability 提取与 EntityRef 实体选择器增强仍可后续加深。
+状态：**已完整交付**。四层 Schema / Record / Binding / Preview 可操作；支持从零建 schema/record、schema 驱动表单（含数组增删、enum、EntityRef）、数组下标绑定路径；校验失败禁用保存；通过 `DataSchemaModAssetWriter` 写回目标 Mod。独立 capability：`mods/capabilities/data_schema_authoring/DataSchemaAuthoringCapabilityMod`（Showcase Shared 仅提供资产并依赖该 capability）。嵌套拖拽用手势按钮等价覆盖；EntityRef 从 World 上带 `Name` 的实体列表选取。
 
 ## 1. 概述
 

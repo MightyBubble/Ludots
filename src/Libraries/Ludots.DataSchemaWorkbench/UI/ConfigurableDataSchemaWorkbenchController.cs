@@ -162,9 +162,31 @@ internal sealed class ConfigurableDataSchemaWorkbenchController
 
     private UiElementBuilder SchemaLayer(ConfigurableDataSchemaSnapshot state)
     {
+        var schemaButtons = new List<UiElementBuilder>();
+        if (TryGetRuntime(out ConfigurableDataSchemaRuntime? runtime) && runtime != null)
+        {
+            foreach (string schemaId in runtime.Authoring.EnumerateSchemaIds())
+            {
+                string captured = schemaId;
+                bool active = string.Equals(schemaId, runtime.Authoring.SelectedSchemaId, StringComparison.Ordinal);
+                schemaButtons.Add(
+                    Ui.Button(schemaId, _ => Run(r => r.AuthoringSelectSchema(_engine!, captured)))
+                        .Padding(8f, 5f)
+                        .Radius(5f)
+                        .Background(active ? "#2F6FED" : "#243041")
+                        .Color("#F4F7FB"));
+            }
+        }
+
         return Ui.Column(
                 Ui.Text("Schema Designer").FontSize(14f).Bold().Color("#F4F7FB"),
-                Ui.Text($"目标 struct：{state.SchemaId}").FontSize(12f).Color("#E8EEF7"),
+                Ui.Column(schemaButtons.ToArray()).Gap(4f),
+                Ui.Row(
+                        Button("新建 point", () => Run(r => r.AuthoringCreateStruct(_engine!, "point"))),
+                        Button("新建 rarity", () => Run(r => r.AuthoringCreateEnum(_engine!, "rarity"))),
+                        Button("新建 unit", () => Run(r => r.AuthoringCreateStruct(_engine!, "unit"))))
+                    .Gap(6f),
+                Button("从零定义 Scout 套件", () => Run(r => r.AuthoringBuildScoutFromScratch(_engine!))),
                 Ui.Text($"新字段  {state.NewFieldName} · {state.NewFieldType} · required={state.NewFieldRequired}")
                     .FontSize(12f)
                     .Color("#E8EEF7"),
@@ -174,39 +196,106 @@ internal sealed class ConfigurableDataSchemaWorkbenchController
                         Button("必填", () => Run(r => r.AuthoringToggleRequired(_engine!))),
                         Button("添加字段", () => Run(r => r.AuthoringAddField(_engine!))))
                     .Gap(6f),
-                Button("给 rarity 增加 Epic=9", () => Run(r => r.AuthoringAddEpicEnum(_engine!))))
+                Button("给 rarity 增加 Epic=9", () => Run(r => r.AuthoringAddEpicEnum(_engine!))),
+                Button("清空草稿目录", () => Run(r => r.AuthoringClearDraftCatalog(_engine!))))
             .Gap(6f);
     }
 
     private UiElementBuilder RecordLayer(ConfigurableDataSchemaSnapshot state)
     {
+        var recordButtons = new List<UiElementBuilder>();
+        var formRows = new List<UiElementBuilder>();
+        if (TryGetRuntime(out ConfigurableDataSchemaRuntime? runtime) && runtime != null)
+        {
+            foreach (string recordId in runtime.Authoring.EnumerateRecordIds())
+            {
+                string captured = recordId;
+                bool active = string.Equals(recordId, runtime.Authoring.SelectedRecordId, StringComparison.Ordinal);
+                recordButtons.Add(
+                    Ui.Button(recordId, _ => Run(r => r.AuthoringSelectRecord(_engine!, captured)))
+                        .Padding(8f, 5f)
+                        .Radius(5f)
+                        .Background(active ? "#2F6FED" : "#243041")
+                        .Color("#F4F7FB"));
+            }
+
+            string[] entities = _engine != null ? runtime.EnumerateNamedEntities(_engine) : Array.Empty<string>();
+            foreach (AuthoringFormField field in runtime.Authoring.EnumerateFormFields())
+            {
+                formRows.Add(BuildFormFieldRow(field, entities));
+            }
+        }
+
         return Ui.Column(
-                Ui.Text("Record Editor").FontSize(14f).Bold().Color("#F4F7FB"),
+                Ui.Text("Record Editor（按 schema 生成）").FontSize(14f).Bold().Color("#F4F7FB"),
                 Ui.Text(state.AuthoringRecordSummary).FontSize(12f).Color("#E8EEF7"),
-                Ui.Row(
-                        Button("Scout", () => Run(r => r.AuthoringSelectRecord(_engine!, ConfigurableDataSchemaIds.ScoutPresetId))),
-                        Button("Tank", () => Run(r => r.AuthoringSelectRecord(_engine!, ConfigurableDataSchemaIds.TankPresetId))),
-                        Button("Workbench", () => Run(r => r.AuthoringSelectRecord(_engine!, ConfigurableDataSchemaIds.WorkbenchRecordId))))
-                    .Gap(6f),
-                Ui.Row(
-                        Button("X -1", () => Run(r => r.AuthoringNudgeX(_engine!, -1))),
-                        Button("X +1", () => Run(r => r.AuthoringNudgeX(_engine!, 1))),
-                        Button("Rarity", () => Run(r => r.AuthoringCycleRarity(_engine!))))
-                    .Gap(6f),
-                Ui.Row(
-                        Button("+tag", () => Run(r => r.AuthoringAddTag(_engine!))),
-                        Button("-tag", () => Run(r => r.AuthoringRemoveTag(_engine!))))
-                    .Gap(6f))
+                Ui.Column(recordButtons.ToArray()).Gap(4f),
+                Button("创建 unit.scout", () => Run(r => r.AuthoringCreateRecord(_engine!, "unit.scout", "unit"))),
+                Ui.Column(formRows.ToArray()).Gap(4f))
             .Gap(6f);
+    }
+
+    private UiElementBuilder BuildFormFieldRow(AuthoringFormField field, string[] entities)
+    {
+        string path = field.Path;
+        string kind = field.Kind;
+        var actions = new List<UiElementBuilder>
+        {
+            Ui.Text($"{path} [{kind}] = {field.ValueText}")
+                .FontSize(11f)
+                .Color("#E8EEF7")
+                .WhiteSpace(UiWhiteSpace.Normal),
+        };
+
+        if (string.Equals(kind, "float", StringComparison.Ordinal) ||
+            string.Equals(kind, "int", StringComparison.Ordinal))
+        {
+            actions.Add(Ui.Row(
+                    Button("-", () => Run(r => r.AuthoringNudgeFormNumber(_engine!, path, -1))),
+                    Button("+", () => Run(r => r.AuthoringNudgeFormNumber(_engine!, path, 1))))
+                .Gap(4f));
+        }
+        else if (string.Equals(kind, "enum", StringComparison.Ordinal))
+        {
+            string enumRef = field.TypeRef;
+            actions.Add(Button("下拉切换", () => Run(r => r.AuthoringCycleFormEnum(_engine!, path, enumRef))));
+        }
+        else if (string.Equals(kind, "array", StringComparison.Ordinal))
+        {
+            actions.Add(Ui.Row(
+                    Button("+项", () => Run(r => r.AuthoringAddArrayItem(_engine!, path))),
+                    Button("-项", () => Run(r => r.AuthoringRemoveArrayItem(_engine!, path))))
+                .Gap(4f));
+        }
+        else if (string.Equals(kind, "entityRef", StringComparison.Ordinal))
+        {
+            foreach (string entity in entities)
+            {
+                string captured = entity;
+                actions.Add(Button($"选 {captured}", () => Run(r => r.AuthoringSetEntityRef(_engine!, path, captured))));
+            }
+        }
+        else if (string.Equals(kind, "string", StringComparison.Ordinal))
+        {
+            actions.Add(Button("设为 Scout", () => Run(r => r.AuthoringSetFormString(_engine!, path, "Scout"))));
+            actions.Add(Button("设为 Tank", () => Run(r => r.AuthoringSetFormString(_engine!, path, "Tank"))));
+        }
+
+        return Ui.Column(actions.ToArray()).Gap(2f);
     }
 
     private UiElementBuilder BindingLayer(ConfigurableDataSchemaSnapshot state)
     {
         var pathButtons = new List<UiElementBuilder>();
-        if (_engine?.GlobalContext.TryGetValue(ConfigurableDataSchemaIds.RuntimeServiceKey, out object? runtimeObj) == true &&
-            runtimeObj is ConfigurableDataSchemaRuntime runtime)
+        if (TryGetRuntime(out ConfigurableDataSchemaRuntime? runtime) && runtime != null)
         {
-            foreach (string path in runtime.Authoring.EnumerateBindingPaths(ConfigurableDataSchemaIds.SchemaId))
+            string schemaId = runtime.Authoring.SelectedSchemaId;
+            if (string.IsNullOrWhiteSpace(schemaId))
+            {
+                schemaId = ConfigurableDataSchemaIds.SchemaId;
+            }
+
+            foreach (string path in runtime.Authoring.EnumerateBindingPaths(schemaId))
             {
                 string captured = path;
                 bool active = string.Equals(path, state.SelectedBindingPath, StringComparison.Ordinal);
@@ -232,7 +321,7 @@ internal sealed class ConfigurableDataSchemaWorkbenchController
                         Button("Data source", () => Run(r => r.AuthoringSetPinSource(_engine!, "data"))),
                         Button("Graph source", () => Run(r => r.AuthoringSetPinSource(_engine!, "graph"))))
                     .Gap(6f),
-                Ui.Text("路径树（点选，不手写）").FontSize(12f).Color("#B7C3D4"),
+                Ui.Text("路径树（含数组下标，点选不手写）").FontSize(12f).Color("#B7C3D4"),
                 Ui.Column(pathButtons.ToArray()).Gap(4f))
             .Gap(6f);
     }
@@ -261,6 +350,19 @@ internal sealed class ConfigurableDataSchemaWorkbenchController
                         Button("修复", () => Run(r => r.InjectInvalid(_engine!, DataSchemaInvalidCase.None))))
                     .Gap(6f))
             .Gap(4f);
+    }
+
+    private bool TryGetRuntime(out ConfigurableDataSchemaRuntime? runtime)
+    {
+        runtime = null;
+        if (_engine?.GlobalContext.TryGetValue(ConfigurableDataSchemaIds.RuntimeServiceKey, out object? runtimeObj) == true &&
+            runtimeObj is ConfigurableDataSchemaRuntime typed)
+        {
+            runtime = typed;
+            return true;
+        }
+
+        return false;
     }
 
     private UiElementBuilder Button(string label, Action action)

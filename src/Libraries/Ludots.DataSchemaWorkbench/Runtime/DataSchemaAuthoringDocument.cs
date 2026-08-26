@@ -12,6 +12,14 @@ public enum DataSchemaAuthoringLayer : byte
     Preview = 4,
 }
 
+public readonly record struct AuthoringFormField(
+    string Path,
+    string Kind,
+    string ValueText,
+    string TypeRef,
+    bool Required,
+    int ArrayLength);
+
 public sealed class DataSchemaAuthoringDocument
 {
     private JsonArray _schemas = new();
@@ -92,7 +100,385 @@ public sealed class DataSchemaAuthoringDocument
     public void SelectRecord(string recordId)
     {
         _selectedRecordId = recordId;
+        foreach (JsonNode? node in _records)
+        {
+            if (node is JsonObject record &&
+                string.Equals(record["id"]?.GetValue<string>(), recordId, StringComparison.Ordinal))
+            {
+                string? schemaId = record["schema"]?.GetValue<string>();
+                if (!string.IsNullOrWhiteSpace(schemaId))
+                {
+                    _selectedSchemaId = schemaId;
+                }
+
+                break;
+            }
+        }
+
         _status = $"选中 record {recordId}";
+    }
+
+    public IReadOnlyList<string> EnumerateSchemaIds()
+    {
+        var ids = new List<string>();
+        foreach (JsonNode? node in _schemas)
+        {
+            if (node is JsonObject schema &&
+                schema["id"] is JsonValue idValue &&
+                idValue.TryGetValue<string>(out string? id) &&
+                !string.IsNullOrWhiteSpace(id))
+            {
+                ids.Add(id);
+            }
+        }
+
+        return ids;
+    }
+
+    public IReadOnlyList<string> EnumerateRecordIds()
+    {
+        var ids = new List<string>();
+        foreach (JsonNode? node in _records)
+        {
+            if (node is JsonObject record &&
+                record["id"] is JsonValue idValue &&
+                idValue.TryGetValue<string>(out string? id) &&
+                !string.IsNullOrWhiteSpace(id))
+            {
+                ids.Add(id);
+            }
+        }
+
+        return ids;
+    }
+
+    public void ClearDraftCatalog()
+    {
+        _schemas = new JsonArray();
+        _records = new JsonArray();
+        _selectedSchemaId = string.Empty;
+        _selectedRecordId = string.Empty;
+        Revalidate();
+        _status = "已清空作者草稿目录，可从零定义 schema。";
+    }
+
+    public void CreateStructSchema(string schemaId)
+    {
+        if (string.IsNullOrWhiteSpace(schemaId))
+        {
+            _status = "struct id 不能为空。";
+            return;
+        }
+
+        if (FindSchema(schemaId) != null)
+        {
+            _status = $"schema {schemaId} 已存在。";
+            return;
+        }
+
+        _schemas.Add(new JsonObject
+        {
+            ["id"] = schemaId.Trim(),
+            ["kind"] = "struct",
+            ["fields"] = new JsonArray(),
+        });
+        _selectedSchemaId = schemaId.Trim();
+        Revalidate();
+        _status = _canSave || string.IsNullOrEmpty(_firstError)
+            ? $"已新建 struct {schemaId}"
+            : $"已新建 struct，预检：{_firstError}";
+    }
+
+    public void CreateEnumSchema(string schemaId)
+    {
+        if (string.IsNullOrWhiteSpace(schemaId))
+        {
+            _status = "enum id 不能为空。";
+            return;
+        }
+
+        if (FindSchema(schemaId) != null)
+        {
+            _status = $"schema {schemaId} 已存在。";
+            return;
+        }
+
+        _schemas.Add(new JsonObject
+        {
+            ["id"] = schemaId.Trim(),
+            ["kind"] = "enum",
+            ["values"] = new JsonArray(),
+        });
+        _selectedSchemaId = schemaId.Trim();
+        Revalidate();
+        _status = $"已新建 enum {schemaId}";
+    }
+
+    public void CreateRecord(string recordId, string schemaId)
+    {
+        if (string.IsNullOrWhiteSpace(recordId) || string.IsNullOrWhiteSpace(schemaId))
+        {
+            _status = "record/schema id 不能为空。";
+            return;
+        }
+
+        JsonObject? schema = FindSchema(schemaId);
+        if (schema == null || !string.Equals(schema["kind"]?.GetValue<string>(), "struct", StringComparison.Ordinal))
+        {
+            _status = $"找不到 struct schema {schemaId}";
+            return;
+        }
+
+        foreach (JsonNode? node in _records)
+        {
+            if (node is JsonObject existing &&
+                string.Equals(existing["id"]?.GetValue<string>(), recordId, StringComparison.Ordinal))
+            {
+                _status = $"record {recordId} 已存在。";
+                return;
+            }
+        }
+
+        var value = new JsonObject();
+        if (schema["fields"] is JsonArray fields)
+        {
+            foreach (JsonNode? fieldNode in fields)
+            {
+                if (fieldNode is not JsonObject field)
+                {
+                    continue;
+                }
+
+                string name = field["name"]?.GetValue<string>() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                value[name] = DefaultValueForFieldType(field["type"]);
+            }
+        }
+
+        _records.Add(new JsonObject
+        {
+            ["id"] = recordId.Trim(),
+            ["schema"] = schemaId.Trim(),
+            ["value"] = value,
+        });
+        _selectedRecordId = recordId.Trim();
+        _selectedSchemaId = schemaId.Trim();
+        Revalidate();
+        _status = _canSave
+            ? $"已创建 record {recordId}"
+            : $"已创建 record，校验：{_firstError}";
+    }
+
+    public void BuildScoutFromScratch()
+    {
+        ClearDraftCatalog();
+        CreateStructSchema("point");
+        _newFieldName = "x";
+        _newFieldType = "float";
+        _newFieldRequired = true;
+        AddFieldToSelectedSchema();
+        _newFieldName = "y";
+        AddFieldToSelectedSchema();
+
+        CreateEnumSchema("rarity");
+        AddEnumMember("rarity", "Common", 1);
+        AddEnumMember("rarity", "Rare", 5);
+
+        CreateStructSchema("unit");
+        _newFieldName = "name";
+        _newFieldType = "string";
+        AddFieldToSelectedSchema();
+        _newFieldName = "position";
+        _newFieldType = "struct:point";
+        AddFieldToSelectedSchema();
+        _newFieldName = "tags";
+        _newFieldType = "array:string";
+        AddFieldToSelectedSchema();
+        _newFieldName = "rarity";
+        _newFieldType = "enum:rarity";
+        AddFieldToSelectedSchema();
+        _newFieldName = "focusTarget";
+        _newFieldType = "entityRef";
+        _newFieldRequired = false;
+        AddFieldToSelectedSchema();
+
+        CreateRecord("unit.scout", "unit");
+        JsonObject? scout = GetSelectedRecordValue();
+        if (scout != null)
+        {
+            scout["name"] = "Scout";
+            scout["position"] = new JsonObject { ["x"] = 12d, ["y"] = 4d };
+            scout["tags"] = new JsonArray("light", "recon");
+            scout["rarity"] = "Common";
+            scout["focusTarget"] = "WorkbenchOwner";
+        }
+
+        CreateRecord(ConfigurableDataSchemaIds.WorkbenchRecordId, "unit");
+        SelectRecord(ConfigurableDataSchemaIds.WorkbenchRecordId);
+        JsonObject? workbench = GetSelectedRecordValue();
+        if (workbench != null && scout != null)
+        {
+            foreach (KeyValuePair<string, JsonNode?> pair in scout)
+            {
+                workbench[pair.Key] = pair.Value?.DeepClone();
+            }
+        }
+
+        _selectedPinName = "x";
+        _selectedBindingPath = "position.x";
+        ApplyBindingToSelectedPin();
+        Revalidate();
+        _status = _canSave
+            ? "已从零定义 point/rarity/unit 与 unit.scout。"
+            : $"从零定义完成，仍有预检：{_firstError}";
+    }
+
+    public void SetSelectedRecordPathString(string path, string value)
+    {
+        JsonObject? draft = GetSelectedRecordValue();
+        if (draft == null)
+        {
+            return;
+        }
+
+        if (!TryGetOrCreateObjectPath(draft, path, out JsonObject parent, out string leaf))
+        {
+            _status = $"路径不存在：{path}";
+            return;
+        }
+
+        parent[leaf] = value;
+        Revalidate();
+        _status = _canSave ? $"已设置 {path}" : $"设置后校验失败：{_firstError}";
+    }
+
+    public void SetSelectedRecordPathNumber(string path, double value)
+    {
+        JsonObject? draft = GetSelectedRecordValue();
+        if (draft == null)
+        {
+            return;
+        }
+
+        if (!TryGetOrCreateObjectPath(draft, path, out JsonObject parent, out string leaf))
+        {
+            _status = $"路径不存在：{path}";
+            return;
+        }
+
+        parent[leaf] = value;
+        Revalidate();
+        _status = _canSave ? $"已设置 {path}={value}" : $"设置后校验失败：{_firstError}";
+    }
+
+    public void SetSelectedRecordPathBool(string path, bool value)
+    {
+        JsonObject? draft = GetSelectedRecordValue();
+        if (draft == null)
+        {
+            return;
+        }
+
+        if (!TryGetOrCreateObjectPath(draft, path, out JsonObject parent, out string leaf))
+        {
+            _status = $"路径不存在：{path}";
+            return;
+        }
+
+        parent[leaf] = value;
+        Revalidate();
+    }
+
+    public void SetSelectedRecordEnum(string path, string enumName)
+    {
+        SetSelectedRecordPathString(path, enumName);
+    }
+
+    public void SetSelectedRecordEntityRef(string path, string entityName)
+    {
+        SetSelectedRecordPathString(path, entityName);
+    }
+
+    public void AddArrayItem(string path, string itemValue)
+    {
+        JsonObject? draft = GetSelectedRecordValue();
+        if (draft == null)
+        {
+            return;
+        }
+
+        if (!TryGetObjectPath(draft, path, out JsonObject parent, out string leaf))
+        {
+            _status = $"数组路径不存在：{path}";
+            return;
+        }
+
+        JsonArray array = parent[leaf] as JsonArray ?? new JsonArray();
+        parent[leaf] = array;
+        array.Add(itemValue);
+        Revalidate();
+        _status = $"已向 {path} 追加项。";
+    }
+
+    public void RemoveArrayItemAt(string path, int index)
+    {
+        JsonObject? draft = GetSelectedRecordValue();
+        if (draft == null || !TryGetObjectPath(draft, path, out JsonObject parent, out string leaf))
+        {
+            return;
+        }
+
+        if (parent[leaf] is not JsonArray array || index < 0 || index >= array.Count)
+        {
+            _status = $"无法删除 {path}[{index}]";
+            return;
+        }
+
+        array.RemoveAt(index);
+        Revalidate();
+    }
+
+    public void MoveArrayItem(string path, int index, int delta)
+    {
+        JsonObject? draft = GetSelectedRecordValue();
+        if (draft == null || !TryGetObjectPath(draft, path, out JsonObject parent, out string leaf))
+        {
+            return;
+        }
+
+        if (parent[leaf] is not JsonArray array)
+        {
+            return;
+        }
+
+        int target = index + delta;
+        if (index < 0 || index >= array.Count || target < 0 || target >= array.Count)
+        {
+            return;
+        }
+
+        JsonNode? moving = array[index];
+        array.RemoveAt(index);
+        array.Insert(target, moving);
+        Revalidate();
+    }
+
+    public IReadOnlyList<AuthoringFormField> EnumerateFormFields()
+    {
+        var fields = new List<AuthoringFormField>();
+        JsonObject? schema = FindSchema(_selectedSchemaId);
+        JsonObject? value = GetSelectedRecordValue();
+        if (schema == null || value == null)
+        {
+            return fields;
+        }
+
+        CollectFormFields(schema, value, prefix: string.Empty, fields, depth: 0);
+        return fields;
     }
 
     public void CycleNewFieldName()
@@ -101,6 +487,7 @@ public sealed class DataSchemaAuthoringDocument
         {
             "notes" => "speed",
             "speed" => "faction",
+            "faction" => "focusTarget",
             _ => "notes",
         };
     }
@@ -111,7 +498,9 @@ public sealed class DataSchemaAuthoringDocument
         {
             "string" => "float",
             "float" => "bool",
-            "bool" => "enum:rarity",
+            "bool" => "int",
+            "int" => "entityRef",
+            "entityRef" => "enum:rarity",
             "enum:rarity" => "struct:point",
             "struct:point" => "array:string",
             _ => "string",
@@ -263,17 +652,45 @@ public sealed class DataSchemaAuthoringDocument
 
     public void CycleSelectedRecordEnum(string field, params string[] names)
     {
+        CycleSelectedRecordEnumAtPath(field, names);
+    }
+
+    public void CycleSelectedRecordEnumAtPath(string path, params string[] names)
+    {
         JsonObject? draft = GetSelectedRecordValue();
         if (draft == null || names.Length == 0)
         {
             return;
         }
 
-        string current = draft[field] is JsonValue value && value.TryGetValue<string>(out string? text)
+        if (!TryGetObjectPath(draft, path, out JsonObject parent, out string leaf))
+        {
+            _status = $"路径不存在：{path}";
+            return;
+        }
+
+        string current = parent[leaf] is JsonValue value && value.TryGetValue<string>(out string? text)
             ? text ?? names[0]
             : names[0];
         int index = Array.IndexOf(names, current);
-        draft[field] = names[(index + 1 + names.Length) % names.Length];
+        parent[leaf] = names[(index + 1 + names.Length) % names.Length];
+        Revalidate();
+    }
+
+    public void RemoveLastArrayItem(string path)
+    {
+        JsonObject? draft = GetSelectedRecordValue();
+        if (draft == null || !TryGetObjectPath(draft, path, out JsonObject parent, out string leaf))
+        {
+            return;
+        }
+
+        if (parent[leaf] is not JsonArray array || array.Count == 0)
+        {
+            return;
+        }
+
+        array.RemoveAt(array.Count - 1);
         Revalidate();
     }
 
@@ -312,8 +729,46 @@ public sealed class DataSchemaAuthoringDocument
             return paths;
         }
 
-        CollectPaths(schema, prefix: string.Empty, paths, depth: 0);
+        CollectPaths(schema, GetSelectedRecordValue(), prefix: string.Empty, paths, depth: 0);
         return paths;
+    }
+
+    public bool IsBindingPathAllowed(string schemaId, string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        IReadOnlyList<string> allowed = EnumerateBindingPaths(schemaId);
+        for (int i = 0; i < allowed.Count; i++)
+        {
+            if (string.Equals(allowed[i], path, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        // Accept schema-level array root even when empty (e.g. tags).
+        string schemaPath = StripArrayIndices(path);
+        JsonObject? schema = FindSchema(schemaId);
+        if (schema == null)
+        {
+            return false;
+        }
+
+        var schemaOnly = new List<string>();
+        CollectPaths(schema, recordValue: null, prefix: string.Empty, schemaOnly, depth: 0);
+        for (int i = 0; i < schemaOnly.Count; i++)
+        {
+            if (string.Equals(schemaOnly[i], schemaPath, StringComparison.Ordinal) ||
+                string.Equals(schemaOnly[i], path, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void SelectBindingPath(string path)
@@ -474,11 +929,72 @@ public sealed class DataSchemaAuthoringDocument
             "float" => 0d,
             "bool" => false,
             "int" => 0,
+            "entityRef" => string.Empty,
             _ => string.Empty,
         };
     }
 
-    private void CollectPaths(JsonObject schema, string prefix, List<string> paths, int depth)
+    private void CollectFormFields(
+        JsonObject schema,
+        JsonObject value,
+        string prefix,
+        List<AuthoringFormField> fields,
+        int depth)
+    {
+        if (depth > 8 || schema["fields"] is not JsonArray schemaFields)
+        {
+            return;
+        }
+
+        foreach (JsonNode? node in schemaFields)
+        {
+            if (node is not JsonObject field)
+            {
+                continue;
+            }
+
+            string name = field["name"]?.GetValue<string>() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            string path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}.{name}";
+            bool required = field["required"]?.GetValue<bool>() ?? false;
+            JsonNode? typeNode = field["type"];
+            string kind = DescribeTypeKind(typeNode, out string typeRef);
+            JsonNode? fieldValue = value[name];
+
+            if (string.Equals(kind, "struct", StringComparison.Ordinal) &&
+                fieldValue is JsonObject nestedValue &&
+                !string.IsNullOrWhiteSpace(typeRef))
+            {
+                JsonObject? nestedSchema = FindSchema(typeRef);
+                if (nestedSchema != null)
+                {
+                    CollectFormFields(nestedSchema, nestedValue, path, fields, depth + 1);
+                }
+
+                continue;
+            }
+
+            int arrayLength = fieldValue is JsonArray array ? array.Count : 0;
+            fields.Add(new AuthoringFormField(
+                path,
+                kind,
+                FormatFieldValue(fieldValue),
+                typeRef,
+                required,
+                arrayLength));
+        }
+    }
+
+    private void CollectPaths(
+        JsonObject schema,
+        JsonObject? recordValue,
+        string prefix,
+        List<string> paths,
+        int depth)
     {
         if (depth > 8 || schema["fields"] is not JsonArray fields)
         {
@@ -501,6 +1017,8 @@ public sealed class DataSchemaAuthoringDocument
             string path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}.{name}";
             paths.Add(path);
             JsonNode? typeNode = field["type"];
+            JsonNode? valueNode = recordValue?[name];
+
             if (typeNode is JsonObject typeObject &&
                 string.Equals(typeObject["kind"]?.GetValue<string>(), "struct", StringComparison.Ordinal))
             {
@@ -508,13 +1026,208 @@ public sealed class DataSchemaAuthoringDocument
                 if (!string.IsNullOrWhiteSpace(typeRef))
                 {
                     JsonObject? nested = FindSchema(typeRef);
+                    JsonObject? nestedValue = valueNode as JsonObject;
                     if (nested != null)
                     {
-                        CollectPaths(nested, path, paths, depth + 1);
+                        CollectPaths(nested, nestedValue, path, paths, depth + 1);
                     }
                 }
             }
+            else if (IsArrayType(typeNode) && valueNode is JsonArray array)
+            {
+                for (int i = 0; i < array.Count; i++)
+                {
+                    paths.Add($"{path}[{i}]");
+                }
+            }
         }
+    }
+
+    private static bool IsArrayType(JsonNode? typeNode)
+    {
+        if (typeNode is JsonObject typeObject)
+        {
+            return string.Equals(typeObject["kind"]?.GetValue<string>(), "array", StringComparison.Ordinal);
+        }
+
+        return typeNode is JsonValue text &&
+               text.TryGetValue<string>(out string? token) &&
+               token != null &&
+               token.StartsWith("array:", StringComparison.Ordinal);
+    }
+
+    private static string DescribeTypeKind(JsonNode? typeNode, out string typeRef)
+    {
+        typeRef = string.Empty;
+        if (typeNode is JsonObject typeObject)
+        {
+            string kind = typeObject["kind"]?.GetValue<string>() ?? "string";
+            typeRef = typeObject["ref"]?.GetValue<string>()
+                ?? typeObject["items"]?.ToJsonString()
+                ?? string.Empty;
+            return kind;
+        }
+
+        if (typeNode is JsonValue value && value.TryGetValue<string>(out string? token) && token != null)
+        {
+            if (token.StartsWith("enum:", StringComparison.Ordinal))
+            {
+                typeRef = token["enum:".Length..];
+                return "enum";
+            }
+
+            if (token.StartsWith("struct:", StringComparison.Ordinal))
+            {
+                typeRef = token["struct:".Length..];
+                return "struct";
+            }
+
+            if (token.StartsWith("array:", StringComparison.Ordinal))
+            {
+                typeRef = token["array:".Length..];
+                return "array";
+            }
+
+            return token;
+        }
+
+        return "string";
+    }
+
+    private static string FormatFieldValue(JsonNode? value)
+    {
+        if (value == null)
+        {
+            return "(missing)";
+        }
+
+        if (value is JsonArray array)
+        {
+            return $"[{array.Count}] {array.ToJsonString()}";
+        }
+
+        return value.ToJsonString();
+    }
+
+    private static JsonNode? ResolvePathValue(JsonObject root, string path)
+    {
+        string[] parts = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        JsonNode? current = root;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (current is not JsonObject obj)
+            {
+                return null;
+            }
+
+            string part = parts[i];
+            int bracket = part.IndexOf('[', StringComparison.Ordinal);
+            if (bracket >= 0)
+            {
+                string name = part[..bracket];
+                if (!obj.TryGetPropertyValue(name, out JsonNode? arrNode) || arrNode is not JsonArray array)
+                {
+                    return null;
+                }
+
+                int end = part.IndexOf(']', bracket);
+                if (end < 0 ||
+                    !int.TryParse(part[(bracket + 1)..end], NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ||
+                    index < 0 ||
+                    index >= array.Count)
+                {
+                    return null;
+                }
+
+                current = array[index];
+            }
+            else if (!obj.TryGetPropertyValue(part, out current))
+            {
+                return null;
+            }
+        }
+
+        return current;
+    }
+
+    private static string StripArrayIndices(string path)
+    {
+        if (string.IsNullOrEmpty(path) || path.IndexOf('[', StringComparison.Ordinal) < 0)
+        {
+            return path;
+        }
+
+        var builder = new System.Text.StringBuilder(path.Length);
+        for (int i = 0; i < path.Length; i++)
+        {
+            if (path[i] == '[')
+            {
+                while (i < path.Length && path[i] != ']')
+                {
+                    i++;
+                }
+
+                continue;
+            }
+
+            builder.Append(path[i]);
+        }
+
+        return builder.ToString();
+    }
+
+    private bool TryGetOrCreateObjectPath(JsonObject root, string path, out JsonObject parent, out string leaf)
+    {
+        parent = root;
+        leaf = path;
+        string[] parts = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            string part = parts[i];
+            if (parent[part] is JsonObject next)
+            {
+                parent = next;
+                continue;
+            }
+
+            var created = new JsonObject();
+            parent[part] = created;
+            parent = created;
+        }
+
+        leaf = parts[^1];
+        if (leaf.IndexOf('[', StringComparison.Ordinal) >= 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static JsonNode DefaultValueForFieldType(JsonNode? typeNode)
+    {
+        string kind = DescribeTypeKind(typeNode, out string typeRef);
+        return kind switch
+        {
+            "float" => 0d,
+            "int" => 0,
+            "bool" => false,
+            "entityRef" => string.Empty,
+            "enum" => string.Empty,
+            "array" => new JsonArray(),
+            "struct" when !string.IsNullOrWhiteSpace(typeRef) => new JsonObject(),
+            _ => string.Empty,
+        };
+    }
+
+    private void CollectPaths(JsonObject schema, string prefix, List<string> paths, int depth)
+    {
+        CollectPaths(schema, recordValue: null, prefix, paths, depth);
     }
 
     private JsonObject? FindSchema(string id)
@@ -608,18 +1321,7 @@ public sealed class DataSchemaAuthoringDocument
                 }
 
                 string schemaId = record["schema"]?.GetValue<string>() ?? _selectedSchemaId;
-                IReadOnlyList<string> allowed = EnumerateBindingPaths(schemaId);
-                bool known = false;
-                for (int i = 0; i < allowed.Count; i++)
-                {
-                    if (string.Equals(allowed[i], path, StringComparison.Ordinal))
-                    {
-                        known = true;
-                        break;
-                    }
-                }
-
-                if (!known)
+                if (!IsBindingPathAllowed(schemaId, path))
                 {
                     diagnostics.Add($"Panel '{panelId}' pin '{pinName}' unknown path '{path}'.");
                 }
