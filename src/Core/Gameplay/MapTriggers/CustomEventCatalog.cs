@@ -142,10 +142,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
 
                 names.Register(name);
-                if (CustomEventSchemaParser.TryParse(node, name, $"{CustomEventNameRegistry.ConfigPath} entry '{name}'") is { } schema)
-                {
-                    schemas.RegisterCustom(schema);
-                }
+                schemas.RegisterCustom(
+                    CustomEventSchemaParser.Parse(
+                        node,
+                        name,
+                        $"{CustomEventNameRegistry.ConfigPath} entry '{name}'"));
             }
 
             return new CustomEventCatalog(names, schemas);
@@ -157,14 +158,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <c>scope</c> ("map" default / "entity" / "global") and <c>params[]</c> of
     /// <c>{ name, type, key, optional? }</c>. Unknown fields, out-of-whitelist types
     /// (bool / region / team wait on the map variable type contract), and malformed
-    /// shapes fail closed. Entries without <c>params</c> stay parameterless (null).
+    /// shapes fail closed. Entries without <c>params</c> become an empty-param schema
+    /// (parameterless contract), never an unbound name.
     /// </summary>
     public static class CustomEventSchemaParser
     {
         private static readonly string[] EntryFields = { "id", "description", "scope", "params" };
         private static readonly string[] ParamFields = { "name", "type", "key", "optional" };
 
-        public static EventSchema? TryParse(JsonObject node, string eventName, string context)
+        public static EventSchema Parse(JsonObject node, string eventName, string context)
         {
             foreach (KeyValuePair<string, JsonNode?> field in node)
             {
@@ -183,7 +185,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             if (!node.ContainsKey("params"))
             {
-                return null;
+                return new EventSchema(eventName, scope, Array.Empty<EventParamSchema>());
             }
 
             if (node["params"] is not JsonArray paramsArray)

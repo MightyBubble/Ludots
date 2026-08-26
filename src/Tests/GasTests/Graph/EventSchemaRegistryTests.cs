@@ -32,7 +32,7 @@ namespace Ludots.Tests.Gas.Graph
     { ""name"": ""probeTag"", ""type"": ""int"", ""key"": ""ModA.ProbeTag"", ""optional"": true }
   ]
 }")!;
-            probeSchema = CustomEventSchemaParser.TryParse(node, "ModA.Probe", "test entry 'ModA.Probe'")!;
+            probeSchema = CustomEventSchemaParser.Parse(node, "ModA.Probe", "test entry 'ModA.Probe'");
             registry.RegisterCustom(probeSchema);
             return registry;
         }
@@ -102,7 +102,10 @@ namespace Ludots.Tests.Gas.Graph
         public void Parse_WithoutParams_YieldsParameterlessSchema()
         {
             JsonObject node = (JsonObject)JsonNode.Parse(@"{ ""id"": ""ModA.Bare"", ""description"": ""bare"" }")!;
-            Assert.That(CustomEventSchemaParser.TryParse(node, "ModA.Bare", "test"), Is.Null);
+            EventSchema schema = CustomEventSchemaParser.Parse(node, "ModA.Bare", "test");
+            Assert.That(schema.EventName, Is.EqualTo("ModA.Bare"));
+            Assert.That(schema.Scope, Is.EqualTo(EventScope.Map));
+            Assert.That(schema.Params, Is.Empty);
         }
 
         [Test]
@@ -110,7 +113,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             JsonObject node = (JsonObject)JsonNode.Parse(@"{ ""id"": ""ModA.X"", ""typo"": 1 }")!;
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                CustomEventSchemaParser.TryParse(node, "ModA.X", "test"));
+                CustomEventSchemaParser.Parse(node, "ModA.X", "test"));
             Assert.That(ex.Message, Does.Contain("unknown field 'typo'"));
         }
 
@@ -120,7 +123,7 @@ namespace Ludots.Tests.Gas.Graph
             JsonObject node = (JsonObject)JsonNode.Parse(
                 @"{ ""id"": ""ModA.X"", ""params"": [ { ""name"": ""a"", ""type"": ""int"", ""key"": ""ModA.A"", ""extra"": 1 } ] }")!;
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                CustomEventSchemaParser.TryParse(node, "ModA.X", "test"));
+                CustomEventSchemaParser.Parse(node, "ModA.X", "test"));
             Assert.That(ex.Message, Does.Contain("unknown field 'extra'"));
         }
 
@@ -129,7 +132,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             JsonObject node = (JsonObject)JsonNode.Parse(@"{ ""id"": ""ModA.X"", ""scope"": ""solar"" }")!;
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                CustomEventSchemaParser.TryParse(node, "ModA.X", "test"));
+                CustomEventSchemaParser.Parse(node, "ModA.X", "test"));
             Assert.That(ex.Message, Does.Contain("scope"));
         }
 
@@ -141,7 +144,7 @@ namespace Ludots.Tests.Gas.Graph
             JsonObject node = (JsonObject)JsonNode.Parse(
                 @"{ ""id"": ""ModA.X"", ""params"": [ { ""name"": ""a"", ""type"": """ + type + @""", ""key"": ""ModA.A"" } ] }")!;
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                CustomEventSchemaParser.TryParse(node, "ModA.X", "test"));
+                CustomEventSchemaParser.Parse(node, "ModA.X", "test"));
             Assert.That(ex.Message, Does.Contain("map variable type contract"));
         }
 
@@ -151,7 +154,7 @@ namespace Ludots.Tests.Gas.Graph
             JsonObject node = (JsonObject)JsonNode.Parse(
                 @"{ ""id"": ""ModA.X"", ""params"": [ { ""name"": ""a"", ""type"": ""quaternion"", ""key"": ""ModA.A"" } ] }")!;
             Assert.Throws<InvalidOperationException>(() =>
-                CustomEventSchemaParser.TryParse(node, "ModA.X", "test"));
+                CustomEventSchemaParser.Parse(node, "ModA.X", "test"));
         }
 
         [Test]

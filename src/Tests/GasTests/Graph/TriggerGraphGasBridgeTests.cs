@@ -42,7 +42,7 @@ namespace Ludots.Tests.Gas.Graph
             world.Add(target, new MapEntity { MapId = mapId });
 
             var bus = new GameplayEventBus();
-            var manager = new TriggerManager();
+            var manager = new TriggerManager { EventSchemas = new EventSchemaRegistry() };
             var bridge = new GasEventTriggerBridgeSystem(bus, manager, world, () => new ScriptContext());
 
             GameplayEvent? seen = null;
@@ -85,7 +85,7 @@ namespace Ludots.Tests.Gas.Graph
             world.Add(source, new MapEntity { MapId = mapId });
 
             var bus = new GameplayEventBus();
-            var manager = new TriggerManager();
+            var manager = new TriggerManager { EventSchemas = new EventSchemaRegistry() };
             var bridge = new GasEventTriggerBridgeSystem(bus, manager, world, () => new ScriptContext());
 
             var fired = new List<string>();
@@ -109,7 +109,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             using World world = World.Create();
             var bus = new GameplayEventBus();
-            var manager = new TriggerManager();
+            var manager = new TriggerManager { EventSchemas = new EventSchemaRegistry() };
             var bridge = new GasEventTriggerBridgeSystem(bus, manager, world, () => new ScriptContext());
 
             bus.Publish(new GameplayEvent { TagId = 4127, Source = Entity.Null, Target = Entity.Null });
@@ -128,7 +128,7 @@ namespace Ludots.Tests.Gas.Graph
             world.Add(caster, new MapEntity { MapId = mapId });
 
             var buffer = new GasPresentationEventBuffer(8);
-            var manager = new TriggerManager();
+            var manager = new TriggerManager { EventSchemas = new EventSchemaRegistry() };
             var bridge = new TriggerGraphMomentBridgeSystem(buffer, manager, world, () => new ScriptContext());
 
             GasPresentationEvent? seen = null;

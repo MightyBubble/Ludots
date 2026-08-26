@@ -32,14 +32,11 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Keys whose owning event is not yet schema-bound; each entry names the slice
-        /// that will claim it. Shrinks to zero as PhaseChanged (#1113) and the float
-        /// phase contract land.
+        /// that will claim it. Shrinks to zero as float phase / MapVariableChanged (#1113)
+        /// land OldValue and float payloads.
         /// </summary>
         private static readonly (string Key, string Owner)[] PendingPayloadKeys =
         {
-            (MapTriggerEventPayloadKeys.VarName, "PhaseChanged (#1113)"),
-            (MapTriggerEventPayloadKeys.Phase, "PhaseChanged (#1113)"),
-            (MapTriggerEventPayloadKeys.VarValueInt, "PhaseChanged (#1113)"),
             (MapTriggerEventPayloadKeys.VarValueFloat, "float phase slice of the map variable contract"),
         };
 
@@ -82,6 +79,18 @@ namespace Ludots.Core.Scripting
                 new("groundXCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundXCm),
                 new("groundYCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundYCm),
                 new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity, Optional: true),
+            }),
+            new(GameEvents.ModLoaded.Value, EventScope.Global, new EventParamSchema[]
+            {
+                new("modId", EventParamType.String, MapTriggerEventPayloadKeys.ModId),
+            }),
+            // Existing fire path is still named PhaseChanged; #1113 evolves it to
+            // MapVariableChanged (+ OldValue). Schema matches today's dispatcher payload.
+            new("PhaseChanged", EventScope.Map, new EventParamSchema[]
+            {
+                new("varName", EventParamType.String, MapTriggerEventPayloadKeys.VarName),
+                new("phase", EventParamType.Int, MapTriggerEventPayloadKeys.Phase),
+                new("varValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt),
             }),
         };
 
@@ -161,13 +170,36 @@ namespace Ludots.Core.Scripting
         /// <summary>
         /// Fire-time contract check: every declared parameter must be present (unless
         /// optional) with the declared type, and no undeclared MapTrigger.* key may ride
-        /// the context. Events without a schema entry are not validated yet.
+        /// the context. Events without a schema entry may not carry reserved MapTrigger.*
+        /// keys unless they belong to a dynamic bridge family, in which case only the
+        /// declared dynamic-bridge key set is legal.
         /// </summary>
         public void ValidateFirePayload(EventKey eventKey, ScriptContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
             if (!TryGet(eventKey.Value, out EventSchema schema))
             {
+                bool dynamicFamily = IsDynamicBridgeFamily(eventKey.Value);
+                foreach (KeyValuePair<string, object> entry in context.EnumerateStringEntries())
+                {
+                    if (!IsReservedPayloadKey(entry.Key))
+                    {
+                        continue;
+                    }
+
+                    if (dynamicFamily && IsDynamicBridgePayloadKey(entry.Key))
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        dynamicFamily
+                            ? $"EVENT.SCHEMA.UnboundPayloadKey: firing '{eventKey.Value}' carries reserved payload key " +
+                              $"'{entry.Key}' outside the dynamic bridge key set."
+                            : $"EVENT.SCHEMA.UnboundPayloadKey: firing '{eventKey.Value}' carries reserved payload key " +
+                              $"'{entry.Key}' but no EventSchema is registered for that event.");
+                }
+
                 return;
             }
 
@@ -204,6 +236,26 @@ namespace Ludots.Core.Scripting
                         $"'{entry.Key}' that its schema does not declare.");
                 }
             }
+        }
+
+        private static bool IsDynamicBridgeFamily(string eventName)
+        {
+            return eventName.StartsWith("Gas.Event.", StringComparison.Ordinal) ||
+                eventName.StartsWith("Ability.", StringComparison.Ordinal) ||
+                eventName.StartsWith("Effect.", StringComparison.Ordinal);
+        }
+
+        private static bool IsDynamicBridgePayloadKey(string payloadKey)
+        {
+            for (int i = 0; i < DynamicBridgePayloadKeys.Length; i++)
+            {
+                if (string.Equals(DynamicBridgePayloadKeys[i], payloadKey, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         internal static bool IsReservedPayloadKey(string payloadKey)
