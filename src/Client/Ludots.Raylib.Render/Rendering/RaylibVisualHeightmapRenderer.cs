@@ -29,6 +29,13 @@ namespace Ludots.Raylib.Render
         private long _overviewBoundsKey;
         private int _overviewVertexLimit = -1;
         private bool _overviewMeshLoaded;
+        private bool _overviewReceiverReady;
+        private float _overviewMinX;
+        private float _overviewMinY;
+        private float _overviewMinZ;
+        private float _overviewMaxX;
+        private float _overviewMaxY;
+        private float _overviewMaxZ;
         private readonly IRenderAssetPathResolver? _assetPaths;
         private readonly string _backendId;
         private readonly List<TerrainAlbedoDescriptor> _albedoDescriptors = new();
@@ -423,6 +430,7 @@ namespace Ludots.Raylib.Render
                 ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
                 // Keep albedo/control so authored weight maps stay readable; drop nav walkability wash only.
                 ApplyOverviewWithoutNavWalkabilityUniforms();
+                _overviewReceiverReady = true;
                 RaylibMatrix identity = RaylibMatrix.Identity;
                 Rl.rlDisableBackfaceCulling();
                 Rl.DrawMesh(_overviewMesh, _terrainMaterial, identity);
@@ -434,6 +442,7 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
+            _overviewReceiverReady = false;
             int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
@@ -517,10 +526,32 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
+            if (_overviewReceiverReady)
+            {
+                if (!_overviewMeshLoaded)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibVisualHeightmapRenderer)} overview receiver is selected but the overview mesh is not loaded. Render the visual heightmap before drawing Decals.");
+                }
+
+                if (_overviewMaxX < minX || _overviewMinX > maxX ||
+                    _overviewMaxY < minY || _overviewMinY > maxY ||
+                    _overviewMaxZ < minZ || _overviewMinZ > maxZ)
+                {
+                    return 0;
+                }
+
+                RaylibMatrix overviewIdentity = RaylibMatrix.Identity;
+                Rl.rlDisableBackfaceCulling();
+                Rl.DrawMesh(_overviewMesh, material, overviewIdentity);
+                Rl.rlEnableBackfaceCulling();
+                return 1;
+            }
+
             if (_chunks.Count == 0)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} has no cached terrain meshes for projected Decals. Render the visual heightmap before drawing Decals.");
+                    $"{nameof(RaylibVisualHeightmapRenderer)} has no cached terrain meshes for projected Decals. Render the visual heightmap (chunk or overview) before drawing Decals.");
             }
 
             int drawn = 0;
@@ -1445,9 +1476,16 @@ namespace Ludots.Raylib.Render
 
             _overviewMesh = default;
             _overviewMeshLoaded = false;
+            _overviewReceiverReady = false;
             _overviewRevision = int.MinValue;
             _overviewBoundsKey = 0;
             _overviewVertexLimit = -1;
+            _overviewMinX = 0f;
+            _overviewMinY = 0f;
+            _overviewMinZ = 0f;
+            _overviewMaxX = 0f;
+            _overviewMaxY = 0f;
+            _overviewMaxZ = 0f;
         }
 
         private static float ResolveFrameAspect()
@@ -1517,6 +1555,8 @@ namespace Ludots.Raylib.Render
             float displayHeightScale = _displayHeightScale;
             float minHeightCm = float.PositiveInfinity;
             float maxHeightCm = float.NegativeInfinity;
+            float minDisplayY = float.PositiveInfinity;
+            float maxDisplayY = float.NegativeInfinity;
             var heights = new float[vertexCount];
             var displayHeights = new float[vertexCount];
             for (int y = 0; y < rows; y++)
@@ -1539,9 +1579,12 @@ namespace Ludots.Raylib.Render
                     minHeightCm = MathF.Min(minHeightCm, heightCm);
                     maxHeightCm = MathF.Max(maxHeightCm, heightCm);
                     int f = vertex * 3;
+                    float displayY = displayHeightCm * displayHeightScale * 0.01f;
                     mesh.vertices[f + 0] = worldXCm * 0.01f;
-                    mesh.vertices[f + 1] = displayHeightCm * displayHeightScale * 0.01f;
+                    mesh.vertices[f + 1] = displayY;
                     mesh.vertices[f + 2] = worldYCm * 0.01f;
+                    minDisplayY = MathF.Min(minDisplayY, displayY);
+                    maxDisplayY = MathF.Max(maxDisplayY, displayY);
                     mesh.normals[f + 0] = 0f;
                     mesh.normals[f + 1] = 1f;
                     mesh.normals[f + 2] = 0f;
@@ -1553,6 +1596,19 @@ namespace Ludots.Raylib.Render
                 minHeightCm = 0f;
                 maxHeightCm = 1f;
             }
+
+            if (!float.IsFinite(minDisplayY) || !float.IsFinite(maxDisplayY))
+            {
+                minDisplayY = 0f;
+                maxDisplayY = 1f;
+            }
+
+            _overviewMinX = bounds.Left * 0.01f;
+            _overviewMaxX = (bounds.Left + bounds.Width) * 0.01f;
+            _overviewMinY = minDisplayY;
+            _overviewMaxY = maxDisplayY;
+            _overviewMinZ = bounds.Top * 0.01f;
+            _overviewMaxZ = (bounds.Top + bounds.Height) * 0.01f;
 
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
             for (int y = 0; y < rows; y++)
