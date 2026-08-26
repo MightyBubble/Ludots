@@ -2,7 +2,7 @@
   "browserRuntime": {
     "enabled": true,
     "required": true,
-    "provider": "cef"
+    "provider": "ultralight"
   },
   "windowTitle": "Ludots - Panel Web UI Skin",
   "windowWidth": 1600,

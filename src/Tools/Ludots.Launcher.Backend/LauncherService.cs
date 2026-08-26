@@ -1884,6 +1884,41 @@ public sealed class LauncherService
                 }
             }
         }
+        else if (string.Equals(browserRuntime.Provider, "ultralight", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] requiredFiles =
+            {
+                "Ludots.UI.Browser.Ultralight.deps.json",
+                "Ludots.UI.Browser.Ultralight.dll",
+                "UltralightNet.dll",
+                "UltralightNet.Binaries.dll",
+                "UltralightNet.AppCore.dll",
+                "UltralightNet.AppCore.Binaries.dll"
+            };
+
+            foreach (string file in requiredFiles)
+            {
+                string path = Path.Combine(browserRuntime.RuntimeRootPath, file);
+                if (!File.Exists(path))
+                {
+                    message = $"Ultralight browser runtime package is incomplete. Missing: {path}";
+                    return false;
+                }
+            }
+
+            bool hasLinux = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "libUltralight.so")) ||
+                            File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "linux-x64", "native", "libUltralight.so"));
+            bool hasWindows = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "Ultralight.dll")) ||
+                              File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "win-x64", "native", "Ultralight.dll"));
+            bool hasMac = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "libUltralight.dylib")) ||
+                          File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "osx-x64", "native", "libUltralight.dylib"));
+            if (!hasLinux && !hasWindows && !hasMac)
+            {
+                message =
+                    $"Ultralight browser runtime package is incomplete. Missing native Ultralight libraries under '{browserRuntime.RuntimeRootPath}'.";
+                return false;
+            }
+        }
 
         message = string.Empty;
         return true;
