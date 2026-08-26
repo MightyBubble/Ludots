@@ -5123,7 +5123,7 @@
       "path": "mods/showcases/narrative/NarrativeShowcaseMod",
       "projectPath": "NarrativeShowcaseMod.csproj",
       "title": "叙事：对话 + 演出",
-      "summary": "开场 Sequencer 镜头字幕、对话选项、试炼演出轨与立绘同台。一幕一屏。换肤用 narrative_theme_*（含九宫格框图）。",
+      "summary": "开场 Sequencer 镜头字幕、对话选项、试炼演出轨与立绘同台。一幕一屏。换肤用 narrative_theme_*（panelTheme CSS + cutout 切图，合同见 panel-skins.md）。",
       "tier": "T2",
       "category": "capability",
       "binding": "narrative",
@@ -8046,7 +8046,7 @@
       "path": "mods/showcases/narrative_theme_sanguo/NarrativeThemeSanguoMod",
       "projectPath": null,
       "title": "叙事换肤·三国",
-      "summary": "0 代码壳：panelTheme=story-sanguo（朱砂乌木 + 九宫格框）。玩法复用 NarrativeShowcaseMod。",
+      "summary": "0 代码壳：panelTheme=story-sanguo（朱砂乌木，theme.css + cutout 切图）。玩法复用 NarrativeShowcaseMod。",
       "tier": "T2",
       "category": "capability",
       "binding": "narrative_theme_sanguo",
@@ -8060,8 +8060,7 @@
       "tags": [
         "narrative",
         "panelTheme",
-        "zero-code",
-        "nineslice"
+        "zero-code"
       ]
     },
     {
@@ -8069,7 +8068,7 @@
       "path": "mods/showcases/narrative_theme_fantasy/NarrativeThemeFantasyMod",
       "projectPath": null,
       "title": "叙事换肤·奇幻",
-      "summary": "0 代码壳：panelTheme=story-fantasy（羊皮鎏金 + 九宫格框）。",
+      "summary": "0 代码壳：panelTheme=story-fantasy（羊皮鎏金，theme.css + cutout 切图）。",
       "tier": "T2",
       "category": "capability",
       "binding": "narrative_theme_fantasy",
@@ -8083,8 +8082,7 @@
       "tags": [
         "narrative",
         "panelTheme",
-        "zero-code",
-        "nineslice"
+        "zero-code"
       ]
     },
     {
@@ -8092,7 +8090,7 @@
       "path": "mods/showcases/narrative_theme_acnh/NarrativeThemeAcnhMod",
       "projectPath": null,
       "title": "叙事换肤·动森",
-      "summary": "0 代码壳：panelTheme=story-acnh（软圆角薄荷绿 + 九宫格框）。",
+      "summary": "0 代码壳：panelTheme=story-acnh（软圆角薄荷绿，theme.css + cutout 切图）。",
       "tier": "T2",
       "category": "capability",
       "binding": "narrative_theme_acnh",
@@ -8106,8 +8104,7 @@
       "tags": [
         "narrative",
         "panelTheme",
-        "zero-code",
-        "nineslice"
+        "zero-code"
       ]
     }
   ]

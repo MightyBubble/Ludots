@@ -441,42 +441,19 @@ internal static class NarrativeFrontendUiComposer
     private static UiElementBuilder ApplyAuthorChrome(UiElementBuilder builder, NarrativeFrontendSurfaceModel surface)
     {
         // Author overrides only. Empty means theme.css owns the skin (NO parallel hardcoded chrome).
+        // 换皮合同见 gitbook/architecture/panel-skins.md：theme.css + images/（cutout.py）负责框体观感，
+        // 禁止再叠一层未抠净的整框九宫格图盖住主题。
         if (!string.IsNullOrWhiteSpace(surface.BackgroundHex))
         {
             builder = builder.Background(surface.BackgroundHex);
         }
 
-        // 有九宫格框图时，边线交给 frame 图；再画 BorderHex 会盖住拟物框。
-        if (string.IsNullOrWhiteSpace(surface.FrameImageSrc) &&
-            !string.IsNullOrWhiteSpace(surface.BorderHex))
+        if (!string.IsNullOrWhiteSpace(surface.BorderHex))
         {
             builder = builder.Border(1f, Color(surface.BorderHex));
         }
 
-        return WrapWithThemeFrame(builder, surface);
-    }
-
-    private static UiElementBuilder WrapWithThemeFrame(UiElementBuilder content, NarrativeFrontendSurfaceModel surface)
-    {
-        if (string.IsNullOrWhiteSpace(surface.FrameImageSrc))
-        {
-            return content;
-        }
-
-        string frameClass = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
-            ? "story-choice-frame"
-            : "story-frame";
-
-        // 对齐 UiShowcase 九宫格：框图叠在内容之上（中心透明），内容用 story-framed-body 留出切边内边距。
-        return Ui.Panel(
-                content.Class("story-framed-body"),
-                Ui.Image(surface.FrameImageSrc)
-                    .Class(frameClass)
-                    .Absolute(0f, 0f)
-                    .WidthPercent(100f)
-                    .HeightPercent(100f)
-                    .ZIndex(40))
-            .Class("story-framed");
+        return builder;
     }
 
     private static UiElementBuilder ApplyOptionalColor(UiElementBuilder builder, string hex)

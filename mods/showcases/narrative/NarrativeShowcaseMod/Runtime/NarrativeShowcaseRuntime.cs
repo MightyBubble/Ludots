@@ -47,8 +47,6 @@ namespace NarrativeShowcaseMod.Runtime
         private bool _interactionInputActive;
         private bool _taskHookInstalled;
         private int _historySerial;
-        private string _panelFrameSrc = string.Empty;
-        private string _choiceFrameSrc = string.Empty;
 
         internal NarrativeShowcaseRuntime(IModContext context)
         {
@@ -274,22 +272,7 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             RebindEntities(engine);
-            ResolveThemeFrames(engine);
             frontend.Publish(BuildPage(engine, dialogue, sequencer, tasks));
-        }
-
-        private void ResolveThemeFrames(GameEngine engine)
-        {
-            string themeId = engine.MergedConfig?.PanelTheme?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(themeId))
-            {
-                _panelFrameSrc = string.Empty;
-                _choiceFrameSrc = string.Empty;
-                return;
-            }
-
-            _panelFrameSrc = ResolveThemeImage(engine, themeId, "panel_frame.png");
-            _choiceFrameSrc = ResolveThemeImage(engine, themeId, "choice_frame.png");
         }
 
         private static string ResolveThemeImage(GameEngine engine, string themeId, string fileName)
@@ -655,8 +638,7 @@ namespace NarrativeShowcaseMod.Runtime
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
                 PortraitSrc: portraitSrc,
-                PortraitSize: standingPortrait ? 980f : overlay ? 112f : 84f,
-                FrameImageSrc: _panelFrameSrc);
+                PortraitSize: standingPortrait ? 980f : overlay ? 112f : 84f);
         }
 
         private NarrativeFrontendSurfaceModel BuildChoiceSurface(DialogueView dialogue)
@@ -768,10 +750,7 @@ namespace NarrativeShowcaseMod.Runtime
                 BackgroundHex: config.BackgroundHex,
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
-                MutedHex: config.MutedHex,
-                FrameImageSrc: kind == NarrativeFrontendSurfaceKind.ChoiceList
-                    ? _choiceFrameSrc
-                    : _panelFrameSrc);
+                MutedHex: config.MutedHex);
         }
 
         private void EnsureBootstrapped(GameEngine engine)

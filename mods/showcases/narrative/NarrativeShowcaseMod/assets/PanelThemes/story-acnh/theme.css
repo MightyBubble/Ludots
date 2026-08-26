@@ -1,84 +1,88 @@
-/* story-acnh — 动森感：软圆角、薄荷绿、暖粉点缀。0 代码换皮：只改 panelTheme。 */
-.story-root { font-family: "Nunito", "Segoe UI", "Iosevka", sans-serif; }
+/* story-acnh — 动森软圆角：CSS 边 + wash + cutout ornament（panel-skins 合同）。 */
+.story-root { font-family: "Segoe UI", "Nunito", "Georgia", sans-serif; }
 
-.story-card {
-  background-color: rgba(236, 246, 232, 235);
-  background-image: url(images/panel_wash.png);
-  background-size: cover;
-  border: 0 solid rgb(120, 190, 130);
-  border-radius: 22px;
-  box-shadow: 0 12px 28px rgba(40, 80, 50, 0.25);
-  padding: 16px;
-}
-
+.story-card,
 .story-overlay-dialogue,
-.story-standing-dialogue {
-  border-color: rgb(255, 180, 160);
-  border-width: 0;
-  border-radius: 24px;
+.story-standing-dialogue,
+.story-choice-list {
+  background-color: rgba(246, 236, 214, 245);
   background-image: url(images/panel_wash.png), url(images/ornament.png);
   background-repeat: no-repeat, no-repeat;
-  background-position: center, right 12px bottom 12px;
-  background-size: cover, 96px auto;
-  padding: 22px 24px 28px 24px;
+  background-position: center, right 8px top 4px;
+  background-size: cover, 200px auto;
+  border-width: 4px;
+  border-style: solid;
+  border-color: rgb(120, 176, 88);
+  border-radius: 18px;
+  padding: 18px 20px 22px 18px;
+}
+
+.story-choice-list {
+  background-position: center, right 6px bottom 6px;
+  background-size: cover, 140px auto;
+  border-color: rgb(96, 152, 72);
+}
+
+.story-choice-item {
+  border: 2px solid rgba(120, 176, 88, 0.45);
+  border-radius: 12px;
+  padding: 10px;
+  background-color: rgba(255, 250, 235, 200);
+}
+
+.story-choice-item-active {
+  border-color: rgb(232, 196, 96);
+  background-color: rgba(255, 244, 210, 230);
 }
 
 .story-dialogue-bubble {
-  border-radius: 22px 22px 8px 22px;
-  border-color: rgb(120, 190, 130);
-  border-width: 2px;
+  border-radius: 8px 18px 18px 18px;
+  border-width: 3px;
+  border-style: solid;
+  border-color: rgb(120, 176, 88);
+  padding: 14px 16px;
+  background-color: rgba(255, 250, 235, 235);
+  background-image: url(images/panel_wash.png);
+  background-size: cover;
 }
 
 .story-subtitle-bubble {
-  border-radius: 999px;
-  border-color: rgb(255, 180, 160);
+  border-radius: 18px 18px 8px 18px;
+  border-width: 3px;
+  border-style: solid;
+  border-color: rgb(232, 196, 96);
+  padding: 12px 18px;
+  background-color: rgba(255, 248, 230, 230);
   background-image: none;
-  background-color: rgba(255, 248, 240, 230);
-  padding: 12px 22px;
 }
 
-.story-choice-list { border-color: rgb(100, 170, 120); border-radius: 20px; }
-.story-choice-item { border: 0 solid rgba(120, 190, 130, 0.45); border-radius: 16px; padding: 10px 12px; background-color: rgba(255, 255, 255, 180); }
-.story-choice-item-active { border-color: rgb(255, 160, 140); background-color: rgba(255, 230, 220, 230); }
-
-.story-title { color: rgb(48, 84, 58); letter-spacing: 0.2px; }
-.story-body { color: rgb(56, 78, 62); line-height: 1.5; }
-.story-muted { color: rgb(110, 140, 118); }
-.story-eyebrow { color: rgb(255, 255, 255); background-color: rgb(120, 190, 130); border-radius: 999px; padding: 6px 10px; font-weight: 700; }
-
-.story-portrait { border: 0 solid rgb(255, 180, 160); border-radius: 18px; background-color: transparent; }
-.story-standing-portrait { border-radius: 0; background-color: transparent; border-width: 0; }
-.story-prompt-ribbon { background-color: rgba(255, 255, 255, 220); border: 0 solid rgb(120, 190, 130); border-radius: 999px; padding: 12px; background-image: none; }
-.story-objective { border-color: rgb(100, 170, 200); }
-.story-history { border-color: rgb(180, 160, 120); }
-.story-item-row { background-color: rgba(255, 255, 255, 160); border-radius: 14px; padding: 10px; }
-.story-item-row-active { background-color: rgba(220, 245, 220, 210); }
-.story-bubble-tail { background-color: rgba(236, 246, 232, 235); }
-.story-threat-banner { background-color: rgba(255, 220, 200, 232); border: 0 solid rgb(240, 140, 120); border-radius: 18px; padding: 16px; background-image: none; }
-.story-transmission { background-color: rgba(220, 240, 255, 220); border: 0 solid rgb(120, 170, 210); border-radius: 18px; padding: 14px; background-image: none; }
-.story-event-card { background-color: rgb(255, 220, 140); border: 0 solid rgb(255, 240, 200); border-radius: 18px; padding: 18px; background-image: none; }
-.story-notification { background-color: rgba(255, 255, 255, 230); border: 0 solid rgba(120, 190, 130, 0.5); border-radius: 16px; padding: 12px; background-image: none; }
-
-/* Nine-slice ornate frame — images/panel_frame.png + choice_frame.png (0-code theme assets). */
-.story-frame {
-  object-fit: fill;
-  image-slice: 48 48 48 48;
-  pointer-events: none;
+.story-title { color: rgb(60, 90, 50); }
+.story-body { color: rgb(70, 90, 55); line-height: 1.55; }
+.story-muted { color: rgb(110, 130, 90); }
+.story-eyebrow {
+  color: rgb(255, 250, 235);
+  background-color: rgb(120, 176, 88);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-weight: 700;
 }
 
-.story-choice-frame {
-  object-fit: fill;
-  image-slice: 36 36 36 36;
-  pointer-events: none;
+.story-portrait {
+  border-width: 3px;
+  border-style: solid;
+  border-color: rgb(120, 176, 88);
+  border-radius: 14px;
+  background-color: transparent;
 }
 
-.story-framed {
-  position: relative;
-  overflow: visible;
+.story-standing-portrait { border-width: 0; background-color: transparent; }
+.story-prompt-ribbon {
+  background-color: rgba(255, 250, 235, 230);
+  border: 2px solid rgb(120, 176, 88);
+  border-radius: 999px;
+  padding: 12px;
+  background-image: none;
 }
-
-/* 内容让出切边，避免字压在拟物框金边上 */
-.story-framed-body {
-  position: relative;
-  padding: 22px 24px 26px 24px;
-}
+.story-item-row { background-color: rgba(255, 248, 230, 180); border-radius: 12px; padding: 10px; }
+.story-item-row-active { background-color: rgba(232, 220, 170, 220); }
+.story-bubble-tail { background-color: rgba(246, 236, 214, 245); }
