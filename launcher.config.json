@@ -1823,6 +1823,22 @@
         "type": "path",
         "value": "mods/showcases/narrative_theme_acnh/NarrativeThemeAcnhMod"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPlacedAnchor",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedAnchorEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPlacedAnchorEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPlacedRegion",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedRegionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPlacedRegionEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

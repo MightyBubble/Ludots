@@ -2428,6 +2428,24 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedAnchor_raylib",
+      "name": "Graph Op LoadPlacedAnchor Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedAnchor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedRegion_raylib",
+      "name": "Graph Op LoadPlacedRegion Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedRegion"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
