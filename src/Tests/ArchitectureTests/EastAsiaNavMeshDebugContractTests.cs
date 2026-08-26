@@ -30,7 +30,7 @@ public sealed class EastAsiaNavMeshDebugContractTests
         Assert.That(map.Tags, Does.Contain("Feature.NavMesh:On"));
         Assert.That(board.WidthInMacroTiles, Is.EqualTo(7));
         Assert.That(board.HeightInMacroTiles, Is.EqualTo(4));
-        Assert.That(board.GridCellSizeCm, Is.EqualTo(502596));
+        Assert.That(board.GridCellSizeCm, Is.EqualTo(3571));
         Assert.That(board.ChunkSizeCells, Is.EqualTo(64));
         Assert.That(board.LoadedChunkCapacity, Is.EqualTo(512));
         Assert.That(board.TerrainHeightStepCm, Is.EqualTo(100));
@@ -91,10 +91,10 @@ public sealed class EastAsiaNavMeshDebugContractTests
 
         Assert.That(root.GetProperty("width").GetInt32(), Is.EqualTo(4096));
         Assert.That(root.GetProperty("height").GetInt32(), Is.EqualTo(2341));
-        Assert.That(bounds.GetProperty("minX").GetInt32(), Is.EqualTo(-450326016));
-        Assert.That(bounds.GetProperty("minZ").GetInt32(), Is.EqualTo(-257329152));
-        Assert.That(bounds.GetProperty("maxX").GetInt32(), Is.EqualTo(450326016));
-        Assert.That(bounds.GetProperty("maxZ").GetInt32(), Is.EqualTo(257329152));
+        Assert.That(bounds.GetProperty("minX").GetInt32(), Is.EqualTo(-3_199_616));
+        Assert.That(bounds.GetProperty("minZ").GetInt32(), Is.EqualTo(-1_828_352));
+        Assert.That(bounds.GetProperty("maxX").GetInt32(), Is.EqualTo(3_199_616));
+        Assert.That(bounds.GetProperty("maxZ").GetInt32(), Is.EqualTo(1_828_352));
         Assert.That(root.GetProperty("sourceTileCount").GetInt32(), Is.EqualTo(448));
         Assert.That(root.GetProperty("triangleCount").GetInt32(), Is.GreaterThan(0));
         Assert.That(root.GetProperty("contentHash").GetString(), Is.EqualTo("sha256:" + hash));

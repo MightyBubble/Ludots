@@ -5,260 +5,260 @@
   "nodes": [
     {
       "id": "yangtze_0",
-      "xcm": -990031,
-      "ycm": 21117,
+      "xcm": -989912,
+      "ycm": 21114,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_1",
-      "xcm": -785161,
-      "ycm": -153450,
+      "xcm": -785067,
+      "ycm": -153432,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_2",
-      "xcm": -591009,
-      "ycm": -575414,
+      "xcm": -590939,
+      "ycm": -575345,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_3",
-      "xcm": -370109,
-      "ycm": -487088,
+      "xcm": -370065,
+      "ycm": -487029,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_4",
-      "xcm": -237985,
-      "ycm": -437069,
+      "xcm": -237956,
+      "ycm": -437016,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_5",
-      "xcm": 87154,
-      "ycm": -344706,
+      "xcm": 87143,
+      "ycm": -344665,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_6",
-      "xcm": 288715,
-      "ycm": -351034,
+      "xcm": 288680,
+      "ycm": -350992,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_7",
-      "xcm": 477644,
-      "ycm": -263854,
+      "xcm": 477586,
+      "ycm": -263822,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_8",
-      "xcm": 592405,
-      "ycm": -206189,
+      "xcm": 592334,
+      "ycm": -206164,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yangtze_9",
-      "xcm": 762793,
-      "ycm": -244976,
+      "xcm": 762701,
+      "ycm": -244946,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_0",
-      "xcm": -855500,
-      "ycm": 58242,
+      "xcm": -855398,
+      "ycm": 58235,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_1",
-      "xcm": -591425,
-      "ycm": 149030,
+      "xcm": -591354,
+      "ycm": 149012,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_2",
-      "xcm": -388330,
-      "ycm": 100648,
+      "xcm": -388283,
+      "ycm": 100636,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_3",
-      "xcm": -179731,
-      "ycm": 364830,
+      "xcm": -179709,
+      "ycm": 364786,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_4",
       "xcm": 0,
-      "ycm": 482620,
+      "ycm": 482562,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_5",
-      "xcm": 138734,
-      "ycm": 323513,
+      "xcm": 138717,
+      "ycm": 323474,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_6",
-      "xcm": 31783,
+      "xcm": 31779,
       "ycm": 80,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_7",
-      "xcm": 223002,
-      "ycm": -12160,
+      "xcm": 222975,
+      "ycm": -12158,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_8",
-      "xcm": 407620,
-      "ycm": 93818,
+      "xcm": 407572,
+      "ycm": 93807,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "yellow_9",
-      "xcm": 550915,
-      "ycm": 250338,
+      "xcm": 550849,
+      "ycm": 250308,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_0",
-      "xcm": 701727,
-      "ycm": -267913,
+      "xcm": 701643,
+      "ycm": -267880,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_1",
-      "xcm": 698802,
-      "ycm": -259588,
+      "xcm": 698718,
+      "ycm": -259557,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_2",
-      "xcm": 692299,
-      "ycm": -252955,
+      "xcm": 692216,
+      "ycm": -252924,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_3",
-      "xcm": 683215,
-      "ycm": -249014,
+      "xcm": 683133,
+      "ycm": -248984,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_4",
-      "xcm": 672926,
-      "ycm": -248360,
+      "xcm": 672845,
+      "ycm": -248330,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_5",
-      "xcm": 662984,
-      "ycm": -251089,
+      "xcm": 662904,
+      "ycm": -251059,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_6",
-      "xcm": 654889,
-      "ycm": -256792,
+      "xcm": 654810,
+      "ycm": -256761,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_7",
-      "xcm": 649869,
-      "ycm": -264607,
+      "xcm": 649791,
+      "ycm": -264575,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_8",
-      "xcm": 648694,
-      "ycm": -273352,
+      "xcm": 648616,
+      "ycm": -273320,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_9",
-      "xcm": 651557,
-      "ycm": -281698,
+      "xcm": 651479,
+      "ycm": -281664,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_10",
-      "xcm": 658037,
-      "ycm": -288368,
+      "xcm": 657958,
+      "ycm": -288333,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_11",
-      "xcm": 667151,
-      "ycm": -292340,
+      "xcm": 667071,
+      "ycm": -292305,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_12",
-      "xcm": 677505,
-      "ycm": -293002,
+      "xcm": 677424,
+      "ycm": -292967,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_13",
-      "xcm": 687509,
-      "ycm": -290252,
+      "xcm": 687427,
+      "ycm": -290217,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_14",
-      "xcm": 695627,
-      "ycm": -284512,
+      "xcm": 695544,
+      "ycm": -284478,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_15",
-      "xcm": 700618,
-      "ycm": -276665,
+      "xcm": 700533,
+      "ycm": -276632,
       "kind": "Normal",
       "tags": []
     },
     {
       "id": "taihu_16",
-      "xcm": 701727,
-      "ycm": -267913,
+      "xcm": 701643,
+      "ycm": -267880,
       "kind": "Normal",
       "tags": []
     }
@@ -309,7 +309,7 @@
         "Water.Yangtze"
       ],
       "depthCm": 1800,
-      "widthCm": 400000,
+      "widthCm": 2842,
       "laneCount": 0,
       "visualWidthMeters": 6.0
     },
@@ -358,7 +358,7 @@
         "Water.YellowRiver"
       ],
       "depthCm": 900,
-      "widthCm": 250000,
+      "widthCm": 1776,
       "laneCount": 0,
       "visualWidthMeters": 4.0
     },

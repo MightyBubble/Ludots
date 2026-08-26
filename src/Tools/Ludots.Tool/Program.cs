@@ -927,6 +927,10 @@ namespace {modId}
                 asset = Ludots.Core.Presentation.Terrain.VisualHeightmapBinary.Read(vhtmStream);
             }
 
+            asset = Ludots.Core.Presentation.Terrain.MapVisualHeightmapLoader.ApplyWorldWidthOverride(
+                asset,
+                mapConfig.VisualHeightmap);
+
             var heightmap = new Ludots.Core.Presentation.Terrain.VisualHeightmapRuntime(asset);
             int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
             int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
@@ -1337,6 +1341,10 @@ namespace {modId}
             {
                 asset = Ludots.Core.Presentation.Terrain.VisualHeightmapBinary.Read(stream);
             }
+
+            asset = Ludots.Core.Presentation.Terrain.MapVisualHeightmapLoader.ApplyWorldWidthOverride(
+                asset,
+                mapConfig.VisualHeightmap);
 
             var heightmap = new Ludots.Core.Presentation.Terrain.VisualHeightmapRuntime(asset);
             return VisualHeightmapLogicTerrainProjection.ProjectToGrid(

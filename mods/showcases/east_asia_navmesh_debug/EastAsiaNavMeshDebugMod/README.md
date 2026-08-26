@@ -2,21 +2,20 @@
 
 This data-only overlay enables the offline Recast-baked `Small` navigation
 profile on `east_asia_visual_heightmap`. Recast voxels follow the board's
-502596 cm logic cells (strategy resolution), not the tactical 5–50 cm agent
-clamp. Its 7x4 macro-tile board covers the complete 900652032x514658304 cm
-VisualHeightmap.
+3571 cm logic cells on a ~64 km playable board (source VHTM samples stay
+continental; `VisualHeightmap.WorldWidthCm` remaps world meters). Its 7x4
+macro-tile board covers the complete 6399232x3656704 cm playable extent.
 
 The overlay also authors a simplified East Asia waterway `TransportNetwork`
 (Yangtze corridor, Yellow River corridor, Taihu filled ring) and opts into
 `Navigation/transport_nav_obstacle_sink.json` so bake carves those polygons
 into the same `NavObstacleSet` as map-authored obstacles. Corridor nodes are
-Albers-projected lon/lat samples; carve width comes from `widthCm` (Yangtze
-4 km, Yellow River 2.5 km at strategy scale); presentation ribbon width stays
-on `visualWidthMeters`.
+Albers-projected lon/lat samples scaled with the playable board; carve width
+comes from `widthCm`; presentation ribbon width stays on `visualWidthMeters`.
 
 It depends on `FieldEastAsiaAdminMod` so the same VisualHeightmap also draws
 province-scale `ownership.east_asia.admin` DiscreteOwnership colors on terrain
-(`DrawFieldOverlays`, default on).
+(`DrawFieldOverlays`, default on). Admin cells are 7142 cm (~2× nav cell).
 
 Bake the authoritative continuous VisualHeightmap from the repository root:
 
@@ -45,10 +44,10 @@ dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav export-walk
   --repoRoot . `
   --out mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod/assets/Textures/nav_walkability.png `
   --width 4096 `
-  --minXcm -450326016 `
-  --minZcm -257329152 `
-  --maxXcm 450326016 `
-  --maxZcm 257329152 `
+  --minXcm -3199616 `
+  --minZcm -1828352 `
+  --maxXcm 3199616 `
+  --maxZcm 1828352 `
   --vhtm mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm `
   --seaLevelCm 0
 ```

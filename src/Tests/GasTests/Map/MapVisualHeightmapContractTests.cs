@@ -220,12 +220,12 @@ namespace Ludots.Tests.Gas
                 sampleColumns: 3,
                 sampleRows: 3,
                 new short[] { 0, 0, 0, 0, 100, 0, 0, 0, 0 });
-            var binding = new VisualHeightmapBindingConfig { WorldWidthCm = 6_400_000 };
+            var binding = new VisualHeightmapBindingConfig { WorldWidthCm = 6_399_232 };
 
             VisualHeightmapAsset scaled = MapVisualHeightmapLoader.ApplyWorldWidthOverride(source, binding);
 
-            Assert.That(scaled.Bounds.Width, Is.EqualTo(6_400_000));
-            Assert.That(scaled.Bounds.Height, Is.EqualTo(3_657_143));
+            Assert.That(scaled.Bounds.Width, Is.EqualTo(6_399_232));
+            Assert.That(scaled.Bounds.Height, Is.EqualTo(3_656_704));
             Assert.That(scaled.Bounds.Left + (scaled.Bounds.Width / 2), Is.EqualTo(0));
             Assert.That(scaled.SampleColumns, Is.EqualTo(3));
             Assert.That(scaled.HeightSamplesCm[4], Is.EqualTo((short)100));

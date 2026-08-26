@@ -12,7 +12,7 @@
       "SpatialType": "Grid",
       "WidthInMacroTiles": 7,
       "HeightInMacroTiles": 4,
-      "GridCellSizeCm": 502596,
+      "GridCellSizeCm": 3571,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 512,
       "NavigationEnabled": true,
@@ -24,10 +24,10 @@
     "navWalkabilityOverlay": {
       "textureUri": "EastAsiaNavMeshDebugMod:assets/Textures/nav_walkability.png",
       "boundsCm": {
-        "minX": -450326016,
-        "minZ": -257329152,
-        "maxX": 450326016,
-        "maxZ": 257329152
+        "minX": -3199616,
+        "minZ": -1828352,
+        "maxX": 3199616,
+        "maxZ": 1828352
       }
     }
   }

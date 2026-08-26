@@ -95,8 +95,8 @@
   "visualHeightmap": {
     "sampleColumns": 7169,
     "sampleRows": 4097,
-    "worldWidthCm": 6400000,
-    "worldHeightCm": 3657143,
+    "worldWidthCm": 6399232,
+    "worldHeightCm": 3656704,
     "seaLevelCm": 0,
     "seaFloorCm": -1200,
     "bathymetry": "continuous_distance_to_coast",
@@ -109,7 +109,7 @@
     "editorHeightAmplitudeCm": 6000,
     "sourceWorldWidthCm": 900652032,
     "sourceWorldHeightCm": 514658304,
-    "playableWorldWidthOverrideCm": 6400000
+    "playableWorldWidthOverrideCm": 6399232
   },
   "outputs": {
     "gridReactMapData": {
