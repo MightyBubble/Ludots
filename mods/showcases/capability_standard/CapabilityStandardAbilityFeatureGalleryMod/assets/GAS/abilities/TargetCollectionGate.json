@@ -1,0 +1,30 @@
+[
+  {
+    "id": "Ability.AbilityFeature.TargetCollectionGate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TargetCollectionGate",
+          "tick": 0,
+          "tag": "Input.AbilityFeature.Collect",
+          "payloadA": 0
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 1,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 1
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "名单齐了才打出去",
+      "iconGlyph": "单",
+      "hintText": "等外部名单。"
+    }
+  }
+]

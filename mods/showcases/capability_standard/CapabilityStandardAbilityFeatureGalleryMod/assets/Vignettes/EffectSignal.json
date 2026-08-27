@@ -1,0 +1,26 @@
+{
+  "feature": "EffectSignal",
+  "family": "timeline",
+  "title": "点一下就打中",
+  "beat": "施法者对着木桩出手，木桩血条马上掉一截。",
+  "detailTemplate": "木桩血条从 {targetBefore} 掉到 {targetAfter}。",
+  "assertDetailContains": [
+    "掉到"
+  ],
+  "abilityId": "Ability.AbilityFeature.EffectSignal",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 24,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "targetHealthDelta": -25
+  }
+}

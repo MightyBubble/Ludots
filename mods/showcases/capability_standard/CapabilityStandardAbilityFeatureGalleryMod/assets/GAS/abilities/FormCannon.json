@@ -1,0 +1,24 @@
+[
+  {
+    "id": "Ability.AbilityFeature.FormCannon",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "炮打",
+      "iconGlyph": "炮",
+      "hintText": "底座栏。"
+    }
+  }
+]

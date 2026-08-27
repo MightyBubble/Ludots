@@ -1,0 +1,23 @@
+[
+  {
+    "id": "Ability.AbilityFeature.FormSwitch",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "toggleSpec": {
+      "toggleTag": "State.AbilityFeature.Hammer",
+      "activeEffects": []
+    },
+    "presentation": {
+      "displayName": "换姿态",
+      "iconGlyph": "换",
+      "hintText": "挂上锤姿态印。"
+    }
+  }
+]

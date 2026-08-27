@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardAbilityFeatureTagClipTargetEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for Ability feature TagClipTarget player gallery.",
+  "main": "bin/net9.0/CapabilityStandardAbilityFeatureTagClipTargetEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardAbilityFeatureGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "ability",
+    "per-feature"
+  ]
+}

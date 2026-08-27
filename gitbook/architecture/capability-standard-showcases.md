@@ -22,6 +22,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Night Raid 夜袭三波 | `map_trigger_night_raid` | `mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod` | **可读剧本**：英雄走进夜袭圈开袭（wave=1）→清完第一波跨思考波进第二波（wave=2）→Boss 阵亡翻阶段（phase=2）并开出胜利面板。关卡流全部在地图 JSON + 一张 TriggerGraph 里，mod 只带表现；袭击队由地图数据预置（触发图方言只放行纯算子，还没有刷怪算子） |
 | Ability Graph Sandbox | `capability_standard_ability_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod` | **可读剧本**：巡逻查一圈找范围目标，给命中对象挂状态、加好感，并把状态牌读成面板 token |
 | Graph Op 单节点画廊 | `capability_standard_graph_op_{Op}` | `graph_op_entries/CapabilityStandardGraphOp{Op}EntryMod` | **玩家入口**：每个可执行图节点单独一场短剧 + 单独录像。共用宿主 `CapabilityStandardGraphOpsNodeGalleryMod`。启动器条目由 `scripts/generate-graph-op-node-galleries.py` 从 vignette 生成。没有按家族打包的大杂烩房间。 |
+| Ability 词条画廊 | `capability_standard_ability_feature_{Feature}` | `ability_feature_entries/CapabilityStandardAbilityFeature{Feature}EntryMod` | **玩家入口**：每个已接通的技能合同单独一场短剧。共用宿主 `CapabilityStandardAbilityFeatureGalleryMod`。启动器条目由 `scripts/generate-ability-feature-galleries.py` 从 catalog 生成。英雄技能沙盒是组合戏，不是词条入口。 |
 | Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **单独短剧**：左巡逻 / 右门岗，串一条故事（BT + HFSM 两种宿主；关卡导演已退役，地图级反应式关卡流见「夜袭三波」） |
 | 残血的分更高 | `capability_standard_graph_score` | `mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod` | **打分短剧**：选人走 GraphScore，字幕读决策痕迹，自动打残血木桩 |
 | 拼一句上字幕 | `capability_standard_graph_formal_text` | `mods/showcases/capability_standard/CapabilityStandardGraphFormalTextShowcaseMod` | **正式文字短剧**：进图拼「守卫倒下了」与「击杀 1」，只从 PresentationTextSink 上字幕 |
@@ -47,6 +48,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$map_trigger_night_raid' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_ability_graph_sandbox' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_op_AddFloat' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_ability_feature_EffectSignal' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_behavior_integration' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_score' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_formal_text' --adapter raylib
@@ -71,6 +73,7 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:map_trigger_night_raid_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_ability_graph_sandbox_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_op_AddFloat_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_ability_feature_EffectSignal_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_behavior_integration_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_score_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_formal_text_raylib'
@@ -129,3 +132,15 @@ Feature: 每个图节点单独一场可看懂的短剧
     And 启动器能单独打开这一场
     And 这一场有自己的录像目录
 ```
+
+## Ability 词条画廊
+
+玩家入口是「一场短剧只讲一个技能合同」，不把英雄整栏塞进同一场。总规矩见 [Ability 词条画廊](ability-feature-gallery.md)。
+
+- 启动绑定：`capability_standard_ability_feature_{Feature}`
+- 剧本：`CapabilityStandardAbilityFeatureGalleryMod/assets/Vignettes/{Feature}.json`
+- 薄入口：`ability_feature_entries/CapabilityStandardAbilityFeature{Feature}EntryMod`（只覆盖 `startupMapId`）
+- 玩家 Wiki：`gitbook/reference/ability-feature-wiki/{Feature}.md`（总览 `README.md`）
+- 生成器：`scripts/generate-ability-feature-galleries.py`（launcher / registry / coverage / 地图 / 薄入口）
+- Wiki 生成器：`scripts/generate-ability-feature-wiki.py`（从 catalog / vignette 生成）
+- 录像还没采。Wiki 可以先出页，必须写明还没有录像。

@@ -1,0 +1,31 @@
+{
+  "feature": "TagClip",
+  "family": "timeline",
+  "title": "自己身上挂一阵印",
+  "beat": "出手之后施法者头顶先亮一枚印，过一会儿印自己掉。",
+  "detailTemplate": "施法者现在{casterTagState}。",
+  "assertDetailContains": [
+    "印"
+  ],
+  "abilityId": "Ability.AbilityFeature.TagClip",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 18,
+      "op": "assert",
+      "casterHasTag": "Mark.AbilityFeature.SelfTimed"
+    },
+    {
+      "atFrame": 48,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "casterLacksTag": "Mark.AbilityFeature.SelfTimed"
+  }
+}

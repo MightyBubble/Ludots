@@ -1,0 +1,23 @@
+[
+  {
+    "id": "Ability.AbilityFeature.ToggleSpec",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "toggleSpec": {
+      "toggleTag": "State.AbilityFeature.ToggleOn",
+      "activeEffects": []
+    },
+    "presentation": {
+      "displayName": "再按一次关掉",
+      "iconGlyph": "开",
+      "hintText": "开关技能。"
+    }
+  }
+]

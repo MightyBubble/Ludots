@@ -1,0 +1,32 @@
+{
+  "feature": "ToggleDeactivateExec",
+  "family": "toggle",
+  "title": "关掉时补一刀收尾",
+  "beat": "打开时什么也不打；再按一次关掉，收尾那一刀打在木桩上。",
+  "detailTemplate": "关掉之后木桩血条从 {targetBefore} 掉到 {targetAfter}。",
+  "assertDetailContains": [
+    "关掉"
+  ],
+  "abilityId": "Ability.AbilityFeature.ToggleDeactivateExec",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 20,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 36,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "targetHealthDelta": -12
+  }
+}

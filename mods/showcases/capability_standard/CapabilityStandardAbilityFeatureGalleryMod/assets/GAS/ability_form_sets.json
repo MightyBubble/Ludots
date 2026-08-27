@@ -1,0 +1,19 @@
+[
+  {
+    "id": "ability_feature_hammer_forms",
+    "routes": [
+      {
+        "requiredAll": [
+          "State.AbilityFeature.Hammer"
+        ],
+        "priority": 100,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.AbilityFeature.FormHammer"
+          }
+        ]
+      }
+    ]
+  }
+]

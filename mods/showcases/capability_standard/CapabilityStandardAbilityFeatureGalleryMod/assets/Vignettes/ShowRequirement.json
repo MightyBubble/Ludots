@@ -1,0 +1,39 @@
+{
+  "feature": "ShowRequirement",
+  "family": "progress",
+  "title": "没解锁栏上就没有",
+  "beat": "牌子点亮之前栏上只有一招；点亮之后，隐藏的那招才出现。",
+  "detailTemplate": "看得见的招：{visibleAbilities}。",
+  "assertDetailContains": [
+    "看得见"
+  ],
+  "abilityId": "Ability.AbilityFeature.ShowRequirement",
+  "script": [
+    {
+      "atFrame": 8,
+      "op": "snapshotVisible"
+    },
+    {
+      "atFrame": 14,
+      "op": "unlockProgression"
+    },
+    {
+      "atFrame": 20,
+      "op": "snapshotVisible",
+      "saveAs": "after"
+    },
+    {
+      "atFrame": 24,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "visibleBeforeCount": 1,
+    "visibleAfterCount": 2
+  },
+  "needsProgression": true,
+  "casterAbilities": [
+    "Ability.AbilityFeature.ShowAlways",
+    "Ability.AbilityFeature.ShowRequirement"
+  ]
+}

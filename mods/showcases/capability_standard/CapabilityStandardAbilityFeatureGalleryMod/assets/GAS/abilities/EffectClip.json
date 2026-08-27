@@ -1,0 +1,25 @@
+[
+  {
+    "id": "Ability.AbilityFeature.EffectClip",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectClip",
+          "tick": 0,
+          "durationTicks": 36,
+          "template": "Effect.AbilityFeature.Burn"
+        },
+        {
+          "kind": "End",
+          "tick": 36
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "火还在烧",
+      "iconGlyph": "烧",
+      "hintText": "持续效果。"
+    }
+  }
+]

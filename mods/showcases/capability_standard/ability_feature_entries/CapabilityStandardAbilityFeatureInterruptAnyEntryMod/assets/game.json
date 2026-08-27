@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_InterruptAny",
+  "windowTitle": "Ludots - 被晕就停手",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

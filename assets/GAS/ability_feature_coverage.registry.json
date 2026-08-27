@@ -1,0 +1,152 @@
+{
+  "description": "Ability feature coverage SSOT. Each covered contract has a per-feature showcaseId and must be exercised by AbilityFeatureGalleryAcceptanceTests.",
+  "entries": [
+    {
+      "feature": "EffectSignal",
+      "showcaseId": "capability_standard_ability_feature_EffectSignal",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "EffectClip",
+      "showcaseId": "capability_standard_ability_feature_EffectClip",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "TagClip",
+      "showcaseId": "capability_standard_ability_feature_TagClip",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "TagClipTarget",
+      "showcaseId": "capability_standard_ability_feature_TagClipTarget",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "TagSignal",
+      "showcaseId": "capability_standard_ability_feature_TagSignal",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "TagSignalTarget",
+      "showcaseId": "capability_standard_ability_feature_TagSignalTarget",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "EventSignal",
+      "showcaseId": "capability_standard_ability_feature_EventSignal",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "InputGate",
+      "showcaseId": "capability_standard_ability_feature_InputGate",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "EventGate",
+      "showcaseId": "capability_standard_ability_feature_EventGate",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "TargetCollectionGate",
+      "showcaseId": "capability_standard_ability_feature_TargetCollectionGate",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "InterruptAny",
+      "showcaseId": "capability_standard_ability_feature_InterruptAny",
+      "status": "covered",
+      "family": "timeline",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "CallerParams",
+      "showcaseId": "capability_standard_ability_feature_CallerParams",
+      "status": "covered",
+      "family": "params",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "BlockTagsBlocked",
+      "showcaseId": "capability_standard_ability_feature_BlockTagsBlocked",
+      "status": "covered",
+      "family": "gates",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "BlockTagsRequired",
+      "showcaseId": "capability_standard_ability_feature_BlockTagsRequired",
+      "status": "covered",
+      "family": "gates",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "ActivationPrecondition",
+      "showcaseId": "capability_standard_ability_feature_ActivationPrecondition",
+      "status": "covered",
+      "family": "gates",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "UseRequirement",
+      "showcaseId": "capability_standard_ability_feature_UseRequirement",
+      "status": "covered",
+      "family": "progress",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "ShowRequirement",
+      "showcaseId": "capability_standard_ability_feature_ShowRequirement",
+      "status": "covered",
+      "family": "progress",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "ToggleSpec",
+      "showcaseId": "capability_standard_ability_feature_ToggleSpec",
+      "status": "covered",
+      "family": "toggle",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "ToggleDeactivateExec",
+      "showcaseId": "capability_standard_ability_feature_ToggleDeactivateExec",
+      "status": "covered",
+      "family": "toggle",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "DispatchTarget",
+      "showcaseId": "capability_standard_ability_feature_DispatchTarget",
+      "status": "covered",
+      "family": "dispatch",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    },
+    {
+      "feature": "FormSet",
+      "showcaseId": "capability_standard_ability_feature_FormSet",
+      "status": "covered",
+      "family": "form",
+      "acceptanceTest": "AbilityFeatureGalleryAcceptanceTests"
+    }
+  ]
+}

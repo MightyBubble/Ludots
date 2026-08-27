@@ -1,0 +1,37 @@
+{
+  "feature": "ToggleSpec",
+  "family": "toggle",
+  "title": "再按一次关掉",
+  "beat": "第一下打开姿态印；再按一次，印灭掉。",
+  "detailTemplate": "关掉之后施法者{casterTagState}。",
+  "assertDetailContains": [
+    "关掉"
+  ],
+  "abilityId": "Ability.AbilityFeature.ToggleSpec",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "caster"
+    },
+    {
+      "atFrame": 20,
+      "op": "assert",
+      "casterHasTag": "State.AbilityFeature.ToggleOn"
+    },
+    {
+      "atFrame": 26,
+      "op": "cast",
+      "slot": 0,
+      "target": "caster"
+    },
+    {
+      "atFrame": 38,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "casterLacksTag": "State.AbilityFeature.ToggleOn"
+  }
+}

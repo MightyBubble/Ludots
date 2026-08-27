@@ -1,0 +1,19 @@
+[
+  {
+    "id": "Ability.AbilityFeature.ShowAlways",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "常驻招",
+      "iconGlyph": "常",
+      "hintText": "一直看得见。"
+    }
+  }
+]

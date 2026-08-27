@@ -1,0 +1,30 @@
+[
+  {
+    "id": "Ability.AbilityFeature.InputGate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "InputGate",
+          "tick": 0,
+          "tag": "Input.AbilityFeature.Confirm",
+          "payloadA": 0
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 1,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 1
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "等你点头才打出去",
+      "iconGlyph": "等",
+      "hintText": "等输入确认。"
+    }
+  }
+]

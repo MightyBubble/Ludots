@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_ActivationPrecondition",
+  "windowTitle": "Ludots - 残血才打得中",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

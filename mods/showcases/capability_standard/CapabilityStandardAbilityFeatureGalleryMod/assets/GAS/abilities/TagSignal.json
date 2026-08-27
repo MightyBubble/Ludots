@@ -1,0 +1,25 @@
+[
+  {
+    "id": "Ability.AbilityFeature.TagSignal",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagSignal",
+          "tick": 0,
+          "tag": "Mark.AbilityFeature.SelfInstant",
+          "payloadA": 0
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "瞬间给自己打上印",
+      "iconGlyph": "印",
+      "hintText": "瞬间给自己加标记。"
+    }
+  }
+]

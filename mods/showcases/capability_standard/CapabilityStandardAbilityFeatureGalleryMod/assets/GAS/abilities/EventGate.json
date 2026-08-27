@@ -1,0 +1,30 @@
+[
+  {
+    "id": "Ability.AbilityFeature.EventGate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EventGate",
+          "tick": 0,
+          "tag": "Event.AbilityFeature.Impact",
+          "payloadA": 60
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 1,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 1
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "铃响了才打出去",
+      "iconGlyph": "等",
+      "hintText": "等事件再往下走。"
+    }
+  }
+]

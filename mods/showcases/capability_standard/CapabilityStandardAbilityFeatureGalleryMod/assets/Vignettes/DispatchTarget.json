@@ -1,0 +1,27 @@
+{
+  "feature": "DispatchTarget",
+  "family": "dispatch",
+  "title": "这一刀打回自己",
+  "beat": "对着木桩出手，血条掉的是施法者自己，木桩不动。",
+  "detailTemplate": "对着木桩出手，掉血的是施法者自己：从 {casterBefore} 掉到 {casterAfter}；木桩仍是 {targetAfter}。",
+  "assertDetailContains": [
+    "自己"
+  ],
+  "abilityId": "Ability.AbilityFeature.DispatchTarget",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 24,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "casterHealthDelta": -20,
+    "targetHealthDelta": 0
+  }
+}

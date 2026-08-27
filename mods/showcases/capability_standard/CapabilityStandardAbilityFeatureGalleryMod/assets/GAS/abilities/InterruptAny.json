@@ -1,0 +1,27 @@
+[
+  {
+    "id": "Ability.AbilityFeature.InterruptAny",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 24,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 24
+        }
+      ],
+      "interruptAny": [
+        "Status.AbilityFeature.Stunned"
+      ]
+    },
+    "presentation": {
+      "displayName": "被晕就停手",
+      "iconGlyph": "晕",
+      "hintText": "身上有打断印就停。"
+    }
+  }
+]

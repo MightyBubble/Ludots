@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_DispatchTarget",
+  "windowTitle": "Ludots - 这一刀打回自己",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

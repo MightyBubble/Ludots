@@ -1,0 +1,122 @@
+[
+  {
+    "id": "AbilityFeature.Caster",
+    "components": {
+      "Name": {
+        "Value": "施法者"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 5000,
+          "Y": 5000
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.AbilityFeature.EffectSignal"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "AbilityFeature.Dummy",
+    "components": {
+      "Name": {
+        "Value": "木桩"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 5600,
+          "Y": 5000
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {}
+    }
+  },
+  {
+    "id": "AbilityFeature.Wounded",
+    "components": {
+      "Name": {
+        "Value": "残血木桩"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 5600,
+          "Y": 5000
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 30
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {}
+    }
+  },
+  {
+    "id": "AbilityFeature.UnlockBoard",
+    "components": {
+      "Name": {
+        "Value": "解锁牌"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 4400,
+          "Y": 5000
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "ProgressionStateBuffer": {},
+      "ProgressionScopeHost": {
+        "scope": "abilityfeature.self",
+        "hostKey": "ability_feature_board"
+      }
+    }
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "feature": "TagSignalTarget",
+  "family": "timeline",
+  "title": "瞬间给对面打上印",
+  "beat": "出手那一下，木桩头顶立刻多一枚印。",
+  "detailTemplate": "木桩现在{targetTagState}。",
+  "assertDetailContains": [
+    "印"
+  ],
+  "abilityId": "Ability.AbilityFeature.TagSignalTarget",
+  "script": [
+    {
+      "atFrame": 12,
+      "op": "cast",
+      "slot": 0,
+      "target": "target"
+    },
+    {
+      "atFrame": 24,
+      "op": "settle"
+    }
+  ],
+  "expect": {
+    "targetHasTag": "Mark.AbilityFeature.TargetInstant"
+  }
+}

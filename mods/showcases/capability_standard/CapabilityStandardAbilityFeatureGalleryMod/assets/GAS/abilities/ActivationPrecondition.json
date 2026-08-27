@@ -1,0 +1,27 @@
+[
+  {
+    "id": "Ability.AbilityFeature.ActivationPrecondition",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "activationPrecondition": {
+      "validationGraph": "Graph.AbilityFeature.WoundedOnly"
+    },
+    "presentation": {
+      "displayName": "残血才打得中",
+      "iconGlyph": "验",
+      "hintText": "校验图不过就不放。"
+    }
+  }
+]

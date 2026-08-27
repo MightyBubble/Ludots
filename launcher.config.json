@@ -1903,6 +1903,174 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadTextKeyEntryMod",
         "projectPath": "CapabilityStandardGraphOpLoadTextKeyEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_ability_feature_EffectSignal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureEffectSignalEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureEffectSignalEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_EffectClip",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureEffectClipEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureEffectClipEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_TagClip",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureTagClipEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureTagClipEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_TagClipTarget",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureTagClipTargetEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureTagClipTargetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_TagSignal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureTagSignalEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureTagSignalEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_TagSignalTarget",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureTagSignalTargetEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureTagSignalTargetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_EventSignal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureEventSignalEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureEventSignalEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_InputGate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureInputGateEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureInputGateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_EventGate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureEventGateEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureEventGateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_TargetCollectionGate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureTargetCollectionGateEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureTargetCollectionGateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_InterruptAny",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureInterruptAnyEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureInterruptAnyEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_CallerParams",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureCallerParamsEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureCallerParamsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_BlockTagsBlocked",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureBlockTagsBlockedEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureBlockTagsBlockedEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_BlockTagsRequired",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureBlockTagsRequiredEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureBlockTagsRequiredEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_ActivationPrecondition",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureActivationPreconditionEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureActivationPreconditionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_UseRequirement",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureUseRequirementEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureUseRequirementEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_ShowRequirement",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureShowRequirementEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureShowRequirementEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_ToggleSpec",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureToggleSpecEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureToggleSpecEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_ToggleDeactivateExec",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureToggleDeactivateExecEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureToggleDeactivateExecEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_DispatchTarget",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureDispatchTargetEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureDispatchTargetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_feature_FormSet",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/ability_feature_entries/CapabilityStandardAbilityFeatureFormSetEntryMod",
+        "projectPath": "CapabilityStandardAbilityFeatureFormSetEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

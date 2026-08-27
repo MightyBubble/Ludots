@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_EffectSignal",
+  "windowTitle": "Ludots - 点一下就打中",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_TagSignal",
+  "windowTitle": "Ludots - 瞬间给自己打上印",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

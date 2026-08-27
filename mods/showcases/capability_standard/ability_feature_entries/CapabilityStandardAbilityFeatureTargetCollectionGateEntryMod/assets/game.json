@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_ability_feature_TargetCollectionGate",
+  "windowTitle": "Ludots - 名单齐了才打出去",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

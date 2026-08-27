@@ -1,0 +1,35 @@
+[
+  {
+    "id": "Ability.AbilityFeature.BlockTagsBlocked",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 48,
+          "tag": "Cooldown.AbilityFeature.Lock"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.AbilityFeature.Strike"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.AbilityFeature.Lock"
+      ]
+    },
+    "presentation": {
+      "displayName": "身上有禁招印就放不出",
+      "iconGlyph": "禁",
+      "hintText": "禁招印在场就拒。"
+    }
+  }
+]

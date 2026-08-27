@@ -1,0 +1,25 @@
+[
+  {
+    "id": "Ability.AbilityFeature.TagClipTarget",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClipTarget",
+          "tick": 0,
+          "duration": 24,
+          "tag": "Mark.AbilityFeature.TargetTimed"
+        },
+        {
+          "kind": "End",
+          "tick": 24
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "给对面挂一阵印",
+      "iconGlyph": "印",
+      "hintText": "给当前目标挂一阵标记。"
+    }
+  }
+]
