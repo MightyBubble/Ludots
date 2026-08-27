@@ -5,7 +5,7 @@ into Field schema v2 (`ownership.east_asia.country`, cell 7142 cm) on the
 ~64 km East Asia playable board.
 
 玩家看到的国界色是整图 **Decal 投影贴花**：`country_borders.png` 按棋盘尺寸印在高度图上。
-Field 格子只负责过境判定；地图标签 `Raylib.FieldOverlays:Off` 关掉调试用 DiscreteOwnership 铺盖。
+填色接近不透明，避免草地从贴花底下透出来。Field 格子只负责过境判定；地图标签 `Raylib.FieldOverlays:Off` 关掉调试用 DiscreteOwnership 铺盖。
 
 Regenerate cells:
 

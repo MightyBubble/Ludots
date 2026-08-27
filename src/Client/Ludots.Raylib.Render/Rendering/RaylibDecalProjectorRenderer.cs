@@ -23,7 +23,9 @@ namespace Ludots.Raylib.Render
         private int _locDecalProjectMinReceiverNDotUp;
         private int _locDecalProjectReceiverDepthBias;
         private const float DecalMinReceiverNDotUp = 0.05f;
-        private const float DecalReceiverDepthBiasMeters = 0.04f;
+        internal const float DecalReceiverDepthBiasMeters = 0.04f;
+        internal const float DecalReceiverDepthBiasPerStampMeter = 2e-4f;
+        internal const float DecalBoardScaleStampMeters = 1000f;
         private const float DecalAlphaBlendCutoff = 0.02f;
         private const float DecalCutoutAlphaCutoff = RaylibPrimitiveRenderer.DefaultVegetationAlphaCutoff;
 
@@ -113,8 +115,8 @@ namespace Ludots.Raylib.Render
             float alphaCutoff = blendMode == MaterialBlendMode.Cutout
                 ? DecalCutoutAlphaCutoff
                 : DecalAlphaBlendCutoff;
-            float minReceiver = DecalMinReceiverNDotUp;
-            float receiverDepthBias = DecalReceiverDepthBiasMeters;
+            float minReceiver = ResolveMinReceiverNDotUp(volume.StampSizeMeters);
+            float receiverDepthBias = ResolveReceiverDepthBiasMeters(volume.StampSizeMeters);
             Vector4 colDiffuse = Vector4.One;
             Vector4 tint = color;
             RaylibMatrix worldToDecalRay = RaylibMatrix.FromSystemNumerics(worldToDecal);
@@ -204,6 +206,30 @@ namespace Ludots.Raylib.Render
                 Rl.UnloadShader(_decalProjectShader);
                 _decalProjectShaderReady = false;
             }
+        }
+
+        internal static float ResolveReceiverDepthBiasMeters(in Vector2 stampSizeMeters)
+        {
+            float span = MathF.Max(stampSizeMeters.X, stampSizeMeters.Y);
+            if (!float.IsFinite(span) || span <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibDecalProjectorRenderer)} stamp size must be finite and positive, got {stampSizeMeters}.");
+            }
+
+            return MathF.Max(DecalReceiverDepthBiasMeters, span * DecalReceiverDepthBiasPerStampMeter);
+        }
+
+        internal static float ResolveMinReceiverNDotUp(in Vector2 stampSizeMeters)
+        {
+            float span = MathF.Max(stampSizeMeters.X, stampSizeMeters.Y);
+            if (!float.IsFinite(span) || span <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibDecalProjectorRenderer)} stamp size must be finite and positive, got {stampSizeMeters}.");
+            }
+
+            return span >= DecalBoardScaleStampMeters ? -1f : DecalMinReceiverNDotUp;
         }
 
         private void EnsureDecalResources()

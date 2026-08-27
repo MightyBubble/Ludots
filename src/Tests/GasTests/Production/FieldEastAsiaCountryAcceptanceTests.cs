@@ -169,6 +169,8 @@ public sealed class FieldEastAsiaCountryAcceptanceTests
         Assert.That(meta.RootElement.GetProperty("width").GetInt32(), Is.EqualTo(896));
         Assert.That(meta.RootElement.GetProperty("height").GetInt32(), Is.EqualTo(512));
         Assert.That(meta.RootElement.GetProperty("paintedCells").GetInt32(), Is.EqualTo(ExpectedNonDefaultCells));
+        Assert.That(palette.RootElement.GetProperty("fillAlpha").GetInt32(), Is.EqualTo(230));
+        Assert.That(palette.RootElement.GetProperty("borderAlpha").GetInt32(), Is.EqualTo(255));
         Assert.That(File.Exists(Path.Combine(textures, "country_borders.png")), Is.True);
 
         foreach (JsonElement region in field.RootElement.GetProperty("regions").EnumerateArray())

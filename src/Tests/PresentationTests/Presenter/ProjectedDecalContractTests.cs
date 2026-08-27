@@ -280,6 +280,25 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void DecalProjector_BoardScaleStampRaisesBiasAndPaintsCliffs()
+        {
+            Assert.That(
+                RaylibDecalProjectorRenderer.ResolveReceiverDepthBiasMeters(new Vector2(3.8f, 3.8f)),
+                Is.EqualTo(RaylibDecalProjectorRenderer.DecalReceiverDepthBiasMeters).Within(1e-6f));
+            Assert.That(
+                RaylibDecalProjectorRenderer.ResolveMinReceiverNDotUp(new Vector2(3.8f, 3.8f)),
+                Is.EqualTo(0.05f).Within(1e-6f));
+
+            Vector2 eastAsia = new(63992.32f, 36567.04f);
+            Assert.That(
+                RaylibDecalProjectorRenderer.ResolveReceiverDepthBiasMeters(eastAsia),
+                Is.EqualTo(63992.32f * RaylibDecalProjectorRenderer.DecalReceiverDepthBiasPerStampMeter).Within(1e-3f));
+            Assert.That(
+                RaylibDecalProjectorRenderer.ResolveMinReceiverNDotUp(eastAsia),
+                Is.EqualTo(-1f));
+        }
+
+        [Test]
         public void DecalProjectShaders_ClipStampPlaneNotThinBoxLid()
         {
             string repo = FindRepoRoot();

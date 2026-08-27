@@ -1,6 +1,6 @@
 {
-  "fillAlpha": 128,
-  "borderAlpha": 230,
+  "fillAlpha": 230,
+  "borderAlpha": 255,
   "regions": {
     "country.bangladesh": [46, 139, 87],
     "country.bhutan": [186, 85, 211],
