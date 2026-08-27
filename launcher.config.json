@@ -26,6 +26,14 @@
       }
     },
     {
+      "name": "save_load_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/save_load/SaveLoadShowcaseMod",
+        "projectPath": "SaveLoadShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "persistence_online_replay_showcase",
       "target": {
         "type": "path",

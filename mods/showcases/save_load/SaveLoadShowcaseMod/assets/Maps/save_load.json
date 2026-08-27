@@ -1,0 +1,76 @@
+{
+  "Id": "save_load",
+  "Tags": [
+    "showcase",
+    "save",
+    "persistence"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 16,
+      "NavigationEnabled": true
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "InstanceId": "save_load_hero",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6400,
+            "Y": 6400
+          }
+        },
+        "Name": {
+          "Value": "Save Hero"
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "InstanceId": "save_load_marker_a",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5900,
+            "Y": 6800
+          }
+        },
+        "Name": {
+          "Value": "Marker A"
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "InstanceId": "save_load_marker_b",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6900,
+            "Y": 6000
+          }
+        },
+        "Name": {
+          "Value": "Marker B"
+        }
+      }
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 6400,
+    "TargetYCm": 6400,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 5200,
+    "FovYDeg": 60
+  }
+}
