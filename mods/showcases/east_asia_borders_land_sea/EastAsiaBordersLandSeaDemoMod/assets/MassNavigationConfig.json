@@ -91,7 +91,6 @@
       {
         "id": "Small",
         "heavy": false,
-        "visualScale": 80.0,
         "speedCmPerSecond": 80000,
         "everyNth": 0,
         "nthOffset": 0
@@ -99,7 +98,6 @@
       {
         "id": "Medium",
         "heavy": true,
-        "visualScale": 120.0,
         "speedCmPerSecond": 100000,
         "everyNth": 0,
         "nthOffset": 0
@@ -213,7 +211,6 @@
     },
     "solver": {
       "minNavMass": 0.001,
-      "minVisualScale": 0.01,
       "maxStepDtSeconds": 0.05,
       "parallelStepMinAgents": 2048,
       "directionEpsilonSq": 0.0001,
