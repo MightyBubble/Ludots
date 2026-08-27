@@ -1,7 +1,11 @@
 {
   "schemaVersion": 1,
   "exemptions": [
-    { "kind": "binding", "value": "save_panel", "reason": "SavePanelMod 是通用存档 UI 组件 mod，非独立 showcase 条目；演示由 save_load showcase 承担" },
+    {
+      "kind": "binding",
+      "value": "save_panel",
+      "reason": "SavePanelMod 是通用存档 UI 组件 mod，非独立 showcase 条目；演示由 save_load showcase 承担"
+    },
     {
       "kind": "csproj",
       "value": "mods/showcases/shared/RoadNetworkShowcaseData",
