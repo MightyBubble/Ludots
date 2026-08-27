@@ -83,6 +83,11 @@ namespace Ludots.AgentBridge
             tools.Register(new PresentersQueryTool());
             tools.Register(new PresentersDesyncTool());
             tools.Register(new PresentersScreenTool());
+            tools.Register(new SaveSlotsTool());
+            tools.Register(new SaveCaptureTool());
+            tools.Register(new SaveWriteTool());
+            tools.Register(new SaveReadTool());
+            tools.Register(new SaveRestoreTool());
         }
 
         /// <summary>
@@ -96,3 +101,4 @@ namespace Ludots.AgentBridge
         }
     }
 }
+
