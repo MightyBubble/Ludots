@@ -144,19 +144,25 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
         }
 
         Assert.That(chips.Count, Is.EqualTo(4), "column present must keep all four chips in the layout tree");
+        // Panel chrome: border 2 + padding 12 — chips must stay in the content box, not flush the outer edge.
+        const float inset = 10f;
         const float epsilon = 1.5f;
+        float contentLeft = frame.X + inset;
+        float contentRight = frame.X + frame.Width - inset;
+        float contentTop = frame.Y + inset;
+        float contentBottom = frame.Y + frame.Height - inset;
         foreach (UiNode chip in chips)
         {
             UiRect box = chip.LayoutRect;
             Assert.That(box.Width, Is.GreaterThan(8f), "column chip collapsed");
-            Assert.That(box.X, Is.GreaterThanOrEqualTo(frame.X - epsilon),
-                $"column chip left {box.X} escapes panel left {frame.X}");
-            Assert.That(box.X + box.Width, Is.LessThanOrEqualTo(frame.X + frame.Width + epsilon),
-                $"column chip right {box.X + box.Width} escapes panel right {frame.X + frame.Width}");
-            Assert.That(box.Y, Is.GreaterThanOrEqualTo(frame.Y - epsilon),
-                $"column chip top {box.Y} escapes panel top {frame.Y}");
-            Assert.That(box.Y + box.Height, Is.LessThanOrEqualTo(frame.Y + frame.Height + epsilon),
-                $"column chip bottom {box.Y + box.Height} escapes panel bottom {frame.Y + frame.Height}");
+            Assert.That(box.X, Is.GreaterThanOrEqualTo(contentLeft - epsilon),
+                $"column chip left {box.X} escapes content left {contentLeft}");
+            Assert.That(box.X + box.Width, Is.LessThanOrEqualTo(contentRight + epsilon),
+                $"column chip right {box.X + box.Width} escapes content right {contentRight}");
+            Assert.That(box.Y, Is.GreaterThanOrEqualTo(contentTop - epsilon),
+                $"column chip top {box.Y} escapes content top {contentTop}");
+            Assert.That(box.Y + box.Height, Is.LessThanOrEqualTo(contentBottom + epsilon),
+                $"column chip bottom {box.Y + box.Height} escapes content bottom {contentBottom}");
         }
     }
 

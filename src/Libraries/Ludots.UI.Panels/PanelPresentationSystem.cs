@@ -285,6 +285,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         return new UiElementBuilder(UiNodeKind.Container)
             .Column()
             .Class("layout")
+            .WidthPercent(100f)
             .Gap(6)
             .Children(children.ToArray());
     }
@@ -552,12 +553,13 @@ public sealed class PanelPresentationSystem : ISystem<float>
 
             if (control.Present == PanelPresentMode.Grid && control.Columns is int gridColumns && gridColumns > 0)
             {
-                cell = cell.FlexGrow(1f).FlexShrink(1f).FlexBasisPercent(100f / gridColumns);
+                // MinWidth 0 overrides flex min-content so cells can shrink into the column budget.
+                cell = cell.FlexGrow(1f).FlexShrink(1f).FlexBasisPercent(100f / gridColumns).MinWidth(0f);
             }
             else if (control.Present == PanelPresentMode.Column)
             {
                 // Equal share of the panel content width so the buff row never spills the frame.
-                cell = cell.FlexGrow(1f).FlexShrink(1f).FlexBasis(0f);
+                cell = cell.FlexGrow(1f).FlexShrink(1f).FlexBasis(0f).MinWidth(0f);
             }
 
             rows.Add(cell);

@@ -256,6 +256,15 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
+	public UiElementBuilder MinWidth(float pixels)
+	{
+		_style = _style with
+		{
+			MinWidth = UiLength.Px(pixels)
+		};
+		return this;
+	}
+
 	public UiElementBuilder Height(float pixels)
 	{
 		_style = _style with

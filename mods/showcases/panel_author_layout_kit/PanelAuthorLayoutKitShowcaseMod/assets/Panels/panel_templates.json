@@ -81,7 +81,7 @@
           "type": "list",
           "class": "kit-list",
           "bind": "effects",
-          "itemExtent": 56,
+          "itemExtent": 72,
           "present": "list",
           "viewportHeight": 200,
           "virtualize": true,
@@ -126,7 +126,7 @@
           "type": "list",
           "class": "kit-grid",
           "bind": "effects",
-          "itemExtent": 56,
+          "itemExtent": 72,
           "present": "grid",
           "columns": 2,
           "viewportHeight": 200
@@ -170,7 +170,7 @@
           "type": "list",
           "class": "kit-column",
           "bind": "effects",
-          "itemExtent": 56,
+          "itemExtent": 72,
           "present": "column"
         }
       ]
