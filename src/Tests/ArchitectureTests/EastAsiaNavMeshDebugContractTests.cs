@@ -38,7 +38,10 @@ public sealed class EastAsiaNavMeshDebugContractTests
         Assert.That(map.Metadata, Does.ContainKey("navWalkabilityOverlay"));
         Assert.That(nav.Config.ParsedAlgorithm, Is.EqualTo(NavBakeAlgorithmKind.Recast));
         Assert.That(nav.Config.ParsedMode, Is.EqualTo(NavBakeMode.Offline));
-        Assert.That(nav.Config.Profiles.Select(profile => profile.Id), Is.EqualTo(new[] { "Small" }));
+        Assert.That(nav.Config.Profiles.Select(profile => profile.Id), Is.EqualTo(new[] { "Small", "Medium" }));
+        Assert.That(nav.Config.Layers.Select(layer => layer.Id), Is.EqualTo(new[] { "Ground", "Water" }));
+        Assert.That(nav.AgentProfiles.Require("Small", "East Asia nav").Layer, Is.EqualTo(0));
+        Assert.That(nav.AgentProfiles.Require("Medium", "East Asia nav").Layer, Is.EqualTo(1));
     }
 
     [Test]
@@ -77,6 +80,38 @@ public sealed class EastAsiaNavMeshDebugContractTests
 
         Assert.That(emptyTileCount, Is.GreaterThan(0));
         Assert.That(walkableTriangleCount, Is.GreaterThan(0));
+
+        string waterRoot = Path.Combine(
+            modRoot,
+            "assets",
+            "Data",
+            "Nav",
+            MapId,
+            "layer1",
+            "profile_Medium");
+        string[] waterPaths = Directory
+            .EnumerateFiles(waterRoot, "*.ntil", SearchOption.AllDirectories)
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+        Assert.That(waterPaths, Has.Length.EqualTo(28 * 16));
+        int waterEmpty = 0;
+        int waterTriangles = 0;
+        foreach (string path in waterPaths)
+        {
+            using FileStream stream = File.OpenRead(path);
+            NavTile tile = NavTileBinary.Read(stream);
+            if (tile.TriangleCount == 0)
+            {
+                waterEmpty++;
+            }
+            else
+            {
+                waterTriangles += tile.TriangleCount;
+            }
+        }
+
+        Assert.That(waterEmpty, Is.GreaterThan(0));
+        Assert.That(waterTriangles, Is.GreaterThan(0));
     }
 
     [Test]

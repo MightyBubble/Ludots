@@ -106,6 +106,35 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void VisualHeightmapProjection_BlocksSamplesAboveConfiguredWaterCeiling()
+        {
+            var bounds = new WorldAabbCm(-50, -50, 100, 100);
+            var asset = VisualHeightmapAsset.CreateSingleLayer(
+                bounds,
+                sampleColumns: 2,
+                sampleRows: 2,
+                heightSamplesCm: new short[] { -1, 0, 1, 2 },
+                interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
+            var visual = new VisualHeightmapRuntime(asset);
+
+            MutableGridLogicTerrainField projected = VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+                visual,
+                widthCells: 2,
+                heightCells: 2,
+                cellSizeCm: 100,
+                options: new LogicTerrainProjectionOptions(
+                    heightStepCm: 1,
+                    blockedAboveHeightCm: 0,
+                    originXcm: -50,
+                    originZcm: -50));
+
+            Assert.That(projected.GetCell(0, 0).IsBlocked, Is.False);
+            Assert.That(projected.GetCell(1, 0).IsBlocked, Is.False);
+            Assert.That(projected.GetCell(0, 1).IsBlocked, Is.True);
+            Assert.That(projected.GetCell(1, 1).IsBlocked, Is.True);
+        }
+
+        [Test]
         public void ReactStride4Converter_PreservesBiomeAreaAndBlockedAsSeparateLogicChannels()
         {
             string reactPath = Path.Combine(Path.GetTempPath(), "ludots-react-terrain-" + Guid.NewGuid().ToString("N") + ".bin");

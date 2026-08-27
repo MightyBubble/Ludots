@@ -8,6 +8,8 @@ using Ludots.Core.Gameplay.FieldRegions;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -39,7 +41,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     };
 
     [Test]
-    public void BordersLandSea_PathingHasFootMeshAndShipGraph()
+    public void BordersLandSea_PathingHasFootLandMeshAndShipWaterMesh()
     {
         using GameEngine engine = CreateEngine(BorderMods);
         engine.Start();
@@ -65,7 +67,42 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         Assert.That(foot, Is.Not.Null);
         Assert.That(foot!.Selection.Mode, Is.EqualTo(PathSelectionMode.PreferMesh));
         Assert.That(ship, Is.Not.Null);
-        Assert.That(ship!.Selection.Mode, Is.EqualTo(PathSelectionMode.Direct));
+        Assert.That(ship!.Selection.Mode, Is.EqualTo(PathSelectionMode.PreferMesh));
+
+        var agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("AgentProfiles missing");
+        Assert.That(agentProfiles.Require("Small", "land-sea foot").Layer, Is.EqualTo(0));
+        Assert.That(agentProfiles.Require("Medium", "land-sea ship").Layer, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void BordersLandSea_FootStaysOnLandMeshAndShipStaysOnWaterMesh()
+    {
+        using GameEngine engine = CreateEngine(BorderMods);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 2);
+
+        IPathService pathService = engine.GetService(CoreServiceKeys.PathService)
+            ?? throw new InvalidOperationException("PathService missing");
+        Assert.That(pathService, Is.TypeOf<AutoPathService>());
+
+        Assert.That(
+            TrySolve(pathService, "StrategyFoot", 200_000, 100_000, 250_000, 150_000, out PathResult foot),
+            Is.True);
+        Assert.That(foot.Status, Is.EqualTo(PathStatus.Found), "army must walk the land mesh");
+        Assert.That(foot.ResolvedDomain, Is.EqualTo(PathDomain.NavMesh));
+
+        Assert.That(
+            TrySolve(pathService, "StrategyShip", 855_397, 58_235, 1_055_397, 58_235, out PathResult shipSea),
+            Is.True);
+        Assert.That(shipSea.Status, Is.EqualTo(PathStatus.Found), "ship must walk the water mesh");
+        Assert.That(shipSea.ResolvedDomain, Is.EqualTo(PathDomain.NavMesh));
+
+        Assert.That(
+            TrySolve(pathService, "StrategyShip", 855_397, 58_235, 200_000, 100_000, out PathResult shipInland),
+            Is.True);
+        Assert.That(shipInland.Status, Is.EqualTo(PathStatus.NoPath), "ship must not cut across land");
     }
 
     [Test]
@@ -116,6 +153,26 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
             FieldRegionQueries.TryIsInFieldRegion(engine.World, session, army, LayerKey, "country.japan", out bool inJapan)
             && inJapan,
             Is.True);
+    }
+
+    private static bool TrySolve(
+        IPathService pathService,
+        string agentTypeId,
+        int startXcm,
+        int startYcm,
+        int goalXcm,
+        int goalYcm,
+        out PathResult result)
+    {
+        var request = new PathRequest(
+            requestId: 1,
+            actor: default,
+            PathDomain.Auto,
+            agentTypeId,
+            PathEndpoint.FromWorldCm(startXcm, startYcm),
+            PathEndpoint.FromWorldCm(goalXcm, goalYcm),
+            new PathBudget(maxExpanded: 0, maxPoints: 128));
+        return pathService.TrySolve(in request, out result);
     }
 
     private static void DetachMassNavigation(GameEngine engine, Entity entity)

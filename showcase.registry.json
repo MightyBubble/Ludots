@@ -5141,7 +5141,7 @@
       "id": "east_asia_borders_land_sea",
       "path": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod",
       "title": "East Asia Borders Land & Sea",
-      "summary": "Army PreferMesh + ship Direct on East Asia Natural Earth borders, with FieldRegion enter popups. PreferGraph river sailing needs a NodeGraph board (documented debt).",
+      "summary": "Army PreferMesh on Ground and ship PreferMesh on Water over East Asia Natural Earth borders, with FieldRegion enter popups. Inland river PreferGraph still needs a NodeGraph board (documented debt).",
       "tier": "T2",
       "category": "capability",
       "tags": [

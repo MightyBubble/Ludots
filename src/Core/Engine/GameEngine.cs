@@ -3459,40 +3459,54 @@ namespace Ludots.Core.Engine
             var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
-            var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
+            var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(profileRegistry.Count);
             int widthChunks = LogicTerrain.WidthChunks;
             int heightChunks = LogicTerrain.HeightChunks;
 
-            for (int li = 0; li < bakeConfig.Layers.Count; li++)
+            for (int pi = 0; pi < profileRegistry.Count; pi++)
             {
-                int layer = bakeConfig.Layers[li].Layer;
-                for (int pi = 0; pi < profileRegistry.Count; pi++)
+                int profileIndex = pi;
+                string profileId = profileRegistry.GetId(profileIndex);
+                AgentProfileConfig agentProfile = agentProfiles.Require(profileId, "NavMeshBakeConfig.profiles");
+                int layer = agentProfile.Layer;
+                bool layerAuthored = false;
+                for (int li = 0; li < bakeConfig.Layers.Count; li++)
                 {
-                    int profileIndex = pi;
-                    var uriCache = new Dictionary<NavTileId, string>(256);
-
-                    string ResolveTileUri(NavTileId id)
+                    if (bakeConfig.Layers[li].Layer == layer)
                     {
-                        if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
-                        if (uriCache.TryGetValue(id, out var cached)) return cached;
-                        string profileId = profileRegistry.GetId(profileIndex);
-                        string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY);
-                        string uri = ResolveSingleExistingUri(rel);
-                        uriCache[id] = uri;
-                        return uri;
+                        layerAuthored = true;
+                        break;
                     }
-
-                    for (int cy = 0; cy < heightChunks; cy++)
-                    {
-                        for (int cx = 0; cx < widthChunks; cx++)
-                        {
-                            _ = ResolveTileUri(new NavTileId(cx, cy, layer));
-                        }
-                    }
-
-                    var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
-                    stores[new NavQueryServiceKey(layer, profileIndex)] = store;
                 }
+
+                if (!layerAuthored)
+                {
+                    throw new InvalidOperationException(
+                        $"NavMesh profile '{profileId}' uses layer {layer} but Navigation/navmesh.json does not author that layer.");
+                }
+
+                var uriCache = new Dictionary<NavTileId, string>(256);
+
+                string ResolveTileUri(NavTileId id)
+                {
+                    if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
+                    if (uriCache.TryGetValue(id, out var cached)) return cached;
+                    string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY);
+                    string uri = ResolveSingleExistingUri(rel);
+                    uriCache[id] = uri;
+                    return uri;
+                }
+
+                for (int cy = 0; cy < heightChunks; cy++)
+                {
+                    for (int cx = 0; cx < widthChunks; cx++)
+                    {
+                        _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                    }
+                }
+
+                var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
+                stores[new NavQueryServiceKey(layer, profileIndex)] = store;
             }
 
             var navRegistry = new NavQueryServiceRegistry(stores, LogicTerrain.ChunkWidthCm, LogicTerrain.ChunkHeightCm);
@@ -3640,15 +3654,17 @@ namespace Ludots.Core.Engine
 
             if (hasNavServices)
             {
-                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
+                IPathService autoPathService = loadedGraphRuntime != null
+                    ? new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay)
+                    : new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
                 if (loadedGraphRuntime != null)
                 {
-                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
+                    IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
                 else
                 {
-                    pathService = navMeshService;
+                    pathService = autoPathService;
                 }
             }
             else if (loadedGraphRuntime != null)

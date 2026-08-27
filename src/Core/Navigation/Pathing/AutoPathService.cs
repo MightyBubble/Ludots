@@ -14,9 +14,9 @@ namespace Ludots.Core.Navigation.Pathing
 {
     public sealed class AutoPathService : IPathService
     {
-        private readonly NodeGraph _graph;
-        private readonly INodeGraphSpatialIndex _graphIndex;
-        private readonly LoadedGraphRuntime _graphRuntime;
+        private readonly NodeGraph? _graph;
+        private readonly INodeGraphSpatialIndex? _graphIndex;
+        private readonly LoadedGraphRuntime? _graphRuntime;
         private readonly NavQueryServiceRegistry? _navRegistry;
         private readonly NavMeshProfileRegistry? _navProfiles;
         private readonly AgentProfileRegistry _agentProfiles;
@@ -144,6 +144,40 @@ namespace Ludots.Core.Navigation.Pathing
             if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
         }
 
+        public AutoPathService(
+            NavQueryServiceRegistry navRegistry,
+            NavMeshProfileRegistry navProfiles,
+            AgentProfileRegistry agentProfiles,
+            PathStore store,
+            PathingConfig config,
+            GraphEdgeCostOverlay? edgeOverlay = null)
+        {
+            _graphRuntime = null;
+            _graph = null;
+            _graphIndex = null;
+            _navRegistry = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
+            _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
+            _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
+            _store = store ?? throw new ArgumentNullException(nameof(store));
+            _edgeOverlay = edgeOverlay;
+            _navMeshAvailable = true;
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+
+            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            _defaultAgent = default;
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                var a = config.AgentTypes[i];
+                if (a == null) continue;
+                var compiled = CompileAgent(a);
+                _agents[compiled.Id] = compiled;
+                if (i == 0) _defaultAgent = compiled;
+            }
+
+            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+        }
+
         public bool TrySolve(in PathRequest request, out PathResult result)
         {
             if (request.Domain != PathDomain.Auto)
@@ -205,6 +239,12 @@ namespace Ludots.Core.Navigation.Pathing
         private bool TrySolveGraph(in PathRequest request, in CompiledAgentType agent, out PathResult result, out float travelCost)
         {
             travelCost = 0f;
+            if (_graph == null && _graphRuntime == null)
+            {
+                result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, expanded: 0, errorCode: 23);
+                return false;
+            }
+
             NodeGraph graph = ResolveGraph();
             INodeGraphSpatialIndex graphIndex = ResolveGraphIndex();
             TagRuleTraversalPolicy policy = agent.CreateGraphPolicy(graph);
@@ -453,12 +493,22 @@ namespace Ludots.Core.Navigation.Pathing
 
         private NodeGraph ResolveGraph()
         {
-            return _graphRuntime != null ? _graphRuntime.CurrentGraph : _graph;
+            if (_graphRuntime != null)
+            {
+                return _graphRuntime.CurrentGraph;
+            }
+
+            return _graph ?? throw new InvalidOperationException("Auto path service has no node graph.");
         }
 
         private INodeGraphSpatialIndex ResolveGraphIndex()
         {
-            return _graphRuntime != null ? _graphRuntime.CurrentSpatialIndex : _graphIndex;
+            if (_graphRuntime != null)
+            {
+                return _graphRuntime.CurrentSpatialIndex;
+            }
+
+            return _graphIndex ?? throw new InvalidOperationException("Auto path service has no node-graph spatial index.");
         }
 
         private readonly struct CompiledAgentType

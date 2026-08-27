@@ -6,12 +6,21 @@
       "id": "Small",
       "maxClimbCm": 40,
       "maxSlopeDeg": 45
+    },
+    {
+      "id": "Medium",
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45
     }
   ],
   "layers": [
     {
       "id": "Ground",
       "layer": 0
+    },
+    {
+      "id": "Water",
+      "layer": 1
     }
   ],
   "areas": [

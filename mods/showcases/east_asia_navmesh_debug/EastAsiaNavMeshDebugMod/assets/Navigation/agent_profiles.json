@@ -1,0 +1,12 @@
+[
+  {
+    "id": "Medium",
+    "radiusCm": 50.0,
+    "heightCm": 200.0,
+    "clearanceCm": 45.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
+    "mass": 2.0,
+    "layer": 1
+  }
+]

@@ -271,6 +271,21 @@ namespace Ludots.Tool
             bakeVhtmNavCommand.AddOption(navTileVersionOption);
             bakeVhtmNavCommand.AddOption(navLargeBakeOption);
             bakeVhtmNavCommand.AddOption(navEstimateHashOption);
+            var navWaterWalkableOption = new Option<bool>(
+                "--waterWalkable",
+                () => false,
+                "Invert sea-level blocking: land above --seaLevelCm is blocked, water is walkable");
+            var navBakeProfilesOption = new Option<string?>(
+                "--profiles",
+                () => null,
+                "Comma-separated NavMesh profile ids to bake (default: all authored profiles)");
+            var navBakeLayersOption = new Option<string?>(
+                "--layers",
+                () => null,
+                "Comma-separated NavMesh layer ids to bake (default: all authored layers)");
+            bakeVhtmNavCommand.AddOption(navWaterWalkableOption);
+            bakeVhtmNavCommand.AddOption(navBakeProfilesOption);
+            bakeVhtmNavCommand.AddOption(navBakeLayersOption);
             bakeVhtmNavCommand.SetHandler((InvocationContext ctx) =>
             {
                 var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
@@ -291,7 +306,31 @@ namespace Ludots.Tool
                 var estimateHash = ctx.ParseResult.GetValueForOption(navEstimateHashOption);
                 var heightStep = ctx.ParseResult.GetValueForOption(navHeightStepOption);
                 var seaLevel = ctx.ParseResult.GetValueForOption(navSeaLevelOption);
-                ctx.ExitCode = BakeNavFromVhtm(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, outputRoot, heightScale, heightStep, seaLevel, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
+                var waterWalkable = ctx.ParseResult.GetValueForOption(navWaterWalkableOption);
+                var bakeProfiles = ctx.ParseResult.GetValueForOption(navBakeProfilesOption);
+                var bakeLayers = ctx.ParseResult.GetValueForOption(navBakeLayersOption);
+                ctx.ExitCode = BakeNavFromVhtm(
+                    mapId,
+                    modId,
+                    inputPath,
+                    dirtyPath,
+                    includeNeighbors,
+                    outDir,
+                    outputRoot,
+                    heightScale,
+                    heightStep,
+                    seaLevel,
+                    waterWalkable,
+                    bakeProfiles,
+                    bakeLayers,
+                    minUpDot,
+                    cliffThreshold,
+                    writeArtifact,
+                    parallel,
+                    maxDegree,
+                    tileVersion,
+                    largeBake,
+                    estimateHash);
             });
             navCommand.AddCommand(bakeVhtmNavCommand);
 
@@ -804,6 +843,9 @@ namespace {modId}
             float heightScale,
             int heightStep,
             int seaLevelCm,
+            bool waterWalkable,
+            string? bakeProfileIds,
+            string? bakeLayerIds,
             float minUpDot,
             int cliffThreshold,
             bool writeArtifact,
@@ -825,6 +867,9 @@ namespace {modId}
                     heightScale,
                     heightStep,
                     seaLevelCm,
+                    waterWalkable,
+                    bakeProfileIds,
+                    bakeLayerIds,
                     minUpDot,
                     cliffThreshold,
                     parallel,
@@ -869,6 +914,9 @@ namespace {modId}
             float heightScale,
             int heightStep,
             int seaLevelCm,
+            bool waterWalkable,
+            string? bakeProfileIds,
+            string? bakeLayerIds,
             float minUpDot,
             int cliffThreshold,
             bool parallel,
@@ -959,11 +1007,17 @@ namespace {modId}
                 widthCells,
                 heightCells,
                 cellSizeCm,
-                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
-                    heightStep,
-                    blockedAtOrBelowHeightCm: seaLevelCm,
-                    originXcm: originXcm,
-                    originZcm: originZcm));
+                waterWalkable
+                    ? new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
+                        heightStep,
+                        blockedAboveHeightCm: seaLevelCm,
+                        originXcm: originXcm,
+                        originZcm: originZcm)
+                    : new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
+                        heightStep,
+                        blockedAtOrBelowHeightCm: seaLevelCm,
+                        originXcm: originXcm,
+                        originZcm: originZcm));
 
             IReadOnlyList<NavBakeTileCoord> targets;
             if (!string.IsNullOrWhiteSpace(dirtyChunksPath))
@@ -981,7 +1035,10 @@ namespace {modId}
                 targets = NavBakeTileSelection.AllTiles(terrain);
             }
 
-            NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+            NavMeshBakeConfig bakeConfig = FilterBakeConfig(
+                bakeConfigContext.Config,
+                bakeProfileIds,
+                bakeLayerIds);
             return new NavBakeContext
             {
                 MapId = mapId,
@@ -1002,6 +1059,134 @@ namespace {modId}
                     MaxDegreeOfParallelism = Math.Max(1, maxDegree)
                 }
             };
+        }
+
+        static NavMeshBakeConfig FilterBakeConfig(
+            NavMeshBakeConfig source,
+            string? bakeProfileIds,
+            string? bakeLayerIds)
+        {
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (string.IsNullOrWhiteSpace(bakeProfileIds) && string.IsNullOrWhiteSpace(bakeLayerIds))
+            {
+                return source;
+            }
+
+            var filtered = new NavMeshBakeConfig
+            {
+                Mode = source.Mode,
+                Algorithm = source.Algorithm,
+                Areas = source.Areas,
+                RuntimeIncremental = source.RuntimeIncremental,
+                Profiles = FilterBakeProfiles(source.Profiles, bakeProfileIds),
+                Layers = FilterBakeLayers(source.Layers, bakeLayerIds)
+            };
+            if (filtered.Profiles.Count == 0)
+            {
+                throw new InvalidOperationException("bake-vhtm --profiles matched no Navigation/navmesh.json profiles.");
+            }
+
+            if (filtered.Layers.Count == 0)
+            {
+                throw new InvalidOperationException("bake-vhtm --layers matched no Navigation/navmesh.json layers.");
+            }
+
+            return filtered;
+        }
+
+        static List<NavMeshAgentProfileConfig> FilterBakeProfiles(
+            List<NavMeshAgentProfileConfig> profiles,
+            string? bakeProfileIds)
+        {
+            if (string.IsNullOrWhiteSpace(bakeProfileIds))
+            {
+                return profiles;
+            }
+
+            string[] requested = SplitBakeFilter(bakeProfileIds);
+            var matched = new List<NavMeshAgentProfileConfig>(requested.Length);
+            for (int i = 0; i < requested.Length; i++)
+            {
+                NavMeshAgentProfileConfig? found = null;
+                for (int p = 0; p < profiles.Count; p++)
+                {
+                    if (string.Equals(profiles[p].Id, requested[i], StringComparison.Ordinal))
+                    {
+                        found = profiles[p];
+                        break;
+                    }
+                }
+
+                if (found == null)
+                {
+                    throw new InvalidOperationException(
+                        $"bake-vhtm --profiles '{requested[i]}' is not an authored Navigation/navmesh.json profile.");
+                }
+
+                matched.Add(found);
+            }
+
+            return matched;
+        }
+
+        static List<NavLayerConfig> FilterBakeLayers(List<NavLayerConfig> layers, string? bakeLayerIds)
+        {
+            if (string.IsNullOrWhiteSpace(bakeLayerIds))
+            {
+                return layers;
+            }
+
+            string[] requested = SplitBakeFilter(bakeLayerIds);
+            var matched = new List<NavLayerConfig>(requested.Length);
+            for (int i = 0; i < requested.Length; i++)
+            {
+                NavLayerConfig? found = null;
+                for (int l = 0; l < layers.Count; l++)
+                {
+                    if (string.Equals(layers[l].Id, requested[i], StringComparison.Ordinal))
+                    {
+                        found = layers[l];
+                        break;
+                    }
+                }
+
+                if (found == null)
+                {
+                    throw new InvalidOperationException(
+                        $"bake-vhtm --layers '{requested[i]}' is not an authored Navigation/navmesh.json layer.");
+                }
+
+                matched.Add(found);
+            }
+
+            return matched;
+        }
+
+        static string[] SplitBakeFilter(string csv)
+        {
+            string[] raw = csv.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            if (raw.Length == 0)
+            {
+                throw new InvalidOperationException("bake-vhtm filter must list at least one id.");
+            }
+
+            var ids = new string[raw.Length];
+            for (int i = 0; i < raw.Length; i++)
+            {
+                string id = raw[i].Trim();
+                if (id.Length == 0)
+                {
+                    throw new InvalidOperationException("bake-vhtm filter ids must be non-empty.");
+                }
+
+                ids[i] = id;
+            }
+
+            return ids;
         }
 
         static int BakeNavFromReactRecast(

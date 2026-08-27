@@ -391,12 +391,14 @@ namespace Ludots.Core.Navigation.Terrain
             int layerIndex = -1,
             float? blockedAtOrBelowHeightCm = null,
             int originXcm = 0,
-            int originZcm = 0)
+            int originZcm = 0,
+            float? blockedAboveHeightCm = null)
         {
             if (heightStepCm <= 0) throw new ArgumentOutOfRangeException(nameof(heightStepCm));
             HeightStepCm = heightStepCm;
             LayerIndex = layerIndex;
             BlockedAtOrBelowHeightCm = blockedAtOrBelowHeightCm;
+            BlockedAboveHeightCm = blockedAboveHeightCm;
             OriginXcm = originXcm;
             OriginZcm = originZcm;
         }
@@ -406,6 +408,8 @@ namespace Ludots.Core.Navigation.Terrain
         public int LayerIndex { get; }
 
         public float? BlockedAtOrBelowHeightCm { get; }
+
+        public float? BlockedAboveHeightCm { get; }
 
         public int OriginXcm { get; }
 
@@ -446,11 +450,13 @@ namespace Ludots.Core.Navigation.Terrain
 
                     int level = (int)MathF.Round(heightCm / options.HeightStepCm);
                     level = Math.Clamp(level, 0, SpatialScaleDefaults.LogicTerrainMaxHeightLevel);
-                    LogicTerrainSurfaceFlags flags =
-                        options.BlockedAtOrBelowHeightCm.HasValue &&
-                        heightCm <= options.BlockedAtOrBelowHeightCm.Value
-                            ? LogicTerrainSurfaceFlags.Blocked
-                            : LogicTerrainSurfaceFlags.None;
+                    bool blockedBelow = options.BlockedAtOrBelowHeightCm.HasValue &&
+                        heightCm <= options.BlockedAtOrBelowHeightCm.Value;
+                    bool blockedAbove = options.BlockedAboveHeightCm.HasValue &&
+                        heightCm > options.BlockedAboveHeightCm.Value;
+                    LogicTerrainSurfaceFlags flags = blockedBelow || blockedAbove
+                        ? LogicTerrainSurfaceFlags.Blocked
+                        : LogicTerrainSurfaceFlags.None;
                     field.SetCell(col, row, new LogicTerrainCell((byte)level, 0, flags));
                 }
             }

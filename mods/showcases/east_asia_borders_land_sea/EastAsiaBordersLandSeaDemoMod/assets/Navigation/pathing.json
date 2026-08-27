@@ -27,7 +27,7 @@
       "id": "StrategyShip",
       "profileId": "Medium",
       "selection": {
-        "mode": "Direct",
+        "mode": "PreferMesh",
         "graphBias": 0.0,
         "meshBias": 0.0,
         "graphCostWeight": 1.0,

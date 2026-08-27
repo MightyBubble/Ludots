@@ -1,10 +1,12 @@
 # East Asia NavMesh Debug
 
-This data-only overlay enables the offline Recast-baked `Small` navigation
-profile on `east_asia_visual_heightmap`. Recast voxels follow the board's
+This data-only overlay enables the offline Recast-baked `Small` Ground layer
+and `Medium` Water layer on `east_asia_visual_heightmap`. Recast voxels follow the board's
 3571 cm logic cells on a ~64 km playable board (source VHTM samples stay
 continental; `VisualHeightmap.WorldWidthCm` remaps world meters). Its 7x4
 macro-tile board covers the complete 6399232x3656704 cm playable extent.
+`Navigation/agent_profiles.json` keeps `Medium.layer` on Water so ships query
+the sea mesh instead of the land mesh.
 
 The overlay also authors a simplified East Asia waterway `TransportNetwork`
 (Yangtze corridor, Yellow River corridor, Taihu filled ring) and opts into
@@ -28,6 +30,26 @@ dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav bake-vhtm `
   --in mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm `
   --outDir . `
   --seaLevelCm 0 `
+  --heightStep 100 `
+  --heightScale 1 `
+  --parallel true `
+  --artifact false `
+  --large-bake true `
+  --estimateHash <hash printed by the first run>
+```
+
+Bake the inverted water mesh (`Medium` × `Water` only) after the land tiles exist:
+
+```powershell
+dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav bake-vhtm `
+  --mapId east_asia_visual_heightmap `
+  --modId EastAsiaNavMeshDebugMod `
+  --in mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm `
+  --outDir . `
+  --seaLevelCm 0 `
+  --waterWalkable true `
+  --profiles Medium `
+  --layers Water `
   --heightStep 100 `
   --heightScale 1 `
   --parallel true `
