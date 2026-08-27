@@ -87,8 +87,6 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         Tick(engine, 4);
         Entity army = FindNamed(engine, "EastAsia.Army");
         Entity ship = FindNamed(engine, "EastAsia.Ship");
-        var army0 = engine.World.Get<WorldPositionCm>(army).ToWorldCmInt2();
-        var ship0 = engine.World.Get<WorldPositionCm>(ship).ToWorldCmInt2();
         // Medium profile is 100000 cm/s; Yellow Sea → army is ~6.5e5 cm (~7s). Sample past arrival.
         Tick(engine, 480);
         var army1 = engine.World.Get<WorldPositionCm>(army).ToWorldCmInt2();
