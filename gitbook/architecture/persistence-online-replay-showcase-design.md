@@ -1,3 +1,7 @@
+# 归档：persistence_online_replay（复合 showcase，已退役）
+
+> 本 showcase 已按一能力一 showcase 原则拆解退役（#1208）：存/读 → `save_load`，确定性回放 → `deterministic_replay`，重连恢复 → `reconnect_recovery`。本文保留为设计历史；现行设计见三份新文档。
+
 # 持久化、Replay 与断线恢复 showcase 设计
 
 状态：可玩交付完成（联机专项仍标记为单机等价故障注入；本次实机回放终点比较显示 mismatch，界面明确暴露差异，未伪报确定性通过）。
