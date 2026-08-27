@@ -1430,10 +1430,19 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             Vector2 world = worldPos.Value.ToVector2();
-            Vector2 screen = projector.WorldToScreen(new Vector3(
-                world.X / 100f,
-                headOffsetYCm / 100f,
-                world.Y / 100f));
+            Vector2 screen;
+            try
+            {
+                screen = projector.WorldToScreen(new Vector3(
+                    world.X / 100f,
+                    headOffsetYCm / 100f,
+                    world.Y / 100f));
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
+
             if (float.IsNaN(screen.X) || float.IsNaN(screen.Y))
             {
                 return false;
