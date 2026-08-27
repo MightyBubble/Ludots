@@ -38,6 +38,9 @@
   },
   {
     "id": "east_asia_army",
+    "children": [
+      { "definitionId": "east_asia_army_marker", "scopeTag": "marker" }
+    ],
     "behaviors": [
       {
         "slot": "body",
@@ -66,7 +69,56 @@
     ]
   },
   {
+    "id": "east_asia_army_marker",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "east_asia.army.marker.fill",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [220, 36, 1]
+        },
+        "style": { "color": [1.0, 0.92, 0.12, 1] }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 220, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "east_asia.army.marker.fill",
+          "mode": "AttributeRatio"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "east_asia.army.marker.fill",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ]
+  },
+  {
     "id": "east_asia_ship",
+    "children": [
+      { "definitionId": "east_asia_ship_marker", "scopeTag": "marker" }
+    ],
     "behaviors": [
       {
         "slot": "body",
@@ -91,6 +143,52 @@
           "offset": 80,
           "updatePolicy": "EveryFrame"
         }
+      }
+    ]
+  },
+  {
+    "id": "east_asia_ship_marker",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "east_asia.ship.marker.fill",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [220, 36, 1]
+        },
+        "style": { "color": [0.12, 0.78, 1.0, 1] }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 200, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "east_asia.ship.marker.fill",
+          "mode": "AttributeRatio"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "east_asia.ship.marker.fill",
+        "lane": "Float",
+        "floatValue": 1
       }
     ]
   }
