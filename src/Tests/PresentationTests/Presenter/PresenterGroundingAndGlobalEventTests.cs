@@ -1111,6 +1111,65 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void BehaviorSystem_SnapToGround_AppliesDisplayHeightScaleFromRenderSource()
+        {
+            using var world = World.Create();
+            var runtime = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var sounds = new SoundRequestBuffer();
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 9f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            int defId = definitions.Register("entity.grounded.display.scale", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 1.25f,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                ],
+            });
+
+            Entity presenter = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 23,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            world.Add(presenter, new PresenterBootstrapPending());
+
+            using var system = new PresenterBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                new PresentationOwnerChangeBuffer(8),
+                sounds,
+                heightmap: new StubRenderHeightmap(heightCm: 250f, displayHeightScale: 50f));
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+            Assert.That(world.Get<PresenterWorldPosition>(presenter).Value.Y, Is.EqualTo(126.25f).Within(0.001f));
+        }
+
+        [Test]
         public void BehaviorSystem_OnceSnapToGround_BatchSampleFailure_KeepsOriginalYAndBootstrapPending()
         {
             using var world = World.Create();
@@ -1554,6 +1613,77 @@ namespace Ludots.Tests.Presentation
 
                 return true;
             }
+        }
+
+        private sealed class StubRenderHeightmap : IVisualHeightmap, IVisualHeightmapRenderSource
+        {
+            private readonly StubHeightmap _inner;
+            private readonly VisualHeightmapRenderProfile _profile;
+
+            public StubRenderHeightmap(float heightCm, float displayHeightScale)
+            {
+                _inner = new StubHeightmap(heightCm);
+                _profile = new VisualHeightmapRenderProfile { DisplayHeightScale = displayHeightScale }.NormalizeAndValidate();
+            }
+
+            public VisualHeightmapRenderProfile RenderProfile => _profile;
+            public WorldAabbCm Bounds => default;
+            public int ChunkColumns => 0;
+            public int ChunkRows => 0;
+            public int SamplesPerChunkColumn => 0;
+            public int SamplesPerChunkRow => 0;
+            public int DefaultLayerIndex => 0;
+            public int Revision => 0;
+
+            public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+            {
+                chunk = default;
+                return false;
+            }
+
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+                => _inner.TrySampleHeightCm(worldXCm, worldYCm, out heightCm, layerIndex);
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+                => _inner.SampleHeightsCm(worldXCm, worldYCm, outHeightCm, layerIndex);
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+                => _inner.TryRaycastGround(in ray, out hit, layerIndex);
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = 0)
+                => _inner.RaycastGroundBatch(
+                    originXMeters,
+                    originYMeters,
+                    originZMeters,
+                    directionX,
+                    directionY,
+                    directionZ,
+                    outWorldXCm,
+                    outWorldYCm,
+                    outHeightCm,
+                    outDistanceMeters,
+                    outNormalX,
+                    outNormalY,
+                    outNormalZ,
+                    outLayerIndex,
+                    outHitMask,
+                    layerIndex);
         }
 
         /// <summary>

@@ -1873,7 +1873,6 @@ namespace Ludots.Core.Presentation.Systems
             bool requireResolvedSample)
         {
             const float metersToCm = 100f;
-            const float cmToMeters = 0.01f;
             if (!heightmap.TrySampleHeightCm(position.X * metersToCm, position.Z * metersToCm, out float heightCm) ||
                 !float.IsFinite(heightCm))
             {
@@ -1886,8 +1885,16 @@ namespace Ludots.Core.Presentation.Systems
                 return true;
             }
 
-            position.Y = (heightCm * cmToMeters) + offsetMeters;
+            position.Y = ToDisplayGroundedMeters(heightmap, heightCm, offsetMeters);
             return true;
+        }
+
+        private static float ToDisplayGroundedMeters(IVisualHeightmap heightmap, float heightCm, float offsetMeters)
+        {
+            float displayScale = heightmap is IVisualHeightmapRenderSource renderSource
+                ? renderSource.RenderProfile.DisplayHeightScale
+                : VisualHeightmapRenderProfile.DefaultDisplayHeightScale;
+            return (heightCm * 0.01f * displayScale) + offsetMeters;
         }
 
         private void WarnMissingGroundingHeightmap()
@@ -2302,7 +2309,6 @@ namespace Ludots.Core.Presentation.Systems
             out bool anyUnresolved)
         {
             const float metersToCm = 100f;
-            const float cmToMeters = 0.01f;
             anyUnresolved = false;
             Span<float> worldXCm = _groundingWorldXCm.AsSpan(0, count);
             Span<float> worldZCm = _groundingWorldZCm.AsSpan(0, count);
@@ -2354,7 +2360,7 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                _groundingPositions[i].Y = (heightCm * cmToMeters) + _groundingOffsets[i];
+                _groundingPositions[i].Y = ToDisplayGroundedMeters(heightmap, heightCm, _groundingOffsets[i]);
                 _groundingResolved[i] = true;
             }
 
