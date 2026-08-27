@@ -16,9 +16,9 @@ internal static class CalendarFixtures
         };
     }
 
-    public static CalendarClockConfig Clock(string activeCalendarId = "calendar.solar360", int ticksPerDay = 20, int startDayIndex = 0)
+    public static CalendarWorldConfig World(string activeCalendarId = "calendar.solar360", int ticksPerDay = 20, int startDayIndex = 0)
     {
-        return new CalendarClockConfig(
+        return new CalendarWorldConfig(
             TickSource: "Step",
             TicksPerDay: ticksPerDay,
             StartDayIndex: startDayIndex,

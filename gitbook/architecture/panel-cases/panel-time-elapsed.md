@@ -2,7 +2,7 @@
 
 > 状态：🟢 今日可装载——纯展示，图输出 realtime 回读，字段全过白名单（新形状不写 scope）。
 >
-> ⚠️ **基建依赖**：当天进度千分比与昼夜相位已由 `CalendarRuntime.CaptureClockSnapshot` 提供（见 [历法与周期](../calendar-system.md)）。`12:34` 是皮层把 `DayPermille` 画成钟面，不是世界钟再算一套分钟。面板仍缺 G3：`Clock.DayPermille`/`Clock.DayPhase` 还没有全局实体属性出口。
+> ⚠️ **基建依赖**：当天进度千分比与昼夜相位已由 `CalendarRuntime.CaptureProgressSnapshot` 提供（见 [历法与周期](../calendar-system.md)）。`12:34` 是皮层把 `DayPermille` 画成钟面，不是时钟再算一套分钟。面板仍缺 G3：`Calendar.DayPermille`/`Calendar.DayPhase` 还没有全局实体属性出口。日期不进 `Clock.*`。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 
@@ -15,8 +15,8 @@
   "id": "panel.time.elapsed",
   "graph": "Graph.Time.Elapsed",              // 时钟图输出 dayPermille/dayPhase
   "pins": [
-    { "name": "dayPermille", "key": "clock.dayPermille", "mode": "realtime", "default": 0 },
-    { "name": "dayPhase",    "key": "clock.dayPhase",    "mode": "realtime", "default": 1 }
+    { "name": "dayPermille", "key": "calendar.dayPermille", "mode": "realtime", "default": 0 },
+    { "name": "dayPhase",    "key": "calendar.dayPhase",    "mode": "realtime", "default": 1 }
   ]
   // 无 events/intents——纯展示；昼夜图标换肤=皮读 dayPhase 自行决定
 }
@@ -27,16 +27,16 @@
 {
   "id": "Graph.Time.Elapsed", "kind": "Query", "entry": "dayPermille",
   "nodes": [
-    { "id": "dayPermille", "op": "LoadSelfAttribute", "attribute": "Clock.DayPermille" },
-    { "id": "dayPhase",    "op": "LoadSelfAttribute", "attribute": "Clock.DayPhase" }
+    { "id": "dayPermille", "op": "LoadSelfAttribute", "attribute": "Calendar.DayPermille" },
+    { "id": "dayPhase",    "op": "LoadSelfAttribute", "attribute": "Calendar.DayPhase" }
   ],
   "controlEdges": [
     { "from": "dayPermille", "fromPort": "next", "to": "dayPhase" }
   ],
   "valueEdges": [],
   "outputs": [
-    { "id": "dayPermille", "destination": "Summary", "type": "Int", "source": "dayPermille", "key": "clock.dayPermille" },
-    { "id": "dayPhase",    "destination": "Summary", "type": "Int", "source": "dayPhase",    "key": "clock.dayPhase" }
+    { "id": "dayPermille", "destination": "Summary", "type": "Int", "source": "dayPermille", "key": "calendar.dayPermille" },
+    { "id": "dayPhase",    "destination": "Summary", "type": "Int", "source": "dayPhase",    "key": "calendar.dayPhase" }
   ]
 }
 ```

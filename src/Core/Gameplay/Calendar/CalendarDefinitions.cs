@@ -19,7 +19,7 @@ namespace Ludots.Core.Gameplay.Calendar
         IReadOnlyList<CalendarEraDefinition> Eras,
         IReadOnlyList<CalendarCycleDefinition> Cycles);
 
-    public sealed record CalendarClockConfig(
+    public sealed record CalendarWorldConfig(
         string TickSource,
         int TicksPerDay,
         int StartDayIndex,
@@ -50,7 +50,7 @@ namespace Ludots.Core.Gameplay.Calendar
         int TicksIntoDay,
         string ActiveCalendarId);
 
-    public sealed record CalendarClockSnapshot(
+    public sealed record CalendarProgressSnapshot(
         bool Enabled,
         int DayIndex,
         int TicksIntoDay,

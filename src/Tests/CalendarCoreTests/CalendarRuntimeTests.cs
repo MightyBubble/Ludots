@@ -53,7 +53,7 @@ public sealed class CalendarRuntimeTests
     public void Advance_FiresEraChangedWhenCrossingEraBoundary()
     {
         var registry = CalendarFixtures.Registry(CalendarFixtures.Solar360(), CalendarFixtures.Regnal());
-        var runtime = new CalendarRuntime(CalendarFixtures.Clock("calendar.regnal", startDayIndex: 3599), registry);
+        var runtime = new CalendarRuntime(CalendarFixtures.World("calendar.regnal", startDayIndex: 3599), registry);
         var eras = new List<string>();
         runtime.Advance(20, () => new ScriptContext(), (key, ctx) =>
         {
@@ -83,8 +83,8 @@ public sealed class CalendarRuntimeTests
         Assert.That(runtime.DayIndex, Is.EqualTo(0));
         Assert.That(runtime.TicksIntoDay, Is.EqualTo(5));
         Assert.That(phases, Is.EqualTo(new[] { "day" }));
-        Assert.That(runtime.CaptureClockSnapshot().DayPhaseId, Is.EqualTo("day"));
-        Assert.That(runtime.CaptureClockSnapshot().DayPermille, Is.EqualTo(250));
+        Assert.That(runtime.CaptureProgressSnapshot().DayPhaseId, Is.EqualTo("day"));
+        Assert.That(runtime.CaptureProgressSnapshot().DayPermille, Is.EqualTo(250));
     }
 
     [Test]
@@ -104,7 +104,7 @@ public sealed class CalendarRuntimeTests
     [Test]
     public void DisabledRuntime_RejectsProjection()
     {
-        var runtime = new CalendarRuntime(clock: null, CalendarFixtures.Registry());
+        var runtime = new CalendarRuntime(world: null, CalendarFixtures.Registry());
         Assert.That(runtime.IsEnabled, Is.False);
         Assert.Throws<InvalidOperationException>(() => runtime.ProjectActive());
     }
@@ -112,7 +112,7 @@ public sealed class CalendarRuntimeTests
     [Test]
     public void Restore_RejectsEnabledMismatch()
     {
-        var disabled = new CalendarRuntime(clock: null, CalendarFixtures.Registry());
+        var disabled = new CalendarRuntime(world: null, CalendarFixtures.Registry());
         CalendarRuntime enabled = CreateRuntime();
         Assert.Throws<InvalidOperationException>(() => disabled.RestoreSnapshot(enabled.CaptureSnapshot()));
     }
@@ -120,7 +120,7 @@ public sealed class CalendarRuntimeTests
     private static CalendarRuntime CreateRuntime(int startDayIndex = 0)
     {
         return new CalendarRuntime(
-            CalendarFixtures.Clock(startDayIndex: startDayIndex),
+            CalendarFixtures.World(startDayIndex: startDayIndex),
             CalendarFixtures.Registry(CalendarFixtures.Solar360()));
     }
 

@@ -8,7 +8,7 @@ namespace Ludots.Core.Gameplay.Calendar
 {
     public sealed class CalendarConfigLoader
     {
-        public const string ClockPath = "Calendar/clock.json";
+        public const string WorldPath = "Calendar/world.json";
         public const string CalendarsPath = "Calendar/calendars.json";
 
         private readonly ConfigPipeline _pipeline;
@@ -18,7 +18,7 @@ namespace Ludots.Core.Gameplay.Calendar
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
-        public CalendarClockConfig? Load(
+        public CalendarWorldConfig? Load(
             CalendarDefinitionRegistry registry,
             ConfigCatalog? catalog = null,
             ConfigConflictReport? report = null)
@@ -26,7 +26,7 @@ namespace Ludots.Core.Gameplay.Calendar
             ArgumentNullException.ThrowIfNull(registry);
             registry.Clear();
 
-            bool hasClock = HasFragments(catalog, ClockPath);
+            bool hasWorld = HasFragments(catalog, WorldPath);
             bool hasCalendars = catalog != null && catalog.TryGet(CalendarsPath, out _);
             if (hasCalendars)
             {
@@ -42,7 +42,7 @@ namespace Ludots.Core.Gameplay.Calendar
                 }
             }
 
-            if (!hasClock)
+            if (!hasWorld)
             {
                 return null;
             }
@@ -50,20 +50,20 @@ namespace Ludots.Core.Gameplay.Calendar
             if (!hasCalendars)
             {
                 throw new InvalidOperationException(
-                    $"{ClockPath} requires {CalendarsPath} to declare at least one calendar.");
+                    $"{WorldPath} requires {CalendarsPath} to declare at least one calendar.");
             }
 
-            CalendarClockConfig clock = LoadClock(catalog!, report);
-            if (!registry.TryGet(clock.ActiveCalendarId, out _))
+            CalendarWorldConfig world = LoadWorld(catalog!, report);
+            if (!registry.TryGet(world.ActiveCalendarId, out _))
             {
                 throw new InvalidOperationException(
-                    $"{ClockPath}.activeCalendarId '{clock.ActiveCalendarId}' is not registered in {CalendarsPath}.");
+                    $"{WorldPath}.activeCalendarId '{world.ActiveCalendarId}' is not registered in {CalendarsPath}.");
             }
 
-            return clock;
+            return world;
         }
 
-        public static CalendarClockConfig ParseClock(JsonObject root, string context = ClockPath)
+        public static CalendarWorldConfig ParseWorld(JsonObject root, string context = WorldPath)
         {
             string tickSource = RequireCanonicalString(root["tickSource"], $"{context}.tickSource");
             if (!string.Equals(tickSource, "Step", StringComparison.Ordinal))
@@ -98,7 +98,7 @@ namespace Ludots.Core.Gameplay.Calendar
                 "activeCalendarId",
                 "dayPhases");
 
-            return new CalendarClockConfig(
+            return new CalendarWorldConfig(
                 tickSource,
                 ticksPerDay,
                 startDayIndex,
@@ -139,16 +139,16 @@ namespace Ludots.Core.Gameplay.Calendar
             return _pipeline.CollectFragmentsWithSources(in entry).Count > 0;
         }
 
-        private CalendarClockConfig LoadClock(ConfigCatalog catalog, ConfigConflictReport? report)
+        private CalendarWorldConfig LoadWorld(ConfigCatalog catalog, ConfigConflictReport? report)
         {
-            var entry = ConfigPipeline.RequireEntry(catalog, ClockPath, ConfigMergePolicy.DeepObject);
+            var entry = ConfigPipeline.RequireEntry(catalog, WorldPath, ConfigMergePolicy.DeepObject);
             JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
             if (merged == null)
             {
-                throw new InvalidOperationException($"{ClockPath} must provide an explicit calendar clock object.");
+                throw new InvalidOperationException($"{WorldPath} must provide an explicit calendar world object.");
             }
 
-            return ParseClock(merged, ClockPath);
+            return ParseWorld(merged, WorldPath);
         }
 
         private IReadOnlyList<CalendarDefinition> LoadCalendars(ConfigCatalog catalog, ConfigConflictReport? report)

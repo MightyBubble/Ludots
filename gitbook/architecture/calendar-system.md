@@ -6,12 +6,12 @@
 
 ## 1 概述
 
-游戏世界需要「今天是哪一天、过了哪个节、该结算什么」。Pacemaker / TimeFlow / GAS Step 只回答「走了几步、有没有停」。历法层回答业务时间。
+游戏世界需要「今天是哪一天、过了哪个节、该结算什么」。Pacemaker / TimeFlow / GAS Step 只回答「走了几步、有没有停」。日、年、季节是历法的业务读法，不进时钟层。
 
 - 全世界共用一个日序（从 0 起的绝对天数）。
 - 一份历法表把日序投影成可读日期。可以同时挂多份历，同一天可以有不同纪年。
 - 四季、月、旬、二十四节气都是周期：一组相位，长度加起来等于周期天数。
-- 没有 `Calendar/clock.json` 时，历法不推进。有这份文件时，缺表、缺字段、相位对不齐一律启动失败。
+- 没有 `Calendar/world.json` 时，历法不推进。有这份文件时，缺表、缺字段、相位对不齐一律启动失败。
 
 ## 2 结构
 
@@ -32,7 +32,7 @@ Calendar.DayPhaseChanged
 
 | 件 | 职责 |
 |---|---|
-| `Calendar/clock.json` | 世界日怎么走：多少步算一天、从哪天开始、用哪份历、昼夜相位 |
+| `Calendar/world.json` | 日序怎么走：多少步算一天、从哪天开始、用哪份历、昼夜相位 |
 | `Calendar/calendars.json` | 历法表：年长、纪年、周期与相位 |
 | `CalendarRuntime` | 日序、当天已走步、投影、存档 |
 | `CalendarSystem` | 每个固定步读 `GasClockStepPolicy.LastConsumedSteps`，Paused / 暂停令牌为 0 时不走日 |
@@ -41,11 +41,13 @@ Calendar.DayPhaseChanged
 
 ## 3 详情
 
-### 3.1 世界钟
+### 3.1 日序推进
 
-`assets/config_catalog.json` 已登记两条路径。`Calendar/calendars.json` 默认带一份 360 日年的 `calendar.solar360`。`Calendar/clock.json` 允许空：没有这份文件，运行时 `IsEnabled=false`，不发事件、不改日序。
+`assets/config_catalog.json` 已登记两条路径。`Calendar/calendars.json` 默认带一份 360 日年的 `calendar.solar360`。`Calendar/world.json` 允许空：没有这份文件，运行时 `IsEnabled=false`，不发事件、不改日序。
 
-`clock.json` 字段（全部显式必填）：
+`Engine/clock.json`、`GAS/clock.json`、`Physics2D/clock.json` 只管步进。历法不另开一份 clock，也不往那些文件里写日。
+
+`world.json` 字段（全部显式必填）：
 
 | 字段 | 含义 |
 |---|---|
@@ -55,9 +57,9 @@ Calendar.DayPhaseChanged
 | `activeCalendarId` | 主历，必须在历法表里 |
 | `dayPhases` | 昼夜相位，按当天进度千分比切。首项 `startPermille` 必须是 0，后面递增且 < 1000 |
 
-当天进度 = `ticksIntoDay * 1000 / ticksPerDay`，读接口是 `CaptureClockSnapshot().DayPermille`。晓、昼、暮、夜查这根轴。钟面（例如 12:34）是界面把千分比画成表，不要在 `clock.json` 再写一套「一天多少分钟」。写了 `minutesPerDay` 装载失败。
+当天进度 = `ticksIntoDay * 1000 / ticksPerDay`，读接口是 `CaptureProgressSnapshot().DayPermille`。晓、昼、暮、夜查这根轴。钟面（例如 12:34）是界面把千分比画成表，不要再写一套「一天多少分钟」。写了 `minutesPerDay` 装载失败。
 
-Mod 要启用历法，写 `Calendar/clock.json`，并保证 catalog 里有这条 DeepObject（核心 catalog 已登记且 `AllowEmpty: true`）。
+Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条 DeepObject（核心 catalog 已登记且 `AllowEmpty: true`）。
 
 ### 3.2 历法表
 
@@ -88,7 +90,7 @@ Mod 要启用历法，写 `Calendar/clock.json`，并保证 catalog 里有这条
 
 存档域 `calendar`：`enabled`、`dayIndex`、`ticksIntoDay`、`activeCalendarId`。定义不存，以配置为准。恢复时 enabled / 主历必须和当前配置一致，否则失败。恢复不补发事件。
 
-读当前日期：`GameEngine` 服务 `CalendarRuntime` 的 `Project` / `CaptureClockSnapshot`。面板 `Clock.DayIndex` 仍要等全局 scope（G3）才能用 `LoadSelfAttribute`；现在不要假装这些属性已经有实体。
+读当前日期：`GameEngine` 服务 `CalendarRuntime` 的 `Project` / `CaptureProgressSnapshot`。面板 `Calendar.DayIndex` 仍要等全局 scope（G3）才能用 `LoadSelfAttribute`；现在不要假装这些属性已经有实体。日期不进 `Clock.*`。
 
 ## 4 场景
 
@@ -105,9 +107,10 @@ Mod 要启用历法，写 `Calendar/clock.json`，并保证 catalog 里有这条
 - 不在玩法 Mod 里再写一份 `if (day > 360)`。
 - 闰年、阴阳合历、月长不齐：用相位表表达。本年不做隐式闰规则。
 - `EntityLocalClock` 不驱动世界历。单体变速不影响日序。
-- 没有 `clock.json` 时调用 `Project` 失败，不返回假日期。
+- 没有 `world.json` 时调用 `Project` 失败，不返回假日期。
 - 未知字段、相位长度对不齐、主历不存在：装载失败并点名。
-- `minutesPerDay` / 累计已过分钟不是世界钟字段。一天只按 `ticksPerDay` 翻页。
+- `minutesPerDay` / 累计已过分钟不是日序字段。一天只按 `ticksPerDay` 翻页。
+- 时钟层（Engine / GAS / Physics2D / TimeFlow）不认识日、年、季节。日期属性走 `Calendar.*`。
 
 ## 6 UAT
 
@@ -136,9 +139,16 @@ Feature: 世界日子按历法走
     And 主历的四季算法不变
 
   Scenario: 没启用历法就不能读日期
-    Given 没有 Calendar/clock.json
+    Given 没有 Calendar/world.json
     When 有人要读今天是哪一年
     Then 系统失败并说明历法未启用
+
+  Scenario: 时钟答不出今天几号
+    Given 引擎和玩法步进都在走
+    And 没有启用世界历
+    When 有人去时钟配置里问今天几号
+    Then 问不到日期
+    And 日子只在历法里
 
   Scenario: 一天只按一套进度走
     Given 一天是 20 步

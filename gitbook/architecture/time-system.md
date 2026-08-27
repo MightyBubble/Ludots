@@ -8,7 +8,7 @@
 - TimeFlow：在 domain 层组合暂停与倍率，当前内建 domain 只有 `simulation` 和 `simulation.gas`。
 - GAS 离散时钟：`FixedFrame` 是每个 FixedStep，`Step` 是 GAS 逻辑步。
 - Entity-local 时钟：`EntityLocalClock.LocalStep` 是单个 entity 自有的 GAS 逻辑时间。
-- 历法：`CalendarRuntime` 消费 `Step`，把日序投影成年 / 纪年 / 周期相位。见 [历法与周期](calendar-system.md)。不另开 scheduler。
+- 历法：`CalendarRuntime` 消费 `Step`，把日序投影成年 / 纪年 / 周期相位。见 [历法与周期](calendar-system.md)。不另开 scheduler。时钟层不认识日、年、季节。
 
 `simulation.gas` 的 effective scale 包含父域 `simulation`，用于展示、快照和存档。由于 GAS 系统已经在 simulation Pacemaker 的 FixedStep 内执行，`GameEngine` 写入 `GasClockStepPolicy` 时使用 GAS 相对父域的倍率，避免全局变速在 GAS 上重复相乘。
 

@@ -7,15 +7,15 @@ namespace Ludots.Core.Gameplay.Calendar
     public sealed class CalendarRuntime
     {
         private readonly CalendarDefinitionRegistry _registry;
-        private readonly CalendarClockConfig? _clock;
+        private readonly CalendarWorldConfig? _world;
         private CalendarDateSnapshot[] _projections;
 
-        public CalendarRuntime(CalendarClockConfig? clock, CalendarDefinitionRegistry registry)
+        public CalendarRuntime(CalendarWorldConfig? world, CalendarDefinitionRegistry registry)
         {
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-            _clock = clock;
-            IsEnabled = clock != null;
-            DayIndex = clock?.StartDayIndex ?? 0;
+            _world = world;
+            IsEnabled = world != null;
+            DayIndex = world?.StartDayIndex ?? 0;
             TicksIntoDay = 0;
             _projections = IsEnabled ? BuildProjections(DayIndex) : Array.Empty<CalendarDateSnapshot>();
         }
@@ -26,7 +26,7 @@ namespace Ludots.Core.Gameplay.Calendar
 
         public int TicksIntoDay { get; private set; }
 
-        public string ActiveCalendarId => _clock?.ActiveCalendarId ?? string.Empty;
+        public string ActiveCalendarId => _world?.ActiveCalendarId ?? string.Empty;
 
         public void Advance(
             int consumedSteps,
@@ -43,12 +43,12 @@ namespace Ludots.Core.Gameplay.Calendar
                 throw new InvalidOperationException("Calendar consumed steps must be >= 0.");
             }
 
-            CalendarClockConfig clock = _clock!;
+            CalendarWorldConfig world = _world!;
             string previousDayPhaseId = CurrentDayPhaseId();
             TicksIntoDay = checked(TicksIntoDay + consumedSteps);
-            while (TicksIntoDay >= clock.TicksPerDay)
+            while (TicksIntoDay >= world.TicksPerDay)
             {
-                TicksIntoDay -= clock.TicksPerDay;
+                TicksIntoDay -= world.TicksPerDay;
                 AdvanceOneDay(contextFactory, fireEvent);
             }
 
@@ -72,11 +72,11 @@ namespace Ludots.Core.Gameplay.Calendar
             return Project(ActiveCalendarId);
         }
 
-        public CalendarClockSnapshot CaptureClockSnapshot()
+        public CalendarProgressSnapshot CaptureProgressSnapshot()
         {
             if (!IsEnabled)
             {
-                return new CalendarClockSnapshot(
+                return new CalendarProgressSnapshot(
                     Enabled: false,
                     DayIndex: 0,
                     TicksIntoDay: 0,
@@ -87,17 +87,17 @@ namespace Ludots.Core.Gameplay.Calendar
                     ActiveDate: null);
             }
 
-            CalendarClockConfig clock = _clock!;
+            CalendarWorldConfig world = _world!;
             CalendarDayPhaseDefinition phase = CalendarProjection.ResolveDayPhase(
-                clock.DayPhases,
+                world.DayPhases,
                 TicksIntoDay,
-                clock.TicksPerDay);
-            return new CalendarClockSnapshot(
+                world.TicksPerDay);
+            return new CalendarProgressSnapshot(
                 Enabled: true,
                 DayIndex: DayIndex,
                 TicksIntoDay: TicksIntoDay,
-                TicksPerDay: clock.TicksPerDay,
-                DayPermille: CalendarProjection.ComputeDayPermille(TicksIntoDay, clock.TicksPerDay),
+                TicksPerDay: world.TicksPerDay,
+                DayPermille: CalendarProjection.ComputeDayPermille(TicksIntoDay, world.TicksPerDay),
                 DayPhaseId: phase.Id,
                 DayPhaseLabel: phase.Label,
                 ActiveDate: ProjectActive());
@@ -137,10 +137,10 @@ namespace Ludots.Core.Gameplay.Calendar
                 throw new InvalidOperationException("Calendar save dayIndex must be >= 0.");
             }
 
-            if ((uint)snapshot.TicksIntoDay >= (uint)_clock!.TicksPerDay)
+            if ((uint)snapshot.TicksIntoDay >= (uint)_world!.TicksPerDay)
             {
                 throw new InvalidOperationException(
-                    $"Calendar save ticksIntoDay must be in [0, {_clock.TicksPerDay}).");
+                    $"Calendar save ticksIntoDay must be in [0, {_world.TicksPerDay}).");
             }
 
             DayIndex = snapshot.DayIndex;
@@ -242,7 +242,7 @@ namespace Ludots.Core.Gameplay.Calendar
 
         private string CurrentDayPhaseId()
         {
-            return CalendarProjection.ResolveDayPhase(_clock!.DayPhases, TicksIntoDay, _clock.TicksPerDay).Id;
+            return CalendarProjection.ResolveDayPhase(_world!.DayPhases, TicksIntoDay, _world.TicksPerDay).Id;
         }
 
         private void FireDayPhaseChanged(
@@ -274,7 +274,7 @@ namespace Ludots.Core.Gameplay.Calendar
             if (!IsEnabled)
             {
                 throw new InvalidOperationException(
-                    "Calendar is not enabled. Add Calendar/clock.json to activate world calendar.");
+                    "Calendar is not enabled. Add Calendar/world.json to activate world calendar.");
             }
         }
     }

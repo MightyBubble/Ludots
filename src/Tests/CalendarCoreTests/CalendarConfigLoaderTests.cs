@@ -8,7 +8,7 @@ namespace Ludots.Tests.CalendarCore;
 public sealed class CalendarConfigLoaderTests
 {
     [Test]
-    public void ParseClock_RejectsNonStepTickSource()
+    public void ParseWorld_RejectsNonStepTickSource()
     {
         JsonObject node = ParseObject("""
             {
@@ -21,13 +21,13 @@ public sealed class CalendarConfigLoaderTests
             """);
 
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-            () => CalendarConfigLoader.ParseClock(node))!;
+            () => CalendarConfigLoader.ParseWorld(node))!;
         Assert.That(ex.Message, Does.Contain("tickSource"));
         Assert.That(ex.Message, Does.Contain("Step"));
     }
 
     [Test]
-    public void ParseClock_RejectsMinutesPerDay()
+    public void ParseWorld_RejectsMinutesPerDay()
     {
         JsonObject node = ParseObject("""
             {
@@ -41,7 +41,7 @@ public sealed class CalendarConfigLoaderTests
             """);
 
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-            () => CalendarConfigLoader.ParseClock(node))!;
+            () => CalendarConfigLoader.ParseWorld(node))!;
         Assert.That(ex.Message, Does.Contain("minutesPerDay"));
     }
 

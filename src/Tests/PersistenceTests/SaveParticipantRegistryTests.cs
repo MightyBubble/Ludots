@@ -244,18 +244,18 @@ public sealed class SaveParticipantRegistryTests
         var calendar = new CalendarDefinition("calendar.solar360", 360, new[] { era }, new[] { cycle });
         var registry = new CalendarDefinitionRegistry();
         registry.Register(calendar);
-        var clock = new CalendarClockConfig(
+        var world = new CalendarWorldConfig(
             "Step",
             20,
             0,
             "calendar.solar360",
             new[] { new CalendarDayPhaseDefinition("dawn", "晓", 0) });
 
-        var source = new CalendarRuntime(clock, registry);
+        var source = new CalendarRuntime(world, registry);
         source.Advance(25);
         var targetRegistry = new CalendarDefinitionRegistry();
         targetRegistry.Register(calendar);
-        var target = new CalendarRuntime(clock, targetRegistry);
+        var target = new CalendarRuntime(world, targetRegistry);
 
         ISaveParticipant participant = CoreSaveParticipants.CreateCalendarParticipant(source);
         ISaveParticipant targetParticipant = CoreSaveParticipants.CreateCalendarParticipant(target);

@@ -1517,9 +1517,9 @@ namespace Ludots.Core.Engine
             var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
             var entityLocalClockSystem = new EntityLocalClockSystem(World, clockStepPolicy, timeScalePermilleAttributeId);
             var calendarRegistry = new CalendarDefinitionRegistry();
-            CalendarClockConfig? calendarClock = new CalendarConfigLoader(ConfigPipeline)
+            CalendarWorldConfig? calendarWorld = new CalendarConfigLoader(ConfigPipeline)
                 .Load(calendarRegistry, ConfigCatalog, ConfigConflictReport);
-            var calendarRuntime = new CalendarRuntime(calendarClock, calendarRegistry);
+            var calendarRuntime = new CalendarRuntime(calendarWorld, calendarRegistry);
             var calendarSystem = new CalendarSystem(calendarRuntime, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
             var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);

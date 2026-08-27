@@ -16,7 +16,7 @@ public sealed class CalendarSystemTests
         var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1, GasStepMode.Auto);
         var gasClock = new GasClockSystem(clock, policy);
         CalendarRuntime runtime = new(
-            CalendarFixtures.Clock(ticksPerDay: 1),
+            CalendarFixtures.World(ticksPerDay: 1),
             CalendarFixtures.Registry(CalendarFixtures.Solar360()));
         var calendar = new CalendarSystem(runtime, policy);
 
@@ -35,7 +35,7 @@ public sealed class CalendarSystemTests
     {
         var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1, GasStepMode.Manual);
         CalendarRuntime runtime = new(
-            CalendarFixtures.Clock(ticksPerDay: 1),
+            CalendarFixtures.World(ticksPerDay: 1),
             CalendarFixtures.Registry(CalendarFixtures.Solar360()));
         var calendar = new CalendarSystem(runtime, policy);
 

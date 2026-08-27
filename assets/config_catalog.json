@@ -57,7 +57,7 @@
     "IdField": "id"
   },
   {
-    "Path": "Calendar/clock.json",
+    "Path": "Calendar/world.json",
     "Policy": "DeepObject",
     "AllowEmpty": true
   },

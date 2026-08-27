@@ -17,7 +17,7 @@ public sealed class CalendarCoreAcceptanceTests
         Directory.CreateDirectory(artifactDir);
 
         var registry = CalendarFixtures.Registry(CalendarFixtures.Solar360(), CalendarFixtures.Regnal());
-        var runtime = new CalendarRuntime(CalendarFixtures.Clock("calendar.solar360", ticksPerDay: 1, startDayIndex: 88), registry);
+        var runtime = new CalendarRuntime(CalendarFixtures.World("calendar.solar360", ticksPerDay: 1, startDayIndex: 88), registry);
         var rows = new List<PhaseRow>();
 
         Capture(rows, runtime, "day88", "Still spring, late third month");
@@ -39,8 +39,8 @@ public sealed class CalendarCoreAcceptanceTests
 
     private static void Capture(List<PhaseRow> rows, CalendarRuntime runtime, string phaseId, string title)
     {
-        CalendarClockSnapshot clock = runtime.CaptureClockSnapshot();
-        CalendarDateSnapshot date = clock.ActiveDate!;
+        CalendarProgressSnapshot progress = runtime.CaptureProgressSnapshot();
+        CalendarDateSnapshot date = progress.ActiveDate!;
         rows.Add(new PhaseRow(
             phaseId,
             title,
@@ -52,8 +52,8 @@ public sealed class CalendarCoreAcceptanceTests
             FindCycle(date, "month").PhaseLabel,
             FindCycle(date, "xun").PhaseLabel,
             FindCycle(date, "solarTerm").PhaseLabel,
-            clock.DayPhaseLabel,
-            clock.DayPermille));
+            progress.DayPhaseLabel,
+            progress.DayPermille));
     }
 
     private static string BuildTrace(IReadOnlyList<PhaseRow> rows)
