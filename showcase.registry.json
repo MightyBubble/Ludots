@@ -8396,6 +8396,25 @@
       "tier": "T2",
       "category": "demo",
       "status": "active"
+    },
+    {
+      "id": "reconnect_recovery",
+      "title": "Reconnect Recovery — resume from the authority",
+      "summary": "Disconnecting is not a reset: the authority keeps ticking while the client freezes; reconnecting resumes from the authoritative checkpoint. Missing, duplicate and stale frame injections are rejected with readable errors. Single-machine simulation, honestly labeled.",
+      "path": "mods/showcases/reconnect_recovery/ReconnectRecoveryShowcaseMod",
+      "projectPath": "ReconnectRecoveryShowcaseMod.csproj",
+      "binding": "reconnect_recovery_showcase",
+      "preset": "reconnect_recovery_showcase_raylib",
+      "docsPath": "gitbook/architecture/reconnect-recovery-showcase-design.md",
+      "acceptanceTest": "gitbook/acceptance/reconnect-recovery.feature",
+      "artifactDir": "artifacts/acceptance/reconnect-recovery",
+      "tags": [
+        "reconnect",
+        "recovery"
+      ],
+      "tier": "T2",
+      "category": "demo",
+      "status": "active"
     }
   ]
 }

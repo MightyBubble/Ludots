@@ -42,6 +42,14 @@
       }
     },
     {
+      "name": "reconnect_recovery_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/reconnect_recovery/ReconnectRecoveryShowcaseMod",
+        "projectPath": "ReconnectRecoveryShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "persistence_online_replay_showcase",
       "target": {
         "type": "path",
