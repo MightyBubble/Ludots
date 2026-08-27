@@ -136,11 +136,11 @@
   ],
   "DefaultCamera": {
     "VirtualCameraId": "EastAsia.Camera.PlayableTerrain",
-    "TargetXCm": 500000,
-    "TargetYCm": 80000,
+    "TargetXCm": 527700,
+    "TargetYCm": 79120,
     "Yaw": 210,
-    "Pitch": 55,
-    "DistanceCm": 1800000,
+    "Pitch": 50,
+    "DistanceCm": 900000,
     "FovYDeg": 55
   }
 }

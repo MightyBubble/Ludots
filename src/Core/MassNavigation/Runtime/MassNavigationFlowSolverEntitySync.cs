@@ -38,6 +38,9 @@ public sealed partial class MassNavigationFlowSolverState
                 throw new InvalidOperationException(
                     $"MassNavigationFlowSolverState cannot sync unit {i} because no tracked agent entity is registered.");
             }
+            // #region agent log
+            { float _sx = _worldOriginXCm + _positionsCm[i << 1]; float _sy = _worldOriginYCm + _positionsCm[(i << 1) + 1]; if ((_frameCount & 15) == 0 && (_sx < 400000f || _sx > 700000f)) { try { var _n = world.TryGet(entity, out Name _nm) ? _nm.Value : null; System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "C", location = "MassNavigationFlowSolverEntitySync.cs:SyncEntities", message = "sync WorldPositionCm", data = new { unitIndex = i, entityId = entity.Id, name = _n, worldX = _sx, worldY = _sy, hasUnitTarget = _hasUnitTarget[i] }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { } } }
+            // #endregion
 
             if (!world.IsAlive(entity))
             {

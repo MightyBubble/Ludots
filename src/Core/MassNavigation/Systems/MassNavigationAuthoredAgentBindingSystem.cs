@@ -414,10 +414,15 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         AgentProfileConfig geometry = simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
         float worldXCm = worldPosition.Value.X.ToFloat();
         float worldYCm = worldPosition.Value.Y.ToFloat();
+        float localXCm = simulation.ToLocalXCm(worldXCm);
+        float localYCm = simulation.ToLocalYCm(worldYCm);
+        // #region agent log
+        try { var _n = world.TryGet(entity, out Name _nm) ? _nm.Value : null; System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "A", location = "MassNavigationAuthoredAgentBindingSystem.cs:CreateSeed", message = "authored seed", data = new { entityId = entity.Id, name = _n, worldXCm, worldYCm, localXCm, localYCm, domainRepId = domainRep.Id, profileKey, speed = profile.SpeedCmPerSecond }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
+        // #endregion
         return new MassNavigationAgentSeed(
             domainRep,
-            simulation.ToLocalXCm(worldXCm),
-            simulation.ToLocalYCm(worldYCm),
+            localXCm,
+            localYCm,
             profile.Heavy,
             geometry.Mass,
             geometry.RadiusCm,

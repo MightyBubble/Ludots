@@ -79,6 +79,35 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     }
 
     [Test]
+    public void BordersLandSea_ShipHoldsAuthoredYellowSeaSpawn_NotTeamSlotNearArmy()
+    {
+        using GameEngine engine = CreateEngine(BorderMods);
+        engine.Start();
+        engine.LoadMap(MapId);
+        // #region agent log
+        try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "D", location = "EastAsiaBordersLandSeaAcceptanceTests.cs:ShipHolds", message = "map loaded", data = new { mapId = MapId }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
+        // #endregion
+        Tick(engine, 4);
+        Entity army = FindNamed(engine, "EastAsia.Army");
+        Entity ship = FindNamed(engine, "EastAsia.Ship");
+        var army0 = engine.World.Get<WorldPositionCm>(army).ToWorldCmInt2();
+        var ship0 = engine.World.Get<WorldPositionCm>(ship).ToWorldCmInt2();
+        // #region agent log
+        try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "D", location = "EastAsiaBordersLandSeaAcceptanceTests.cs:ShipHolds", message = "positions after 4 ticks", data = new { armyX = army0.X, armyY = army0.Y, shipX = ship0.X, shipY = ship0.Y }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
+        // #endregion
+        // Medium profile is 100000 cm/s; Yellow Sea → army is ~6.5e5 cm (~7s). Sample past arrival.
+        Tick(engine, 480);
+        var army1 = engine.World.Get<WorldPositionCm>(army).ToWorldCmInt2();
+        var ship1 = engine.World.Get<WorldPositionCm>(ship).ToWorldCmInt2();
+        // #region agent log
+        try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "B", location = "EastAsiaBordersLandSeaAcceptanceTests.cs:ShipHolds", message = "positions after 484 ticks", data = new { armyX = army1.X, armyY = army1.Y, shipX = ship1.X, shipY = ship1.Y, armyDeltaX = army1.X - army0.X, shipDeltaX = ship1.X - ship0.X }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
+        // #endregion
+        Assert.That(ship1.X, Is.EqualTo(855_397).Within(5_000), "ship must remain on authored Yellow Sea water, not idle-pull to army team slots");
+        Assert.That(ship1.Y, Is.EqualTo(58_235).Within(5_000));
+        Assert.That(System.Math.Abs(ship1.X - army1.X), Is.GreaterThan(100_000), "ship must not sit in army formation");
+    }
+
+    [Test]
     public void BordersLandSea_FootQueriesLandLayer_ShipQueriesSeaLayer()
     {
         using GameEngine engine = CreateEngine(BorderMods);

@@ -1,11 +1,11 @@
 {
   "mapId": "east_asia_visual_heightmap",
   "world": {
-    "solverWindowWidthCm": 800000,
-    "solverWindowHeightCm": 800000,
+    "solverWindowWidthCm": 2000000,
+    "solverWindowHeightCm": 1200000,
     "streamingChunkSizeCm": 228544,
     "commandFocusHoldTicks": 90,
-    "workAreaPaddingCm": 200000,
+    "workAreaPaddingCm": 400000,
     "workAreaMaxWidthCm": 6400000,
     "workAreaMaxHeightCm": 3700000,
     "activeHotZoneId": "board",
@@ -13,16 +13,16 @@
       {
         "id": "board",
         "label": "East Asia Board",
-        "centerXCm": 0,
-        "centerYCm": 0,
+        "centerXCm": 527700,
+        "centerYCm": 79120,
         "widthCm": 6400000,
         "heightCm": 3700000
       }
     ]
   },
   "solver": {
-    "fieldWidthCm": 800000,
-    "fieldHeightCm": 800000,
+    "fieldWidthCm": 2000000,
+    "fieldHeightCm": 1200000,
     "flowCellSizeCm": 4000,
     "maxObstacleCount": 64,
     "parallelWorkerCount": 4,
@@ -31,9 +31,9 @@
     "hardResolveHashCellSizeCm": 2000,
     "hardResolveHashMinSearchRadiusCells": 1,
     "playAreaMinXCm": 50,
-    "playAreaMaxXCm": 799950,
+    "playAreaMaxXCm": 1999950,
     "playAreaMinYCm": 50,
-    "playAreaMaxYCm": 799950
+    "playAreaMaxYCm": 1199950
   },
   "presentation": {
     "requiredMeshAssetIds": [
