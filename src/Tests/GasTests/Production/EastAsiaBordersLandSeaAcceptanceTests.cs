@@ -3,7 +3,6 @@ using System.IO;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.Pathing;
@@ -96,9 +95,12 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         engine.LoadMap(MapId);
         Tick(engine, 2);
 
-        Assert.That(engine.CurrentMapSession!.MapConfig!.Fields, Is.Null.Or.Empty
-            .Or.Matches<Ludots.Core.Map.MapFieldsConfig>(f => f.Layers == null || f.Layers.Count == 0),
+        var mapFields = engine.CurrentMapSession!.MapConfig!.Fields;
+        Assert.That(
+            mapFields == null || mapFields.Layers == null || mapFields.Layers.Count == 0,
+            Is.True,
             "land-sea demo must not enable MapField ownership layers");
+        Assert.That(engine.CurrentMapSession.Fields == null || engine.CurrentMapSession.Fields.Count == 0, Is.True);
 
         IPathService pathService = engine.GetService(CoreServiceKeys.PathService)
             ?? throw new InvalidOperationException("PathService missing");

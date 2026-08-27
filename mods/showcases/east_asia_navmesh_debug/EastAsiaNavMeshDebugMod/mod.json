@@ -4,8 +4,7 @@
   "description": "Data-only continental NavMesh and walkability texture overlay for the East Asia VisualHeightmap.",
   "priority": 0,
   "dependencies": {
-    "EastAsiaPlayableTerrainMod": "^1.0.0",
-    "FieldEastAsiaCountryMod": "^1.0.0"
+    "EastAsiaPlayableTerrainMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": [
