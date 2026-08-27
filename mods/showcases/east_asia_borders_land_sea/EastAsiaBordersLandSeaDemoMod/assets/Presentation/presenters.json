@@ -47,7 +47,7 @@
           "assetKind": "Mesh",
           "assetId": "east_asia_borders.army",
           "materialId": "default_surface",
-          "renderPath": "StaticMesh",
+          "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
           "localScale": [400, 160, 400]
         },
@@ -76,7 +76,7 @@
           "assetKind": "Mesh",
           "assetId": "east_asia_borders.ship",
           "materialId": "default_surface",
-          "renderPath": "StaticMesh",
+          "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
           "localScale": [560, 120, 280]
         },
