@@ -54,7 +54,8 @@ The target editor flow is:
 8. Run estimate using the same inputs that real bake will use.
 9. Bake through CLI or Editor Bridge into `.ntil` nav tiles.
 10. Inspect the produced mesh in Web editor and Raylib debug view.
-11. Start runtime, select agents, issue movement, and verify route + MassNavigationFlow execution.
+11. Export the world-aligned walkability texture from those tiles when you need the `T` overlay. Contract: [地图数据 · 导航走性贴图](map-data-wiki/README.md).
+12. Start runtime, select agents, issue movement, and verify route + MassNavigationFlow execution.
 
 `NodeGraph` boards use the short graph path and do not bake navmesh.
 
