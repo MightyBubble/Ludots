@@ -8358,6 +8358,20 @@
       "video": "artifacts/evidence/capability_standard_graph_op_LoadTextKey/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "save_load",
+      "title": "Save / Load — the world comes back",
+      "summary": "Mutate the world, save to a real disk slot through the generic save panel, keep playing, restore: state returns to the save point, and the slot survives a cold restart. Includes excluded-entity and corrupted-slot fault demos.",
+      "path": "mods/showcases/save_load/SaveLoadShowcaseMod",
+      "projectPath": "SaveLoadShowcaseMod.csproj",
+      "binding": "save_load_showcase",
+      "preset": "save_load_showcase_raylib",
+      "docsPath": "gitbook/architecture/save-load-showcase-design.md",
+      "acceptanceTest": "gitbook/acceptance/save-load.feature",
+      "artifactDir": "artifacts/acceptance/save-load",
+      "tags": ["save", "persistence"],
+      "status": "active"
     }
   ]
 }

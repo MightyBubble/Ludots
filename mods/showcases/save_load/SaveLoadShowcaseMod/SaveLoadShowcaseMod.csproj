@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\SavePanelMod\SavePanelMod.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Platform\Ludots.Platform.Desktop\Ludots.Platform.Desktop.csproj" />
+  </ItemGroup>
+</Project>
