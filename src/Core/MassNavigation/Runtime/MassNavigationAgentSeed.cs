@@ -10,7 +10,6 @@ public readonly struct MassNavigationAgentSeed
         float localPositionYCm,
         bool heavy,
         float navMass,
-        float visualScale,
         float bodyRadiusCm,
         float speedCmPerSecond,
         MassNavigationAgentLayer layer)
@@ -21,7 +20,6 @@ public readonly struct MassNavigationAgentSeed
         LocalPositionYCm = localPositionYCm;
         Heavy = heavy;
         NavMass = navMass;
-        VisualScale = visualScale;
         BodyRadiusCm = bodyRadiusCm;
         SpeedCmPerSecond = speedCmPerSecond;
         Layer = layer;
@@ -33,7 +31,6 @@ public readonly struct MassNavigationAgentSeed
         float localPositionYCm,
         bool heavy,
         float navMass,
-        float visualScale,
         float bodyRadiusCm,
         float speedCmPerSecond,
         MassNavigationAgentLayer layer)
@@ -43,7 +40,6 @@ public readonly struct MassNavigationAgentSeed
             localPositionYCm,
             heavy,
             navMass,
-            visualScale,
             bodyRadiusCm,
             speedCmPerSecond,
             layer)
@@ -57,7 +53,6 @@ public readonly struct MassNavigationAgentSeed
     public float LocalPositionYCm { get; }
     public bool Heavy { get; }
     public float NavMass { get; }
-    public float VisualScale { get; }
     public float BodyRadiusCm { get; }
     public float SpeedCmPerSecond { get; }
     public MassNavigationAgentLayer Layer { get; }

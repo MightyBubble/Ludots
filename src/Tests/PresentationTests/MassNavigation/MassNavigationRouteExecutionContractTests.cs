@@ -277,8 +277,8 @@ namespace Ludots.Tests.Presentation
                 new[] { routed, direct },
                 new[]
                 {
-                    new MassNavigationAgentSeed(1, 5_000, 5_000, false, 1f, 1f, 20f, 800f, layer),
-                    new MassNavigationAgentSeed(1, 5_000, 5_200, false, 1f, 1f, 20f, 800f, layer),
+                    new MassNavigationAgentSeed(1, 5_000, 5_000, false, 1f, 20f, 800f, layer),
+                    new MassNavigationAgentSeed(1, 5_000, 5_200, false, 1f, 20f, 800f, layer),
                 },
                 new[] { true, true });
             return runtime;
@@ -304,8 +304,8 @@ namespace Ludots.Tests.Presentation
                 new[] { first, second },
                 new[]
                 {
-                    new MassNavigationAgentSeed(1, 5_000, 5_000, false, 1f, 1f, 20f, 800f, layer),
-                    new MassNavigationAgentSeed(1, 5_000, 5_200, false, 1f, 1f, 20f, 800f, layer),
+                    new MassNavigationAgentSeed(1, 5_000, 5_000, false, 1f, 20f, 800f, layer),
+                    new MassNavigationAgentSeed(1, 5_000, 5_200, false, 1f, 20f, 800f, layer),
                 },
                 new[] { true, true });
             return runtime;

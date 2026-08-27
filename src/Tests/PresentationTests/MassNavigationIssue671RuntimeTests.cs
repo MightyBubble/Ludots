@@ -266,7 +266,6 @@ public sealed class MassNavigationIssue671RuntimeTests
                 index: 0,
                 teamId: 1,
                 navMass: 1f,
-                visualScale: 1f,
                 bodyRadiusCm: 20f,
                 speedCmPerSecond: 800f,
                 layer: unregisteredLayer))!;
@@ -329,7 +328,6 @@ public sealed class MassNavigationIssue671RuntimeTests
             localPositionYCm: localY,
             heavy: false,
             navMass: 1f,
-            visualScale: 1f,
             bodyRadiusCm: 20f,
             speedCmPerSecond: 800f,
             layer);

@@ -65,7 +65,6 @@ public sealed class MassNavigationOrderChainTests
                     localPositionYCm: 1300f,
                     heavy: false,
                     navMass: 1f,
-                    visualScale: 1f,
                     bodyRadiusCm: 20f,
                     speedCmPerSecond: 800f,
                     new MassNavigationAgentLayer(1u, 1u)),
@@ -233,7 +232,6 @@ public sealed class MassNavigationOrderChainTests
                     {
                         Id = "light",
                         Heavy = false,
-                        VisualScale = 0.22f,
                         SpeedCmPerSecond = 800f,
                         EveryNth = 0,
                         NthOffset = 0,

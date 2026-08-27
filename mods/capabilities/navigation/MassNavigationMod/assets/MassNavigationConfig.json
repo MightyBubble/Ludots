@@ -164,7 +164,6 @@
       {
         "id": "heavy",
         "heavy": true,
-        "visualScale": 0.34,
         "speedCmPerSecond": 800,
         "everyNth": 7,
         "nthOffset": 0
@@ -172,7 +171,6 @@
       {
         "id": "light",
         "heavy": false,
-        "visualScale": 0.22,
         "speedCmPerSecond": 800,
         "everyNth": 0,
         "nthOffset": 0
@@ -293,7 +291,6 @@
     },
     "solver": {
       "minNavMass": 0.001,
-      "minVisualScale": 0.01,
       "maxStepDtSeconds": 0.05,
       "parallelStepMinAgents": 2048,
       "directionEpsilonSq": 0.0001,
