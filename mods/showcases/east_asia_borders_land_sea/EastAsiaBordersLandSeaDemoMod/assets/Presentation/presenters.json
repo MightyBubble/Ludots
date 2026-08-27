@@ -45,13 +45,13 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": "east_asia_borders.army",
+          "assetId": "mass_navigation.command.marker",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [12000, 24000, 12000]
+          "localScale": [120, 20, 120]
         },
-        "style": { "color": [0.95, 0.82, 0.2, 1] }
+        "style": { "color": [1.0, 0.92, 0.12, 1] }
       },
       {
         "slot": "grounding",
@@ -59,7 +59,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0,
+          "offset": 40,
           "updatePolicy": "EveryFrame"
         }
       }
@@ -74,13 +74,13 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": "east_asia_borders.ship",
+          "assetId": "mass_navigation.command.marker",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [20000, 6000, 10000]
+          "localScale": [220, 30, 120]
         },
-        "style": { "color": [0.2, 0.55, 0.95, 1] }
+        "style": { "color": [0.15, 0.75, 1.0, 1] }
       },
       {
         "slot": "grounding",
@@ -88,7 +88,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0,
+          "offset": 40,
           "updatePolicy": "EveryFrame"
         }
       }

@@ -37,8 +37,6 @@
   },
   "presentation": {
     "requiredMeshAssetIds": [
-      "east_asia_borders.army",
-      "east_asia_borders.ship",
       "mass_navigation.command.marker",
       "mass_navigation.blocker.rock",
       "mass_navigation.hotspot.obelisk"
