@@ -11,17 +11,17 @@
       "adapterId": "raylib",
       "buildMode": "auto"
     },
-  {
-   "id": "save_load_showcase_raylib",
-   "name": "Save Load Raylib",
-   "selectors": [
-    "$save_load_showcase",
-    "$save_panel",
-    "$agent_bridge"
-   ],
-   "adapterId": "raylib",
-   "buildMode": "auto"
-  },
+    {
+      "id": "save_load_showcase_raylib",
+      "name": "Save Load Raylib",
+      "selectors": [
+        "$save_load_showcase",
+        "$save_panel",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
     {
       "id": "camera_acceptance_raylib",
       "name": "Camera Acceptance Raylib",
