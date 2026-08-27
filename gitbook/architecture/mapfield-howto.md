@@ -112,7 +112,7 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 | `field_jing_yang_transit` | 两区过境 + 区内名单 + 面板 |
 | `field_east_asia_admin` | 东亚 VisualHeightmap 上的省级归属投影 |
 | `field_east_asia_country` | Natural Earth 国界栅格化归属投影 |
-| `east_asia_borders_land_sea` | 国界 + 陆军/航船寻路 + 过境面板 |
+| `east_asia_borders_land_sea` | 国界两级（国家贴花 + 中国省级示意）+ 陆军走陆网 / 航船走海网 + 过境面板 |
 | `field_layer_table` | 三区表 + MapLoaded 计数面板 |
 | `field_editor_paint` | field-editor 形状资产（paint.a / paint.b）+ 过境 |
 | `field_hierarchy_query` | hierarchies.json + `TryResolveChain` |
@@ -121,7 +121,9 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 
 `field_east_asia_admin` 是叠加在 `EastAsiaPlayableTerrainMod` 上的数据-only Mod。它用 `7142 cm`（约 71.4 m）格长把 `ownership.east_asia.admin` 挂到 `east_asia_visual_heightmap`，以 schema v2 矩形写入 26 个省级示意区（经纬度框经 Albers 投到格网，先涂先占、无重叠），共 52881 个非默认格。可玩图幅由地图 `VisualHeightmap.WorldWidthCm = 6399232`（约 64 km 宽，与 7×4 导航板 `GridCellSizeCm = 3571` 对齐；南北约 36.6 km）等比收缩；高度样本仍来自大陆源 VHTM。远景走 overview mesh，并打开 `DisableDistanceFog`（板级相机远超默认雾距，否则会整片洗蓝），保留 albedo/控制权重贴图；`DisplayHeightScale` 约 50 让厘米级海拔可读；归属用整图半透明贴面叠在地形色上。运行时沿标准 `FieldRegionMaterializer` 物化区域，再由 `FieldDiscreteVisualProjector` 发布 `DiscreteOwnership`，不复制地形资产或引入专用代码。
 
-`field_east_asia_country` 用同一套投影与图幅，把 Natural Earth 110m `admin_0` 国界栅格化成 `ownership.east_asia.country`（约 17 国、203193 非默认格）。玩家看见的国界色是整图 **Decal 投影贴花**（`country_borders.png` 印在高度图上），不是调试格网铺盖；地图带 `Raylib.FieldOverlays:Off` 关掉 DiscreteOwnership 马赛克。再生格子：`python3 tools/east_asia_borders/rasterize_countries_to_field.py ...`；再生贴花：`python3 tools/east_asia_borders/export_country_decal_png.py ...`（见该 Mod README）。陆海演示 `east_asia_borders_land_sea` 在此国界层上挂陆军 PreferMesh / 航船 Direct，并用 `FieldRegionEntered` 刷新过境面板（河网 PreferGraph 需 NodeGraph 主棋盘，记债）。
+`field_east_asia_country` 用同一套投影与图幅，把 Natural Earth 110m `admin_0` 国界栅格化成 `ownership.east_asia.country`（约 17 国、203193 非默认格）。玩家看见的国界色是整图 **Decal 投影贴花**（`country_borders.png` 印在高度图上），不是调试格网铺盖；地图带 `Raylib.FieldOverlays:Off` 关掉 DiscreteOwnership 马赛克。再生格子：`python3 tools/east_asia_borders/rasterize_countries_to_field.py ...`；再生贴花：`python3 tools/east_asia_borders/export_country_decal_png.py ...`（见该 Mod README）。
+
+陆海演示 `east_asia_borders_land_sea` 同时挂国家层与省级层：陆军 / 航船都走 PreferMesh（陆网 Ground、海网 Water），过境面板只报国家；中国 26 个省级示意区挂在 `country.china` 下，开局点必须能查到省→中国这条链。郡级没有。河网 PreferGraph 需 NodeGraph 主棋盘，记债。单位看起来多大只认展示绑定，走路档案不再写视觉缩放。
 
 ```powershell
 .\scripts\run-mod-launcher.cmd cli launch 'preset:field_east_asia_admin_raylib'

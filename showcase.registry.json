@@ -5141,7 +5141,7 @@
       "id": "east_asia_borders_land_sea",
       "path": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod",
       "title": "East Asia Borders Land & Sea",
-      "summary": "Army PreferMesh on Ground and ship PreferMesh on Water over East Asia Natural Earth borders, with FieldRegion enter popups. Inland river PreferGraph still needs a NodeGraph board (documented debt).",
+      "summary": "Country Decal plus Chinese province placeholders, army on Ground mesh and ship on Water mesh, border-enter panel. Inland river PreferGraph still needs a NodeGraph board.",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -5153,7 +5153,7 @@
       ],
       "binding": "east_asia_borders_land_sea",
       "preset": "east_asia_borders_land_sea_raylib",
-      "docsPath": null,
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
       "readmePath": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod/README.md",
       "acceptanceTest": "EastAsiaBordersLandSeaAcceptanceTests",
       "artifactDir": null,
