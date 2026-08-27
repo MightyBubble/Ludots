@@ -35,7 +35,7 @@ Calendar.DayPhaseChanged
 | `Calendar/world.json` | 日序怎么走：多少步算一天、从哪天开始、用哪份历、昼夜相位 |
 | `Calendar/calendars.json` | 历法表：年长、纪年、周期与相位 |
 | `CalendarRuntime` | 日序、当天已走步、投影、存档 |
-| `CalendarSystem` | 每个固定步读 `GasClockStepPolicy.LastConsumedSteps`，Paused / 暂停令牌为 0 时不走日 |
+| `CalendarSystem` | 只在启用时挂进循环，读 `GasClockStepPolicy.LastConsumedSteps`。Paused / 暂停令牌为 0 时不走日。没 `world.json` 不挂这个系统 |
 
 推进源只允许 `Step`。`Turn`、`FixedFrame`、`EntityLocal` 都拒绝。
 
@@ -107,7 +107,7 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 - 不在玩法 Mod 里再写一份 `if (day > 360)`。
 - 闰年、阴阳合历、月长不齐：用相位表表达。本年不做隐式闰规则。
 - `EntityLocalClock` 不驱动世界历。单体变速不影响日序。
-- 没有 `world.json` 时调用 `Project` 失败，不返回假日期。
+- 没有 `world.json` 时不挂 `CalendarSystem`，不每帧问开没开。调用 `Project` 失败，不返回假日期。
 - 未知字段、相位长度对不齐、主历不存在：装载失败并点名。
 - `minutesPerDay` / 累计已过分钟不是日序字段。一天只按 `ticksPerDay` 翻页。
 - 时钟层（Engine / GAS / Physics2D / TimeFlow）不认识日、年、季节。日期属性走 `Calendar.*`。

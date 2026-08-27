@@ -19,6 +19,12 @@ namespace Ludots.Core.Gameplay.Calendar
             Action<EventKey, ScriptContext>? fireEvent = null)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            if (!runtime.IsEnabled)
+            {
+                throw new InvalidOperationException(
+                    "CalendarSystem requires an enabled CalendarRuntime. Omit this system when Calendar/world.json is absent.");
+            }
+
             _stepPolicy = stepPolicy ?? throw new ArgumentNullException(nameof(stepPolicy));
             _contextFactory = contextFactory;
             _fireEvent = fireEvent;

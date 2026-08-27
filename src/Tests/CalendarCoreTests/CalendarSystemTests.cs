@@ -42,4 +42,12 @@ public sealed class CalendarSystemTests
         calendar.Update(0f);
         Assert.That(runtime.DayIndex, Is.EqualTo(0));
     }
+
+    [Test]
+    public void CalendarSystem_RejectsDisabledRuntime()
+    {
+        var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1, GasStepMode.Auto);
+        var runtime = new CalendarRuntime(world: null, CalendarFixtures.Registry());
+        Assert.Throws<InvalidOperationException>(() => new CalendarSystem(runtime, policy));
+    }
 }

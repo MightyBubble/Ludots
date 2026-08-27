@@ -1520,7 +1520,9 @@ namespace Ludots.Core.Engine
             CalendarWorldConfig? calendarWorld = new CalendarConfigLoader(ConfigPipeline)
                 .Load(calendarRegistry, ConfigCatalog, ConfigConflictReport);
             var calendarRuntime = new CalendarRuntime(calendarWorld, calendarRegistry);
-            var calendarSystem = new CalendarSystem(calendarRuntime, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
+            CalendarSystem? calendarSystem = calendarRuntime.IsEnabled
+                ? new CalendarSystem(calendarRuntime, clockStepPolicy, CreateContext, TriggerManager.FireEvent)
+                : null;
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
             var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);
             _physics2DController = new Physics2DController(World, physics2dTickPolicy, physics2dClockConfig.PhysicsHz, CreateContext, TriggerManager.FireEvent);
@@ -1972,7 +1974,10 @@ namespace Ludots.Core.Engine
             RegisterSystem(new StoryRuntimeSystem(dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
-            RegisterSystem(calendarSystem, SystemGroup.InputCollection);
+            if (calendarSystem != null)
+            {
+                RegisterSystem(calendarSystem, SystemGroup.InputCollection);
+            }
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
             RegisterSystem(
