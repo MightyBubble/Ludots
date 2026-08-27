@@ -28,16 +28,25 @@ Ludots is a modern C# game framework designed for high-performance gameplay logi
 > The commands below are the canonical way to build and run. For the full newcomer guide (environment, showcase tour, acceptance evidence), see the [Documentation Portal](https://mightybubble.github.io/Ludots/).
 
 ### Prerequisites
-*   .NET 8.0 SDK
-*   .NET 9.0 SDK
-*   .NET 10.0 preview SDK
-*   Node.js & npm (for Editor)
+*   .NET 9.0 SDK (only hard prerequisite)
+*   In-repo offline NuGet (`external/nuget/`): canonical paths work offline — no nuget.org hunt
+*   Node.js & npm (editor / Web only; Raylib CLI one-shot path does not need them)
 
-All three .NET SDKs are required — a missing SDK can cause `dotnet restore` or launcher build failures. See the [Quick Start](gitbook/quick-start.md) for the full contract.
+The whole repo targets `net9.0` (`global.json` pins SDK 9.0.x). Weak-network contract: [Quick Start](gitbook/quick-start.md) / [zero-env setup](gitbook/reference/zero-env-setup.md).
 
 ### Build & Run
 
-**Using Convenience Scripts (Recommended)**
+**Weak-network one-shot (recommended, Linux / macOS / Windows)**
+
+```bash
+./scripts/dev-up.sh          # Linux/macOS: offline restore + build + launch ExampleMod
+```
+
+```powershell
+.\scripts\dev-up.ps1         # Windows
+```
+
+**Other convenience scripts**
 
 Scripts are located in the `scripts/` directory:
 
@@ -68,7 +77,7 @@ dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Rel
 *   `src/Core/`: The heart of the engine (ECS, GAS, Physics, Math).
 *   `src/Apps/`: Application entry points (Desktop/Raylib, Web).
 *   `mods/`: 30+ built-in and demo mods (outside `src/` for UGC parity).
-*   `src/Tools/`: Developer tools (Editor, ModLauncher, NavBake).
+*   `src/Tools/`: Developer tools (Launcher CLI, Editor.Bridge, AgentBridge, NavBake).
 *   `src/Libraries/`: Source-integrated third-party (Arch, DotRecast, Raylib-cs).
 *   `docs/`: Portal site source and in-repo deep materials (conventions, architecture, reference, ADR, audits, RFCs).
 

@@ -2,7 +2,7 @@
   "name": "CapabilityStandardConfigShardsShowcaseMod",
   "version": "1.0.0",
   "description": "Capability-standard showcase proving GAS config shard files merge into formal runtime registries.",
-  "main": "bin/net8.0/CapabilityStandardConfigShardsShowcaseMod.dll",
+  "main": "bin/net9.0/CapabilityStandardConfigShardsShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

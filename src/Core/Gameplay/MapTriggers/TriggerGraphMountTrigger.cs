@@ -63,7 +63,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// entity's mounts are inert (CheckConditions false) and lazily swept at think
     /// waves by the mount pipeline.
     /// </summary>
-    public sealed class TriggerGraphMountTrigger : Trigger, IMapTriggerRoute
+    public sealed class TriggerGraphMountTrigger : Trigger, IMapTriggerRoute, IGraphCallbackResumeTarget
     {
         private const string TargetEntityPayloadKey = "MapTrigger.TargetEntity";
         private const string TagIdPayloadKey = "MapTrigger.TagId";
@@ -79,6 +79,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly int _abilityIdFilter;
         private readonly string? _modIdFilter;
         private readonly TriggerGraphRefirePolicy _refirePolicy;
+        private readonly EventScope _subscriptionScope;
         private readonly bool _entryIsResumeEvent;
         private readonly int[] _vmIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
         private readonly int[] _previousIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
@@ -95,11 +96,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private Entity _runCaster;
         private MapId? _mapScope;
         private bool _mapScopeResolved;
+        private readonly GraphEntryPayloadTable _entryPayload = new();
+        private readonly GraphEntryPayloadTable _invokeArgs = new();
         private bool _runActive;
         private bool _ranToHaltOnce;
         private bool _lifecycleDispatch;
+        private bool _awaitingCallback;
+        private ScriptContext? _parkedContext;
 
         public TriggerGraphMountDomain Domain => _domain;
+        public bool IsAwaitingCallback => _awaitingCallback;
+        public bool IsCallbackResumeAlive => _runActive;
 
         public TriggerGraphMountTrigger(
             int graphId,
@@ -110,7 +117,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             TriggerGraphMountDomain domain = TriggerGraphMountDomain.Map,
             TriggerGraphMountRoute route = TriggerGraphMountRoute.Local,
             int abilityIdFilter = 0,
-            string? modIdFilter = null)
+            string? modIdFilter = null,
+            EventScope subscriptionScope = EventScope.Map)
         {
             if (graphId <= 0)
             {
@@ -164,6 +172,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 throw new ArgumentException("Only mod-domain mounts may specify an owning mod id.", nameof(modIdFilter));
             }
 
+            if (!Enum.IsDefined(typeof(EventScope), subscriptionScope))
+            {
+                throw new ArgumentOutOfRangeException(nameof(subscriptionScope));
+            }
+
             _graphId = graphId;
             _graphName = graphName;
             _entry = entry;
@@ -173,13 +186,22 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _abilityIdFilter = abilityIdFilter;
             _modIdFilter = modIdFilter;
             _refirePolicy = refirePolicy;
+            _subscriptionScope = subscriptionScope;
             _entryIsResumeEvent = new EventKey(entry.EventName) == ResumeEventKey;
             _runCaster = scope;
             EventKey = new EventKey(entry.EventName);
-            Priority = 0;
+            Priority = entry.Priority;
         }
 
         public override string Name => $"TriggerGraph:{_graphName}:{_entry.Label}";
+
+        /// <summary>
+        /// Which dispatch table this entry's subscription routes to (#1123): derived from
+        /// the event schema scope at mount time — Global goes to the TriggerManager global
+        /// table, everything else stays map-scoped.
+        /// </summary>
+        public EventScope SubscriptionScope => _subscriptionScope;
+
 
         public int GraphId => _graphId;
 
@@ -371,12 +393,43 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         internal void ResumeFromSuspension(ScriptContext context)
         {
-            if (!_runActive)
+            if (!_runActive || _awaitingCallback)
             {
                 return;
             }
 
             RunSlice(context);
+        }
+
+        public void ResumeAfterGraphCallback(int handleId, bool confirmed, int resultBoolRegister)
+        {
+            if (!_runActive)
+            {
+                throw new InvalidOperationException(
+                    $"GRAPH.CALLBACK.ERR.MountNotSuspended: handle {handleId} completed but mount '{Name}' has no active run.");
+            }
+
+            if (!_awaitingCallback)
+            {
+                throw new InvalidOperationException(
+                    $"GRAPH.CALLBACK.ERR.MountNotAwaiting: handle {handleId} completed but mount '{Name}' is not awaiting a callback.");
+            }
+
+            if ((uint)resultBoolRegister >= (uint)_vmBoolRegisters.Length)
+            {
+                throw new InvalidOperationException(
+                    $"GRAPH.CALLBACK.ERR.ResultRegisterOutOfRange: bool register {resultBoolRegister} is outside the mount VM.");
+            }
+
+            if (_parkedContext == null)
+            {
+                throw new InvalidOperationException(
+                    $"GRAPH.CALLBACK.ERR.ParkedContextMissing: handle {handleId} completed without a parked ScriptContext on mount '{Name}'.");
+            }
+
+            _vmBoolRegisters[resultBoolRegister] = (byte)(confirmed ? 1 : 0);
+            _awaitingCallback = false;
+            RunSlice(_parkedContext);
         }
 
         internal bool IsScopeDispatchable(ScriptContext context)
@@ -406,6 +459,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _cursor = new GraphExecutionCursor(_entry.StartPc);
             _runCaster = ResolveRunCaster(context);
             SeedEntryRegisters(context);
+            CaptureEntryPayload(context, ResolveDependencies(context).EventSchemas);
+            _invokeArgs.Clear();
             RunSlice(context);
         }
 
@@ -417,26 +472,48 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 GraphKind.TriggerGraph,
                 "触发器图挂载");
 
-            GraphSliceResult result = GraphExecutor.ExecuteScriptSlice(
-                dependencies.Engine.World,
-                _runCaster,
-                _scope,
-                ResolveTargetPosCm(context),
-                program,
-                dependencies.GraphApi,
-                dependencies.Programs,
-                _vmFloatRegisters,
-                _vmIntRegisters,
-                _vmBoolRegisters,
-                _vmEntityRegisters,
-                _vmTargetRegisters,
-                _vmCallStack,
-                ref _cursor,
-                TriggerGraphLimits.SliceBudgetSteps,
-                GraphKind.Script,
-                _debugTrace,
-                ResolveMapScopeOnce(dependencies),
-                _graphId);
+            MapId? mapScope = ResolveMapScopeOnce(dependencies);
+            GraphCallbackService? callbacks = dependencies.Engine.GetService(CoreServiceKeys.GraphCallbackService);
+            _parkedContext = context;
+            if (callbacks != null)
+            {
+                callbacks.PushResumeTarget(this);
+            }
+
+            GraphSliceResult result;
+            try
+            {
+                result = GraphExecutor.ExecuteScriptSlice(
+                    dependencies.Engine.World,
+                    _runCaster,
+                    _scope,
+                    ResolveTargetPosCm(context),
+                    program,
+                    dependencies.GraphApi,
+                    dependencies.Programs,
+                    _vmFloatRegisters,
+                    _vmIntRegisters,
+                    _vmBoolRegisters,
+                    _vmEntityRegisters,
+                    _vmTargetRegisters,
+                    _vmCallStack,
+                    ref _cursor,
+                    TriggerGraphLimits.SliceBudgetSteps,
+                    GraphKind.Script,
+                    _debugTrace,
+                    mapScope,
+                    _graphId,
+                    _entryPayload,
+                    _invokeArgs);
+            }
+            finally
+            {
+                if (callbacks != null)
+                {
+                    callbacks.PopResumeTarget(this);
+                }
+            }
+
             LastSliceResult = result;
 
             RecordDebugTrace(result);
@@ -445,10 +522,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 _runActive = false;
                 _ranToHaltOnce = true;
+                _awaitingCallback = false;
                 return;
             }
 
             _runActive = true;
+            _awaitingCallback = result.Yielded && callbacks != null && callbacks.HasLiveWaiterForTarget(this);
             if (_cursor.Steps >= GraphVmLimits.MaxInstructionsPerExecution)
             {
                 throw new InvalidOperationException(
@@ -522,6 +601,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
+        /// <summary>
+        /// The mount scope's map binding, resolved once while the anchor is alive and
+        /// then authoritative for map variable ops — event casters such as EntityDied's
+        /// dying entity must never be the scope source. Mounts whose scope carries no
+        /// MapEntity resolve null and keep the executor's entity-scope contract.
+        /// </summary>
         private MapId? ResolveMapScopeOnce(TriggerGraphTriggerDependencies dependencies)
         {
             if (!_mapScopeResolved)
@@ -545,6 +630,50 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 : null;
         }
 
+        /// <summary>
+        /// Captures the named payload values this entry's event schema declares, keyed by
+        /// payload key string, so LoadEntryPayload* ops read stable values even though
+        /// slices may run ticks after the firing context is gone. Events without a schema
+        /// capture nothing and named reads from them fail closed at first use.
+        /// </summary>
+        private void CaptureEntryPayload(ScriptContext context, EventSchemaRegistry? schemas)
+        {
+            _entryPayload.Clear();
+            if (schemas == null || !schemas.TryGet(_entry.EventName, out EventSchema schema))
+            {
+                return;
+            }
+
+            for (int i = 0; i < schema.Params.Count; i++)
+            {
+                EventParamSchema param = schema.Params[i];
+                if (!context.Contains(param.PayloadKey))
+                {
+                    continue;
+                }
+
+                object raw = context.Get<object>(param.PayloadKey);
+                switch (param.Type)
+                {
+                    case EventParamType.Entity:
+                        _entryPayload.SetEntity(param.PayloadKey, (Entity)raw);
+                        break;
+                    case EventParamType.Int:
+                        _entryPayload.SetInt(param.PayloadKey, (int)raw);
+                        break;
+                    case EventParamType.Float:
+                        _entryPayload.SetFloat(param.PayloadKey, (float)raw);
+                        break;
+                    case EventParamType.String:
+                        // No string register contract yet; string params stay un-captured.
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"TriggerGraph '{_graphName}' entry '{_entry.Label}' payload key '{param.PayloadKey}' has unsupported type {param.Type}.");
+                }
+            }
+        }
+
         private static TriggerGraphTriggerDependencies ResolveDependencies(ScriptContext context)
         {
             GameEngine engine = context.Get(CoreServiceKeys.Engine)
@@ -553,8 +682,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GraphProgramRegistry.");
             GasGraphRuntimeApi graphApi = engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
                 ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GasGraphRuntimeApi.");
+            engine.TryGetService(CoreServiceKeys.EventSchemaRegistry, out EventSchemaRegistry? eventSchemas);
 
-            return new TriggerGraphTriggerDependencies(engine, programs, graphApi);
+            return new TriggerGraphTriggerDependencies(engine, programs, graphApi, eventSchemas);
         }
 
         private static Ludots.Platform.Abstractions.IntVector2 ResolveTargetPosCm(ScriptContext context)
@@ -618,7 +748,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly record struct TriggerGraphTriggerDependencies(
             GameEngine Engine,
             GraphProgramRegistry Programs,
-            GasGraphRuntimeApi GraphApi);
+            GasGraphRuntimeApi GraphApi,
+            EventSchemaRegistry? EventSchemas);
     }
 
     /// <summary>
@@ -639,7 +770,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             EventKey = owner.Domain == TriggerGraphMountDomain.Mod
                 ? GameEvents.ModTriggerResume
                 : GameEvents.MapHeartbeat;
-            Priority = 0;
+            Priority = owner.Priority;
         }
 
         public override string Name => $"{_owner.Name}:Resume";
@@ -647,7 +778,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public bool IsSuspended => _owner.IsSuspended;
 
         public override bool CheckConditions(ScriptContext context)
-            => _owner.IsSuspended && _owner.IsScopeDispatchable(context);
+            => _owner.IsSuspended && !_owner.IsAwaitingCallback && _owner.IsScopeDispatchable(context);
 
         public override Task ExecuteAsync(ScriptContext context)
         {

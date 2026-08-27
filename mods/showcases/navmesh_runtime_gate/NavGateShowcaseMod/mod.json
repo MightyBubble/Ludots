@@ -15,5 +15,5 @@
     "runtime-update",
     "vhtm"
   ],
-  "main": "bin/net8.0/NavGateShowcaseMod.dll"
+  "main": "bin/net9.0/NavGateShowcaseMod.dll"
 }

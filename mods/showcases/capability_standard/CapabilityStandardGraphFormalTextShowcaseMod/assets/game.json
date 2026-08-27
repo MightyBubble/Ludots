@@ -1,0 +1,14 @@
+{
+  "startupMapId": "capability_standard_graph_formal_text",
+  "windowTitle": "Ludots - 拼一句上字幕",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

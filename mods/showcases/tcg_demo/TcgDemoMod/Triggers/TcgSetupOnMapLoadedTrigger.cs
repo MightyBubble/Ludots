@@ -41,12 +41,17 @@ namespace TcgDemoMod.Triggers
                 ?? throw new InvalidOperationException(ResponseChainListenerOps.MissingQueueError);
             EnsureTagComponents(world);
 
-            int spellTagId = TagRegistry.Register("Effect.Tcg.Spell");
+            int spellCategoryId = EffectCategoryRegistry.GetId("Effect.Tcg.Spell");
+            if (spellCategoryId == EffectCategoryRegistry.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    "Effect category 'Effect.Tcg.Spell' is not registered. Declare it on effects.json categories before installing response-chain listeners.");
+            }
 
             if (hook || modify)
             {
                 var listener = default(ResponseChainListener);
-                listener.Add(spellTagId, hook ? ResponseType.Hook : ResponseType.Modify,
+                listener.Add(spellCategoryId, hook ? ResponseType.Hook : ResponseType.Modify,
                     priority: 100, modifyValue: 10, modifyOp: ModifierOp.Add);
 
                 Entity listenerEntity = world.Create(
@@ -59,7 +64,7 @@ namespace TcgDemoMod.Triggers
                 // Chain response: when a spell resolves, append CounterBlast as a chained effect
                 int counterBlastId = EffectTemplateIdRegistry.GetId("Effect.Tcg.CounterBlast");
                 var chainListener = default(ResponseChainListener);
-                chainListener.Add(spellTagId, ResponseType.Chain, priority: 50,
+                chainListener.Add(spellCategoryId, ResponseType.Chain, priority: 50,
                     effectTemplateId: counterBlastId);
 
                 Entity listenerEntity = world.Create(new Name { Value = "TcgChainListener" });

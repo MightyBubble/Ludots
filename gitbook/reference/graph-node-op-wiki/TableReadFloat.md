@@ -3,7 +3,7 @@
 同一行名册，读出这一击该扣多少血，木桩照单落账。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_TableReadFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_TableReadFloat/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_TableReadFloat/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_TableReadFloat/play.mp4。
 </video>
 
 ## 作者写法

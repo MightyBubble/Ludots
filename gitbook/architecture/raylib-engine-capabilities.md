@@ -61,7 +61,7 @@ Ludots 的 Raylib 桌面引擎适配器（`src/Client/Ludots.Raylib.Render` + `s
 - 环境配置：天空环境、雾、阴影、环境光 ramp 各自 JSON，装载期严格校验；
 - 太阳盘/光晕四参数（`RaylibSkyboxConfig`）双天空 shader 共享 `sun_disk.glsl.inc`。
 
-## 引擎画廊：20 场景一键验收
+## 引擎画廊：21 场景一键验收
 
 ```powershell
 .\scripts\run-mod-launcher.cmd cli launch preset:engine_raylib_lighting --adapter raylib
@@ -82,6 +82,7 @@ Ludots 的 Raylib 桌面引擎适配器（`src/Client/Ludots.Raylib.Render` + `s
 | `engine_raylib_skybox` / `engine_raylib_sky_daynight` | 天空两车道 |
 | `engine_raylib_water` / `engine_raylib_atmosphere_fog` / `engine_raylib_postprocess` | 水体/雾/后处理 |
 | `engine_raylib_particles` / `engine_raylib_ribbon_overlay` / `engine_raylib_skia_overlay` / `engine_raylib_debug_draw` | 粒子/ribbon/Skia/调试绘制 |
+| `engine_raylib_slash_trail` | TrailMeshBuffer 刀光轨迹 |
 
 每场景有验收六件套证据（截图 + stats），见「测试与验收」页。逐场景的演示讲解（截图 + 作者写法 + 怎么跑）见 [引擎画廊 Wiki](../reference/engine-gallery-wiki/README.md)（站内入口：Raylib 引擎画廊页）。
 
@@ -94,5 +95,5 @@ Ludots 的 Raylib 桌面引擎适配器（`src/Client/Ludots.Raylib.Render` + `s
 ## 深读
 
 - [渲染光照栈与下游使用指南](render-lighting-guide.md)——车道接线、IBL 实现细节、材质合同；
-- [引擎画廊 Wiki](../reference/engine-gallery-wiki/README.md)——20 场景逐场讲解（截图 + 作者写法 + 怎么跑）；
+- [引擎画廊 Wiki](../reference/engine-gallery-wiki/README.md)——21 场景逐场讲解（截图 + 作者写法 + 怎么跑）；
 - [Raylib 引擎能力标准化 Showcase](engine-capability-showcases.md)——能力矩阵与验收登记。

@@ -2026,7 +2026,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     new()
                     {
                         Priority = 10,
-                        Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithTag = "ability.catalog.weapon" },
+                        Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithCategory = "ability.catalog.weapon" },
                         Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
                         Route = new CommandIntentRouteDefinition { OrderTypeKey = "moveTo" },
                     },

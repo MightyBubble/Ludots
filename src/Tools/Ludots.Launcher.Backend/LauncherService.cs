@@ -12,6 +12,7 @@ namespace Ludots.Launcher.Backend;
 public sealed class LauncherService
 {
     private const int LaunchGraphSchemaVersion = 1;
+    private const string RuntimeTargetFramework = "net9.0";
     private static readonly JsonSerializerOptions BootstrapJsonWriteOptions = new() { WriteIndented = true };
     private static readonly JsonSerializerOptions GraphJsonWriteOptions = new()
     {
@@ -288,15 +289,34 @@ public sealed class LauncherService
         IEnumerable<string> selectors,
         string? adapterId = null,
         LauncherBuildMode buildMode = LauncherBuildMode.Always,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? browserProviderOverride = null)
     {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        var resolveResult = ResolvePlan(
+            resolvedSelectors,
+            adapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            LoadPresets(),
+            browserProviderOverride);
         WriteLaunchGraphDocument(resolveResult.Plan);
         return await BuildPlanRuntimeAsync(resolveResult.Plan, config, ct);
+    }
+
+    /// <summary>
+    /// 与 BuildExecutableTargetAsync 的 Never 语义对齐：预构建布局（玩家发行包）跳过 app 编译，
+    /// 避免玩家机需要 .NET SDK。
+    /// </summary>
+    private static bool ShouldSkipAppBuild(LauncherLaunchPlan plan)
+    {
+        return plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
+               !string.IsNullOrWhiteSpace(plan.AppAssemblyPath) &&
+               File.Exists(plan.AppAssemblyPath);
     }
 
     public async Task<LauncherBuildResult> BuildAppAsync(string platformId)
@@ -395,13 +415,21 @@ public sealed class LauncherService
     public async Task<LauncherLaunchResult> LaunchAsync(
         IEnumerable<string> selectors,
         string? adapterId = null,
-        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto,
+        string? browserProviderOverride = null)
     {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        var resolveResult = ResolvePlan(
+            resolvedSelectors,
+            adapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            LoadPresets(),
+            browserProviderOverride);
         if (resolveResult.Plan.IsExecutableTarget)
         {
             return await LaunchExecutableTargetAsync(resolveResult.Plan, config);
@@ -414,7 +442,9 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+        var appBuild = ShouldSkipAppBuild(resolveResult.Plan)
+            ? new LauncherBuildResult(resolveResult.Plan.AdapterId, true, 0, "App build skipped by request; using prebuilt assembly.")
+            : await BuildAppAsync(resolveResult.Plan.AdapterId);
         if (!appBuild.Ok)
         {
             return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
@@ -422,15 +452,19 @@ public sealed class LauncherService
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
         ReplacePreviousActiveProcess(resolveResult.Plan);
-        var startInfo = new ProcessStartInfo(
-            ResolveDotnetCommand(),
-            $"exec --roll-forward Major \"{resolveResult.Plan.AppAssemblyPath}\" \"{bootstrapPath}\"")
+        Process process;
+        try
         {
-            WorkingDirectory = resolveResult.Plan.AppOutputDirectory,
-            UseShellExecute = false
-        };
+            process = Process.Start(CreateAppStartInfo(
+                resolveResult.Plan.AppAssemblyPath,
+                resolveResult.Plan.AppOutputDirectory,
+                $"\"{bootstrapPath}\""));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, bootstrapPath, resolveResult.Plan);
+        }
 
-        var process = Process.Start(startInfo);
         if (process == null)
         {
             return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, bootstrapPath, resolveResult.Plan);
@@ -450,13 +484,19 @@ public sealed class LauncherService
         }
 
         ReplacePreviousActiveProcess(plan);
-        var startInfo = new ProcessStartInfo(ResolveDotnetCommand(), BuildExecutableTargetArguments(plan))
+        Process process;
+        try
         {
-            WorkingDirectory = plan.AppOutputDirectory,
-            UseShellExecute = false
-        };
+            process = Process.Start(CreateAppStartInfo(
+                plan.AppAssemblyPath,
+                plan.AppOutputDirectory,
+                BuildExecutableTargetArguments(plan)));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, string.Empty, plan);
+        }
 
-        var process = Process.Start(startInfo);
         if (process == null)
         {
             return new LauncherLaunchResult(false, "Failed to start executable target process.", -1, string.Empty, string.Empty, plan);
@@ -479,24 +519,122 @@ public sealed class LauncherService
         }
 
         ct.ThrowIfCancellationRequested();
-        var arguments = BuildExecutableTargetArguments(plan);
+        var (runnerFileName, runnerArguments) = BuildAppRunnerCommand(
+            plan.AppAssemblyPath,
+            BuildExecutableTargetArguments(plan));
         var run = await RunProcessAsync(
-            ResolveDotnetCommand(),
-            arguments,
+            runnerFileName,
+            runnerArguments,
             plan.AppOutputDirectory,
             timeoutMs: 300_000);
-        return new LauncherExecutableTargetRun($"{ResolveDotnetCommand()} {arguments}", run.ExitCode, run.Output);
+        return new LauncherExecutableTargetRun($"{runnerFileName} {runnerArguments}", run.ExitCode, run.Output);
     }
 
     private static string BuildExecutableTargetArguments(LauncherLaunchPlan plan)
     {
-        var arguments = new StringBuilder($"exec --roll-forward Major \"{plan.AppAssemblyPath}\"");
+        var arguments = new StringBuilder();
         foreach (var argument in plan.ExecutableArgs ?? Array.Empty<string>())
         {
-            arguments.Append(' ').Append(QuoteProcessArgument(argument));
+            if (arguments.Length > 0)
+            {
+                arguments.Append(' ');
+            }
+
+            arguments.Append(QuoteProcessArgument(argument));
         }
 
         return arguments.ToString();
+    }
+
+    /// <summary>
+    /// 自包含发布布局下 apphost 与应用 DLL 同目录：Windows 为 .exe，Unix 为无扩展名同名文件。
+    /// 存在则直启（玩家机无需安装 .NET 运行时）；否则要求可用的 dotnet（开发机布局），缺则显式失败。
+    /// </summary>
+    private static (string FileName, string Arguments) BuildAppRunnerCommand(string appAssemblyPath, string arguments)
+    {
+        var appHostPath = ResolveAppHostPath(appAssemblyPath);
+        if (appHostPath != null)
+        {
+            return (appHostPath, arguments);
+        }
+
+        var dotnet = ResolveDotnetCommand();
+        if (!IsUsableDotnetCommand(dotnet))
+        {
+            throw new InvalidOperationException(
+                $"App host executable not found next to '{appAssemblyPath}', and no usable dotnet is available. " +
+                "Prebuilt/player packages must ship the self-contained apphost next to the app DLL " +
+                "(Windows: *.exe; Linux/macOS: extensionless sibling); " +
+                "dev layouts require a runnable dotnet (launcher must run under dotnet, or dotnet must be on PATH).");
+        }
+
+        var dotnetArguments = string.IsNullOrWhiteSpace(arguments)
+            ? $"exec --roll-forward Major \"{appAssemblyPath}\""
+            : $"exec --roll-forward Major \"{appAssemblyPath}\" {arguments}";
+        return (dotnet, dotnetArguments);
+    }
+
+    private static string? ResolveAppHostPath(string appAssemblyPath)
+    {
+        var directory = Path.GetDirectoryName(appAssemblyPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return null;
+        }
+
+        var baseName = Path.GetFileNameWithoutExtension(appAssemblyPath);
+        if (OperatingSystem.IsWindows())
+        {
+            var windowsHost = Path.Combine(directory, baseName + ".exe");
+            return File.Exists(windowsHost) ? windowsHost : null;
+        }
+
+        // linux-x64 / osx-* self-contained：apphost 与 DLL 同名、无扩展名
+        var unixHost = Path.Combine(directory, baseName);
+        if (!File.Exists(unixHost))
+        {
+            return null;
+        }
+
+        if (string.Equals(Path.GetFullPath(unixHost), Path.GetFullPath(appAssemblyPath), StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return unixHost;
+    }
+
+    private static bool IsUsableDotnetCommand(string command)
+    {
+        if (!string.Equals(Path.GetFileName(command), "dotnet", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(Path.GetFileName(command), "dotnet.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return File.Exists(command);
+        }
+
+        // 裸 "dotnet"：必须真的能在 PATH 上找到
+        var pathVariable = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var extensions = OperatingSystem.IsWindows() ? new[] { ".exe", ".cmd", ".bat", "" } : new[] { "" };
+        return pathVariable.Split(Path.PathSeparator).Any(directory =>
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return false;
+            }
+
+            return extensions.Any(extension =>
+                File.Exists(Path.Combine(directory.Trim(), $"dotnet{extension}")));
+        });
+    }
+
+    private static ProcessStartInfo CreateAppStartInfo(string appAssemblyPath, string workingDirectory, string arguments)
+    {
+        var (fileName, fullArguments) = BuildAppRunnerCommand(appAssemblyPath, arguments);
+        return new ProcessStartInfo(fileName, fullArguments)
+        {
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false
+        };
     }
 
     private static string QuoteProcessArgument(string argument)
@@ -509,11 +647,22 @@ public sealed class LauncherService
         return $"\"{argument.Replace("\"", "\\\"")}\"";
     }
 
-    public LauncherResolveResult Resolve(IEnumerable<string> selectors, string? adapterId = null, LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    public LauncherResolveResult Resolve(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto,
+        string? browserProviderOverride = null)
     {
         var config = LoadConfig();
         var catalog = BuildCatalog(config);
-        var result = ResolvePlan(selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(), adapterId, buildMode, config, catalog, LoadPresets());
+        var result = ResolvePlan(
+            selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(),
+            adapterId,
+            buildMode,
+            config,
+            catalog,
+            LoadPresets(),
+            browserProviderOverride);
         WriteLaunchGraphDocument(result.Plan);
         return result;
     }
@@ -597,7 +746,8 @@ public sealed class LauncherService
         LauncherBuildMode buildMode,
         LauncherConfig config,
         CatalogIndex catalog,
-        LauncherPresetDocument presetDocument)
+        LauncherPresetDocument presetDocument,
+        string? browserProviderOverride = null)
     {
         if (selectors.Count == 0)
         {
@@ -654,7 +804,12 @@ public sealed class LauncherService
             .Select(entry => entry.Info.Id)
             .ToList();
         var diagnostics = BuildPlanDiagnostics(roots, ordered);
-        var browserRuntime = ResolveBrowserRuntimeConfig(selectors, presetDocument, diagnostics, config);
+        var browserRuntime = ResolveBrowserRuntimeConfig(
+            selectors,
+            presetDocument,
+            diagnostics,
+            config,
+            browserProviderOverride);
         var adapterDescriptor = BuildAdapterDescriptor(profile);
         var bootstrapArtifactPath = Path.Combine(profile.OutputDirectory, profile.RuntimeBootstrapFileName);
         var appAssemblyPath = ResolveAppAssemblyPath(profile);
@@ -934,7 +1089,7 @@ public sealed class LauncherService
             throw new InvalidOperationException($"Executable project path has no directory: {projectPath}");
         }
 
-        return Path.Combine(projectDirectory, "bin", "Release", "net8.0");
+        return Path.Combine(projectDirectory, "bin", "Release", RuntimeTargetFramework);
     }
 
     private static string ResolveExecutableAssemblyPath(string projectPath, string outputDirectory)
@@ -1026,12 +1181,31 @@ public sealed class LauncherService
         IReadOnlyList<string> selectors,
         LauncherPresetDocument presetDocument,
         LauncherPlanDiagnostics diagnostics,
-        LauncherConfig config)
+        LauncherConfig config,
+        string? browserProviderOverride = null)
     {
         BrowserRuntimeConfig? gameConfig = ResolveBrowserRuntimeFromDiagnostics(diagnostics);
         BrowserRuntimeConfig? presetConfig = ResolveBrowserRuntimeFromSelectors(selectors, presetDocument);
         BrowserRuntimeConfig? effective = presetConfig ?? gameConfig;
-        return effective == null ? null : CompleteHostBrowserRuntimeConfig(effective, config);
+        if (effective == null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(browserProviderOverride))
+        {
+            effective = CloneBrowserRuntimeConfig(effective);
+            effective.Provider = browserProviderOverride.Trim();
+            // Force host paths to be re-derived from the selected provider registration.
+            effective.ProviderAssemblyPath = string.Empty;
+            effective.ProviderHostTypeName = string.Empty;
+            effective.ProviderProjectPath = string.Empty;
+            effective.RuntimeRootPath = string.Empty;
+            effective.UseCollectibleLoadContext = null;
+            effective.ProcessSharedAssemblyNamePrefixes = Array.Empty<string>();
+        }
+
+        return CompleteHostBrowserRuntimeConfig(effective, config);
     }
 
     private static BrowserRuntimeConfig? ResolveBrowserRuntimeFromDiagnostics(LauncherPlanDiagnostics diagnostics)
@@ -1412,7 +1586,7 @@ public sealed class LauncherService
                 LauncherPlatformIds.Raylib,
                 "Raylib",
                 Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "Ludots.App.Raylib.csproj"),
-                Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0"),
+                Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", RuntimeTargetFramework),
                 string.Empty,
                 string.Empty,
                 string.Empty,
@@ -1421,7 +1595,7 @@ public sealed class LauncherService
                 LauncherPlatformIds.Web,
                 "Web",
                 Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "Ludots.App.Web.csproj"),
-                Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "bin", "Release", "net8.0"),
+                Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "bin", "Release", RuntimeTargetFramework),
                 Path.Combine(_repoRoot, "src", "Client", "Web"),
                 Path.Combine(_repoRoot, "src", "Client", "Web", "dist"),
                 "http://localhost:5200",
@@ -1884,6 +2058,41 @@ public sealed class LauncherService
                 }
             }
         }
+        else if (string.Equals(browserRuntime.Provider, "ultralight", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] requiredFiles =
+            {
+                "Ludots.UI.Browser.Ultralight.deps.json",
+                "Ludots.UI.Browser.Ultralight.dll",
+                "UltralightNet.dll",
+                "UltralightNet.Binaries.dll",
+                "UltralightNet.AppCore.dll",
+                "UltralightNet.AppCore.Binaries.dll"
+            };
+
+            foreach (string file in requiredFiles)
+            {
+                string path = Path.Combine(browserRuntime.RuntimeRootPath, file);
+                if (!File.Exists(path))
+                {
+                    message = $"Ultralight browser runtime package is incomplete. Missing: {path}";
+                    return false;
+                }
+            }
+
+            bool hasLinux = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "libUltralight.so")) ||
+                            File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "linux-x64", "native", "libUltralight.so"));
+            bool hasWindows = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "Ultralight.dll")) ||
+                              File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "win-x64", "native", "Ultralight.dll"));
+            bool hasMac = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "libUltralight.dylib")) ||
+                          File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "osx-x64", "native", "libUltralight.dylib"));
+            if (!hasLinux && !hasWindows && !hasMac)
+            {
+                message =
+                    $"Ultralight browser runtime package is incomplete. Missing native Ultralight libraries under '{browserRuntime.RuntimeRootPath}'.";
+                return false;
+            }
+        }
 
         message = string.Empty;
         return true;
@@ -1999,7 +2208,7 @@ public sealed class LauncherService
         var projectContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>{RuntimeTargetFramework}</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputPath>bin</OutputPath>
@@ -2686,7 +2895,7 @@ public sealed class LauncherService
 
     private string GetLudotsToolAssemblyPath()
     {
-        return Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "bin", "Release", "net8.0", "Ludots.Tool.dll");
+        return Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "bin", "Release", RuntimeTargetFramework, "Ludots.Tool.dll");
     }
 
     private async Task<(int ExitCode, string Output)> RunLudotsToolAsync(string arguments, int timeoutMs)

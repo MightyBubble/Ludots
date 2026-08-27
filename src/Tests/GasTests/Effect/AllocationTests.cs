@@ -31,7 +31,7 @@ namespace Ludots.Tests.GAS
                 mods.Add(attrId: 0, ModifierOp.Add, -1f);
                 templates.Register(1, new EffectTemplateData
                 {
-                    TagId = 0,
+                    CategoryId = 0,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -136,7 +136,7 @@ namespace Ludots.Tests.GAS
             var templates = new EffectTemplateRegistry();
             templates.Register(1, new EffectTemplateData
             {
-                TagId = 0,
+                CategoryId = 0,
                 PresetType = EffectPresetType.ApplyForce2D,
                 PresetAttribute0 = fxId,
                 PresetAttribute1 = fyId,
@@ -270,7 +270,7 @@ namespace Ludots.Tests.GAS
 
             EffectPhaseListenerBuffer listeners = default;
             That(listeners.TryAdd(
-                listenTagId: 0,
+                listenCategoryId: 0,
                 listenEffectId: 0,
                 EffectPhaseId.OnApply,
                 PhaseListenerScope.Target,
@@ -498,7 +498,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 0,
+                    effectCategoryId: 0,
                     effectTemplateId: 1);
             }
         }

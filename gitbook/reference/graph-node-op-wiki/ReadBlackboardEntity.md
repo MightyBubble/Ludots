@@ -3,7 +3,7 @@
 板上那格贴着木桩的画像，读出来就套住他。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/poster.png" src="artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/play.mp4。
 </video>
 
 ## 作者写法

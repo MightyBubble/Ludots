@@ -2,7 +2,7 @@
   "name": "CapabilityStandardTimeFlowShowcaseMod",
   "version": "1.0.0",
   "description": "Capability-standard TimeFlow showcase for pause and scale token stacks across settings, menu, skill indicator, system guide, MassNavigation, Physics2D, and GAS clocks.",
-  "main": "bin/net8.0/CapabilityStandardTimeFlowShowcaseMod.dll",
+  "main": "bin/net9.0/CapabilityStandardTimeFlowShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

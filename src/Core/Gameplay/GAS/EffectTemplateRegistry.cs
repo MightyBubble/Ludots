@@ -337,7 +337,8 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct EffectTemplateData
     {
-        public int TagId;
+        /// <summary>Effect category id (<see cref="Registry.EffectCategoryRegistry"/>); not a gameplay tag.</summary>
+        public int CategoryId;
         public EffectPresetType PresetType;
         public int PresetTypeId;
 

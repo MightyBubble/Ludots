@@ -12,11 +12,13 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Placement;
@@ -108,9 +110,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.Rng.RngPickService? _rngPickService;
         private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
+        private GraphPresentationTextSink? _presentationTextSink;
+        private PresentationTextCatalog? _presentationTextCatalog;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
+        private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
+        private Func<MapId, IReadOnlySet<string>?>? _regionCatalogResolver;
         private Ludots.Core.Scripting.TriggerManager? _triggerManager;
+        private Ludots.Core.GraphRuntime.GraphCallbackService? _graphCallbacks;
         private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
         private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
 
@@ -233,12 +240,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
+        /// Resolves a map id to its live placed-instance index (#1108). Bound by the engine
+        /// next to the variable-store resolver: LoadPlacedEntity reads the same session.
+        /// </summary>
+        public void BindPlacedInstanceIndexResolver(Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?> resolver)
+        {
+            _placedInstanceIndexResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
+        /// Resolves a map id to its authored Regions id set (#1108 LoadPlacedRegion).
+        /// Bound next to the placed-instance index; never writes into EntityIndex.
+        /// </summary>
+        public void BindRegionCatalogResolver(Func<MapId, System.Collections.Generic.IReadOnlySet<string>?> resolver)
+        {
+            _regionCatalogResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
         /// Binds the engine TriggerManager so graph programs can fire map-scoped trigger
         /// events via <see cref="FireEventKey"/>.
         /// </summary>
         public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
         {
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
+        }
+
+        /// <summary>
+        /// Binds #1126 AwaitCallback registration/completion service.
+        /// </summary>
+        public void BindGraphCallbackService(Ludots.Core.GraphRuntime.GraphCallbackService callbacks)
+        {
+            _graphCallbacks = callbacks ?? throw new ArgumentNullException(nameof(callbacks));
         }
 
         /// <summary>
@@ -355,6 +388,54 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RequirePanelHost().DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
         }
 
+        public void PushPresentationText(GraphPresentationTextSurface surface, ReadOnlySpan<char> text)
+        {
+            GraphPresentationTextSink sink = _presentationTextSink
+                ?? throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
+            sink.Push(surface, text);
+        }
+
+        public GraphPresentationTextSink? PresentationTextSink => _presentationTextSink;
+
+        public void BindPresentationTextSink(GraphPresentationTextSink sink)
+        {
+            _presentationTextSink = sink ?? throw new ArgumentNullException(nameof(sink));
+        }
+
+        public void BindPresentationTextCatalog(PresentationTextCatalog catalog)
+        {
+            _presentationTextCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        }
+
+        public ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)
+        {
+            PresentationTextCatalog catalog = _presentationTextCatalog
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PresentationTextCatalogUnavailable");
+
+            if (!catalog.TryGetTokenDefinition(tokenId, out PresentationTextTokenDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey token id {tokenId} is not registered in PresentationTextCatalog.");
+            }
+
+            if (definition.ArgCount != 0)
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey '{definition.Key}' declares argCount={definition.ArgCount}; " +
+                    "this slice only loads zero-argument tokens (FormatTextKey is a later op).");
+            }
+
+            int localeId = catalog.DefaultLocaleId;
+            if (localeId <= 0 ||
+                !catalog.TryGetTemplate(localeId, tokenId, out PresentationTextTemplate template))
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey '{definition.Key}' has no template for DefaultLocaleId={localeId}.");
+            }
+
+            return template.Source.AsSpan();
+        }
+
         private string ResolvePanelTypeName(int panelTypeId)
         {
             string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(panelTypeId);
@@ -373,6 +454,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
             => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
+
+        public bool TryGetPlacedEntity(int instanceKeyId, MapId mapId, out Entity entity)
+        {
+            var resolver = _placedInstanceIndexResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PlacedIndexUnavailable");
+            Ludots.Core.Systems.MapLoadEntityIndex index = resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.PlacedIndexUnavailable: map '{mapId.Value}' has no live placed-instance index.");
+            string instanceId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(instanceKeyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.PlacedInstanceNameUnknown: placed-instance op references unregistered config key id {instanceKeyId}.");
+            return index.TryGet(instanceId, out entity);
+        }
+
+        public bool TryHasPlacedRegion(int regionKeyId, MapId mapId)
+        {
+            var resolver = _regionCatalogResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.RegionCatalogUnavailable");
+            IReadOnlySet<string> catalog = resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.RegionCatalogUnavailable: map '{mapId.Value}' has no live region catalog.");
+            string regionId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(regionKeyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.PlacedRegionNameUnknown: LoadPlacedRegion references unregistered config key id {regionKeyId}.");
+            return catalog.Contains(regionId);
+        }
 
         /// <summary>
         /// Fires a config-key-named trigger event from a graph program in the scope entity's map.
@@ -396,6 +503,136 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             context.Set(ContextKeys.MapId, mapId);
             context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
             triggerManager.FireMapEvent(mapId, new EventKey(name), context);
+        }
+
+        /// <summary>
+        /// Structured map-event dispatch (#1115): assembles a ScriptContext from the StoreArg*
+        /// staging table per the event schema and fires it map-scoped. Fire-time
+        /// ValidateFirePayload backstops missing required params, type mismatches, and
+        /// undeclared MapTrigger.* keys.
+        /// </summary>
+        public void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs)
+        {
+            RejectDerivedAttributeSideEffect(nameof(FireMapEventPayload));
+            var triggerManager = _triggerManager
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+
+            EventSchema schema = RequireDispatchEventSchema(triggerManager, eventKeyId, out string name);
+
+            if (string.IsNullOrEmpty(mapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchMapEventNoMapScope: DispatchMapEvent '{name}' requires a map scope.");
+            }
+
+            ScriptContext context = BuildDispatchContext(schema, mapId, stagedArgs);
+
+            if (selfSource != Entity.Null && selfSource != default &&
+                schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.SourceEntity))
+            {
+                context.Set(MapTriggerEventPayloadKeys.SourceEntity, selfSource);
+            }
+
+            triggerManager.FireMapEvent(mapId, new EventKey(name), context);
+        }
+
+        /// <summary>
+        /// Global-scope dispatch (#1123): same schema-driven context assembly, then
+        /// TriggerManager.FireGlobalEvent — only the global subscription table sees it,
+        /// regardless of how many maps or map triggers are live. The origin map (mount
+        /// scope or caster anchor) rides MapTrigger.SourceMapId as transport metadata.
+        /// </summary>
+        public void FireGlobalEventPayload(int eventKeyId, MapId originMapId, GraphEntryPayloadTable? stagedArgs)
+        {
+            RejectDerivedAttributeSideEffect(nameof(FireGlobalEventPayload));
+            var triggerManager = _triggerManager
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+
+            EventSchema schema = RequireDispatchEventSchema(triggerManager, eventKeyId, out string name);
+
+            if (schema.Scope != EventScope.Global)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchEventScopeMismatch: DispatchMapEvent '{name}' global dispatch requires a " +
+                    $"Global-scope schema (declared '{schema.Scope}'); the compiler should have rejected this graph.");
+            }
+
+            ScriptContext context = BuildDispatchContext(schema, originMapId, stagedArgs);
+
+            triggerManager.FireGlobalEvent(new EventKey(name), context);
+        }
+
+        public void BeginAwaitCallback(string callbackType, MapId mapId, Entity scope, int resultBoolRegister)
+        {
+            RejectDerivedAttributeSideEffect(nameof(BeginAwaitCallback));
+            GraphCallbackService callbacks = _graphCallbacks
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.GraphCallbackUnavailable");
+            callbacks.BeginAwait(callbackType, mapId, scope, resultBoolRegister);
+        }
+
+        private static EventSchema RequireDispatchEventSchema(TriggerManager triggerManager, int eventKeyId, out string name)
+        {
+            name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(eventKeyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventKeyNameUnknown: DispatchMapEvent references unregistered config key id {eventKeyId}.");
+
+            EventSchemaRegistry? schemas = triggerManager.EventSchemas
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventSchemaUnavailable: DispatchMapEvent '{name}' requires the engine EventSchemaRegistry.");
+
+            if (!schemas.TryGet(name, out EventSchema schema))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventSchemaUnknown: DispatchMapEvent event '{name}' has no registered schema.");
+            }
+
+            return schema;
+        }
+
+        private static ScriptContext BuildDispatchContext(EventSchema schema, MapId mapId, GraphEntryPayloadTable? stagedArgs)
+        {
+            var context = new ScriptContext();
+            if (!string.IsNullOrEmpty(mapId.Value))
+            {
+                context.Set(ContextKeys.MapId, mapId);
+                context.Set(MapTriggerEventPayloadKeys.SourceMapId, mapId);
+            }
+
+            for (int i = 0; i < schema.Params.Count; i++)
+            {
+                EventParamSchema param = schema.Params[i];
+                if (stagedArgs == null)
+                {
+                    continue;
+                }
+
+                switch (param.Type)
+                {
+                    case EventParamType.Entity:
+                        if (stagedArgs.TryGetEntity(param.PayloadKey, out Entity entityValue))
+                        {
+                            context.Set(param.PayloadKey, entityValue);
+                        }
+
+                        break;
+                    case EventParamType.Int:
+                        if (stagedArgs.TryGetInt(param.PayloadKey, out int intValue))
+                        {
+                            context.Set(param.PayloadKey, intValue);
+                        }
+
+                        break;
+                    case EventParamType.Float:
+                        if (stagedArgs.TryGetFloat(param.PayloadKey, out float floatValue))
+                        {
+                            context.Set(param.PayloadKey, floatValue);
+                        }
+
+                        break;
+                }
+            }
+
+            return context;
         }
 
         /// <summary>

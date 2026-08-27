@@ -44,7 +44,17 @@ public sealed partial class EntityInfoPanelService
 
     public string ResolveTextTokenKey(string tokenKey) => _insightTextResolver.ResolveRequiredTokenKey(tokenKey);
     public string ResolveTextTokenId(int tokenId) => _insightTextResolver.ResolveRequiredTokenId(tokenId);
-    public string BuildInsightPortraitIconUri(EntityInsightProfile profile) => _insightIconFactory.Build(profile.PortraitGlyph, profile.AccentColorHex, profile.SurfaceColorHex, emphatic: true);
+    public string BuildInsightPortraitIconUri(EntityInsightProfile profile)
+    {
+        if (_displayResolver != null &&
+            !string.IsNullOrWhiteSpace(profile.PortraitImageId) &&
+            _displayResolver.TryResolveImageSource(profile.PortraitImageId, out string source))
+        {
+            return source;
+        }
+
+        return _insightIconFactory.Build(profile.PortraitGlyph, profile.AccentColorHex, profile.SurfaceColorHex, emphatic: true);
+    }
     public string BuildInsightGenreIconUri(EntityInsightProfile profile) => _insightIconFactory.Build(profile.GenreGlyph, profile.AccentColorHex, profile.SurfaceColorHex);
     public string BuildInsightGlyphIconUri(string glyph, string accentHex, string surfaceHex, bool emphatic = false) => _insightIconFactory.Build(glyph, accentHex, surfaceHex, emphatic);
 

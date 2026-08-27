@@ -3,7 +3,7 @@
 点到 2 号那行，册上记着三颗星，照数挂印。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_TableReadInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_TableReadInt/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_TableReadInt/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_TableReadInt/play.mp4。
 </video>
 
 ## 作者写法

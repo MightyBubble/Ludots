@@ -1,0 +1,85 @@
+[
+  {
+    "id": "showcase.graph_op.AwaitCallback",
+    "kind": "Script",
+    "entry": "askConfirm",
+    "nodes": [
+      {
+        "id": "askConfirm",
+        "op": "AwaitCallback",
+        "callbackType": "DialogConfirm"
+      },
+      {
+        "id": "gate",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "yesOne",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 0
+      },
+      {
+        "id": "doneYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "noZero",
+        "op": "ConstInt",
+        "intValue": 0,
+        "pinRegister": 0
+      },
+      {
+        "id": "doneNo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "askConfirm",
+        "fromPort": "next",
+        "to": "gate"
+      },
+      {
+        "from": "gate",
+        "fromPort": "true",
+        "to": "yesOne"
+      },
+      {
+        "from": "gate",
+        "fromPort": "false",
+        "to": "noZero"
+      },
+      {
+        "from": "yesOne",
+        "fromPort": "next",
+        "to": "doneYes"
+      },
+      {
+        "from": "noZero",
+        "fromPort": "next",
+        "to": "doneNo"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "askConfirm",
+        "fromPort": "value",
+        "to": "gate",
+        "toPort": "condition"
+      },
+      {
+        "from": "yesOne",
+        "fromPort": "value",
+        "to": "doneYes",
+        "toPort": "value"
+      },
+      {
+        "from": "noZero",
+        "fromPort": "value",
+        "to": "doneNo",
+        "toPort": "value"
+      }
+    ]
+  }
+]

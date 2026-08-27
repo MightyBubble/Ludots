@@ -69,6 +69,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public OwnershipResolver? Ownership { get; private set; }
     public KnowledgeProjectionStore Knowledge { get; private set; } = null!;
     public GameplayEventBus EventBus { get; private set; } = null!;
+    public GraphCallbackService GraphCallbacks { get; private set; } = null!;
     public ISpatialCoordinateConverter Coords { get; private set; } = null!;
     public GraphOpsNodeGallerySymbolResolver Resolver { get; private set; } = null!;
 
@@ -80,7 +81,10 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         host.EntityIndex = engine.CurrentMapSession?.EntityIndex
             ?? throw new InvalidOperationException(
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
-        host.FinishResolver(Path.Combine(assetsRoot, "GraphTables"), engine.GetService(CoreServiceKeys.RngPickService));
+        host.FinishResolver(
+            Path.Combine(assetsRoot, "GraphTables"),
+            engine.GetService(CoreServiceKeys.RngPickService),
+            engine.GetService(CoreServiceKeys.PresentationTextCatalog));
         GraphOpsNodeGallerySymbolResolver.RegisterAuthoredCompileSymbols(assetsRoot);
         return host;
     }
@@ -167,6 +171,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Collections = Collections,
             TagOps = TagOps,
             EventBus = EventBus,
+            GraphCallbacks = GraphCallbacks,
             Ownership = Ownership,
             Knowledge = Knowledge,
             Coords = Coords,
@@ -227,6 +232,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         spatialQueries.SetCoordinateConverter(Coords);
         EventBus = engine.EventBus
             ?? throw new InvalidOperationException("Node gallery requires engine EventBus.");
+        GraphCallbacks = RequireEngineService(engine, CoreServiceKeys.GraphCallbackService);
         EffectRequests = RequireEngineService(engine, CoreServiceKeys.EffectRequestQueue);
         TagOps = RequireEngineService(engine, CoreServiceKeys.TagOps);
         Relationships = RequireEngineService(engine, CoreServiceKeys.RelationshipRuntime);
@@ -256,7 +262,10 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         TeamManager.SetRelationship(2, 1, TeamRelationship.Hostile);
     }
 
-    private void FinishResolver(string? graphTablesDir, Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null)
+    private void FinishResolver(
+        string? graphTablesDir,
+        Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
+        Ludots.Core.Presentation.Hud.PresentationTextCatalog? presentationTextCatalog = null)
     {
         Resolver = new GraphOpsNodeGallerySymbolResolver(
             Templates,
@@ -266,7 +275,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             RelationshipReasons,
             DispatchPresets,
             graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir),
-            rngPicks);
+            rngPicks,
+            presentationTextCatalog);
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)

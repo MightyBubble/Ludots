@@ -75,7 +75,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
 
       - name: Build maintained test project graphs
@@ -152,7 +151,9 @@ jobs:
             'FullyQualifiedName~FormationCapabilityMoveBatch_SharedOrderIdPreservesRelativeLayout',
             'FullyQualifiedName~FormationCapabilityOrderBatch_',
             'FullyQualifiedName~OrderIngestion_RouteEnabledWithoutConfiguredAgentType',
-            'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields'
+            'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields',
+            'FullyQualifiedName~PresentationRequestChannelTests',
+            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests'
           ) -join '|'
 
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.MassNavigation;
 using Ludots.Core.Modding;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Scripting;
@@ -31,6 +32,14 @@ public sealed class MassNavigationModEntry : IMod
         GameEngine engine = context.GetEngine()
             ?? throw new InvalidOperationException("MassNavigationMod requires a live GameEngine.");
         if (engine.GlobalContext.ContainsKey(MovePlanOrderAdapterInstalledKey))
+        {
+            return Task.CompletedTask;
+        }
+
+        // MovePlan order adapter anchors on MassNavigationMovePlanExecutionSystem, which is only
+        // installed when MassNavigationRuntime focuses a matching mapId. Maps that deliberately
+        // disable MassNav (mismatched MassNavigationConfig.mapId) must skip adapter insertion.
+        if (!MassNavigationIds.IsCurrentNavigationMap(engine))
         {
             return Task.CompletedTask;
         }

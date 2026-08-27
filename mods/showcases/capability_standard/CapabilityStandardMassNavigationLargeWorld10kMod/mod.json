@@ -2,7 +2,7 @@
   "name": "CapabilityStandardMassNavigationLargeWorld10kMod",
   "version": "1.0.0",
   "description": "Standard capability acceptance entry for the large-world 10K MassNavigation presenter showcase.",
-  "main": "bin/net8.0/CapabilityStandardMassNavigationLargeWorld10kMod.dll",
+  "main": "bin/net9.0/CapabilityStandardMassNavigationLargeWorld10kMod.dll",
   "priority": -2000,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -3,7 +3,7 @@
 一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/poster.png" src="artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4。
 </video>
 
 ## 作者写法

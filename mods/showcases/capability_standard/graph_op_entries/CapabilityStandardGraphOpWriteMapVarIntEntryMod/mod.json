@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpWriteMapVarIntEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp WriteMapVarInt player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpWriteMapVarIntEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpWriteMapVarIntEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

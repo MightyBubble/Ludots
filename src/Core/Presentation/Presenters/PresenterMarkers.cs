@@ -23,4 +23,5 @@ namespace Ludots.Core.Presentation.Presenters
     public struct PerfRetainedPresentationRequestLifecycleTick {}
     public struct PerfMaterialDirty {}
     public struct PresenterEmitDirty {}
+    public struct PerfHasTrailMesh {}
 }

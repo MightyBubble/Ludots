@@ -1,0 +1,32 @@
+[
+  {
+    "id": "map.speaker.warden",
+    "domain": "Speaker",
+    "key": "speaker.warden",
+    "textToken": "story.speaker.warden.name"
+  },
+  {
+    "id": "map.speaker.player",
+    "domain": "Speaker",
+    "key": "speaker.player",
+    "textToken": "story.speaker.player.name"
+  },
+  {
+    "id": "map.speaker.shrine",
+    "domain": "Speaker",
+    "key": "speaker.shrine",
+    "textToken": "story.speaker.shrine.name"
+  },
+  {
+    "id": "map.ending.mercy",
+    "domain": "Enum",
+    "key": "ending.mercy",
+    "textToken": "story.ending.mercy"
+  },
+  {
+    "id": "map.ending.duty",
+    "domain": "Enum",
+    "key": "ending.duty",
+    "textToken": "story.ending.duty"
+  }
+]

@@ -9,12 +9,12 @@ rts 底座效果表节选（真实）：一条 Buff、一条即时伤害：
 ```json
 [
   { "id": "Effect.Rts.RedAlert.Construction",
-    "tags": ["Effect.Rts.RedAlert.Construction"],
+    "categories": ["Effect.Rts.RedAlert.Construction"],
     "presetType": "Buff", "lifetime": "After", "participatesInResponse": false,
     "duration": { "durationTicks": 45, "periodTicks": 0, "clockId": "FixedFrame" },
     "grantedTags": [ { "tag": "State.Rts.RedAlert.Constructing", "formula": "Fixed", "amount": 1 } ] },
   { "id": "Effect.Rts.RedAlert.CostPowerPlantStep",
-    "tags": ["Effect.Rts.RedAlert.Cost"],
+    "categories": ["Effect.Rts.RedAlert.Cost"],
     "presetType": "InstantDamage", "lifetime": "Instant", "participatesInResponse": false,
     "modifiers": [ { "attribute": "Credits", "op": "Add", "value": -62.5 } ] }
 ]
@@ -25,7 +25,7 @@ rts 底座效果表节选（真实）：一条 Buff、一条即时伤害：
 | 字段 | 这样配会产生什么效果 |
 |---|---|
 | `id` | 模板身份；与所在条目 id 逐字一致，不一致启动失败 |
-| `tags` | 效果身份标签，至多一枚 |
+| `categories` | 效果分类（至多一枚）；进 `EffectCategoryRegistry`，**不是**玩法 Tag |
 | `presetType` | 必填；按 preset_types 注册表→内建枚举序解析（fx-03） |
 | `lifetime` | 必填，精确三值 Instant / After / Infinite（fx-04） |
 | `participatesInResponse` | 必填布尔；false 的效果不收响应链回应（fx-07） |

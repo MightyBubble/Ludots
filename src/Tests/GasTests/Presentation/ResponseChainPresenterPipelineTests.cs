@@ -41,7 +41,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplRoot, new EffectTemplateData
                 {
-                    TagId = tag,
+                    CategoryId = tag,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -151,7 +151,7 @@ namespace Ludots.Tests.GAS
             var templates = new EffectTemplateRegistry();
             templates.Register(tplRoot, new EffectTemplateData
             {
-                TagId = tag,
+                CategoryId = tag,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
                 ParticipatesInResponse = true,

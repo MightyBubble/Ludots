@@ -1,0 +1,22 @@
+[
+  {
+    "id": "showcase.graph_op.IntToText",
+    "kind": "Script",
+    "entry": "num",
+    "nodes": [
+      { "id": "num", "op": "ConstInt", "intValue": 7 },
+      { "id": "featured", "op": "IntToText" },
+      { "id": "sink", "op": "SinkPresentationText", "presentationSurface": "Subtitle" },
+      { "id": "done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "num", "fromPort": "next", "to": "featured" },
+      { "from": "featured", "fromPort": "next", "to": "sink" },
+      { "from": "sink", "fromPort": "next", "to": "done" }
+    ],
+    "valueEdges": [
+      { "from": "num", "fromPort": "value", "to": "featured", "toPort": "a" },
+      { "from": "featured", "fromPort": "value", "to": "sink", "toPort": "a" }
+    ]
+  }
+]

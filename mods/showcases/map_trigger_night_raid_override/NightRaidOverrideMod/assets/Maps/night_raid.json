@@ -5,10 +5,26 @@
       "name": "kill_threshold",
       "type": "int",
       "initial": 2
+    },
+    {
+      "name": "probe_last_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "probe_hero_entered",
+      "type": "int",
+      "initial": 0
     }
   ],
   "TriggerGraphs": [
-    { "graph": "Graph.NightRaid.Override", "scopeInstanceId": "night_raid_hero" },
-    { "graph": "Graph.NightRaid.Override.GlobalObserver", "route": "global" }
+    {
+      "graph": "Graph.NightRaid.Override",
+      "scopeInstanceId": "night_raid_hero"
+    },
+    {
+      "graph": "Graph.NightRaidOverride.SchemaProbe",
+      "scopeInstanceId": "night_raid_hero"
+    }
   ]
 }

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "showcase.graph_op.LoadPlacedAnchor",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "roll_call",
+        "event": "MapLoaded",
+        "start": "readAnchor"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "readAnchor",
+        "op": "LoadPlacedAnchor",
+        "instanceId": "camp_anchor"
+      },
+      {
+        "id": "readHealth",
+        "op": "LoadAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "writeHealth",
+        "op": "WriteMapVarFloat",
+        "var": "gallery.anchor_health"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      { "from": "readAnchor", "fromPort": "next", "to": "readHealth" },
+      { "from": "readHealth", "fromPort": "next", "to": "writeHealth" },
+      { "from": "writeHealth", "fromPort": "next", "to": "done" }
+    ],
+    "valueEdges": [
+      { "from": "readAnchor", "fromPort": "value", "to": "readHealth", "toPort": "source" },
+      { "from": "readAnchor", "fromPort": "value", "to": "writeHealth", "toPort": "source" },
+      { "from": "readHealth", "fromPort": "value", "to": "writeHealth", "toPort": "value" }
+    ]
+  }
+]

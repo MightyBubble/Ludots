@@ -5,7 +5,7 @@
 ## 1. 现状快照
 
 - 加载入口：默认根 `GAS/abilities.json`，ArrayById 按 id 收集，**按 id 排序后注册**；单条失败聚合为 AggregateException 一次抛出（不中断扫描）。
-- 顶层块：exec 必填；cooldown（valueAttribute 须已注册 + tag 至少其一）；blockTags{requiredAll,blockedAny}；catalogTags 纯分类；interactionContextProfile 非空 Trim；activationPrecondition.validationGraph 必填已注册；toggleSpec（toggleTag 必填、activeEffects ≤4、deactivateExec 可选）；targeting（castRangeCm 必填非负 0=自施、impactEffect 必填已注册）；presentation（九字段，全空→null，mode 键须解析为 InteractionModeType）；input（五字段至少一项）；useRequirement/showRequirement 未知名抛。
+- 顶层块：exec 必填；cooldown（valueAttribute 须已注册 + tag 至少其一）；blockTags{requiredAll,blockedAny}；categories 纯分类（AbilityCategoryRegistry）；interactionContextProfile 非空 Trim；activationPrecondition.validationGraph 必填已注册；toggleSpec（toggleTag 必填、activeEffects ≤4、deactivateExec 可选）；targeting（castRangeCm 必填非负 0=自施、impactEffect 必填已注册）；presentation（九字段，全空→null，mode 键须解析为 InteractionModeType）；input（五字段至少一项）；useRequirement/showRequirement 未知名抛。
 - 专门报错的历史字段：indicator、onActivateEffects、瞄准表现族（aimVisual/areaPerformerId/rangeCirclePerformerId/previewPerformerId/performerId 递归扫描拒）、四项改名（cooldown.cooldownValueAttribute→valueAttribute、cooldown.cooldownTag→tag、toggleSpec.tag→toggleTag、targeting.range→castRangeCm）、clockId "Turn" 已移除。
 - presentation token：必须已注册且 locale 有模板，拒 Unknown 与 `Ability#` 前缀兜底键。
 

@@ -2,7 +2,7 @@
   "name": "RoadNetworkShowcaseMod",
   "version": "1.0.0",
   "description": "Chunked road-network RTS showcase with loaded-graph pathing, capture points, and spline road rendering.",
-  "main": "bin/net8.0/RoadNetworkShowcaseMod.dll",
+  "main": "bin/net9.0/RoadNetworkShowcaseMod.dll",
   "priority": -2000,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

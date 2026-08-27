@@ -2,7 +2,7 @@
   "name": "EntityCommandPanelShowcaseMod",
   "version": "1.0.0",
   "description": "Showcase for trigger-controlled, multi-instance entity command panels over the interaction sandbox.",
-  "main": "bin/net8.0/EntityCommandPanelShowcaseMod.dll",
+  "main": "bin/net9.0/EntityCommandPanelShowcaseMod.dll",
   "priority": 180,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "graph_formal_text_guard",
+    "components": {
+      "Name": { "Value": "倒下的守卫" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } },
+      "AttributeBuffer": { "base": { "Health": 100 }, "current": { "Health": 0 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]

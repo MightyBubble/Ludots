@@ -815,7 +815,21 @@ namespace Ludots.Core.Input.Orders
 
         private static int ResolveSemanticEventKeyId(in EffectTemplateData effect)
         {
-            return effect.TagId > 0 ? effect.TagId : 0;
+            if (effect.CategoryId <= 0)
+            {
+                return 0;
+            }
+
+            string categoryName = EffectCategoryRegistry.GetName(effect.CategoryId);
+            if (string.IsNullOrWhiteSpace(categoryName))
+            {
+                throw new InvalidOperationException(
+                    $"Effect category id {effect.CategoryId} has no registered name; cannot publish AbilityAim semantic preview key.");
+            }
+
+            // Presenter AbilityAim* rules register the category *name* into PresentationEventKeyRegistry.
+            // Never publish EffectCategoryRegistry ids as presentation KeyId — different identity tables.
+            return ResolveEventKeyId(categoryName);
         }
 
         private static string ResolveActiveAreaEventKey(in TargetQueryDescriptor query)
@@ -838,15 +852,15 @@ namespace Ludots.Core.Input.Orders
 
         private static int ResolveEventKeyId(string key)
         {
-            int existing = TagRegistry.GetId(key);
-            return existing > 0 ? existing : TagRegistry.Register(key);
+            int existing = PresentationEventKeyRegistry.GetId(key);
+            return existing > 0 ? existing : PresentationEventKeyRegistry.Register(key);
         }
 
         private static int ResolveActionKeyId(string actionId)
         {
             return string.IsNullOrWhiteSpace(actionId)
                 ? 0
-                : TagRegistry.Register($"input.action.{actionId.Trim()}");
+                : PresentationEventKeyRegistry.Register($"input.action.{actionId.Trim()}");
         }
 
         private static Entity ResolveViewer(Entity actor, in AbilityAimInputState input)

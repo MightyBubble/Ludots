@@ -75,6 +75,19 @@ namespace Ludots.Core.Config
         public List<MapVariableDeclaration> Variables { get; set; } = new List<MapVariableDeclaration>();
 
         /// <summary>
+        /// Placed-instance exposure policy for graph authoring (#1108): "all" (default)
+        /// exposes every placed instance; "declared" narrows variable materialization to
+        /// <see cref="WatchedInstances"/>. The declared branch fails closed at map load
+        /// until the HITL threshold decision lands; it never narrows #1106 event subscription.
+        /// </summary>
+        public string InstanceExposure { get; set; }
+
+        /// <summary>
+        /// Watch-list backing the "declared" <see cref="InstanceExposure"/> policy (#1108).
+        /// </summary>
+        public List<string> WatchedInstances { get; set; } = new List<string>();
+
+        /// <summary>
         /// Data-declared death rule: when the declared attribute's current value reaches
         /// zero, map entities go through the destroy pipeline, feeding EntityDied /
         /// EntityAliveCountChanged for TriggerGraphs. Null = no death policy.

@@ -19,15 +19,26 @@ namespace Ludots.Core.UI.PanelHosting
     {
         private readonly PanelTemplateRegistry _templates;
         private readonly PanelProjectionReader _reader;
+        private readonly PanelListProjector? _listProjector;
         private readonly List<Entry> _entries = new();
         private readonly Stack<int> _freeSlots = new();
 
         public PanelHost(PanelTemplateRegistry templates, PanelProjectionReader reader, IPanelGraphEvaluator? graphEvaluator = null)
+            : this(templates, reader, graphEvaluator, listProjector: null)
+        {
+        }
+
+        public PanelHost(
+            PanelTemplateRegistry templates,
+            PanelProjectionReader reader,
+            IPanelGraphEvaluator? graphEvaluator,
+            PanelListProjector? listProjector)
         {
             _writerThreadId = Environment.CurrentManagedThreadId;
             _templates = templates ?? throw new ArgumentNullException(nameof(templates));
             _reader = reader ?? throw new ArgumentNullException(nameof(reader));
             _graphEvaluator = graphEvaluator;
+            _listProjector = listProjector;
         }
 
         private readonly IPanelGraphEvaluator? _graphEvaluator;
@@ -106,7 +117,8 @@ namespace Ludots.Core.UI.PanelHosting
             for (int i = 0; i < _entries.Count; i++)
             {
                 Entry entry = _entries[i];
-                if (!entry.Alive || !entry.HasRealtime)
+                bool hasCollections = entry.Template.Collections.Count > 0;
+                if (!entry.Alive || (!entry.HasRealtime && !hasCollections))
                 {
                     continue;
                 }
@@ -146,6 +158,12 @@ namespace Ludots.Core.UI.PanelHosting
                     }
                 }
 
+                if (hasCollections)
+                {
+                    ProjectLists(entry);
+                    changed = true;
+                }
+
                 if (changed)
                 {
                     touched++;
@@ -165,6 +183,30 @@ namespace Ludots.Core.UI.PanelHosting
             }
 
             values = null!;
+            return false;
+        }
+
+        public bool TryGetListProjections(PanelInstanceHandle handle, out IReadOnlyList<PanelListProjection> lists)
+        {
+            if (TryGetEntry(handle, out Entry? entry))
+            {
+                lists = entry.ListProjections;
+                return true;
+            }
+
+            lists = Array.Empty<PanelListProjection>();
+            return false;
+        }
+
+        public bool TryGetTemplate(PanelInstanceHandle handle, out PanelTemplate template)
+        {
+            if (TryGetEntry(handle, out Entry? entry))
+            {
+                template = entry.Template;
+                return true;
+            }
+
+            template = null!;
             return false;
         }
 
@@ -263,7 +305,71 @@ namespace Ludots.Core.UI.PanelHosting
                 entry.HasRealtime |= pin.Realtime;
             }
 
+            ProjectLists(entry);
             entry.Revision = revision;
+        }
+
+        private void ProjectLists(Entry entry)
+        {
+            if (_listProjector == null || entry.Template.Collections.Count == 0)
+            {
+                entry.ListProjections = Array.Empty<PanelListProjection>();
+                return;
+            }
+
+            if (PanelListProjector.TemplateUsesVirtualizedList(entry.Template))
+            {
+                var counts = new List<PanelListProjection>(entry.Template.Collections.Count);
+                foreach (PanelCollectionBinding collection in entry.Template.Collections)
+                {
+                    int total = _listProjector.CountMembers(entry.Scope, collection);
+                    counts.Add(new PanelListProjection(
+                        collection.Name,
+                        Array.Empty<PanelListItemProjection>(),
+                        totalCount: total,
+                        startIndex: 0));
+                }
+
+                entry.ListProjections = counts;
+                return;
+            }
+
+            entry.ListProjections = _listProjector.Project(entry.Scope, entry.Template);
+        }
+
+        /// <summary>
+        /// Windowed element projection for virtualized lists. Non-virtual templates may
+        /// also call this; pass <see cref="PanelListViewWindow.All"/> for the full set.
+        /// </summary>
+        public bool TryProjectListWindow(
+            PanelInstanceHandle handle,
+            string collectionName,
+            PanelListViewWindow window,
+            out PanelListProjection projection)
+        {
+            projection = new PanelListProjection(collectionName, Array.Empty<PanelListItemProjection>(), 0);
+            if (_listProjector == null || !TryGetEntry(handle, out Entry? entry) || entry == null)
+            {
+                return false;
+            }
+
+            PanelCollectionBinding? collection = null;
+            for (int i = 0; i < entry.Template.Collections.Count; i++)
+            {
+                if (string.Equals(entry.Template.Collections[i].Name, collectionName, StringComparison.Ordinal))
+                {
+                    collection = entry.Template.Collections[i];
+                    break;
+                }
+            }
+
+            if (collection == null)
+            {
+                return false;
+            }
+
+            projection = _listProjector.ProjectCollectionWindow(entry.Scope, collection, window);
+            return true;
         }
 
         /// <summary>
@@ -349,6 +455,7 @@ namespace Ludots.Core.UI.PanelHosting
             public int ZOrder { get; }
             public Dictionary<string, float> Values { get; }
             public Dictionary<string, uint> Revisions { get; }
+            public IReadOnlyList<PanelListProjection> ListProjections { get; set; } = Array.Empty<PanelListProjection>();
             public uint Revision { get; set; }
             public int Generation { get; set; }
             public bool Alive { get; set; } = true;

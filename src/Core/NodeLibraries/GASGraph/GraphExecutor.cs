@@ -154,6 +154,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             GraphExecutionState state = frame.CreateState();
+            if (TryExecuteGenerated(ref frame, ref state))
+            {
+                frame.Cursor.CallStackCount = state.CallStackCount;
+                frame.Cursor.ReturnInt = state.ReturnInt;
+                frame.Cursor.InvokeDepth = state.InvokeDepth;
+                frame.Cursor.Status = state.Status;
+                frame.TargetList = state.TargetList;
+                return;
+            }
+
             GasGraphOpHandlerTable.Execute(ref state, program, table);
             frame.Cursor.CallStackCount = state.CallStackCount;
             frame.Cursor.ReturnInt = state.ReturnInt;
@@ -184,6 +194,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             GraphExecutionState state = frame.CreateState();
+            if (TryExecuteGeneratedSlice(ref frame, ref state, budgetSteps, out GraphSliceResult generated))
+            {
+                frame.TargetList = state.TargetList;
+                return generated;
+            }
+
             GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
                 ref state,
                 program,
@@ -192,6 +208,45 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 budgetSteps);
             frame.TargetList = state.TargetList;
             return result;
+        }
+
+        private static bool TryExecuteGenerated(ref GraphFrame frame, ref GraphExecutionState state)
+        {
+            if (frame.Programs == null || frame.GraphId <= 0)
+            {
+                return false;
+            }
+
+            if (!frame.Programs.TryGetRegistration(frame.GraphId, out GraphProgramRegistration registration) ||
+                registration.GeneratedExecute == null)
+            {
+                return false;
+            }
+
+            registration.GeneratedExecute(ref state);
+            return true;
+        }
+
+        private static bool TryExecuteGeneratedSlice(
+            ref GraphFrame frame,
+            ref GraphExecutionState state,
+            int budgetSteps,
+            out GraphSliceResult result)
+        {
+            result = default;
+            if (frame.Programs == null || frame.GraphId <= 0)
+            {
+                return false;
+            }
+
+            if (!frame.Programs.TryGetRegistration(frame.GraphId, out GraphProgramRegistration registration) ||
+                registration.GeneratedExecuteSlice == null)
+            {
+                return false;
+            }
+
+            result = registration.GeneratedExecuteSlice(ref state, ref frame.Cursor, budgetSteps);
+            return true;
         }
 
         public static void ExecuteRegistered(
@@ -214,6 +269,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             frame.Programs = programs;
+            frame.GraphId = graphId;
             Execute(ref frame, program, programAlreadyValidated: true);
         }
 
@@ -244,7 +300,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 world,
                 caster,
                 explicitTarget,
-                api);
+                api,
+                graphId);
         }
 
         public static GraphSliceResult ExecuteResolvedRegisteredScriptSlice(
@@ -258,7 +315,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             World? world = null,
             Entity caster = default,
             Entity explicitTarget = default,
-            IGraphRuntimeApi? api = null)
+            IGraphRuntimeApi? api = null,
+            int graphId = 0)
         {
             ArgumentNullException.ThrowIfNull(programs);
             if (program.Length == 0)
@@ -271,7 +329,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
             GraphSliceResult result = ExecuteResolvedRegisteredScriptSlice(
                 programs, program, floats, ints, bools, entities, targets, callStack, ref cursor,
-                budgetSteps, world, caster, explicitTarget, api);
+                budgetSteps, world, caster, explicitTarget, api, graphId);
             if (!result.Halted)
             {
                 throw new InvalidOperationException("Resumable Script execution requires caller-owned float, entity, and target register spans.");
@@ -293,7 +351,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             World? world = null,
             Entity caster = default,
             Entity explicitTarget = default,
-            IGraphRuntimeApi? api = null)
+            IGraphRuntimeApi? api = null,
+            int graphId = 0)
         {
             GraphFrame frame = GraphFrame.Bind(
                 GraphKind.Script,
@@ -311,6 +370,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 targets,
                 callStack,
                 cursor);
+            frame.GraphId = graphId;
             GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps, programAlreadyValidated: true);
             cursor = frame.Cursor;
             return result;
@@ -335,7 +395,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind kind = GraphKind.Script,
             GraphDebugTrace? debugTrace = null,
             MapId? mapScope = null,
-            int graphId = 0)
+            int graphId = 0,
+            GraphEntryPayloadTable? entryPayload = null,
+            GraphEntryPayloadTable? invokeArgs = null)
         {
             RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
             GraphFrame frame = GraphFrame.Bind(
@@ -355,7 +417,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 callStack,
                 cursor,
                 debugTrace: debugTrace,
-                mapScope: mapScope);
+                mapScope: mapScope,
+                entryPayload: entryPayload,
+                invokeArgs: invokeArgs);
             frame.GraphId = graphId;
             GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps);
             cursor = frame.Cursor;

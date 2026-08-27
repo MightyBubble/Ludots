@@ -1,0 +1,19 @@
+[
+  {
+    "id": "showcase.graph_op.LoadTextKey",
+    "kind": "Script",
+    "entry": "featured",
+    "nodes": [
+      { "id": "featured", "op": "LoadTextKey", "textKey": "gallery.hello" },
+      { "id": "sink", "op": "SinkPresentationText", "presentationSurface": "Subtitle" },
+      { "id": "done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "featured", "fromPort": "next", "to": "sink" },
+      { "from": "sink", "fromPort": "next", "to": "done" }
+    ],
+    "valueEdges": [
+      { "from": "featured", "fromPort": "value", "to": "sink", "toPort": "a" }
+    ]
+  }
+]

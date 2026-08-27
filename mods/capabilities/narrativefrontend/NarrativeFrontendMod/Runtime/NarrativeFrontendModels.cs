@@ -33,6 +33,7 @@ public enum NarrativeFrontendSurfaceKind
     InspectPanel = 12,
     FlowReview = 13,
     TransmissionOverlay = 14,
+    StandingPortrait = 15,
 }
 
 public sealed record NarrativeFrontendSurfaceItem(
@@ -68,7 +69,10 @@ public sealed record NarrativeFrontendSurfaceModel(
     string BackgroundHex = "",
     string BorderHex = "",
     string ForegroundHex = "",
-    string MutedHex = "");
+    string MutedHex = "",
+    string PortraitSrc = "",
+    float PortraitSize = 96f,
+    string FrameImageSrc = "");
 
 public sealed record NarrativeFrontendPageState(
     string OwnerId,

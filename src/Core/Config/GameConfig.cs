@@ -115,6 +115,12 @@ namespace Ludots.Core.Config
         /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>
         public GameConstants Constants { get; set; } = new GameConstants();
+
+        /// <summary>
+        /// Graph execution backend load mode: interpret | codegen | codegen-prefer.
+        /// Default interpret. codegen fails closed if any registered graph cannot bind generated execute.
+        /// </summary>
+        public string? GraphExecutionBackend { get; set; }
     }
 
     public sealed class Physics2DConfig
@@ -141,6 +147,7 @@ namespace Ludots.Core.Config
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
         public int CommandIntentScratchCapacity { get; set; }
+        public int AttachmentPositionSyncScratchCapacity { get; set; } = 8192;
 
         public void Validate()
         {
@@ -256,6 +263,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            if (AttachmentPositionSyncScratchCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.attachmentPositionSyncScratchCapacity must be positive.");
             }
         }
 

@@ -12,6 +12,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -120,6 +121,24 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
             "The four-team participant view showcase must bind the MassNavigation visual heightmap through the formal map service.");
         Assert.That(CountVisualTransforms(engine), Is.GreaterThan(0),
             "The showcase world must contain visual transforms for its authored team members.");
+
+        // This GasTests harness installs ViewController but does not arm CameraCullingSystem
+        // present-binding, so CullState stays default-hidden and PresenterCullState is never
+        // camera-synced. Under #999 OwnerCullVisible SSOT, frustum-hidden static retained
+        // entries are Removed (they must not leak Visible draws via StableDrawCache).
+        // Reveal authored world owners, sync PresenterCullState, then tick emit.
+        PresenterEntityRuntime presenterRuntime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+            ?? throw new InvalidOperationException("PresenterEntityRuntime missing.");
+        var revealOwners = new QueryDescription().WithAll<CullState, VisualTransform>();
+        engine.World.Query(in revealOwners, (ref CullState cull) =>
+        {
+            cull.IsVisible = true;
+        });
+        presenterRuntime.SyncCullVisibility();
+        for (int frame = 0; frame < 2; frame++)
+        {
+            engine.Tick(1f / 60f);
+        }
 
         PrimitiveDrawBuffer primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
             ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");

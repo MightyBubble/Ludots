@@ -229,7 +229,7 @@ namespace Ludots.Tests.GAS
             bool added = listener.Add(spellTag, ResponseType.Chain, priority: 50, effectTemplateId: counterEffectId);
             That(added, Is.True);
             That(listener.Count, Is.EqualTo(1));
-            That(listener.MatchesEventTag(spellTag), Is.True);
+            That(listener.MatchesEffectCategory(spellTag), Is.True);
 
             // Verify stored data
             unsafe
@@ -252,9 +252,9 @@ namespace Ludots.Tests.GAS
             listener.Add(tag2, ResponseType.Chain, priority: 60, effectTemplateId: 99);
 
             That(listener.Count, Is.EqualTo(3));
-            That(listener.MatchesEventTag(tag1), Is.True);
-            That(listener.MatchesEventTag(tag2), Is.True);
-            That(listener.MatchesEventTag(999), Is.False);
+            That(listener.MatchesEffectCategory(tag1), Is.True);
+            That(listener.MatchesEffectCategory(tag2), Is.True);
+            That(listener.MatchesEffectCategory(999), Is.False);
         }
 
         [Test]

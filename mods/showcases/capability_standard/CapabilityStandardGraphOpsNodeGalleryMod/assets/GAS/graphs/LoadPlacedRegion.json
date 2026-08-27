@@ -1,0 +1,34 @@
+[
+  {
+    "id": "showcase.graph_op.LoadPlacedRegion",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "roll_call",
+        "event": "MapLoaded",
+        "start": "scope"
+      }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadCaster" },
+      { "id": "readYard", "op": "LoadPlacedRegion", "instanceId": "yard" },
+      { "id": "writeYard", "op": "WriteMapVarInt", "var": "gallery.region_yard" },
+      { "id": "readGhost", "op": "LoadPlacedRegion", "instanceId": "ghost_yard" },
+      { "id": "writeGhost", "op": "WriteMapVarInt", "var": "gallery.region_ghost" },
+      { "id": "done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "readYard" },
+      { "from": "readYard", "fromPort": "next", "to": "writeYard" },
+      { "from": "writeYard", "fromPort": "next", "to": "readGhost" },
+      { "from": "readGhost", "fromPort": "next", "to": "writeGhost" },
+      { "from": "writeGhost", "fromPort": "next", "to": "done" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "writeYard", "toPort": "source" },
+      { "from": "readYard", "fromPort": "value", "to": "writeYard", "toPort": "value" },
+      { "from": "scope", "fromPort": "value", "to": "writeGhost", "toPort": "source" },
+      { "from": "readGhost", "fromPort": "value", "to": "writeGhost", "toPort": "value" }
+    ]
+  }
+]

@@ -1,8 +1,8 @@
 {
   "name": "NarrativeShowcaseMod",
   "version": "1.0.0",
-  "description": "Task, dialogue, and cinematic showcase layered onto Ludots ECS, GAS, trigger, and camera runtime.",
-  "main": "bin/net8.0/NarrativeShowcaseMod.dll",
+  "description": "Task, Dialogue, and Sequencer showcase layered onto Ludots ECS, GAS, trigger, and camera runtime.",
+  "main": "bin/net9.0/NarrativeShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
@@ -12,5 +12,5 @@
     "InteractionShowcaseMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["narrative", "task", "dialogue", "cinematic", "showcase"]
+  "tags": ["narrative", "task", "dialogue", "sequencer", "showcase"]
 }

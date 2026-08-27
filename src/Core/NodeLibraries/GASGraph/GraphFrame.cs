@@ -65,10 +65,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Span<Entity> Targets;
         public GraphTargetList TargetList;
         public Span<int> CallStack;
+        public GraphTextHeap Text;
         public GraphExecutionCursor Cursor;
         public GraphDebugTrace? DebugTrace;
         public int GraphId;
         public MapId? MapScope;
+        public GraphEntryPayloadTable? EntryPayload;
+        public GraphEntryPayloadTable? InvokeArgs;
 
         public static GraphFrame Bind(
             GraphKind kind,
@@ -89,7 +92,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             uint randomSeed = 0,
             GraphEventPayload eventPayload = default,
             GraphDebugTrace? debugTrace = null,
-            MapId? mapScope = null)
+            MapId? mapScope = null,
+            GraphEntryPayloadTable? entryPayload = null,
+            GraphEntryPayloadTable? invokeArgs = null)
         {
             if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
             {
@@ -148,10 +153,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
                 CallStack = callStack,
+                Text = GraphTextHeap.ForCurrentThread(),
                 Cursor = cursor,
                 DebugTrace = debugTrace,
                 GraphId = 0,
-                MapScope = mapScope
+                MapScope = mapScope,
+                EntryPayload = entryPayload,
+                InvokeArgs = invokeArgs
             };
         }
 
@@ -176,13 +184,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Targets = Targets,
                 TargetList = TargetList,
                 CallStack = CallStack,
+                Text = Text ?? throw new InvalidOperationException("Graph frame requires a GraphTextHeap."),
                 CallStackCount = Cursor.CallStackCount,
                 ReturnInt = Cursor.ReturnInt,
                 InvokeDepth = Cursor.InvokeDepth,
                 Status = GraphExecutionStatus.Running,
                 CurrentGraphId = GraphId,
                 DebugTrace = DebugTrace,
-                MapScope = MapScope
+                MapScope = MapScope,
+                EntryPayload = EntryPayload,
+                InvokeArgs = InvokeArgs
             };
         }
     }

@@ -1,17 +1,22 @@
 [
   {
     "id": "Effect.Fireball.ManaCost",
-    "tags": ["Effect.Fireball.ManaCost"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Mana", "op": "Add", "value": -10 }
+      {
+        "attribute": "Mana",
+        "op": "Add",
+        "value": -10
+      }
+    ],
+    "categories": [
+      "Effect.Fireball.ManaCost"
     ]
   },
   {
     "id": "Effect.Fireball.Projectile",
-    "tags": ["Effect.Fireball.Projectile"],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -28,23 +33,34 @@
       "collisionRelationFilter": "Hostile",
       "collisionExcludeSource": true,
       "maxHitCount": 1
-    }
+    },
+    "categories": [
+      "Effect.Fireball.Projectile"
+    ]
   },
   {
     "id": "Effect.Fireball.ProjectileVisual",
-    "tags": ["Effect.Fireball.ProjectileVisual"],
     "presetType": "None",
     "lifetime": "Instant",
-    "participatesInResponse": false
+    "participatesInResponse": false,
+    "categories": [
+      "Effect.Fireball.ProjectileVisual"
+    ]
   },
   {
     "id": "Effect.Fireball.Damage",
-    "tags": ["Effect.Fireball.Damage"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -15 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
+    ],
+    "categories": [
+      "Effect.Fireball.Damage"
     ]
   }
 ]

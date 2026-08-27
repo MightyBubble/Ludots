@@ -34,7 +34,7 @@ Launcher (playable showcase; Linux cloud agents may need Skia underlay disabled)
 export LD_LIBRARY_PATH=src/Platforms/Desktop:$LD_LIBRARY_PATH
 export LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY=1
 export LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY=1
-dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll \
+dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net9.0/Ludots.Launcher.Cli.dll \
   launch raylib_client_parity --adapter raylib --build auto
 ```
 
@@ -46,10 +46,9 @@ Launcher smoke (`00_launcher_showcase.png` + `.diag.txt`) must show `gpuSkinned`
 
 ```bash
 export LD_LIBRARY_PATH=src/Platforms/Desktop:$LD_LIBRARY_PATH
-dotnet run --project tools/raylib_client_parity_acceptance -c Release -- \
-  /workspace \
-  artifacts/raylib-client-parity/acceptance \
-  /opt/cursor/artifacts/raylib-client-parity/acceptance
+dotnet run --project src/Apps/Raylib/Ludots.App.RaylibEngineGallery -c Release -- \
+  --scene gpu_skinning \
+  --screenshot artifacts/raylib-client-parity/acceptance
 ```
 
 Fail-loud: missing assets, invalid skinning animation, or identical `02_*` frames abort the capture.

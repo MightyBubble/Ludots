@@ -2,7 +2,7 @@
   "name": "FogOfWarShowcaseMod",
   "version": "1.0.0",
   "description": "Integrated fog-of-war showcase root for layered fields, apertures, line-of-sight, concealment, memory, generators, detection, and shared snapshots.",
-  "main": "bin/net8.0/FogOfWarShowcaseMod.dll",
+  "main": "bin/net9.0/FogOfWarShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
@@ -34,6 +35,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
         private readonly Func<string, int> _resolveEntityCollectionKeyId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
+        private readonly Func<int, GraphKind>? _resolveGraphProgramKind;
         private readonly PresenterCommandKindRegistry? _commandKinds;
         private readonly PresenterBehaviorKindRegistry? _behaviorKinds;
 
@@ -52,7 +54,8 @@ namespace Ludots.Core.Presentation.Config
             Func<string, int> resolveInstancedBatchAssetId = null,
             Func<string, int> resolveEntityCollectionKeyId = null,
             PresenterCommandKindRegistry? commandKinds = null,
-            PresenterBehaviorKindRegistry? behaviorKinds = null)
+            PresenterBehaviorKindRegistry? behaviorKinds = null,
+            Func<int, GraphKind>? resolveGraphProgramKind = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -67,6 +70,7 @@ namespace Ludots.Core.Presentation.Config
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
             _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
+            _resolveGraphProgramKind = resolveGraphProgramKind;
             _commandKinds = commandKinds;
             _behaviorKinds = behaviorKinds;
         }
@@ -680,6 +684,7 @@ namespace Ludots.Core.Presentation.Config
             def.Id = _registry.GetId(key);
 
             AppendCompiledDurationRules(def);
+            AppendCompiledActivationConditionRules(def);
             ValidateAssetVisibilityParamProduction(key, def);
             StampRuleOwners(def.Id, def.Rules);
             return (key, def);
@@ -939,6 +944,7 @@ namespace Ludots.Core.Presentation.Config
             "assetBinding", "attributeBinding", "tagBinding", "animator",
             "attachment", "sound", "material", "spline", "grounding",
             "minimapMarker", "worldText", "surfaceSource", "instancedBatch",
+            "trailMesh",
         };
 
         private static readonly string[] ChildFields =
@@ -1067,6 +1073,12 @@ namespace Ludots.Core.Presentation.Config
         {
             "splineAssetId", "usage", "widthParamKey", "colorParamKey",
             "speedParamKey", "progressParamKey", "loop", "pingPong", "waypointEventId",
+        };
+
+        private static readonly string[] TrailMeshFields =
+        {
+            "baseOffset", "tipOffset", "maxSamples", "sampleIntervalSeconds",
+            "sampleLifetimeSeconds", "headColor", "tailColor",
         };
 
         private static readonly string[] GroundingFields =
@@ -1221,6 +1233,88 @@ namespace Ludots.Core.Presentation.Config
                     RouteStrategy = ResolveBuiltinCommandRoute(PresenterCommandKind.DestroyPresenter, presenterDefinitionId: 0),
                 },
             };
+            def.Rules = rules;
+        }
+
+        /// <summary>
+        /// Compiles each behavior slot's activationCondition into the canonical rule
+        /// pipeline: one unconditional DeactivateBehavior + conditional ActivateBehavior
+        /// pair on PresenterCreated (exact definition key), so the slot's active mask
+        /// converges to the condition result when the presenter instance is created.
+        /// Commands inside one event bucket execute in rule order, so the unconditional
+        /// Deactivate lands before the conditional Activate. Condition evaluation reuses
+        /// the existing PresenterRuleSystem ConditionRef path; no second condition
+        /// system is added. Runtime re-evaluation of tag/attribute-driven behavior stays
+        /// in authored keyed rules (TagEffectiveChanged + TagGained/TagLost), which is
+        /// the SSOT pattern; wildcard re-evaluation against unrelated events is
+        /// intentionally not compiled. activationCondition is a root-presenter
+        /// contract: child creation bypasses PresenterCreated, enforced by
+        /// ValidateChildGraph over children[] and
+        /// PresenterChildInstanceOverride.InstanceChildren payloads.
+        /// </summary>
+        private static void AppendCompiledActivationConditionRules(PresenterDefinition def)
+        {
+            BehaviorSlot[] behaviors = def.Behaviors;
+            if (behaviors == null || behaviors.Length == 0)
+            {
+                return;
+            }
+
+            var conditioned = new List<int>(2);
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (HasConditionalActivation(in slot.ActivationCondition))
+                {
+                    conditioned.Add(i);
+                }
+            }
+
+            if (conditioned.Count == 0)
+            {
+                return;
+            }
+
+            PresenterRule[] authored = def.Rules ?? Array.Empty<PresenterRule>();
+            var rules = new PresenterRule[authored.Length + conditioned.Count * 2];
+            Array.Copy(authored, rules, authored.Length);
+            int cursor = authored.Length;
+            for (int k = 0; k < conditioned.Count; k++)
+            {
+                int behaviorIndex = conditioned[k];
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                if (slot.SlotIndex is < 0 or >= 32)
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{def.Key}' behavior index {behaviorIndex} declares activationCondition on invalid slot {slot.SlotIndex}; valid behavior slots are 0-31.");
+                }
+
+                rules[cursor++] = new PresenterRule
+                {
+                    Event = new EventFilter { Kind = PresentationEventKind.PresenterCreated, KeyId = def.Id },
+                    Condition = ConditionRef.AlwaysTrue,
+                    Command = new PresenterCommand
+                    {
+                        CommandKind = PresenterCommandKind.DeactivateBehavior,
+                        CommandKindId = (byte)PresenterCommandKind.DeactivateBehavior,
+                        RouteStrategy = ResolveBuiltinCommandRoute(PresenterCommandKind.DeactivateBehavior, presenterDefinitionId: 0),
+                        TargetBehaviorSlot = slot.SlotIndex,
+                    },
+                };
+                rules[cursor++] = new PresenterRule
+                {
+                    Event = new EventFilter { Kind = PresentationEventKind.PresenterCreated, KeyId = def.Id },
+                    Condition = slot.ActivationCondition,
+                    Command = new PresenterCommand
+                    {
+                        CommandKind = PresenterCommandKind.ActivateBehavior,
+                        CommandKindId = (byte)PresenterCommandKind.ActivateBehavior,
+                        RouteStrategy = ResolveBuiltinCommandRoute(PresenterCommandKind.ActivateBehavior, presenterDefinitionId: 0),
+                        TargetBehaviorSlot = slot.SlotIndex,
+                    },
+                };
+            }
+
             def.Rules = rules;
         }
 
@@ -1401,19 +1495,19 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.CastFailed => ResolveRequired(AbilityIdRegistry.GetId(key), kind, "ability", key),
                 PresentationEventKind.EntityCollectionMemberAdded => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
                 PresentationEventKind.EntityCollectionMemberRemoved => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
-                PresentationEventKind.AbilityAimBegun => TagRegistry.Register(key),
-                PresentationEventKind.AbilityAimSlotAdvanced => TagRegistry.Register(key),
-                PresentationEventKind.AbilityAimUpdated => TagRegistry.Register(key),
-                PresentationEventKind.AbilityAimEnded => TagRegistry.Register(key),
-                PresentationEventKind.MovePathBegun => TagRegistry.Register(key),
-                PresentationEventKind.MovePathUpdated => TagRegistry.Register(key),
-                PresentationEventKind.MovePathEnded => TagRegistry.Register(key),
-                PresentationEventKind.WorldOverlayUpdated => TagRegistry.Register(key),
-                PresentationEventKind.WorldOverlayEnded => TagRegistry.Register(key),
-                PresentationEventKind.WorldHudUpdated => TagRegistry.Register(key),
-                PresentationEventKind.WorldHudEnded => TagRegistry.Register(key),
-                PresentationEventKind.WorldSplineUpdated => TagRegistry.Register(key),
-                PresentationEventKind.WorldSplineEnded => TagRegistry.Register(key),
+                PresentationEventKind.AbilityAimBegun => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.AbilityAimSlotAdvanced => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.AbilityAimUpdated => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.AbilityAimEnded => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.MovePathBegun => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.MovePathUpdated => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.MovePathEnded => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.WorldOverlayUpdated => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.WorldOverlayEnded => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.WorldHudUpdated => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.WorldHudEnded => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.WorldSplineUpdated => PresentationEventKeyRegistry.Register(key),
+                PresentationEventKind.WorldSplineEnded => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.TimerExpired => PresenterTimerNameRegistry.Register(key),
                 _ => throw new InvalidOperationException($"Presentation event kind '{kind}' does not support string key '{key}'."),
             };
@@ -2457,59 +2551,128 @@ namespace Ludots.Core.Presentation.Config
 
             try
             {
-                ChildPresenterRef[] children = definition.Children;
-                if (children == null || children.Length == 0)
-                {
-                    return;
-                }
-
-                for (int i = 0; i < children.Length; i++)
-                {
-                    int childDefinitionId = children[i].DefinitionId;
-                    if (childDefinitionId <= 0)
-                    {
-                        throw new InvalidOperationException($"Presenter '{key}' child[{i}] references an unknown definition.");
-                    }
-
-                    string childKey = definition.Key;
-                    childKey = string.Empty;
-                    foreach ((string parsedKey, PresenterDefinition parsedDefinition) in parsedByKey)
-                    {
-                        if (parsedDefinition.Id == childDefinitionId)
-                        {
-                            childKey = parsedKey;
-                            break;
-                        }
-                    }
-
-                    if (parsedByKey[childKey].DefaultLifetime > 0f)
-                    {
-                        throw new InvalidOperationException(
-                            $"Presenter '{key}' child[{i}] references duration-authored definition '{childKey}'. "
-                            + "lifecycle.durationSeconds is a root-presenter contract: child creation bypasses PresenterCreated, so its duration timer could never arm.");
-                    }
-
-                    if (string.IsNullOrWhiteSpace(childKey))
-                    {
-                        throw new InvalidOperationException($"Presenter '{key}' child[{i}] references definition id={childDefinitionId} that failed to load.");
-                    }
-
-                    if (pathIds.Contains(childDefinitionId))
-                    {
-                        var cyclePath = new List<string>(path.Count + 1);
-                        cyclePath.AddRange(path);
-                        cyclePath.Add(childKey);
-                        throw new InvalidOperationException($"Circular child reference detected: {string.Join("->", cyclePath)}");
-                    }
-
-                    ValidateChildGraph(childKey, parsedByKey, pathIds, path);
-                }
+                ValidateChildArray(key, definition.Children, "children", parsedByKey, pathIds, path);
             }
             finally
             {
                 path.RemoveAt(path.Count - 1);
                 pathIds.Remove(definition.Id);
             }
+        }
+
+        /// <summary>
+        /// Walks one child array (authored children[] or an instanceChildren payload) and
+        /// enforces the root-presenter contracts on every referenced definition: no
+        /// lifecycle.durationSeconds, no behavior activationCondition, no cycles. Entries in
+        /// both arrays are instantiated without a PresenterCreated event (child creation
+        /// bypasses the event stream), so the compiled PresenterCreated duration/condition
+        /// rule plans could never arm for them. A child id that still resolves in the
+        /// registry but is absent from this load's parsed graph fails with an authoring
+        /// error, never a KeyNotFoundException.
+        /// </summary>
+        private static void ValidateChildArray(
+            string ownerKey,
+            ChildPresenterRef[]? children,
+            string segmentName,
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey,
+            HashSet<int> pathIds,
+            List<string> path)
+        {
+            if (children == null || children.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                ref readonly ChildPresenterRef child = ref children[i];
+                string entryContext = $"{segmentName}[{i}]";
+                int childDefinitionId = child.DefinitionId;
+                if (childDefinitionId <= 0)
+                {
+                    throw new InvalidOperationException($"Presenter '{ownerKey}' {entryContext} references an unknown definition.");
+                }
+
+                if (!TryGetDefinitionById(parsedByKey, childDefinitionId, out PresenterDefinition childDefinition))
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{ownerKey}' {entryContext} references definition id={childDefinitionId} that failed to load.");
+                }
+
+                if (childDefinition.DefaultLifetime > 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{ownerKey}' {entryContext} references duration-authored definition '{childDefinition.Key}'. "
+                        + "lifecycle.durationSeconds is a root-presenter contract: child creation bypasses PresenterCreated, so its duration timer could never arm.");
+                }
+
+                if (HasActivationConditionedBehaviors(childDefinition))
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{ownerKey}' {entryContext} references activation-conditioned definition '{childDefinition.Key}'. "
+                        + "behavior activationCondition is a root-presenter contract: child creation bypasses PresenterCreated, so its condition could never be evaluated.");
+                }
+
+                if (pathIds.Contains(childDefinitionId))
+                {
+                    var cyclePath = new List<string>(path.Count + 1);
+                    cyclePath.AddRange(path);
+                    cyclePath.Add(childDefinition.Key);
+                    throw new InvalidOperationException(
+                        $"{PresenterCreatePlanCompiler.CircularChildReferenceError}: root='{ownerKey}', childSource='{entryContext}', expansionPath='{string.Join("->", cyclePath)}'.");
+                }
+
+                pathIds.Add(childDefinitionId);
+                path.Add(childDefinition.Key);
+                try
+                {
+                    PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+                    if (instanceOverride != null && instanceOverride.ChildrenMode == PresenterChildrenMode.Instance)
+                    {
+                        ValidateChildArray(
+                            ownerKey,
+                            instanceOverride.InstanceChildren,
+                            $"{entryContext}.instanceChildren",
+                            parsedByKey,
+                            pathIds,
+                            path);
+                    }
+                    else
+                    {
+                        ValidateChildArray(childDefinition.Key, childDefinition.Children, "children", parsedByKey, pathIds, path);
+                    }
+                }
+                finally
+                {
+                    path.RemoveAt(path.Count - 1);
+                    pathIds.Remove(childDefinitionId);
+                }
+            }
+        }
+
+        private static bool HasActivationConditionedBehaviors(PresenterDefinition definition)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            if (behaviors == null || behaviors.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (HasConditionalActivation(in slot.ActivationCondition))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasConditionalActivation(in ConditionRef condition)
+        {
+            return condition.Inline != InlineConditionKind.None || condition.GraphProgramId > 0;
         }
 
         private static void ValidateChildInstanceBehaviorSlots(
@@ -2717,12 +2880,14 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 seenSlots |= slotBit;
-                if (obj["activationCondition"] != null)
+                if (obj["activationCondition"] != null &&
+                    string.Equals(arrayFieldName, "instanceBehaviors", StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"Presenter '{ownerKey}' behavior[{i}] declares activationCondition, but behavior activation conditions are not wired into runtime consumption.");
+                        $"Presenter '{ownerKey}' behavior[{i}] declares activationCondition on child instance behaviors; activation conditions are definition-scoped and compile to PresenterCreated rules targeting definition slots.");
                 }
 
+                ConditionRef activationCondition = ParseBehaviorActivationCondition(obj["activationCondition"], $"{behaviorPath}.activationCondition");
                 var slot = new BehaviorSlot
                 {
                     SlotIndex = slotIndex,
@@ -2730,65 +2895,78 @@ namespace Ludots.Core.Presentation.Config
                     KindId = kindId,
                     ExtensionLane = extensionLane,
                     ExtensionTriggerId = extensionTriggerId,
-                    ActiveByDefault = obj["activeByDefault"]?.GetValue<bool>() ?? false,
+                    // activationCondition is the sole authority for the slot state at creation: the
+                    // compiled PresenterCreated rule pair (unconditional Deactivate + conditional
+                    // Activate) converges the mask to the condition result, so keeping the slot off
+                    // by default removes the one-frame activation window between presenter creation
+                    // and the first rule pass (PresenterBehaviorSystem runs after PresenterRuntimeSystem
+                    // in the same engine frame).
+                    ActiveByDefault = HasConditionalActivation(in activationCondition)
+                        ? false
+                        : obj["activeByDefault"]?.GetValue<bool>() ?? false,
+                    ActivationCondition = activationCondition,
                 };
 
                 switch (kind)
                 {
                     case BehaviorKind.AssetBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.AssetBinding = ParseAssetBinding(obj["assetBinding"], $"{behaviorPath}.assetBinding");
                         slot.Style = ParseBehaviorStyle(obj["style"], $"{behaviorPath}.style");
                         slot.Motion = ParseBehaviorMotion(obj["motion"], $"{behaviorPath}.motion");
                         break;
                     case BehaviorKind.AttributeBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.AttributeBinding = ParseAttributeBinding(obj["attributeBinding"], $"{behaviorPath}.attributeBinding");
                         break;
                     case BehaviorKind.TagBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.TagBinding = ParseTagBinding(obj["tagBinding"], $"{behaviorPath}.tagBinding");
                         break;
                     case BehaviorKind.Animator:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Animator = ParseAnimator(obj["animator"], $"{behaviorPath}.animator");
                         break;
                     case BehaviorKind.Attachment:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Attachment = ParseAttachment(obj["attachment"], $"{behaviorPath}.attachment");
                         break;
                     case BehaviorKind.Sound:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Sound = ParseSound(obj["sound"], $"{behaviorPath}.sound");
                         break;
                     case BehaviorKind.Material:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Material = ParseMaterial(obj["material"], $"{behaviorPath}.material");
                         break;
                     case BehaviorKind.Spline:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Spline = ParseSpline(obj["spline"], $"{behaviorPath}.spline");
                         break;
-                    case BehaviorKind.Grounding:
+                    case BehaviorKind.TrailMesh:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        slot.TrailMesh = ParseTrailMesh(obj["trailMesh"], $"{behaviorPath}.trailMesh");
+                        break;
+                    case BehaviorKind.Grounding:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.Grounding = ParseGrounding(obj["grounding"], $"{behaviorPath}.grounding");
                         break;
                     case BehaviorKind.MinimapMarker:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.MinimapMarker = ParseMinimapMarker(obj["minimapMarker"], $"{behaviorPath}.minimapMarker");
                         break;
                     case BehaviorKind.WorldText:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch", "trailMesh");
                         slot.WorldText = ParseWorldText(obj["worldText"], $"{behaviorPath}.worldText");
                         slot.Style = ParseBehaviorStyle(obj["style"], $"{behaviorPath}.style");
                         slot.Motion = ParseBehaviorMotion(obj["motion"], $"{behaviorPath}.motion");
                         break;
                     case BehaviorKind.SurfaceSource:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch", "trailMesh");
                         slot.SurfaceSource = ParseSurface(obj["surfaceSource"], ownerKey, $"{behaviorPath}.surfaceSource");
                         break;
                     case BehaviorKind.InstancedBatch:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource", "trailMesh");
                         slot.InstancedBatch = ParseInstancedBatchBehavior(obj["instancedBatch"], ownerKey, $"{behaviorPath}.instancedBatch");
                         break;
                     case BehaviorKind.Extension:
@@ -3599,6 +3777,58 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
+        private static TrailMeshConfig ParseTrailMesh(JsonNode? node, string path)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("TrailMesh behavior requires object field 'trailMesh'.");
+            }
+
+            RejectUnknownFields(obj, path, TrailMeshFields);
+
+            Vector3 baseOffset = ParseVector3OrDefault(obj["baseOffset"], Vector3.Zero);
+            Vector3 tipOffset = ParseRequiredVector3(obj["tipOffset"], $"{path}.tipOffset", Vector3.Zero, required: true);
+            int maxSamples = obj["maxSamples"]?.GetValue<int>() ?? 24;
+            if (maxSamples < 2 || maxSamples > TrailMeshBuffer.MaxSamplesPerTrail)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.maxSamples must be in [2, {TrailMeshBuffer.MaxSamplesPerTrail}], got {maxSamples}.");
+            }
+
+            float sampleIntervalSeconds = obj["sampleIntervalSeconds"]?.GetValue<float>() ?? 0f;
+            if (!float.IsFinite(sampleIntervalSeconds) || sampleIntervalSeconds < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.sampleIntervalSeconds must be a finite value >= 0, got {sampleIntervalSeconds}.");
+            }
+
+            float sampleLifetimeSeconds = obj["sampleLifetimeSeconds"]?.GetValue<float>() ?? 0.3f;
+            if (!float.IsFinite(sampleLifetimeSeconds) || sampleLifetimeSeconds <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.sampleLifetimeSeconds must be a finite value > 0, got {sampleLifetimeSeconds}.");
+            }
+
+            Vector4 headColor = ParseOptionalFiniteVector4(obj["headColor"], Vector4.One, $"{path}.headColor");
+            Vector4 tailColor = ParseOptionalFiniteVector4(obj["tailColor"], new Vector4(1f, 1f, 1f, 0f), $"{path}.tailColor");
+            if (baseOffset == tipOffset)
+            {
+                throw new InvalidOperationException(
+                    $"{path} requires distinct baseOffset and tipOffset; a zero-length blade segment cannot be sampled.");
+            }
+
+            return new TrailMeshConfig
+            {
+                BaseOffset = baseOffset,
+                TipOffset = tipOffset,
+                MaxSamples = maxSamples,
+                SampleIntervalSeconds = sampleIntervalSeconds,
+                SampleLifetimeSeconds = sampleLifetimeSeconds,
+                HeadColor = headColor,
+                TailColor = tailColor,
+            };
+        }
+
         private static int ParseOptionalParamKey(JsonNode? node, string context)
         {
             return ParseParamKey(node, -1, context, allowMissing: true, allowNone: true);
@@ -3775,6 +4005,7 @@ namespace Ludots.Core.Presentation.Config
                 ["attributeCurrent"] = 14,
                 ["attributeBase"] = 15,
                 ["instancedBatch"] = 16,
+                ["trail"] = 17,
             };
 
             public static int Register(string key)
@@ -4164,6 +4395,46 @@ namespace Ludots.Core.Presentation.Config
             return cond;
         }
 
+        private ConditionRef ParseBehaviorActivationCondition(JsonNode? node, string context)
+        {
+            if (node == null)
+            {
+                return ConditionRef.AlwaysTrue;
+            }
+
+            ConditionRef cond = ParseConditionRef(node, context, allowGraphProgramId: true);
+            if (cond.Inline == InlineConditionKind.None && cond.GraphProgramId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context} must declare a condition contract: author 'inline' or a positive 'graphProgramId'. An empty activationCondition is authoring noise; omit the field or use activeByDefault.");
+            }
+
+            if (cond.GraphProgramId > 0)
+            {
+                if (_resolveGraphProgramKind == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.graphProgramId={cond.GraphProgramId} requires a graph-program kind resolver, but none was supplied to PresenterDefinitionConfigLoader. "
+                        + "Wire resolveGraphProgramKind, e.g. GraphProgramRegistry.TryGetKind (the graph registry SSOT), so activationCondition graph references are validated at load.");
+                }
+
+                GraphKind graphKind = _resolveGraphProgramKind(cond.GraphProgramId);
+                if (graphKind == GraphKind.None)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.graphProgramId={cond.GraphProgramId} references an unknown graph program; register it before loading presenters.");
+                }
+
+                if (graphKind != GraphKind.Validation)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.graphProgramId={cond.GraphProgramId} references graph kind '{graphKind}', but behavior activationCondition requires kind '{GraphKind.Validation}' (the kind PresenterRuleSystem evaluates).");
+                }
+            }
+
+            return cond;
+        }
+
         private static void StampRuleOwners(int ownerDefinitionId, PresenterRule[] rules)
         {
             if (rules == null)
@@ -4229,6 +4500,33 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return Vector4.Zero;
+        }
+
+        private static Vector4 ParseOptionalFiniteVector4(JsonNode? node, Vector4 defaultValue, string context)
+        {
+            if (node is null)
+            {
+                return defaultValue;
+            }
+
+            if (node is not JsonArray arr || arr.Count != 4)
+            {
+                throw new InvalidOperationException($"{context} requires exactly 4 numeric components.");
+            }
+
+            Vector4 parsed = new(
+                ParseRequiredFloat(arr[0], $"{context}[0]"),
+                ParseRequiredFloat(arr[1], $"{context}[1]"),
+                ParseRequiredFloat(arr[2], $"{context}[2]"),
+                ParseRequiredFloat(arr[3], $"{context}[3]")
+            );
+            if (!float.IsFinite(parsed.X) || !float.IsFinite(parsed.Y) ||
+                !float.IsFinite(parsed.Z) || !float.IsFinite(parsed.W))
+            {
+                throw new InvalidOperationException($"{context} components must be finite.");
+            }
+
+            return parsed;
         }
 
         private static Vector4 ParseRequiredVector4(JsonNode? node, string context)

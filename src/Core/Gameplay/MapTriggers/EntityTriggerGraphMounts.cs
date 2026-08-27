@@ -121,6 +121,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 {
                     MapLoadSpawn spawn = _mapLoadBuffer[i];
                     List<Trigger> spawnTriggers = BuildEntityGraphList(
+                        session,
                         spawn.Entity,
                         spawn.GraphNames,
                         $"entity template '{spawn.TemplateId}'");
@@ -157,7 +158,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"Entity template '{templateId}' declares TriggerGraphs but the entity's map '{mapId.Value}' has no active session; entity-domain mounts register through their map.");
             }
 
-            List<Trigger> triggers = BuildEntityGraphList(entity, graphNames, $"entity template '{templateId}'");
+            List<Trigger> triggers = BuildEntityGraphList(session, entity, graphNames, $"entity template '{templateId}'");
             DecorateTrackAndDispatch(session, entity, triggers);
             _triggerManager.AddMapTriggers(mapId, triggers);
         }
@@ -176,7 +177,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"{ownerLabel} cannot mount TriggerGraph '{graph}' on a dead scope entity.");
             }
 
-            List<Trigger> triggers = BuildEntityGraphList(scope, new[] { graph }, ownerLabel);
+            List<Trigger> triggers = BuildEntityGraphList(session, scope, new[] { graph }, ownerLabel);
             DecorateTrackAndDispatch(session, scope, triggers);
             return triggers;
         }
@@ -193,7 +194,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             DispatchLifecycle(session, scope, GameEvents.EntitySpawned, triggers);
         }
 
-        private List<Trigger> BuildEntityGraphList(Entity scope, IReadOnlyList<string> graphNames, string ownerLabel)
+        private List<Trigger> BuildEntityGraphList(MapSession session, Entity scope, IReadOnlyList<string> graphNames, string ownerLabel)
         {
             GraphProgramRegistry programs = _programs()
                 ?? throw new InvalidOperationException($"{ownerLabel} requires GraphProgramRegistry to mount TriggerGraphs.");
@@ -209,7 +210,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     scope,
                     graphNames[g],
                     ownerLabel,
-                    customEvents));
+                    customEvents,
+                    session.EntityIndex,
+                    _triggerManager.EventSchemas,
+                    TriggerGraphMounting.CollectRegionIds(session)));
             }
 
             return triggers;
@@ -318,6 +322,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 context.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? new List<string>());
                 context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
                 context.Set(MapTriggerEventPayloadKeys.SourceTeamId, ResolveTeamId(scope));
+                _triggerManager.EventSchemas?.ValidateFirePayload(eventKey, context);
                 _ = mount.ExecuteLifecycleDispatch(context);
             }
         }

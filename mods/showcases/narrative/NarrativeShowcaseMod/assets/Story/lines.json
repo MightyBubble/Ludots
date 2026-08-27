@@ -1,0 +1,225 @@
+[
+  {
+    "id": "line.warden.intro.elder",
+    "speakerId": "speaker.warden",
+    "textToken": "story.warden.intro.elder",
+    "tags": [
+      "intro"
+    ]
+  },
+  {
+    "id": "line.warden.intro.shrine",
+    "speakerId": "speaker.warden",
+    "textToken": "story.warden.intro.shrine",
+    "tags": [
+      "intro"
+    ]
+  },
+  {
+    "id": "line.warden.briefing.001",
+    "speakerId": "speaker.warden",
+    "textToken": "story.warden.briefing.001",
+    "tags": [
+      "briefing"
+    ]
+  },
+  {
+    "id": "line.player.briefing.lore",
+    "speakerId": "speaker.player",
+    "textToken": "story.player.briefing.lore",
+    "tags": [
+      "choice"
+    ]
+  },
+  {
+    "id": "line.player.briefing.accept_now",
+    "speakerId": "speaker.player",
+    "textToken": "story.player.briefing.accept_now",
+    "tags": [
+      "choice"
+    ]
+  },
+  {
+    "id": "line.warden.briefing.lore_reply",
+    "speakerId": "speaker.warden",
+    "textToken": "story.warden.briefing.lore_reply",
+    "tags": [
+      "briefing"
+    ]
+  },
+  {
+    "id": "line.player.briefing.accept_after_lore",
+    "speakerId": "speaker.player",
+    "textToken": "story.player.briefing.accept_after_lore",
+    "tags": [
+      "choice"
+    ]
+  },
+  {
+    "id": "line.warden.briefing.accept",
+    "speakerId": "speaker.warden",
+    "textToken": "story.warden.briefing.accept",
+    "tags": [
+      "briefing"
+    ]
+  },
+  {
+    "id": "line.shrine.reveal.001",
+    "speakerId": "speaker.shrine",
+    "textToken": "story.shrine.reveal.001",
+    "tags": [
+      "trial"
+    ]
+  },
+  {
+    "id": "line.warden.return.001",
+    "speakerId": "speaker.warden",
+    "textToken": "story.warden.return.001",
+    "tags": [
+      "return"
+    ]
+  },
+  {
+    "id": "line.player.return.duty",
+    "speakerId": "speaker.player",
+    "textToken": "story.player.return.duty",
+    "tags": [
+      "choice"
+    ]
+  },
+  {
+    "id": "line.player.return.mercy",
+    "speakerId": "speaker.player",
+    "textToken": "story.player.return.mercy",
+    "tags": [
+      "choice"
+    ]
+  },
+  {
+    "id": "line.warden.return.duty_outro",
+    "speakerId": "speaker.warden",
+    "textToken": "story.warden.return.duty_outro",
+    "tags": [
+      "return"
+    ]
+  },
+  {
+    "id": "line.warden.return.mercy_outro",
+    "speakerId": "speaker.warden",
+    "textToken": "story.warden.return.mercy_outro",
+    "tags": [
+      "return"
+    ]
+  },
+  {
+    "id": "line.demo.overture.elder",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.overture.elder",
+    "tags": [
+      "demo",
+      "subtitle"
+    ]
+  },
+  {
+    "id": "line.demo.overture.shrine",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.overture.shrine",
+    "tags": [
+      "demo",
+      "subtitle"
+    ]
+  },
+  {
+    "id": "line.demo.overture.close",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.overture.close",
+    "tags": [
+      "demo",
+      "subtitle"
+    ]
+  },
+  {
+    "id": "line.demo.audience.open",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.audience.open",
+    "tags": [
+      "demo"
+    ]
+  },
+  {
+    "id": "line.demo.player.ask",
+    "speakerId": "speaker.player",
+    "textToken": "story.demo.player.ask",
+    "tags": [
+      "demo",
+      "choice"
+    ]
+  },
+  {
+    "id": "line.demo.player.ready",
+    "speakerId": "speaker.player",
+    "textToken": "story.demo.player.ready",
+    "tags": [
+      "demo",
+      "choice"
+    ]
+  },
+  {
+    "id": "line.demo.audience.ask_reply",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.audience.ask_reply",
+    "tags": [
+      "demo"
+    ]
+  },
+  {
+    "id": "line.demo.audience.ready_reply",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.audience.ready_reply",
+    "tags": [
+      "demo"
+    ]
+  },
+  {
+    "id": "line.demo.audience.standing",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.audience.standing",
+    "tags": [
+      "demo"
+    ]
+  },
+  {
+    "id": "line.demo.player.duty",
+    "speakerId": "speaker.player",
+    "textToken": "story.demo.player.duty",
+    "tags": [
+      "demo",
+      "choice"
+    ]
+  },
+  {
+    "id": "line.demo.player.mercy",
+    "speakerId": "speaker.player",
+    "textToken": "story.demo.player.mercy",
+    "tags": [
+      "demo",
+      "choice"
+    ]
+  },
+  {
+    "id": "line.demo.audience.duty_end",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.audience.duty_end",
+    "tags": [
+      "demo"
+    ]
+  },
+  {
+    "id": "line.demo.audience.mercy_end",
+    "speakerId": "speaker.warden",
+    "textToken": "story.demo.audience.mercy_end",
+    "tags": [
+      "demo"
+    ]
+  }
+]

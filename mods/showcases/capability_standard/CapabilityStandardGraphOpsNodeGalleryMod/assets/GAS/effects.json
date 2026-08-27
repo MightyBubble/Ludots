@@ -1,54 +1,95 @@
 [
   {
     "id": "Effect.GraphOp.DispatchStub",
-    "tags": ["Effect.GraphOp"],
     "presetType": "ApplyForce2D",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "configParams": {
-      "_ep.forceXTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestX" },
-      "_ep.forceYTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestY" },
-      "_ep.forceXAttribute": { "type": "Int", "value": 0 },
-      "_ep.forceYAttribute": { "type": "Int", "value": 0 }
-    }
+      "_ep.forceXTargetAttrId": {
+        "type": "Attribute",
+        "value": "Physics.ForceRequestX"
+      },
+      "_ep.forceYTargetAttrId": {
+        "type": "Attribute",
+        "value": "Physics.ForceRequestY"
+      },
+      "_ep.forceXAttribute": {
+        "type": "Int",
+        "value": 0
+      },
+      "_ep.forceYAttribute": {
+        "type": "Int",
+        "value": 0
+      }
+    },
+    "categories": [
+      "Effect.GraphOp"
+    ]
   },
   {
     "id": "Effect.GraphOps.Strike",
-    "tags": ["Effect.GraphOps.Strike"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -18 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -18
+      }
+    ],
+    "categories": [
+      "Effect.GraphOps.Strike"
     ]
   },
   {
     "id": "Effect.GraphOps.Config",
-    "tags": ["Effect.GraphOps.Config"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "configParams": {
-      "showcase.config.power": { "type": "Float", "value": 40 },
-      "showcase.config.tier": { "type": "Int", "value": 2 },
-      "showcase.config.chainEffect": { "type": "EffectTemplate", "value": "Effect.GraphOps.Strike" }
-    }
+      "showcase.config.power": {
+        "type": "Float",
+        "value": 40
+      },
+      "showcase.config.tier": {
+        "type": "Int",
+        "value": 2
+      },
+      "showcase.config.chainEffect": {
+        "type": "EffectTemplate",
+        "value": "Effect.GraphOps.Strike"
+      }
+    },
+    "categories": [
+      "Effect.GraphOps.Config"
+    ]
   },
   {
     "id": "Effect.GraphOps.Lifecycle",
-    "tags": ["Effect.GraphOps.Lifecycle"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "configParams": {
-      "_ep.targetEntityTemplate": { "type": "EntityTemplate", "value": "GraphOps.Ally" },
-      "_ep.lifecycleAttributeValueSource": { "type": "LifecycleAttributeValueSource", "value": "Current" },
-      "_ep.lifecycleAttribute0": { "type": "Attribute", "value": "Health" }
-    }
+      "_ep.targetEntityTemplate": {
+        "type": "EntityTemplate",
+        "value": "GraphOps.Ally"
+      },
+      "_ep.lifecycleAttributeValueSource": {
+        "type": "LifecycleAttributeValueSource",
+        "value": "Current"
+      },
+      "_ep.lifecycleAttribute0": {
+        "type": "Attribute",
+        "value": "Health"
+      }
+    },
+    "categories": [
+      "Effect.GraphOps.Lifecycle"
+    ]
   },
   {
     "id": "Effect.GraphOps.Mark",
-    "tags": ["Effect.GraphOps.Mark"],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -56,13 +97,13 @@
       "durationTicks": 180,
       "periodTicks": 0,
       "clockId": "FixedFrame"
-    }
+    },
+    "categories": [
+      "Effect.GraphOps.Mark"
+    ]
   },
   {
     "id": "Effect.GraphOpsAttr.Mark",
-    "tags": [
-      "Effect.GraphOpsAttr.Mark"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -70,11 +111,13 @@
       "durationTicks": 180,
       "periodTicks": 0,
       "clockId": "FixedFrame"
-    }
+    },
+    "categories": [
+      "Effect.GraphOpsAttr.Mark"
+    ]
   },
   {
     "id": "Effect.GraphOpsSandbox.Mark",
-    "tags": ["Effect.GraphOpsSandbox.Mark"],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -82,11 +125,13 @@
       "durationTicks": 180,
       "periodTicks": 0,
       "clockId": "FixedFrame"
-    }
+    },
+    "categories": [
+      "Effect.GraphOpsSandbox.Mark"
+    ]
   },
   {
     "id": "Effect.GraphOpsSandbox.Buff",
-    "tags": ["Effect.GraphOpsSandbox.Buff"],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -94,6 +139,9 @@
       "durationTicks": 180,
       "periodTicks": 0,
       "clockId": "FixedFrame"
-    }
+    },
+    "categories": [
+      "Effect.GraphOpsSandbox.Buff"
+    ]
   }
 ]

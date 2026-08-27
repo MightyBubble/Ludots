@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -20,6 +21,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly InstancedBatchAssetRegistry _batches;
         private readonly MeshAssetRegistry _meshes;
         private readonly PresentationMaterialRegistry _materials;
+        private readonly InstancedBatchFactorizedSourceLoader _factorizedSources;
         private readonly Func<string, int> _resolveAttributeKey;
         private readonly Func<PresentationEventKind, string, int> _resolveGasEventKey;
         private readonly Func<PresentationEventKind, string, int> _resolvePresentationEventKey;
@@ -29,6 +31,7 @@ namespace Ludots.Core.Presentation.Config
             InstancedBatchAssetRegistry batches,
             MeshAssetRegistry meshes,
             PresentationMaterialRegistry materials,
+            IVirtualFileSystem vfs,
             Func<string, int>? resolveAttributeKey = null,
             Func<PresentationEventKind, string, int>? resolveGasEventKey = null,
             Func<PresentationEventKind, string, int>? resolvePresentationEventKey = null)
@@ -37,6 +40,8 @@ namespace Ludots.Core.Presentation.Config
             _batches = batches ?? throw new ArgumentNullException(nameof(batches));
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
+            _factorizedSources = new InstancedBatchFactorizedSourceLoader(
+                vfs ?? throw new ArgumentNullException(nameof(vfs)));
             _resolveAttributeKey = resolveAttributeKey ?? (_ => 0);
             _resolveGasEventKey = resolveGasEventKey ?? ((_, _) => 0);
             _resolvePresentationEventKey = resolvePresentationEventKey ?? ((_, _) => 0);
@@ -118,6 +123,7 @@ namespace Ludots.Core.Presentation.Config
                 string meshKey = RequireString(obj["meshAssetId"], $"Instanced batch '{batchKey}' group '{groupId}' meshAssetId");
                 int meshAssetId = ResolveMeshId(meshKey, batchKey, groupId);
                 int materialId = ResolveOptionalMaterialId(obj["materialId"], batchKey, groupId);
+                InstancedBatchInstanceSource source = ParseInstanceSource(obj["source"], obj["transforms"], batchKey, groupId);
 
                 groups[i] = new InstancedBatchGroup
                 {
@@ -127,11 +133,19 @@ namespace Ludots.Core.Presentation.Config
                     BucketId = ResolveBucketId(obj["bucketId"], batchKey, groupId),
                     InstanceSpanId = RequireString(obj["instanceSpanId"], $"Instanced batch '{batchKey}' group '{groupId}' instanceSpanId"),
                     Transforms = ParseTransforms(obj["transforms"], obj["source"], batchKey, groupId),
-                    Source = ParseInstanceSource(obj["source"], obj["transforms"], batchKey, groupId),
+                    Source = source,
+                    FactorizedSource = source.IsValid
+                        ? LoadFactorizedSource(in source, batchKey, groupId)
+                        : null,
                 };
             }
 
             return groups;
+        }
+
+        private InstancedBatchFactorizedSource LoadFactorizedSource(in InstancedBatchInstanceSource source, string batchKey, string groupId)
+        {
+            return _factorizedSources.Load(in source, batchKey, groupId);
         }
 
         private static string ResolveBucketId(JsonNode? node, string batchKey, string groupId)

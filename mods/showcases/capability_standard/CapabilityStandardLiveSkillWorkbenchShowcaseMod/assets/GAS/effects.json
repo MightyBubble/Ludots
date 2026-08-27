@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.LSW.IceballHit",
-    "tags": [
-      "Effect.LSW.Ice"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": true,
@@ -30,6 +27,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.LSW.Ice"
     ]
   }
 ]

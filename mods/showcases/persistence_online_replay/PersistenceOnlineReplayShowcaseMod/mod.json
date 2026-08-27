@@ -2,7 +2,7 @@
   "name": "PersistenceOnlineReplayShowcaseMod",
   "version": "1.0.0",
   "description": "Playable persistence, replay and reconnect recovery showcase on the RTS training map.",
-  "main": "bin/net8.0/PersistenceOnlineReplayShowcaseMod.dll",
+  "main": "bin/net9.0/PersistenceOnlineReplayShowcaseMod.dll",
   "priority": 130,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

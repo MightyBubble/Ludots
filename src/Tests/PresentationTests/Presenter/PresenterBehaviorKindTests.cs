@@ -31,7 +31,7 @@ namespace Ludots.Tests.Presentation
         public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(15), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values.Length, Is.EqualTo(16), "BehaviorKind SSOT is the architecture enum.");
             Assert.That(values, Does.Contain(BehaviorKind.None));
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
@@ -46,6 +46,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.WorldText));
             Assert.That(values, Does.Contain(BehaviorKind.SurfaceSource));
             Assert.That(values, Does.Contain(BehaviorKind.InstancedBatch));
+            Assert.That(values, Does.Contain(BehaviorKind.TrailMesh));
             Assert.That(values, Does.Contain(BehaviorKind.Extension));
         }
 
@@ -66,6 +67,7 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.WorldText, Is.EqualTo(11));
             Assert.That((byte)BehaviorKind.SurfaceSource, Is.EqualTo(12));
             Assert.That((byte)BehaviorKind.InstancedBatch, Is.EqualTo(13));
+            Assert.That((byte)BehaviorKind.TrailMesh, Is.EqualTo(14));
             Assert.That((byte)BehaviorKind.Extension, Is.EqualTo(255));
         }
 
@@ -2070,18 +2072,21 @@ namespace Ludots.Tests.Presentation
             int definitionId,
             out PresentationVisualProxy proxy)
         {
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            for (int i = 0; i < span.Length; i++)
+            ReadOnlySpan<PresentationRequestOp> ops = requests.Ops;
+            for (int i = 0; i < ops.Length; i++)
             {
-                ref readonly PresentationRequest request = ref span[i];
-                if (request.Kind != PresentationRequestKind.VisualProxy ||
-                    request.Owner != owner ||
-                    request.VisualProxy.TemplateId != definitionId)
+                if (ops[i].Channel != PresentationRequestChannel.VisualProxy)
                 {
                     continue;
                 }
 
-                proxy = request.VisualProxy;
+                ref readonly VisualProxyChannelItem item = ref requests.VisualProxyAt(ops[i].Slot);
+                if (item.Owner != owner || item.VisualProxy.TemplateId != definitionId)
+                {
+                    continue;
+                }
+
+                proxy = item.VisualProxy;
                 return true;
             }
 

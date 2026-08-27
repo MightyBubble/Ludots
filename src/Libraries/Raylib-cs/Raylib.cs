@@ -773,6 +773,18 @@ namespace Raylib_cs
         public static extern void rlEnableBackfaceCulling();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlBegin(int mode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnd();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlVertex3f(float x, float y, float z);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlColor4ub(byte r, byte g, byte b, byte a);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlEnableDepthTest();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]

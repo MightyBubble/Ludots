@@ -81,12 +81,19 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 
 ### 3.3 真正还在做的
 
-**编辑器里程碑（控制流与 live debug 已收口，文本能力未收口）。**
-节点联想只从运行时 descriptor 获取；Bridge 同时投影 `BranchBool`、`SwitchInt`、`Wait`、`While`、`Until`、`Break` 六种作者糖及其控制/值端口。`Jump.target`、`Call.call/next` 等普通控制端口也来自 Bridge descriptor，React 不维护第二份 op 端口表。`Break` 编译时严格降低为带显式 `target` 边的 Jump；`Select` 仍明确是实体选择 `SelectEntity`，不是尚不存在的通用 Select。编辑器连线、删节点后的悬挂边清理、布局数据校验和 live trace source map 校验均走失败关闭。
+**编辑器里程碑（控制流与 live debug 已收口；正式文字合同已齐）。**
+节点联想只从运行时 descriptor 获取；Bridge 投影作者糖及其控制/值端口（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；TriggerGraph 另有 `InlineGraph`）。`Jump.target`、`Call.call/next` 等普通控制端口也来自 Bridge descriptor，React 不维护第二份 op 端口表。`Break` 编译时严格降低为带显式 `target` 边的 Jump；`Select` 仍明确是实体选择 `SelectEntity`，不是尚不存在的通用 Select。编辑器连线、删节点后的悬挂边清理、布局数据校验和 live trace source map 校验均走失败关闭。
 
 Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标、引脚和黑板变化；嵌套 `InvokeScript` 继承固定容量 trace 并携带子图 id。当前不伪造 `NodeExit` 生命周期事件。黑板 buffer 缺失仍在运行时明确失败；实体能力在 authoring 阶段的声明和编译校验仍是下一条合同切片，不能把运行时隐式安装路径写成已完成。
 
-字符串花括号自动引脚、字符串寄存器、组合文本与 `Concat` 仍未完成。当前运行时没有正式的 text value、固定容量/零分配传递、符号 patch 和 presentation sink 合同，因此编辑器不会展示可保存但运行时不可执行的假节点。它们必须作为独立基建切片先补齐合同，再进入 descriptor 名册。
+字符串花括号自动引脚、字符串寄存器、组合文本与 `Concat` 的运行时合同已落地：`GraphValueType.Text` + 固定容量 `GraphTextHeap`、`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText`，以及作者糖 `FormatText`（花括号自动引脚，编译期降为原子文字 op）。合同正本见 [图正式文字](graph-formal-text.md)；作者接法见 [拼句指南](graph-formal-text-authoring-guide.md)。玩家短剧「拼一句上字幕」见 [验收](../acceptance/graph-formal-text-subtitle.md)（`capability_standard_graph_formal_text`）。编辑器只从运行时 descriptor / 已登记糖露出可保存节点，不再留假 Concat。
+
+TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面量轨分离：可保存 op `LoadTextKey`、Bridge `/api/graph/text-keys/{modId}`、编辑器 `textKey` 选择器。合同正本见 [图 TextKey 发现糖](graph-textkey.md)。本切片零参；带参 `FormatTextKey`、ActiveLocale 对齐、生产 Dialogue drain sink 另线。
+
+**图 Codegen 产品化（CG-0…CG-6 + 运行时装载已落地）。**  
+正式程序集 `Ludots.Graph.Codegen`：F0–F3 特化发射（允许回边），其余家族 HandlerForward；coverage 全量 `covered`；Bridge 预览/对拍/覆盖；编辑器 Codegen 面板。运行时：`game.json` 键 `graphExecutionBackend`（`interpret` / `codegen` / `codegen-prefer`）在装图后绑定生成入口；`GraphExecutor` 优先走生成码；`ludots.graph.debug` 与 Live Debug 标题报 `executionBackend`。夜袭旗舰 `graphExecutionBackend=codegen`。合同正本 [图 Codegen 产品化](graph-codegen-productization.md)；自审 `artifacts/gas-composition-gate-graph-codegen-impl.md`。未知 op / 绑定失败在 `codegen` 模式失败关闭。
+
+作者面还开着的债，不要当成新发现再审：执行线没下一步就该结束，但先改“必须显式停下”的合同 https://github.com/MightyBubble/Ludots/issues/1107 。蓝图变量面板 MapVariable 作者面已随 Narrative PR #1222 / Bridge 进主干，#1109 只剩关单。#1108 要对齐的是「地图上具体 InstanceId（单位/区域）当变量拖取」——单实体 `LoadPlacedEntity` + 区域 `LoadPlacedRegion` + 锚点 `LoadPlacedAnchor`（InstanceId 含 `anchor`）+ Placed 栏 / Bridge `kind` 已落地；不是数组/映射集合类型。事件入口露出本次载荷（#1106）、放置实体读、地图变量变更事件（#1113）、图互调/跨图派发/全局订阅与 hook（#1115/#1116/#1123/#1124）、纯数据枚举（#1125）、图↔代码 AwaitCallback 续跑（#1126）已随 night-raid 大包进主干（PR #1239）；合入后把对应票改成关单卫生，不要再派实现票。#1126 落地范围：`AwaitCallback=455` + `GraphCallbackService` + `SystemGroup.Continuation` 按注册序 Drain；TriggerGraph 挂载可直接挂起；嵌套 `InvokeScript`/`InvokeGraph` 仍禁 Yield/AwaitCallback（同步函数）。可等待复用走编译期糖 `InlineGraph`（`TriggerGraphInlineWeaver`，虚幻 Macro 风格，Await 落在宿主程序）。Dialogue 宿主 Completer 已接线：玩家确认选项/推进台词时 `TryCompleteByCallbackType(DialogConfirm)`，不另造第二套等待。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
 
 **分层：架子有了，墙没有。**  
 工程里多了两份薄的契约，核心工程还是一大坨。展厅大多还能一把抓住整台引擎。把空间、输入、画面、结算真正拆开，以及不许再抓整台引擎，这两步没做。要做就单独开活，对照 `docs/audits/s14_layering_physicalization_design.md`，别和修演示、修构建捆在一起。没拆完之前，总规矩继续写「修复中」。
@@ -98,7 +105,17 @@ Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标�
 
 新开了一条线，别当成图能力收口的回锅：触发器图（TriggerGraph，原 MapTriggerGraph）。
 进度与计划只认两张票：地图域线 https://github.com/MightyBubble/Ludots/issues/1030 ；域扩展线（实体域挂载、GAS 事件桥、技能/效果时刻桥、presenter 时序合同）https://github.com/MightyBubble/Ludots/issues/1031 ——两张票顶部各有进度快照与剩余切片清单，新活从快照开工，别重做已落地的。
-方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落地；2026-08-24 又补上技能域 `abilities.json.triggerGraphs`、Mod 域 `mod.json.triggerGraphs` 和显式 `route: global` 跨地图路由，统一复用现有 TriggerManager/TriggerGraph VM。剩余收口是 S4 时序合同全文对齐与 S5 实体/技能真实可玩 showcase、画廊和 AgentBridge 运行证据，不能把 headless 基建测试写成 showcase 完成。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。合不合、什么时候合，看 #1031 的最新进度快照。
+方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落地；2026-08-24 又补上技能域 `abilities.json.triggerGraphs`、Mod 域 `mod.json.triggerGraphs` 和显式 `route: global` 跨地图路由，统一复用现有 TriggerManager/TriggerGraph VM。2026-08-26 night-raid 大包（rebase 最新 main，PR #1239）继续把事件 Schema SSOT、全局订阅表/`FireGlobalEvent`/`FireCrossMapEvent`、图互调与放置实体读、Enum 目录、图编辑器作者面 hardening 收进同一条线；真正的跨图派发走 `FireGlobalEvent`，不再靠 FireMapEvent 扇出旧表。剩余收口是 S4 时序合同全文对齐与 S5 实体/技能真实可玩 showcase、画廊和 AgentBridge 运行证据，不能把 headless 基建测试写成 showcase 完成。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。合不合、什么时候合，看 #1031 的最新进度快照。
+
+又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`。
+
+**BT 侧已落地：** `BtSequence` / `BtSelector` / `BtDecorator` 三个 Script-only 作者糖把整棵树内联成单个 Script 程序（`Call`/`Return` + `CompareEqInt` + `JumpIfFalse`，零新 opcode，状态寄存器 0/1/2）；`GraphBehaviorTreeHost` 做 per-agent 帧与 think wave 驱动，Yield 叶跨波恢复，嵌套深度对齐 `MaxCallStackDepth`。真实性判据锁在 `GraphBehaviorTreeSugarTests` / `GraphBehaviorTreeHostTests`。旧 `BehaviorTreeWorld`（C# JSON 树解释器）保留为旧数据路径与无图压测，图路径不碰它的遍历。BT-B 已落地：arena 主树 `bt.patrolChaseAttack` 重写为糖图并由 `GraphBehaviorTreeHost` 逐波执行；10k crowd 段实测真图超预算，保留无图压测拓扑并在注册表 summary 显式标注。还开着的（**另开活，本轮别捆**）：Parallel（一期显式不支持）、子树复用/异步叶（BT-2）。
+
+**FSM-1a 已收口：** `FsmState` 糖（ReadMapVarInt + SwitchInt 式臂链，零新 opcode）+ `GraphFsmHost`（每 agent 相位 map 变量、每波一次 halt 分派）。哨兵演武场 featured 走 `Graph.FSM.Sentry`；万人 crowd 诚实走无图 `HfsmWorld(hfsm.sentry)`（`LifecycleRuns==0`），注册表 summary/notes 与验收 `HfsmSentryArena_CrowdBand_NoGraphPressureBaseline_Labeled` 锁死。Bridge / React 投影 `FsmState`（enumType、stateVar、case 臂）。`HfsmWorld` **不删 Core**：退役的是静默双轨——旗舰真图声称必须走 `GraphFsmHost`；crowd/压测/旧 `hfsm.json` 绑定可留，但必须标注；整合演示显式 old-path（`GraphProgramHfsmHost`），不得顶 FSM-1。删除 Core `HfsmWorld` 的触发条件见冻结本 §3.3。
+
+分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。
+
+又开了一条线：纯数据自定义枚举目录（#1125）。已落地：`Enums/enums.json` 走 ConfigPipeline（ArrayById + `ArrayAppendFields:["members"]`，mod 侧 config_catalog.json 声明）装载成 `EnumCatalog`；成员值=首次声明的顺序索引，后 mod 只能追加成员、同名重声明 fail closed 点名，未知字段/缺 id/非法成员名/缺 members 全 fail closed。`SwitchInt` 节点可绑 `enumType`，case 边写成 `case:成员名`，编译期查目录解析成 int 再走原 SwitchInt 路径（消融测试锁死：与手写 `case:1` 指令序列逐条一致），指令 source map 保留 `case:Combat` 原始拼写；enumType 未注册、成员名不在枚举内、绑定时写裸 int 全 fail closed。新作者糖 `SelectByEnum`（selector + case:成员名 候选 + 可选 default）展开 ConstInt+CompareEqInt+JumpIfFalse+MoveInt 链，零新 opcode/执行器。事件参数可注解 `enumType`（int 参数专属，EventParamType 不加 Enum 成员，防回归断言在 `EnumCatalogTests`）。GameEngine 装载序：枚举目录先于事件目录；编译通道 `Compile(doc, eventSchemas, enums)` 可空参数；Bridge validate 同源聚合，`/api/graph/enums/{modId}` 供编辑器下拉。showcase 一期不做：enum-driven-fsm 归 FSM-1 载体（artifacts/showcases/enum-driven-fsm-showcase-design.md 明说依赖 #1113+本票）。→ https://github.com/MightyBubble/Ludots/issues/1125
 
 下面这些早就知道、还没做，**不要当成新发现再审一轮**：默认「看见敌人 / 进入射程」还要有人先塞数字；图号在代码里还是普通整数；有一条事件丢弃计数永远是零；两个节点钉同一格时说不清。
 

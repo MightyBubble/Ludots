@@ -2,7 +2,7 @@
   "name": "CameraAcceptanceHotpathEntryMod",
   "version": "1.0.0",
   "description": "Direct launcher entry for the camera acceptance hotpath map with avatar-driven virtual camera validation.",
-  "main": "bin/net8.0/CameraAcceptanceHotpathEntryMod.dll",
+  "main": "bin/net9.0/CameraAcceptanceHotpathEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CameraAcceptanceMod": "^1.0.0"

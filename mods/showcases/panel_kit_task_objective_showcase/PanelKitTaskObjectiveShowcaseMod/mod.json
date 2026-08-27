@@ -2,7 +2,7 @@
   "name": "PanelKitTaskObjectiveShowcaseMod",
   "version": "1.0.0",
   "description": "WPK-10 small showcase for the objective panel only. RTS and 4X semantics come from PanelKit profile JSON, not generic PanelKit C#.",
-  "main": "bin/net8.0/PanelKitTaskObjectiveShowcaseMod.dll",
+  "main": "bin/net9.0/PanelKitTaskObjectiveShowcaseMod.dll",
   "priority": 50,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

@@ -108,6 +108,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
+        void PushPresentationText(GraphPresentationTextSurface surface, ReadOnlySpan<char> text)
+        {
+            throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
+        }
+
+        /// <summary>
+        /// Resolves a patched PresentationTextCatalog token id to default-locale template characters.
+        /// Zero-arg tokens only; argCount&gt;0 fails closed until FormatTextKey lands.
+        /// </summary>
+        ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)
+        {
+            throw new InvalidOperationException(
+                "GAS.GRAPH.ERR.PresentationTextCatalogUnavailable");
+        }
+
         // ── Map-scoped variables ──
 
         int ReadMapVarInt(int varKeyId, MapId mapId)
@@ -128,6 +143,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        /// <summary>
+        /// Resolves a placed entity registered under the instance key id on the mounting
+        /// map's MapLoadEntityIndex. False means unregistered (the LoadPlacedEntity op then
+        /// writes Entity.Null); liveness stays the caller's contract.
+        /// </summary>
+        bool TryGetPlacedEntity(int instanceKeyId, MapId mapId, out Entity entity)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PlacedIndexUnavailable");
+        }
+
+        /// <summary>
+        /// True when Imm region id is present in the mounting map's Regions catalog
+        /// (#1108 LoadPlacedRegion). Regions never enter MapLoadEntityIndex.
+        /// </summary>
+        bool TryHasPlacedRegion(int regionKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RegionCatalogUnavailable");
         }
         int CollectMapEntities(Span<Entity> buffer)
         {
@@ -389,6 +423,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
         }
 
+        /// <summary>
+        /// Fires a schema-checked map-scoped trigger event with a structured payload: values
+        /// come from the StoreArg* staging table keyed by the event schema's payload keys;
+        /// TriggerManager.ValidateFirePayload backstops missing/mistyped parameters.
+        /// selfSource stamps MapTrigger.SourceEntity when the schema declares it (Entity.Null
+        /// for map-domain dispatch). Optional bridge — requires a bound TriggerManager.
+        /// </summary>
+        void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
+        /// <summary>
+        /// Fires a schema-checked Global-scope trigger event (#1123): delivery goes
+        /// through the TriggerManager global subscription table only. The origin map
+        /// (empty when unmapped) rides MapTrigger.SourceMapId as transport metadata.
+        /// Optional bridge — requires a bound TriggerManager.
+        /// </summary>
+        void FireGlobalEventPayload(int eventKeyId, MapId originMapId, GraphEntryPayloadTable? stagedArgs)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
+        /// <summary>
+        /// #1126: register an AwaitCallback waiter (Imm callback type) and park the slice.
+        /// Completions resume through GraphCallbackContinuationSystem in registration order.
+        /// </summary>
+        void BeginAwaitCallback(string callbackType, MapId mapId, Entity scope, int resultBoolRegister)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.GraphCallbackUnavailable");
+        }
+
         // ── Entity lifecycle graph composition ──
         void BeginLifecycleTransaction()
         {
@@ -467,5 +533,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveRelationshipReason(string name);
         int ResolveTargetDispatchPreset(string name);
         int ResolveEntityTemplate(string name);
+
+        int ResolveTextToken(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references text token '{name}', but no PresentationTextCatalog resolver is available.");
+        }
     }
 }

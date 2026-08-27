@@ -12,6 +12,7 @@ namespace AgentBridgeMod
     /// </summary>
     public sealed class AgentBridgeModEntry : IMod
     {
+        private readonly AgentLogRingBackend _logRing = new();
         private AgentBridgeHttpServer? _server;
 
         public static ServiceKey<AgentToolRegistry> ToolRegistryKey { get; } = new("AgentToolRegistry");
@@ -38,23 +39,8 @@ namespace AgentBridgeMod
                 var runtime = new AgentBridgeRuntime(engine, tools) { ArtifactsRoot = discoveryDir };
                 runtime.FrameTick += recording.Tick;
 
-                tools.Register(new SessionInfoTool(runtime));
-                tools.Register(new TimeGetTool(time));
-                tools.Register(new TimeControlTool(time));
-                tools.Register(new EntitiesQueryTool());
-                tools.Register(new UiTreeTool());
-                tools.Register(new UiQueryTool());
-                tools.Register(new UiClickTool());
-                tools.Register(new GasEntityTool());
-                tools.Register(new GasDiagnosticsTool());
-                tools.Register(new OrdersInspectTool());
-                tools.Register(new OrdersIssueTool());
-                tools.Register(new InputStateTool(runtime));
-                tools.Register(new InputInjectTool(runtime));
-                tools.Register(new InputRawTool());
-                tools.Register(new ScreenshotTool(runtime));
-                tools.Register(new RecordingStartTool(recording, runtime));
-                tools.Register(new RecordingStopTool(recording));
+                BuiltinAgentTools.InstallLogRing(_logRing);
+                BuiltinAgentTools.RegisterAll(tools, runtime, time, recording, _logRing);
 
                 engine.SetService(ToolRegistryKey, tools);
 

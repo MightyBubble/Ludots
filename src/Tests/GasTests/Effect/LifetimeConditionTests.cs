@@ -208,7 +208,7 @@ namespace Ludots.Tests.GAS
             That(bindings.TryAddStep(EffectPhaseId.OnPeriod, PhaseSlot.Post, graphId), Is.True);
             templates.Register(templateId, new EffectTemplateData
             {
-                TagId = 0,
+                CategoryId = 0,
                 PresetType = EffectPresetType.None,
                 LifetimeKind = EffectLifetimeKind.Infinite,
                 ClockId = GasClockId.FixedFrame,

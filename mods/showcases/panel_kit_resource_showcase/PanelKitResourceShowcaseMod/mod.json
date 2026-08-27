@@ -2,7 +2,7 @@
   "name": "PanelKitResourceShowcaseMod",
   "version": "1.0.0",
   "description": "WPK-10 small showcase for the resource-bar panel only. RTS and 4X semantics come from PanelKit profile JSON, not generic PanelKit C#.",
-  "main": "bin/net8.0/PanelKitResourceShowcaseMod.dll",
+  "main": "bin/net9.0/PanelKitResourceShowcaseMod.dll",
   "priority": 50,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

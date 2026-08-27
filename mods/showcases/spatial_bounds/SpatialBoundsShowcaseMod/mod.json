@@ -2,7 +2,7 @@
   "name": "SpatialBoundsShowcaseMod",
   "version": "1.0.0",
   "description": "Dedicated showcase for reusable spatial bounds, polygon footprints, multi-polygon footprints, and 3D selection boxes.",
-  "main": "bin/net8.0/SpatialBoundsShowcaseMod.dll",
+  "main": "bin/net9.0/SpatialBoundsShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
