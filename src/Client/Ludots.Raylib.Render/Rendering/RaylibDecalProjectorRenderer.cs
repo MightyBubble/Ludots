@@ -154,6 +154,12 @@ namespace Ludots.Raylib.Render
                 Rl.rlDisableDepthMask();
             }
 
+            bool disableDepthTest = IsBoardScaleStamp(volume.StampSizeMeters);
+            if (disableDepthTest)
+            {
+                Rl.rlDisableDepthTest();
+            }
+
             Shader previousShader = _decalMaterial.shader;
             try
             {
@@ -176,6 +182,11 @@ namespace Ludots.Raylib.Render
             finally
             {
                 _decalMaterial.shader = previousShader;
+
+                if (disableDepthTest)
+                {
+                    Rl.rlEnableDepthTest();
+                }
 
                 if (depthMaskDisabled)
                 {
@@ -229,7 +240,19 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibDecalProjectorRenderer)} stamp size must be finite and positive, got {stampSizeMeters}.");
             }
 
-            return span >= DecalBoardScaleStampMeters ? -1f : DecalMinReceiverNDotUp;
+            return IsBoardScaleStamp(in stampSizeMeters) ? -1f : DecalMinReceiverNDotUp;
+        }
+
+        internal static bool IsBoardScaleStamp(in Vector2 stampSizeMeters)
+        {
+            float span = MathF.Max(stampSizeMeters.X, stampSizeMeters.Y);
+            if (!float.IsFinite(span) || span <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibDecalProjectorRenderer)} stamp size must be finite and positive, got {stampSizeMeters}.");
+            }
+
+            return span >= DecalBoardScaleStampMeters;
         }
 
         private void EnsureDecalResources()

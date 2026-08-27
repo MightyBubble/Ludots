@@ -296,6 +296,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 RaylibDecalProjectorRenderer.ResolveMinReceiverNDotUp(eastAsia),
                 Is.EqualTo(-1f));
+            Assert.That(RaylibDecalProjectorRenderer.IsBoardScaleStamp(eastAsia), Is.True);
+            Assert.That(RaylibDecalProjectorRenderer.IsBoardScaleStamp(new Vector2(3.8f, 3.8f)), Is.False);
         }
 
         [Test]
@@ -327,6 +329,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(next, Is.GreaterThan(method));
             string body = source[method..next];
             Assert.That(body, Does.Contain("FitYawedStampProjectorCenter"));
+            Assert.That(body, Does.Contain("rlDisableDepthTest"));
             Assert.That(body, Does.Not.Contain("_frameVisualHeightmap"));
             Assert.That(source, Does.Not.Contain("FitDecalProjectorVolume"));
             Assert.That(source, Does.Not.Contain("if (_frameVisualHeightmap == null)"));
