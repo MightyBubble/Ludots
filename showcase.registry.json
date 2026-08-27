@@ -8371,6 +8371,8 @@
       "acceptanceTest": "gitbook/acceptance/save-load.feature",
       "artifactDir": "artifacts/acceptance/save-load",
       "tags": ["save", "persistence"],
+      "tier": "T2",
+      "category": "demo",
       "status": "active"
     }
   ]
