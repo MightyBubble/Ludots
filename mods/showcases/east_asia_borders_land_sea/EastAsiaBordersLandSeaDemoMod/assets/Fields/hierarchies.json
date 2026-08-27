@@ -1,0 +1,33 @@
+[
+  {
+    "parent": "country.china",
+    "children": [
+      "admin.anhui",
+      "admin.chongqing",
+      "admin.fujian",
+      "admin.gansu_east",
+      "admin.guangdong",
+      "admin.guangxi",
+      "admin.guizhou",
+      "admin.hainan",
+      "admin.hebei",
+      "admin.heilongjiang",
+      "admin.henan",
+      "admin.hubei",
+      "admin.hunan",
+      "admin.jiangsu",
+      "admin.jiangxi",
+      "admin.jilin",
+      "admin.liaoning",
+      "admin.neimenggu_east",
+      "admin.ningxia",
+      "admin.shaanxi",
+      "admin.shandong",
+      "admin.shanghai",
+      "admin.shanxi",
+      "admin.sichuan",
+      "admin.yunnan",
+      "admin.zhejiang"
+    ]
+  }
+]

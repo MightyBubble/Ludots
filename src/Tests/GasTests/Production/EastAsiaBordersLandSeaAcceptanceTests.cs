@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -7,6 +8,7 @@ using Ludots.Core.Fields;
 using Ludots.Core.Gameplay.FieldRegions;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.Pathing;
@@ -26,6 +28,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     private const float DeltaTime = 1f / 60f;
     private const string MapId = "east_asia_visual_heightmap";
     private const string LayerKey = "ownership.east_asia.country";
+    private const string AdminLayerKey = "ownership.east_asia.admin";
 
     private static readonly string[] BorderMods =
     {
@@ -33,6 +36,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         "EastAsiaPlayableTerrainMod",
         "EastAsiaVisualHeightmapRuntimeEntryMod",
         "FieldEastAsiaCountryMod",
+        "FieldEastAsiaAdminMod",
         "EastAsiaNavMeshDebugMod",
         "CoreInputMod",
         "CameraProfilesMod",
@@ -106,6 +110,36 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
             shipInland.Status,
             Is.AnyOf(PathStatus.NoPath, PathStatus.NotReady),
             "ship must not cut across land");
+    }
+
+    [Test]
+    public void BordersLandSea_CountryAndAdminHierarchyResolves()
+    {
+        using GameEngine engine = CreateEngine(BorderMods);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 2);
+
+        MapSession session = engine.CurrentMapSession
+            ?? throw new InvalidOperationException("map session missing");
+        Assert.That(session.Fields!.TryGetByKey(LayerKey, out FieldLayerData countryData), Is.True);
+        Assert.That(session.Fields.TryGetByKey(AdminLayerKey, out FieldLayerData adminData), Is.True);
+        Assert.That(session.RegionGroups, Is.Not.Null);
+        Assert.That(session.MapConfig!.Fields!.Layers, Is.EqualTo(new[] { LayerKey, AdminLayerKey }));
+
+        var country = (DiscreteIdFieldLayerData)countryData;
+        var admin = (DiscreteIdFieldLayerData)adminData;
+        var spawn = new WorldCmInt2(200_000, 100_000);
+        int countryId = country.Field.Get(country.Field.WorldToCell(spawn));
+        int adminId = admin.Field.Get(admin.Field.WorldToCell(spawn));
+        Assert.That(country.Regions.GetName(countryId), Is.EqualTo("country.china"), "army spawn must sit on China");
+        Assert.That(adminId, Is.GreaterThan(0), "army spawn must sit on a Chinese province placeholder");
+
+        Assert.That(session.RegionIndex!.TryResolve(admin.LayerId, adminId, out Entity province), Is.True);
+        var chain = new List<string>();
+        Assert.That(RegionHierarchyBuilder.TryResolveChain(engine.World, province, chain), Is.True);
+        Assert.That(chain[0], Does.StartWith("admin."));
+        Assert.That(chain, Does.Contain("country.china"));
     }
 
     [Test]

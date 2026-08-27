@@ -5,6 +5,12 @@
     "land-sea",
     "transport-waterways"
   ],
+  "Fields": {
+    "Layers": [
+      "ownership.east_asia.country",
+      "ownership.east_asia.admin"
+    ]
+  },
   "TriggerGraphs": [
     {
       "graph": "Graph.EastAsiaBorders.Boot",
