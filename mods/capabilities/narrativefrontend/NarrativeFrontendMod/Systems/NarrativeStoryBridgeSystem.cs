@@ -11,12 +11,13 @@ using NarrativeFrontendMod.Runtime;
 namespace NarrativeFrontendMod.Systems
 {
     /// <summary>
-    /// Built-in wire: active DialogueView → StoryPresentationProjector → NarrativeFrontendService.
-    /// Content mods start dialogue via TriggerGraph StartDialogue (e.g. MapLoaded); this system only projects.
-    /// Input contexts come from game.json startupInputContexts — not from a per-mod host schema.
+    /// Projects active DialogueView onto NarrativeFrontend when the current map opts in via tag
+    /// <c>narrative.frontend.project</c>. Content mods start dialogue via TriggerGraph StartDialogue;
+    /// flagship NarrativeShowcase keeps its own publisher and must not also carry this tag.
     /// </summary>
     internal sealed class NarrativeStoryBridgeSystem : ISystem<float>
     {
+        public const string ProjectDialogueMapTag = "narrative.frontend.project";
         private const string OwnerId = "NarrativeFrontend.ActiveDialogue";
 
         private readonly GameEngine _engine;
@@ -35,9 +36,16 @@ namespace NarrativeFrontendMod.Systems
 
         public void Update(in float t)
         {
+            if (!CurrentMapOptsIntoProjection())
+            {
+                _service.Clear(OwnerId);
+                return;
+            }
+
             if (_engine.GetService(CoreServiceKeys.DialogueRuntime) is not DialogueRuntime dialogue)
             {
-                return;
+                throw new InvalidOperationException(
+                    $"Map tagged '{ProjectDialogueMapTag}' requires DialogueRuntime for narrative frontend projection.");
             }
 
             if (!dialogue.TryGetActiveView(out DialogueView view))
@@ -66,6 +74,12 @@ namespace NarrativeFrontendMod.Systems
             }
 
             surfaces.RemoveAll(static s => !s.Visible);
+            if (surfaces.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Active dialogue '{view.DialogueId}' projected zero visible surfaces; check presentation profiles.");
+            }
+
             string signature = BuildSignature(view, surfaces.Count);
             _service.Publish(new NarrativeFrontendPageState(
                 OwnerId,
@@ -73,6 +87,25 @@ namespace NarrativeFrontendMod.Systems
                 true,
                 string.Empty,
                 surfaces));
+        }
+
+        private bool CurrentMapOptsIntoProjection()
+        {
+            var tags = _engine.CurrentMapSession?.MapConfig?.Tags;
+            if (tags == null || tags.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (string.Equals(tags[i], ProjectDialogueMapTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string BuildSignature(DialogueView view, int surfaceCount)

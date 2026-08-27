@@ -112,6 +112,7 @@ DialogueAuthorKitShowcaseMod/
 
 - **禁止**再发明 `narrative_hosts` / bootstrap 一类一次性 Frontend schema。
 - 进图开聊只用 TriggerGraph + `StartDialogue`。
+- 要用 NarrativeFrontend 自动投影对话窗：地图 Tags 加 `narrative.frontend.project`（旗舰自管 UI 的地图不要加，避免双开）。
 - 世界气泡 / Sequencer / 任务链：看 Narrative 旗舰，不在本入门包。
 
 ## 6. UAT
@@ -134,6 +135,12 @@ Feature: 关口口令作者案例
   Scenario: 一行换皮
     When 启动 dialogue_author_kit_theme_ink 或 panelTheme=kit-ink
     Then 对话表面使用墨色主题
+
+  Scenario: 投影到 Overlay
+    Given 地图 Tags 含 narrative.frontend.project
+    When 对话已开始
+    Then Overlay 出现台词面与选项面
+    And 旗舰自管 UI 的地图不加该 Tag
 ```
 
 ## 启动

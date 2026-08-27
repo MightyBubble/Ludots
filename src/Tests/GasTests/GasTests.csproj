@@ -78,7 +78,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\EntityCommandPanelShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\superweapon_context\SuperweaponContextShowcaseMod\SuperweaponContextShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\relationship\RelationshipShowcaseMod\RelationshipShowcaseMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />    <ProjectReference Include="..\..\..\mods\showcases\entity_query_tactics\EntityQueryTacticsShowcaseMod\EntityQueryTacticsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\entity_query_tactics\EntityQueryTacticsShowcaseMod\EntityQueryTacticsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\minimap\MinimapShowcaseMod\MinimapShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\chunk_streaming\ChunkStreamingShowcaseMod\ChunkStreamingShowcaseMod.csproj" />

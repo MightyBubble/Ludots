@@ -17,6 +17,8 @@ using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using Ludots.Tests.TestCommon;
 using Ludots.UI;
+using NarrativeFrontendMod;
+using NarrativeFrontendMod.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -70,6 +72,17 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(open.Choices.Count, Is.EqualTo(2),
                 "Without pass, only write_pass and leave should be visible.");
             Assert.That(open.Choices, Has.None.Matches<DialogueChoiceView>(c => c.ChoiceId == "ask_enter"));
+
+            NarrativeFrontendService frontend = engine.GetService(NarrativeFrontendServiceKeys.Service)
+                ?? throw new InvalidOperationException("NarrativeFrontendService missing.");
+            TickUntil(engine, frameTimesMs,
+                () => frontend.Snapshot.HasVisibleContent && frontend.Snapshot.Surfaces.Count >= 2,
+                maxFrames: 30,
+                "Tagged map must project OverlayDialogue + ChoiceList onto NarrativeFrontend.");
+            Assert.That(frontend.Snapshot.Surfaces, Has.Some.Matches<NarrativeFrontendSurfaceModel>(
+                s => s.Kind == NarrativeFrontendSurfaceKind.OverlayDialogue));
+            Assert.That(frontend.Snapshot.Surfaces, Has.Some.Matches<NarrativeFrontendSurfaceModel>(
+                s => s.Kind == NarrativeFrontendSurfaceKind.ChoiceList));
 
             int writeIndex = IndexOfChoice(open, "write_pass");
             dialogue.ChooseOption(writeIndex);

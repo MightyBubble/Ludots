@@ -1,6 +1,6 @@
 {
   "Id": "dialogue_author_kit_gate",
-  "Tags": ["dialogue.author_kit", "mapvar", "panelTheme"],
+  "Tags": ["dialogue.author_kit", "mapvar", "panelTheme", "narrative.frontend.project"],
   "Variables": [
     { "name": "pass_granted", "type": "int", "initial": 0 }
   ],
