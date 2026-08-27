@@ -2,7 +2,7 @@
 
 离散归属层（MapField / discreteId Field）是地图级栅格作者面：层声明、矩形笔画、地图挂载、过境通知、层级查询。引擎只认通用键与 id；省/郡等业务词只出现在 Mod 明文 key 里。
 
-更深存储合同见 [Core Field2D](core-field2d.md)。本页是作者入口。
+**配置结构与 API 的唯一正文**：[MapField 离散归属 SSOT](mapfield-discreteid-ssot.md)。更深存储合同见 [Core Field2D](core-field2d.md)。本页是作者速查，不另立合同。
 
 ## 1. 声明层：`Fields/layers.json`
 
@@ -46,8 +46,8 @@
 }
 ```
 
-- `regions[i]` → regionId `i+1`（1-based）。
-- `rects` 每项 `[x0, y0, x1, y1, regionId]`，闭区间，装载直接 `FillRect`。
+- `regions` 先按 **Ordinal** 排序，再 `regionId = 下标 + 1`（`0` = 无区域）。书写顺序不决定 id。
+- `rects` 每项 `[x0, y0, x1, y1, regionId]`，闭区间，装载直接 `FillRect`；条目里的 id 按**本片段排序后的** `regions` 解释。
 - 可选 `points`；禁止再写 `cells`。
 - FieldEditor / 存档写出走 `FieldRectCodec`（行 RLE + 纵向合并）。细节见 [Field Editor CLI](field-editor.md)。
 
@@ -113,18 +113,20 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 | `field_jing_yang_transit` | 两区过境 + 区内名单 + 面板 |
 | `field_east_asia_admin` | 东亚 VisualHeightmap 上的省级归属投影 |
 | `field_east_asia_country` | Natural Earth 国界栅格化归属投影 |
-| `east_asia_borders_land_sea` | 国界两级（国家贴花 + 中国省级示意）+ 陆军 / 船分走 NavMesh 陆地层与海上层（不同走路档案）+ 过境面板 |
+| `east_asia_borders_land_sea` | 国家贴花 + 陆军 / 船分走 NavMesh 陆地层与海上层（不同走路档案）+ 过境面板；**只挂国家层** |
 | `field_layer_table` | 三区表 + MapLoaded 计数面板 |
 | `field_editor_paint` | field-editor 形状资产（paint.a / paint.b）+ 过境 |
 | `field_hierarchy_query` | hierarchies.json + `TryResolveChain` |
 
-### 7.1 东亚省级归属覆盖层
+### 7.1 东亚国家 / 省级（各自独立）
 
-`field_east_asia_admin` 是叠加在 `EastAsiaPlayableTerrainMod` 上的数据-only Mod。它用 `7142 cm`（约 71.4 m）格长把 `ownership.east_asia.admin` 挂到 `east_asia_visual_heightmap`，以 schema v2 矩形写入 26 个省级示意区（经纬度框经 Albers 投到格网，先涂先占、无重叠），共 52881 个非默认格。可玩图幅由地图 `VisualHeightmap.WorldWidthCm = 6399232`（约 64 km 宽，与 7×4 导航板 `GridCellSizeCm = 3571` 对齐；南北约 36.6 km）等比收缩；高度样本仍来自大陆源 VHTM。远景走 overview mesh，并打开 `DisableDistanceFog`（板级相机远超默认雾距，否则会整片洗蓝），保留 albedo/控制权重贴图；`DisplayHeightScale` 约 50 让厘米级海拔可读；归属用整图半透明贴面叠在地形色上。运行时沿标准 `FieldRegionMaterializer` 物化区域，再由 `FieldDiscreteVisualProjector` 发布 `DiscreteOwnership`，不复制地形资产或引入专用代码。
+合同细节以 [MapField 离散归属 SSOT](mapfield-discreteid-ssot.md) 为准。此处只记作者入口。
 
-`field_east_asia_country` 用同一套投影与图幅，把 Natural Earth 110m `admin_0` 国界栅格化成 `ownership.east_asia.country`（约 17 国、203193 非默认格）。玩家看见的国界色是整图 **Decal 投影贴花**（`country_borders.png` 印在高度图上），不是调试格网铺盖；地图带 `Raylib.FieldOverlays:Off` 关掉 DiscreteOwnership 马赛克。再生格子：`python3 tools/east_asia_borders/rasterize_countries_to_field.py ...`；再生贴花：`python3 tools/east_asia_borders/export_country_decal_png.py ...`（见该 Mod README）。
+`field_east_asia_admin` 是叠加在 `EastAsiaPlayableTerrainMod` 上的数据-only Mod：层 `ownership.east_asia.admin`、schema v2 省级示意矩形。独立 showcase，不要求同图挂国家层。
 
-陆海演示 `east_asia_borders_land_sea` 同时挂国家层与省级层。移动只走导航三角网：陆军走路档案 `Small` 查陆地层（Ground / layer 0），船走路档案 `Medium` 查海上层（Water / layer 1），选择模式都是 PreferMesh。这条演示不走路网 / 河网节点图。过境面板只报国家；开局点必须同时落在 `country.china` 和一个 `admin.*` 示意区上。郡级没有。单位看起来多大只认展示绑定，走路档案不再写视觉缩放。
+`field_east_asia_country`：Natural Earth `admin_0` → `ownership.east_asia.country`；玩家国界色是 Decal 贴花，地图 Tag `Raylib.FieldOverlays:Off`。再生：`tools/east_asia_borders/`（见该 Mod README）。国↔省几何对齐只允许离线脚本，禁止进 Core。
+
+陆海演示 `east_asia_borders_land_sea` **只挂国家层**。移动：陆军 `Small` → Ground（layer 0），船 `Medium` → Water（layer 1），均为 PreferMesh；不走路网 / 河网。过境面板只报国家。单位外观只认展示绑定。
 
 ```powershell
 .\scripts\run-mod-launcher.cmd cli launch 'preset:field_east_asia_admin_raylib'

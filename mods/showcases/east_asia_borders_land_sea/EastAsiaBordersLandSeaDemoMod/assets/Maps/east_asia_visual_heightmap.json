@@ -7,8 +7,7 @@
   ],
   "Fields": {
     "Layers": [
-      "ownership.east_asia.country",
-      "ownership.east_asia.admin"
+      "ownership.east_asia.country"
     ]
   },
   "TriggerGraphs": [

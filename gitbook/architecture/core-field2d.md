@@ -21,6 +21,8 @@ Core Field2D 是全图或大面积二维栅格数据的共享数据结构层。F
 
 ## 离散归属层作者格式
 
+标准配置与 API 合同见 [MapField 离散归属 SSOT](mapfield-discreteid-ssot.md)。本页只记存储底座：
+
 - `Fields/cells/<layerKey>.json`：
   - `schemaVersion: 1`：逐格 `cells: [[x,y,regionId], ...]`（小图 / 既有资产）。
   - `schemaVersion: 2`：矩形笔画 `rects: [[x0,y0,x1,y1,regionId], ...]`，可选 `points`；禁止再写 `cells`。
