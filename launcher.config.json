@@ -1568,6 +1568,13 @@
       }
     },
     {
+      "name": "strategic_hud_panels",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/strategic_hud_panels/StrategicHudPanelsMod"
+      }
+    },
+    {
       "name": "panel_skin_compose",
       "target": {
         "type": "path",

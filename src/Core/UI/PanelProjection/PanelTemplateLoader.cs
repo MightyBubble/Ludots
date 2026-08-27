@@ -11,7 +11,7 @@ namespace Ludots.Core.UI.PanelProjection
     /// </summary>
     public static class PanelTemplateLoader
     {
-        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "skin", "graph", "pins", "events", "intents" };
+        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "skin", "graph", "layout", "pins", "events", "intents" };
         private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
 
         public static PanelTemplate Load(string json)
@@ -54,6 +54,7 @@ namespace Ludots.Core.UI.PanelProjection
                 skin = skinText.Trim();
             }
             string graph = RequireString(rootObject, "graph", "panel template");
+            string layout = RequireString(rootObject, "layout", $"panel template '{id}'");
             if (rootObject["pins"] is not JsonArray pinsNode || pinsNode.Count == 0)
             {
                 throw new InvalidOperationException($"Panel template '{id}' must declare a non-empty 'pins' array.");
@@ -97,7 +98,7 @@ namespace Ludots.Core.UI.PanelProjection
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
             List<PanelIntentMapEntry> intents = ParseIntents(id, rootObject, events);
 
-            return new PanelTemplate(id, graph, pins, events, intents, skin);
+            return new PanelTemplate(id, graph, pins, events, intents, skin, layout);
         }
 
         private static List<PanelTemplateEvent> ParseEvents(string templateId, JsonObject rootObject)

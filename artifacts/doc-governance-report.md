@@ -92,3 +92,10 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 - 帧统计表摘自当前验收工件（`engine_gallery_all/*.json` 等），证据重跑后数值会变化；页面已标注工件路径供对账。
 - 侧栏 Playwright 自动化点击在粘性滚动容器内偶发超时（人工路径不受影响；哈希路由 `#scene/<id>` 等价可达，实测正常）。
 - 本次操作事故记录：在他人工作树 `.worktrees/audit-raylib-main` 做 stash 验证时，因多工作树共享 stash 栈弹入了他人 stash 造成冲突残留；已 `git reset --hard` 恢复至该分支干净 HEAD（`a4b594a118`），他人 stash（wip-nr）完好保留。教训：不在共享仓库的他人工作树执行 stash/pop。
+
+# Strategic HUD Panels 本次检查补充（2026-08-26）
+
+- `gitbook/architecture/strategic-hud-panel-showcase.md` 已加入 `gitbook/SUMMARY.md`。
+- 新增的 Mod、launcher preset、运行证据路径均为仓库相对路径且已存在。
+- 本次仅确认 markup/Raylib 的真实运行证据；其余 native skin 的具体截图仍明确列为后续验收，不作为已完成声明。
+- 证据：`artifacts/acceptance/strategic-hud-panels/trace.jsonl`、`artifacts/acceptance/strategic-hud-panels/battle-report.md`、`artifacts/agent-bridge/shots/strategic-hud-panels-first-viewport.png`。
