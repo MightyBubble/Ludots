@@ -57,6 +57,8 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
         Assert.That(texts, Does.Contain("祝福"));
         Assert.That(texts, Does.Contain("×3"));
 
+        AssertColumnChipsStayInsidePanelFrame(root);
+
         AcceptanceUiEvidenceWriter.CaptureFrame(
             root,
             screensDir,

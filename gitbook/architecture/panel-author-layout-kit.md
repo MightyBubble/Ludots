@@ -106,6 +106,7 @@
 - 过滤排序只在查询图；面板不筛层数、不造假效果。
 - `grid`/`column`/`aggregate` 与 `virtualize` 互斥（装载失败）。
 - 未知 `present` / 缺 `columns` / 缺 `aggregate.count` → 装载失败。
+- 进度条宽度跟格子走，禁止按整块面板写死像素——`column` 不得画出面板边框。
 - 本教学场可同屏三面板；玩家竖切仍「一袋一场」。
 
 ## 6. UAT
@@ -118,6 +119,12 @@ Feature: 开箱布局套件
     Then 我能同时看到标题含「竖列」「网格」「横栏」的三块面板
     And 三块面板名单里都能认出带剩余时间的效果名
     And 至少有一个效果行能读到层数徽标
+
+  Scenario: 横栏不跑出面板框
+    Given 我打开横栏 present=column 且名单有多名成员
+    When 面板完成布局
+    Then 每一颗效果芯片的左右边界都落在该面板框内
+    And 我能在框内认出全部成员名（不被裁到框外看不见）
 
   Scenario: 网格按列折行
     Given 配置 present 为 grid 且 columns 为 3

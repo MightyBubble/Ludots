@@ -243,6 +243,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             .Radius(8)
             .Padding(12)
             .Width(rect.Width)
+            .Overflow(UiOverflow.Clip)
             .Gap(4)
             .Absolute(rect.X, rect.Y)
             .Children(
@@ -339,13 +340,15 @@ public sealed class PanelPresentationSystem : ISystem<float>
         float current = ReadBoundFloat(control.Current!, values, item);
         float max = MathF.Max(0.0001f, ReadBoundFloat(control.Max!, values, item));
         float ratio = Math.Clamp(current / max, 0f, 1f);
-        float trackWidth = PanelWidth - 48f;
-        float fillWidth = MathF.Max(2f, trackWidth * ratio);
+        // Track/fill follow the owning cell width — never hardcode panel chrome width
+        // (that forced column chips to ~full panel width and painted past the frame).
+        float fillPercent = MathF.Max(0f, ratio * 100f);
 
         return new UiElementBuilder(UiNodeKind.Container)
             .Column()
             .Class("control-progress")
             .Class(control.ClassName ?? "progress-bar")
+            .WidthPercent(100f)
             .Gap(2)
             .Children(
                 new UiElementBuilder(UiNodeKind.Text)
@@ -356,7 +359,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 new UiElementBuilder(UiNodeKind.Container)
                     .Row()
                     .Class("progress-track")
-                    .Width(trackWidth)
+                    .WidthPercent(100f)
                     .Height(10)
                     .Background(new UiColor(40, 40, 55, 255))
                     .Radius(4)
@@ -364,7 +367,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
                         new UiElementBuilder(UiNodeKind.Container)
                             .Class("progress-fill")
                             .Class("progress-fill-health")
-                            .Width(fillWidth)
+                            .WidthPercent(fillPercent)
                             .Height(10)
                             .Background(new UiColor(255, 68, 68, 255))
                             .Radius(4)));
@@ -542,13 +545,19 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 .Gap(2)
                 .Padding(4)
                 .Height(cellExtent)
+                .Overflow(UiOverflow.Clip)
                 .Background(new UiColor(28, 28, 48, 180))
                 .Radius(4)
                 .Children(itemChildren.ToArray());
 
             if (control.Present == PanelPresentMode.Grid && control.Columns is int gridColumns && gridColumns > 0)
             {
-                cell = cell.FlexGrow(1f).FlexBasisPercent(100f / gridColumns);
+                cell = cell.FlexGrow(1f).FlexShrink(1f).FlexBasisPercent(100f / gridColumns);
+            }
+            else if (control.Present == PanelPresentMode.Column)
+            {
+                // Equal share of the panel content width so the buff row never spills the frame.
+                cell = cell.FlexGrow(1f).FlexShrink(1f).FlexBasis(0f);
             }
 
             rows.Add(cell);
@@ -568,6 +577,9 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 .Class("control-list-column")
                 .Class(control.ClassName ?? "list")
                 .Class($"list-{control.Bind}")
+                .WidthPercent(100f)
+                .Height(cellExtent)
+                .Overflow(UiOverflow.Clip)
                 .Gap(4f)
                 .Children(rows.ToArray());
         }
@@ -853,7 +865,16 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     }
                 }
 
-                listBudget += itemCount * (control.ItemExtent ?? ListItemHeight);
+                float itemExtent = control.ItemExtent ?? ListItemHeight;
+                int visualRows = control.Present switch
+                {
+                    PanelPresentMode.Column => itemCount > 0 ? 1 : 0,
+                    PanelPresentMode.Grid when control.Columns is int cols && cols > 0
+                        => (itemCount + cols - 1) / cols,
+                    PanelPresentMode.Aggregate => itemCount > 0 ? 1 : 0,
+                    _ => itemCount,
+                };
+                listBudget += visualRows * itemExtent;
             }
 
             contentHeight = PanelChromeHeight + Math.Max(3 * RowHeight, listBudget);
