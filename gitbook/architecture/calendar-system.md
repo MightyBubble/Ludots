@@ -55,7 +55,7 @@ Calendar.DayPhaseChanged
 | `activeCalendarId` | 主历，必须在历法表里 |
 | `dayPhases` | 昼夜相位，按当天进度千分比切。首项 `startPermille` 必须是 0，后面递增且 < 1000 |
 
-当天进度 = `ticksIntoDay * 1000 / ticksPerDay`，读接口是 `CaptureClockSnapshot().DayPermille`。晓、昼、暮、夜查这根轴。钟面（例如 12:34）是皮层把千分比画成表，不要在 `clock.json` 再写一套「一天多少分钟」。写了 `minutesPerDay` 装载失败。
+当天进度 = `ticksIntoDay * 1000 / ticksPerDay`，读接口是 `CaptureClockSnapshot().DayPermille`。晓、昼、暮、夜查这根轴。钟面（例如 12:34）是界面把千分比画成表，不要在 `clock.json` 再写一套「一天多少分钟」。写了 `minutesPerDay` 装载失败。
 
 Mod 要启用历法，写 `Calendar/clock.json`，并保证 catalog 里有这条 DeepObject（核心 catalog 已登记且 `AllowEmpty: true`）。
 
