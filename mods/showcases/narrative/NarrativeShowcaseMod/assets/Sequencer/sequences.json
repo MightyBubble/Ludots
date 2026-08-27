@@ -1,7 +1,7 @@
 [
   {
     "id": "Sequence.Narrative.Intro",
-    "displayName": "Ashen Oath Intro",
+    "displayName": "灰烬誓约·开场",
     "clearCameraOnComplete": true,
     "clock": {
       "rate": 1.0,
@@ -38,7 +38,7 @@
   },
   {
     "id": "Sequence.Narrative.TrialReveal",
-    "displayName": "Ashen Oath Trial Reveal",
+    "displayName": "灰烬誓约·神龛醒来",
     "clearCameraOnComplete": true,
     "clock": {
       "rate": 1.0,

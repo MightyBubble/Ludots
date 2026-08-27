@@ -106,6 +106,8 @@ namespace Ludots.Tests.GAS.Production
                 30,
                 () => "Expected bootstrap intro sequence or briefing dialogue after map focus.");
             AssertTaskState(tasks, NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingTaskId, TaskInstanceState.Active);
+            AssertCastIdentityVisible(uiRoot);
+            Assert.That(UiContains(uiRoot, "米蕾勒") || UiContains(uiRoot, "灯火"), Is.True);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "map_loaded");
             timeline.Add("[T+001] Loaded the narrative showcase hub; HUD mounted and TaskRuntime entered the briefing beat.");
 
@@ -123,6 +125,9 @@ namespace Ludots.Tests.GAS.Production
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             Assert.That(dialogue.TryGetActiveView(out DialogueView introDialogue), Is.True);
             Assert.That(introDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingDialogueId));
+            Assert.That(introDialogue.ResolvedSpeakerName, Does.Contain("米蕾勒").Or.Contain("Mirelle"));
+            Assert.That(UiContains(uiRoot, "守望者米蕾勒") || UiContains(uiRoot, "Warden Mirelle"), Is.True);
+            Assert.That(UiContains(uiRoot, "回话") || UiContains(uiRoot, "1"), Is.True);
             AssertThemeFrameVisibleOnDialogue(uiRoot);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
             timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
@@ -132,13 +137,15 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => dialogue.TryGetActiveView(out DialogueView view) &&
-                      view.ResolvedText.Contains("ember-memory", StringComparison.OrdinalIgnoreCase),
+                      (view.ResolvedText.Contains("余烬记忆", StringComparison.Ordinal) ||
+                       view.ResolvedText.Contains("ember-memory", StringComparison.OrdinalIgnoreCase)),
                 20,
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             Assert.That(dialogue.TryGetActiveView(out DialogueView loreBubble), Is.True);
             Assert.That(loreBubble.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationWorldBubble));
 
             AssertWorldBubbleFollowsSpeakerProjection(engine, uiRoot, dialogue, loreBubble);
+            Assert.That(UiContains(uiRoot, "你说了") || UiContains(uiRoot, "You chose"), Is.True);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "world_bubble_projected");
             timeline.Add("[T+003a] World bubble lore reply projected onto the speaker head via IScreenProjector (not a fixed corner panel).");
             PressStoryAction(engine, backend, DialogueInputActionIds.Choice1, frameTimesMs);
@@ -146,7 +153,8 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => dialogue.TryGetActiveView(out DialogueView view) &&
-                      view.ResolvedText.Contains("Wake what sleeps beneath it", StringComparison.OrdinalIgnoreCase),
+                      (view.ResolvedText.Contains("唤醒沉睡其下", StringComparison.Ordinal) ||
+                       view.ResolvedText.Contains("Wake what sleeps beneath it", StringComparison.OrdinalIgnoreCase)),
                 20,
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             PressStoryAction(engine, backend, DialogueInputActionIds.Advance, frameTimesMs);
@@ -154,6 +162,8 @@ namespace Ludots.Tests.GAS.Production
             AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId, 1);
             AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId, 2);
             AssertTaskState(tasks, NarrativeShowcaseMod.NarrativeShowcaseIds.TrialTaskId, TaskInstanceState.Active);
+            Assert.That(UiContains(uiRoot, "神龛") || UiContains(uiRoot, "Shrine"), Is.True);
+            Assert.That(UiContains(uiRoot, "见闻") || UiContains(uiRoot, "信任"), Is.True);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "briefing_branch_complete");
             timeline.Add("[T+003] Took the lore branch via StoryChoice1, wrote MapVariableStore trust/lore, and advanced TaskRuntime into the trial beat.");
 
@@ -684,6 +694,14 @@ namespace Ludots.Tests.GAS.Production
         }
 
 
+
+        private static void AssertCastIdentityVisible(UIRoot uiRoot)
+        {
+            Assert.That(UiContains(uiRoot, "织弧者"), Is.True, "Player nameplate 织弧者 must be visible.");
+            Assert.That(UiContains(uiRoot, "米蕾勒"), Is.True, "Warden nameplate 米蕾勒 must be visible.");
+            Assert.That(UiContains(uiRoot, "余烬神龛"), Is.True, "Shrine nameplate 余烬神龛 must be visible.");
+            Assert.That(FindUiNodeByClass(uiRoot.Scene?.Root, "story-nameplate"), Is.Not.Null);
+        }
 
         private static void AssertStandingPortraitSurface(UIRoot uiRoot, DialogueView view)
         {

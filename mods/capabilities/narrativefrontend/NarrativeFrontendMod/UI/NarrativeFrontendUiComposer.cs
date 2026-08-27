@@ -65,6 +65,7 @@ internal static class NarrativeFrontendUiComposer
             NarrativeFrontendSurfaceKind.FlowReview => BuildCard(surface, "story-flow-review"),
             NarrativeFrontendSurfaceKind.TransmissionOverlay => BuildTransmission(surface),
             NarrativeFrontendSurfaceKind.StandingPortrait => BuildStandingPortrait(surface),
+            NarrativeFrontendSurfaceKind.WorldNameplate => BuildWorldNameplate(surface),
             _ => BuildCard(surface, "story-card"),
         };
 
@@ -92,6 +93,18 @@ internal static class NarrativeFrontendUiComposer
                     .Gap(8f)
                     .Align(subtitle ? UiAlignItems.End : UiAlignItems.Start),
                 surface);
+    }
+
+    private static UiElementBuilder BuildWorldNameplate(NarrativeFrontendSurfaceModel surface)
+    {
+        return ApplyAuthorChrome(
+            Ui.Column(
+                    BuildEyebrow(surface),
+                    BuildTitle(surface, fontSize: 16f))
+                .Classes("story-nameplate", "story-card")
+                .Gap(2f)
+                .Align(UiAlignItems.Center),
+            surface);
     }
 
     private static UiElementBuilder BuildStandingPortrait(NarrativeFrontendSurfaceModel surface)

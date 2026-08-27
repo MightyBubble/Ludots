@@ -1,5 +1,5 @@
 {
-  "defaultLocale": "en-US",
+  "defaultLocale": "zh-CN",
   "locales": {
     "en-US": {
       "story.speaker.warden.name": "Warden Mirelle",
@@ -36,7 +36,7 @@
       "story.demo.audience.mercy_end": "Then spare what can learn. The valley will remember your hand."
     },
     "zh-CN": {
-      "story.speaker.warden.name": "看守米蕾尔",
+      "story.speaker.warden.name": "守望者米蕾勒",
       "story.speaker.player.name": "织弧者",
       "story.speaker.shrine.name": "余烬神龛",
       "story.ending.mercy": "仁慈",

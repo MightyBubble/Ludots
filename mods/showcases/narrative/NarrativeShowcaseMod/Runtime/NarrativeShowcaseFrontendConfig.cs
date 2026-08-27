@@ -9,22 +9,27 @@ namespace NarrativeShowcaseMod.Runtime
     internal sealed class NarrativeShowcaseFrontendConfig
     {
         public string OwnerId { get; set; } = "NarrativeShowcase";
+        public string PlayerLocale { get; set; } = string.Empty;
         public string BackdropHex { get; set; } = string.Empty;
         public NarrativeShowcaseSurfaceConfig PromptRibbon { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig ObjectiveTracker { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig HistoryJournal { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig VariablesPanel { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig NotificationStack { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig OverlayDialogue { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig DialogueBubble { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig StandingPortrait { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig SubtitleBubble { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig ChoiceList { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig TransmissionOverlay { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig Nameplate { get; set; } = new();
         public NarrativeShowcaseHintConfig Hints { get; set; } = new();
         public NarrativeShowcaseTemplateConfig Templates { get; set; } = new();
         public NarrativeShowcaseRoutingConfig Routing { get; set; } = new();
         public NarrativeShowcaseStageHudConfig StageHud { get; set; } = new();
         public NarrativeShowcaseBootstrapConfig Bootstrap { get; set; } = new();
+        public NarrativeShowcaseInteractConfig Interact { get; set; } = new();
+        public NarrativeShowcaseCastMemberConfig[] Cast { get; set; } = Array.Empty<NarrativeShowcaseCastMemberConfig>();
         public NarrativeShowcaseVariableConfig[] Variables { get; set; } = Array.Empty<NarrativeShowcaseVariableConfig>();
         public Dictionary<string, string> EndingLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, string> SpeakerLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -115,12 +120,34 @@ namespace NarrativeShowcaseMod.Runtime
     internal sealed class NarrativeShowcaseHintConfig
     {
         public string PromptTitle { get; set; } = string.Empty;
+        public string IntroPrompt { get; set; } = string.Empty;
         public string ExplorePrompt { get; set; } = string.Empty;
+        public string ExploreWardenPrompt { get; set; } = string.Empty;
+        public string ExploreWardenNearPrompt { get; set; } = string.Empty;
+        public string ExploreShrinePrompt { get; set; } = string.Empty;
+        public string ExploreShrineNearPrompt { get; set; } = string.Empty;
         public string ChoicePrompt { get; set; } = string.Empty;
+        public string ContinuePrompt { get; set; } = string.Empty;
         public string CombatPrompt { get; set; } = string.Empty;
         public string ReturnPrompt { get; set; } = string.Empty;
+        public string ReturnNearPrompt { get; set; } = string.Empty;
         public string SkipPrompt { get; set; } = string.Empty;
         public string AutoAdvancePrompt { get; set; } = string.Empty;
+    }
+
+    internal sealed class NarrativeShowcaseInteractConfig
+    {
+        public float WardenRangeCm { get; set; } = 420f;
+        public float ShrineRangeCm { get; set; } = 360f;
+    }
+
+    internal sealed class NarrativeShowcaseCastMemberConfig
+    {
+        public string EntityName { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string AccentHex { get; set; } = string.Empty;
+        public float HeadOffsetYCm { get; set; } = 160f;
     }
 
     internal sealed class NarrativeShowcaseTemplateConfig
@@ -151,8 +178,10 @@ namespace NarrativeShowcaseMod.Runtime
     {
         public bool ShowHistoryAlways { get; set; }
         public bool ShowVariablesAlways { get; set; }
+        public bool ShowVariablesWhenNonZero { get; set; }
         public bool ShowObjectiveWithDialogue { get; set; }
         public bool ShowObjectiveWithSequence { get; set; }
+        public bool HideCastDuringStandingPortrait { get; set; } = true;
     }
 
     internal sealed class NarrativeShowcaseChoiceSignalRoute

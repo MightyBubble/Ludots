@@ -34,6 +34,7 @@ public enum NarrativeFrontendSurfaceKind
     FlowReview = 13,
     TransmissionOverlay = 14,
     StandingPortrait = 15,
+    WorldNameplate = 16,
 }
 
 public sealed record NarrativeFrontendSurfaceItem(

@@ -98,6 +98,7 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 ActivateInputContexts(input);
                 EnsureViewMode(engine);
+                EnsurePlayerLocale(engine);
                 RequireShowcaseSolePossessedRep(engine, activeMapId);
                 PublishShowcaseKnowledge(engine, activeMapId);
                 EnsureBootstrapped(engine);
@@ -366,6 +367,23 @@ namespace NarrativeShowcaseMod.Runtime
         internal bool BeastDefeated(GameEngine engine)
             => engine.GlobalContext.TryGetValue(NarrativeShowcaseIds.BeastDefeatedKey, out var value) && value is bool defeated && defeated;
 
+        internal float WardenInteractRangeCm => _frontendConfig.Interact.WardenRangeCm;
+
+        internal float ShrineInteractRangeCm => _frontendConfig.Interact.ShrineRangeCm;
+
+        internal bool IsNearNamed(GameEngine engine, string name, float rangeCm)
+        {
+            if (!TryFindEntityByName(engine.World, NarrativeShowcaseIds.PlayerName, out Entity player) ||
+                !engine.World.TryGet(player, out WorldPositionCm playerPos) ||
+                !TryFindEntityByName(engine.World, name, out Entity target) ||
+                !engine.World.TryGet(target, out WorldPositionCm targetPos))
+            {
+                return false;
+            }
+
+            return IsNear(playerPos, targetPos, rangeCm);
+        }
+
         internal void MarkBeastDefeated(GameEngine engine)
         {
             engine.GlobalContext[NarrativeShowcaseIds.BeastDefeatedKey] = true;
@@ -421,9 +439,24 @@ namespace NarrativeShowcaseMod.Runtime
                 surfaces.Add(BuildHistorySurface());
             }
 
-            if (hud.ShowVariablesAlways)
+            if (hud.ShowVariablesAlways || (hud.ShowVariablesWhenNonZero && HasNonZeroStoryVariable(engine)))
             {
                 surfaces.Add(BuildVariablesSurface(engine));
+            }
+
+            if (_history.Count > 0)
+            {
+                surfaces.Add(BuildNotificationSurface());
+            }
+
+            bool standingPortrait = dialogueActive &&
+                string.Equals(
+                    dialogueView.PresentationProfile,
+                    NarrativeShowcaseIds.PresentationStandingPortrait,
+                    StringComparison.OrdinalIgnoreCase);
+            if (!hud.HideCastDuringStandingPortrait || !standingPortrait)
+            {
+                AddCastNameplates(engine, surfaces);
             }
 
             if (sequenceActive)
@@ -455,13 +488,7 @@ namespace NarrativeShowcaseMod.Runtime
             DialogueRuntime dialogue,
             SequencerRuntime sequencer)
         {
-            string body = BeastDefeated(engine)
-                ? _frontendConfig.Hints.ReturnPrompt
-                : BeastSpawned(engine)
-                    ? _frontendConfig.Hints.CombatPrompt
-                    : dialogue.TryGetActiveView(out DialogueView activeDialogue) && activeDialogue.Choices.Count > 0
-                        ? _frontendConfig.Hints.ChoicePrompt
-                        : _frontendConfig.Hints.ExplorePrompt;
+            string body = ResolvePromptBody(engine, dialogue, sequencer);
             string footer = sequencer.HasActiveSequence
                 ? _frontendConfig.Hints.SkipPrompt
                 : string.Empty;
@@ -667,7 +694,6 @@ namespace NarrativeShowcaseMod.Runtime
                 DialogueChoiceView choice = dialogue.Choices[i];
                 items.Add(new NarrativeFrontendSurfaceItem(
                     Label: choice.ResolvedText,
-                    Caption: choice.ChoiceId,
                     Active: i == 0,
                     Shortcut: (i + 1).ToString()));
             }
@@ -1094,7 +1120,8 @@ namespace NarrativeShowcaseMod.Runtime
                 surfaceCount,
                 _historySerial,
                 BeastSpawned(engine),
-                BeastDefeated(engine));
+                BeastDefeated(engine),
+                BuildCastSignature(engine));
         }
 
         private string FormatVariable(MapVariableStore? variables, string variableId)
@@ -1228,6 +1255,205 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             return result;
+        }
+
+        private void EnsurePlayerLocale(GameEngine engine)
+        {
+            if (string.IsNullOrWhiteSpace(_frontendConfig.PlayerLocale))
+            {
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection) is PresentationTextLocaleSelection locale
+                && !string.Equals(locale.ActiveLocaleKey, _frontendConfig.PlayerLocale, StringComparison.OrdinalIgnoreCase))
+            {
+                locale.SetActiveLocale(_frontendConfig.PlayerLocale);
+            }
+        }
+
+        private string ResolvePromptBody(GameEngine engine, DialogueRuntime dialogue, SequencerRuntime sequencer)
+        {
+            NarrativeShowcaseHintConfig hints = _frontendConfig.Hints;
+            if (sequencer.HasActiveSequence)
+            {
+                if (sequencer.TryGetActiveView(out SequenceView sequence) &&
+                    string.Equals(sequence.SequenceId, NarrativeShowcaseIds.TrialRevealSequenceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return FirstNonEmpty(hints.SkipPrompt, hints.IntroPrompt);
+                }
+
+                return FirstNonEmpty(hints.IntroPrompt, hints.SkipPrompt);
+            }
+
+            if (dialogue.TryGetActiveView(out DialogueView activeDialogue))
+            {
+                return activeDialogue.Choices.Count > 0
+                    ? FirstNonEmpty(hints.ChoicePrompt, hints.ContinuePrompt)
+                    : FirstNonEmpty(hints.ContinuePrompt, hints.ChoicePrompt);
+            }
+
+            if (BeastSpawned(engine) && !BeastDefeated(engine))
+            {
+                return hints.CombatPrompt;
+            }
+
+            bool nearWarden = IsNearNamed(engine, NarrativeShowcaseIds.ElderName, WardenInteractRangeCm);
+            bool nearShrine = IsNearNamed(engine, NarrativeShowcaseIds.ShrineName, ShrineInteractRangeCm);
+
+            if (BeastDefeated(engine))
+            {
+                return nearWarden
+                    ? FirstNonEmpty(hints.ReturnNearPrompt, hints.ReturnPrompt)
+                    : hints.ReturnPrompt;
+            }
+
+            if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService tasks)
+            {
+                if (tasks.TryGetState(NarrativeShowcaseIds.TrialTaskId, out TaskInstanceState trialState) &&
+                    trialState == TaskInstanceState.Active)
+                {
+                    return nearShrine
+                        ? FirstNonEmpty(hints.ExploreShrineNearPrompt, hints.ExploreShrinePrompt)
+                        : FirstNonEmpty(hints.ExploreShrinePrompt, hints.ExplorePrompt);
+                }
+
+                if (tasks.TryGetState(NarrativeShowcaseIds.BriefingTaskId, out TaskInstanceState briefingState) &&
+                    briefingState == TaskInstanceState.Active)
+                {
+                    return nearWarden
+                        ? FirstNonEmpty(hints.ExploreWardenNearPrompt, hints.ExploreWardenPrompt)
+                        : FirstNonEmpty(hints.ExploreWardenPrompt, hints.ExplorePrompt);
+                }
+            }
+
+            return FirstNonEmpty(hints.ExploreWardenPrompt, hints.ExplorePrompt);
+        }
+
+        private NarrativeFrontendSurfaceModel BuildNotificationSurface()
+        {
+            int take = Math.Min(2, _history.Count);
+            var items = new List<NarrativeFrontendSurfaceItem>(take);
+            for (int i = 0; i < take; i++)
+            {
+                string line = _history[_history.Count - 1 - i];
+                items.Add(new NarrativeFrontendSurfaceItem(
+                    Label: i == 0 ? "刚才" : "之前",
+                    Value: line,
+                    Active: i == 0));
+            }
+
+            return CreateSurface(
+                _frontendConfig.NotificationStack,
+                NarrativeFrontendSurfaceKind.NotificationStack,
+                _frontendConfig.NotificationStack.Title,
+                string.Empty,
+                _frontendConfig.NotificationStack.Footer,
+                items);
+        }
+
+        private void AddCastNameplates(GameEngine engine, List<NarrativeFrontendSurfaceModel> surfaces)
+        {
+            NarrativeShowcaseCastMemberConfig[] cast = _frontendConfig.Cast;
+            for (int i = 0; i < cast.Length; i++)
+            {
+                NarrativeShowcaseCastMemberConfig member = cast[i];
+                if (string.IsNullOrWhiteSpace(member.EntityName) ||
+                    !TryProjectNamedEntity(engine, member.EntityName, member.HeadOffsetYCm, out float screenX, out float screenY))
+                {
+                    continue;
+                }
+
+                NarrativeShowcaseSurfaceConfig plate = _frontendConfig.Nameplate;
+                surfaces.Add(new NarrativeFrontendSurfaceModel(
+                    SurfaceId: $"{_frontendConfig.OwnerId}.nameplate.{member.EntityName}",
+                    Kind: NarrativeFrontendSurfaceKind.WorldNameplate,
+                    Anchor: NarrativeFrontendAnchor.TopLeft,
+                    Title: member.Title,
+                    Subtitle: member.Role,
+                    Width: plate.Width,
+                    OffsetX: screenX - UiMargin - (plate.Width * 0.5f),
+                    OffsetY: screenY - UiMargin - 52f,
+                    ZIndex: plate.ZIndex,
+                    AccentHex: FirstNonEmpty(member.AccentHex, plate.AccentHex),
+                    BackgroundHex: plate.BackgroundHex,
+                    BorderHex: plate.BorderHex,
+                    ForegroundHex: plate.ForegroundHex,
+                    MutedHex: plate.MutedHex));
+            }
+        }
+
+        private bool HasNonZeroStoryVariable(GameEngine engine)
+        {
+            MapVariableStore? variables = engine.CurrentMapSession?.Variables;
+            if (variables == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _frontendConfig.Variables.Length; i++)
+            {
+                string variableId = _frontendConfig.Variables[i].VariableId;
+                if (variables.Contains(variableId) && variables.ReadInt(variableId) != 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private string BuildCastSignature(GameEngine engine)
+        {
+            if (!TryFindEntityByName(engine.World, NarrativeShowcaseIds.PlayerName, out Entity player) ||
+                !engine.World.TryGet(player, out WorldPositionCm playerPos))
+            {
+                return string.Empty;
+            }
+
+            Vector2 pos = playerPos.Value.ToVector2();
+            return string.Join("|",
+                $"{pos.X:0}",
+                $"{pos.Y:0}",
+                IsNearNamed(engine, NarrativeShowcaseIds.ElderName, WardenInteractRangeCm),
+                IsNearNamed(engine, NarrativeShowcaseIds.ShrineName, ShrineInteractRangeCm));
+        }
+
+        private bool TryProjectNamedEntity(GameEngine engine, string name, float headOffsetYCm, out float screenX, out float screenY)
+        {
+            screenX = 0f;
+            screenY = 0f;
+            if (engine.GetService(CoreServiceKeys.ScreenProjector) is not IScreenProjector projector ||
+                !TryFindEntityByName(engine.World, name, out Entity entity) ||
+                !engine.World.TryGet(entity, out WorldPositionCm worldPos))
+            {
+                return false;
+            }
+
+            Vector2 world = worldPos.Value.ToVector2();
+            Vector2 screen = projector.WorldToScreen(new Vector3(
+                world.X / 100f,
+                headOffsetYCm / 100f,
+                world.Y / 100f));
+            if (float.IsNaN(screen.X) || float.IsNaN(screen.Y))
+            {
+                return false;
+            }
+
+            screenX = screen.X;
+            screenY = screen.Y;
+            return true;
+        }
+
+        private static string FirstNonEmpty(string preferred, string fallback)
+        {
+            return string.IsNullOrWhiteSpace(preferred) ? fallback ?? string.Empty : preferred;
+        }
+
+        private static bool IsNear(WorldPositionCm a, WorldPositionCm b, float rangeCm)
+        {
+            Vector2 va = a.Value.ToVector2();
+            Vector2 vb = b.Value.ToVector2();
+            return Vector2.Distance(va, vb) <= rangeCm;
         }
 
         private static bool TryFindEntityByName(World world, string name, out Entity result)

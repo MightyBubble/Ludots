@@ -5148,7 +5148,7 @@
       "path": "mods/showcases/narrative/NarrativeShowcaseMod",
       "projectPath": "NarrativeShowcaseMod.csproj",
       "title": "叙事：对话 + 演出",
-      "summary": "开场 Sequencer 镜头字幕、对话选项、试炼演出轨与立绘同台。一幕一屏。换肤用 narrative_theme_*（含九宫格框图）。",
+      "summary": "你是织弧者。先听守望者米蕾勒把话说完，再去叫醒神龛、打退灰烬兽，最后回来选一个结局。场上有名牌，按键马上有下一句。换肤用 narrative_theme_*。",
       "tier": "T2",
       "category": "capability",
       "binding": "narrative",
