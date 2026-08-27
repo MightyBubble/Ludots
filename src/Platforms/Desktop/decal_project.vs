@@ -13,10 +13,11 @@ out vec3 fragNormal;
 void main()
 {
     vec3 n = normalize(mat3(matModel) * vertexNormal);
-    // Nudge along the receiver normal so the re-drawn terrain triangles win the
-    // depth test against the opaque pass without a separate depth-bias API.
-    vec3 biasedPosition = vertexPosition + (vertexNormal * receiverDepthBias);
     fragPos = (matModel * vec4(vertexPosition, 1.0)).xyz;
     fragNormal = n;
-    gl_Position = mvp * vec4(biasedPosition, 1.0);
+    vec4 clip = mvp * vec4(vertexPosition, 1.0);
+    // Clip-depth only. Along-normal vertex push slides steep slopes off the
+    // painted pixels and lets the grass pass show through the stamp.
+    clip.z -= receiverDepthBias * clip.w * 1.0e-4;
+    gl_Position = clip;
 }

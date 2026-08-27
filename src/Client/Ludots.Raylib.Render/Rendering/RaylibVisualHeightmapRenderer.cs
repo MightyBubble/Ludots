@@ -1175,6 +1175,14 @@ namespace Ludots.Raylib.Render
 
             long buildStart = Stopwatch.GetTimestamp();
             ResolveChunkHeightRange(in chunk, out float minHeightCm, out float maxHeightCm);
+            ResolveDisplayYRangeMeters(
+                minHeightCm,
+                maxHeightCm,
+                _displayHeightScale,
+                _absoluteColorSeaLevelCm,
+                _absoluteColorPeakSpanCm,
+                out float minDisplayY,
+                out float maxDisplayY);
             ChunkGpu gpu = new()
             {
                 Mesh = CreateChunkMesh(in chunk),
@@ -1182,8 +1190,8 @@ namespace Ludots.Raylib.Render
                 LastUsedFrame = _frameIndex,
                 MinX = chunk.Bounds.Left * 0.01f,
                 MaxX = chunk.Bounds.Right * 0.01f,
-                MinY = minHeightCm * 0.01f,
-                MaxY = maxHeightCm * 0.01f,
+                MinY = minDisplayY,
+                MaxY = maxDisplayY,
                 MinZ = chunk.Bounds.Top * 0.01f,
                 MaxZ = chunk.Bounds.Bottom * 0.01f,
             };
@@ -1366,6 +1374,30 @@ namespace Ludots.Raylib.Render
             }
 
             return relative;
+        }
+
+        internal static void ResolveDisplayYRangeMeters(
+            float minHeightCm,
+            float maxHeightCm,
+            float displayHeightScale,
+            float? absoluteSeaLevelCm,
+            float absolutePeakSpanCm,
+            out float minY,
+            out float maxY)
+        {
+            float scale = MathF.Max(VisualHeightmapRenderProfile.MinDisplayHeightScale, displayHeightScale);
+            float minDisplayCm = absoluteSeaLevelCm is float seaCm
+                ? ResolveAbsoluteDisplayHeightCm(minHeightCm, seaCm, absolutePeakSpanCm)
+                : minHeightCm;
+            float maxDisplayCm = absoluteSeaLevelCm is float seaForMax
+                ? ResolveAbsoluteDisplayHeightCm(maxHeightCm, seaForMax, absolutePeakSpanCm)
+                : maxHeightCm;
+            minY = minDisplayCm * scale * 0.01f;
+            maxY = maxDisplayCm * scale * 0.01f;
+            if (minY > maxY)
+            {
+                (minY, maxY) = (maxY, minY);
+            }
         }
 
         internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float absolutePeakSpanCm)

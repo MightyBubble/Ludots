@@ -309,8 +309,25 @@ namespace Ludots.Tests.Presentation
             Assert.That(fragment, Does.Contain("abs(local.x) > 0.5 || abs(local.z) > 0.5"));
             Assert.That(fragment, Does.Not.Contain("abs(local.y)"));
             Assert.That(vertex, Does.Contain("receiverDepthBias"));
+            Assert.That(vertex, Does.Not.Contain("vertexNormal * receiverDepthBias"));
+            Assert.That(vertex, Does.Contain("clip.z"));
             Assert.That(vertex, Does.Not.Contain("0.04"));
             Assert.That(fragment, Does.Contain("minReceiverNDotUp"));
+        }
+
+        [Test]
+        public void HeightmapProjector_ChunkAabbUsesDisplayScaledY()
+        {
+            RaylibVisualHeightmapRenderer.ResolveDisplayYRangeMeters(
+                minHeightCm: 200f,
+                maxHeightCm: 5000f,
+                displayHeightScale: 50f,
+                absoluteSeaLevelCm: 0f,
+                absolutePeakSpanCm: 5000f,
+                out float minY,
+                out float maxY);
+            Assert.That(minY, Is.EqualTo(100f).Within(1e-3f));
+            Assert.That(maxY, Is.EqualTo(2500f).Within(1e-3f));
         }
 
         [Test]
