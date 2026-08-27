@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Gameplay.Story;
+using Ludots.Core.Presentation;
 
 namespace NarrativeFrontendMod.Runtime;
 
@@ -17,6 +19,19 @@ public sealed class NarrativeFrontendService
     public int Revision => _revision;
 
     public NarrativeFrontendRenderState Snapshot => _snapshot;
+
+    /// <summary>
+    /// Publish a Core story frame (dialogue/subtitle/choices as strings + imageId).
+    /// Paths are resolved at this boundary via <paramref name="display"/>.
+    /// </summary>
+    public void PublishStoryFrame(
+        string ownerId,
+        StoryPresentationFrame frame,
+        PresentationDisplayResolver? display,
+        string frameImageSrc = "")
+    {
+        Publish(StoryPresentationFrontendAdapter.ToPage(ownerId, frame, display, frameImageSrc));
+    }
 
     public void Publish(NarrativeFrontendPageState page)
     {

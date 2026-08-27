@@ -3,14 +3,17 @@ using System.Collections.Generic;
 
 namespace Ludots.Core.Gameplay.Dialogue
 {
+    /// <summary>
+    /// Presentation-facing choice row. Graph wiring stays inside DialogueRuntime.
+    /// </summary>
     public sealed record DialogueChoiceView(
         string ChoiceId,
         string LineId,
-        string ResolvedText,
-        string NextNode,
-        string ConditionGraphId,
-        string ActionGraphId);
+        string ResolvedText);
 
+    /// <summary>
+    /// Session view for projection. Image fields are presentation imageIds (not filesystem paths).
+    /// </summary>
     public sealed record DialogueView(
         string DialogueId,
         string DisplayName,
@@ -18,8 +21,8 @@ namespace Ludots.Core.Gameplay.Dialogue
         string LineId,
         string SpeakerId,
         string ResolvedSpeakerName,
-        string PortraitImageSrc,
-        string StandingImageSrc,
+        string PortraitImageId,
+        string StandingImageId,
         string TextToken,
         string ResolvedText,
         string PresentationProfile,
