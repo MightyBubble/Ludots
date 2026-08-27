@@ -21,7 +21,7 @@ namespace Ludots.Core.Fields.Config
         /// <summary>Inclusive rect strokes. Preferred authoring form for large provinces.</summary>
         public required FieldCellRectEntry[] Rects { get; init; }
 
-        /// <summary>Sparse point strokes (schema v1 cells land here; v2 optional leftovers).</summary>
+        /// <summary>Sparse point strokes for isolated single cells.</summary>
         public required FieldCellRegionEntry[] Points { get; init; }
     }
 
@@ -31,14 +31,12 @@ namespace Ludots.Core.Fields.Config
     /// Region ids are derived from the Ordinal-sorted union of all region keys,
     /// so fragment load order never changes an id. Two fragments assigning the
     /// same cell to different regions fail the load with both keys named.
-    /// schemaVersion 1 uses per-cell <c>cells</c>; schemaVersion 2 uses <c>rects</c>
-    /// (+ optional <c>points</c>) and rejects <c>cells</c>.
+    /// The accepted shape is exactly <c>regions</c> + <c>rects</c> (+ optional
+    /// <c>points</c>); every other member fails as an unknown field.
     /// </summary>
     public sealed class FieldCellsConfigLoader
     {
         public const string CellsDirectory = "Fields/cells";
-        public const int SchemaVersionCells = 1;
-        public const int SchemaVersionRects = 2;
 
         private readonly ConfigPipeline _pipeline;
 
@@ -121,12 +119,6 @@ namespace Ludots.Core.Fields.Config
                 throw new InvalidOperationException($"Field cells asset '{path}' from {fragment.SourceUri}: {ex.Message}", ex);
             }
 
-            if (cfg.SchemaVersion != SchemaVersionCells && cfg.SchemaVersion != SchemaVersionRects)
-            {
-                throw new InvalidOperationException(
-                    $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {cfg.SchemaVersion} is not supported; expected {SchemaVersionCells} or {SchemaVersionRects}.");
-            }
-
             if (!string.Equals(cfg.Layer, layerKey, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
@@ -140,28 +132,10 @@ namespace Ludots.Core.Fields.Config
                 keyById[i + 1] = sortedKeys[i];
             }
 
-            if (cfg.SchemaVersion == SchemaVersionCells)
-            {
-                if (cfg.Rects != null || cfg.Points != null)
-                {
-                    throw new InvalidOperationException(
-                        $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {SchemaVersionCells} forbids 'rects'/'points'; use schemaVersion {SchemaVersionRects}.");
-                }
-
-                List<FieldCellRegionEntry> cells = ParsePoints(cfg.Cells, keyById, path, fragment.SourceUri, "cells");
-                return new FragmentStrokes(sortedKeys, Array.Empty<FieldCellRectEntry>(), cells.ToArray());
-            }
-
-            if (cfg.Cells != null)
-            {
-                throw new InvalidOperationException(
-                    $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {SchemaVersionRects} forbids 'cells'; use 'rects' and optional 'points'.");
-            }
-
             if (cfg.Rects == null)
             {
                 throw new InvalidOperationException(
-                    $"Field cells asset '{path}' from {fragment.SourceUri}: schemaVersion {SchemaVersionRects} requires 'rects' (use an empty array when the layer has no painted area).");
+                    $"Field cells asset '{path}' from {fragment.SourceUri}: requires 'rects' (use an empty array when the layer has no painted area).");
             }
 
             FieldCellRectEntry[] rects = ParseRects(cfg.Rects, keyById, path, fragment.SourceUri);

@@ -21,18 +21,18 @@ namespace Ludots.Tests.GAS
             {
                 WriteCells(root, "Core", """
                 {
-                  "schemaVersion": 1,
                   "layer": "layerX",
                   "regions": [ "r2", "r1" ],
-                  "cells": [ [1, 1, 2], [2, 2, 1] ]
+                  "rects": [],
+                  "points": [ [1, 1, 2], [2, 2, 1] ]
                 }
                 """);
                 WriteCells(root, "ModA", """
                 {
-                  "schemaVersion": 1,
                   "layer": "layerX",
                   "regions": [ "r3" ],
-                  "cells": [ [5, 5, 1] ]
+                  "rects": [],
+                  "points": [ [5, 5, 1] ]
                 }
                 """);
 
@@ -52,14 +52,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_SchemaV2_Rects_DoNotExpandIntoPoints()
+        public void Load_Rects_DoNotExpandIntoPoints()
         {
             string root = CreateTempRoot();
             try
             {
                 WriteCells(root, "Core", """
                 {
-                  "schemaVersion": 2,
                   "layer": "layerX",
                   "regions": [ "west", "east" ],
                   "rects": [ [0, 0, 99, 99, 2], [100, 0, 199, 99, 1] ]
@@ -68,11 +67,8 @@ namespace Ludots.Tests.GAS
 
                 FieldCellsAsset asset = CreateLoader(root).Load("layerX")!;
 
-                Assert.That(asset.RegionKeys, Is.EqualTo(new[] { "east", "west" }));
                 Assert.That(asset.Rects.Length, Is.EqualTo(2));
                 Assert.That(asset.Points, Is.Empty);
-                Assert.That(asset.Rects[0].RegionKey, Is.EqualTo("west"));
-                Assert.That(asset.Rects[0].X1 - asset.Rects[0].X0 + 1, Is.EqualTo(100));
             }
             finally
             {
@@ -81,16 +77,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_SameCellSameRegion_AcrossFragments_IsIdempotent()
+        public void Load_DuplicatePoints_SameFragment_Collapse()
         {
             string root = CreateTempRoot();
             try
             {
                 WriteCells(root, "Core", """
-                { "schemaVersion": 1, "layer": "layerX", "regions": [ "r1" ], "cells": [ [3, 3, 1] ] }
+                { "layer": "layerX", "regions": [ "r1" ], "rects": [], "points": [ [3, 3, 1] ] }
                 """);
                 WriteCells(root, "ModA", """
-                { "schemaVersion": 1, "layer": "layerX", "regions": [ "r1", "r2" ], "cells": [ [3, 3, 1], [4, 4, 2] ] }
+                { "layer": "layerX", "regions": [ "r1", "r2" ], "rects": [], "points": [ [3, 3, 1], [4, 4, 2] ] }
                 """);
 
                 FieldCellsAsset asset = CreateLoader(root).Load("layerX")!;
@@ -104,16 +100,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_SameCellDifferentRegion_FailsClosed()
+        public void Load_OverlappingPointsDifferentRegion_FailsClosed()
         {
             string root = CreateTempRoot();
             try
             {
                 WriteCells(root, "Core", """
-                { "schemaVersion": 1, "layer": "layerX", "regions": [ "r1" ], "cells": [ [12, 7, 1] ] }
+                { "layer": "layerX", "regions": [ "r1" ], "rects": [], "points": [ [12, 7, 1] ] }
                 """);
                 WriteCells(root, "ModA", """
-                { "schemaVersion": 1, "layer": "layerX", "regions": [ "r2" ], "cells": [ [12, 7, 1] ] }
+                { "layer": "layerX", "regions": [ "r2" ], "rects": [], "points": [ [12, 7, 1] ] }
                 """);
 
                 var exception = Assert.Throws<InvalidOperationException>(() => CreateLoader(root).Load("layerX"));
@@ -134,10 +130,10 @@ namespace Ludots.Tests.GAS
             try
             {
                 WriteCells(root, "Core", """
-                { "schemaVersion": 2, "layer": "layerX", "regions": [ "r1" ], "rects": [ [0, 0, 10, 10, 1] ] }
+                { "layer": "layerX", "regions": [ "r1" ], "rects": [ [0, 0, 10, 10, 1] ] }
                 """);
                 WriteCells(root, "ModA", """
-                { "schemaVersion": 2, "layer": "layerX", "regions": [ "r2" ], "rects": [ [5, 5, 15, 15, 1] ] }
+                { "layer": "layerX", "regions": [ "r2" ], "rects": [ [5, 5, 15, 15, 1] ] }
                 """);
 
                 var exception = Assert.Throws<InvalidOperationException>(() => CreateLoader(root).Load("layerX"));
@@ -159,10 +155,10 @@ namespace Ludots.Tests.GAS
             try
             {
                 string fragmentOne = """
-                { "schemaVersion": 1, "layer": "layerX", "regions": [ "b", "a" ], "cells": [ [0, 0, 1] ] }
+                { "layer": "layerX", "regions": [ "b", "a" ], "rects": [], "points": [ [0, 0, 1] ] }
                 """;
                 string fragmentTwo = """
-                { "schemaVersion": 1, "layer": "layerX", "regions": [ "c" ], "cells": [ [0, 1, 1] ] }
+                { "layer": "layerX", "regions": [ "c" ], "rects": [], "points": [ [0, 1, 1] ] }
                 """;
 
                 WriteCells(rootA, "Core", fragmentOne);
@@ -198,18 +194,17 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        [TestCase("""{ "schemaVersion": 3, "layer": "layerX", "regions": [ "r1" ], "rects": [] }""", "schemaVersion")]
-        [TestCase("""{ "schemaVersion": 2, "layer": "layerX", "regions": [ "r1" ], "cells": [] }""", "forbids 'cells'")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ "r1" ], "rects": [] }""", "forbids 'rects'")]
-        [TestCase("""{ "schemaVersion": 2, "layer": "layerX", "regions": [ "r1" ] }""", "requires 'rects'")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerY", "regions": [ "r1" ], "cells": [] }""", "layerY")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [], "cells": [] }""", "regions")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ "r1", "r1" ], "cells": [] }""", "duplicate region key 'r1'")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ " r1" ], "cells": [] }""", "whitespace")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ "r1" ], "cells": [ [1, 2, 2] ] }""", "regionId 2")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ "r1" ], "cells": [ [1, 2] ] }""", "exactly 3")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ "r1" ], "cells": [ [1, 2, "x"] ] }""", "integers")]
-        [TestCase("""{ "schemaVersion": 1, "layer": "layerX", "regions": [ "r1" ], "cells": {}, "surprise": 1 }""", "surprise")]
+        [TestCase("""{ "schemaVersion": 2, "layer": "layerX", "regions": [ "r1" ], "rects": [] }""", "'schemaVersion'")]
+        [TestCase("""{ "layer": "layerX", "regions": [ "r1" ], "rects": [], "cells": [] }""", "'cells'")]
+        [TestCase("""{ "layer": "layerX", "regions": [ "r1" ] }""", "requires 'rects'")]
+        [TestCase("""{ "layer": "layerY", "regions": [ "r1" ], "rects": [] }""", "layerY")]
+        [TestCase("""{ "layer": "layerX", "regions": [], "rects": [] }""", "regions")]
+        [TestCase("""{ "layer": "layerX", "regions": [ "r1", "r1" ], "rects": [] }""", "duplicate region key 'r1'")]
+        [TestCase("""{ "layer": "layerX", "regions": [ " r1" ], "rects": [] }""", "whitespace")]
+        [TestCase("""{ "layer": "layerX", "regions": [ "r1" ], "rects": [], "points": [ [1, 2, 2] ] }""", "regionId 2")]
+        [TestCase("""{ "layer": "layerX", "regions": [ "r1" ], "rects": [], "points": [ [1, 2] ] }""", "exactly 3")]
+        [TestCase("""{ "layer": "layerX", "regions": [ "r1" ], "rects": [], "points": [ [1, 2, "x"] ] }""", "integers")]
+        [TestCase("""{ "layer": "layerX", "regions": [ "r1" ], "rects": {}, "surprise": 1 }""", "surprise")]
         public void Load_RejectsMalformedAssets(string json, string expectedMessagePart)
         {
             string root = CreateTempRoot();

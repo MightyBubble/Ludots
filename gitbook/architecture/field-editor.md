@@ -1,6 +1,6 @@
 # Field Editor
 
-`tools/FieldEditor` 是独立的离线作者工具，提供 Raylib 画布和 CLI：对 Mod 目录下的 `Fields/layers.json` 与 `Fields/cells/<layerKey>.json` 做声明、区域登记与矩形笔画。写出格式与引擎装载格式一致——**schemaVersion 2 + `regions` + `rects`**（可选 `points`），禁止 v1 的 `cells` 数组。编辑器内存态直接使用 `ChunkedField2D<int>`；读取 rect 时调用 `FillRect`，保存时从场合并 rect，不展开成逐格字典或 point 列表。
+`tools/FieldEditor` 是独立的离线作者工具，提供 Raylib 画布和 CLI：对 Mod 目录下的 `Fields/layers.json` 与 `Fields/cells/<layerKey>.json` 做声明、区域登记与矩形笔画。写出格式与引擎装载格式一致——**`regions` + `rects`**（可选 `points`）；声明之外的任何键都被拒载。编辑器内存态直接使用 `ChunkedField2D<int>`；读取 rect 时调用 `FillRect`，保存时从场合并 rect，不展开成逐格字典或 point 列表。
 
 运行（在仓库根，已还原 .NET 8）：
 
@@ -93,11 +93,10 @@ dotnet run --project tools/FieldEditor -- render --mod %MOD% --layer ownership.p
 dotnet run --project tools/FieldEditor -- save --mod %MOD% --layer ownership.paint
 ```
 
-写出后 `assets/Fields/cells/ownership.paint.json` 形如：
+写出后 `mods/showcases/field_editor_paint/FieldEditorPaintMod/assets/Fields/cells/ownership.paint.json` 形如：
 
 ```json
 {
-  "schemaVersion": 2,
   "layer": "ownership.paint",
   "regions": ["paint.a", "paint.b"],
   "rects": [

@@ -57,7 +57,7 @@ namespace Ludots.Tests.GAS
             try
             {
                 WriteCells(root, """
-                { "schemaVersion": 1, "layer": "layerX", "regions": [ "r2", "r1" ], "cells": [ [7, 7, 1], [8, 8, 2] ] }
+                { "layer": "layerX", "regions": [ "r2", "r1" ], "rects": [], "points": [ [7, 7, 1], [8, 8, 2] ] }
                 """);
                 FieldLayerRegistry catalog = CreateCatalog(Layer("layerX", FieldLayerKind.DiscreteId));
 

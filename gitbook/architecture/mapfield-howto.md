@@ -29,13 +29,12 @@
 - `maxRegionIds`：区域名表容量（含 default 0 之外的可编号区域）。
 - Core + Mod 片段经 ConfigPipeline `ArrayById` 合并。
 
-## 2. 笔画：`Fields/cells/<layerKey>.json`（schema v2）
+## 2. 笔画：`Fields/cells/<layerKey>.json`
 
-大陆级作者只写矩形，不要写 v1 逐格 `cells`：
+大陆级作者只写矩形笔画；声明之外的任何键都会被装载器拒载：
 
 ```json
 {
-  "schemaVersion": 2,
   "layer": "ownership.table",
   "regions": ["r1", "r2", "r3"],
   "rects": [
@@ -48,7 +47,7 @@
 
 - `regions[i]` → regionId `i+1`（1-based）。
 - `rects` 每项 `[x0, y0, x1, y1, regionId]`，闭区间，装载直接 `FillRect`。
-- 可选 `points`；禁止再写 `cells`。
+- 可选 `points`：散点补笔。
 - FieldEditor / 存档写出走 `FieldRectCodec`（行 RLE + 纵向合并）。细节见 [Field Editor CLI](field-editor.md)。
 
 ## 3. 地图挂载：`Maps/<mapId>.json` → `Fields.Layers`
@@ -91,7 +90,7 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 
 ## 5. Field-editor CLI
 
-离线改 Mod 资产（写出即 schema v2）。命令与示例见 [Field Editor CLI](field-editor.md)。入口工程：`tools/FieldEditor/`。
+离线改 Mod 资产。命令与示例见 [Field Editor CLI](field-editor.md)。入口工程：`tools/FieldEditor/`。
 
 ## 6. Agent bridge：`ludots.field.*`
 

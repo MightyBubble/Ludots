@@ -6,8 +6,6 @@ namespace Ludots.Tools.FieldEditor
 {
     public sealed class CellsDocument
     {
-        public const int SupportedSchemaVersion = 2;
-
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             WriteIndented = true,
@@ -58,7 +56,7 @@ namespace Ludots.Tools.FieldEditor
                 throw new InvalidOperationException($"'{assetPath}' is not valid JSON: {ex.Message}", ex);
             }
 
-            return LoadJson(root, layerKey, chunkSizeCells, assetPath, allowSchemaVersion1: true);
+            return LoadJson(root, layerKey, chunkSizeCells, assetPath);
         }
 
         internal static CellsDocument LoadSnapshot(
@@ -66,7 +64,7 @@ namespace Ludots.Tools.FieldEditor
             string layerKey,
             int chunkSizeCells,
             string context) =>
-            LoadJson(root, layerKey, chunkSizeCells, context, allowSchemaVersion1: false);
+            LoadJson(root, layerKey, chunkSizeCells, context);
 
         public string AddRegion(string key)
         {
@@ -256,7 +254,6 @@ namespace Ludots.Tools.FieldEditor
             List<FieldCellRectStroke> rects = FieldRectCodec.CoalesceFromField(_field);
             return new JsonObject
             {
-                ["schemaVersion"] = SupportedSchemaVersion,
                 ["layer"] = LayerKey,
                 ["regions"] = new JsonArray(
                     Regions.Keys.Select(key => JsonValue.Create(key)).ToArray()),
@@ -278,29 +275,15 @@ namespace Ludots.Tools.FieldEditor
             JsonObject root,
             string layerKey,
             int chunkSizeCells,
-            string context,
-            bool allowSchemaVersion1)
+            string context)
         {
             RequireOnlyProperties(
                 root,
                 context,
-                "schemaVersion",
                 "layer",
                 "regions",
-                "cells",
                 "rects",
                 "points");
-
-            int schemaVersion = root["schemaVersion"]?.GetValue<int>()
-                ?? throw new InvalidOperationException($"'{context}' is missing schemaVersion.");
-            if (schemaVersion != SupportedSchemaVersion &&
-                (!allowSchemaVersion1 || schemaVersion != 1))
-            {
-                throw new InvalidOperationException(
-                    allowSchemaVersion1
-                        ? $"'{context}' schemaVersion must be 1 or {SupportedSchemaVersion}."
-                        : $"'{context}' schemaVersion must be {SupportedSchemaVersion}.");
-            }
 
             string? layer = root["layer"]?.GetValue<string>();
             if (!string.Equals(layer, layerKey, StringComparison.Ordinal))
@@ -322,39 +305,15 @@ namespace Ludots.Tools.FieldEditor
                 }
             }
 
-            if (schemaVersion == 1)
-            {
-                if (root["rects"] != null || root["points"] != null)
-                {
-                    throw new InvalidOperationException(
-                        $"'{context}': schemaVersion 1 forbids 'rects' and 'points'.");
-                }
-
-                JsonArray cells = root["cells"] as JsonArray
-                    ?? throw new InvalidOperationException(
-                        $"'{context}': schemaVersion 1 requires 'cells'.");
-                foreach (JsonNode? entry in cells)
-                {
-                    JsonArray triple = RequireArray(entry, 3, context, "cell", "[x, y, regionIndex]");
-                    int x = triple[0]!.GetValue<int>();
-                    int y = triple[1]!.GetValue<int>();
-                    int regionId = triple[2]!.GetValue<int>();
-                    RegionKeyAt(document, regionId, context, x, y);
-                    document._field.Set(new FieldCell2D(x, y), regionId);
-                }
-
-                return document;
-            }
-
             if (root["cells"] != null)
             {
                 throw new InvalidOperationException(
-                    $"'{context}': schemaVersion {SupportedSchemaVersion} forbids 'cells'; use 'rects'.");
+                    $"'{context}': 'cells' is not accepted; author rectangles via 'rects'.");
             }
 
             JsonArray rects = root["rects"] as JsonArray
                 ?? throw new InvalidOperationException(
-                    $"'{context}': schemaVersion {SupportedSchemaVersion} requires 'rects'.");
+                    $"'{context}' requires 'rects'.");
             foreach (JsonNode? entry in rects)
             {
                 JsonArray rect = RequireArray(

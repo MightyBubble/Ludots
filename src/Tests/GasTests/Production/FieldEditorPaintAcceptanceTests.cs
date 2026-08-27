@@ -14,7 +14,7 @@ namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
 /// Field editor paint acceptance: data-only mod whose Fields/cells assets match
-/// field-editor CLI schemaVersion 2 rect output (regions paint.a / paint.b).
+/// field-editor CLI rect output (regions paint.a / paint.b).
 /// Teleporting the hero between paint.a and paint.b cells fires FieldRegionEntered.
 /// </summary>
 [NonParallelizable]
@@ -41,9 +41,9 @@ public sealed class FieldEditorPaintAcceptanceTests
         Assert.That(File.Exists(Path.Combine(modRoot, "mod.json")), Is.True);
         Assert.That(File.Exists(Path.Combine(modRoot, "FieldEditorPaintMod.csproj")), Is.False,
             "Paint showcase must stay code-free: Fields + map + graphs + panels only.");
-        // Assets match field-editor v2 format: schemaVersion 2 + regions + rects (no cells[]).
+        // Assets carry only the canonical members; no format-version marker exists.
         string cells = File.ReadAllText(Path.Combine(modRoot, "assets", "Fields", "cells", "ownership.paint.json"));
-        Assert.That(cells, Does.Contain("\"schemaVersion\": 2"));
+        Assert.That(cells, Does.Not.Contain("schemaVersion"));
         Assert.That(cells, Does.Contain("paint.a"));
         Assert.That(cells, Does.Contain("paint.b"));
         Assert.That(cells, Does.Contain("\"rects\""));

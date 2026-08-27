@@ -5,8 +5,6 @@ namespace Ludots.Tools.FieldEditor
 {
     public static class HistoryStore
     {
-        public const int SupportedSchemaVersion = 1;
-
         public static string HistoryPath(string assetPath) =>
             Path.ChangeExtension(assetPath, ".field-editor-history.json");
 
@@ -155,20 +153,10 @@ namespace Ludots.Tools.FieldEditor
             RequireOnlyProperties(
                 root,
                 historyPath,
-                "schemaVersion",
                 "layer",
                 "activeBrushKey",
                 "undo",
                 "redo");
-
-            int schemaVersion = root["schemaVersion"]?.GetValue<int>()
-                ?? throw new InvalidOperationException(
-                    $"'{historyPath}' is missing schemaVersion.");
-            if (schemaVersion != SupportedSchemaVersion)
-            {
-                throw new InvalidOperationException(
-                    $"'{historyPath}' schemaVersion must be {SupportedSchemaVersion}.");
-            }
 
             string? storedLayer = root["layer"]?.GetValue<string>();
             if (!string.Equals(storedLayer, layerKey, StringComparison.Ordinal))
@@ -198,7 +186,6 @@ namespace Ludots.Tools.FieldEditor
         {
             var root = new JsonObject
             {
-                ["schemaVersion"] = SupportedSchemaVersion,
                 ["layer"] = state.LayerKey,
                 ["activeBrushKey"] = state.ActiveBrushKey,
                 ["undo"] = state.Undo.DeepClone(),
@@ -337,8 +324,6 @@ namespace Ludots.Tools.FieldEditor
 
     public static class FieldEditorMetadataStore
     {
-        public const int SupportedSchemaVersion = 1;
-
         public static string MetadataPath(string assetPath) =>
             Path.ChangeExtension(assetPath, ".field-editor-meta.json");
 
@@ -447,18 +432,8 @@ namespace Ludots.Tools.FieldEditor
             RequireOnlyProperties(
                 root,
                 metadataPath,
-                "schemaVersion",
                 "layer",
                 "regionColors");
-
-            int schemaVersion = root["schemaVersion"]?.GetValue<int>()
-                ?? throw new InvalidOperationException(
-                    $"'{metadataPath}' is missing schemaVersion.");
-            if (schemaVersion != SupportedSchemaVersion)
-            {
-                throw new InvalidOperationException(
-                    $"'{metadataPath}' schemaVersion must be {SupportedSchemaVersion}.");
-            }
 
             string? storedLayer = root["layer"]?.GetValue<string>();
             if (!string.Equals(storedLayer, layerKey, StringComparison.Ordinal))
@@ -501,7 +476,6 @@ namespace Ludots.Tools.FieldEditor
         {
             var root = new JsonObject
             {
-                ["schemaVersion"] = SupportedSchemaVersion,
                 ["layer"] = state.LayerKey,
                 ["regionColors"] = ToColorsJson(state),
             };
