@@ -1209,9 +1209,6 @@ public sealed partial class MassNavigationFlowSolverState
             if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
             {
                 _teamStates[teamStateIndex].UnitCount++;
-                // #region agent log
-                try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "A", location = "MassNavigationFlowSolverState.cs:InitializeTeams", message = "same MassNav team increment", data = new { seedIndex = i, teamId, unitCount = _teamStates[teamStateIndex].UnitCount, teamTargetX = _teamStates[teamStateIndex].TargetX, teamTargetY = _teamStates[teamStateIndex].TargetY, seedLocalX = agentSeeds[i].LocalPositionXCm, seedLocalY = agentSeeds[i].LocalPositionYCm }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-                // #endregion
                 continue;
             }
 
@@ -1221,9 +1218,6 @@ public sealed partial class MassNavigationFlowSolverState
                 TargetX = agentSeeds[i].LocalPositionXCm,
                 TargetY = agentSeeds[i].LocalPositionYCm,
             };
-            // #region agent log
-            try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "A", location = "MassNavigationFlowSolverState.cs:InitializeTeams", message = "new MassNav team from first seed", data = new { seedIndex = i, teamId, targetX = state.TargetX, targetY = state.TargetY }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-            // #endregion
             _teamStateIndexById[teamId] = _teamStates.Count;
             _teamStates.Add(state);
         }
@@ -1847,9 +1841,6 @@ public sealed partial class MassNavigationFlowSolverState
                     float toSlotX = targetX - px;
                     float toSlotY = targetY - py;
                     float slotDistSq = toSlotX * toSlotX + toSlotY * toSlotY;
-                    // #region agent log
-                    if ((_frameCount & 15) == 0 && slotDistSq > 1_000_000f) { try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "B", location = "MassNavigationFlowSolverState.cs:StepRange", message = "idle team-slot pull", data = new { unitIndex = i, teamId = team.TeamId, px, py, targetX, targetY, slotDistSq, hasUnitTarget = _hasUnitTarget[i], speed = _speedsCmPerSecond[i], frame = _frameCount }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { } }
-                    // #endregion
                     if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
                     {
                         if (ShouldRetryTargetAfterPush(i, px, py, slotDistSq, unitTargetStopThresholdSq))
