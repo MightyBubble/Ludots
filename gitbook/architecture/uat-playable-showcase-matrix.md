@@ -12,7 +12,7 @@
 | UAT-2C | `RoadNetworkShowcaseMod` | `road_network_showcase` | 道路规划与逐实体 MovePlan 执行 | `MovePlanExecutionMode.Individual` |
 | UAT-3 | `RelationshipShowcaseMod` | `relationship_showcase` | 场景卡、状态变化、artifact | battle report、trace、path evidence |
 | UAT-4 | `InteractionShowcaseMod` | `interaction_showcase_hub` | 统一输入、collection、HUD、entity info | 单一 command/selection truth |
-| UAT-5 | `EastAsiaBordersLandSeaDemoMod` | `east_asia_visual_heightmap` | 国界色、陆军走陆、船走海、过境面板、中国境内能查到省 | `EastAsiaBordersLandSeaAcceptanceTests` |
+| UAT-5 | `EastAsiaBordersLandSeaDemoMod` | `east_asia_visual_heightmap` | 国界色、陆军 / 船分走 NavMesh 陆地层与海上层（不同走路档案）、过境面板、中国境内能查到省 | `EastAsiaBordersLandSeaAcceptanceTests` |
 
 ## Formation 玩家场景
 

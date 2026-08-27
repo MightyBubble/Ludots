@@ -5141,14 +5141,14 @@
       "id": "east_asia_borders_land_sea",
       "path": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod",
       "title": "East Asia Borders Land & Sea",
-      "summary": "Country Decal plus Chinese province placeholders, army on Ground mesh and ship on Water mesh, border-enter panel. Inland river PreferGraph still needs a NodeGraph board.",
+      "summary": "Country Decal plus Chinese province placeholders; army Small profile on Ground NavMesh layer, ship Medium profile on Water NavMesh layer; border-enter panel. Not a road/river NodeGraph demo.",
       "tier": "T2",
       "category": "capability",
       "tags": [
         "east-asia",
         "borders",
         "navmesh",
-        "transport",
+        "agent-profile",
         "showcase"
       ],
       "binding": "east_asia_borders_land_sea",

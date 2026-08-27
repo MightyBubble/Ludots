@@ -44,7 +44,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     };
 
     [Test]
-    public void BordersLandSea_PathingHasFootLandMeshAndShipWaterMesh()
+    public void BordersLandSea_PathingUsesLandAndSeaNavMeshLayerProfiles()
     {
         using GameEngine engine = CreateEngine(BorderMods);
         engine.Start();
@@ -74,12 +74,12 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
 
         var agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
             ?? throw new InvalidOperationException("AgentProfiles missing");
-        Assert.That(agentProfiles.Require("Small", "land-sea foot").Layer, Is.EqualTo(0));
-        Assert.That(agentProfiles.Require("Medium", "land-sea ship").Layer, Is.EqualTo(1));
+        Assert.That(agentProfiles.Require("Small", "land-sea foot").Layer, Is.EqualTo(0), "Small must query Ground NavMesh layer");
+        Assert.That(agentProfiles.Require("Medium", "land-sea ship").Layer, Is.EqualTo(1), "Medium must query Water NavMesh layer");
     }
 
     [Test]
-    public void BordersLandSea_FootStaysOnLandMeshAndShipStaysOnWaterMesh()
+    public void BordersLandSea_FootQueriesLandLayer_ShipQueriesSeaLayer()
     {
         using GameEngine engine = CreateEngine(BorderMods);
         engine.Start();
@@ -93,13 +93,13 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         Assert.That(
             TrySolve(pathService, "StrategyFoot", 200_000, 100_000, 250_000, 150_000, out PathResult foot),
             Is.True);
-        Assert.That(foot.Status, Is.EqualTo(PathStatus.Found), "army must walk the land mesh");
+        Assert.That(foot.Status, Is.EqualTo(PathStatus.Found), "army must path on Ground NavMesh layer");
         Assert.That(foot.ResolvedDomain, Is.EqualTo(PathDomain.NavMesh));
 
         Assert.That(
             TrySolve(pathService, "StrategyShip", 855_397, 58_235, 1_055_397, 58_235, out PathResult shipSea),
             Is.True);
-        Assert.That(shipSea.Status, Is.EqualTo(PathStatus.Found), "ship must walk the water mesh");
+        Assert.That(shipSea.Status, Is.EqualTo(PathStatus.Found), "ship must path on Water NavMesh layer");
         Assert.That(shipSea.ResolvedDomain, Is.EqualTo(PathDomain.NavMesh));
 
         Assert.That(
@@ -108,7 +108,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         Assert.That(
             shipInland.Status,
             Is.AnyOf(PathStatus.NoPath, PathStatus.NotReady),
-            "ship must not cut across land");
+            "ship Water-layer query must not cut across land");
     }
 
     [Test]

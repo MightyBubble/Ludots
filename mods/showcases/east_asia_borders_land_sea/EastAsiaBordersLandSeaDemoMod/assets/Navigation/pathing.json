@@ -40,7 +40,7 @@
       },
       "nodeGraph": {
         "projectionMaxRadiusCm": 500000,
-        "useDynamicOverlay": true,
+        "useDynamicOverlay": false,
         "requiredTagsAll": [],
         "forbiddenTagsAny": [],
         "tagCostRules": []
