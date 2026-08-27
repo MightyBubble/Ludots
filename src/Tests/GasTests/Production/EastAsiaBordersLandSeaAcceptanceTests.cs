@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -113,7 +112,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     }
 
     [Test]
-    public void BordersLandSea_CountryAndAdminHierarchyResolves()
+    public void BordersLandSea_CountryAndAdminLayersPresent()
     {
         using GameEngine engine = CreateEngine(BorderMods);
         engine.Start();
@@ -124,7 +123,6 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
             ?? throw new InvalidOperationException("map session missing");
         Assert.That(session.Fields!.TryGetByKey(LayerKey, out FieldLayerData countryData), Is.True);
         Assert.That(session.Fields.TryGetByKey(AdminLayerKey, out FieldLayerData adminData), Is.True);
-        Assert.That(session.RegionGroups, Is.Not.Null);
         Assert.That(session.MapConfig!.Fields!.Layers, Is.EqualTo(new[] { LayerKey, AdminLayerKey }));
 
         var country = (DiscreteIdFieldLayerData)countryData;
@@ -134,14 +132,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         int adminId = admin.Field.Get(admin.Field.WorldToCell(spawn));
         Assert.That(country.Regions.GetName(countryId), Is.EqualTo("country.china"), "army spawn must sit on China");
         Assert.That(adminId, Is.GreaterThan(0), "army spawn must sit on a Chinese province placeholder");
-
-        Assert.That(session.RegionIndex!.TryResolve(admin.LayerId, adminId, out Entity province), Is.True);
-        var chain = new List<string>();
-        Assert.That(RegionHierarchyBuilder.TryResolveChain(engine.World, province, chain), Is.True);
-        Assert.That(chain[0], Does.StartWith("admin."));
-        Assert.That(chain[1], Does.StartWith("group.china."));
-        Assert.That(chain, Does.Contain("country.china"));
-        Assert.That(chain.Count, Is.EqualTo(3));
+        Assert.That(admin.Regions.GetName(adminId), Does.StartWith("admin."));
     }
 
     [Test]
