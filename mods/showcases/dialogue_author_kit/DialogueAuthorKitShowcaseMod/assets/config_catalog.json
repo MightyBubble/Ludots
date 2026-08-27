@@ -7,6 +7,5 @@
   { "Path": "Presentation/text_tokens.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/text_locales.json", "Policy": "DeepObject" },
   { "Path": "Presentation/image_assets.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "PanelThemes/themes.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "Frontend/narrative_hosts.json", "Policy": "ArrayById", "IdField": "ownerId" }
+  { "Path": "PanelThemes/themes.json", "Policy": "ArrayById", "IdField": "id" }
 ]

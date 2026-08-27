@@ -1,5 +1,24 @@
 [
   {
+    "id": "Graph.AuthorKit.Boot.StartGate",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "start", "once": true }
+    ],
+    "nodes": [
+      { "id": "start", "op": "StartDialogue", "dialogueId": "Dialogue.AuthorKit.Gate" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "start", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
     "id": "Graph.AuthorKit.Condition.PassGranted",
     "kind": "Query",
     "entry": "read_pass",

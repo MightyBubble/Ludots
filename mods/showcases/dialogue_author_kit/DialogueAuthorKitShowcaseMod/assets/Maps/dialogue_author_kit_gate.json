@@ -4,6 +4,12 @@
   "Variables": [
     { "name": "pass_granted", "type": "int", "initial": 0 }
   ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.AuthorKit.Boot.StartGate",
+      "scopeInstanceId": "author_kit_traveler_1"
+    }
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 1200,
