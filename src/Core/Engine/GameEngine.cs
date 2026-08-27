@@ -3509,7 +3509,12 @@ namespace Ludots.Core.Engine
                 stores[new NavQueryServiceKey(layer, profileIndex)] = store;
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, LogicTerrain.ChunkWidthCm, LogicTerrain.ChunkHeightCm);
+            var navRegistry = new NavQueryServiceRegistry(
+                stores,
+                LogicTerrain.ChunkWidthCm,
+                LogicTerrain.ChunkHeightCm,
+                LogicTerrain.OriginXcm,
+                LogicTerrain.OriginZcm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {

@@ -56,6 +56,44 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void TryProject_UsesTerrainOriginWhenBoardIsCentered()
+        {
+            const int originXcm = -3_199_616;
+            const int originZcm = -1_828_352;
+            NavTile tile = DefaultGridNavTileFactory.CreateFlatTile(
+                14,
+                8,
+                layer: 0,
+                tileVersion: 1,
+                TileSizeCm,
+                TileSizeCm,
+                ChunkSizeCells,
+                ChunkSizeCells,
+                boardOriginXcm: originXcm,
+                boardOriginZcm: originZcm);
+            var blobs = new Dictionary<NavTileId, byte[]>();
+            using (var ms = new MemoryStream())
+            {
+                NavTileBinary.Write(ms, tile);
+                blobs[tile.TileId] = ms.ToArray();
+            }
+
+            var store = new NavTileStore(id => new MemoryStream(blobs[id], writable: false));
+            var registry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore> { [new NavQueryServiceKey(0, 0)] = store },
+                TileSizeCm,
+                TileSizeCm,
+                originXcm,
+                originZcm);
+            Assert.That(registry.TryCreateQuery(0, 0, null!, out NavQueryService service), Is.True);
+
+            int worldXcm = originXcm + (14 * TileSizeCm) + 1000;
+            int worldZcm = originZcm + (8 * TileSizeCm) + 1000;
+            Assert.That(service.TryProject(worldXcm, worldZcm, out NavLocation loc), Is.True);
+            Assert.That(loc.TileId, Is.EqualTo(new NavTileId(14, 8, 0)));
+        }
+
+        [Test]
         public void GridTerrain_ChunkWorldSize_DerivesFromCellSizeAndChunkCells()
         {
             var terrain = new FlatGridLogicTerrainField(5440, 5440, cellSizeCm: CellSizeCm, chunkSizeCells: ChunkSizeCells);

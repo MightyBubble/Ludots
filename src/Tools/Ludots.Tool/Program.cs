@@ -1045,7 +1045,7 @@ namespace {modId}
                 ModId = modId ?? string.Empty,
                 SourceUri = ToCoreSourceUri(repoRoot, inputVhtmPath),
                 Terrain = terrain,
-                Obstacles = obstacles,
+                Obstacles = FilterObstaclesForLayers(obstacles, bakeConfig),
                 Config = bakeConfig,
                 AgentProfiles = bakeConfigContext.AgentProfiles,
                 Targets = targets,
@@ -1187,6 +1187,32 @@ namespace {modId}
             }
 
             return ids;
+        }
+
+        static NavObstacleSet FilterObstaclesForLayers(NavObstacleSet obstacles, NavMeshBakeConfig bakeConfig)
+        {
+            if (obstacles?.Obstacles == null || bakeConfig?.Layers == null)
+            {
+                return obstacles ?? new NavObstacleSet();
+            }
+
+            var layerIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < bakeConfig.Layers.Count; i++)
+            {
+                layerIds.Add(bakeConfig.Layers[i].Id);
+            }
+
+            var filtered = new NavObstacleSet { Version = obstacles.Version };
+            for (int i = 0; i < obstacles.Obstacles.Count; i++)
+            {
+                NavObstacle obstacle = obstacles.Obstacles[i];
+                if (layerIds.Contains(obstacle.LayerId))
+                {
+                    filtered.Obstacles.Add(obstacle);
+                }
+            }
+
+            return filtered;
         }
 
         static int BakeNavFromReactRecast(

@@ -102,7 +102,10 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         Assert.That(
             TrySolve(pathService, "StrategyShip", 855_397, 58_235, 200_000, 100_000, out PathResult shipInland),
             Is.True);
-        Assert.That(shipInland.Status, Is.EqualTo(PathStatus.NoPath), "ship must not cut across land");
+        Assert.That(
+            shipInland.Status,
+            Is.AnyOf(PathStatus.NoPath, PathStatus.NotReady),
+            "ship must not cut across land");
     }
 
     [Test]

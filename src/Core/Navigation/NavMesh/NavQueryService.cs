@@ -54,24 +54,44 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly NavAreaCostTable _areaCosts;
         private readonly Fix64 _tileWidthCm;
         private readonly Fix64 _tileHeightCm;
+        private readonly int _originXcm;
+        private readonly int _originZcm;
 
-        public NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, int tileWidthCm, int tileHeightCm)
+        public NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            int tileWidthCm,
+            int tileHeightCm,
+            int originXcm = 0,
+            int originZcm = 0)
             : this(
                 store,
                 layer,
                 areaCosts,
                 Fix64.FromInt(RequirePositive(tileWidthCm, nameof(tileWidthCm))),
-                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))))
+                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))),
+                originXcm,
+                originZcm)
         {
         }
 
-        private NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, Fix64 tileWidthCm, Fix64 tileHeightCm)
+        private NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            Fix64 tileWidthCm,
+            Fix64 tileHeightCm,
+            int originXcm,
+            int originZcm)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _layer = layer;
             _areaCosts = areaCosts ?? NavAreaCostTable.CreateDefault();
             _tileWidthCm = tileWidthCm;
             _tileHeightCm = tileHeightCm;
+            _originXcm = originXcm;
+            _originZcm = originZcm;
         }
 
         public bool TryProject(int worldXcm, int worldZcm, out NavLocation loc)
@@ -141,8 +161,8 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)
         {
-            var xFix = Fix64.FromInt(worldXcm);
-            var zFix = Fix64.FromInt(worldZcm);
+            var xFix = Fix64.FromInt(worldXcm - _originXcm);
+            var zFix = Fix64.FromInt(worldZcm - _originZcm);
             int cx = (xFix / _tileWidthCm).ToInt();
             int cz = (zFix / _tileHeightCm).ToInt();
 

@@ -30,15 +30,17 @@ namespace Ludots.Core.Navigation.NavMesh
             int tileHeightCm,
             int tileWidthCells,
             int tileHeightCells,
-            byte areaId = 0)
+            byte areaId = 0,
+            int boardOriginXcm = 0,
+            int boardOriginZcm = 0)
         {
             if (tileWidthCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileWidthCm), "Tile width must be positive.");
             if (tileHeightCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileHeightCm), "Tile height must be positive.");
             if (tileWidthCells <= 0) throw new ArgumentOutOfRangeException(nameof(tileWidthCells), "Tile width in cells must be positive.");
             if (tileHeightCells <= 0) throw new ArgumentOutOfRangeException(nameof(tileHeightCells), "Tile height in cells must be positive.");
 
-            int originXcm = checked(chunkX * tileWidthCm);
-            int originZcm = checked(chunkY * tileHeightCm);
+            int originXcm = checked(boardOriginXcm + chunkX * tileWidthCm);
+            int originZcm = checked(boardOriginZcm + chunkY * tileHeightCm);
             int clearanceCm = Math.Max(0, Math.Min(tileWidthCm, tileHeightCm) / 2);
 
             return new NavTile(

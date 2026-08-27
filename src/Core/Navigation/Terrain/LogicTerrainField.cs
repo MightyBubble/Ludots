@@ -103,6 +103,10 @@ namespace Ludots.Core.Navigation.Terrain
 
         public abstract int ChunkHeightCm { get; }
 
+        public virtual int OriginXcm => 0;
+
+        public virtual int OriginZcm => 0;
+
         public bool IsInBounds(int col, int row)
             => (uint)col < (uint)WidthCells && (uint)row < (uint)HeightCells;
 
@@ -252,9 +256,9 @@ namespace Ludots.Core.Navigation.Terrain
 
         public int CellSizeCm { get; }
 
-        public int OriginXcm { get; }
+        public override int OriginXcm { get; }
 
-        public int OriginZcm { get; }
+        public override int OriginZcm { get; }
 
         public override int HorizontalStepCm => CellSizeCm;
 
