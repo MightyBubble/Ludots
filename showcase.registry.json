@@ -8377,6 +8377,25 @@
       "tier": "T2",
       "category": "demo",
       "status": "active"
+    },
+    {
+      "id": "deterministic_replay",
+      "title": "Deterministic Replay — same inputs, same world",
+      "summary": "Record authoritative input frames while commanding the hero, replay them from the recorded checkpoint, and watch the world re-evolve identically; live input during playback is isolated and rejected.",
+      "path": "mods/showcases/deterministic_replay/DeterministicReplayShowcaseMod",
+      "projectPath": "DeterministicReplayShowcaseMod.csproj",
+      "binding": "deterministic_replay_showcase",
+      "preset": "deterministic_replay_showcase_raylib",
+      "docsPath": "gitbook/architecture/deterministic-replay-showcase-design.md",
+      "acceptanceTest": "gitbook/acceptance/deterministic-replay.feature",
+      "artifactDir": "artifacts/acceptance/deterministic-replay",
+      "tags": [
+        "replay",
+        "determinism"
+      ],
+      "tier": "T2",
+      "category": "demo",
+      "status": "active"
     }
   ]
 }

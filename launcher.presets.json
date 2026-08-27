@@ -23,6 +23,16 @@
       "buildMode": "auto"
     },
     {
+      "id": "deterministic_replay_showcase_raylib",
+      "name": "Deterministic Replay Raylib",
+      "selectors": [
+        "$deterministic_replay_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "camera_acceptance_raylib",
       "name": "Camera Acceptance Raylib",
       "selectors": [

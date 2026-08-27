@@ -34,6 +34,14 @@
       }
     },
     {
+      "name": "deterministic_replay_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/deterministic_replay/DeterministicReplayShowcaseMod",
+        "projectPath": "DeterministicReplayShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "persistence_online_replay_showcase",
       "target": {
         "type": "path",
