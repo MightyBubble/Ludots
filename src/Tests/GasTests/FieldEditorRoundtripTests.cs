@@ -83,7 +83,6 @@ namespace Ludots.Tests.GAS
                     path,
                     """
                     {
-                      "schemaVersion": 2,
                       "layer": "layer.large",
                       "regions": ["province"],
                       "rects": [[0, 0, 511, 511, 1]]

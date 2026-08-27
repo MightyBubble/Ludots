@@ -49,5 +49,12 @@ namespace Ludots.Core.Components
         public int LastCellX;
         public int LastCellY;
         public byte Initialized;
+
+        /// <summary>
+        /// Change stamp of the chunk under the entity when membership was last
+        /// evaluated; a mismatch forces re-evaluation even for stationary entities,
+        /// which is how runtime redraws reach units standing inside repainted cells.
+        /// </summary>
+        public long LastChunkStamp;
     }
 }

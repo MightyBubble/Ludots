@@ -79,11 +79,6 @@ namespace Ludots.Core.Persistence
             return new FieldLayersSaveParticipant(manager);
         }
 
-        public static ISaveParticipant CreateNarrativeParticipant(NarrativeDirector director)
-        {
-            return new NarrativeSaveParticipant(director);
-        }
-
         public static ISaveParticipant CreateSequencerParticipant(SequencerRuntime runtime)
         {
             return new SequencerSaveParticipant(runtime);

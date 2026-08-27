@@ -15,14 +15,12 @@
     {
       "name": "stage",
       "type": "int",
-      "initial": 0,
-      "phase": true
+      "initial": 0
     },
     {
       "name": "mapmode",
       "type": "int",
-      "initial": 0,
-      "phase": false
+      "initial": 0
     }
   ],
   "TriggerGraphs": [

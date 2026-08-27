@@ -15,8 +15,7 @@
     {
       "name": "stage",
       "type": "int",
-      "initial": 0,
-      "phase": true
+      "initial": 0
     },
     {
       "name": "layer_count",

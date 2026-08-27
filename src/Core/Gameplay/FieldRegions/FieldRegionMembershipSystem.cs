@@ -28,6 +28,7 @@ namespace Ludots.Core.Gameplay.FieldRegions
         private readonly TriggerManager _triggerManager;
         private readonly Func<ScriptContext> _contextFactory;
         private readonly CommandBuffer _commandBuffer = new();
+        private static readonly List<string> EmptyTags = new();
 
         private readonly QueryDescription _adoptionQuery = new QueryDescription()
             .WithAll<MapEntity, WorldPositionCm, FieldTrackedCm>()
@@ -140,12 +141,15 @@ namespace Ludots.Core.Gameplay.FieldRegions
             ref RegionMembershipCm membership)
         {
             var cell = layer.Field.WorldToCell(position.Value.ToWorldCmInt2());
+            long chunkStamp = layer.Field.GetChangeStamp(cell);
             if (membership.Initialized != 0 && membership.LayerId == layer.LayerId.Value &&
-                membership.LastCellX == cell.X && membership.LastCellY == cell.Y)
+                membership.LastCellX == cell.X && membership.LastCellY == cell.Y &&
+                membership.LastChunkStamp == chunkStamp)
             {
                 return;
             }
 
+            membership.LastChunkStamp = chunkStamp;
             int newRegionId = layer.Field.Get(cell);
             membership.LayerId = layer.LayerId.Value;
             membership.LastCellX = cell.X;
@@ -301,7 +305,7 @@ namespace Ludots.Core.Gameplay.FieldRegions
             ScriptContext context = _contextFactory();
             context.Set(CoreServiceKeys.MapId, session.MapId);
             context.Set(CoreServiceKeys.MapSession, session);
-            context.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? new List<string>());
+            context.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? EmptyTags);
             context.Set(MapTriggerEventPayloadKeys.SourceEntity, entity);
             context.Set(MapTriggerEventPayloadKeys.RegionId, layer.Regions.GetName(regionId));
             context.Set(MapTriggerEventPayloadKeys.FieldLayer, layer.LayerKey);

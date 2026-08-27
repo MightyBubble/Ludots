@@ -1,7 +1,7 @@
 [
   {
     "id": "Effect.FieldJingYang.JingFire.Cast",
-    "tags": [
+    "categories": [
       "Effect.FieldJingYang.JingFire"
     ],
     "presetType": "Buff",

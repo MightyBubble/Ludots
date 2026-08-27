@@ -287,6 +287,17 @@ namespace Ludots.Core.Fields
             return written;
         }
 
+        /// <summary>Monotonic stamp of the last value change under this cell; 0 = never written.</summary>
+        public long GetChangeStamp(FieldCell2D cell)
+        {
+            if (!TryGetChunkIndex(Grid.ChunkCoord(cell.X), Grid.ChunkCoord(cell.Y), out int chunkIndex))
+            {
+                return 0;
+            }
+
+            return _chunks[chunkIndex].ChangeStamp;
+        }
+
         public FieldChunk2D<T> GetChunkAt(int index)
         {
             if ((uint)index >= (uint)_chunkCount)
