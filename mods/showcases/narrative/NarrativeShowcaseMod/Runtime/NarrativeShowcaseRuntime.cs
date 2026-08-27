@@ -680,6 +680,23 @@ namespace NarrativeShowcaseMod.Runtime
                 items);
         }
 
+        private string ResolveSpeakerDisplay(GameEngine engine, string speakerId)
+        {
+            if (string.IsNullOrWhiteSpace(speakerId))
+            {
+                return string.Empty;
+            }
+
+            if (engine.GetService(CoreServiceKeys.PresentationDisplayResolver) is PresentationDisplayResolver display &&
+                engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
+                story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
+            {
+                return display.FormatTokenOrThrow(speaker.DisplayNameToken);
+            }
+
+            return _frontendConfig.ResolveSpeakerLabel(speakerId);
+        }
+
         private NarrativeFrontendSurfaceModel CreateSurface(
             NarrativeShowcaseSurfaceConfig config,
             NarrativeFrontendSurfaceKind kind,
