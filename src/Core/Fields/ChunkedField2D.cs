@@ -7,9 +7,19 @@ namespace Ludots.Core.Fields
     public sealed class ChunkedField2D<T>
         where T : struct
     {
+        /// <summary>
+        /// Chunks are indexed by a two-level page table instead of a hash map:
+        /// on dense boards (hundreds of thousands of materialized chunks) hash-bucket
+        /// lookups degrade into µs-class pointer chasing, while the second level stays
+        /// one bounded array read. Page slots hold chunk indices, -1 marks empty.
+        /// </summary>
+        private const int PageShift = 5;
+        private const int PageSide = 1 << PageShift;
+        private const int PageMask = PageSide - 1;
+
         private readonly T _defaultValue;
         private readonly IFieldValueCodec<T> _codec;
-        private readonly Dictionary<long, int> _chunkIndexByKey;
+        private readonly Dictionary<long, int[]> _pages;
         private FieldChunk2D<T>[] _chunks;
         private int _chunkCount;
         private int _dirtyCount;
@@ -41,7 +51,7 @@ namespace Ludots.Core.Fields
             _defaultValue = defaultValue;
             _codec = codec;
             _chunks = new FieldChunk2D<T>[initialChunkCapacity];
-            _chunkIndexByKey = new Dictionary<long, int>(initialChunkCapacity);
+            _pages = new Dictionary<long, int[]>();
         }
 
         public FieldGridSpec2D Grid { get; }
@@ -299,21 +309,42 @@ namespace Ludots.Core.Fields
 
         public void Clear()
         {
-            _chunkIndexByKey.Clear();
+            _pages.Clear();
             _chunkCount = 0;
             _dirtyCount = 0;
             _nonDefaultCount = 0;
         }
 
+        private static long PageKey(int chunkX, int chunkY) =>
+            ((long)(chunkX >> PageShift) << 32) ^ (uint)(chunkY >> PageShift);
+
+        private static int PageSlot(int chunkX, int chunkY) =>
+            ((chunkY & PageMask) << PageShift) | (chunkX & PageMask);
+
         private bool TryGetChunkIndex(int chunkX, int chunkY, out int chunkIndex)
         {
-            return _chunkIndexByKey.TryGetValue(FieldGridSpec2D.PackChunkKey(chunkX, chunkY), out chunkIndex);
+            if (!_pages.TryGetValue(PageKey(chunkX, chunkY), out int[]? page))
+            {
+                chunkIndex = -1;
+                return false;
+            }
+
+            chunkIndex = page[PageSlot(chunkX, chunkY)];
+            return chunkIndex >= 0;
         }
 
         private FieldChunk2D<T> GetOrCreateChunk(int chunkX, int chunkY)
         {
-            long key = FieldGridSpec2D.PackChunkKey(chunkX, chunkY);
-            if (_chunkIndexByKey.TryGetValue(key, out int existing))
+            if (!_pages.TryGetValue(PageKey(chunkX, chunkY), out int[]? page))
+            {
+                page = new int[PageSide * PageSide];
+                Array.Fill(page, -1);
+                _pages.Add(PageKey(chunkX, chunkY), page);
+            }
+
+            int slot = PageSlot(chunkX, chunkY);
+            int existing = page![slot];
+            if (existing >= 0)
             {
                 return _chunks[existing];
             }
@@ -322,7 +353,7 @@ namespace Ludots.Core.Fields
             int index = _chunkCount++;
             FieldChunk2D<T> chunk = new(chunkX, chunkY, Grid.ChunkSizeCells, _defaultValue, _codec);
             _chunks[index] = chunk;
-            _chunkIndexByKey.Add(key, index);
+            page[slot] = index;
             return chunk;
         }
 
