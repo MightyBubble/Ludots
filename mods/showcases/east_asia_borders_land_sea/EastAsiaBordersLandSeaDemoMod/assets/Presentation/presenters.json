@@ -139,7 +139,7 @@
         "kind": "Grounding",
         "activeByDefault": true,
         "grounding": {
-          "mode": "SnapToGround",
+          "mode": "None",
           "offset": 80,
           "updatePolicy": "EveryFrame"
         }
