@@ -84,7 +84,7 @@ public sealed class CalendarRuntimeTests
         Assert.That(runtime.TicksIntoDay, Is.EqualTo(5));
         Assert.That(phases, Is.EqualTo(new[] { "day" }));
         Assert.That(runtime.CaptureClockSnapshot().DayPhaseId, Is.EqualTo("day"));
-        Assert.That(runtime.CaptureClockSnapshot().ElapsedMin, Is.EqualTo(360));
+        Assert.That(runtime.CaptureClockSnapshot().DayPermille, Is.EqualTo(250));
     }
 
     [Test]

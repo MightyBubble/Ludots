@@ -32,7 +32,7 @@ Calendar.DayPhaseChanged
 
 | 件 | 职责 |
 |---|---|
-| `Calendar/clock.json` | 世界日怎么走：每几天算一天、从哪天开始、用哪份历、一天几分钟、昼夜相位 |
+| `Calendar/clock.json` | 世界日怎么走：多少步算一天、从哪天开始、用哪份历、昼夜相位 |
 | `Calendar/calendars.json` | 历法表：年长、纪年、周期与相位 |
 | `CalendarRuntime` | 日序、当天已走步、投影、存档 |
 | `CalendarSystem` | 每个固定步读 `GasClockStepPolicy.LastConsumedSteps`，Paused / 暂停令牌为 0 时不走日 |
@@ -50,11 +50,12 @@ Calendar.DayPhaseChanged
 | 字段 | 含义 |
 |---|---|
 | `tickSource` | 只接受 `Step` |
-| `ticksPerDay` | 多少个 Step 算一天，≥ 1 |
+| `ticksPerDay` | 多少个 Step 算一天，≥ 1。一天有多长只认这个数 |
 | `startDayIndex` | 开局日序，≥ 0 |
 | `activeCalendarId` | 主历，必须在历法表里 |
-| `minutesPerDay` | 一天多少分钟，用来算已过分钟 |
-| `dayPhases` | 昼夜相位，首项 `startPermille` 必须是 0，后面递增且 < 1000 |
+| `dayPhases` | 昼夜相位，按当天进度千分比切。首项 `startPermille` 必须是 0，后面递增且 < 1000 |
+
+当天进度 = `ticksIntoDay * 1000 / ticksPerDay`，读接口是 `CaptureClockSnapshot().DayPermille`。晓、昼、暮、夜查这根轴。钟面（例如 12:34）是皮层把千分比画成表，不要在 `clock.json` 再写一套「一天多少分钟」。写了 `minutesPerDay` 装载失败。
 
 Mod 要启用历法，写 `Calendar/clock.json`，并保证 catalog 里有这条 DeepObject（核心 catalog 已登记且 `AllowEmpty: true`）。
 
@@ -106,6 +107,7 @@ Mod 要启用历法，写 `Calendar/clock.json`，并保证 catalog 里有这条
 - `EntityLocalClock` 不驱动世界历。单体变速不影响日序。
 - 没有 `clock.json` 时调用 `Project` 失败，不返回假日期。
 - 未知字段、相位长度对不齐、主历不存在：装载失败并点名。
+- `minutesPerDay` / 累计已过分钟不是世界钟字段。一天只按 `ticksPerDay` 翻页。
 
 ## 6 UAT
 
@@ -137,6 +139,14 @@ Feature: 世界日子按历法走
     Given 没有 Calendar/clock.json
     When 有人要读今天是哪一年
     Then 系统失败并说明历法未启用
+
+  Scenario: 一天只按一套进度走
+    Given 一天是 20 步
+    And 晓从进度 0 开始、昼从进度 250 开始
+    When 世界走了 5 步
+    Then 当天进度是 250
+    And 玩家看到昼夜变成昼
+    And 配置里不能再写一天多少分钟
 ```
 
 ## 7 深度材料

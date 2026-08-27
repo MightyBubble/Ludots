@@ -62,10 +62,11 @@ public sealed class CalendarProjectionTests
     }
 
     [Test]
-    public void ElapsedMin_UsesWholeDaysPlusCurrentDayFraction()
+    public void DayPermille_UsesOnlyTicksIntoTheCurrentDay()
     {
-        Assert.That(CalendarProjection.ComputeElapsedMin(0, 10, 20, 1440), Is.EqualTo(720));
-        Assert.That(CalendarProjection.ComputeElapsedMin(1, 0, 20, 1440), Is.EqualTo(1440));
+        Assert.That(CalendarProjection.ComputeDayPermille(0, 20), Is.EqualTo(0));
+        Assert.That(CalendarProjection.ComputeDayPermille(5, 20), Is.EqualTo(250));
+        Assert.That(CalendarProjection.ComputeDayPermille(10, 20), Is.EqualTo(500));
     }
 
     private static CalendarCycleSnapshot FindCycle(CalendarDateSnapshot date, string cycleId)

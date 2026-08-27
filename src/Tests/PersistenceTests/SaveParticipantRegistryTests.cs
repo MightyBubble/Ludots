@@ -249,7 +249,6 @@ public sealed class SaveParticipantRegistryTests
             20,
             0,
             "calendar.solar360",
-            1440,
             new[] { new CalendarDayPhaseDefinition("dawn", "晓", 0) });
 
         var source = new CalendarRuntime(clock, registry);

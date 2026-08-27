@@ -16,7 +16,6 @@ public sealed class CalendarConfigLoaderTests
               "ticksPerDay": 20,
               "startDayIndex": 0,
               "activeCalendarId": "calendar.solar360",
-              "minutesPerDay": 1440,
               "dayPhases": [ { "id": "dawn", "label": "晓", "startPermille": 0 } ]
             }
             """);
@@ -25,6 +24,25 @@ public sealed class CalendarConfigLoaderTests
             () => CalendarConfigLoader.ParseClock(node))!;
         Assert.That(ex.Message, Does.Contain("tickSource"));
         Assert.That(ex.Message, Does.Contain("Step"));
+    }
+
+    [Test]
+    public void ParseClock_RejectsMinutesPerDay()
+    {
+        JsonObject node = ParseObject("""
+            {
+              "tickSource": "Step",
+              "ticksPerDay": 20,
+              "startDayIndex": 0,
+              "activeCalendarId": "calendar.solar360",
+              "minutesPerDay": 1440,
+              "dayPhases": [ { "id": "dawn", "label": "晓", "startPermille": 0 } ]
+            }
+            """);
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CalendarConfigLoader.ParseClock(node))!;
+        Assert.That(ex.Message, Does.Contain("minutesPerDay"));
     }
 
     [Test]

@@ -23,7 +23,6 @@ internal static class CalendarFixtures
             TicksPerDay: ticksPerDay,
             StartDayIndex: startDayIndex,
             ActiveCalendarId: activeCalendarId,
-            MinutesPerDay: 1440,
             DayPhases: DefaultDayPhases());
     }
 

@@ -83,7 +83,7 @@ namespace Ludots.Core.Gameplay.Calendar
                 throw new InvalidOperationException("Calendar ticksIntoDay must be in [0, ticksPerDay).");
             }
 
-            int permille = (int)((long)ticksIntoDay * 1000L / ticksPerDay);
+            int permille = ComputeDayPermille(ticksIntoDay, ticksPerDay);
             CalendarDayPhaseDefinition current = phases[0];
             for (int i = 1; i < phases.Count; i++)
             {
@@ -96,16 +96,19 @@ namespace Ludots.Core.Gameplay.Calendar
             return current;
         }
 
-        public static int ComputeElapsedMin(int dayIndex, int ticksIntoDay, int ticksPerDay, int minutesPerDay)
+        public static int ComputeDayPermille(int ticksIntoDay, int ticksPerDay)
         {
-            long elapsed = (long)dayIndex * minutesPerDay
-                + (long)ticksIntoDay * minutesPerDay / ticksPerDay;
-            if (elapsed > int.MaxValue)
+            if (ticksPerDay < 1)
             {
-                throw new InvalidOperationException("Calendar elapsed minutes overflowed int.");
+                throw new InvalidOperationException("Calendar ticksPerDay must be >= 1.");
             }
 
-            return (int)elapsed;
+            if ((uint)ticksIntoDay >= (uint)ticksPerDay)
+            {
+                throw new InvalidOperationException("Calendar ticksIntoDay must be in [0, ticksPerDay).");
+            }
+
+            return (int)((long)ticksIntoDay * 1000L / ticksPerDay);
         }
 
         private static CalendarEraDefinition ResolveEra(IReadOnlyList<CalendarEraDefinition> eras, int dayIndex)

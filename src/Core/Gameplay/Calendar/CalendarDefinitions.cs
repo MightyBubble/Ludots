@@ -24,7 +24,6 @@ namespace Ludots.Core.Gameplay.Calendar
         int TicksPerDay,
         int StartDayIndex,
         string ActiveCalendarId,
-        int MinutesPerDay,
         IReadOnlyList<CalendarDayPhaseDefinition> DayPhases);
 
     public sealed record CalendarCycleSnapshot(
@@ -56,8 +55,7 @@ namespace Ludots.Core.Gameplay.Calendar
         int DayIndex,
         int TicksIntoDay,
         int TicksPerDay,
-        int MinutesPerDay,
-        int ElapsedMin,
+        int DayPermille,
         string DayPhaseId,
         string DayPhaseLabel,
         CalendarDateSnapshot? ActiveDate);

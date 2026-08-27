@@ -85,12 +85,6 @@ namespace Ludots.Core.Gameplay.Calendar
             }
 
             string activeCalendarId = RequireCanonicalString(root["activeCalendarId"], $"{context}.activeCalendarId");
-            int minutesPerDay = RequireInt(root["minutesPerDay"], $"{context}.minutesPerDay");
-            if (minutesPerDay < 1)
-            {
-                throw new InvalidOperationException($"{context}.minutesPerDay must be >= 1.");
-            }
-
             IReadOnlyList<CalendarDayPhaseDefinition> dayPhases = ParseDayPhases(
                 root["dayPhases"],
                 $"{context}.dayPhases");
@@ -102,7 +96,6 @@ namespace Ludots.Core.Gameplay.Calendar
                 "ticksPerDay",
                 "startDayIndex",
                 "activeCalendarId",
-                "minutesPerDay",
                 "dayPhases");
 
             return new CalendarClockConfig(
@@ -110,7 +103,6 @@ namespace Ludots.Core.Gameplay.Calendar
                 ticksPerDay,
                 startDayIndex,
                 activeCalendarId,
-                minutesPerDay,
                 dayPhases);
         }
 

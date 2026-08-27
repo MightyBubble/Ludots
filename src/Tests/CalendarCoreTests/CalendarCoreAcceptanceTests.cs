@@ -53,7 +53,7 @@ public sealed class CalendarCoreAcceptanceTests
             FindCycle(date, "xun").PhaseLabel,
             FindCycle(date, "solarTerm").PhaseLabel,
             clock.DayPhaseLabel,
-            clock.ElapsedMin));
+            clock.DayPermille));
     }
 
     private static string BuildTrace(IReadOnlyList<PhaseRow> rows)
@@ -71,7 +71,7 @@ public sealed class CalendarCoreAcceptanceTests
             xun = row.Xun,
             solar_term = row.SolarTerm,
             day_phase = row.DayPhase,
-            elapsed_min = row.ElapsedMin
+            day_permille = row.DayPermille
         }))) + Environment.NewLine;
     }
 
@@ -150,5 +150,5 @@ public sealed class CalendarCoreAcceptanceTests
         string Xun,
         string SolarTerm,
         string DayPhase,
-        int ElapsedMin);
+        int DayPermille);
 }

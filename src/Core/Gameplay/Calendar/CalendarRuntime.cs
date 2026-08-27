@@ -81,8 +81,7 @@ namespace Ludots.Core.Gameplay.Calendar
                     DayIndex: 0,
                     TicksIntoDay: 0,
                     TicksPerDay: 0,
-                    MinutesPerDay: 0,
-                    ElapsedMin: 0,
+                    DayPermille: 0,
                     DayPhaseId: string.Empty,
                     DayPhaseLabel: string.Empty,
                     ActiveDate: null);
@@ -98,12 +97,7 @@ namespace Ludots.Core.Gameplay.Calendar
                 DayIndex: DayIndex,
                 TicksIntoDay: TicksIntoDay,
                 TicksPerDay: clock.TicksPerDay,
-                MinutesPerDay: clock.MinutesPerDay,
-                ElapsedMin: CalendarProjection.ComputeElapsedMin(
-                    DayIndex,
-                    TicksIntoDay,
-                    clock.TicksPerDay,
-                    clock.MinutesPerDay),
+                DayPermille: CalendarProjection.ComputeDayPermille(TicksIntoDay, clock.TicksPerDay),
                 DayPhaseId: phase.Id,
                 DayPhaseLabel: phase.Label,
                 ActiveDate: ProjectActive());
