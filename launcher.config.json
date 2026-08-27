@@ -18,6 +18,14 @@
       }
     },
     {
+      "name": "save_panel",
+      "target": {
+        "type": "path",
+        "value": "mods/SavePanelMod",
+        "projectPath": "SavePanelMod.csproj"
+      }
+    },
+    {
       "name": "persistence_online_replay_showcase",
       "target": {
         "type": "path",
