@@ -3,7 +3,7 @@
   "Tags": [
     "borders",
     "land-sea",
-    "transport-waterways"
+    "navmesh-layers"
   ],
   "Fields": {
     "Layers": [
