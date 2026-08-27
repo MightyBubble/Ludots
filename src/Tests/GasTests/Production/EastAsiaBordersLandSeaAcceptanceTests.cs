@@ -139,7 +139,9 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         var chain = new List<string>();
         Assert.That(RegionHierarchyBuilder.TryResolveChain(engine.World, province, chain), Is.True);
         Assert.That(chain[0], Does.StartWith("admin."));
+        Assert.That(chain[1], Does.StartWith("group.china."));
         Assert.That(chain, Does.Contain("country.china"));
+        Assert.That(chain.Count, Is.EqualTo(3));
     }
 
     [Test]

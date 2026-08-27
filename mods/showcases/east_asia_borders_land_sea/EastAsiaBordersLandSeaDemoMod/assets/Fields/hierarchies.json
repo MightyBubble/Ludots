@@ -1,33 +1,63 @@
 [
   {
-    "parent": "country.china",
+    "parent": "group.china.north",
+    "children": [
+      "admin.hebei",
+      "admin.heilongjiang",
+      "admin.jilin",
+      "admin.liaoning",
+      "admin.neimenggu_east",
+      "admin.shandong",
+      "admin.shanxi"
+    ]
+  },
+  {
+    "parent": "group.china.east",
     "children": [
       "admin.anhui",
-      "admin.chongqing",
       "admin.fujian",
-      "admin.gansu_east",
+      "admin.jiangsu",
+      "admin.jiangxi",
+      "admin.shanghai",
+      "admin.zhejiang"
+    ]
+  },
+  {
+    "parent": "group.china.central",
+    "children": [
+      "admin.henan",
+      "admin.hubei",
+      "admin.hunan"
+    ]
+  },
+  {
+    "parent": "group.china.south",
+    "children": [
       "admin.guangdong",
       "admin.guangxi",
       "admin.guizhou",
       "admin.hainan",
-      "admin.hebei",
-      "admin.heilongjiang",
-      "admin.henan",
-      "admin.hubei",
-      "admin.hunan",
-      "admin.jiangsu",
-      "admin.jiangxi",
-      "admin.jilin",
-      "admin.liaoning",
-      "admin.neimenggu_east",
+      "admin.yunnan"
+    ]
+  },
+  {
+    "parent": "group.china.west",
+    "children": [
+      "admin.chongqing",
+      "admin.gansu_east",
       "admin.ningxia",
       "admin.shaanxi",
-      "admin.shandong",
-      "admin.shanghai",
-      "admin.shanxi",
-      "admin.sichuan",
-      "admin.yunnan",
-      "admin.zhejiang"
+      "admin.sichuan"
+    ]
+  },
+  {
+    "parent": "country.china",
+    "children": [
+      "group.china.north",
+      "group.china.east",
+      "group.china.central",
+      "group.china.south",
+      "group.china.west"
     ]
   }
 ]
