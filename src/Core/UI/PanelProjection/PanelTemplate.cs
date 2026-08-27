@@ -19,7 +19,8 @@ namespace Ludots.Core.UI.PanelProjection
             IReadOnlyList<PanelPin> pins,
             IReadOnlyList<PanelTemplateEvent>? events = null,
             IReadOnlyList<PanelIntentMapEntry>? intents = null,
-            string? skin = null)
+            string? skin = null,
+            string? layout = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -86,6 +87,7 @@ namespace Ludots.Core.UI.PanelProjection
 
             Id = id.Trim();
             Graph = graph.Trim();
+            Layout = PanelLayoutCatalog.Require(layout, Id);
             Pins = pins;
             Events = safeEvents;
             Intents = safeIntents;
@@ -96,6 +98,7 @@ namespace Ludots.Core.UI.PanelProjection
 
         /// <summary>The single data source: one graph whose output schema feeds every pin.</summary>
         public string Graph { get; }
+        public string Layout { get; }
         public IReadOnlyList<PanelPin> Pins { get; }
         public IReadOnlyList<PanelTemplateEvent> Events { get; }
         public IReadOnlyList<PanelIntentMapEntry> Intents { get; }

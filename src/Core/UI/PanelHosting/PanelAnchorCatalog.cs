@@ -14,6 +14,8 @@ namespace Ludots.Core.UI.PanelHosting
             "screen.topLeft",
             "screen.topCenter",
             "screen.topRight",
+            "screen.middleLeft",
+            "screen.middleRight",
             "screen.bottomLeft",
             "screen.bottomCenter",
             "screen.bottomRight",
