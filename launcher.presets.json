@@ -33,6 +33,16 @@
       "buildMode": "auto"
     },
     {
+      "id": "reconnect_recovery_showcase_raylib",
+      "name": "Reconnect Recovery Raylib",
+      "selectors": [
+        "$reconnect_recovery_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "camera_acceptance_raylib",
       "name": "Camera Acceptance Raylib",
       "selectors": [
