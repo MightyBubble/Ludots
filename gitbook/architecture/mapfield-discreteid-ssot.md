@@ -120,7 +120,7 @@ TriggerGraph `filters.region` 用**明文 key**，不用 int id。
 | 产物进 data-only Mod 资产 | 为行政区抬 `GasConstants.MAX_CHILDREN_BUFFER_CAPACITY` |
 
 现有国家层再生：`tools/east_asia_borders/rasterize_countries_to_field.py`、`export_country_decal_png.py`。  
-省级层有独立 showcase `field_east_asia_admin`；与国家层的对齐若需要，**另写离线脚本**，不要叠进陆海玩法图。
+省级层有独立 showcase `field_east_asia_admin`；与国家层的对齐若需要，**另写离线脚本**，不要叠进同一张国界玩法图。
 
 ### 3.8 `hierarchies.json` 边界
 
@@ -150,10 +150,10 @@ TriggerGraph `filters.region` 用**明文 key**，不用 int id。
 ```gherkin
 Feature: 格子区域只认一层归属合同
 
-  Scenario: 玩法图只挂一层国家归属
-    Given 作者打开陆海国界演示图的配置
-    Then Fields.Layers 里只有国家层
-    And 没有省级层挂在同一张玩法图上
+  Scenario: 玩法图只挂需要的归属层
+    Given 作者配置一张国界归属图
+    Then Fields.Layers 只列国家层
+    And 不把省级层叠进同一张国界玩法图
 
   Scenario: 单位过境只报跟踪层
     Given 玩家进入挂了国家层的棋盘
@@ -173,6 +173,11 @@ Feature: 格子区域只认一层归属合同
     When 作者运行离线烘焙脚本
     Then 产物写入 Mod 的 Fields/cells 资产
     And Core 源码中不出现国家包含省的类型或系统
+
+  Scenario: 陆海分路不夹带格子归属
+    Given 玩家进入陆海分路演示
+    Then 棋盘不启用 ownership 层
+    And 验收只谈陆军走陆、船走海
 ```
 
 ## 7. 索引
@@ -187,4 +192,5 @@ Feature: 格子区域只认一层归属合同
 | 运行时 | `src/Core/Gameplay/FieldRegions/` |
 | 组件 | `src/Core/Components/FieldRegionComponents.cs` |
 | 国家烘焙 | `tools/east_asia_borders/` |
-| 标准 showcase | `field_layer_table`、`field_editor_paint`、`field_hierarchy_query`、`field_jing_yang_transit`、`field_east_asia_country`、`field_east_asia_admin`、`east_asia_borders_land_sea`（仅国家层） |
+| 标准 showcase | `field_layer_table`、`field_editor_paint`、`field_hierarchy_query`、`field_jing_yang_transit`、`field_east_asia_country`、`field_east_asia_admin` |
+| 非 Field | `east_asia_borders_land_sea` 只验收 NavMesh 陆/海分层走路，不挂 ownership |

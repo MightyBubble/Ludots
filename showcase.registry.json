@@ -5140,20 +5140,19 @@
     {
       "id": "east_asia_borders_land_sea",
       "path": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod",
-      "title": "East Asia Borders Land & Sea",
-      "summary": "Country Decal only (no stacked province layer); army Small on Ground NavMesh, ship Medium on Water NavMesh; border-enter panel. Not a road/river NodeGraph demo.",
+      "title": "East Asia Land & Sea",
+      "summary": "Army Small on Ground NavMesh, ship Medium on Water NavMesh. Not a MapField / country-ownership demo.",
       "tier": "T2",
       "category": "capability",
       "tags": [
         "east-asia",
-        "borders",
         "navmesh",
         "agent-profile",
         "showcase"
       ],
       "binding": "east_asia_borders_land_sea",
       "preset": "east_asia_borders_land_sea_raylib",
-      "docsPath": "gitbook/architecture/mapfield-discreteid-ssot.md",
+      "docsPath": null,
       "readmePath": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod/README.md",
       "acceptanceTest": "EastAsiaBordersLandSeaAcceptanceTests",
       "artifactDir": null,

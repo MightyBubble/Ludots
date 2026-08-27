@@ -113,7 +113,6 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 | `field_jing_yang_transit` | 两区过境 + 区内名单 + 面板 |
 | `field_east_asia_admin` | 东亚 VisualHeightmap 上的省级归属投影 |
 | `field_east_asia_country` | Natural Earth 国界栅格化归属投影 |
-| `east_asia_borders_land_sea` | 国家贴花 + 陆军 / 船分走 NavMesh 陆地层与海上层（不同走路档案）+ 过境面板；**只挂国家层** |
 | `field_layer_table` | 三区表 + MapLoaded 计数面板 |
 | `field_editor_paint` | field-editor 形状资产（paint.a / paint.b）+ 过境 |
 | `field_hierarchy_query` | hierarchies.json + `TryResolveChain` |
@@ -126,14 +125,12 @@ Raylib 中地图变量 `mapmode=0/1/2` 分别选择 leaf / parent / grandparent�
 
 `field_east_asia_country`：Natural Earth `admin_0` → `ownership.east_asia.country`；玩家国界色是 Decal 贴花，地图 Tag `Raylib.FieldOverlays:Off`。再生：`tools/east_asia_borders/`（见该 Mod README）。国↔省几何对齐只允许离线脚本，禁止进 Core。
 
-陆海演示 `east_asia_borders_land_sea` **只挂国家层**。移动：陆军 `Small` → Ground（layer 0），船 `Medium` → Water（layer 1），均为 PreferMesh；不走路网 / 河网。过境面板只报国家。单位外观只认展示绑定。
+陆海分路 `east_asia_borders_land_sea` **不是** MapField 演示：不挂 ownership 层、不做过境面板。它只验收陆军 / 船分走 NavMesh 陆地层与海上层。国界归属看 `field_east_asia_country`。
 
 ```powershell
 .\scripts\run-mod-launcher.cmd cli launch 'preset:field_east_asia_admin_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:field_east_asia_country_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:east_asia_borders_land_sea_raylib'
 ```
-
 `field_jing_yang_transit` 的“荆域火计”把区域状态投影为地图变量，`activationPrecondition` 的 Validation graph 通过纯 `InvokeScript` 读取 `region_code` 并 fail closed；施放成功后，`EventSignal` 经既有 GAS → TriggerGraph bridge 更新 `fire_cast_count`。这是 `HasTag` scope-effect 组合在当前 TriggerGraph 不允许 `ApplyEffectTemplate` / `RemoveEffectTemplate` 时的无 fallback 数据组合。
 
 目录均在 `mods/showcases/field_*/`；数据-only（无 csproj）。启动：
