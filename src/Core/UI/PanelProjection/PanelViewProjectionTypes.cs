@@ -36,6 +36,7 @@ namespace Ludots.Core.UI.PanelProjection
         ProgressBar = 1,
         Badge = 2,
         List = 3,
+        Image = 4,
     }
 
     public enum PanelPresentMode : byte
@@ -136,7 +137,10 @@ namespace Ludots.Core.UI.PanelProjection
             int overscan = 2,
             PanelPresentMode present = PanelPresentMode.List,
             int? columns = null,
-            PanelAggregateCountSpec? aggregateCount = null)
+            PanelAggregateCountSpec? aggregateCount = null,
+            string? src = null,
+            float? width = null,
+            float? height = null)
         {
             Type = type;
             ClassName = className;
@@ -153,6 +157,9 @@ namespace Ludots.Core.UI.PanelProjection
             Present = present;
             Columns = columns;
             AggregateCount = aggregateCount;
+            Src = src;
+            Width = width;
+            Height = height;
         }
 
         public PanelLayoutControlType Type { get; }
@@ -163,6 +170,15 @@ namespace Ludots.Core.UI.PanelProjection
         public string? Current { get; }
         public string? Max { get; }
         public bool? ShowWhen { get; }
+
+        /// <summary>Literal presentation imageId for <see cref="PanelLayoutControlType.Image"/> (xor <see cref="Bind"/>).</summary>
+        public string? Src { get; }
+
+        /// <summary>Pixel width for <see cref="PanelLayoutControlType.Image"/>.</summary>
+        public float? Width { get; }
+
+        /// <summary>Pixel height for <see cref="PanelLayoutControlType.Image"/>.</summary>
+        public float? Height { get; }
 
         /// <summary>Fixed scroll viewport height in px; null = grow with content (no scroll).</summary>
         public float? ViewportHeight { get; }
@@ -317,6 +333,12 @@ namespace Ludots.Core.UI.PanelProjection
 
         /// <summary>Entity / effect-instance subject surface available to layout binds (not graph pins).</summary>
         public const string EntityDisplayName = "displayName";
+
+        /// <summary>
+        /// Presentation imageId surface for <c>type: image</c> binds (not graph pins).
+        /// Portrait / standing / buff icon are all the same control — only the id differs.
+        /// </summary>
+        public const string ImageId = "imageId";
     }
 
     public static class PanelPresentModes

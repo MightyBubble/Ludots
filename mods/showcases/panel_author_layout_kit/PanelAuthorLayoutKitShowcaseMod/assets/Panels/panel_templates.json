@@ -26,6 +26,13 @@
     "layout": {
       "controls": [
         {
+          "type": "image",
+          "class": "effect-icon",
+          "bind": "imageId",
+          "width": 28,
+          "height": 28
+        },
+        {
           "type": "label",
           "class": "effect-name",
           "bind": "displayName"
@@ -81,7 +88,7 @@
           "type": "list",
           "class": "kit-list",
           "bind": "effects",
-          "itemExtent": 72,
+          "itemExtent": 88,
           "present": "list",
           "viewportHeight": 200,
           "virtualize": true,
@@ -126,7 +133,7 @@
           "type": "list",
           "class": "kit-grid",
           "bind": "effects",
-          "itemExtent": 72,
+          "itemExtent": 88,
           "present": "grid",
           "columns": 2,
           "viewportHeight": 200
@@ -170,7 +177,7 @@
           "type": "list",
           "class": "kit-column",
           "bind": "effects",
-          "itemExtent": 72,
+          "itemExtent": 88,
           "present": "column"
         }
       ]

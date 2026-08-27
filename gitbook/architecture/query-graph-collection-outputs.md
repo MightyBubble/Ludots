@@ -388,13 +388,12 @@ squad.candidates ──inputs.candidates──► SlotCard 图 ──ability.slo
   "bind": "stacks",
   "present": "aggregate",
   "aggregate": {
-    "head": { "from": "first", "icon": "icon", "label": "displayName" },
-    "count": { "from": "totalCount" }
+    "count": { "from": "totalCount", "prefix": "×" }
   }
 }
 ```
 
-`bind` 指向的 collections 条目仍须满足 §2.4（`source` + 类型）。空袋：fail-closed 或作者显式 empty 控件——禁止静默画「有货」。
+首位外观（含图标）来自元素模板：在芯片 layout 里写 `type: "image"`（`bind: "imageId"` 或 `src`），不要另造 `aggregate.head.icon` 字段。空袋：fail-closed 或作者显式 empty 控件——禁止静默画「有货」。
 
 #### 3.7.4 对照
 

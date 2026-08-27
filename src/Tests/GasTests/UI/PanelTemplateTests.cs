@@ -316,6 +316,43 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
+        public void Load_ImageControl_RequiresSrcOrBindAndSize()
+        {
+            Assert.That(
+                () => PanelTemplateLoader.Load("""
+                {
+                  "id": "tests.panel.image.bad",
+                  "subject": "EffectInstance",
+                  "graph": "g",
+                  "pins": [ { "name": "n", "key": "k" } ],
+                  "layout": {
+                    "controls": [
+                      { "type": "image", "bind": "imageId" }
+                    ]
+                  }
+                }
+                """),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains("width"));
+
+            PanelTemplate ok = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.image.ok",
+              "subject": "EffectInstance",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "layout": {
+                "controls": [
+                  { "type": "image", "bind": "imageId", "width": 28, "height": 28 }
+                ]
+              }
+            }
+            """);
+            Assert.That(ok.Layout!.Controls[0].Type, Is.EqualTo(PanelLayoutControlType.Image));
+            Assert.That(ok.Layout.Controls[0].Bind, Is.EqualTo("imageId"));
+            Assert.That(ok.Layout.Controls[0].Width, Is.EqualTo(28f));
+        }
+
+        [Test]
         public void Load_ElementDeclaresSubjectAndGraph()
         {
             const string json = """

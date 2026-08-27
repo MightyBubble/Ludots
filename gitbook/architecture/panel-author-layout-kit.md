@@ -17,13 +17,13 @@
 ```text
 元素芯片 panel.kit.effect.chip
   subject: EffectInstance
-  pins: remaining / total / stacks
-  layout: 名 + 剩余时间条 + 层数徽标
+    pins: remaining / total / stacks
+    layout: image 图标 + 名 + 剩余时间条 + 层数徽标
 
 容器（三选一，同一 collections 绑定）
   present: list    → 竖向逐条（可滚动 / 可虚拟化）
   present: grid    → columns 折行成格
-  present: column  → 横向一排（buff 条 / 技能栏）
+  present: column  → 横向一排（buff 条 / 技能栏；人多可横滑）
 
 开箱 Showcase：panel_author_layout_kit
   一场三块面板并排（教学用）——与「一袋一场」玩家竖切正交；本场明确是作者教室
@@ -37,7 +37,7 @@
 |---|---|---|---|
 | `list` | 竖向 | `viewportHeight` / `itemExtent` / `virtualize` / `overscan` | 允许 |
 | `grid` | 按列折行 | **必填** `columns`（≥1）；`itemExtent` = 格高 | 本轮禁止 |
-| `column` | 横向一排 | `itemExtent` = 行高（可选） | 禁止 |
+| `column` | 横向一排 | `itemExtent` = 行高（可选）；人多时格子保底宽 + 横滑 | 禁止 |
 | `aggregate` | 首位芯片 + 总数文案 | **必填** `aggregate.count` | 禁止 |
 
 ```jsonc
@@ -55,9 +55,31 @@
   "type": "list",
   "bind": "effects",
   "present": "column",
-  "itemExtent": 56
+  "itemExtent": 88
 }
 ```
+
+### 3.1.1 image 控件（头像 / 立绘 / 图标统一）
+
+不区分「头像控件」「立绘控件」「buff 图标」——一律：
+
+```jsonc
+{
+  "type": "image",
+  "bind": "imageId",
+  "width": 28,
+  "height": 28
+}
+```
+
+或静态：`{ "type": "image", "src": "effect.icon.祝福", "width": 28, "height": 28 }`（`src` 与 `bind` 二选一）。
+
+- `width` / `height` 必填正数。
+- `bind: "imageId"` 读主体表面：效果实例 → `effect.icon.<模板名>`，物品 → `item.icon.<定义名>`，实体 → `entity.icon.<名>`。
+- 解析走 `PresentationDisplayResolver` + `Presentation/image_assets.json`（可只写 `glyphFallback`）。
+- 缺资产 / 空 id → 装载或绘制失败，禁止静默方块。
+
+`aggregate.head.icon` 不再另造字段：首位成员的元素模板里放 `image` 即可。
 
 ```jsonc
 {
@@ -72,12 +94,12 @@
 
 - `aggregate.count.from` 本轮只允许 `totalCount`（袋基数）。
 - `aggregate.count.prefix` 必填字符串（可为空串，但字段必须出现）——禁止引擎写死 `×`。
-- `head` / `icon` 仍属「日后图标控件」；本轮 head = 元素模板投影首位成员。
 
 ### 3.2 效果芯片（剩余时间 + 层数）
 
 | pin | 图节点 | 画面 |
 |---|---|---|
+| （表面）`imageId` | — | `image` |
 | `remaining` / `total` | `LoadEffectTiming` | `progressBar` |
 | `stacks` | `LoadEffectStack` | `badge` 或 `label`（`prefix: "×"` 由配置写） |
 
@@ -107,6 +129,7 @@
 - `grid`/`column`/`aggregate` 与 `virtualize` 互斥（装载失败）。
 - 未知 `present` / 缺 `columns` / 缺 `aggregate.count` → 装载失败。
 - 进度条宽度跟格子走，禁止按整块面板写死像素——`column` 不得画出面板边框。
+- 头像 / 立绘 / 图标统一 `type: image`，禁止平行控件名。
 - 本教学场可同屏三面板；玩家竖切仍「一袋一场」。
 
 ## 6. UAT
@@ -125,6 +148,11 @@ Feature: 开箱布局套件
     When 面板完成布局
     Then 每一颗效果芯片的左右边界都落在该面板框内
     And 我能在框内认出全部成员名（不被裁到框外看不见）
+
+  Scenario: 芯片带统一 image 图标
+    Given 我启动 panel_author_layout_kit 且 image_assets 已登记效果图标
+    When 面板完成布局
+    Then 我能在芯片上看到小图标（或缺资产时启动失败，不出现空白洞）
 
   Scenario: 网格按列折行
     Given 配置 present 为 grid 且 columns 为 3

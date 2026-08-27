@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Arch.System;
+using Ludots.Core.Presentation;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
@@ -38,6 +39,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly UiStyleSheet? _themeSheet;
     private readonly IUiTextMeasurer _textMeasurer;
     private readonly IUiImageSizeProvider _imageSizeProvider;
+    private readonly PresentationDisplayResolver? _displayResolver;
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -51,7 +53,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
         string? globalSkin,
         UiStyleSheet? themeSheet = null,
         IUiTextMeasurer? textMeasurer = null,
-        IUiImageSizeProvider? imageSizeProvider = null)
+        IUiImageSizeProvider? imageSizeProvider = null,
+        PresentationDisplayResolver? displayResolver = null)
     {
         _panelHost = panelHost ?? throw new ArgumentNullException(nameof(panelHost));
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
@@ -62,6 +65,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _themeSheet = themeSheet;
         _textMeasurer = textMeasurer ?? new NullTextMeasurer();
         _imageSizeProvider = imageSizeProvider ?? new NullImageSizeProvider();
+        _displayResolver = displayResolver;
     }
 
     public void Initialize() { }
@@ -304,6 +308,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             PanelLayoutControlType.Label => BuildLabel(control, values, item),
             PanelLayoutControlType.ProgressBar => BuildProgressBar(control, values, item),
             PanelLayoutControlType.Badge => BuildBadge(control, values, item),
+            PanelLayoutControlType.Image => BuildImage(control, values, item),
             PanelLayoutControlType.List => BuildList(template, control, values, lists, item, handle, reactiveContext),
             _ => null,
         };
@@ -372,6 +377,40 @@ public sealed class PanelPresentationSystem : ISystem<float>
                             .Height(10)
                             .Background(new UiColor(255, 68, 68, 255))
                             .Radius(4)));
+    }
+
+    private UiElementBuilder BuildImage(
+        PanelLayoutControl control,
+        PanelVariableSet values,
+        PanelListItemProjection? item)
+    {
+        string imageId = !string.IsNullOrWhiteSpace(control.Src)
+            ? control.Src!
+            : ReadBoundText(control.Bind!, values, item);
+        if (string.IsNullOrWhiteSpace(imageId))
+        {
+            throw new InvalidOperationException(
+                "Panel image control resolved an empty imageId (src/bind). Author image_assets or remove the control.");
+        }
+
+        if (_displayResolver == null)
+        {
+            throw new InvalidOperationException(
+                "Panel image control requires PresentationDisplayResolver engine service.");
+        }
+
+        string source = _displayResolver.ResolveImageSourceOrThrow(imageId);
+        float width = control.Width
+            ?? throw new InvalidOperationException("Panel image control missing width.");
+        float height = control.Height
+            ?? throw new InvalidOperationException("Panel image control missing height.");
+
+        return Ui.Image(source)
+            .Class("control-image")
+            .Class(control.ClassName ?? "image")
+            .Width(width)
+            .Height(height)
+            .FlexShrink(0f);
     }
 
     private static UiElementBuilder? BuildBadge(
@@ -558,8 +597,9 @@ public sealed class PanelPresentationSystem : ISystem<float>
             }
             else if (control.Present == PanelPresentMode.Column)
             {
-                // Equal share of the panel content width so the buff row never spills the frame.
-                cell = cell.FlexGrow(1f).FlexShrink(1f).FlexBasis(0f).MinWidth(0f);
+                // Floor keeps unreadably-crushed chips from stacking forever; Overflow.Scroll
+                // takes over when the floor sum exceeds the panel content width.
+                cell = cell.FlexGrow(1f).FlexShrink(1f).FlexBasis(0f).MinWidth(48f);
             }
 
             rows.Add(cell);
@@ -581,7 +621,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 .Class($"list-{control.Bind}")
                 .WidthPercent(100f)
                 .Height(cellExtent)
-                .Overflow(UiOverflow.Clip)
+                .Overflow(UiOverflow.Scroll)
                 .Gap(4f)
                 .Children(rows.ToArray());
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -58,6 +59,11 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
         Assert.That(texts, Does.Contain("祝福"));
         Assert.That(texts, Does.Contain("×3"));
 
+        Assert.That(
+            root.Scene!.EnumerateVisualNodes().Any(node => node.Kind == UiNodeKind.Image),
+            Is.True,
+            "classroom chips must render image controls");
+
         AssertColumnChipsStayInsidePanelFrame(root);
 
         AcceptanceUiEvidenceWriter.CaptureFrame(
@@ -87,6 +93,7 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
         Assert.That(effects.Items.Count, Is.EqualTo(4));
 
         Assert.That(effects.Items[0].Strings["displayName"], Is.EqualTo("祝福"));
+        Assert.That(effects.Items[0].Strings["imageId"], Is.EqualTo("effect.icon.祝福"));
         Assert.That(effects.Items[0].Floats["remaining"], Is.EqualTo(80f).Within(0.001f));
         Assert.That(effects.Items[0].Floats["total"], Is.EqualTo(100f).Within(0.001f));
         Assert.That(effects.Items[0].Floats["stacks"], Is.EqualTo(3f).Within(0.001f));

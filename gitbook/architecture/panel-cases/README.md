@@ -19,6 +19,7 @@
 - [进行中的活动](panel-active-activities.md) — 活动实例袋
 - [谁会火球](panel-ability-holders.md) — 技能反查持有者（source=input）
 - [修行进度](panel-progression-nodes.md) — 进度节点袋
+- [开箱布局教室](panel-author-layout-kit.md) — 同一芯片 × 竖列/网格/横栏 + image 图标
 
 ## 前四案（全设计）
 

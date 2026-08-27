@@ -8909,7 +8909,7 @@
       "category": "panel",
       "binding": "panel_author_layout_kit",
       "preset": "panel_author_layout_kit_raylib",
-      "docsPath": "gitbook/architecture/panel-author-layout-kit.md",
+      "docsPath": "gitbook/architecture/panel-cases/panel-author-layout-kit.md",
       "readmePath": null,
       "acceptanceTest": "Ludots.Tests.GAS.Production.PanelAuthorLayoutKitAcceptanceTests",
       "artifactDir": "artifacts/acceptance/panel_author_layout_kit",

@@ -333,6 +333,12 @@ namespace Ludots.Core.UI.PanelProjection
             {
                 [PanelSubjectKinds.EntityDisplayName] = ReadEntityDisplayName(member, element.Subject)
             };
+            string? imageId = ReadEntityImageId(member, element.Subject);
+            if (!string.IsNullOrWhiteSpace(imageId))
+            {
+                strings[PanelSubjectKinds.ImageId] = imageId;
+            }
+
             IReadOnlyList<PanelListProjection> nested = ProjectNested(
                 new PanelProjectionContext(hostScope, member),
                 element,
@@ -368,6 +374,12 @@ namespace Ludots.Core.UI.PanelProjection
                 [PanelSubjectKinds.EntityDisplayName] =
                     ReadIntIdDisplayName(owner, memberIntId, element.Subject)
             };
+            string? imageId = ReadIntIdImageId(owner, memberIntId, element.Subject);
+            if (!string.IsNullOrWhiteSpace(imageId))
+            {
+                strings[PanelSubjectKinds.ImageId] = imageId;
+            }
+
             IReadOnlyList<PanelListProjection> nested = ProjectNested(
                 new PanelProjectionContext(hostScope, owner),
                 element,
@@ -410,6 +422,76 @@ namespace Ludots.Core.UI.PanelProjection
                 PanelSubjectKind.ItemInstance => ReadItemDisplayName(member),
                 _ => ReadName(member),
             };
+        }
+
+        private string? ReadEntityImageId(Entity member, PanelSubjectKind subject)
+        {
+            string name = subject switch
+            {
+                PanelSubjectKind.EffectInstance => ReadEffectTemplateName(member),
+                PanelSubjectKind.ItemInstance => ReadItemDefinitionName(member),
+                _ => ReadName(member),
+            };
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            string kind = subject switch
+            {
+                PanelSubjectKind.EffectInstance => "effect",
+                PanelSubjectKind.ItemInstance => "item",
+                _ => "entity",
+            };
+            return $"{kind}.icon.{name}";
+        }
+
+        private string? ReadIntIdImageId(Entity owner, int memberIntId, PanelSubjectKind subject)
+        {
+            string name = subject switch
+            {
+                PanelSubjectKind.EffectTemplate => EffectTemplateIdRegistry.GetName(memberIntId),
+                PanelSubjectKind.ItemDefinition => _itemDefinitions.GetName(memberIntId),
+                PanelSubjectKind.AbilityDefinition => AbilityIdRegistry.GetName(memberIntId),
+                _ => string.Empty,
+            };
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            string kind = subject switch
+            {
+                PanelSubjectKind.EffectTemplate => "effect",
+                PanelSubjectKind.ItemDefinition => "item",
+                PanelSubjectKind.AbilityDefinition => "ability",
+                _ => "id",
+            };
+            return $"{kind}.icon.{name}";
+        }
+
+        private string ReadEffectTemplateName(Entity effectEntity)
+        {
+            if (!_world.IsAlive(effectEntity) || !_world.Has<EffectTemplateRef>(effectEntity))
+            {
+                return string.Empty;
+            }
+
+            int templateId = _world.Get<EffectTemplateRef>(effectEntity).TemplateId;
+            string name = EffectTemplateIdRegistry.GetName(templateId);
+            return string.IsNullOrWhiteSpace(name) ? string.Empty : name;
+        }
+
+        private string ReadItemDefinitionName(Entity itemEntity)
+        {
+            if (!_world.IsAlive(itemEntity) || !_world.Has<ItemInstanceCm>(itemEntity))
+            {
+                return string.Empty;
+            }
+
+            int definitionId = _world.Get<ItemInstanceCm>(itemEntity).DefinitionId;
+            string name = _itemDefinitions.GetName(definitionId);
+            return string.IsNullOrWhiteSpace(name) ? string.Empty : name;
         }
 
         private string ReadIntIdDisplayName(

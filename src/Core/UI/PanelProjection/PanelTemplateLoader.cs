@@ -51,7 +51,7 @@ namespace Ludots.Core.UI.PanelProjection
         {
             "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
             "viewportHeight", "itemExtent", "virtualize", "overscan", "present",
-            "columns", "aggregate"
+            "columns", "aggregate", "src", "width", "height"
         };
 
         public static PanelTemplate Load(string json)
@@ -309,6 +309,7 @@ namespace Ludots.Core.UI.PanelProjection
             if (PanelSubjectKinds.IsEntityBagSubject(subject) || PanelSubjectKinds.IsIntIdBagSubject(subject))
             {
                 pinNames.Add(PanelSubjectKinds.EntityDisplayName);
+                pinNames.Add(PanelSubjectKinds.ImageId);
             }
 
             var collectionNames = new HashSet<string>(StringComparer.Ordinal);
@@ -346,6 +347,7 @@ namespace Ludots.Core.UI.PanelProjection
                 "progressBar" => PanelLayoutControlType.ProgressBar,
                 "badge" => PanelLayoutControlType.Badge,
                 "list" => PanelLayoutControlType.List,
+                "image" => PanelLayoutControlType.Image,
                 _ => throw new InvalidOperationException(
                     $"Panel template '{templateId}' layout control type '{typeText}' is unknown."),
             };
@@ -356,6 +358,7 @@ namespace Ludots.Core.UI.PanelProjection
             string? prefix = OptionalString(controlObject, "prefix");
             string? current = OptionalString(controlObject, "current");
             string? max = OptionalString(controlObject, "max");
+            string? src = OptionalString(controlObject, "src");
             bool? showWhen = null;
             if (controlObject["showWhen"] is JsonValue showNode && showNode.TryGetValue<bool>(out bool showValue))
             {
@@ -510,9 +513,34 @@ namespace Ludots.Core.UI.PanelProjection
 
             ValidateControlBindings(templateId, type, bind, current, max, pinNames);
 
+            float? width = OptionalPositiveFloat(controlObject, "width", templateId);
+            float? height = OptionalPositiveFloat(controlObject, "height", templateId);
+            if (type == PanelLayoutControlType.Image)
+            {
+                bool hasSrc = !string.IsNullOrWhiteSpace(src);
+                bool hasBind = !string.IsNullOrWhiteSpace(bind);
+                if (hasSrc == hasBind)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' image requires exactly one of src or bind.");
+                }
+
+                if (!width.HasValue || !height.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' image requires positive width and height.");
+                }
+            }
+            else if (width.HasValue || height.HasValue || !string.IsNullOrWhiteSpace(src))
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' src/width/height are only valid on image controls.");
+            }
+
             return new PanelLayoutControl(
                 type, className, text, bind, prefix, current, max, showWhen,
-                viewportHeight, itemExtent, virtualize, overscan, present, columns, aggregateCount);
+                viewportHeight, itemExtent, virtualize, overscan, present, columns, aggregateCount,
+                src, width, height);
         }
 
         private static PanelAggregateCountSpec ParseAggregateCount(
@@ -597,6 +625,14 @@ namespace Ludots.Core.UI.PanelProjection
                     {
                         throw new InvalidOperationException(
                             $"Panel template '{templateId}' control bind '{bind}' is not a known pin.");
+                    }
+
+                    break;
+                case PanelLayoutControlType.Image:
+                    if (!string.IsNullOrWhiteSpace(bind) && !pinNames.Contains(bind))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' image bind '{bind}' is not a known pin or subject surface.");
                     }
 
                     break;
