@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardGraphOpStartDialogueEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for GraphNodeOp StartDialogue player gallery.",
+  "main": "bin/net9.0/CapabilityStandardGraphOpStartDialogueEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ]
+}

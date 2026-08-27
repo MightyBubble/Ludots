@@ -1,0 +1,21 @@
+[
+  {
+    "id": "showcase.graph_op.StartDialogue",
+    "kind": "Script",
+    "entry": "featured",
+    "nodes": [
+      { "id": "featured", "op": "StartDialogue", "dialogueId": "Dialogue.Gallery.StartDialogue" },
+      { "id": "line", "op": "ConstText", "text": "对话已开" },
+      { "id": "sink", "op": "SinkPresentationText", "presentationSurface": "Subtitle" },
+      { "id": "done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "featured", "fromPort": "next", "to": "line" },
+      { "from": "line", "fromPort": "next", "to": "sink" },
+      { "from": "sink", "fromPort": "next", "to": "done" }
+    ],
+    "valueEdges": [
+      { "from": "line", "fromPort": "value", "to": "sink", "toPort": "a" }
+    ]
+  }
+]

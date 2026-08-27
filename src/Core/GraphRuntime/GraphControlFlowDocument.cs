@@ -220,6 +220,8 @@ namespace Ludots.Core.GraphRuntime
         public string? Text { get; set; }
         /// <summary>Presentation TextToken key for LoadTextKey; patched to token id at load.</summary>
         public string? TextKey { get; set; }
+        /// <summary>Dialogue definition id for StartDialogue; patched to config key id at load.</summary>
+        public string? DialogueId { get; set; }
         /// <summary>Presentation surface for SinkPresentationText: "Subtitle" or "Dialogue".</summary>
         public string? PresentationSurface { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>

@@ -112,6 +112,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private GraphPresentationTextSink? _presentationTextSink;
         private PresentationTextCatalog? _presentationTextCatalog;
+        private Action<string>? _startDialogue;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
@@ -405,6 +406,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindPresentationTextCatalog(PresentationTextCatalog catalog)
         {
             _presentationTextCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        }
+
+        public void BindStartDialogue(Action<string> startDialogue)
+        {
+            _startDialogue = startDialogue ?? throw new ArgumentNullException(nameof(startDialogue));
+        }
+
+        public void StartDialogue(int dialogueKeyId)
+        {
+            Action<string> start = _startDialogue
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueRuntimeUnavailable");
+            string? dialogueId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(dialogueKeyId);
+            if (string.IsNullOrWhiteSpace(dialogueId))
+            {
+                throw new InvalidOperationException(
+                    $"StartDialogue references unregistered dialogue key id {dialogueKeyId}.");
+            }
+
+            start(dialogueId);
         }
 
         public ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)

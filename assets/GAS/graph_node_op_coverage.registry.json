@@ -1353,6 +1353,22 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "LoadPlacedAnchor",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadPlacedAnchor",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPlacedRegionAcceptanceTests.LoadPlacedAnchor_RollCallHitsLiveInstanceThenNullAfterKill"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "LoadPlacedEntity",
       "authorableKinds": [
         "TriggerGraph"
@@ -1365,6 +1381,22 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryPlacedEntityAcceptanceTests.LoadPlacedEntity_RollCallHitsLiveInstanceThenNullAfterKill"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadPlacedRegion",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadPlacedRegion",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPlacedRegionAcceptanceTests.LoadPlacedRegion_RollCallReportsYardPresentAndGhostAbsent"
       ],
       "codegenStatus": "covered"
     },
@@ -2833,6 +2865,25 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "StartDialogue",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_StartDialogue",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryScriptAcceptanceTests.FormalTextOp_CompilesFeaturedOpcode",
+        "GraphOpsNodeGalleryScriptAcceptanceTests.StartDialogue_OpensSession_AndCaptions",
+        "GraphStartDialogueOpTests.StartDialogue_InvokesBoundStarter_WithPatchedDialogueId"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "StoreArgEntity",
       "authorableKinds": [
         "TriggerGraph"
@@ -3121,38 +3172,6 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.Yield_FillsWaterAcrossTicks_AndCaptionRests",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "LoadPlacedRegion",
-      "authorableKinds": [
-        "TriggerGraph"
-      ],
-      "showcaseId": "capability_standard_graph_op_LoadPlacedRegion",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryPlacedRegionAcceptanceTests.LoadPlacedRegion_RollCallReportsYardPresentAndGhostAbsent"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "LoadPlacedAnchor",
-      "authorableKinds": [
-        "TriggerGraph"
-      ],
-      "showcaseId": "capability_standard_graph_op_LoadPlacedAnchor",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryPlacedRegionAcceptanceTests.LoadPlacedAnchor_RollCallHitsLiveInstanceThenNullAfterKill"
       ],
       "codegenStatus": "covered"
     }

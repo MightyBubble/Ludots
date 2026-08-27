@@ -269,6 +269,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Zero-arg tokens only in this slice; argCount&gt;0 fails closed.
         /// </summary>
         LoadTextKey = 461,
+
+        /// <summary>
+        /// Start DialogueRuntime session. Imm = dialogueId config key (patched from dialogueId symbol).
+        /// TriggerGraph / Script only; MapLoaded entry is the data-driven auto-start path.
+        /// </summary>
+        StartDialogue = 462,
     }
 
     public static class GraphNodeOpParser

@@ -2579,6 +2579,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StartDialogue_raylib",
+      "name": "Graph Op StartDialogue Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StartDialogue"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

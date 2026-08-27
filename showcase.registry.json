@@ -8399,6 +8399,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_LoadTextKey/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_StartDialogue",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStartDialogueEntryMod",
+      "projectPath": "CapabilityStandardGraphOpStartDialogueEntryMod.csproj",
+      "title": "进图开一场对话",
+      "summary": "图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "StartDialogue"
+      ],
+      "binding": "capability_standard_graph_op_StartDialogue",
+      "preset": "capability_standard_graph_op_StartDialogue_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/StartDialogue.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_StartDialogue",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_StartDialogue/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_StartDialogue/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }
