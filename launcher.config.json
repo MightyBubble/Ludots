@@ -1820,6 +1820,20 @@
       }
     },
     {
+      "name": "dialogue_author_kit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dialogue_author_kit/DialogueAuthorKitShowcaseMod"
+      }
+    },
+    {
+      "name": "dialogue_author_kit_theme_ink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dialogue_author_kit_theme_ink/DialogueAuthorKitThemeInkMod"
+      }
+    },
+    {
       "name": "narrative_theme_sanguo",
       "target": {
         "type": "path",

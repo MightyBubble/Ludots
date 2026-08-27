@@ -1,0 +1,29 @@
+{
+  "defaultLocale": "zh-CN",
+  "locales": {
+    "zh-CN": {
+      "story.author_kit.speaker.guard": "关口门卫",
+      "story.author_kit.speaker.traveler": "旅人",
+      "story.author_kit.guard.open": "站住。过关要口令。你是先在簿子上记下口令，还是直接报上来？",
+      "story.author_kit.player.write_pass": "先把口令写进簿子。",
+      "story.author_kit.player.ask_enter": "口令在簿子上，请放行。",
+      "story.author_kit.player.leave": "我再转转。",
+      "story.author_kit.guard.recorded": "簿子上有了。再跟我说一次，就能过。",
+      "story.author_kit.player.back": "好，我再说一遍。",
+      "story.author_kit.guard.allowed": "口令对上了。进去吧。",
+      "story.author_kit.guard.bye": "行，关口还在这儿。"
+    },
+    "en-US": {
+      "story.author_kit.speaker.guard": "Gate Guard",
+      "story.author_kit.speaker.traveler": "Traveler",
+      "story.author_kit.guard.open": "Hold. You need a pass-phrase. Log it first, or try to enter now?",
+      "story.author_kit.player.write_pass": "Write the pass-phrase into the ledger.",
+      "story.author_kit.player.ask_enter": "The ledger has it. Let me through.",
+      "story.author_kit.player.leave": "I will walk around first.",
+      "story.author_kit.guard.recorded": "It is in the ledger. Speak to me again and you may pass.",
+      "story.author_kit.player.back": "Alright, I will speak again.",
+      "story.author_kit.guard.allowed": "Pass-phrase matches. Go on.",
+      "story.author_kit.guard.bye": "Fine. The gate stays."
+    }
+  }
+}

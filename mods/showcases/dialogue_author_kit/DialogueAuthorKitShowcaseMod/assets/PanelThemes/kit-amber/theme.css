@@ -1,0 +1,45 @@
+/* kit-amber — warm amber dialogue chrome for author-kit debug */
+
+.story-root {
+  font-family: "Palatino Linotype", "Book Antiqua", "Georgia", serif;
+}
+
+.story-card {
+  background-color: rgba(42, 26, 14, 235);
+  border: 2px solid rgb(232, 188, 110);
+  border-radius: 4px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  padding: 16px;
+}
+
+.story-overlay-dialogue {
+  border-color: rgb(246, 197, 107);
+  border-width: 2px;
+  border-radius: 4px;
+  padding: 22px 24px 28px 24px;
+  background-color: rgba(48, 28, 16, 242);
+}
+
+.story-choice-list {
+  border-color: rgb(246, 197, 107);
+  border-width: 2px;
+  border-radius: 4px;
+  background-color: rgba(36, 22, 12, 236);
+  padding: 12px 14px;
+}
+
+.story-eyebrow {
+  color: rgb(246, 197, 107);
+}
+
+.story-title {
+  color: rgb(248, 250, 252);
+}
+
+.story-body {
+  color: rgb(230, 220, 200);
+}
+
+.story-muted {
+  color: rgb(180, 160, 130);
+}

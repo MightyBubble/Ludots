@@ -1,0 +1,10 @@
+{
+  "startupMapId": "dialogue_author_kit_gate",
+  "panelTheme": "kit-amber",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

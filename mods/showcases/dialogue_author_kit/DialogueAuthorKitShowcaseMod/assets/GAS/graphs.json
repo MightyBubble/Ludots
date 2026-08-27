@@ -1,0 +1,42 @@
+[
+  {
+    "id": "Graph.AuthorKit.Condition.PassGranted",
+    "kind": "Query",
+    "entry": "read_pass",
+    "nodes": [
+      { "id": "read_pass", "op": "ReadMapVarInt", "var": "pass_granted" },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "read_pass", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "read_pass", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.AuthorKit.Action.GrantPass",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "story_invoke", "event": "Story.ManualInvoke", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadCaster" },
+      { "id": "one", "op": "ConstInt", "intValue": 1 },
+      { "id": "write", "op": "WriteMapVarInt", "var": "pass_granted" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "one" },
+      { "from": "one", "fromPort": "next", "to": "write" },
+      { "from": "write", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "write", "toPort": "source" },
+      { "from": "one", "fromPort": "value", "to": "write", "toPort": "value" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

@@ -5166,6 +5166,52 @@
       ]
     },
     {
+      "id": "dialogue_author_kit",
+      "path": "mods/showcases/dialogue_author_kit/DialogueAuthorKitShowcaseMod",
+      "projectPath": "DialogueAuthorKitShowcaseMod.csproj",
+      "title": "关口口令：对话分支入门",
+      "summary": "门卫问话：写地图变量、条件选项、一行换皮。给作者看怎么配 Dialogue / Graph / UI。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "dialogue_author_kit",
+      "preset": "dialogue_author_kit_raylib",
+      "docsPath": "gitbook/architecture/dialogue-author-kit.md",
+      "readmePath": null,
+      "acceptanceTest": "DialogueAuthorKitAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/dialogue-author-kit",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "dialogue",
+        "mapvar",
+        "panelTheme",
+        "author-kit"
+      ]
+    },
+    {
+      "id": "dialogue_author_kit_theme_ink",
+      "path": "mods/showcases/dialogue_author_kit_theme_ink/DialogueAuthorKitThemeInkMod",
+      "projectPath": null,
+      "title": "关口口令换肤·墨色",
+      "summary": "0 代码壳：panelTheme=kit-ink。玩法复用 DialogueAuthorKitShowcaseMod。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "dialogue_author_kit_theme_ink",
+      "preset": "dialogue_author_kit_theme_ink_raylib",
+      "docsPath": "gitbook/architecture/dialogue-author-kit.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/dialogue-author-kit-theme-ink",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "dialogue",
+        "panelTheme",
+        "zero-code",
+        "author-kit"
+      ]
+    },
+    {
       "id": "narrative_frontend",
       "path": "mods/capabilities/narrativefrontend/NarrativeFrontendMod",
       "projectPath": "NarrativeFrontendMod.csproj",

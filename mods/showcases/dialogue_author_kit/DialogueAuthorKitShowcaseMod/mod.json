@@ -1,0 +1,15 @@
+{
+  "name": "DialogueAuthorKitShowcaseMod",
+  "version": "1.0.0",
+  "description": "关口口令：分支对话 + 地图变量读写 + panelTheme 换肤的作者入门案例。",
+  "main": "bin/net9.0/DialogueAuthorKitShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "NarrativeFrontendMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["dialogue", "mapvar", "panelTheme", "showcase", "author-kit"]
+}

@@ -1,0 +1,45 @@
+/* kit-ink — cool ink dialogue chrome; flip panelTheme to compare skins */
+
+.story-root {
+  font-family: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+.story-card {
+  background-color: rgba(12, 22, 34, 235);
+  border: 2px solid rgb(120, 180, 220);
+  border-radius: 2px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  padding: 16px;
+}
+
+.story-overlay-dialogue {
+  border-color: rgb(120, 180, 220);
+  border-width: 2px;
+  border-radius: 2px;
+  padding: 22px 24px 28px 24px;
+  background-color: rgba(10, 20, 32, 242);
+}
+
+.story-choice-list {
+  border-color: rgb(120, 180, 220);
+  border-width: 2px;
+  border-radius: 2px;
+  background-color: rgba(8, 16, 28, 236);
+  padding: 12px 14px;
+}
+
+.story-eyebrow {
+  color: rgb(125, 211, 252);
+}
+
+.story-title {
+  color: rgb(241, 245, 249);
+}
+
+.story-body {
+  color: rgb(203, 213, 225);
+}
+
+.story-muted {
+  color: rgb(148, 163, 184);
+}

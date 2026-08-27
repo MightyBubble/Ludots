@@ -2464,6 +2464,24 @@
       "buildMode": "auto"
     },
     {
+      "id": "dialogue_author_kit_raylib",
+      "name": "Dialogue Author Kit Raylib",
+      "selectors": [
+        "$dialogue_author_kit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "dialogue_author_kit_theme_ink_raylib",
+      "name": "Dialogue Author Kit Ink Theme Raylib",
+      "selectors": [
+        "$dialogue_author_kit_theme_ink"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "narrative_theme_sanguo_raylib",
       "name": "Narrative Theme 三国 Raylib",
       "selectors": [

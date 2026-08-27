@@ -1,0 +1,50 @@
+[
+  {
+    "id": "line.author_kit.guard.open",
+    "speakerId": "speaker.guard",
+    "textToken": "story.author_kit.guard.open",
+    "tags": ["gate"]
+  },
+  {
+    "id": "line.author_kit.player.write_pass",
+    "speakerId": "speaker.traveler",
+    "textToken": "story.author_kit.player.write_pass",
+    "tags": ["choice"]
+  },
+  {
+    "id": "line.author_kit.player.ask_enter",
+    "speakerId": "speaker.traveler",
+    "textToken": "story.author_kit.player.ask_enter",
+    "tags": ["choice"]
+  },
+  {
+    "id": "line.author_kit.player.leave",
+    "speakerId": "speaker.traveler",
+    "textToken": "story.author_kit.player.leave",
+    "tags": ["choice"]
+  },
+  {
+    "id": "line.author_kit.guard.recorded",
+    "speakerId": "speaker.guard",
+    "textToken": "story.author_kit.guard.recorded",
+    "tags": ["gate"]
+  },
+  {
+    "id": "line.author_kit.player.back",
+    "speakerId": "speaker.traveler",
+    "textToken": "story.author_kit.player.back",
+    "tags": ["choice"]
+  },
+  {
+    "id": "line.author_kit.guard.allowed",
+    "speakerId": "speaker.guard",
+    "textToken": "story.author_kit.guard.allowed",
+    "tags": ["gate"]
+  },
+  {
+    "id": "line.author_kit.guard.bye",
+    "speakerId": "speaker.guard",
+    "textToken": "story.author_kit.guard.bye",
+    "tags": ["gate"]
+  }
+]
