@@ -8,6 +8,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
 using Ludots.UI;
+using Ludots.UI.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production;
@@ -113,6 +114,63 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
             Path.Combine(repoRoot, "assets"));
         AcceptanceUiHostInstaller.Install(engine);
         return engine;
+    }
+
+    private static void AssertColumnChipsStayInsidePanelFrame(UIRoot root)
+    {
+        UiScene scene = root.Scene
+            ?? throw new InvalidOperationException("UIRoot.Scene missing after layout.");
+
+        UiNode? panel = null;
+        foreach (UiNode node in scene.EnumerateVisualNodes())
+        {
+            if (HasClass(node, "panel-kit-effect-column"))
+            {
+                panel = node;
+                break;
+            }
+        }
+
+        Assert.That(panel, Is.Not.Null, "column panel node missing");
+        UiRect frame = panel!.LayoutRect;
+
+        var chips = new List<UiNode>();
+        foreach (UiNode node in scene.EnumerateVisualNodes())
+        {
+            if (HasClass(node, "list-item-column"))
+            {
+                chips.Add(node);
+            }
+        }
+
+        Assert.That(chips.Count, Is.EqualTo(4), "column present must keep all four chips in the layout tree");
+        const float epsilon = 1.5f;
+        foreach (UiNode chip in chips)
+        {
+            UiRect box = chip.LayoutRect;
+            Assert.That(box.Width, Is.GreaterThan(8f), "column chip collapsed");
+            Assert.That(box.X, Is.GreaterThanOrEqualTo(frame.X - epsilon),
+                $"column chip left {box.X} escapes panel left {frame.X}");
+            Assert.That(box.X + box.Width, Is.LessThanOrEqualTo(frame.X + frame.Width + epsilon),
+                $"column chip right {box.X + box.Width} escapes panel right {frame.X + frame.Width}");
+            Assert.That(box.Y, Is.GreaterThanOrEqualTo(frame.Y - epsilon),
+                $"column chip top {box.Y} escapes panel top {frame.Y}");
+            Assert.That(box.Y + box.Height, Is.LessThanOrEqualTo(frame.Y + frame.Height + epsilon),
+                $"column chip bottom {box.Y + box.Height} escapes panel bottom {frame.Y + frame.Height}");
+        }
+    }
+
+    private static bool HasClass(UiNode node, string className)
+    {
+        for (int i = 0; i < node.ClassNames.Count; i++)
+        {
+            if (string.Equals(node.ClassNames[i], className, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void Tick(GameEngine engine, int frames)
