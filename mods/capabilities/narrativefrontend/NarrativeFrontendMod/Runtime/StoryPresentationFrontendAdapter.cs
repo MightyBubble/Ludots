@@ -78,7 +78,7 @@ public static class StoryPresentationFrontendAdapter
                 StoryPresentationChoice choice = surface.Choices[i];
                 items.Add(new NarrativeFrontendSurfaceItem(
                     Label: choice.Text,
-                    Caption: choice.ChoiceId,
+                    Caption: string.Empty,
                     Active: i == 0,
                     Shortcut: choice.Shortcut));
             }
@@ -140,7 +140,8 @@ public static class StoryPresentationFrontendAdapter
             "BottomLeft" => NarrativeFrontendAnchor.BottomLeft,
             "BottomCenter" => NarrativeFrontendAnchor.BottomCenter,
             "BottomRight" => NarrativeFrontendAnchor.BottomRight,
-            _ => NarrativeFrontendAnchor.BottomCenter,
+            _ => throw new InvalidOperationException(
+                $"Unknown story presentation anchor '{anchor}' for NarrativeFrontend."),
         };
     }
 }

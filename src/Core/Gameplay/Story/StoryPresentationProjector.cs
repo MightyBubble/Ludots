@@ -14,7 +14,7 @@ namespace Ludots.Core.Gameplay.Story
     public sealed class StoryPresentationProjector
     {
         private const float WorldProjectedHeadOffsetPx = 96f;
-        private const float ChoiceListStackOffsetY = 92f;
+        private const float ChoiceListStackOffsetY = 168f;
         private const float SequencePortraitSize = 72f;
 
         private readonly StoryDefinitionRegistry _story;
