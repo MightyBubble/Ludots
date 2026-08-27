@@ -1,8 +1,7 @@
 {
   "name": "DialogueAuthorKitShowcaseMod",
   "version": "1.0.0",
-  "description": "关口口令：分支对话 + 地图变量读写 + panelTheme 换肤的作者入门案例。",
-  "main": "bin/net9.0/DialogueAuthorKitShowcaseMod.dll",
+  "description": "关口口令：纯配置作者入门案例（对话/图/换肤）。UI 桥路由 NarrativeFrontendMod 内置。",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

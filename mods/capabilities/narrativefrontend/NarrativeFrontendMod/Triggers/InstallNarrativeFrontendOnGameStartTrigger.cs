@@ -1,7 +1,10 @@
 using System.Threading.Tasks;
+using Ludots.Core.Client;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using NarrativeFrontendMod.Config;
 using NarrativeFrontendMod.Runtime;
 using NarrativeFrontendMod.Systems;
 
@@ -37,6 +40,17 @@ internal sealed class InstallNarrativeFrontendOnGameStartTrigger : Trigger
 
         var service = new NarrativeFrontendService();
         engine.SetService(NarrativeFrontendServiceKeys.Service, service);
+
+        NarrativeFrontendHostCatalog hosts = NarrativeFrontendHostCatalog.LoadOptional(
+            engine.ConfigPipeline,
+            engine.ConfigCatalog);
+        if (hosts.Hosts.Count > 0)
+        {
+            // Bridge publishes before the UI consumer mounts the same frame.
+            engine.RegisterPresentationSystem(new NarrativeStoryBridgeSystem(engine, service, hosts));
+            _context.Log($"[NarrativeFrontendMod] Story bridge enabled for {hosts.Hosts.Count} host(s).");
+        }
+
         engine.RegisterPresentationSystem(new NarrativeFrontendPresentationSystem(engine, service));
 
         _context.Log("[NarrativeFrontendMod] Service and presentation system registered.");

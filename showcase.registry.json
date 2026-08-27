@@ -5168,9 +5168,9 @@
     {
       "id": "dialogue_author_kit",
       "path": "mods/showcases/dialogue_author_kit/DialogueAuthorKitShowcaseMod",
-      "projectPath": "DialogueAuthorKitShowcaseMod.csproj",
+      "projectPath": null,
       "title": "关口口令：对话分支入门",
-      "summary": "门卫问话：写地图变量、条件选项、一行换皮。给作者看怎么配 Dialogue / Graph / UI。",
+      "summary": "纯配置：门卫问话、写地图变量、条件选项、一行换皮。UI 由 NarrativeFrontend 内置桥接。",
       "tier": "T2",
       "category": "capability",
       "binding": "dialogue_author_kit",
