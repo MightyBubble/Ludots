@@ -1037,7 +1037,6 @@ public sealed class MassNavigationSimulationRuntime
         {
             ProfileId = profileId,
             Heavy = MassNavigationFlow.IsHeavyProfile(agentIndex),
-            VisualScale = MassNavigationFlow.GetVisualScale(agentIndex),
             SpeedCmPerSecond = MassNavigationFlow.GetSpeedCmPerSecond(agentIndex),
         });
         if (world.Has<MovePlanExecutionIntent>(entity))

@@ -472,7 +472,6 @@ namespace Ludots.Tests.Presentation
                         localPositionYCm: spec.WorldYCm,
                         heavy: false,
                         navMass: 1f,
-                        visualScale: 1f,
                         bodyRadiusCm: 20f,
                         speedCmPerSecond: 800f,
                         layer);

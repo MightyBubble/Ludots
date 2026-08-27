@@ -66,7 +66,6 @@ public sealed partial class MassNavigationFlowSolverState
     private uint[] _layerCategoryMasks = Array.Empty<uint>();
     private uint[] _layerInteractionMasks = Array.Empty<uint>();
     private float[] _navMasses = Array.Empty<float>();
-    private float[] _visualScales = Array.Empty<float>();
     private float[] _bodyRadiiCm = Array.Empty<float>();
     private float[] _speedsCmPerSecond = Array.Empty<float>();
     private int[] _separationHashSearchRadiusCellsByAgent = Array.Empty<int>();
@@ -261,7 +260,6 @@ public sealed partial class MassNavigationFlowSolverState
     }
     public int GetTeam(int index) => _teams[index];
     public float GetNavMass(int index) => _navMasses[index];
-    public float GetVisualScale(int index) => _visualScales[index];
     public float GetBodyRadiusCm(int index) => _bodyRadiiCm[index];
     public float GetSpeedCmPerSecond(int index) => _speedsCmPerSecond[index];
     public bool IsHeavyProfile(int index) => _heavyProfileFlags[index] != 0;
@@ -430,7 +428,7 @@ public sealed partial class MassNavigationFlowSolverState
             int localIndex = _teamStates[teamStateIndex].UnitCount;
             _teamStates[teamStateIndex].UnitCount++;
             int i2 = unitIndex << 1;
-            ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
+            ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
             _teams[unitIndex] = seed.TeamId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = localIndex;
@@ -438,7 +436,6 @@ public sealed partial class MassNavigationFlowSolverState
             _layerCategoryMasks[unitIndex] = seed.Layer.CategoryMask;
             _layerInteractionMasks[unitIndex] = seed.Layer.InteractionMask;
             _navMasses[unitIndex] = seed.NavMass;
-            _visualScales[unitIndex] = seed.VisualScale;
             _bodyRadiiCm[unitIndex] = seed.BodyRadiusCm;
             _speedsCmPerSecond[unitIndex] = seed.SpeedCmPerSecond;
             _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, seed.BodyRadiusCm);
@@ -475,7 +472,6 @@ public sealed partial class MassNavigationFlowSolverState
         int index,
         int teamId,
         float navMass,
-        float visualScale,
         float bodyRadiusCm,
         float speedCmPerSecond,
         MassNavigationAgentLayer layer)
@@ -486,13 +482,12 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlow runtime profile agent index {index} exceeds current unit count {UnitCount}.");
         }
 
-        ValidateRuntimeProfile(index, navMass, visualScale, bodyRadiusCm, speedCmPerSecond);
+        ValidateRuntimeProfile(index, navMass, bodyRadiusCm, speedCmPerSecond);
         uint categoryMask = layer.CategoryMask;
         uint interactionMask = layer.InteractionMask;
         bool changed =
             _teams[index] != teamId ||
             MathF.Abs(_navMasses[index] - navMass) > float.Epsilon ||
-            MathF.Abs(_visualScales[index] - visualScale) > float.Epsilon ||
             MathF.Abs(_bodyRadiiCm[index] - bodyRadiusCm) > float.Epsilon ||
             MathF.Abs(_speedsCmPerSecond[index] - speedCmPerSecond) > float.Epsilon ||
             _layerCategoryMasks[index] != categoryMask ||
@@ -514,7 +509,6 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         _navMasses[index] = navMass;
-        _visualScales[index] = visualScale;
         _bodyRadiiCm[index] = bodyRadiusCm;
         _speedsCmPerSecond[index] = speedCmPerSecond;
         if (bodyRadiusCm >= _maxBodyRadiusCm)
@@ -545,7 +539,6 @@ public sealed partial class MassNavigationFlowSolverState
     private void ValidateRuntimeProfile(
         int index,
         float navMass,
-        float visualScale,
         float bodyRadiusCm,
         float speedCmPerSecond)
     {
@@ -553,12 +546,6 @@ public sealed partial class MassNavigationFlowSolverState
         {
             throw new InvalidOperationException(
                 $"MassNavigationFlow runtime profile for agent index {index} requires navMass >= configured semantics.solver.minNavMass {Semantics.Solver.MinNavMass}.");
-        }
-
-        if (!(visualScale >= Semantics.Solver.MinVisualScale))
-        {
-            throw new InvalidOperationException(
-                $"MassNavigationFlow runtime profile for agent index {index} requires visualScale >= configured semantics.solver.minVisualScale {Semantics.Solver.MinVisualScale}.");
         }
 
         if (!(bodyRadiusCm > 0f))
@@ -579,12 +566,11 @@ public sealed partial class MassNavigationFlowSolverState
         int teamId,
         bool heavy,
         float navMass,
-        float visualScale,
         float bodyRadiusCm,
         float speedCmPerSecond,
         MassNavigationAgentLayer layer)
     {
-        bool changed = SetUnitRuntimeProfile(index, teamId, navMass, visualScale, bodyRadiusCm, speedCmPerSecond, layer);
+        bool changed = SetUnitRuntimeProfile(index, teamId, navMass, bodyRadiusCm, speedCmPerSecond, layer);
         if ((uint)index < (uint)UnitCount)
         {
             byte heavyFlag = heavy ? (byte)1 : (byte)0;
@@ -1117,7 +1103,6 @@ public sealed partial class MassNavigationFlowSolverState
             Array.Resize(ref _layerInteractionMasks, unitCount);
             Array.Resize(ref _maxInteractingBodyRadiiCm, unitCount);
             Array.Resize(ref _navMasses, unitCount);
-            Array.Resize(ref _visualScales, unitCount);
             Array.Resize(ref _bodyRadiiCm, unitCount);
             Array.Resize(ref _speedsCmPerSecond, unitCount);
             Array.Resize(ref _separationHashSearchRadiusCellsByAgent, unitCount);
@@ -1290,7 +1275,6 @@ public sealed partial class MassNavigationFlowSolverState
                 _layerCategoryMasks[unitIndex] = layer.CategoryMask;
                 _layerInteractionMasks[unitIndex] = layer.InteractionMask;
                 _navMasses[unitIndex] = geometry.Mass;
-                _visualScales[unitIndex] = profile.VisualScale;
                 _bodyRadiiCm[unitIndex] = geometry.RadiusCm;
                 _speedsCmPerSecond[unitIndex] = profile.SpeedCmPerSecond;
                 _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, geometry.RadiusCm);
@@ -1485,7 +1469,7 @@ public sealed partial class MassNavigationFlowSolverState
             }
 
             int i2 = unitIndex << 1;
-            ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
+            ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
             _teams[unitIndex] = seed.TeamId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = teamLocalWriteCursor[teamStateIndex]++;
@@ -1493,7 +1477,6 @@ public sealed partial class MassNavigationFlowSolverState
             _layerCategoryMasks[unitIndex] = seed.Layer.CategoryMask;
             _layerInteractionMasks[unitIndex] = seed.Layer.InteractionMask;
             _navMasses[unitIndex] = seed.NavMass;
-            _visualScales[unitIndex] = seed.VisualScale;
             _bodyRadiiCm[unitIndex] = seed.BodyRadiusCm;
             _speedsCmPerSecond[unitIndex] = seed.SpeedCmPerSecond;
             _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, seed.BodyRadiusCm);
