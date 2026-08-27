@@ -59,6 +59,7 @@
   - [Placement Validation SSOT](architecture/placement-validation-ssot.md)
   - [空间尺度与分辨率 SSOT](architecture/spatial-scale-and-resolution-ssot.md)
   - [Core Field2D](architecture/core-field2d.md)
+  - [MapField 离散归属 SSOT](architecture/mapfield-discreteid-ssot.md)
   - [MapField 作者手册](architecture/mapfield-howto.md)
   - [Field Editor CLI](architecture/field-editor.md)
   - [Global Field Rendering](architecture/global-field-rendering.md)

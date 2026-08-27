@@ -27,8 +27,7 @@
         "category": ["massNavigation.agent"],
         "mask": ["massNavigation.agent"]
       },
-      "MassNavigationAgent": { "profileId": "Small" },
-      "FieldTrackedCm": { "layer": "ownership.east_asia.country" }
+      "MassNavigationAgent": { "profileId": "Small" }
     }
   },
   {
@@ -53,8 +52,7 @@
         "category": ["massNavigation.agent"],
         "mask": ["massNavigation.agent"]
       },
-      "MassNavigationAgent": { "profileId": "Medium" },
-      "FieldTrackedCm": { "layer": "ownership.east_asia.country" }
+      "MassNavigationAgent": { "profileId": "Medium" }
     }
   },
   {

@@ -3,12 +3,7 @@ using System.IO;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Fields;
-using Ludots.Core.Gameplay.FieldRegions;
-using Ludots.Core.Map;
-using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
@@ -26,16 +21,12 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
 {
     private const float DeltaTime = 1f / 60f;
     private const string MapId = "east_asia_visual_heightmap";
-    private const string LayerKey = "ownership.east_asia.country";
-    private const string AdminLayerKey = "ownership.east_asia.admin";
 
-    private static readonly string[] BorderMods =
+    private static readonly string[] LandSeaMods =
     {
         "LudotsCoreMod",
         "EastAsiaPlayableTerrainMod",
         "EastAsiaVisualHeightmapRuntimeEntryMod",
-        "FieldEastAsiaCountryMod",
-        "FieldEastAsiaAdminMod",
         "EastAsiaNavMeshDebugMod",
         "CoreInputMod",
         "CameraProfilesMod",
@@ -46,7 +37,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     [Test]
     public void BordersLandSea_PathingUsesLandAndSeaNavMeshLayerProfiles()
     {
-        using GameEngine engine = CreateEngine(BorderMods);
+        using GameEngine engine = CreateEngine(LandSeaMods);
         engine.Start();
 
         var pathing = new PathingConfigLoader(engine.ConfigPipeline)
@@ -81,7 +72,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     [Test]
     public void BordersLandSea_ShipHoldsAuthoredYellowSeaSpawn_NotTeamSlotNearArmy()
     {
-        using GameEngine engine = CreateEngine(BorderMods);
+        using GameEngine engine = CreateEngine(LandSeaMods);
         engine.Start();
         engine.LoadMap(MapId);
         Tick(engine, 4);
@@ -99,10 +90,17 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     [Test]
     public void BordersLandSea_FootQueriesLandLayer_ShipQueriesSeaLayer()
     {
-        using GameEngine engine = CreateEngine(BorderMods);
+        using GameEngine engine = CreateEngine(LandSeaMods);
         engine.Start();
         engine.LoadMap(MapId);
         Tick(engine, 2);
+
+        var mapFields = engine.CurrentMapSession!.MapConfig!.Fields;
+        Assert.That(
+            mapFields == null || mapFields.Layers == null || mapFields.Layers.Count == 0,
+            Is.True,
+            "land-sea demo must not enable MapField ownership layers");
+        Assert.That(engine.CurrentMapSession.Fields == null || engine.CurrentMapSession.Fields.Count == 0, Is.True);
 
         IPathService pathService = engine.GetService(CoreServiceKeys.PathService)
             ?? throw new InvalidOperationException("PathService missing");
@@ -129,80 +127,6 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
             "ship Water-layer query must not cut across land");
     }
 
-    [Test]
-    public void BordersLandSea_CountryAndAdminLayersPresent()
-    {
-        using GameEngine engine = CreateEngine(BorderMods);
-        engine.Start();
-        engine.LoadMap(MapId);
-        Tick(engine, 2);
-
-        MapSession session = engine.CurrentMapSession
-            ?? throw new InvalidOperationException("map session missing");
-        Assert.That(session.Fields!.TryGetByKey(LayerKey, out FieldLayerData countryData), Is.True);
-        Assert.That(session.Fields.TryGetByKey(AdminLayerKey, out FieldLayerData adminData), Is.True);
-        Assert.That(session.MapConfig!.Fields!.Layers, Is.EqualTo(new[] { LayerKey, AdminLayerKey }));
-
-        var country = (DiscreteIdFieldLayerData)countryData;
-        var admin = (DiscreteIdFieldLayerData)adminData;
-        var spawn = new WorldCmInt2(200_000, 100_000);
-        int countryId = country.Field.Get(country.Field.WorldToCell(spawn));
-        int adminId = admin.Field.Get(admin.Field.WorldToCell(spawn));
-        Assert.That(country.Regions.GetName(countryId), Is.EqualTo("country.china"), "army spawn must sit on China");
-        Assert.That(adminId, Is.GreaterThan(0), "army spawn must sit on a Chinese province placeholder");
-        Assert.That(admin.Regions.GetName(adminId), Does.StartWith("admin."));
-    }
-
-    [Test]
-    public void BordersLandSea_CrossingCountriesUpdatesBorderPanelVars()
-    {
-        using GameEngine engine = CreateEngine(BorderMods);
-        engine.Start();
-        engine.LoadMap(MapId);
-        Tick(engine, 4);
-
-        MapSession session = engine.CurrentMapSession
-            ?? throw new InvalidOperationException("map session missing");
-        Assert.That(session.Fields!.TryGetByKey(LayerKey, out _), Is.True);
-        Assert.That(session.MapConfig!.Tags, Does.Contain("Raylib.FieldOverlays:Off"));
-        Assert.That(FindNamed(engine, "EastAsia.CountryDecal"), Is.Not.EqualTo(Entity.Null));
-
-        Entity army = FindNamed(engine, "EastAsia.Army");
-        Entity ship = FindNamed(engine, "EastAsia.Ship");
-        // Detach MassNav binding so continental teleports are not clamped back into the
-        // local solver window (FieldRegion membership is what this case accepts).
-        DetachMassNavigation(engine, army);
-        DetachMassNavigation(engine, ship);
-
-        var variables = session.Variables
-            ?? throw new InvalidOperationException("map variables missing");
-
-        engine.World.Set(army, new WorldPositionCm { Value = Fix64Vec2.FromInt(1_038_777, 295_848) });
-        TickUntil(
-            engine,
-            () => variables.ReadInt("last_enter_code") == 3,
-            maxFrames: 12,
-            () => $"expected South Korea code 3, got {variables.ReadInt("last_enter_code")} stage={variables.ReadInt("stage")}");
-        Assert.That(variables.ReadInt("enter_count"), Is.GreaterThanOrEqualTo(1));
-        Assert.That(
-            FieldRegionQueries.TryIsInFieldRegion(engine.World, session, army, LayerKey, "country.south_korea", out bool inKorea)
-            && inKorea,
-            Is.True);
-
-        engine.World.Set(army, new WorldPositionCm { Value = Fix64Vec2.FromInt(1_842_944, 332_291) });
-        TickUntil(
-            engine,
-            () => variables.ReadInt("last_enter_code") == 2,
-            maxFrames: 12,
-            () => $"expected Japan code 2, got {variables.ReadInt("last_enter_code")} region={variables.ReadInt("region_code")} enter={variables.ReadInt("enter_count")}");
-        Assert.That(variables.ReadInt("region_code"), Is.EqualTo(2));
-        Assert.That(variables.ReadInt("enter_count"), Is.GreaterThanOrEqualTo(2));
-        Assert.That(
-            FieldRegionQueries.TryIsInFieldRegion(engine.World, session, army, LayerKey, "country.japan", out bool inJapan)
-            && inJapan,
-            Is.True);
-    }
-
     private static bool TrySolve(
         IPathService pathService,
         string agentTypeId,
@@ -221,19 +145,6 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
             PathEndpoint.FromWorldCm(goalXcm, goalYcm),
             new PathBudget(maxExpanded: 0, maxPoints: 128));
         return pathService.TrySolve(in request, out result);
-    }
-
-    private static void DetachMassNavigation(GameEngine engine, Entity entity)
-    {
-        if (engine.World.Has<MassNavigationAgentIndex>(entity))
-        {
-            engine.World.Remove<MassNavigationAgentIndex>(entity);
-        }
-
-        if (engine.World.Has<MassNavigationAgent>(entity))
-        {
-            engine.World.Remove<MassNavigationAgent>(entity);
-        }
     }
 
     private static Entity FindNamed(GameEngine engine, string name)
@@ -269,22 +180,6 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.Tick(DeltaTime);
         }
-    }
-
-    private static void TickUntil(GameEngine engine, Func<bool> condition, int maxFrames, Func<string> failure)
-    {
-        for (int i = 0; i < maxFrames; i++)
-        {
-            if (condition())
-            {
-                return;
-            }
-
-            engine.SetService(CoreServiceKeys.UiCaptured, false);
-            engine.Tick(DeltaTime);
-        }
-
-        Assert.Fail(failure());
     }
 
     private static string FindRepoRoot()

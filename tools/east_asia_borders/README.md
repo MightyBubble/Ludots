@@ -12,3 +12,9 @@ Projection parameters are read from
 (spherical Albers + `playableWorldWidthOverrideCm` / `sourceWorldWidthCm`).
 
 Do not invent lon/lat→world formulas in call sites; regenerate through this tool.
+
+**Alignment contract:** country ↔ province (or any multi-scale ownership join)
+belongs here as a one-shot offline bake. Do not push alignment types, ChildOf
+trees, or stacked admin layers into Core. Runtime only loads and point-queries
+the baked `Fields/cells/*.json`. See
+`gitbook/architecture/mapfield-discreteid-ssot.md`.

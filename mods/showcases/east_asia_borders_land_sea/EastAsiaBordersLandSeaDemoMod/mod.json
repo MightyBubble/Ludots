@@ -1,13 +1,11 @@
 {
   "name": "EastAsiaBordersLandSeaDemoMod",
   "version": "1.0.0",
-  "description": "East Asia land army PreferMesh via Small profile on Ground NavMesh layer + ship PreferMesh via Medium profile on Water NavMesh layer, with national-border FieldRegion popups on Natural Earth country cells.",
+  "description": "East Asia land army PreferMesh via Small profile on Ground NavMesh layer + ship PreferMesh via Medium profile on Water NavMesh layer. Not a MapField / ownership demo.",
   "priority": 100,
   "dependencies": {
     "EastAsiaPlayableTerrainMod": "^1.0.0",
     "EastAsiaNavMeshDebugMod": "^1.0.0",
-    "FieldEastAsiaCountryMod": "^1.0.0",
-    "FieldEastAsiaAdminMod": "^1.0.0",
     "MassNavigationMod": "^1.0.0",
     "CoreInputMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0"
@@ -15,7 +13,6 @@
   "author": "Ludots Team",
   "tags": [
     "east-asia",
-    "borders",
     "navmesh",
     "agent-profile",
     "showcase"
