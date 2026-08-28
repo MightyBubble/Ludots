@@ -49,7 +49,7 @@
         "projectPath": "ReconnectRecoveryShowcaseMod.csproj"
       }
     },
-        {
+    {
       "name": "camera_acceptance",
       "target": {
         "type": "path",
