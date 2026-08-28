@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Platform.Abstractions;
@@ -37,6 +38,13 @@ namespace Ludots.Core.Config
         /// Board configurations for this map. Each board is a spatial domain.
         /// </summary>
         public List<BoardConfig> Boards { get; set; } = new List<BoardConfig>();
+
+        /// <summary>
+        /// Explicit nav tile grid. Required when the map enables Feature.NavMesh:On;
+        /// runtime tile enumeration and query addressing read this declaration only —
+        /// never derived from boards or terrain objects.
+        /// </summary>
+        public NavTileGridConfig NavTileGrid { get; set; }
 
         /// <summary>
         /// Map-owned visual height truth. When declared, map load must install this

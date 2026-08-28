@@ -345,7 +345,14 @@ namespace Ludots.Tests.Architecture
                 new MapConfig
                 {
                     Id = mapId,
-                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name }
+                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
+                    NavTileGrid = new NavTileGridConfig
+                    {
+                        WidthChunks = 1,
+                        HeightChunks = 1,
+                        ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
+                        CellSizeCm = SpatialScaleDefaults.CellCm
+                    }
                 });
 
             return engine;

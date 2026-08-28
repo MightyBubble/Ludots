@@ -1,4 +1,12 @@
 {
+  "NavTileGrid": {
+    "widthChunks": 16,
+    "heightChunks": 16,
+    "chunkSizeCells": 64,
+    "cellSizeCm": 100,
+    "originXcm": 0,
+    "originZcm": 0
+  },
   "Id": "navmesh_debug_grid",
   "Tags": [
     "showcase",

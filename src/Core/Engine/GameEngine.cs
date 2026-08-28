@@ -3638,8 +3638,6 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
-            if (LogicTerrain == null) throw new InvalidOperationException($"NavMesh enabled but LogicTerrainField is not loaded for map '{mapId}'.");
-
             var bakeConfig = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
 
@@ -3651,8 +3649,20 @@ namespace Ludots.Core.Engine
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
-            int widthChunks = LogicTerrain.WidthChunks;
-            int heightChunks = LogicTerrain.HeightChunks;
+            // Nav tiles are enumerated against the map's explicitly declared nav tile
+            // grid (authored with the bake). Runtime never derives it from boards or
+            // terrain objects; an undeclared grid is a map-authoring error.
+            var tileGrid = mapConfig.NavTileGrid
+                ?? throw new InvalidOperationException(
+                    $"Map '{mapId}' enables Feature.NavMesh:On but declares no NavTileGrid; author the nav tile grid in the map config.");
+            if (tileGrid.WidthChunks <= 0 || tileGrid.HeightChunks <= 0 ||
+                tileGrid.ChunkSizeCells <= 0 || tileGrid.CellSizeCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' NavTileGrid must declare positive widthChunks/heightChunks/chunkSizeCells/cellSizeCm.");
+            }
+            int widthChunks = tileGrid.WidthChunks;
+            int heightChunks = tileGrid.HeightChunks;
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -3686,7 +3696,7 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, LogicTerrain.ChunkWidthCm, LogicTerrain.ChunkHeightCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, tileGrid.ChunkWidthCm, tileGrid.ChunkHeightCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
