@@ -3652,17 +3652,20 @@ namespace Ludots.Core.Engine
             // Nav tiles are enumerated against the map's explicitly declared nav tile
             // grid (authored with the bake). Runtime never derives it from boards or
             // terrain objects; an undeclared grid is a map-authoring error.
-            var tileGrid = mapConfig.NavTileGrid
-                ?? throw new InvalidOperationException(
-                    $"Map '{mapId}' enables Feature.NavMesh:On but declares no NavTileGrid; author the nav tile grid in the map config.");
-            if (tileGrid.WidthChunks <= 0 || tileGrid.HeightChunks <= 0 ||
-                tileGrid.ChunkSizeCells <= 0 || tileGrid.CellSizeCm <= 0)
+            var tileGrids = mapConfig.Boards
+                .Select(b => b.NavTileGrid)
+                .ToList();
+            if (tileGrids.Any(g => g == null))
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has boards without NavTileGrid declarations; author each board's nav tile grid in the map config.");
+            if (tileGrids.Any(g => g!.WidthChunks <= 0 || g!.HeightChunks <= 0 ||
+                g!.ChunkSizeCells <= 0 || g!.CellSizeCm <= 0))
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' NavTileGrid must declare positive widthChunks/heightChunks/chunkSizeCells/cellSizeCm.");
+                    $"Map '{mapId}' has a board whose NavTileGrid declares non-positive dimensions.");
             }
-            int widthChunks = tileGrid.WidthChunks;
-            int heightChunks = tileGrid.HeightChunks;
+            int widthChunks = tileGrids.Max(g => g!.WidthChunks);
+            int heightChunks = tileGrids.Max(g => g!.HeightChunks);
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -3696,7 +3699,8 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, tileGrid.ChunkWidthCm, tileGrid.ChunkHeightCm);
+            var chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, chunkWidthCm, chunkWidthCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {

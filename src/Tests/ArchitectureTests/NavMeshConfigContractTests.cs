@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
@@ -346,12 +347,19 @@ namespace Ludots.Tests.Architecture
                 {
                     Id = mapId,
                     Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
-                    NavTileGrid = new NavTileGridConfig
+                    Boards = new List<BoardConfig>
                     {
-                        WidthChunks = 1,
-                        HeightChunks = 1,
-                        ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
-                        CellSizeCm = SpatialScaleDefaults.CellCm
+                        new BoardConfig
+                        {
+                            Name = "default",
+                            NavTileGrid = new NavTileGridConfig
+                            {
+                                WidthChunks = 3,
+                                HeightChunks = 2,
+                                ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
+                                CellSizeCm = SpatialScaleDefaults.CellCm
+                            }
+                        }
                     }
                 });
 

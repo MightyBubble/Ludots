@@ -40,13 +40,6 @@ namespace Ludots.Core.Config
         public List<BoardConfig> Boards { get; set; } = new List<BoardConfig>();
 
         /// <summary>
-        /// Explicit nav tile grid. Required when the map enables Feature.NavMesh:On;
-        /// runtime tile enumeration and query addressing read this declaration only —
-        /// never derived from boards or terrain objects.
-        /// </summary>
-        public NavTileGridConfig NavTileGrid { get; set; }
-
-        /// <summary>
         /// Map-owned visual height truth. When declared, map load must install this
         /// as the core <see cref="IVisualHeightmap"/> service instead of relying on a
         /// startup-time flat heightmap.
