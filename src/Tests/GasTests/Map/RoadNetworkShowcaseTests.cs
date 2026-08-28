@@ -1136,6 +1136,142 @@ namespace Ludots.Tests.GAS
             Assert.That(finalPosition.Y, Is.EqualTo(0).Within(80));
         }
 
+        /// <summary>稀疏探测组件：只验证「结构变更」本身，无任何系统消费，避免引入语义噪音。</summary>
+        private struct SparseComponentAddProbe
+        {
+            public int Value;
+        }
+
+        private static void RunEngineFarRoadMoveAndAssertArrival(GameEngine engine, Entity actor)
+        {
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue);
+            Assert.That(orderQueue, Is.Not.Null);
+            int moveToOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"];
+            var expander = new RoadMoveOrderExpander(
+                engine.World,
+                engine.GlobalContext,
+                orderQueue!,
+                RoadNetworkShowcaseIds.PathPlannerAgentTypeId,
+                statusKey: string.Empty);
+
+            var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued), ReadRoadStatus(engine));
+
+            bool movementStarted = false;
+            bool completed = false;
+            int furthestXcm = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2().X;
+            for (int i = 0; i < 2400; i++)
+            {
+                engine.Tick(1f / 60f);
+
+                bool hasActiveOrder = engine.World.Get<OrderBuffer>(actor).HasActive;
+                if (!movementStarted && (hasActiveOrder || orderQueue.Count == 0))
+                {
+                    movementStarted = true;
+                }
+
+                int currentXcm = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2().X;
+                if (currentXcm > furthestXcm)
+                {
+                    furthestXcm = currentXcm;
+                }
+
+                if (movementStarted && !hasActiveOrder && orderQueue.Count == 0)
+                {
+                    completed = true;
+                    break;
+                }
+            }
+
+            var finalPosition = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            string diagnostics = BuildPlayableMoveDiagnostics(engine, BlueVanguardInstanceId);
+            Assert.That(movementStarted, Is.True, "Road move never entered the fixed-step movement pipeline.");
+            Assert.That(completed, Is.True, $"Road move should complete instead of stalling mid-route. FurthestX={furthestXcm}, Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}. {diagnostics}");
+            Assert.That(furthestXcm, Is.GreaterThan(17000), $"Column should traverse the full eastward road route, not stop in the currently loaded chunk window. FurthestX={furthestXcm}, Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}");
+            Assert.That(finalPosition.X, Is.EqualTo(18000).Within(80), diagnostics);
+            Assert.That(finalPosition.Y, Is.EqualTo(0).Within(80), diagnostics);
+        }
+
+        [Test]
+        public void RoadNetworkShowcase_EngineFarRoadMove_SparseComponentAddOnMovingAgent_KeepsMoveAlive()
+        {
+            using var engine = CreateRoadShowcaseEngine();
+            engine.LoadStartupMap();
+
+            Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
+            Assert.That(actor, Is.Not.EqualTo(Entity.Null));
+
+            bool movementStarted = false;
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue);
+            Assert.That(orderQueue, Is.Not.Null);
+            int moveToOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"];
+            var expander = new RoadMoveOrderExpander(
+                engine.World,
+                engine.GlobalContext,
+                orderQueue!,
+                RoadNetworkShowcaseIds.PathPlannerAgentTypeId,
+                statusKey: string.Empty);
+
+            var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued), ReadRoadStatus(engine));
+
+            bool completed = false;
+            for (int i = 0; i < 2400; i++)
+            {
+                engine.Tick(1f / 60f);
+
+                bool hasActiveOrder = engine.World.Get<OrderBuffer>(actor).HasActive;
+                if (!movementStarted && (hasActiveOrder || orderQueue.Count == 0))
+                {
+                    movementStarted = true;
+                    engine.World.Add(actor, new SparseComponentAddProbe { Value = 1 });
+                }
+
+                if (movementStarted && !hasActiveOrder && orderQueue.Count == 0)
+                {
+                    completed = true;
+                    break;
+                }
+            }
+
+            var finalPosition = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            string diagnostics = BuildPlayableMoveDiagnostics(engine, BlueVanguardInstanceId);
+            Assert.That(movementStarted, Is.True, "Road move never entered the fixed-step movement pipeline.");
+            Assert.That(completed, Is.True, $"Sparse component add on a moving agent must not stall the road move. Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}. {diagnostics}");
+            Assert.That(finalPosition.X, Is.EqualTo(18000).Within(80), $"Sparse component add on a moving agent must not stall the road move. {diagnostics}");
+            Assert.That(finalPosition.Y, Is.EqualTo(0).Within(80), diagnostics);
+        }
+
+        [Test]
+        public void RoadNetworkShowcase_EngineFarRoadMove_SparseComponentAddAtMapBinding_KeepsMoveAlive()
+        {
+            using var engine = CreateRoadShowcaseEngine();
+            engine.LoadStartupMap();
+
+            Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
+            Assert.That(actor, Is.Not.EqualTo(Entity.Null));
+            Assert.That(engine.CurrentMapSession!.PlayerEntityLookup.Get(RoadTestPlayerId), Is.EqualTo(actor),
+                "Player 1's map representative is the moving vanguard; a seed-style component add targets exactly this entity.");
+
+            engine.World.Add(actor, new SparseComponentAddProbe { Value = 1 });
+            RunEngineFarRoadMoveAndAssertArrival(engine, actor);
+        }
+
+        [Test]
+        public void RoadNetworkShowcase_EngineFarRoadMove_InteractionModeAddAtMapBinding_KeepsMoveAlive()
+        {
+            using var engine = CreateRoadShowcaseEngine();
+            engine.LoadStartupMap();
+
+            Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
+            Assert.That(actor, Is.Not.EqualTo(Entity.Null));
+            var modeMap = engine.GetService(CoreServiceKeys.InteractionModeMap) as Ludots.Core.Input.Interaction.InteractionModeMap;
+            Assert.That(modeMap, Is.Not.Null, "Engine init must install the interaction mode map.");
+
+            engine.World.Add(actor, new Ludots.Core.Input.Interaction.InteractionMode { ModeId = modeMap!.NormalModeId });
+            RunEngineFarRoadMoveAndAssertArrival(engine, actor);
+        }
+
         [Test]
         public void RoadNetworkShowcase_EngineCentralRoadMove_DoesNotBacktrackToBehindSampledWaypoint()
         {
