@@ -439,6 +439,10 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Input/interaction_modes.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Input/control_schemes.json",
     "Policy": "DeepObject"
   },

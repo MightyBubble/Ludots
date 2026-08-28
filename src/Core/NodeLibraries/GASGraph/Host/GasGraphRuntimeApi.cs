@@ -121,6 +121,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.GraphRuntime.GraphCallbackService? _graphCallbacks;
         private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
         private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
+        private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -285,6 +286,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _runtimeEntitySpawnQueue = queue ?? throw new ArgumentNullException(nameof(queue));
             _entityTemplateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
+        }
+
+        /// <summary>
+        /// Binds the compiled interaction mode map so graph programs can switch entity modes via
+        /// <see cref="SetInteractionMode"/> (#1306); unbound maps fail closed per call.
+        /// </summary>
+        public void BindInteractionModeMap(Ludots.Core.Input.Interaction.InteractionModeMap modeMap)
+        {
+            _interactionModeMap = modeMap ?? throw new ArgumentNullException(nameof(modeMap));
         }
 
         public GasGraphRuntimeApi(
@@ -679,6 +689,60 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             else
             {
                 _world.Add(target, position);
+            }
+        }
+
+        /// <summary>
+        /// Sets an entity's interaction mode. Fail-closed on dead or unmapped targets, unbound
+        /// mode maps, and mode key ids that resolve to no installed interaction mode.
+        /// </summary>
+        public void SetInteractionMode(Entity target, int modeKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetInteractionMode));
+            if (_world == null || !_world.IsAlive(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetInteractionModeTargetDead: target entity {target} is not alive.");
+            }
+
+            Ludots.Core.Input.Interaction.InteractionModeMap? modeMap = _interactionModeMap;
+            if (modeMap == null)
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.SetInteractionModeMapUnavailable: no interaction mode map is bound to the graph runtime.");
+            }
+
+            string modeId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(modeKeyId);
+            if (string.IsNullOrWhiteSpace(modeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetInteractionModeUnknown: mode key id {modeKeyId} resolves to no interaction mode.");
+            }
+
+            if (!modeMap.ModeIdRegistry.TryGetId(modeId, out int registeredModeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetInteractionModeUnknown: interaction mode '{modeId}' is not installed.");
+            }
+
+            if (modeMap.IsNormalMode(registeredModeId))
+            {
+                if (_world.Has<Ludots.Core.Input.Interaction.InteractionMode>(target))
+                {
+                    _world.Remove<Ludots.Core.Input.Interaction.InteractionMode>(target);
+                }
+
+                return;
+            }
+
+            var component = new Ludots.Core.Input.Interaction.InteractionMode { ModeId = registeredModeId };
+            if (_world.TryGet(target, out Ludots.Core.Input.Interaction.InteractionMode existing))
+            {
+                _world.Set(target, component);
+            }
+            else
+            {
+                _world.Add(target, component);
             }
         }
 

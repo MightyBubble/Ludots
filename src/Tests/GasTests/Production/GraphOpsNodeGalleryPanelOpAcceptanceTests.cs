@@ -65,6 +65,20 @@ public sealed class GraphOpsNodeGalleryPanelOpAcceptanceTests
     }
 
     [Test]
+    public void SetInteractionModeVignette_ExecutesOpWithoutThrow()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SetInteractionMode");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
+                $"SetInteractionMode detail missing phrase: {runtime.Metrics.Detail}");
+        }
+    }
+
+    [Test]
     public void SpawnTemplateVignette_ExecutesOpWithoutThrow()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

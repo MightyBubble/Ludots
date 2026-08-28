@@ -1605,6 +1605,7 @@ namespace Ludots.Core.Engine
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
+
             // Per-seat input interpretation channels: zero channels for sole-seat clients (their
             // stack is the global handler/snapshot chain above); one channel per seat on
             // multi-seat tables, with scheme activation mirroring the shared catalog above.
@@ -1613,6 +1614,18 @@ namespace Ludots.Core.Engine
                 controlSchemeRuntime,
                 inputConfigRoot,
                 MergedConfig.StartupInputContexts);
+
+
+            // Interaction mode catalog (#1306): simulation-side modes projected onto handler IMC
+            // contexts by InputContextProjectionSystem; the SetInteractionMode graph op writes the
+            // sparse component against this map (unknown modes and undefined contexts fail fast).
+            var interactionModeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var interactionModeMap = new InteractionModeMap(interactionModeIds);
+            interactionModeMap.Install(
+                new InteractionModeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                inputConfigRoot);
+            gasGraphApi.BindInteractionModeMap(interactionModeMap);
+
 
             // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
             // so catalog tag prefixes compile against the loaded definitions.
@@ -1751,6 +1764,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CastCommitProfileRegistry, castCommitProfileRegistry);
             SetService(CoreServiceKeys.ClientCastPreferenceStore, clientCastPreferences);
             SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
+            SetService(CoreServiceKeys.InteractionModeMap, interactionModeMap);
             SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
             SetService(CoreServiceKeys.CommandDeckProfileRegistry, commandDeckProfileRegistry);
             SetService(CoreServiceKeys.CommandDeckRouteResolver, commandDeckRouteResolver);
@@ -1973,6 +1987,19 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
+            // Local IMC projection (#1306): mode components on possessed reps diff into per-seat
+            // (seatId, contextId, op) commands; handler resolution mirrors scheme activation —
+            // per-seat channel handler where one exists, the sole-seat global handler otherwise.
+            // Runs after possession sync so the same tick's possession is what gets projected.
+            RegisterSystem(
+                new Ludots.Core.Input.Systems.InputContextProjectionSystem(
+                    World,
+                    GlobalContext,
+                    interactionModeMap,
+                    seatId => clientLocalSeatInputRuntime.TryGetChannel(seatId, out Client.ClientLocalSeatInputChannel channel)
+                        ? channel.Handler
+                        : GetService(CoreServiceKeys.InputHandler)),
+                SystemGroup.InputCollection);
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).

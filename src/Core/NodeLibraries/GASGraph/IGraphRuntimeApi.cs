@@ -90,6 +90,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>Sets an entity's world position in centimeters (int, matches LoadTargetPosX/Y).</summary>
         void SetWorldPosition(Entity target, int xCm, int yCm);
 
+        /// <summary>
+        /// Sets an entity's interaction mode (#1306): writes the sparse InteractionMode component,
+        /// or removes it when the mode is the reserved normal default. Fail-closed on dead targets
+        /// and mode key ids that do not resolve to an installed interaction mode.
+        /// </summary>
+        void SetInteractionMode(Entity target, int modeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionModeMapUnavailable");
+        }
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 

@@ -1,0 +1,17 @@
+{
+  "modes": [
+    {
+      "id": "mode.normal",
+      "contexts": []
+    },
+    {
+      "id": "mode.targeting",
+      "contexts": [
+        {
+          "contextId": "Default_Gameplay",
+          "priority": 0
+        }
+      ]
+    }
+  ]
+}
