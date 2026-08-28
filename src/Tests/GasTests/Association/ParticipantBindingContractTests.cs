@@ -362,6 +362,31 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ParticipantBindingResolver_PublishFocused_SoleSeatControlSchemeId_LeavesPreferenceStoreUntouched()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            ClientCastPreferenceStore preferences = CreateSeatPreferenceStore();
+            preferences.SetActiveScheme("scheme.seat.first");
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(
+                world, "scheme.seat.first", "scheme.seat.declared", preferences: preferences);
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var result = SoleSeatResult(players, 7, player, controlSchemeId: "scheme.seat.declared");
+            uint preferenceRevision = preferences.Revision;
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.declared")),
+                "the declared scheme is the per-entry launch truth and must activate for this map entry.");
+            Assert.That(preferences.ActiveSchemeId, Is.EqualTo("scheme.seat.first"),
+                "the seat declaration is runtime-only activation; the player's persisted preference must survive it.");
+            Assert.That(preferences.Revision, Is.EqualTo(preferenceRevision),
+                "activation must not mutate the preference store at all.");
+        }
+
+        [Test]
         public void ParticipantBindingResolver_PublishFocused_SoleSeatWithoutScheme_LeavesRuntimeActivationUnchanged()
         {
             using var world = World.Create();
@@ -491,7 +516,8 @@ namespace Ludots.Tests.GAS
             World world,
             string initialScheme,
             string alternateScheme,
-            List<string> allowedSchemes = null)
+            List<string> allowedSchemes = null,
+            ClientCastPreferenceStore preferences = null)
         {
             CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
             InstallSeatGroundIntent(intents, "intent.seat.default");
@@ -528,7 +554,8 @@ namespace Ludots.Tests.GAS
                 stack,
                 intents.Intents,
                 dispatch,
-                orderTypes);
+                orderTypes,
+                preferences: preferences);
             runtime.Install(new ControlSchemesConfig
             {
                 Schemes = new List<ControlSchemeDefinition>
@@ -557,6 +584,24 @@ namespace Ludots.Tests.GAS
                 AllowedSchemes = allowedSchemes,
             });
             return runtime;
+        }
+
+        private static ClientCastPreferenceStore CreateSeatPreferenceStore()
+        {
+            var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castCommitActionIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var contextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            return new ClientCastPreferenceStore(
+                new CastCommitProfileRegistry(
+                    castCommitIds,
+                    castCommitActionIds,
+                    new InteractionContextProfileRegistry(contextProfileIds)),
+                templateKeys.Register,
+                templateKeys.GetName,
+                formSetKeys.Register,
+                formSetKeys.GetName);
         }
 
         private static void InstallSeatGroundIntent(CommandIntentProfileTests.Harness intents, string profileId)

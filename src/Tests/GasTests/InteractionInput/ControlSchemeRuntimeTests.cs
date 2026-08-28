@@ -124,6 +124,30 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TrySwitchRuntimeOnly_SwitchesRuntimeWithoutPersistingPreference()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            Assert.That(harness.Preferences.ActiveSchemeId, Is.EqualTo(SchemeA),
+                "install persists the initial scheme as the player preference.");
+            uint preferenceRevision = harness.Preferences.Revision;
+
+            Assert.That(harness.Runtime.TrySwitchRuntimeOnly(harness.SchemeId(SchemeB)), Is.True);
+            Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeB)));
+            Assert.That(
+                harness.Runtime.ActiveDefaultCommandIntentId,
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)));
+            Assert.That(harness.Preferences.ActiveSchemeId, Is.EqualTo(SchemeA),
+                "runtime-only activation must leave the persisted preference untouched.");
+            Assert.That(harness.Preferences.Revision, Is.EqualTo(preferenceRevision));
+
+            Assert.That(harness.Runtime.TrySwitchRuntimeOnly(schemeId: 999), Is.False,
+                "runtime-only activation keeps the installed/allowed-set refusal semantics.");
+            Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeB)));
+        }
+
+        [Test]
         public void Install_ActivatesPersistedSchemeWhenItIsAllowed()
         {
             using var world = World.Create();
