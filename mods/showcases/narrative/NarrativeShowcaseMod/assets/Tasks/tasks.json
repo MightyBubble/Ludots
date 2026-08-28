@@ -1,8 +1,8 @@
 [
   {
     "id": "Task.Narrative.AshenOath.Briefing",
-    "display_name": "Ashen Oath",
-    "summary": "Hear the warden, wake the shrine, defeat the beast, and return with a verdict.",
+    "display_name": "灰烬誓约",
+    "summary": "听守望者说完，叫醒神龛，打退灰烬兽，再回来告诉她你的裁决。",
     "tags": [ "task.narrative" ],
     "start_policy": "automatic",
     "completion_rule": "all",
@@ -10,17 +10,17 @@
       {
         "id": "briefing",
         "kind": "signal",
-        "title": "Hear The Warden — speak with Warden Mirelle beside the lantern dais.",
+        "title": "先听米蕾勒把话说完",
         "signal_key": "showcase.briefing_accepted",
-        "hint": "Press E near Mirelle after the intro camera pass ends."
+        "hint": "走到灯台旁的金色高个子身边，按 E。"
       }
     ],
     "next_task_id": "Task.Narrative.AshenOath.Trial"
   },
   {
     "id": "Task.Narrative.AshenOath.Trial",
-    "display_name": "Ashen Oath",
-    "summary": "Hear the warden, wake the shrine, defeat the beast, and return with a verdict.",
+    "display_name": "灰烬誓约",
+    "summary": "听守望者说完，叫醒神龛，打退灰烬兽，再回来告诉她你的裁决。",
     "tags": [ "task.narrative" ],
     "start_policy": "automatic",
     "completion_rule": "all",
@@ -28,17 +28,17 @@
       {
         "id": "trial",
         "kind": "signal",
-        "title": "Wake The Shrine — inspect the Ember Shrine and defeat the Ashen Beast once it answers.",
+        "title": "去神龛叫醒灰烬兽",
         "signal_key": "showcase.beast_defeated",
-        "hint": "Press E near the shrine, then use Arcweaver's combat kit."
+        "hint": "走到高石台边上按 E。它出来后，右键靠近，按 Q 出手。"
       }
     ],
     "next_task_id": "Task.Narrative.AshenOath.Return"
   },
   {
     "id": "Task.Narrative.AshenOath.Return",
-    "display_name": "Ashen Oath",
-    "summary": "Hear the warden, wake the shrine, defeat the beast, and return with a verdict.",
+    "display_name": "灰烬誓约",
+    "summary": "听守望者说完，叫醒神龛，打退灰烬兽，再回来告诉她你的裁决。",
     "tags": [ "task.narrative" ],
     "start_policy": "automatic",
     "completion_rule": "all",
@@ -46,9 +46,9 @@
       {
         "id": "return",
         "kind": "signal",
-        "title": "Deliver Your Verdict — return to Warden Mirelle and choose how the valley should remember the trial.",
+        "title": "回去告诉米蕾勒你的裁决",
         "signal_key": "showcase.verdict_delivered",
-        "hint": "Elder dialogue outcome applies a GAS blessing via trigger callback."
+        "hint": "回到灯台旁按 E，再按 1 选职责，或按 2 选仁慈。"
       }
     ]
   }

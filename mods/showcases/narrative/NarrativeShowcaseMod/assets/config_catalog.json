@@ -12,5 +12,7 @@
   { "Path": "Presentation/text_locales.json", "Policy": "DeepObject" },
   { "Path": "Presentation/semantic_maps.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/image_assets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/presenters.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "PanelThemes/themes.json", "Policy": "ArrayById", "IdField": "id" }
 ]

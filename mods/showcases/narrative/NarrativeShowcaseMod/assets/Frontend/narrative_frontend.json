@@ -1,5 +1,6 @@
 {
   "ownerId": "NarrativeShowcase",
+  "playerLocale": "zh-CN",
   "backdropHex": "#05080FCC",
   "promptRibbon": {
     "anchor": "BottomCenter",
@@ -34,8 +35,18 @@
     "zIndex": 41,
     "eyebrow": "状态",
     "title": "剧情进度",
-    "footer": "分支会写在这里。",
+    "footer": "你的选择会写在这里。",
     "accentHex": "#A7F3D0"
+  },
+  "notificationStack": {
+    "anchor": "TopCenter",
+    "width": 520,
+    "offsetY": 12,
+    "zIndex": 70,
+    "eyebrow": "刚才",
+    "title": "有回应",
+    "footer": "",
+    "accentHex": "#FDE68A"
   },
   "overlayDialogue": {
     "anchor": "BottomCenter",
@@ -43,7 +54,7 @@
     "offsetY": 28,
     "zIndex": 60,
     "eyebrow": "交谈",
-    "footer": "回车继续 · 1/2/3 选回复",
+    "footer": "回车听下一句 · 1/2/3 选回复",
     "accentHex": "#F6C56B"
   },
   "dialogueBubble": {
@@ -53,7 +64,7 @@
     "offsetY": 12,
     "zIndex": 58,
     "eyebrow": "附近",
-    "footer": "",
+    "footer": "回车听下一句",
     "accentHex": "#F0C36B"
   },
   "standingPortrait": {
@@ -82,7 +93,7 @@
     "zIndex": 61,
     "eyebrow": "回复",
     "title": "你怎么说？",
-    "footer": "",
+    "footer": "按数字键，马上能看到下一句。",
     "accentHex": "#F6C56B"
   },
   "transmissionOverlay": {
@@ -94,24 +105,38 @@
     "footer": "",
     "accentHex": "#7DD3FC"
   },
+  "nameplate": {
+    "anchor": "TopLeft",
+    "width": 200,
+    "zIndex": 36,
+    "eyebrow": "场上",
+    "footer": "",
+    "accentHex": "#F6C56B"
+  },
   "hints": {
     "promptTitle": "灰烬谷",
-    "explorePrompt": "选中织弧者，右键走到神龛旁，按 E 开启试炼。",
-    "choicePrompt": "有人在等你回话：按 1/2/3 选择，或回车继续。",
-    "combatPrompt": "灰烬兽已经出现：右键靠近，用 Q/W/E/R/空格应战。",
-    "returnPrompt": "试炼结束了：回到守望者米蕾勒身边，选一个结局。",
+    "introPrompt": "灯火先照到守望者米蕾勒。回车看下一句，Tab 跳过这段。",
+    "exploreWardenPrompt": "金色高个子是守望者米蕾勒。右键走到她身边，按 E 跟她说话。",
+    "exploreWardenNearPrompt": "已经到米蕾勒身边了：按 E 跟她说话。",
+    "exploreShrinePrompt": "场地另一头那座高石台是余烬神龛。右键走过去，按 E 叫醒它。",
+    "exploreShrineNearPrompt": "已经到神龛边上了：按 E 唤醒余烬神龛。",
+    "choicePrompt": "米蕾勒在等你回话：按 1 或 2，马上能看到她的下一句。",
+    "continuePrompt": "回车听下一句。",
+    "combatPrompt": "灰烬兽已经出来了：右键靠近它，按 Q 出手。",
+    "returnPrompt": "试炼结束了。右键回到米蕾勒身边，按 E 告诉她你的裁决。",
+    "returnNearPrompt": "已经回到米蕾勒身边：按 E，再按 1 或 2 选结局。",
     "skipPrompt": "这段演出可以用 Tab 跳过。",
     "autoAdvancePrompt": "这句旁白会按时推进。"
   },
   "templates": {
     "objectiveTitleFormat": "{task}",
     "variableCaptionFormat": "{label}: {value}",
-    "taskActivated": "新任务：{bodyText}",
+    "taskActivated": "下一步：{bodyText}",
     "dialogueEntered": "{speaker}：{bodyText}",
-    "dialogueChoiceCommitted": "你选择了：{bodyText}",
+    "dialogueChoiceCommitted": "你说了：{bodyText}",
     "sequenceEntered": "{speaker}：{bodyText}",
-    "taskCompleted": "完成：{taskId}",
-    "signal": "信号：{signalId}",
+    "taskCompleted": "这一步完成了",
+    "signal": "",
     "beastSpawned": "灰烬兽走进了神龛场地。",
     "rewardApplied": "你感到伤口愈合，脚步也轻了一点。"
   },
@@ -179,11 +204,52 @@
     "1": "职责",
     "2": "仁慈"
   },
+  "speakerLabels": {
+    "speaker.warden": "守望者米蕾勒",
+    "speaker.player": "织弧者",
+    "speaker.shrine": "余烬神龛"
+  },
+  "cast": [
+    {
+      "entityName": "Arcweaver",
+      "title": "织弧者",
+      "role": "你",
+      "accentHex": "#76D8FF",
+      "headOffsetYCm": 170
+    },
+    {
+      "entityName": "WardenMirelle",
+      "title": "米蕾勒",
+      "role": "守望者",
+      "accentHex": "#F6C56B",
+      "headOffsetYCm": 190
+    },
+    {
+      "entityName": "EmberShrine",
+      "title": "余烬神龛",
+      "role": "试炼入口",
+      "accentHex": "#F59E0B",
+      "headOffsetYCm": 240
+    },
+    {
+      "entityName": "AshenBeast",
+      "title": "灰烬兽",
+      "role": "敌人",
+      "accentHex": "#F87171",
+      "headOffsetYCm": 180
+    }
+  ],
+  "interact": {
+    "wardenRangeCm": 420,
+    "shrineRangeCm": 360
+  },
   "stageHud": {
     "showHistoryAlways": false,
     "showVariablesAlways": false,
+    "showVariablesWhenNonZero": true,
     "showObjectiveWithDialogue": false,
-    "showObjectiveWithSequence": false
+    "showObjectiveWithSequence": false,
+    "hideCastDuringStandingPortrait": true
   },
   "bootstrap": {
     "pureStoryLane": false,

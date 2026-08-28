@@ -41,7 +41,7 @@
       }
     },
     {
-      "Template": "interaction_stress_anchor_red",
+      "Template": "narrative_warden",
       "InstanceId": "narrative_warden_mirelle",
       "Overrides": {
         "Name": { "Value": "WardenMirelle" },
@@ -50,7 +50,8 @@
       }
     },
     {
-      "Template": "interaction_stress_anchor_blue",
+      "Template": "narrative_shrine",
+      "InstanceId": "narrative_ember_shrine",
       "Overrides": {
         "Name": { "Value": "EmberShrine" },
         "Team": { "Id": 3 },
@@ -62,7 +63,7 @@
       "InstanceId": "narrative_beast_clan_anchor",
       "Overrides": {
         "Name": { "Value": "BeastClanAnchor" },
-        "WorldPositionCm": { "Value": { "X": 2600, "Y": 960 } }
+        "WorldPositionCm": { "Value": { "X": 4200, "Y": 960 } }
       }
     }
   ],
@@ -81,7 +82,7 @@
       { "TeamA": 2, "TeamB": 2, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
       { "TeamA": 3, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
       { "TeamA": 1, "TeamB": 2, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
       { "TeamA": 2, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
     ],
     "Players": [

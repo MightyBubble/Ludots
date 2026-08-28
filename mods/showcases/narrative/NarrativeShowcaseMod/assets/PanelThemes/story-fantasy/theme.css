@@ -57,6 +57,7 @@
 .story-transmission { background-color: rgba(16, 22, 32, 220); border: 1px solid rgb(90, 140, 170); border-radius: 8px; padding: 14px; background-image: none; }
 .story-event-card { background-color: rgb(228, 196, 122); border: 1px solid rgb(255, 246, 208); border-radius: 10px; padding: 18px; background-image: none; }
 .story-notification { background-color: rgba(20, 14, 8, 230); border: 1px solid rgba(201, 166, 90, 0.45); border-radius: 8px; padding: 12px; background-image: none; }
+.story-nameplate { min-width: 0; padding: 6px 10px; border-radius: 8px; border-width: 1px; background-image: none; }
 
 /* Nine-slice ornate frame — images/panel_frame.png + choice_frame.png (0-code theme assets). */
 .story-frame {

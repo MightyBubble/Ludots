@@ -1,0 +1,39 @@
+[
+  {
+    "id": "narrative_warden",
+    "components": {
+      "Name": { "Value": "WardenMirelle" },
+      "Team": { "Id": 3 },
+      "CommandSourceSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "Shield": 0,
+          "MoveSpeed": 0,
+          "Armor": 0
+        }
+      },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "narrative_shrine",
+    "components": {
+      "Name": { "Value": "EmberShrine" },
+      "Team": { "Id": 3 },
+      "CommandSourceSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Shield": 0,
+          "MoveSpeed": 0,
+          "Armor": 0
+        }
+      },
+      "GameplayTagContainer": {}
+    }
+  }
+]
