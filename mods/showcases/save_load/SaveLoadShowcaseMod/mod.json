@@ -1,0 +1,17 @@
+{
+  "name": "SaveLoadShowcaseMod",
+  "version": "1.0.0",
+  "description": "Save/load capability showcase: mutate world, save to a real disk slot, restore, and see the state return. Slot UI is SavePanelMod, reused with zero copies.",
+  "main": "bin/net8.0/SaveLoadShowcaseMod.dll",
+  "priority": 140,
+  "dependencies": {
+    "LudotsCoreMod": ">=1.0.0",
+    "SavePanelMod": ">=1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "save",
+    "persistence"
+  ]
+}

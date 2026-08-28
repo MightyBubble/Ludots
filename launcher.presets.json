@@ -2,10 +2,31 @@
   "schemaVersion": 1,
   "presets": [
     {
-      "id": "persistence_online_replay_showcase_raylib",
-      "name": "Persistence, Replay and Online Recovery Raylib",
+      "id": "save_load_showcase_raylib",
+      "name": "Save Load Raylib",
       "selectors": [
-        "$persistence_online_replay_showcase",
+        "$save_load_showcase",
+        "$save_panel",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "deterministic_replay_showcase_raylib",
+      "name": "Deterministic Replay Raylib",
+      "selectors": [
+        "$deterministic_replay_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "reconnect_recovery_showcase_raylib",
+      "name": "Reconnect Recovery Raylib",
+      "selectors": [
+        "$reconnect_recovery_showcase",
         "$agent_bridge"
       ],
       "adapterId": "raylib",

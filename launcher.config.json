@@ -26,11 +26,27 @@
       }
     },
     {
-      "name": "persistence_online_replay_showcase",
+      "name": "save_load_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/persistence_online_replay/PersistenceOnlineReplayShowcaseMod",
-        "projectPath": "PersistenceOnlineReplayShowcaseMod.csproj"
+        "value": "mods/showcases/save_load/SaveLoadShowcaseMod",
+        "projectPath": "SaveLoadShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "deterministic_replay_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/deterministic_replay/DeterministicReplayShowcaseMod",
+        "projectPath": "DeterministicReplayShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "reconnect_recovery_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/reconnect_recovery/ReconnectRecoveryShowcaseMod",
+        "projectPath": "ReconnectRecoveryShowcaseMod.csproj"
       }
     },
     {
