@@ -8549,6 +8549,33 @@
       "tier": "T2",
       "category": "demo",
       "status": "active"
+    },
+    {
+      "id": "capability_standard_graph_op_SetInteractionMode",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetInteractionModeEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSetInteractionModeEntryMod.csproj",
+      "title": "图内切瞄准",
+      "summary": "不用碰键位表，一枚目标在图里被切进了瞄准模式。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SetInteractionMode"
+      ],
+      "binding": "capability_standard_graph_op_SetInteractionMode",
+      "preset": "capability_standard_graph_op_SetInteractionMode_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SetInteractionMode.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SetInteractionMode",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SetInteractionMode/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SetInteractionMode/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

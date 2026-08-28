@@ -226,6 +226,8 @@ namespace Ludots.Core.GraphRuntime
         public string? PresentationSurface { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>
         public string? ArgKey { get; set; }
+        /// <summary>Interaction mode id symbol for SetInteractionMode; resolved against the installed interaction mode map at run time.</summary>
+        public string? Mode { get; set; }
         public string? QueryCapacityPolicy { get; set; }
         public string? DroppedOutput { get; set; }
         public string? ValidOutput { get; set; }

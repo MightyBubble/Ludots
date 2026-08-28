@@ -1977,6 +1977,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStartDialogueEntryMod",
         "projectPath": "CapabilityStandardGraphOpStartDialogueEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_SetInteractionMode",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetInteractionModeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetInteractionModeEntryMod.csproj"
+      }
     }
   ],
   "adapters": {
