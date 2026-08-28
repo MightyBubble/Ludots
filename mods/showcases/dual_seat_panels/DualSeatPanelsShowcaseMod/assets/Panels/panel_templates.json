@@ -1,0 +1,180 @@
+[
+  {
+    "id": "panel.dsp.seat0",
+    "ownerKind": "seat",
+    "audienceSeats": [
+      "seat.0"
+    ],
+    "graph": "Graph.DSP.SeatVitals",
+    "pins": [
+      {
+        "name": "hp",
+        "key": "dsp.seat.hp",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "hpMax",
+        "key": "dsp.seat.hpMax",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "supply",
+        "key": "dsp.seat.supply",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "events": [
+      {
+        "eventId": "ui.dsp.modify",
+        "gesture": "click",
+        "payload": {
+          "amount": "Int"
+        }
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "progressBar",
+          "class": "seat-hp",
+          "current": "hp",
+          "max": "hpMax"
+        },
+        {
+          "type": "label",
+          "class": "seat-supply",
+          "bind": "supply",
+          "prefix": "补给 "
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.dsp.seat1",
+    "ownerKind": "seat",
+    "audienceSeats": [
+      "seat.1"
+    ],
+    "graph": "Graph.DSP.SeatVitals",
+    "pins": [
+      {
+        "name": "hp",
+        "key": "dsp.seat.hp",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "hpMax",
+        "key": "dsp.seat.hpMax",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "supply",
+        "key": "dsp.seat.supply",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "events": [
+      {
+        "eventId": "ui.dsp.modify",
+        "gesture": "click",
+        "payload": {
+          "amount": "Int"
+        }
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "progressBar",
+          "class": "seat-hp",
+          "current": "hp",
+          "max": "hpMax"
+        },
+        {
+          "type": "label",
+          "class": "seat-supply",
+          "bind": "supply",
+          "prefix": "补给 "
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.dsp.shared",
+    "ownerKind": "world",
+    "audienceSeats": [
+      "seat.0",
+      "seat.1"
+    ],
+    "graph": "Graph.DSP.SharedBoard",
+    "pins": [
+      {
+        "name": "fieldHp",
+        "key": "dsp.shared.fieldHp",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "heroes",
+        "key": "dsp.shared.heroes",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "charges",
+        "key": "dsp.shared.charges",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "boosts",
+        "key": "dsp.shared.boosts",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "events": [
+      {
+        "eventId": "ui.dsp.charge",
+        "gesture": "click",
+        "payload": {
+          "amount": "Int"
+        }
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "shared-field-hp",
+          "bind": "fieldHp",
+          "prefix": "战场血量 "
+        },
+        {
+          "type": "label",
+          "class": "shared-heroes",
+          "bind": "heroes",
+          "prefix": "在场勇者 "
+        },
+        {
+          "type": "label",
+          "class": "shared-charges",
+          "bind": "charges",
+          "prefix": "蓄能 "
+        },
+        {
+          "type": "label",
+          "class": "shared-boosts",
+          "bind": "boosts",
+          "prefix": "已强化 "
+        }
+      ]
+    }
+  }
+]

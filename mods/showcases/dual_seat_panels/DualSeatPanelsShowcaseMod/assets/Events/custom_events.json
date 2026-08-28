@@ -1,0 +1,31 @@
+[
+  {
+    "id": "DSP.PanelBoost.Used",
+    "description": "面板事件 ui.dsp.modify 受众准入后的结算入口：target=面板 owner 的 possessed rep，amount=事件 payload 的 amount。展示层只转Payload，图负责落属性。",
+    "scope": "map",
+    "params": [
+      {
+        "name": "target",
+        "type": "entity",
+        "key": "DSP.BoostTarget"
+      },
+      {
+        "name": "amount",
+        "type": "float",
+        "key": "DSP.Amount"
+      }
+    ]
+  },
+  {
+    "id": "DSP.SharedCharge.Used",
+    "description": "共享面板事件 ui.dsp.charge 受众准入后的蓄能结算：地图变量 dsp_shared_charges +1，两席操作进同一份计数。",
+    "scope": "map",
+    "params": [
+      {
+        "name": "amount",
+        "type": "float",
+        "key": "DSP.Amount"
+      }
+    ]
+  }
+]
