@@ -98,7 +98,14 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 - 唯一 seat 声明的 `controlSchemeId` 是本次进图的激活真相：`PublishLocalSeats` 末尾通过全局 `ControlSchemeRuntime.TrySwitchRuntimeOnly` 激活，优先于偏好存储的旧选择。该激活是**运行时行为，不改写偏好存储**（`ClientCastPreferenceStore`）——进图真相是临时的，用户全局偏好不被地图声明覆盖，之后进无声明的地图仍按用户原偏好激活；偏好存储的显式写入只属于真正的用户切换路径（`TrySwitch`）
 - seat 未声明 `controlSchemeId`：维持既有激活链（偏好存储 → 首个 allowed），`TrySwitch` 热切换照常写偏好存储
 - 声明了但 scheme 未安装、或被 mod allowed-set 拒绝：map load **fail-fast**，不静默回退到初始 scheme
-- 多 seat 的 per-seat scheme 路由是 P3：多座位发布时不激活任何声明（今日多座位本就止步于 present 管线之前）
+- 多 seat 表的 per-seat scheme 激活见下方「Per-seat 输入路由」；全局 `ControlSchemeRuntime` 的激活状态不被多 seat 表触碰
+
+**Per-seat 输入路由（P3 输入侧切片，#1058）**：
+
+- 多 seat 表发布时，每个 seat 各建一条输入解释通道（`ClientLocalSeatInputRuntime`：per-seat `PlayerInputHandler` + per-seat 权威输入快照 accumulator/reader），两个 seat 的 action 状态空间互不合并；声明了 `controlSchemeId` 的 seat 在自己通道上激活该 scheme，未安装 / 被拒绝与 sole seat 同样 fail-fast。scheme 编译目录与 allowed-set 仍是全局 `ControlSchemeRuntime` 单份，per-seat 只持有激活状态
+- 唯一 seat 的解释栈仍是全局链（adapter 绑定的 handler + `CoreServiceKeys.AuthoritativeInput`），本切片对 sole seat 生产路径零改动
+- 设备扇出：设备 → 绑定集合扇出，禁止「设备 → 唯一 seat」。同一 scheme 被多个 seat 声明合法不报警；同一物理设备绑多个 seat 合法，绑定点（`ClientLocalSeatDeviceBinding.BindDevice`）发一次性 warning 点名设备与双方 seat，不改映射不拒绝运行；按键级重叠检测属编辑器层
+- 热切换写回对应 seat 的 `controlSchemeId`：唯一 seat 委托全局 `TrySwitch`（保留偏好写入语义）；多 seat 通道切换只切运行时，不写偏好存储
 
 **多 PresentBinding 呈现管线（P3 第一切片，#1058）**：
 
