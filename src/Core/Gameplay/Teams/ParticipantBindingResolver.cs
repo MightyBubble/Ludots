@@ -260,6 +260,8 @@ namespace Ludots.Core.Gameplay.Teams
 
             seats.Clear();
             views.Clear();
+            string? declaredPresentLayout = ClientLocalSeatAccess.ResolveDeclaredPresentLayout(globals);
+            PresentBinding.ValidateDeclaredLayout(declaredPresentLayout);
             var built = new ClientLocalSeat[localSeats.Count];
             for (int i = 0; i < localSeats.Count; i++)
             {
@@ -272,7 +274,12 @@ namespace Ludots.Core.Gameplay.Teams
                 string viewId = views.EnsureDefaultView(possession.RepEntity);
                 if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
                 {
-                    seat.PresentBinding = PresentBinding.FullScreen(viewId, presentResolutionPx);
+                    seat.PresentBinding = PresentBinding.FromDeclaredLayout(
+                        declaredPresentLayout,
+                        viewId,
+                        i,
+                        localSeats.Count,
+                        presentResolutionPx);
                 }
 
                 built[i] = seat;

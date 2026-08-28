@@ -463,6 +463,103 @@ namespace Ludots.Tests.GAS
             Assert.That(error.Message, Does.Contain("ControlSchemeRuntime"));
         }
 
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DeclaredHorizontalEqualSplit_LaysOutSeatRectsInSeatOrder()
+        {
+            using var world = World.Create();
+            ClientLocalSeatRegistry seats = PublishDualSeatsWithLayout(world, PresentBinding.HorizontalEqualSplitLayoutId);
+
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 0.5f, 1f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0.5f, 0f, 0.5f, 1f)));
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(960f, 1080f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(960f, 1080f)));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DeclaredVerticalEqualSplit_LaysOutSeatRectsInSeatOrder()
+        {
+            using var world = World.Create();
+            ClientLocalSeatRegistry seats = PublishDualSeatsWithLayout(world, PresentBinding.VerticalEqualSplitLayoutId);
+
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 0.5f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0.5f, 1f, 0.5f)));
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(1920f, 540f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(1920f, 540f)));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_NoDeclaredLayout_KeepsFullScreenPerSeat()
+        {
+            using var world = World.Create();
+            ClientLocalSeatRegistry seats = PublishDualSeatsWithLayout(world, layoutId: null);
+
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 1f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 1f)));
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(1920f, 1080f)));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_UnknownDeclaredLayout_FailsFastNamingLayout()
+        {
+            using var world = World.Create();
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                PublishDualSeatsWithLayout(world, "diagonal-split"))!;
+
+            Assert.That(error.Message, Does.Contain("diagonal-split"));
+            Assert.That(error.Message, Does.Contain("horizontal-equal-split"));
+        }
+
+        [Test]
+        public void GameConfig_StartupPresentLayout_MapsFromCamelCaseGameJson()
+        {
+            var options = StrictJsonOptions.CreateCamelCase();
+            var config = System.Text.Json.JsonSerializer.Deserialize<GameConfig>(
+                "{\"startupPresentLayout\": \"vertical-equal-split\"}", options)!;
+
+            Assert.That(config.StartupPresentLayout, Is.EqualTo("vertical-equal-split"));
+        }
+
+        private static ClientLocalSeatRegistry PublishDualSeatsWithLayout(World world, string? layoutId)
+        {
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
+                [CoreServiceKeys.PlayerEntityLookup.Name] = players,
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+                [CoreServiceKeys.ViewController.Name] = new FixedPresentSurface(1920f, 1080f),
+                [CoreServiceKeys.GameConfig.Name] = new GameConfig { StartupPresentLayout = layoutId },
+            };
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+            return (ClientLocalSeatRegistry)globals[CoreServiceKeys.ClientLocalSeatRegistry.Name];
+        }
+
+        private sealed class FixedPresentSurface : Ludots.Core.Presentation.Camera.IViewController
+        {
+            public FixedPresentSurface(float width, float height)
+            {
+                Resolution = new Vector2(width, height);
+            }
+
+            public Vector2 Resolution { get; }
+            public float Fov => 60f;
+            public float AspectRatio => Resolution.X / Resolution.Y;
+        }
+
         private static ParticipantBindingResult SoleSeatResult(
             PlayerEntityLookup players,
             int playerId,

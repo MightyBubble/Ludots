@@ -560,7 +560,7 @@ namespace Ludots.Core.Presentation.Minimap
             var clamped = new Vector2(
                 Math.Clamp(worldCm.X, bounds.Left, bounds.Right),
                 Math.Clamp(worldCm.Y, bounds.Top, bounds.Bottom));
-            Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine)
+            Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine)
                 .ApplyPose(new CameraPoseRequest { TargetCm = clamped });
             _cameraTargetXcm = clamped.X;
             _cameraTargetYcm = clamped.Y;
@@ -722,7 +722,7 @@ namespace Ludots.Core.Presentation.Minimap
 
             if (Preset == MinimapPreset.FollowCamera)
             {
-                Vector2 cameraTarget = Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
+                Vector2 cameraTarget = Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine).State.TargetCm;
                 _centerXcm = cameraTarget.X;
                 _centerYcm = cameraTarget.Y;
                 _viewportInitialized = true;
@@ -1032,7 +1032,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            CameraState state = Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State;
+            CameraState state = Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine).State;
             WorldPlane2D.CameraMinimapBasisFromYawDegrees(state.Yaw, out Vector2 right, out Vector2 forward);
             _mapUp = WorldPlane2D.NormalizeOrDefault(forward, Vector2.UnitY);
             _mapRight = WorldPlane2D.NormalizeOrDefault(right, Vector2.UnitX);
@@ -1041,7 +1041,7 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void UpdateCameraFrustum(GameEngine engine)
         {
-            CameraState state = Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State;
+            CameraState state = Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine).State;
             _cameraTargetXcm = state.TargetCm.X;
             _cameraTargetYcm = state.TargetCm.Y;
             _cameraFrustumVisible = false;
