@@ -51,6 +51,71 @@ public sealed class RaylibFieldRenderPresenterTests
     }
 
     [Test]
+    public void BuildTexturePlan_StagesDiscreteOwnershipBytePaletteWithoutFogFallback()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.DiscreteOwnership,
+            scopeKeyId: 1,
+            layerKeyId: 3,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 2, 1),
+            GlobalFieldVisualValueKind.Byte,
+            paletteId: 3);
+        GlobalFieldVisualCell[] cells =
+        {
+            new(new FieldCell2D(0, 0), byteValue: 7),
+        };
+        IntRect[] dirty = { new(0, 0, 2, 1) };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, dirty);
+
+        var presenter = new RaylibFieldRenderPresenter();
+        ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
+
+        Assert.That(plans.Length, Is.EqualTo(1));
+        Assert.That(plans[0].Id.Kind, Is.EqualTo(GlobalFieldVisualKind.DiscreteOwnership));
+        Assert.That(presenter.LastUnsupportedFieldCount, Is.Zero);
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color color), Is.True);
+        Assert.That(color, Is.EqualTo(RaylibFieldRenderPresenter.ResolveDiscreteOwnershipColor(7, 3)));
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(1, 0), out Color empty), Is.True);
+        Assert.That(empty.a, Is.Zero);
+    }
+
+    [Test]
+    public void BuildTexturePlan_StagesDiscreteOwnershipVectorPalette()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.DiscreteOwnership,
+            scopeKeyId: 1,
+            layerKeyId: 1,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 1, 1),
+            GlobalFieldVisualValueKind.Vector4);
+        GlobalFieldVisualCell[] cells =
+        {
+            new(new FieldCell2D(0, 0), new System.Numerics.Vector4(0.2f, 0.4f, 0.6f, 0.5f)),
+        };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, new[] { new IntRect(0, 0, 1, 1) });
+
+        var presenter = new RaylibFieldRenderPresenter();
+        presenter.BuildTexturePlan(buffer);
+
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color color), Is.True);
+        Assert.That(color, Is.EqualTo(new Color(51, 102, 153, 128)));
+    }
+
+    [Test]
     public void BuildTexturePlan_ReusesScratchAndAllocatesZeroAfterWarmup()
     {
         GlobalFieldVisualBuffer buffer = CreateBuffer(out _, out FogField field);

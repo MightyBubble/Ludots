@@ -88,6 +88,18 @@ namespace Ludots.Core.Scripting
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
                 new("regionId", EventParamType.String, MapTriggerEventPayloadKeys.RegionId),
             }),
+            new(GameEvents.FieldRegionEntered.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("regionId", EventParamType.String, MapTriggerEventPayloadKeys.RegionId),
+                new("fieldLayer", EventParamType.String, MapTriggerEventPayloadKeys.FieldLayer),
+            }),
+            new(GameEvents.FieldRegionExited.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("regionId", EventParamType.String, MapTriggerEventPayloadKeys.RegionId),
+                new("fieldLayer", EventParamType.String, MapTriggerEventPayloadKeys.FieldLayer),
+            }),
             new(GameEvents.InputActionFired.Value, EventScope.Map, new EventParamSchema[]
             {
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),

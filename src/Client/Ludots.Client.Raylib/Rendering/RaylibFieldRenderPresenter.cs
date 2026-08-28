@@ -58,6 +58,7 @@ namespace Ludots.Client.Raylib.Rendering
         private bool _disposed;
 
         public float FogOverlayY { get; set; } = 0.08f;
+        public float DiscreteOwnershipOverlayY { get; set; } = 0.06f;
 
         public int LastFieldTextureCount { get; private set; }
         public int LastFieldCellCount { get; private set; }
@@ -93,17 +94,29 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 GlobalFieldVisualDescriptor descriptor = record.Descriptor;
-                if (descriptor.Id.Kind != GlobalFieldVisualKind.Fog)
+                if (descriptor.Id.Kind is not (
+                    GlobalFieldVisualKind.Fog or
+                    GlobalFieldVisualKind.DiscreteOwnership))
                 {
                     LastUnsupportedFieldCount++;
                     throw new InvalidOperationException(
                         $"Raylib Global Field renderer does not support field kind '{descriptor.Id.Kind}' yet. Publish through the shared buffer, then add an explicit Raylib renderer contract for that kind.");
                 }
 
-                if (descriptor.ValueKind != GlobalFieldVisualValueKind.Byte)
+                if (descriptor.Id.Kind == GlobalFieldVisualKind.Fog &&
+                    descriptor.ValueKind != GlobalFieldVisualValueKind.Byte)
                 {
                     throw new InvalidOperationException(
                         $"Raylib fog field renderer requires byte-valued cells, but field '{descriptor.Id}' published {descriptor.ValueKind}.");
+                }
+
+                if (descriptor.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership &&
+                    descriptor.ValueKind is not (
+                        GlobalFieldVisualValueKind.Byte or
+                        GlobalFieldVisualValueKind.Vector4))
+                {
+                    throw new InvalidOperationException(
+                        $"Raylib discrete ownership renderer requires byte or Vector4 cells, but field '{descriptor.Id}' published {descriptor.ValueKind}.");
                 }
 
                 if (descriptor.BoundsCells.Width <= 0 || descriptor.BoundsCells.Height <= 0)
@@ -112,13 +125,13 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 FieldTextureState state = GetOrCreateState(descriptor.Id);
-                bool fullUpload = EnsureStateSize(state, descriptor.BoundsCells);
+                bool fullUpload = EnsureStateContract(state, in descriptor);
                 ReadOnlySpan<GlobalFieldVisualCell> cells = buffer.GetCells(record);
                 ReadOnlySpan<IntRect> dirtyRects = buffer.GetDirtyRects(record);
 
                 if (fullUpload)
                 {
-                    FillRect(state.Pixels, state.Width, new IntRect(0, 0, state.Width, state.Height), FogVisibilityUnseen);
+                    ClearRect(state, new IntRect(0, 0, state.Width, state.Height));
                     ApplyCells(state, cells);
                     SetSingleDirtyRect(state, new IntRect(0, 0, state.Width, state.Height));
                 }
@@ -242,11 +255,19 @@ namespace Ludots.Client.Raylib.Rendering
             return state;
         }
 
-        private static bool EnsureStateSize(FieldTextureState state, IntRect boundsCells)
+        private static bool EnsureStateContract(
+            FieldTextureState state,
+            in GlobalFieldVisualDescriptor descriptor)
         {
+            IntRect boundsCells = descriptor.BoundsCells;
             int width = boundsCells.Width;
             int height = boundsCells.Height;
-            bool changed = state.Width != width || state.Height != height || state.BoundsCells != boundsCells;
+            bool changed =
+                state.Width != width ||
+                state.Height != height ||
+                state.BoundsCells != boundsCells ||
+                state.ValueKind != descriptor.ValueKind ||
+                state.PaletteId != descriptor.PaletteId;
             if (!changed && state.Pixels.Length >= width * height * 4)
             {
                 state.DirtyRectCount = 0;
@@ -256,6 +277,8 @@ namespace Ludots.Client.Raylib.Rendering
             state.BoundsCells = boundsCells;
             state.Width = width;
             state.Height = height;
+            state.ValueKind = descriptor.ValueKind;
+            state.PaletteId = descriptor.PaletteId;
             int byteCount = checked(width * height * 4);
             if (state.Pixels.Length < byteCount)
             {
@@ -277,7 +300,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SetPixel(state.Pixels, state.Width, x, y, cell.ByteValue);
+                SetPixel(state, x, y, in cell);
             }
         }
 
@@ -300,7 +323,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             for (int i = 0; i < state.DirtyRectCount; i++)
             {
-                FillRect(state.Pixels, state.Width, state.DirtyRects[i], FogVisibilityUnseen);
+                ClearRect(state, state.DirtyRects[i]);
             }
         }
 
@@ -359,39 +382,158 @@ namespace Ludots.Client.Raylib.Rendering
             return true;
         }
 
-        private static void FillRect(byte[] pixels, int textureWidth, IntRect rect, byte visibility)
+        private static void ClearRect(FieldTextureState state, IntRect rect)
         {
-            ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
+            ResolveClearColorBytes(state.Id.Kind, out byte r, out byte g, out byte b, out byte a);
             int endY = rect.Y + rect.Height;
             int endX = rect.X + rect.Width;
             for (int y = rect.Y; y < endY; y++)
             {
-                int row = y * textureWidth;
+                int row = y * state.Width;
                 for (int x = rect.X; x < endX; x++)
                 {
                     int pixel = (row + x) * 4;
-                    pixels[pixel] = r;
-                    pixels[pixel + 1] = g;
-                    pixels[pixel + 2] = b;
-                    pixels[pixel + 3] = a;
+                    state.Pixels[pixel] = r;
+                    state.Pixels[pixel + 1] = g;
+                    state.Pixels[pixel + 2] = b;
+                    state.Pixels[pixel + 3] = a;
                 }
             }
         }
 
-        private static void SetPixel(byte[] pixels, int textureWidth, int x, int y, byte visibility)
+        private static void SetPixel(
+            FieldTextureState state,
+            int x,
+            int y,
+            in GlobalFieldVisualCell cell)
         {
-            ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
-            int pixel = ((y * textureWidth) + x) * 4;
-            pixels[pixel] = r;
-            pixels[pixel + 1] = g;
-            pixels[pixel + 2] = b;
-            pixels[pixel + 3] = a;
+            ResolveCellColorBytes(
+                state.Id.Kind,
+                state.ValueKind,
+                state.PaletteId,
+                in cell,
+                out byte r,
+                out byte g,
+                out byte b,
+                out byte a);
+            int pixel = ((y * state.Width) + x) * 4;
+            state.Pixels[pixel] = r;
+            state.Pixels[pixel + 1] = g;
+            state.Pixels[pixel + 2] = b;
+            state.Pixels[pixel + 3] = a;
         }
 
         public static Color ResolveFogColor(byte visibility)
         {
             ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
             return new Color(r, g, b, a);
+        }
+
+        public static Color ResolveDiscreteOwnershipColor(int projectedId, int paletteId = 0)
+        {
+            ResolveDiscreteOwnershipColorBytes(
+                projectedId,
+                paletteId,
+                out byte r,
+                out byte g,
+                out byte b,
+                out byte a);
+            return new Color(r, g, b, a);
+        }
+
+        public static Vector4 ResolveDiscreteOwnershipColorVector(int projectedId)
+        {
+            ResolveDiscreteOwnershipColorBytes(
+                projectedId,
+                paletteId: 0,
+                out byte r,
+                out byte g,
+                out byte b,
+                out byte a);
+            const float scale = 1f / byte.MaxValue;
+            return new Vector4(r * scale, g * scale, b * scale, a * scale);
+        }
+
+        private static void ResolveClearColorBytes(
+            GlobalFieldVisualKind kind,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            if (kind == GlobalFieldVisualKind.Fog)
+            {
+                ResolveFogColorBytes(FogVisibilityUnseen, out r, out g, out b, out a);
+                return;
+            }
+
+            r = 0;
+            g = 0;
+            b = 0;
+            a = 0;
+        }
+
+        private static void ResolveCellColorBytes(
+            GlobalFieldVisualKind kind,
+            GlobalFieldVisualValueKind valueKind,
+            int paletteId,
+            in GlobalFieldVisualCell cell,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            if (kind == GlobalFieldVisualKind.Fog)
+            {
+                ResolveFogColorBytes(cell.ByteValue, out r, out g, out b, out a);
+                return;
+            }
+
+            if (valueKind == GlobalFieldVisualValueKind.Byte)
+            {
+                ResolveDiscreteOwnershipColorBytes(cell.ByteValue, paletteId, out r, out g, out b, out a);
+                return;
+            }
+
+            Vector4 color = cell.FloatValue;
+            r = ToColorByte(color.X);
+            g = ToColorByte(color.Y);
+            b = ToColorByte(color.Z);
+            a = ToColorByte(color.W);
+        }
+
+        private static void ResolveDiscreteOwnershipColorBytes(
+            int projectedId,
+            int paletteId,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            if (projectedId <= 0)
+            {
+                r = 0;
+                g = 0;
+                b = 0;
+                a = 0;
+                return;
+            }
+
+            uint hash = unchecked((uint)projectedId * 0x9E3779B1u) ^
+                        unchecked((uint)paletteId * 0x85EBCA77u);
+            hash ^= hash >> 16;
+            hash *= 0x7FEB352Du;
+            hash ^= hash >> 15;
+            r = (byte)(72 + (hash & 0x7F));
+            g = (byte)(72 + ((hash >> 8) & 0x7F));
+            b = (byte)(72 + ((hash >> 16) & 0x7F));
+            a = 118;
+        }
+
+        private static byte ToColorByte(float value)
+        {
+            float clamped = Math.Clamp(value, 0f, 1f);
+            return (byte)MathF.Round(clamped * byte.MaxValue);
         }
 
         private static void ResolveFogColorBytes(byte visibility, out byte r, out byte g, out byte b, out byte a)
@@ -498,7 +640,10 @@ namespace Ludots.Client.Raylib.Rendering
             WorldCmInt2 originWorld = new(
                 state.BoundsCells.X * cellSizeCm,
                 state.BoundsCells.Y * cellSizeCm);
-            Vector3 origin = WorldUnits.WorldCmToVisualMeters(in originWorld, FogOverlayY);
+            float overlayY = state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership
+                ? DiscreteOwnershipOverlayY
+                : FogOverlayY;
+            Vector3 origin = WorldUnits.WorldCmToVisualMeters(in originWorld, overlayY);
             RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(widthMeters, 1f, heightMeters) *
                 Matrix4x4.CreateTranslation(origin));
@@ -631,6 +776,8 @@ namespace Ludots.Client.Raylib.Rendering
             public IntRect BoundsCells;
             public int Width;
             public int Height;
+            public GlobalFieldVisualValueKind ValueKind;
+            public int PaletteId;
             public byte[] Pixels = Array.Empty<byte>();
             public IntRect[] DirtyRects = Array.Empty<IntRect>();
             public int DirtyRectCount;

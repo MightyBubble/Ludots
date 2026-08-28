@@ -66,6 +66,11 @@ namespace Ludots.AgentBridge
             tools.Register(new SpatialQueryTool());
             tools.Register(new NavProjectTool());
             tools.Register(new NavFindPathTool());
+            tools.Register(new FieldLayersTool());
+            tools.Register(new FieldCellTool());
+            tools.Register(new FieldWriteCellTool());
+            tools.Register(new FieldHierarchyTool());
+            tools.Register(new FieldRedrawTool());
             tools.Register(new UiTreeTool());
             tools.Register(new UiQueryTool());
             tools.Register(new UiClickTool());

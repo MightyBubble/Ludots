@@ -571,6 +571,42 @@
       "buildMode": "auto"
     },
     {
+      "id": "field_jing_yang_transit_raylib",
+      "name": "Field Jing Yang Transit Raylib",
+      "selectors": [
+        "$field_jing_yang_transit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_layer_table_raylib",
+      "name": "Field Layer Table Raylib",
+      "selectors": [
+        "$field_layer_table"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_editor_paint_raylib",
+      "name": "Field Editor Paint Raylib",
+      "selectors": [
+        "$field_editor_paint"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_hierarchy_query_raylib",
+      "name": "Field Hierarchy Query Raylib",
+      "selectors": [
+        "$field_hierarchy_query"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_ability_graph_sandbox_raylib",
       "name": "Capability Standard Ability Graph Sandbox Raylib",
       "selectors": [

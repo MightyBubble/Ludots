@@ -1,0 +1,152 @@
+[
+  {
+    "id": "field_transit_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "field_transit_hero"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "field_transit_hero",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "field_transit_hero"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "field_transit_marker_jing"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "field_transit_marker_jing",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "field_transit_marker_yang"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "field_transit_marker_yang",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "field_transit_hero",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "field_transit.agent",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.6, 1.2, 0.6]
+        },
+        "style": {
+          "color": [0.95, 0.85, 0.2, 1]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ]
+  },
+  {
+    "id": "field_transit_marker_jing",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "field_transit.marker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [3.5, 0.2, 3.5]
+        },
+        "style": {
+          "color": [0.2, 0.55, 0.95, 0.85]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ]
+  },
+  {
+    "id": "field_transit_marker_yang",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "field_transit.marker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [3.5, 0.2, 3.5]
+        },
+        "style": {
+          "color": [0.9, 0.45, 0.2, 0.85]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ]
+  }
+]

@@ -5060,6 +5060,90 @@
       "notes": "波次 raider 不再预置于地图；RegionEntered 触发 wave1，EntityAliveCountChanged(team 2, cross_below 0) 触发 wave2，累计 kill_threshold=5 后由 SpawnTemplate 图 op（op 447）在 boss_camp 锚点生成 Boss；阶段链与胜利面板全数据驱动。"
     },
     {
+      "id": "field_jing_yang_transit",
+      "path": "mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod",
+      "title": "荆扬过境",
+      "summary": "西荆东扬两色地；英雄从扬走入荆，字幕/面板报 FieldRegion 进出；区内名单同拍对调。层/区域 key 全是 mod 明文，引擎无业务词。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-region",
+        "showcase"
+      ],
+      "binding": "field_jing_yang_transit",
+      "preset": "field_jing_yang_transit_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "FieldJingYangTransitAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_layer_table",
+      "path": "mods/showcases/field_layer_table/FieldLayerTableMod",
+      "title": "Field Layer Table",
+      "summary": "ownership.table with r1/r2/r3 schema v2 rects; MapLoaded writes layer/region/nonDefault counts to panel. Placeholder English keys only.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-layer",
+        "showcase"
+      ],
+      "binding": "field_layer_table",
+      "preset": "field_layer_table_raylib",
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldLayerTableAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_editor_paint",
+      "path": "mods/showcases/field_editor_paint/FieldEditorPaintMod",
+      "title": "Field Editor Paint",
+      "summary": "field-editor CLI shape assets (schema v2 paint.a/paint.b); FieldRegionEntered on teleport between painted cells.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-editor",
+        "showcase"
+      ],
+      "binding": "field_editor_paint",
+      "preset": "field_editor_paint_raylib",
+      "docsPath": "gitbook/architecture/field-editor.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldEditorPaintAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_hierarchy_query",
+      "path": "mods/showcases/field_hierarchy_query/FieldHierarchyQueryMod",
+      "title": "Field Hierarchy Query",
+      "summary": "ownership.zones + Fields/hierarchies.json; resolve zone.a1 → group.mid → group.top chain after map load.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-hierarchy",
+        "showcase"
+      ],
+      "binding": "field_hierarchy_query",
+      "preset": "field_hierarchy_query_raylib",
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldHierarchyQueryAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "night_raid_showcase",
       "path": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
       "projectPath": "NightRaidShowcaseMod.csproj",

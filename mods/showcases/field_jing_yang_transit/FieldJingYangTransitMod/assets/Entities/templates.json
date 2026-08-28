@@ -1,0 +1,50 @@
+[
+  {
+    "id": "field_transit_hero",
+    "components": {
+      "Name": { "Value": "TransitHero" },
+      "Team": { "Id": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 750, "Y": 150 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.FieldJingYang.JingFire"
+        ]
+      },
+      "OrderBuffer": {},
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "FieldTrackedCm": { "layer": "ownership.transit" }
+    }
+  },
+  {
+    "id": "field_transit_marker_jing",
+    "components": {
+      "Name": { "Value": "MarkerJing" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 150, "Y": 150 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "field_transit_marker_yang",
+    "components": {
+      "Name": { "Value": "MarkerYang" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 750, "Y": 150 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {}
+    }
+  }
+]
