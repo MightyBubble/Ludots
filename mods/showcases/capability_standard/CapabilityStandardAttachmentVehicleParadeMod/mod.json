@@ -1,0 +1,13 @@
+{
+  "name": "CapabilityStandardAttachmentVehicleParadeMod",
+  "version": "1.0.0",
+  "description": "装甲阅兵：底盘开动时炮塔与炮管跟着走，炮塔可独立转向。",
+  "main": "bin/net8.0/CapabilityStandardAttachmentVehicleParadeMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "tags": ["showcase", "capability-standard", "attachment", "vehicle"]
+}

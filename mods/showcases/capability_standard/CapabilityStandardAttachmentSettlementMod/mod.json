@@ -1,0 +1,13 @@
+{
+  "name": "CapabilityStandardAttachmentSettlementMod",
+  "version": "1.0.0",
+  "description": "哨所静物：大厅带着附楼与塔楼，静止时挂接位姿保持稳定。",
+  "main": "bin/net8.0/CapabilityStandardAttachmentSettlementMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "tags": ["showcase", "capability-standard", "attachment", "settlement"]
+}

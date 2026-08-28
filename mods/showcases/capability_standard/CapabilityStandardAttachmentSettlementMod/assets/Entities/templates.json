@@ -1,0 +1,49 @@
+[
+  {
+    "id": "attachment_settlement_hall",
+    "components": {
+      "Name": { "Value": "Attachment.Settlement.Hall" },
+      "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } },
+      "FacingDirection": { "AngleRad": 0 },
+      "VisualHeightmapSampleState": {}
+    },
+    "children": [
+      {
+        "template": "attachment_settlement_annex",
+        "localPose": {
+          "offsetXCm": 700,
+          "offsetYCm": 0,
+          "facingDeg": 0,
+          "inheritParentFacing": false,
+          "offsetRotation": "None"
+        }
+      },
+      {
+        "template": "attachment_settlement_tower",
+        "localPose": {
+          "offsetXCm": -350,
+          "offsetYCm": 600,
+          "facingDeg": 0,
+          "inheritParentFacing": false,
+          "offsetRotation": "None"
+        }
+      }
+    ]
+  },
+  {
+    "id": "attachment_settlement_annex",
+    "components": {
+      "Name": { "Value": "Attachment.Settlement.Annex" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "attachment_settlement_tower",
+    "components": {
+      "Name": { "Value": "Attachment.Settlement.Tower" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {}
+    }
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "Id": "capability_standard_attachment_settlement",
+  "Tags": ["attachment.settlement"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 8,
+      "HeightInMacroTiles": 8,
+      "GridCellSizeCm": 100,
+      "LoadedChunkCapacity": 32
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 5000,
+    "TargetYCm": 5200,
+    "Yaw": 45,
+    "Pitch": 50,
+    "DistanceCm": 4200,
+    "FovYDeg": 55
+  },
+  "Entities": [
+    {
+      "Template": "attachment_settlement_hall",
+      "InstanceId": "settlement-hall"
+    }
+  ],
+  "Teams": [{ "TeamId": 1, "RepresentativeInstanceId": "settlement-hall" }],
+  "Players": [{ "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "settlement-hall" }]
+}

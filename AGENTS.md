@@ -11,3 +11,5 @@ Ludots — 基于 Arch ECS 的高性能 C# 游戏框架。六边形架构，一�
 Entity Association Core 的计划与 ADR SSOT 在 GitHub issue #239；ADR 正本在 #244，仓库 `docs/adr/` 不新增 AAC 平行 ADR 文件。
 
 正式文档门户：<https://mightybubble.github.io/Ludots/>（文档 / Showcase 画廊 / 测试验收 / 架构图库一站聚合）；写作源：`gitbook/`（`gitbook/SUMMARY.md` 导航）；showcase 与验收注册表：仓库根 `showcase.registry.json`。图能力的进度、还开着的活、不该合的 PR，只认 `gitbook/architecture/graph-capability-status.md`。不要另写交接。旧审计不是入口。
+
+**可玩 Showcase 完成度（硬门槛）**：开或改任何宣称「可玩 / 短剧 / 画廊」的 Showcase 前，必须先读并遵守 `gitbook/contributing/showcase-completion-bar.md`。主画面必须走正式 Presenter（网格/材质或已登记 host 资产）+ 可读阶段反馈；禁止用 DebugDraw 色圈/轴线冒充产品画面；禁止空场景只靠字幕交差。不满足该页合同，不得开 PR 称为可玩 Showcase。

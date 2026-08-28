@@ -1,0 +1,62 @@
+[
+  {
+    "id": "attachment.mount.carrier",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [3.4, 1.3, 2.4]
+        },
+        "style": { "color": [0.2, 0.75, 0.88, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "attachment_mount_carrier" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "attachment.mount.carrier" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "attachment_mount_carrier" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "attachment.mount.rider",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.9, 1.8, 0.9]
+        },
+        "style": { "color": [0.95, 0.82, 0.25, 1] }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "attachment_mount_rider" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "attachment.mount.rider" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "attachment_mount_rider" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  }
+]

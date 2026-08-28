@@ -1,0 +1,13 @@
+{
+  "name": "CapabilityStandardAttachmentMountDismountMod",
+  "version": "1.0.0",
+  "description": "乘员演练：对载具上车跟车，再周边下车落位。",
+  "main": "bin/net8.0/CapabilityStandardAttachmentMountDismountMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "tags": ["showcase", "capability-standard", "attachment", "mount"]
+}

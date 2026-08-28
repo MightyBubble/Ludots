@@ -1,0 +1,37 @@
+{
+  "Id": "capability_standard_attachment_mount_dismount",
+  "Tags": ["attachment.mount_dismount"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 4,
+      "HeightInMacroTiles": 4,
+      "GridCellSizeCm": 100,
+      "LoadedChunkCapacity": 16
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 1600,
+    "TargetYCm": -80,
+    "Yaw": 45,
+    "Pitch": 50,
+    "DistanceCm": 3200,
+    "FovYDeg": 55
+  },
+  "Entities": [
+    {
+      "Template": "attachment_mount_carrier",
+      "InstanceId": "mount-carrier",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      }
+    },
+    {
+      "Template": "attachment_mount_rider",
+      "InstanceId": "mount-rider"
+    }
+  ],
+  "Teams": [{ "TeamId": 1, "RepresentativeInstanceId": "mount-carrier" }],
+  "Players": [{ "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "mount-carrier" }]
+}

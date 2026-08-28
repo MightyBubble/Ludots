@@ -1,0 +1,34 @@
+[
+  {
+    "id": "Effect.AttachmentMount.AttachRider",
+    "tags": ["Effect.AttachmentMount"],
+    "presetType": "Relation",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "relation": {
+      "operation": "Attach",
+      "subject": "Target",
+      "parent": "Source",
+      "localPose": {
+        "offsetXCm": 0,
+        "offsetYCm": -140,
+        "facingDeg": 0,
+        "inheritParentFacing": false,
+        "offsetRotation": "None"
+      }
+    }
+  },
+  {
+    "id": "Effect.AttachmentMount.DetachRiderScatter",
+    "tags": ["Effect.AttachmentMount"],
+    "presetType": "Relation",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "relation": {
+      "operation": "Detach",
+      "subject": "Target",
+      "detachPlacement": "ParentPerimeterRing",
+      "detachPerimeterRadiusCm": 260
+    }
+  }
+]

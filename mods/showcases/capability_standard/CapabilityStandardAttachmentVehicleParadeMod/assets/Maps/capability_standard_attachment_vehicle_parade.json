@@ -1,0 +1,33 @@
+{
+  "Id": "capability_standard_attachment_vehicle_parade",
+  "Tags": ["attachment.vehicle_parade"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 4,
+      "HeightInMacroTiles": 4,
+      "GridCellSizeCm": 100,
+      "LoadedChunkCapacity": 16
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 1000,
+    "TargetYCm": 100,
+    "Yaw": 45,
+    "Pitch": 50,
+    "DistanceCm": 2800,
+    "FovYDeg": 55
+  },
+  "Entities": [
+    {
+      "Template": "attachment_vehicle_chassis",
+      "InstanceId": "vehicle-chassis",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      }
+    }
+  ],
+  "Teams": [{ "TeamId": 1, "RepresentativeInstanceId": "vehicle-chassis" }],
+  "Players": [{ "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "vehicle-chassis" }]
+}

@@ -4008,6 +4008,29 @@
       "notes": "截图证据待 CI 验收产物补录"
     },
     {
+      "id": "capability_standard_attachment_vehicle_parade",
+      "path": "mods/showcases/capability_standard/CapabilityStandardAttachmentVehicleParadeMod",
+      "projectPath": "CapabilityStandardAttachmentVehicleParadeMod.csproj",
+      "title": "装甲阅兵（挂接跟随）",
+      "summary": "底盘开动时炮塔与炮管跟着走，炮塔可独立转向、炮管随瞄准前伸。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "attachment",
+        "capability-standard",
+        "vehicle"
+      ],
+      "binding": "capability_standard_attachment_vehicle_parade",
+      "preset": "capability_standard_attachment_vehicle_parade_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": "mods/showcases/capability_standard/CapabilityStandardAttachmentVehicleParadeMod/README.md",
+      "acceptanceTest": "CapabilityStandardAttachmentVehicleParadeAcceptanceTests",
+      "artifactDir": "artifacts/showcases/capability-standard-attachment-vehicle-parade",
+      "screenshot": null,
+      "status": "active",
+      "notes": "One-feature showcase: multilayer follow + independent aim. UAT: gitbook/acceptance/capability-standard-attachment-vehicle-parade.feature"
+    },
+    {
       "id": "capability_standard_script_flow_sandbox",
       "path": "mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod",
       "projectPath": "CapabilityStandardScriptFlowSandboxMod.csproj",
@@ -4029,6 +4052,52 @@
       "screenshot": null,
       "status": "active",
       "notes": "Atomic L1 Script showcase; separate from L2 behavior arenas."
+    },
+    {
+      "id": "capability_standard_attachment_mount_dismount",
+      "path": "mods/showcases/capability_standard/CapabilityStandardAttachmentMountDismountMod",
+      "projectPath": "CapabilityStandardAttachmentMountDismountMod.csproj",
+      "title": "乘员上下车（挂接）",
+      "summary": "Effect 上车挂座、载具前移跟车、周界散布下车落位。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "attachment",
+        "capability-standard",
+        "mount"
+      ],
+      "binding": "capability_standard_attachment_mount_dismount",
+      "preset": "capability_standard_attachment_mount_dismount_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": "mods/showcases/capability_standard/CapabilityStandardAttachmentMountDismountMod/README.md",
+      "acceptanceTest": "CapabilityStandardAttachmentMountDismountAcceptanceTests",
+      "artifactDir": "artifacts/showcases/capability-standard-attachment-mount-dismount",
+      "screenshot": null,
+      "status": "active",
+      "notes": "One-feature showcase: Effect Attach/Detach rider lifecycle. UAT: gitbook/acceptance/capability-standard-attachment-mount-dismount.feature"
+    },
+    {
+      "id": "capability_standard_attachment_settlement",
+      "path": "mods/showcases/capability_standard/CapabilityStandardAttachmentSettlementMod",
+      "projectPath": "CapabilityStandardAttachmentSettlementMod.csproj",
+      "title": "哨所静物（挂接）",
+      "summary": "大厅带着附楼与塔楼，静止多拍后挂接位姿保持声明偏移。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "attachment",
+        "capability-standard",
+        "settlement"
+      ],
+      "binding": "capability_standard_attachment_settlement",
+      "preset": "capability_standard_attachment_settlement_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": "mods/showcases/capability_standard/CapabilityStandardAttachmentSettlementMod/README.md",
+      "acceptanceTest": "CapabilityStandardAttachmentSettlementAcceptanceTests",
+      "artifactDir": "artifacts/showcases/capability-standard-attachment-settlement",
+      "screenshot": null,
+      "status": "active",
+      "notes": "One-feature showcase: static-parent pose stability. UAT: gitbook/acceptance/capability-standard-attachment-settlement.feature"
     },
     {
       "id": "capability_standard_static_presenter_30k",
