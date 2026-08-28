@@ -1,0 +1,38 @@
+{
+  "Id": "dialogue_author_kit_gate",
+  "Tags": ["dialogue.author_kit", "mapvar", "panelTheme", "narrative.frontend.project"],
+  "Variables": [
+    { "name": "pass_granted", "type": "int", "initial": 0 }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.AuthorKit.Boot.StartGate",
+      "scopeInstanceId": "author_kit_traveler_1"
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1200,
+    "TargetYCm": 900,
+    "DistanceCm": 3200,
+    "Pitch": 48,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "author_kit_traveler",
+      "InstanceId": "author_kit_traveler_1",
+      "Overrides": {
+        "Name": { "Value": "Traveler" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 900 } }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "author_kit_traveler_1" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "author_kit_traveler_1" }
+  ]
+}

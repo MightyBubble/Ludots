@@ -316,7 +316,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.IntToText or
                 GraphNodeOp.FloatToText or
                 GraphNodeOp.SinkPresentationText or
-                GraphNodeOp.LoadTextKey
+                GraphNodeOp.LoadTextKey or
+                GraphNodeOp.StartDialogue
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -877,6 +878,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.FloatToText, HandleFloatToText, "FloatToText graph opcode.");
             Register(GraphNodeOp.SinkPresentationText, HandleSinkPresentationText, "SinkPresentationText graph opcode.");
             Register(GraphNodeOp.LoadTextKey, HandleLoadTextKey, "LoadTextKey graph opcode.");
+            Register(GraphNodeOp.StartDialogue, HandleStartDialogue, "StartDialogue graph opcode.");
         }
 
         // ── Value Ops ──
@@ -959,6 +961,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleLoadTextKey(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             RequireTextHeap(ref s).Write(ins.Dst, s.Api.ResolvePresentationTextKey(ins.Imm));
+        }
+
+        private static void HandleStartDialogue(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.StartDialogue(ins.Imm);
         }
 
         private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)

@@ -1,0 +1,12 @@
+[
+  { "id": "story.author_kit.speaker.guard", "argCount": 0 },
+  { "id": "story.author_kit.speaker.traveler", "argCount": 0 },
+  { "id": "story.author_kit.guard.open", "argCount": 0 },
+  { "id": "story.author_kit.player.write_pass", "argCount": 0 },
+  { "id": "story.author_kit.player.ask_enter", "argCount": 0 },
+  { "id": "story.author_kit.player.leave", "argCount": 0 },
+  { "id": "story.author_kit.guard.recorded", "argCount": 0 },
+  { "id": "story.author_kit.player.back", "argCount": 0 },
+  { "id": "story.author_kit.guard.allowed", "argCount": 0 },
+  { "id": "story.author_kit.guard.bye", "argCount": 0 }
+]

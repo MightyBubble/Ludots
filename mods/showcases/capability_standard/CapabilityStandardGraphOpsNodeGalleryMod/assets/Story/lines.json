@@ -1,0 +1,8 @@
+[
+  {
+    "id": "line.gallery.start_dialogue.open",
+    "speakerId": "speaker.gallery.author",
+    "textToken": "gallery.start_dialogue.open",
+    "tags": ["gallery"]
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "portrait.speaker.guard",
+    "kind": "Portrait",
+    "path": "DialogueAuthorKitShowcaseMod:assets/Presentation/portraits/guard.png",
+    "glyphFallback": "GG"
+  },
+  {
+    "id": "portrait.speaker.traveler",
+    "kind": "Portrait",
+    "path": "DialogueAuthorKitShowcaseMod:assets/Presentation/portraits/traveler.png",
+    "glyphFallback": "TR"
+  }
+]

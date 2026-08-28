@@ -202,6 +202,7 @@ Showcase 只负责：世界投影坐标补给、HUD（任务/回顾/提示）、
 - 走进神殿触发 `sequence.trial_reveal` → 镜头与字幕同步 → 信号点刷出试炼单位
 - 加载仍含 `NarrativeConditionKind` / 旧 `Narrative/variables.json` 的包 → 启动失败并指出迁移目标
 - 表现层只拿到句柄与字符串袋：换皮 / 换锚点不改 Dialogue 配置；换台词不改 Frontend 布局表
+- 作者入门可玩案例：[关口口令](../../gitbook/architecture/dialogue-author-kit.md)（`dialogue_author_kit`）
 
 ## 5. 边界
 

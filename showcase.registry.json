@@ -5232,6 +5232,52 @@
       ]
     },
     {
+      "id": "dialogue_author_kit",
+      "path": "mods/showcases/dialogue_author_kit/DialogueAuthorKitShowcaseMod",
+      "projectPath": null,
+      "title": "关口口令：对话分支入门",
+      "summary": "纯配置：门卫问话、写地图变量、条件选项、一行换皮。UI 由 NarrativeFrontend 内置桥接。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "dialogue_author_kit",
+      "preset": "dialogue_author_kit_raylib",
+      "docsPath": "gitbook/architecture/dialogue-author-kit.md",
+      "readmePath": null,
+      "acceptanceTest": "DialogueAuthorKitAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/dialogue-author-kit",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "dialogue",
+        "mapvar",
+        "panelTheme",
+        "author-kit"
+      ]
+    },
+    {
+      "id": "dialogue_author_kit_theme_ink",
+      "path": "mods/showcases/dialogue_author_kit_theme_ink/DialogueAuthorKitThemeInkMod",
+      "projectPath": null,
+      "title": "关口口令换肤·墨色",
+      "summary": "0 代码壳：panelTheme=kit-ink。玩法复用 DialogueAuthorKitShowcaseMod。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "dialogue_author_kit_theme_ink",
+      "preset": "dialogue_author_kit_theme_ink_raylib",
+      "docsPath": "gitbook/architecture/dialogue-author-kit.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/dialogue-author-kit-theme-ink",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "dialogue",
+        "panelTheme",
+        "zero-code",
+        "author-kit"
+      ]
+    },
+    {
       "id": "narrative_frontend",
       "path": "mods/capabilities/narrativefrontend/NarrativeFrontendMod",
       "projectPath": "NarrativeFrontendMod.csproj",
@@ -8417,6 +8463,33 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadTextKey",
       "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadTextKey/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_LoadTextKey/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_StartDialogue",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStartDialogueEntryMod",
+      "projectPath": "CapabilityStandardGraphOpStartDialogueEntryMod.csproj",
+      "title": "进图开一场对话",
+      "summary": "图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "StartDialogue"
+      ],
+      "binding": "capability_standard_graph_op_StartDialogue",
+      "preset": "capability_standard_graph_op_StartDialogue_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/StartDialogue.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_StartDialogue",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_StartDialogue/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_StartDialogue/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },

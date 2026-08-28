@@ -1945,6 +1945,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.StoryGraphInvoker, storyGraphs);
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
             SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
+            _gasGraphRuntimeApi?.BindStartDialogue(dialogueId => dialogueRuntime.StartDialogue(dialogueId));
             SetService(
                 CoreServiceKeys.StoryPresentationProjector,
                 new StoryPresentationProjector(storyDefinitions, displayResolver));

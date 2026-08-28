@@ -113,6 +113,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
         }
 
+        /// <summary>Start a DialogueRuntime session by dialogue definition id (config key).</summary>
+        void StartDialogue(int dialogueKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueRuntimeUnavailable");
+        }
+
         /// <summary>
         /// Resolves a patched PresentationTextCatalog token id to default-locale template characters.
         /// Zero-arg tokens only; argCount&gt;0 fails closed until FormatTextKey lands.

@@ -1872,6 +1872,20 @@
       }
     },
     {
+      "name": "dialogue_author_kit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dialogue_author_kit/DialogueAuthorKitShowcaseMod"
+      }
+    },
+    {
+      "name": "dialogue_author_kit_theme_ink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dialogue_author_kit_theme_ink/DialogueAuthorKitThemeInkMod"
+      }
+    },
+    {
       "name": "narrative_theme_sanguo",
       "target": {
         "type": "path",
@@ -1954,6 +1968,14 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadTextKeyEntryMod",
         "projectPath": "CapabilityStandardGraphOpLoadTextKeyEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StartDialogue",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStartDialogueEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStartDialogueEntryMod.csproj"
       }
     }
   ],
