@@ -1629,6 +1629,14 @@
       }
     },
     {
+      "name": "dual_seat_panels_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dual_seat_panels/DualSeatPanelsShowcaseMod",
+        "projectPath": "DualSeatPanelsShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",

@@ -140,6 +140,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\ControlPlaneProjectionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\panel_entity_list\PanelEntityListShowcaseMod\PanelEntityListShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\dual_seat_panels\DualSeatPanelsShowcaseMod\DualSeatPanelsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Panels\Ludots.UI.Panels.csproj" />
   </ItemGroup>

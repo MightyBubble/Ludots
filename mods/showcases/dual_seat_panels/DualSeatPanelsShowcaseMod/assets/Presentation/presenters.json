@@ -1,0 +1,57 @@
+[
+  {
+    "id": "dsp_showcase_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "dsp_hero_a" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "dsp_hero_root", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "dsp_hero_a" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntitySpawned", "key": "dsp_hero_b" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "dsp_hero_root", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "dsp_hero_b" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "dsp_hero_root",
+    "children": [
+      {
+        "definitionId": "dsp_hero_mesh",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [0, 1.2, 0],
+            "localScale": [1.8, 2.4, 1.8]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "dsp_hero_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "dsp.hero_cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static"
+        }
+      }
+    ]
+  }
+]

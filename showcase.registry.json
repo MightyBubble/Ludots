@@ -7468,6 +7468,31 @@
       ]
     },
     {
+      "id": "dual_seat_panels",
+      "path": "mods/showcases/dual_seat_panels/DualSeatPanelsShowcaseMod",
+      "projectPath": "DualSeatPanelsShowcaseMod.csproj",
+      "title": "双 Seat 面板",
+      "summary": "双 seat 分屏下每席一块自己的模板面板 + 一块共享面板：三轴两形态并陈、受众准入拒绝回流、热座轮换",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "dual_seat_panels_showcase",
+      "preset": "dual_seat_panels_raylib",
+      "docsPath": "gitbook/architecture/dual-seat-panels-showcase-design.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.DualSeatPanelsShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/dual-seat-panels",
+      "screenshot": null,
+      "status": "active",
+      "notes": "真机双 seat 取证截图不入库；证据与观察记录见 PR 正文及 artifacts/acceptance/dual-seat-panels/",
+      "tags": [
+        "panel",
+        "ui",
+        "dual-seat",
+        "showcase",
+        "split-screen"
+      ]
+    },
+    {
       "id": "panel_skin_markup",
       "path": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod",
       "title": "Panel Markup Skin",
