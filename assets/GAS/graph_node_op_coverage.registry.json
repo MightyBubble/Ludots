@@ -2759,6 +2759,28 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "SetPanelAudience",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_SetPanelAudience",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPanelOpAcceptanceTests.SetPanelAudienceVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "SetWorldPosition",
       "authorableKinds": [
         "Derived",

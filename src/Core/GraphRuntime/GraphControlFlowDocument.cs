@@ -196,6 +196,8 @@ namespace Ludots.Core.GraphRuntime
         public string? PanelSkin { get; set; }
         /// <summary>Viewport Z-order for CreatePanel; maps to surface lease priority. Default 100.</summary>
         public float? PanelZOrder { get; set; }
+        /// <summary>Seat id symbol for SetPanelAudience; omitted clears the override back to the declared audience.</summary>
+        public string? PanelSeat { get; set; }
         /// <summary>Map variable name symbol for ReadMapVarInt/ReadMapVarFloat/WriteMapVarInt/WriteMapVarFloat.</summary>
         public string? Var { get; set; }
         public string? RelationshipType { get; set; }

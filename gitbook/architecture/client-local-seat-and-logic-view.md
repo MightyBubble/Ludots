@@ -114,6 +114,15 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 - `ResolveAuthorityCamera` 多 binding 时仍抛错（sole 合同）；单视口消费方（minimap / 调试面板 / 宿主兜底）改走 `ResolveFirstPresentBindingCamera`（座位序首个 binding，无 binding 时回落既有链）或 `CopyPresentBindings` per-binding 枚举
 - 分屏布局数据声明化：`PublishLocalSeats` 按 `GameConfig.startupPresentLayout` 用 `PresentBinding.FromDeclaredLayout` 生成各座位 rect（见 3.1），布局只有数据一条路，无旁路加载器
 
+**UI 面板归属三轴（P3 UI 切片，#1058）**：
+
+- 面板模板声明 `ownerKind`（seat / participant / team / world，未知值加载期 fail-fast）与 `audienceSeats`（seatId 列表或 `all-seats`）；缺省 = seat + all-seats，即既有模板行为不变。`ownerKind` 词汇与 intent `playerSource` 同一份（`PanelOwnerKinds`），不在两处各写一套；`playerSource` 非 seat 的运行期归因链留给面板事件线（#1013），本切片解析期点名拒绝
+- 面板事件按触发的 seat 输入通道归因（`PanelEventDispatcher.FireFromSeat`，seatId 来自通道），对有效受众做 admission；受众外 seat 的操作被拒绝并把 reason 回流给 UI（点名面板、seat、受众），不静默吞
+- 共享面板 = 一个面板实例 + 多席受众，禁止按 seat 复制实例（状态分叉违反面板宪法合同二）；per-seat 呈现挂载只是同一份状态的多个呈现拷贝
+- hotseat 轮换 = 受众声明 + 图 op 覆盖：`SetPanelAudience`（op 464）把某 panelType 的受众覆盖为单 seat 或清除覆盖回到声明受众，走 `PanelActivationApi` → `UiPanelActivationStore`，与显隐同一写入口
+- surface 面：panel 级 per-seat 归属已落——面板按有效受众在对应 seat 的 PresentBinding rect 内挂载（`PanelSeatSurfacePlacement`），受众外座位的 rect 不挂；无 binding 的受众座位回落全窗挂载（sole seat 路径与分屏前行为一致）。世界 HUD / overlay 全窗化与 Web 皮路由 per-seat 化是已知取舍，未含在本切片（诚实划界，见 #1058）
+- 面板归属数据只进模板 / 配置：`UiPanelActivationStore` 的受众覆盖是运行时态，不进存档；任何面板状态持久化不得携带 seatId / controlSchemeId / 设备标识
+
 ### 3.4 LogicView（纯逻辑视觉）
 
 - 挂在 Participant（或其显式 view 资产）上，**不**挂在 Seat
@@ -242,4 +251,4 @@ Feature: 本机座位与逻辑视觉
 - P1 SeatRegistry + Possession + 删除全局 LocalPlayer* — #898
 - P2 LogicView 多实例 + PresentBinding 呈现/拾取 — #899（Sole PresentBinding → Presenter / ScreenRay / ScreenProjector / 呈现剔除；LogicView 自有相机权威；已删除 `GameSession.Camera` 会话单例；无座图可用 `logicview.client.present`）
 - P2.5 多分屏基建底座 — PresentBinding.rect 布局工厂 + `CopyPresentBindings` / per-seat 解析；Sole 消费路径仍是今日默认。已收口：存档 `launchContext.localSeats[]` round-trip 直接测试（mapSessions 存档域）+ sole seat `controlSchemeId` 激活链（3.3）
-- P3 分屏布局产品化、per-seat scheme 路由与 UI per-seat owner — #1058。第一切片已落：多 PresentBinding 呈现管线（per-binding rebind / metrics 同步，撤销 sole 抛错，`ResolveFirstPresentBindingCamera` 单视口回落）+ 分屏布局数据声明化（`startupPresentLayout`，水平 / 垂直对半纯数据切换）+ Raylib / Web / headless 宿主 loop 对齐。后续切片：Raylib / Web 多视口绘制与 per-binding culling 多路复用、per-seat 输入路由与 scheme 激活、UI per-seat owner、共享面板三轴模型
+- P3 分屏布局产品化、per-seat scheme 路由与 UI per-seat owner — #1058。已落切片：多 PresentBinding 呈现管线（per-binding rebind / metrics 同步，撤销 sole 抛错，`ResolveFirstPresentBindingCamera` 单视口回落）+ 分屏布局数据声明化（`startupPresentLayout`，水平 / 垂直对半纯数据切换）+ Raylib / Web / headless 宿主 loop 对齐 + Raylib / Web 多视口绘制与 per-binding culling 并集（`PresentBindingCullPass` / `PresentBindingDrawFrame`）+ per-seat 输入路由与 scheme 激活（`ClientLocalSeatInputRuntime`，3.3）+ UI 面板归属三轴（owner / audience / surface，`SetPanelAudience` op 464，见 3.3；世界 HUD / overlay 全窗化与 Web 皮 per-seat 路由仍留后续）。收尾项：#1058 验收清单回填

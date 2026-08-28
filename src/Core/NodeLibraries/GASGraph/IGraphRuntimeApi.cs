@@ -87,6 +87,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
         }
 
+        /// <summary>
+        /// Overrides a panel type's audience with one seat (hotseat turn handoff), or
+        /// clears the override when seatKeyId is 0 — the template's declared audience
+        /// rules again. Fail-closed on key ids that do not resolve to registered names.
+        /// </summary>
+        void SetPanelAudience(int panelTypeId, int seatKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
         /// <summary>Sets an entity's world position in centimeters (int, matches LoadTargetPosX/Y).</summary>
         void SetWorldPosition(Entity target, int xCm, int yCm);
 

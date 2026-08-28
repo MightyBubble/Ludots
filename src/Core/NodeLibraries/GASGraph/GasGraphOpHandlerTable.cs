@@ -306,6 +306,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SpawnTemplate or
                 GraphNodeOp.SetWorldPosition or
                 GraphNodeOp.SetInteractionMode or
+                GraphNodeOp.SetPanelAudience or
                 GraphNodeOp.InvokeGraph or
                 GraphNodeOp.StoreArgInt or
                 GraphNodeOp.StoreArgFloat or
@@ -862,6 +863,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
         Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
         Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
+        Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
             Register(GraphNodeOp.ReadMapVarInt, HandleReadMapVarInt, "ReadMapVarInt graph opcode.");
@@ -1397,6 +1399,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
             s.Api.SetInteractionMode(target, ins.Imm);
+        }
+
+        private static void HandleSetPanelAudience(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SetPanelAudience(
+                UI.PanelHosting.PanelOpEncoding.UnpackTemplate(ins.Imm),
+                UI.PanelHosting.PanelOpEncoding.UnpackAudienceSeat(ins.Imm));
         }
 
         private static void HandleSpawnTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

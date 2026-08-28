@@ -286,6 +286,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         SetInteractionMode = 463,
 
+        /// <summary>
+        /// Override a panel type's audience with one seat (hotseat turn handoff), or
+        /// clear the override when no seat symbol is declared — the template's declared
+        /// audience rules again. Imm packs the panelType and seat key ids (seat 0 = clear);
+        /// event admission and surface placement both consume the recorded override.
+        /// </summary>
+        SetPanelAudience = 464,
+
     }
 
     public static class GraphNodeOpParser
