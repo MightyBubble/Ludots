@@ -169,17 +169,14 @@ namespace Ludots.Core.Gameplay.Dialogue
                 choices.Add(new DialogueChoiceView(
                     choice.Id,
                     choice.LineId,
-                    ResolveLineText(choice.LineId),
-                    choice.NextNode,
-                    choice.ConditionGraphId,
-                    choice.ActionGraphId));
+                    ResolveLineText(choice.LineId)));
             }
 
             ResolveSpeakerPresentation(
                 line.SpeakerId,
                 out string speakerName,
-                out string portraitSrc,
-                out string standingSrc);
+                out string portraitImageId,
+                out string standingImageId);
             view = new DialogueView(
                 _active.Definition.Id,
                 _active.Definition.DisplayName,
@@ -187,8 +184,8 @@ namespace Ludots.Core.Gameplay.Dialogue
                 node.LineId,
                 line.SpeakerId,
                 speakerName,
-                portraitSrc,
-                standingSrc,
+                portraitImageId,
+                standingImageId,
                 line.TextToken,
                 ResolveLineText(node.LineId),
                 node.PresentationProfile,
@@ -202,30 +199,23 @@ namespace Ludots.Core.Gameplay.Dialogue
         private void ResolveSpeakerPresentation(
             string speakerId,
             out string speakerName,
-            out string portraitSrc,
-            out string standingSrc)
+            out string portraitImageId,
+            out string standingImageId)
         {
             speakerName = speakerId ?? string.Empty;
-            portraitSrc = string.Empty;
-            standingSrc = string.Empty;
+            portraitImageId = string.Empty;
+            standingImageId = string.Empty;
             if (string.IsNullOrWhiteSpace(speakerId) || !_story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
             {
                 return;
             }
 
+            portraitImageId = speaker.PortraitImageId ?? string.Empty;
+            standingImageId = speaker.StandingImageId ?? string.Empty;
+
             if (_display != null)
             {
                 speakerName = _display.FormatTokenOrThrow(speaker.DisplayNameToken);
-                if (!string.IsNullOrWhiteSpace(speaker.PortraitImageId))
-                {
-                    portraitSrc = _display.ResolveImageSourceOrThrow(speaker.PortraitImageId);
-                }
-
-                if (!string.IsNullOrWhiteSpace(speaker.StandingImageId))
-                {
-                    standingSrc = _display.ResolveImageSourceOrThrow(speaker.StandingImageId);
-                }
-
                 return;
             }
 
