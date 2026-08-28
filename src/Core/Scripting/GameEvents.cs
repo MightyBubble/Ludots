@@ -47,6 +47,12 @@ namespace Ludots.Core.Scripting
 
         public static readonly EventKey TurnAdvanced = new EventKey("TurnAdvanced");
 
+        public static readonly EventKey CalendarDayAdvanced = new EventKey("Calendar.DayAdvanced");
+        public static readonly EventKey CalendarCyclePhaseEntered = new EventKey("Calendar.CyclePhaseEntered");
+        public static readonly EventKey CalendarCyclePhaseExited = new EventKey("Calendar.CyclePhaseExited");
+        public static readonly EventKey CalendarEraChanged = new EventKey("Calendar.EraChanged");
+        public static readonly EventKey CalendarDayPhaseChanged = new EventKey("Calendar.DayPhaseChanged");
+
         /// <summary>
         /// Fired when a map is about to be unloaded.
         /// Triggers' OnMapExit is called during this event.

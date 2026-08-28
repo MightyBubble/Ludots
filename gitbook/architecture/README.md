@@ -67,7 +67,7 @@
 
 - Entity Association Core 的计划与 ADR SSOT 是 GitHub issue #239；ADR 正本是 #244（AAC-1）。不要在 `docs/adr/` 为 AAC 新增平行 ADR 文件；AAC-2~AAC-12 必须引用 #244 的存储策略、ScopeKey、组合契约、红线与 2.5 UAT showcase capability mod 标准。需要玩家可见 showcase 的子单是 #245、#246、#247、#248、#249、#250、#251、#253；meta/卫生/护栏例外是 #244、#252、#254、#255。
 - launcher 已进入 graph-backed SSOT 阶段，运行时由 launcher graph artifact 驱动
-- Core 现已包含 `TimeFlow`、`EntityLocalClock`、`Items`、`Exchange`、`Quest`、`Dialogue`、`Sequencer`、`Relationships` 等正式运行时能力（Story Runtime SSOT：`docs/architecture/story_runtime_dialogue_sequencer.md`）
+- Core 现已包含 `TimeFlow`、`EntityLocalClock`、`Calendar`、`Items`、`Exchange`、`Quest`、`Dialogue`、`Sequencer`、`Relationships` 等正式运行时能力（Story Runtime SSOT：`docs/architecture/story_runtime_dialogue_sequencer.md`；历法：`gitbook/architecture/calendar-system.md`）
 - 输入、选择、实体信息面板、路网移动与故事 frontend surface 都已有主线实现和 showcase 入口
 - 大规模实体场景的下一阶段主线，是把 `Authority` 与 `Budgeted` 仿真车道、碰撞层过滤、AOI/LOD 调度和 mass crowd 展示收敛成同一套正式组件规范
 - Raylib 侧已补充一个“脱离 presenter/entity 行为”的直接 ISM benchmark，用于隔离最终绘制瓶颈；当前证据表明 30K 黑铁匠铺 mesh 的平台层 instanced draw 已能稳定跑通，优先暴露出的风险点在 Skia final overlay，而不是平台层 mesh draw

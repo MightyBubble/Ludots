@@ -1,0 +1,78 @@
+[
+  {
+    "id": "calendar.solar360",
+    "yearLengthDays": 360,
+    "eras": [
+      { "id": "era.founding", "label": "立国", "startDayIndex": 0 }
+    ],
+    "cycles": [
+      {
+        "id": "season",
+        "lengthDays": 360,
+        "phases": [
+          { "id": "spring", "label": "春", "lengthDays": 90 },
+          { "id": "summer", "label": "夏", "lengthDays": 90 },
+          { "id": "autumn", "label": "秋", "lengthDays": 90 },
+          { "id": "winter", "label": "冬", "lengthDays": 90 }
+        ]
+      },
+      {
+        "id": "month",
+        "lengthDays": 360,
+        "phases": [
+          { "id": "month.01", "label": "正月", "lengthDays": 30 },
+          { "id": "month.02", "label": "二月", "lengthDays": 30 },
+          { "id": "month.03", "label": "三月", "lengthDays": 30 },
+          { "id": "month.04", "label": "四月", "lengthDays": 30 },
+          { "id": "month.05", "label": "五月", "lengthDays": 30 },
+          { "id": "month.06", "label": "六月", "lengthDays": 30 },
+          { "id": "month.07", "label": "七月", "lengthDays": 30 },
+          { "id": "month.08", "label": "八月", "lengthDays": 30 },
+          { "id": "month.09", "label": "九月", "lengthDays": 30 },
+          { "id": "month.10", "label": "十月", "lengthDays": 30 },
+          { "id": "month.11", "label": "十一月", "lengthDays": 30 },
+          { "id": "month.12", "label": "十二月", "lengthDays": 30 }
+        ]
+      },
+      {
+        "id": "xun",
+        "lengthDays": 30,
+        "phases": [
+          { "id": "early", "label": "上旬", "lengthDays": 10 },
+          { "id": "mid", "label": "中旬", "lengthDays": 10 },
+          { "id": "late", "label": "下旬", "lengthDays": 10 }
+        ]
+      },
+      {
+        "id": "solarTerm",
+        "lengthDays": 360,
+        "phases": [
+          { "id": "lichun", "label": "立春", "lengthDays": 15 },
+          { "id": "yushui", "label": "雨水", "lengthDays": 15 },
+          { "id": "jingzhe", "label": "惊蛰", "lengthDays": 15 },
+          { "id": "chunfen", "label": "春分", "lengthDays": 15 },
+          { "id": "qingming", "label": "清明", "lengthDays": 15 },
+          { "id": "guyu", "label": "谷雨", "lengthDays": 15 },
+          { "id": "lixia", "label": "立夏", "lengthDays": 15 },
+          { "id": "xiaoman", "label": "小满", "lengthDays": 15 },
+          { "id": "mangzhong", "label": "芒种", "lengthDays": 15 },
+          { "id": "xiazhi", "label": "夏至", "lengthDays": 15 },
+          { "id": "xiaoshu", "label": "小暑", "lengthDays": 15 },
+          { "id": "dashu", "label": "大暑", "lengthDays": 15 },
+          { "id": "liqiu", "label": "立秋", "lengthDays": 15 },
+          { "id": "chushu", "label": "处暑", "lengthDays": 15 },
+          { "id": "bailu", "label": "白露", "lengthDays": 15 },
+          { "id": "qiufen", "label": "秋分", "lengthDays": 15 },
+          { "id": "hanlu", "label": "寒露", "lengthDays": 15 },
+          { "id": "shuangjiang", "label": "霜降", "lengthDays": 15 },
+          { "id": "lidong", "label": "立冬", "lengthDays": 15 },
+          { "id": "xiaoxue", "label": "小雪", "lengthDays": 15 },
+          { "id": "daxue", "label": "大雪", "lengthDays": 15 },
+          { "id": "dongzhi", "label": "冬至", "lengthDays": 15 },
+          { "id": "xiaohan", "label": "小寒", "lengthDays": 15 },
+          { "id": "dahan", "label": "大寒", "lengthDays": 15 }
+        ]
+      }
+    ]
+  }
+]

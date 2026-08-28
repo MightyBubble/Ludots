@@ -6,6 +6,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Dialogue;
 using Ludots.Core.Gameplay.Story;
@@ -85,6 +86,7 @@ public sealed class SaveParticipantRegistryTests
         Assert.That(domains, Is.EqualTo(new[]
         {
             "activities",
+            "calendar",
             "clock",
             "dialogue",
             "gameSession",
@@ -229,6 +231,39 @@ public sealed class SaveParticipantRegistryTests
         Assert.That(target.GetEffectiveScalePermille(TimeFlowDomainIds.Gas), Is.EqualTo(500));
         Assert.That(target.GetEffectiveScalePermille("simulation.bullets"), Is.EqualTo(0));
         Assert.That(target.IsPaused("simulation.bullets"), Is.True);
+    }
+
+    [Test]
+    public void CalendarParticipantRestoresDayIndexAndTicksIntoDay()
+    {
+        var era = new CalendarEraDefinition("era.founding", "立国", 0);
+        var cycle = new CalendarCycleDefinition(
+            "season",
+            90,
+            new[] { new CalendarPhaseDefinition("spring", "春", 90) });
+        var calendar = new CalendarDefinition("calendar.solar360", 360, new[] { era }, new[] { cycle });
+        var registry = new CalendarDefinitionRegistry();
+        registry.Register(calendar);
+        var world = new CalendarWorldConfig(
+            "Step",
+            20,
+            0,
+            "calendar.solar360",
+            new[] { new CalendarDayPhaseDefinition("dawn", "晓", 0) });
+
+        var source = new CalendarRuntime(world, registry);
+        source.Advance(25);
+        var targetRegistry = new CalendarDefinitionRegistry();
+        targetRegistry.Register(calendar);
+        var target = new CalendarRuntime(world, targetRegistry);
+
+        ISaveParticipant participant = CoreSaveParticipants.CreateCalendarParticipant(source);
+        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateCalendarParticipant(target);
+        targetParticipant.RestoreState(participant.CaptureState());
+
+        Assert.That(target.DayIndex, Is.EqualTo(1));
+        Assert.That(target.TicksIntoDay, Is.EqualTo(5));
+        Assert.That(target.ProjectActive().Year, Is.EqualTo(1));
     }
 
     [Test]

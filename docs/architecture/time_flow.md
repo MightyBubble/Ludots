@@ -67,6 +67,7 @@ GAS clock config + TimeFlow simulation.gas
 ## 6 验证
 
 - TimeFlow domain / Turn 删除：`src/Tests/TimeFlowCoreTests/`
+- 历法 / 纪年 / 周期：`src/Tests/CalendarCoreTests/`；正式口径 `gitbook/architecture/calendar-system.md`
 - Entity-local 时钟：`src/Tests/GasTests/EntityLocalClockTests.cs`
 - Loader fail-fast：`src/Tests/GasTests/*FailFastTests.cs`
 - 存档覆盖：`src/Tests/PersistenceTests/ArchPersistenceCharacterizationTests.cs`
