@@ -46,8 +46,10 @@ namespace Ludots.AgentBridge.Tools
         public string Name => "ludots.camera.control";
 
         public string Description =>
-            "Inspect or drive the authority camera. Params: {action: 'get'|'set'|'follow'|'unfollow', " +
-            "entityId?: int (follow), targetXCm/targetYCm?: number, yaw?/pitch?/distanceCm?: number (set)}. " +
+            "Inspect or drive one seat's present camera. Params: {action: 'get'|'set'|'follow'|'unfollow', " +
+            "seatId?: string, entityId?: int (follow), targetXCm/targetYCm?: number, yaw?/pitch?/distanceCm?: number (set)}. " +
+            "seatId addresses that seat's PresentBinding LogicView camera (split-screen); omitted seatId keeps the " +
+            "single-viewport default (sole binding, or the first binding in seat order under split-screen). " +
             "'set' applies a partial pose through CameraManager.ApplyPose (persists into the active virtual camera); " +
             "'follow' attaches the entity as follow target of the active virtual camera; 'unfollow' clears it.";
 
@@ -57,6 +59,7 @@ namespace Ludots.AgentBridge.Tools
             ["properties"] = new JsonObject
             {
                 ["action"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("get", "set", "follow", "unfollow") },
+                ["seatId"] = new JsonObject { ["type"] = "string", ["description"] = "seat whose PresentBinding camera is addressed; default = sole/first binding" },
                 ["entityId"] = new JsonObject { ["type"] = "integer", ["description"] = "required for action=follow" },
                 ["targetXCm"] = new JsonObject { ["type"] = "number", ["description"] = "set: both targetXCm and targetYCm required" },
                 ["targetYCm"] = new JsonObject { ["type"] = "number" },
@@ -70,12 +73,23 @@ namespace Ludots.AgentBridge.Tools
         public JsonNode? Execute(JsonObject? args, AgentToolContext context)
         {
             string action = AgentToolContext.RequireString(args, "action");
-            CameraManager camera = Ludots.Core.Client.ClientLocalSeatAccess.ResolveAuthorityCamera(context.Engine);
+            string? seatId = AgentToolContext.OptionalString(args, "seatId");
+            CameraManager camera;
+            string? resolvedSeatId;
+            if (seatId != null)
+            {
+                (_, _, camera) = SeatRouting.RequireSeatPresentCamera(context, seatId);
+                resolvedSeatId = seatId.Trim();
+            }
+            else
+            {
+                (camera, resolvedSeatId) = SeatRouting.ResolveDefaultCamera(context);
+            }
 
             switch (action)
             {
                 case "get":
-                    return Status(camera);
+                    return Status(camera, resolvedSeatId);
 
                 case "set":
                 {
@@ -109,7 +123,7 @@ namespace Ludots.AgentBridge.Tools
                     }
 
                     camera.ApplyPose(request);
-                    return Status(camera);
+                    return Status(camera, resolvedSeatId);
                 }
 
                 case "follow":
@@ -124,7 +138,7 @@ namespace Ludots.AgentBridge.Tools
                             $"Active virtual camera '{brain.ActiveCameraId}' rejected the follow target.");
                     }
 
-                    var result = Status(camera);
+                    var result = Status(camera, resolvedSeatId);
                     result["followingEntityId"] = entityId;
                     return result;
                 }
@@ -133,7 +147,7 @@ namespace Ludots.AgentBridge.Tools
                 {
                     VirtualCameraBrain brain = RequireBrain(camera);
                     camera.SetFollowTarget(brain.ActiveCameraId, null);
-                    return Status(camera);
+                    return Status(camera, resolvedSeatId);
                 }
 
                 default:
@@ -156,11 +170,12 @@ namespace Ludots.AgentBridge.Tools
             return brain;
         }
 
-        private static JsonObject Status(CameraManager camera)
+        private static JsonObject Status(CameraManager camera, string? seatId)
         {
             CameraState state = camera.State;
             var result = new JsonObject
             {
+                ["seatId"] = seatId,
                 ["targetCm"] = new JsonObject { ["x"] = state.TargetCm.X, ["y"] = state.TargetCm.Y },
                 ["targetHeightCm"] = state.TargetHeightCm,
                 ["yaw"] = state.Yaw,

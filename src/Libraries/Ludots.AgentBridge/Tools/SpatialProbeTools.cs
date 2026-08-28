@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
@@ -13,7 +15,9 @@ namespace Ludots.AgentBridge.Tools
     /// <summary>
     /// Screen-point entity picking via the production command-source hit
     /// resolver (same algorithm as click selection: selectable tag, knowledge
-    /// gate, projected-bounds tiebreak).
+    /// gate, projected-bounds tiebreak). Sole seat answers through the runtime
+    /// ScreenProjector; seatId or a split-screen point routes through that
+    /// seat's PresentBinding camera with binding-local metrics.
     /// </summary>
     public sealed class EntitiesPickTool : IAgentTool
     {
@@ -22,7 +26,10 @@ namespace Ludots.AgentBridge.Tools
         public string Description =>
             "Pick the entity under a screen point — the same resolution the game uses for click selection " +
             "(CommandSourceSelectableTag + knowledge-gated inspectability + projected-bounds tiebreak). " +
-            "Params: {x: number, y: number, radiusPixels?=24}. Only selectable entities are candidates; " +
+            "Params: {x: number, y: number, radiusPixels?=24, seatId?=string}. x/y are host-window pixels. " +
+            "seatId picks through that seat's PresentBinding viewport (knowledge owner = the seat's possessed rep); " +
+            "without seatId a sole seat keeps the single-viewport path and a split-screen point auto-routes to the " +
+            "binding whose rect contains it. Only selectable entities are candidates; " +
             "use ludots.entities.query for the unfiltered feed.";
 
         public JsonObject? InputSchema => new JsonObject
@@ -33,6 +40,7 @@ namespace Ludots.AgentBridge.Tools
                 ["x"] = new JsonObject { ["type"] = "number" },
                 ["y"] = new JsonObject { ["type"] = "number" },
                 ["radiusPixels"] = new JsonObject { ["type"] = "number", ["default"] = 24 },
+                ["seatId"] = new JsonObject { ["type"] = "string", ["description"] = "pick through this seat's PresentBinding viewport; default = sole seat or rect-routed binding" },
             },
             ["required"] = new JsonArray("x", "y"),
         };
@@ -48,6 +56,35 @@ namespace Ludots.AgentBridge.Tools
             }
 
             var engine = context.Engine;
+            string? seatId = AgentToolContext.OptionalString(args, "seatId");
+            if (seatId != null)
+            {
+                return PickSeatViewport(context, seatId, x, y, radius, routedByPoint: false);
+            }
+
+            ClientLocalSeatRegistry registry = Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine);
+            if (registry.TryGetSoleSeat(out _))
+            {
+                return PickSoleViewport(context, x, y, radius);
+            }
+
+            var bindings = new List<(string SeatId, Ludots.Core.Client.PresentBinding Binding)>(registry.Count);
+            registry.CopyPresentBindings(bindings);
+            if (bindings.Count == 0 ||
+                !SeatRouting.TryRouteWindowPoint(context, new Vector2(x, y), bindings, out int routedIndex))
+            {
+                throw new AgentToolException(
+                    AgentBridgeErrorCodes.ServiceUnavailable,
+                    "Split-screen pick requires a PresentBinding per seat (and a ViewController for point routing); " +
+                    $"this session has {bindings.Count} present bindings. Pass seatId or fix the seat table.");
+            }
+
+            return PickSeatViewport(context, bindings[routedIndex].SeatId, x, y, radius, routedByPoint: true);
+        }
+
+        private static JsonNode? PickSoleViewport(AgentToolContext context, float x, float y, float radius)
+        {
+            var engine = context.Engine;
             if (!Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity owner) ||
                 !engine.World.IsAlive(owner))
             {
@@ -58,31 +95,83 @@ namespace Ludots.AgentBridge.Tools
 
             Entity hit = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
                 engine.World, engine.GlobalContext, owner, new Vector2(x, y), radius);
-
             if (hit == Entity.Null || !engine.World.IsAlive(hit))
             {
                 return new JsonObject { ["hit"] = false, ["x"] = x, ["y"] = y, ["radiusPixels"] = radius };
             }
 
             var projector = context.RequireService(CoreServiceKeys.ScreenProjector);
+            return BuildHitRow(engine.World, hit, projector, offsetX: 0f, offsetY: 0f);
+        }
+
+        private JsonNode? PickSeatViewport(AgentToolContext context, string seatId, float x, float y, float radius, bool routedByPoint)
+        {
+            var (seat, binding, camera) = SeatRouting.RequireSeatPresentCamera(context, seatId);
+            var engine = context.Engine;
+            if (!seat.HasPossession || !engine.World.IsAlive(seat.PossessedRep))
+            {
+                throw new AgentToolException(
+                    AgentBridgeErrorCodes.ServiceUnavailable,
+                    $"Seat '{seat.SeatId}' has no live possessed rep; per-seat picking uses it as the knowledge-gating owner.");
+            }
+
+            var view = context.RequireService(CoreServiceKeys.ViewController);
+            Vector4 rect = binding.NormalizedScreenRect;
+            float offsetX = rect.X * view.Resolution.X;
+            float offsetY = rect.Y * view.Resolution.Y;
+            var localPoint = new Vector2(x - offsetX, y - offsetY);
+
+            var projector = new Ludots.Core.Presentation.Camera.CoreScreenProjector(
+                camera,
+                new Ludots.Core.Client.PresentBindingSurface(binding, view.Fov));
+            Entity hit = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+                engine.World, engine.GlobalContext, seat.PossessedRep, localPoint, radius, projector);
+
+            if (hit == Entity.Null || !engine.World.IsAlive(hit))
+            {
+                return new JsonObject
+                {
+                    ["hit"] = false,
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["radiusPixels"] = radius,
+                    ["seatId"] = seat.SeatId,
+                    ["routedByPoint"] = routedByPoint,
+                };
+            }
+
+            JsonNode row = BuildHitRow(engine.World, hit, projector, offsetX, offsetY);
+            var result = (JsonObject)row;
+            result["seatId"] = seat.SeatId;
+            result["routedByPoint"] = routedByPoint;
+            return result;
+        }
+
+        private static JsonObject BuildHitRow(
+            World world,
+            Entity hit,
+            IScreenProjector projector,
+            float offsetX,
+            float offsetY)
+        {
             var result = new JsonObject
             {
                 ["hit"] = true,
                 ["entityId"] = hit.Id,
-                ["name"] = engine.World.Has<Name>(hit) ? engine.World.Get<Name>(hit).Value : null,
+                ["name"] = world.Has<Name>(hit) ? world.Get<Name>(hit).Value : null,
             };
 
-            if (engine.World.TryGet(hit, out WorldPositionCm pos))
+            if (world.TryGet(hit, out WorldPositionCm pos))
             {
                 result["worldCm"] = new JsonObject { ["x"] = pos.Value.X.ToFloat(), ["y"] = pos.Value.Y.ToFloat() };
             }
 
-            if (SpatialBoundsUtility.TryProjectScreenBounds(engine.World, hit, projector, out ScreenRect rect))
+            if (SpatialBoundsUtility.TryProjectScreenBounds(world, hit, projector, out ScreenRect rect))
             {
                 result["screenRect"] = new JsonObject
                 {
-                    ["x"] = MathF.Round(rect.MinX, 1),
-                    ["y"] = MathF.Round(rect.MinY, 1),
+                    ["x"] = MathF.Round(rect.MinX + offsetX, 1),
+                    ["y"] = MathF.Round(rect.MinY + offsetY, 1),
                     ["w"] = MathF.Round(Math.Max(0f, rect.MaxX - rect.MinX), 1),
                     ["h"] = MathF.Round(Math.Max(0f, rect.MaxY - rect.MinY), 1),
                 };
