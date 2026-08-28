@@ -2,7 +2,7 @@
   "name": "DeterministicReplayShowcaseMod",
   "version": "1.0.0",
   "description": "Deterministic replay showcase: record authoritative input frames, replay them from the recorded checkpoint, and watch the world re-evolve identically with live input isolated.",
-  "main": "bin/net8.0/DeterministicReplayShowcaseMod.dll",
+  "main": "bin/net9.0/DeterministicReplayShowcaseMod.dll",
   "priority": 141,
   "dependencies": {
     "LudotsCoreMod": ">=1.0.0"

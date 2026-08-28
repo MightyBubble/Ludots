@@ -2,7 +2,7 @@
   "name": "ReconnectRecoveryShowcaseMod",
   "version": "1.0.0",
   "description": "Reconnect recovery showcase: authority keeps ticking while the disconnected client freezes; reconnect resumes from the authoritative checkpoint. Fault injections (missing/duplicate/stale frames) are rejected with readable errors. Single-machine simulation, honestly labeled.",
-  "main": "bin/net8.0/ReconnectRecoveryShowcaseMod.dll",
+  "main": "bin/net9.0/ReconnectRecoveryShowcaseMod.dll",
   "priority": 142,
   "dependencies": {
     "LudotsCoreMod": ">=1.0.0"
