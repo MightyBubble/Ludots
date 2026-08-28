@@ -1,0 +1,35 @@
+{
+  "actions": [
+    { "id": "DSP.SelfBoost", "name": "DSP_SelfBoost", "type": "Button" },
+    { "id": "DSP.SelfStrike", "name": "DSP_SelfStrike", "type": "Button" },
+    { "id": "DSP.PokeOther", "name": "DSP_PokeOther", "type": "Button" },
+    { "id": "DSP.SharedCharge", "name": "DSP_SharedCharge", "type": "Button" },
+    { "id": "DSP.RotateTurn", "name": "DSP_RotateTurn", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "DSP.Controls.Left",
+      "name": "Dual Seat Panels Left Seat",
+      "priority": 80,
+      "bindings": [
+        { "actionId": "DSP.SelfBoost", "path": "<Keyboard>/q" },
+        { "actionId": "DSP.SelfStrike", "path": "<Keyboard>/w" },
+        { "actionId": "DSP.PokeOther", "path": "<Keyboard>/e" },
+        { "actionId": "DSP.SharedCharge", "path": "<Keyboard>/r" },
+        { "actionId": "DSP.RotateTurn", "path": "<Keyboard>/t" }
+      ]
+    },
+    {
+      "id": "DSP.Controls.Right",
+      "name": "Dual Seat Panels Right Seat",
+      "priority": 80,
+      "bindings": [
+        { "actionId": "DSP.SelfBoost", "path": "<Keyboard>/u" },
+        { "actionId": "DSP.SelfStrike", "path": "<Keyboard>/i" },
+        { "actionId": "DSP.PokeOther", "path": "<Keyboard>/o" },
+        { "actionId": "DSP.SharedCharge", "path": "<Keyboard>/p" },
+        { "actionId": "DSP.RotateTurn", "path": "<Keyboard>/y" }
+      ]
+    }
+  ]
+}

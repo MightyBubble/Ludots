@@ -425,6 +425,9 @@ namespace Raylib_cs
         public static extern void EndScissorMode();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe byte* rlReadScreenPixels(int width, int height);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlDrawRenderBatchActive();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -530,6 +533,12 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetScreenHeight();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetRenderWidth();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetRenderHeight();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern float GetMouseWheelMove();

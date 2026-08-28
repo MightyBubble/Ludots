@@ -1,0 +1,21 @@
+{
+  "startupMapId": "dual_seat_panels_arena",
+  "windowTitle": "Ludots - 双 Seat 面板",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60,
+  "startupPresentLayout": "horizontal-equal-split",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1,
+      "controlSchemeId": "scheme.dsp.left"
+    },
+    {
+      "seatId": "seat.1",
+      "playerId": 2,
+      "controlSchemeId": "scheme.dsp.right"
+    }
+  ]
+}

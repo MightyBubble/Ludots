@@ -2257,6 +2257,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "dual_seat_panels_raylib",
+      "name": "Dual Seat Panels Raylib",
+      "selectors": [
+        "$dual_seat_panels_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_skin_markup_raylib",
       "name": "Panel Markup Skin Raylib",
       "selectors": [

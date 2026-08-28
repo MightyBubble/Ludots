@@ -193,9 +193,11 @@ namespace Ludots.AgentBridge.Tools
 
         public string Description =>
             "Inject a synthetic input action into the player input handler (same path as game input bindings). " +
-            "Params: {actionId: string, mode: 'press'|'release'|'set', value?: {x,y,z}}. " +
-            "press = InjectButtonPress (held until release), release = InjectButtonRelease, set = InjectAction with vector value. " +
-            "Response carries eventId + injectionHeld for causal confirmation; the ledger is readable via ludots.input.state.";
+            "Params: {actionId: string, mode: 'press'|'release'|'set', value?: {x,y,z}, seatId?: string}. " +
+            "seatId routes to that seat's own input channel (split-screen: ClientLocalSeatInputRuntime; the sole seat " +
+            "keeps the engine-global handler). press = InjectButtonPress (held until release), release = InjectButtonRelease, " +
+            "set = InjectAction with vector value. Response carries eventId + injectionHeld for causal confirmation; " +
+            "the ledger is readable via ludots.input.state.";
 
         public JsonObject? InputSchema => new JsonObject
         {
@@ -214,6 +216,7 @@ namespace Ludots.AgentBridge.Tools
                         ["z"] = new JsonObject { ["type"] = "number" },
                     },
                 },
+                ["seatId"] = new JsonObject { ["type"] = "string", ["description"] = "route to this seat's input channel; default = engine-global handler" },
             },
             ["required"] = new JsonArray("actionId", "mode"),
         };
@@ -222,7 +225,10 @@ namespace Ludots.AgentBridge.Tools
         {
             string actionId = AgentToolContext.RequireString(args, "actionId");
             string mode = AgentToolContext.RequireString(args, "mode");
-            var handler = context.RequireService(CoreServiceKeys.InputHandler);
+            string? seatId = AgentToolContext.OptionalString(args, "seatId");
+            PlayerInputHandler handler = seatId != null
+                ? SeatRouting.ResolveSeatInputHandler(context, seatId)
+                : context.RequireService(CoreServiceKeys.InputHandler);
 
             if (!handler.HasAction(actionId))
             {
@@ -250,8 +256,9 @@ namespace Ludots.AgentBridge.Tools
             }
 
             string eventId = $"inj-{Interlocked.Increment(ref _eventCounter)}";
-            _runtime.RecordInputEvent(eventId, actionId, mode);
-            return new JsonObject
+            string? resolvedSeatId = seatId?.Trim();
+            _runtime.RecordInputEvent(eventId, actionId, mode, resolvedSeatId);
+            var result = new JsonObject
             {
                 ["actionId"] = actionId,
                 ["mode"] = mode,
@@ -261,6 +268,13 @@ namespace Ludots.AgentBridge.Tools
                 ["injectionHeld"] = handler.IsInjectionActive(actionId),
                 ["note"] = "Injection applies at the next InputCollection phase; injectionHeld is the post-inject handler state.",
             };
+
+            if (resolvedSeatId != null)
+            {
+                result["seatId"] = resolvedSeatId;
+            }
+
+            return result;
         }
 
         private static Vector3 ReadVector(JsonObject? value)
