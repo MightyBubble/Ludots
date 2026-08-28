@@ -289,7 +289,7 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                Texture2D texture = Rl.LoadTexture(fullPath);
+                Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
                 if (texture.id != 0 && texture.width > 0 && texture.height > 0)
                 {
                     return texture;
@@ -297,7 +297,7 @@ namespace Ludots.Raylib.Render
 
                 if (texture.id != 0)
                 {
-                    Rl.UnloadTexture(texture);
+                    RaylibNativeResources.UnloadTexture(texture);
                 }
 
                 failures.Append($"[{i}] raylib rejected '{uri}' ({fullPath}); ");
@@ -363,7 +363,7 @@ namespace Ludots.Raylib.Render
             {
                 if (texture.id != 0)
                 {
-                    Rl.UnloadTexture(texture);
+                    RaylibNativeResources.UnloadTexture(texture);
                 }
             }
 

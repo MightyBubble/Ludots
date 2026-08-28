@@ -297,12 +297,12 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibMaterialLibrary)} {slotName} file missing for materialId={materialAssetId} ({materialName}): uri='{uri}' fullPath='{fullPath}'.");
             }
 
-            Texture2D texture = Rl.LoadTexture(fullPath);
+            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
             if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
             {
                 if (texture.id != 0)
                 {
-                    Rl.UnloadTexture(texture);
+                    RaylibNativeResources.UnloadTexture(texture);
                 }
 
                 throw new InvalidOperationException(
@@ -333,7 +333,7 @@ namespace Ludots.Raylib.Render
         {
             if (texture.id != 0)
             {
-                Rl.UnloadTexture(texture);
+                RaylibNativeResources.UnloadTexture(texture);
             }
         }
 

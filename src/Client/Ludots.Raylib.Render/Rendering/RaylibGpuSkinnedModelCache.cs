@@ -87,16 +87,16 @@ namespace Ludots.Raylib.Render
                 // native LoadModel 是 #1050 的 AccessViolation 路径。
                 string loadablePath = RaylibModelFileLoader.PrepareNativeLoadable(fullPath);
 
-                Model model = Rl.LoadModel(loadablePath);
+                Model model = RaylibNativeResources.LoadModel(loadablePath);
                 if (model.meshCount <= 0)
                 {
-                    Rl.UnloadModel(model);
+                    RaylibNativeResources.UnloadModel(model);
                     continue;
                 }
 
                 if (model.boneCount <= 0)
                 {
-                    Rl.UnloadModel(model);
+                    RaylibNativeResources.UnloadModel(model);
                     _entries[meshAssetId] = default;
                     throw new InvalidOperationException(
                         $"{nameof(RaylibGpuSkinnedModelCache)} meshAssetId={meshAssetId} path='{fullPath}' has boneCount=0; GpuSkinnedInstance requires a skinned model.");
@@ -104,7 +104,7 @@ namespace Ludots.Raylib.Render
 
                 if (model.boneCount > MaxBones)
                 {
-                    Rl.UnloadModel(model);
+                    RaylibNativeResources.UnloadModel(model);
                     _entries[meshAssetId] = default;
                     throw new InvalidOperationException(
                         $"{nameof(RaylibGpuSkinnedModelCache)} meshAssetId={meshAssetId} boneCount={model.boneCount} exceeds MAX_BONE_NUM={MaxBones}.");
@@ -119,7 +119,7 @@ namespace Ludots.Raylib.Render
                         Rl.UnloadModelAnimations(animations, animCount);
                     }
 
-                    Rl.UnloadModel(model);
+                    RaylibNativeResources.UnloadModel(model);
                     _entries[meshAssetId] = default;
                     throw new InvalidOperationException(
                         $"{nameof(RaylibGpuSkinnedModelCache)} meshAssetId={meshAssetId} path='{fullPath}' loaded with animCount={animCount}; GpuSkinnedInstance forbids silent static fallback.");
@@ -133,7 +133,7 @@ namespace Ludots.Raylib.Render
                         int animBones = anim.boneCount;
                         int modelBones = model.boneCount;
                         Rl.UnloadModelAnimations(animations, animCount);
-                        Rl.UnloadModel(model);
+                        RaylibNativeResources.UnloadModel(model);
                         _entries[meshAssetId] = default;
                         throw new InvalidOperationException(
                             $"{nameof(RaylibGpuSkinnedModelCache)} meshAssetId={meshAssetId} path='{fullPath}' animation[{i}] failed IsModelAnimationValid (modelBones={modelBones}, animBones={animBones}).");
@@ -172,7 +172,7 @@ namespace Ludots.Raylib.Render
                     Rl.UnloadModelAnimations(entry.Animations, entry.AnimCount);
                 }
 
-                Rl.UnloadModel(entry.Model);
+                RaylibNativeResources.UnloadModel(entry.Model);
             }
 
             _entries.Clear();

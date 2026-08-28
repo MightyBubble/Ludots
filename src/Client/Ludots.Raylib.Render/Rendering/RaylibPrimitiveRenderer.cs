@@ -1663,7 +1663,7 @@ namespace Ludots.Raylib.Render
                     return true;
                 }
 
-                Rl.UnloadModel(model);
+                RaylibNativeResources.UnloadModel(model);
             }
 
             _modelCache[meshAssetId] = cached;
@@ -1788,7 +1788,7 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                var texture = Rl.LoadTexture(fullPath);
+                var texture = RaylibNativeResources.LoadTexture(fullPath);
                 if (texture.id != 0 && texture.width > 0 && texture.height > 0)
                 {
                     cached = new CachedTexture
@@ -1805,7 +1805,7 @@ namespace Ludots.Raylib.Render
                 RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load failed; uri={uri}; fullPath={fullPath}; textureId={texture.id}; size={texture.width}x{texture.height}");
 
                 if (texture.id != 0)
-                    Rl.UnloadTexture(texture);
+                    RaylibNativeResources.UnloadTexture(texture);
             }
 
             _textureCache[meshAssetId] = cached;
@@ -1884,7 +1884,7 @@ namespace Ludots.Raylib.Render
                 proceduralMesh.Colors32.AsSpan(0, colorByteCount).CopyTo(new Span<byte>(mesh.colors, colorByteCount));
             }
 
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
 
@@ -1897,7 +1897,7 @@ namespace Ludots.Raylib.Render
 
             if (cached.Mesh.vertexCount > 0)
             {
-                Rl.UnloadMesh(cached.Mesh);
+                RaylibNativeResources.UnloadMesh(cached.Mesh);
             }
 
             if (cached.SubmeshMeshes == null)
@@ -1909,7 +1909,7 @@ namespace Ludots.Raylib.Render
             {
                 if (cached.SubmeshMeshes[i].vertexCount > 0)
                 {
-                    Rl.UnloadMesh(cached.SubmeshMeshes[i]);
+                    RaylibNativeResources.UnloadMesh(cached.SubmeshMeshes[i]);
                 }
             }
         }
@@ -1921,7 +1921,7 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
-            _proceduralMeshMaterial = Rl.LoadMaterialDefault();
+            _proceduralMeshMaterial = RaylibNativeResources.LoadMaterialDefault();
             _proceduralMeshMaterialLoaded = true;
         }
 
@@ -2792,37 +2792,37 @@ namespace Ludots.Raylib.Render
         {
             if (_initialized) return;
 
-            _cubeMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            _cubeMesh = RaylibNativeResources.GenMeshCube(1f, 1f, 1f);
             if (_cubeMesh.colors == null)
             {
                 int bytes = _cubeMesh.vertexCount * 4;
                 _cubeMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _cubeMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _cubeMesh, false);
+            RaylibNativeResources.UploadMesh(ref _cubeMesh, false);
 
-            _sphereMesh = Rl.GenMeshSphere(0.5f, 8, 8);
+            _sphereMesh = RaylibNativeResources.GenMeshSphere(0.5f, 8, 8);
             if (_sphereMesh.colors == null)
             {
                 int bytes = _sphereMesh.vertexCount * 4;
                 _sphereMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _sphereMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _sphereMesh, false);
+            RaylibNativeResources.UploadMesh(ref _sphereMesh, false);
 
-            _vfxBillboardMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            _vfxBillboardMesh = RaylibNativeResources.GenMeshCube(1f, 1f, 1f);
             if (_vfxBillboardMesh.colors == null)
             {
                 int bytes = _vfxBillboardMesh.vertexCount * 4;
                 _vfxBillboardMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _vfxBillboardMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _vfxBillboardMesh, false);
+            RaylibNativeResources.UploadMesh(ref _vfxBillboardMesh, false);
 
             _billboardShadowMesh = CreateBillboardShadowMesh();
 
             RaylibEffectShader defaultVfx = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
-            _vfxMaterial = Rl.LoadMaterialDefault();
+            _vfxMaterial = RaylibNativeResources.LoadMaterialDefault();
             _vfxMaterial.shader = defaultVfx.Shader;
             _vfxMaterialLoaded = true;
 
@@ -2831,7 +2831,7 @@ namespace Ludots.Raylib.Render
             _shaderCatalog.RegisterInstancing(RaylibShaderKeys.Lit, _instancingLane);
             _shader = _instancingLane.Shader;
 
-            _material = Rl.LoadMaterialDefault();
+            _material = RaylibNativeResources.LoadMaterialDefault();
             _material.shader = _shader;
 
             _instancingPbrLocs = _instancingLane.PbrLocs;
@@ -2878,7 +2878,7 @@ namespace Ludots.Raylib.Render
             vertices.AsSpan().CopyTo(new Span<float>(mesh.vertices, vertices.Length));
             mesh.texcoords = (float*)Rl.MemAlloc(sizeof(float) * texcoords.Length);
             texcoords.AsSpan().CopyTo(new Span<float>(mesh.texcoords, texcoords.Length));
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
         private void EnsureFrameLightingAppliedForInstancing()
@@ -2949,7 +2949,7 @@ namespace Ludots.Raylib.Render
 
                 Model model = kvp.Value.Model;
                 _materialLibrary?.DetachOwnedMaps(model);
-                Rl.UnloadModel(model);
+                RaylibNativeResources.UnloadModel(model);
             }
             _modelCache.Clear();
 
@@ -2963,7 +2963,7 @@ namespace Ludots.Raylib.Render
             foreach (var kvp in _textureCache)
             {
                 if (kvp.Value.Loaded)
-                    Rl.UnloadTexture(kvp.Value.Texture);
+                    RaylibNativeResources.UnloadTexture(kvp.Value.Texture);
             }
             _textureCache.Clear();
 
@@ -2971,14 +2971,14 @@ namespace Ludots.Raylib.Render
             {
                 _materialLibrary?.DetachOwnedMaps(ref _proceduralMeshMaterial);
                 RaylibShadowSampling.ClearTexture(ref _proceduralMeshMaterial);
-                Rl.UnloadMaterial(_proceduralMeshMaterial);
+                RaylibNativeResources.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
             }
 
             if (_vfxMaterialLoaded)
             {
                 _vfxMaterial.shader = default;
-                Rl.UnloadMaterial(_vfxMaterial);
+                RaylibNativeResources.UnloadMaterial(_vfxMaterial);
                 _vfxMaterialLoaded = false;
             }
 
@@ -2998,17 +2998,17 @@ namespace Ludots.Raylib.Render
 
             if (!_initialized) return;
 
-            if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
-            if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
-            if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
-            if (_billboardShadowMesh.vertexCount > 0) Rl.UnloadMesh(_billboardShadowMesh);
+            if (_cubeMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_cubeMesh);
+            if (_sphereMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_sphereMesh);
+            if (_vfxBillboardMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_vfxBillboardMesh);
+            if (_billboardShadowMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_billboardShadowMesh);
             _material.shader = default;
             // UnloadMaterial 会删除材质槽上的全部纹理；IBL 纹理归 RaylibSkyIbl 所有，先清槽防双删。
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
             RaylibShadowSampling.ClearTexture(ref _material);
-            Rl.UnloadMaterial(_material);
-            Rl.UnloadShader(_shader);
+            RaylibNativeResources.UnloadMaterial(_material);
+            RaylibNativeResources.UnloadShader(_shader);
             _initialized = false;
         }
 
