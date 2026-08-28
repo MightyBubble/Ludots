@@ -440,7 +440,102 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_DoNotActivateSeatControlSchemes()
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_ActivatePerSeatChannels()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            ClientLocalSeatInputRuntime seatInput = CreateSeatInputRuntime(globals, schemes);
+            globals[CoreServiceKeys.ClientLocalSeatInputRuntime.Name] = seatInput;
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.seat.declared"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.first"),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
+                "multi-seat activation is per seat; the global runtime keeps its own active scheme untouched.");
+            Assert.That(seatInput.ChannelCount, Is.EqualTo(2));
+            Assert.That(seatInput.TryGetChannel("seat.0", out ClientLocalSeatInputChannel channelZero), Is.True);
+            Assert.That(seatInput.TryGetChannel("seat.1", out ClientLocalSeatInputChannel channelOne), Is.True);
+            Assert.That(channelZero.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.declared")),
+                "seat.0's declared scheme activates on its own channel.");
+            Assert.That(channelOne.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
+                "seat.1's declared scheme activates on its own channel.");
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsSameScheme_BothChannelsActivateWithoutConflict()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var seatInput = CreateSeatInputRuntime(globals, schemes);
+            globals[CoreServiceKeys.ClientLocalSeatInputRuntime.Name] = seatInput;
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.seat.declared"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.declared"),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            int declaredId = schemes.SchemeIdRegistry.GetId("scheme.seat.declared");
+            Assert.That(seatInput.TryGetChannel("seat.0", out ClientLocalSeatInputChannel channelZero), Is.True);
+            Assert.That(seatInput.TryGetChannel("seat.1", out ClientLocalSeatInputChannel channelOne), Is.True);
+            Assert.That(channelZero.ActiveSchemeId, Is.EqualTo(declaredId));
+            Assert.That(channelOne.ActiveSchemeId, Is.EqualTo(declaredId));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_FailsFastWhenSchemeNotInstalled()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            globals[CoreServiceKeys.ClientLocalSeatInputRuntime.Name] = CreateSeatInputRuntime(globals, schemes);
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.seat.declared"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.missing"),
+                });
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ParticipantBindingResolver.PublishFocused(globals, result));
+
+            Assert.That(error!.Message, Does.Contain("seat.1"));
+            Assert.That(error.Message, Does.Contain("scheme.seat.missing"));
+            Assert.That(error.Message, Does.Contain("not installed"));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_FailsFastWhenSeatInputRuntimeNotRegistered()
         {
             using var world = World.Create();
             Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
@@ -459,10 +554,10 @@ namespace Ludots.Tests.GAS
                     new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.first"),
                 });
 
-            ParticipantBindingResolver.PublishFocused(globals, result);
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ParticipantBindingResolver.PublishFocused(globals, result));
 
-            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
-                "multi-seat scheme routing is P3; publishing multiple seats must not activate any declared scheme.");
+            Assert.That(error!.Message, Does.Contain("ClientLocalSeatInputRuntime"));
         }
 
         [Test]
@@ -607,6 +702,16 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
                 [CoreServiceKeys.ControlSchemeRuntime.Name] = schemes,
             };
+        }
+
+        private static ClientLocalSeatInputRuntime CreateSeatInputRuntime(
+            Dictionary<string, object> globals,
+            ControlSchemeRuntime schemes)
+        {
+            return new ClientLocalSeatInputRuntime(
+                globals,
+                schemes,
+                new Ludots.Core.Input.Config.InputConfigRoot());
         }
 
         private static ControlSchemeRuntime CreateInstalledControlSchemeRuntime(

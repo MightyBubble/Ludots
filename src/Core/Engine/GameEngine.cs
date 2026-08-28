@@ -1605,6 +1605,15 @@ namespace Ludots.Core.Engine
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
+            // Per-seat input interpretation channels: zero channels for sole-seat clients (their
+            // stack is the global handler/snapshot chain above); one channel per seat on
+            // multi-seat tables, with scheme activation mirroring the shared catalog above.
+            var clientLocalSeatInputRuntime = new Client.ClientLocalSeatInputRuntime(
+                GlobalContext,
+                controlSchemeRuntime,
+                inputConfigRoot,
+                MergedConfig.StartupInputContexts);
+
             // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
             // so catalog tag prefixes compile against the loaded definitions.
             var abilityAggregationProfileIds = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1719,6 +1728,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ClientLocalSeatRegistry, clientLocalSeatRegistry);
             SetService(CoreServiceKeys.LogicViewRegistry, logicViewRegistry);
             SetService(CoreServiceKeys.ClientLocalSeatDeviceBinding, new Client.ClientLocalSeatDeviceBinding(clientLocalSeatRegistry));
+            SetService(CoreServiceKeys.ClientLocalSeatInputRuntime, clientLocalSeatInputRuntime);
             SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
             SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
@@ -1960,7 +1970,7 @@ namespace Ludots.Core.Engine
 
             // Phase 1: InputCollection
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
-            RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
+            RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,

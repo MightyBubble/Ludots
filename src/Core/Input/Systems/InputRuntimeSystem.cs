@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Attributes;
@@ -62,6 +63,12 @@ namespace Ludots.Core.Input.Systems
             if (_pointerButtons != null)
             {
                 CapturePointerButtons(input);
+            }
+
+            if (_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatInputRuntime.Name, out var seatInputObj) &&
+                seatInputObj is ClientLocalSeatInputRuntime seatInput)
+            {
+                seatInput.UpdateVisualFrame();
             }
         }
 
