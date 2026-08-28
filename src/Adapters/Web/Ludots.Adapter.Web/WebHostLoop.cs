@@ -39,7 +39,12 @@ namespace Ludots.Adapter.Web
             var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
             engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
             engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
-            engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
+            engine.SetService(
+                CoreServiceKeys.ScreenRayProvider,
+                (IScreenRayProvider)new Ludots.Core.Client.PresentBindingScreenRayProvider(
+                    engine,
+                    screenRayProvider,
+                    () => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f));
 
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
             screenProjector.BindPresenter(cameraPresenter);
@@ -143,19 +148,25 @@ namespace Ludots.Adapter.Web
                             viewController.Fov,
                             viewController,
                             cullingSystem);
+                        Ludots.Core.Client.PresentBindingPresentation.TryArmPresentBindingCullingPasses(
+                            engine,
+                            viewController.Fov,
+                            viewController,
+                            cullingSystem);
                         engine.Tick(dt);
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncPresentPipelines(
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TryDrivePresentBindings(
                                 engine,
                                 cameraPresenter,
                                 screenProjector,
                                 screenRayProvider,
                                 cameraAlpha,
                                 viewController.Fov,
-                                renderCameraDebug,
-                                viewController,
-                                cullingSystem))
+                                drawBinding: null,
+                                cameraDebug: renderCameraDebug,
+                                hostView: viewController,
+                                culling: cullingSystem))
                         {
                             if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out Ludots.Core.Client.ClientLocalSeatRegistry? seats) &&
                                 seats != null &&

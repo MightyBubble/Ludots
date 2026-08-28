@@ -68,7 +68,7 @@ public sealed class RaylibNavMeshPresentationContractTests
         Assert.That(rendererSource, Does.Not.Contain("RuntimeIncrementalNavMeshRebuildQueue"));
         Assert.That(rendererSource, Does.Not.Contain("NavTileStore"));
 
-        int terrainDraw = hostSource.IndexOf("terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), activeCamera)", StringComparison.Ordinal);
+        int terrainDraw = hostSource.IndexOf("terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), viewportCamera)", StringComparison.Ordinal);
         int navMeshDraw = hostSource.IndexOf("navMeshPresentationRenderer.Draw(navMeshPresentationBuffer)", StringComparison.Ordinal);
         int entityDraw = hostSource.IndexOf("primitiveRenderer.Draw", navMeshDraw, StringComparison.Ordinal);
         Assert.That(terrainDraw, Is.GreaterThanOrEqualTo(0));
