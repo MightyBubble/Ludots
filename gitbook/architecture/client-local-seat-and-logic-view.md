@@ -94,7 +94,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 
 **控制方案激活链（P2.5 收口）**：
 
-- 唯一 seat 声明的 `controlSchemeId` 是本次进图的激活真相：`PublishLocalSeats` 末尾通过全局 `ControlSchemeRuntime.TrySwitch` 激活，优先于偏好存储的旧选择
+- 唯一 seat 声明的 `controlSchemeId` 是本次进图的激活真相：`PublishLocalSeats` 末尾通过全局 `ControlSchemeRuntime.TrySwitchRuntimeOnly` 激活，优先于偏好存储的旧选择。该激活是**运行时行为，不改写偏好存储**（`ClientCastPreferenceStore`）——进图真相是临时的，用户全局偏好不被地图声明覆盖，之后进无声明的地图仍按用户原偏好激活；偏好存储的显式写入只属于真正的用户切换路径（`TrySwitch`）
 - seat 未声明 `controlSchemeId`：维持既有激活链（偏好存储 → 首个 allowed），`TrySwitch` 热切换照常写偏好存储
 - 声明了但 scheme 未安装、或被 mod allowed-set 拒绝：map load **fail-fast**，不静默回退到初始 scheme
 - 多 seat 的 per-seat scheme 路由是 P3：多座位发布时不激活任何声明（今日多座位本就止步于 present 管线之前）

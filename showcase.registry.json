@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "exemptions": [
     {
+      "kind": "binding",
+      "value": "save_panel",
+      "reason": "SavePanelMod 是通用存档 UI 组件 mod，非独立 showcase 条目；演示由 save_load showcase 承担"
+    },
+    {
       "kind": "csproj",
       "value": "mods/showcases/shared/RoadNetworkShowcaseData",
       "reason": "road_network 共享数据库，非独立 showcase 条目"
@@ -48,29 +53,6 @@
     }
   ],
   "showcases": [
-    {
-      "id": "persistence_online_replay",
-      "path": "mods/showcases/persistence_online_replay/PersistenceOnlineReplayShowcaseMod",
-      "projectPath": "PersistenceOnlineReplayShowcaseMod.csproj",
-      "title": "Persistence, Replay and Online Recovery",
-      "summary": "A playable RTS scenario showing checkpoint restore, deterministic replay and explicit reconnect rejection.",
-      "tier": "T2",
-      "category": "demo",
-      "binding": "persistence_online_replay_showcase",
-      "preset": "persistence_online_replay_showcase_raylib",
-      "docsPath": "gitbook/architecture/persistence-online-replay-showcase-design.md",
-      "readmePath": null,
-      "acceptanceTest": "gitbook/acceptance/persistence-online-replay.feature",
-      "artifactDir": "artifacts/acceptance/persistence-online-replay",
-      "screenshot": "artifacts/acceptance/persistence-online-replay/persistence-first-viewport.png",
-      "status": "active",
-      "tags": [
-        "persistence",
-        "replay",
-        "online-recovery",
-        "showcase"
-      ]
-    },
     {
       "id": "ai_demo",
       "path": "mods/showcases/ai_demo/AIDemoMod",
@@ -5078,6 +5060,90 @@
       "notes": "波次 raider 不再预置于地图；RegionEntered 触发 wave1，EntityAliveCountChanged(team 2, cross_below 0) 触发 wave2，累计 kill_threshold=5 后由 SpawnTemplate 图 op（op 447）在 boss_camp 锚点生成 Boss；阶段链与胜利面板全数据驱动。"
     },
     {
+      "id": "field_jing_yang_transit",
+      "path": "mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod",
+      "title": "荆扬过境",
+      "summary": "西荆东扬两色地；英雄从扬走入荆，字幕/面板报 FieldRegion 进出；区内名单同拍对调。层/区域 key 全是 mod 明文，引擎无业务词。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-region",
+        "showcase"
+      ],
+      "binding": "field_jing_yang_transit",
+      "preset": "field_jing_yang_transit_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "FieldJingYangTransitAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_layer_table",
+      "path": "mods/showcases/field_layer_table/FieldLayerTableMod",
+      "title": "Field Layer Table",
+      "summary": "ownership.table with r1/r2/r3 schema v2 rects; MapLoaded writes layer/region/nonDefault counts to panel. Placeholder English keys only.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-layer",
+        "showcase"
+      ],
+      "binding": "field_layer_table",
+      "preset": "field_layer_table_raylib",
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldLayerTableAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_editor_paint",
+      "path": "mods/showcases/field_editor_paint/FieldEditorPaintMod",
+      "title": "Field Editor Paint",
+      "summary": "field-editor CLI shape assets (schema v2 paint.a/paint.b); FieldRegionEntered on teleport between painted cells.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-editor",
+        "showcase"
+      ],
+      "binding": "field_editor_paint",
+      "preset": "field_editor_paint_raylib",
+      "docsPath": "gitbook/architecture/field-editor.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldEditorPaintAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "field_hierarchy_query",
+      "path": "mods/showcases/field_hierarchy_query/FieldHierarchyQueryMod",
+      "title": "Field Hierarchy Query",
+      "summary": "ownership.zones + Fields/hierarchies.json; resolve zone.a1 → group.mid → group.top chain after map load.",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "mapfield",
+        "field-hierarchy",
+        "showcase"
+      ],
+      "binding": "field_hierarchy_query",
+      "preset": "field_hierarchy_query_raylib",
+      "docsPath": "gitbook/architecture/mapfield-howto.md",
+      "readmePath": null,
+      "acceptanceTest": "FieldHierarchyQueryAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "night_raid_showcase",
       "path": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
       "projectPath": "NightRaidShowcaseMod.csproj",
@@ -8426,6 +8492,63 @@
       "video": "artifacts/evidence/capability_standard_graph_op_StartDialogue/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "save_load",
+      "title": "Save / Load — the world comes back",
+      "summary": "Mutate the world, save to a real disk slot through the generic save panel, keep playing, restore: state returns to the save point, and the slot survives a cold restart. Includes excluded-entity and corrupted-slot fault demos.",
+      "path": "mods/showcases/save_load/SaveLoadShowcaseMod",
+      "projectPath": "SaveLoadShowcaseMod.csproj",
+      "binding": "save_load_showcase",
+      "preset": "save_load_showcase_raylib",
+      "docsPath": "gitbook/architecture/save-load-showcase-design.md",
+      "acceptanceTest": "gitbook/acceptance/save-load.feature",
+      "artifactDir": "artifacts/acceptance/save-load",
+      "tags": [
+        "save",
+        "persistence"
+      ],
+      "tier": "T2",
+      "category": "demo",
+      "status": "active"
+    },
+    {
+      "id": "deterministic_replay",
+      "title": "Deterministic Replay — same inputs, same world",
+      "summary": "Record authoritative input frames while commanding the hero, replay them from the recorded checkpoint, and watch the world re-evolve identically; live input during playback is isolated and rejected.",
+      "path": "mods/showcases/deterministic_replay/DeterministicReplayShowcaseMod",
+      "projectPath": "DeterministicReplayShowcaseMod.csproj",
+      "binding": "deterministic_replay_showcase",
+      "preset": "deterministic_replay_showcase_raylib",
+      "docsPath": "gitbook/architecture/deterministic-replay-showcase-design.md",
+      "acceptanceTest": "gitbook/acceptance/deterministic-replay.feature",
+      "artifactDir": "artifacts/acceptance/deterministic-replay",
+      "tags": [
+        "replay",
+        "determinism"
+      ],
+      "tier": "T2",
+      "category": "demo",
+      "status": "active"
+    },
+    {
+      "id": "reconnect_recovery",
+      "title": "Reconnect Recovery — resume from the authority",
+      "summary": "Disconnecting is not a reset: the authority keeps ticking while the client freezes; reconnecting resumes from the authoritative checkpoint. Missing, duplicate and stale frame injections are rejected with readable errors. Single-machine simulation, honestly labeled.",
+      "path": "mods/showcases/reconnect_recovery/ReconnectRecoveryShowcaseMod",
+      "projectPath": "ReconnectRecoveryShowcaseMod.csproj",
+      "binding": "reconnect_recovery_showcase",
+      "preset": "reconnect_recovery_showcase_raylib",
+      "docsPath": "gitbook/architecture/reconnect-recovery-showcase-design.md",
+      "acceptanceTest": "gitbook/acceptance/reconnect-recovery.feature",
+      "artifactDir": "artifacts/acceptance/reconnect-recovery",
+      "tags": [
+        "reconnect",
+        "recovery"
+      ],
+      "tier": "T2",
+      "category": "demo",
+      "status": "active"
     }
   ]
 }

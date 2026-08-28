@@ -44,6 +44,24 @@ namespace Ludots.Core.Map
         /// </summary>
         public MapVariableStore? Variables { get; private set; }
 
+        /// <summary>
+        /// Field layers hosted by this map (catalog ∩ <see cref="MapConfig.Fields"/>),
+        /// created by the engine at map load; null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Fields.FieldSessionStore? Fields { get; internal set; }
+
+        /// <summary>
+        /// (layer, regionId) → materialized region entity, filled at map load;
+        /// null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Gameplay.FieldRegions.RegionEntityIndex? RegionIndex { get; internal set; }
+
+        /// <summary>
+        /// Hierarchy group entities by key, wired at map load from Fields/hierarchies.json;
+        /// null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Gameplay.FieldRegions.RegionHierarchyRuntime? RegionGroups { get; internal set; }
+
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();
 
@@ -163,6 +181,9 @@ namespace Ludots.Core.Map
             }
             _boards.Clear();
             Variables = null;
+            Fields = null;
+            RegionIndex = null;
+            RegionGroups = null;
 
             State = MapSessionState.Disposed;
         }
@@ -177,6 +198,9 @@ namespace Ludots.Core.Map
                 }
                 _boards.Clear();
                 Variables = null;
+                Fields = null;
+                RegionIndex = null;
+                RegionGroups = null;
                 State = MapSessionState.Disposed;
             }
         }

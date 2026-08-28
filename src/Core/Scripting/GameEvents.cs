@@ -103,11 +103,25 @@ namespace Ludots.Core.Scripting
         public static readonly EventKey RegionExited = new EventKey("RegionExited");
 
         /// <summary>
+        /// <summary>
         /// Map-scoped: fired whenever any declared map variable's value changes
         /// (int and float alike). Payload: VarName plus the old/new pair matching
         /// the variable's type (VarValueInt/OldValueInt or VarValueFloat/OldValueFloat).
         /// </summary>
         public static readonly EventKey MapVariableChanged = new EventKey("MapVariableChanged");
+
+        /// <summary>
+        /// Map-scoped: fired by the field membership system when a tracked entity's
+        /// discrete-id field ownership changes to a new region. Payload: SourceEntity,
+        /// RegionId, FieldLayer. Independent from the circle/rect trigger line above.
+        /// </summary>
+        public static readonly EventKey FieldRegionEntered = new EventKey("FieldRegionEntered");
+
+        /// <summary>
+        /// Map-scoped: fired by the field membership system when a tracked entity leaves
+        /// its discrete-id field region. Payload: SourceEntity, RegionId, FieldLayer.
+        /// </summary>
+        public static readonly EventKey FieldRegionExited = new EventKey("FieldRegionExited");
 
         public static bool IsMapScoped(string eventName)
         {
@@ -122,7 +136,9 @@ namespace Ludots.Core.Scripting
                 eventName == InputActionFired.Value ||
                 eventName == RegionEntered.Value ||
                 eventName == RegionExited.Value ||
-                eventName == MapVariableChanged.Value;
+                eventName == MapVariableChanged.Value ||
+                eventName == FieldRegionEntered.Value ||
+                eventName == FieldRegionExited.Value;
         }
     }
 }

@@ -1,0 +1,94 @@
+{
+  "Id": "field_layer_table",
+  "Tags": [
+    "showcase",
+    "mapfield",
+    "field-layer"
+  ],
+  "HeartbeatIntervalTicks": 6,
+  "Fields": {
+    "Layers": [
+      "ownership.table"
+    ]
+  },
+  "Variables": [
+    {
+      "name": "stage",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "layer_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "region_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "non_default_count",
+      "type": "int",
+      "initial": 0
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.FieldLayerTable.Flow",
+      "scopeInstanceId": "table_hero"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "table_hero",
+      "Template": "field_table_hero"
+    },
+    {
+      "InstanceId": "marker_r1",
+      "Template": "field_table_marker_r1"
+    },
+    {
+      "InstanceId": "marker_r2",
+      "Template": "field_table_marker_r2"
+    },
+    {
+      "InstanceId": "marker_r3",
+      "Template": "field_table_marker_r3"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "table_hero"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "table_hero"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": {
+    "TargetXCm": 400,
+    "TargetYCm": 50,
+    "Yaw": 45,
+    "Pitch": 52,
+    "DistanceCm": 2800,
+    "FovYDeg": 50
+  }
+}

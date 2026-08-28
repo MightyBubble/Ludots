@@ -2,10 +2,31 @@
   "schemaVersion": 1,
   "presets": [
     {
-      "id": "persistence_online_replay_showcase_raylib",
-      "name": "Persistence, Replay and Online Recovery Raylib",
+      "id": "save_load_showcase_raylib",
+      "name": "Save Load Raylib",
       "selectors": [
-        "$persistence_online_replay_showcase",
+        "$save_load_showcase",
+        "$save_panel",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "deterministic_replay_showcase_raylib",
+      "name": "Deterministic Replay Raylib",
+      "selectors": [
+        "$deterministic_replay_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "reconnect_recovery_showcase_raylib",
+      "name": "Reconnect Recovery Raylib",
+      "selectors": [
+        "$reconnect_recovery_showcase",
         "$agent_bridge"
       ],
       "adapterId": "raylib",
@@ -545,6 +566,42 @@
         "$map_trigger_night_raid",
         "$night_raid_showcase",
         "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_jing_yang_transit_raylib",
+      "name": "Field Jing Yang Transit Raylib",
+      "selectors": [
+        "$field_jing_yang_transit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_layer_table_raylib",
+      "name": "Field Layer Table Raylib",
+      "selectors": [
+        "$field_layer_table"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_editor_paint_raylib",
+      "name": "Field Editor Paint Raylib",
+      "selectors": [
+        "$field_editor_paint"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_hierarchy_query_raylib",
+      "name": "Field Hierarchy Query Raylib",
+      "selectors": [
+        "$field_hierarchy_query"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

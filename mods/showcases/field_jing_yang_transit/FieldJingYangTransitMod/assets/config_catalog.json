@@ -1,0 +1,52 @@
+[
+  {
+    "Path": "Entities/templates.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/graphs.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/abilities.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/effects.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/func_lib.json",
+    "Policy": "ArrayById",
+    "IdField": "name"
+  },
+  {
+    "Path": "Panels/panel_templates.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/mesh_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/presenters.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/host_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Input/trigger_actions.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  }
+]

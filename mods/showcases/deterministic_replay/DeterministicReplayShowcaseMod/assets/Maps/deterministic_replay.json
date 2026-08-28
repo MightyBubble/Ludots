@@ -1,0 +1,60 @@
+{
+  "Id": "deterministic_replay",
+  "Tags": [
+    "showcase",
+    "replay",
+    "determinism"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 16,
+      "NavigationEnabled": true
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "InstanceId": "replay_hero",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6400,
+            "Y": 6400
+          }
+        },
+        "Name": {
+          "Value": "Save Hero"
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5900,
+            "Y": 6800
+          }
+        },
+        "Name": {
+          "Value": "Marker A"
+        }
+      }
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 6400,
+    "TargetYCm": 6400,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 5200,
+    "FovYDeg": 60
+  }
+}
