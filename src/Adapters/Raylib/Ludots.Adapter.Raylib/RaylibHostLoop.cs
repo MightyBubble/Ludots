@@ -360,7 +360,7 @@ namespace Ludots.Adapter.Raylib
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
                 engine.LoadStartupMap();
-                Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+                Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
                     engine,
                     screenProjector,
                     screenRayProvider,
@@ -496,7 +496,7 @@ namespace Ludots.Adapter.Raylib
                         engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
-                        Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+                        Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
                             engine,
                             screenProjector,
                             screenRayProvider,
@@ -519,7 +519,7 @@ namespace Ludots.Adapter.Raylib
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
                         {
-                            var authorityCamera = Ludots.Core.Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine);
+                            var authorityCamera = Ludots.Core.Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine);
                             CameraState cameraState = authorityCamera.State;
                             authorityCamera.ApplyPose(new CameraPoseRequest
                             {
@@ -533,7 +533,7 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncSolePresentPipeline(
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncPresentPipelines(
                                 engine,
                                 cameraPresenter,
                                 screenProjector,
@@ -552,7 +552,7 @@ namespace Ludots.Adapter.Raylib
                                     "ClientLocalSeatRegistry is published but PresentBinding pipeline failed to sync.");
                             }
 
-                            cameraPresenter.Update(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), cameraAlpha, renderCameraDebug);
+                            cameraPresenter.Update(ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine), cameraAlpha, renderCameraDebug);
                         }
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(

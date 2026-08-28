@@ -92,7 +92,7 @@ namespace Ludots.Adapter.Web
             }
 
             engine.LoadStartupMap();
-            Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+            Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
                 engine,
                 screenProjector,
                 screenRayProvider,
@@ -136,7 +136,7 @@ namespace Ludots.Adapter.Web
                     {
                         bool uiCaptured = setup.UiBridge.Update(dt);
                         engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
-                        Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+                        Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
                             engine,
                             screenProjector,
                             screenRayProvider,
@@ -146,7 +146,7 @@ namespace Ludots.Adapter.Web
                         engine.Tick(dt);
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncSolePresentPipeline(
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncPresentPipelines(
                                 engine,
                                 cameraPresenter,
                                 screenProjector,
@@ -166,7 +166,7 @@ namespace Ludots.Adapter.Web
                             }
 
                             cameraPresenter.Update(
-                                ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
+                                ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine),
                                 cameraAlpha,
                                 renderCameraDebug);
                         }

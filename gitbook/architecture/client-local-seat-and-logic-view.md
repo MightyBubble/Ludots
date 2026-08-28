@@ -51,6 +51,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 |---|---|---|
 | 地图身份 | `MapConfig.Entities` + `Players` / `Teams` | 世界上有哪些 Participant（先实体，再绑定身份） |
 | 冷启动默认 | `GameConfig.startupLocalSeats[]` | 默认怎么坐；只注入 launch，不是运行时真相 |
+| 冷启动默认 | `GameConfig.startupPresentLayout` | 座位表 PresentBinding 布局声明：`fullscreen`（默认）/ `horizontal-equal-split` / `vertical-equal-split`，走 ConfigPipeline 正式管线；未知布局名进图 fail-fast 点名；水平 / 垂直对半切换是数据改动，无代码分支 |
 | 本次进图 | `MapLaunchContext.LocalSeats[]` | **进图座位表 SSOT**（来自 game 默认 / 命令 / 大厅 / 存档） |
 | 运行时 | `ClientLocalSeatRegistry` | 开局后可变的占有 / PresentBinding |
 
@@ -98,6 +99,13 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 - seat 未声明 `controlSchemeId`：维持既有激活链（偏好存储 → 首个 allowed），`TrySwitch` 热切换照常写偏好存储
 - 声明了但 scheme 未安装、或被 mod allowed-set 拒绝：map load **fail-fast**，不静默回退到初始 scheme
 - 多 seat 的 per-seat scheme 路由是 P3：多座位发布时不激活任何声明（今日多座位本就止步于 present 管线之前）
+
+**多 PresentBinding 呈现管线（P3 第一切片，#1058）**：
+
+- `PresentBindingPresentation` 撤销「恰好一个 ClientLocalSeat」抛错：呈现管线按 binding 各自 rebind projector / ray / culling（`TryRebindPresentBindingPipeline`），**禁止**把多个 binding 合成「唯一全局可见集」当真相
+- 宿主入口 `TrySyncPresentPipelines` 逐 binding 同步呈现 metrics（binding 局部分辨率 = 宿主表面 × rect，窗口缩放跟随），随后把宿主持有的单实例管线 rebind 到座位序首个 binding——多视口绘制、per-binding culling 多路复用是后续切片
+- `ResolveAuthorityCamera` 多 binding 时仍抛错（sole 合同）；单视口消费方（minimap / 调试面板 / 宿主兜底）改走 `ResolveFirstPresentBindingCamera`（座位序首个 binding，无 binding 时回落既有链）或 `CopyPresentBindings` per-binding 枚举
+- 分屏布局数据声明化：`PublishLocalSeats` 按 `GameConfig.startupPresentLayout` 用 `PresentBinding.FromDeclaredLayout` 生成各座位 rect（见 3.1），布局只有数据一条路，无旁路加载器
 
 ### 3.4 LogicView（纯逻辑视觉）
 
@@ -195,9 +203,11 @@ Feature: 本机座位与逻辑视觉
 
   Scenario: 双人分屏矩形可声明
     Given 两 Seat 各有 PresentBinding
-    When 用水平对半分屏布局写入各自 rect
+    When game.json 声明 startupPresentLayout 为水平或垂直对半
     Then 两个 PresentBinding 的矩形不重叠且并集覆盖全屏
+    And 各自 binding 局部分辨率等于宿主表面乘以各自 rect
     And 各自镜头权威仍来自绑定的 LogicView
+    And 切换水平 / 垂直对半只改数据声明，无代码分支
 
   Scenario: 座位声明的控制方案在发布时激活
     Given 唯一 seat 的 LocalSeats 项声明 controlSchemeId 且该 scheme 已安装并被 allowed-set 允许
@@ -225,4 +235,4 @@ Feature: 本机座位与逻辑视觉
 - P1 SeatRegistry + Possession + 删除全局 LocalPlayer* — #898
 - P2 LogicView 多实例 + PresentBinding 呈现/拾取 — #899（Sole PresentBinding → Presenter / ScreenRay / ScreenProjector / 呈现剔除；LogicView 自有相机权威；已删除 `GameSession.Camera` 会话单例；无座图可用 `logicview.client.present`）
 - P2.5 多分屏基建底座 — PresentBinding.rect 布局工厂 + `CopyPresentBindings` / per-seat 解析；Sole 消费路径仍是今日默认。已收口：存档 `launchContext.localSeats[]` round-trip 直接测试（mapSessions 存档域）+ sole seat `controlSchemeId` 激活链（3.3）
-- P3 分屏布局产品化、per-seat scheme 路由与 UI per-seat owner（同模型，另开子单）
+- P3 分屏布局产品化、per-seat scheme 路由与 UI per-seat owner — #1058。第一切片已落：多 PresentBinding 呈现管线（per-binding rebind / metrics 同步，撤销 sole 抛错，`ResolveFirstPresentBindingCamera` 单视口回落）+ 分屏布局数据声明化（`startupPresentLayout`，水平 / 垂直对半纯数据切换）+ Raylib / Web / headless 宿主 loop 对齐。后续切片：Raylib / Web 多视口绘制与 per-binding culling 多路复用、per-seat 输入路由与 scheme 激活、UI per-seat owner、共享面板三轴模型
