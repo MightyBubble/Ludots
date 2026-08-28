@@ -8488,10 +8488,10 @@
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_StartDialogue",
-      "screenshot": "artifacts/evidence/capability_standard_graph_op_StartDialogue/poster.png",
-      "video": "artifacts/evidence/capability_standard_graph_op_StartDialogue/play.mp4",
+      "screenshot": null,
+      "video": null,
       "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+      "notes": "Per-op player gallery; wiki under graph-node-op-wiki. poster/play.mp4 真机走查证据待补录（Git LFS）。"
     },
     {
       "id": "save_load",

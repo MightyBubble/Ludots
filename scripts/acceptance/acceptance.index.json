@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 46,
+    "runnable": 48,
     "testOnly": 0,
-    "total": 46
+    "total": 48
   },
   "runnable": [
     {
@@ -89,6 +89,14 @@
       "binding": "capability_standard_physics2d_stress",
       "testFilter": "CapabilityStandardPhysics2DStressShowcaseAcceptanceTests",
       "artifactDir": "artifacts/showcases/capability-standard-physics2d-stress",
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_sound_showcase",
+      "preset": "capability_standard_sound_showcase_raylib",
+      "binding": "capability_standard_sound_showcase",
+      "testFilter": "SoundShowcaseAcceptanceTests",
+      "artifactDir": null,
       "hasScreenshotEvidence": false
     },
     {
@@ -292,38 +300,6 @@
       "hasScreenshotEvidence": false
     },
     {
-      "id": "field_jing_yang_transit",
-      "preset": "field_jing_yang_transit_raylib",
-      "binding": "field_jing_yang_transit",
-      "testFilter": "FieldJingYangTransitAcceptanceTests",
-      "artifactDir": null,
-      "hasScreenshotEvidence": false
-    },
-    {
-      "id": "field_layer_table",
-      "preset": "field_layer_table_raylib",
-      "binding": "field_layer_table",
-      "testFilter": "FieldLayerTableAcceptanceTests",
-      "artifactDir": null,
-      "hasScreenshotEvidence": false
-    },
-    {
-      "id": "field_editor_paint",
-      "preset": "field_editor_paint_raylib",
-      "binding": "field_editor_paint",
-      "testFilter": "FieldEditorPaintAcceptanceTests",
-      "artifactDir": null,
-      "hasScreenshotEvidence": false
-    },
-    {
-      "id": "field_hierarchy_query",
-      "preset": "field_hierarchy_query_raylib",
-      "binding": "field_hierarchy_query",
-      "testFilter": "FieldHierarchyQueryAcceptanceTests",
-      "artifactDir": null,
-      "hasScreenshotEvidence": false
-    },
-    {
       "id": "fog_of_war",
       "preset": "fog_of_war_raylib",
       "binding": "fog_of_war",
@@ -345,6 +321,14 @@
       "binding": "forge_socket",
       "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "instanced_batch_demo",
+      "preset": "instanced_batch_demo_raylib",
+      "binding": "instanced_batch_demo",
+      "testFilter": "RaylibInstancedBatchDemoIntegrationTests",
+      "artifactDir": "artifacts/acceptance/instanced-batch-demo",
       "hasScreenshotEvidence": false
     },
     {
