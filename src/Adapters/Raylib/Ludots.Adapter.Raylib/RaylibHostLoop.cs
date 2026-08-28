@@ -1051,13 +1051,6 @@ namespace Ludots.Adapter.Raylib
                             string fullScreenshotPath = screenshotSequenceEnabled
                                 ? BuildSequencedScreenshotPath(screenshotTargetPath!, screenshotSequenceIndex, screenshotFrame)
                                 : screenshotTargetPath!;
-                            string screenshotFile = Path.GetFileName(fullScreenshotPath);
-                            string screenshotWorkingFilePath = Path.Combine(Environment.CurrentDirectory, screenshotFile);
-                            string? screenshotDirectory = Path.GetDirectoryName(fullScreenshotPath);
-                            if (!string.IsNullOrWhiteSpace(screenshotDirectory))
-                            {
-                                Directory.CreateDirectory(screenshotDirectory);
-                            }
 
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
@@ -1072,15 +1065,11 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
                             long screenshotStart = Stopwatch.GetTimestamp();
-                            Rl.TakeScreenshot(screenshotFile);
-                            if (!string.Equals(screenshotWorkingFilePath, fullScreenshotPath, StringComparison.OrdinalIgnoreCase) &&
-                                File.Exists(screenshotWorkingFilePath))
-                            {
-                                File.Copy(screenshotWorkingFilePath, fullScreenshotPath, overwrite: true);
-                                File.Delete(screenshotWorkingFilePath);
-                            }
-
-                            ValidateRuntimeScreenshotEvidence(fullScreenshotPath, lastW, lastH);
+                            RaylibFramebufferCapture.WriteFramebufferPng(fullScreenshotPath);
+                            ValidateRuntimeScreenshotEvidence(
+                                fullScreenshotPath,
+                                Math.Max(1, Rl.GetRenderWidth()),
+                                Math.Max(1, Rl.GetRenderHeight()));
                             presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
 
                             if (screenshotSequenceEnabled)
