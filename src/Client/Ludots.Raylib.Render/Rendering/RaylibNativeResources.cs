@@ -13,6 +13,7 @@ namespace Ludots.Raylib.Render;
 /// 身份键：纹理/着色器/RT 用 GL 名，网格用 VAO 名，模型用 meshes 数组指针，材质用 maps 指针，声音用 buffer 指针。
 /// 身份为 0（加载失败的哨兵值：id==0 / 指针==null）不进台账，交由调用方 fail-loud；
 /// 对应卸载同样跳过，避免失败对象制造假驻留或未知卸载计数。
+/// GenMesh* 在 raylib 内部即完成上传（GL 3.3 VAO 路径下 vaoId 非零即入账；无 VAO 后端时留待 UploadMesh 补记）。
 /// </summary>
 public static unsafe class RaylibNativeResources
 {

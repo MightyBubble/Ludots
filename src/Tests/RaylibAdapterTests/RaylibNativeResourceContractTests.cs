@@ -124,31 +124,17 @@ public sealed class RaylibNativeResourceContractTests
     private static bool HasAdjacentLedgerCall(string facade, string member)
     {
         bool expectsTrack = member.StartsWith("Unload") == false;
-        List<int> anchors = new();
-        int index = facade.IndexOf("Rl." + member, StringComparison.Ordinal);
-        while (index >= 0)
+        foreach (int bodyStart in EnumerateWrapperMethodBodies(facade, member.TrimEnd('(')))
         {
-            anchors.Add(index);
-            index = facade.IndexOf("Rl." + member, index + 1, StringComparison.Ordinal);
-        }
-
-        if (member == "LoadTextureCubemap(")
-        {
-            index = facade.IndexOf("rlLoadTextureCubemap", StringComparison.Ordinal);
-            while (index >= 0)
+            string? body = ExtractMethodBody(facade, bodyStart);
+            if (body == null)
             {
-                anchors.Add(index);
-                index = facade.IndexOf("rlLoadTextureCubemap", index + 1, StringComparison.Ordinal);
+                continue;
             }
-        }
 
-        foreach (int anchor in anchors)
-        {
-            int start = System.Math.Max(0, anchor - 200);
-            string window = facade.Substring(start, System.Math.Min(1100, facade.Length - start));
             bool accounted = expectsTrack
-                ? window.Contains("TrackIfResident(") || window.Contains("RaylibNativeResourceLedger.Track(")
-                : window.Contains("UntrackIfResident(") || window.Contains("RaylibNativeResourceLedger.Untrack(");
+                ? body.Contains("TrackIfResident(") || body.Contains("RaylibNativeResourceLedger.Track(")
+                : body.Contains("UntrackIfResident(") || body.Contains("RaylibNativeResourceLedger.Untrack(");
             if (accounted)
             {
                 return true;
@@ -156,6 +142,52 @@ public sealed class RaylibNativeResourceContractTests
         }
 
         return false;
+    }
+
+    private static IEnumerable<int> EnumerateWrapperMethodBodies(string facade, string methodName)
+    {
+        int search = 0;
+        while (true)
+        {
+            int signature = facade.IndexOf(methodName + "(", search, StringComparison.Ordinal);
+            if (signature < 0)
+            {
+                yield break;
+            }
+
+            int openingBrace = facade.IndexOf('{', signature);
+            int signatureLineStart = facade.LastIndexOf('\n', signature) + 1;
+            string signatureLine = facade.Substring(signatureLineStart, signature - signatureLineStart);
+            bool isMethodDeclaration = signatureLine.Contains("static") && openingBrace >= 0 && openingBrace - signature < 400;
+            if (isMethodDeclaration)
+            {
+                yield return openingBrace;
+            }
+
+            search = signature + 1;
+        }
+    }
+
+    private static string? ExtractMethodBody(string facade, int openingBrace)
+    {
+        int depth = 0;
+        for (int i = openingBrace; i < facade.Length; i++)
+        {
+            if (facade[i] == '{')
+            {
+                depth++;
+            }
+            else if (facade[i] == '}')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    return facade.Substring(openingBrace, i - openingBrace + 1);
+                }
+            }
+        }
+
+        return null;
     }
 
     private static IEnumerable<string> EnumerateSourceFiles(string root)
