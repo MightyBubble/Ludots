@@ -1,0 +1,24 @@
+T1 写入前: tick 1157 digest 2C30B362E7045655
+T2 写入: slot manual/uat-coldstart tick 1884 17628138 bytes digest 5DE9B9935E50F045
+T3 读回: digest 5DE9B9935E50F045 schema 1
+T3 槽位: manual/panel-20260828-062004 tick 3023 17628138 bytes
+T3 槽位: manual/uat-coldstart tick 1884 17628138 bytes
+T4 冷启动后 HEALTH: True | map: save_load | pump: 1067 | pid: 59564
+T4 冷启动槽位存活: manual/panel-20260828-062004 tick 3023
+T4 冷启动槽位存活: manual/uat-coldstart tick 1884
+T5 冷启动读档: restoredTick 1884 digest 5DE9B9935E50F045
+T5 继续运行 tick: 2377
+截图: {'path': 'C:\\001_AI\\LudotsProd\\artifacts\\agent-bridge\\shots\\save-load-t5-cold-restore.png', 'bytes': 208608, 'width': 1280, 'height': 720}
+UI 按钮数: 5
+ - Nudge hero
+ - Save via panel
+ - Restore latest
+ - Spawn excluded decoy
+ - Corrupt latest slot
+槽位数: 2
+ - manual/panel-20260828-062004 3023
+ - manual/uat-coldstart 1884
+槽位数: 3
+ - manual/panel-20260828-062004 3023
+ - manual/panel-20260828-062720 4253
+ - manual/uat-coldstart 1884

@@ -13,6 +13,7 @@ namespace Ludots.Core.Gameplay.Providers
         private static readonly HashSet<string> AllowedDomains = new(StringComparer.Ordinal)
         {
             "time",
+            "condition",
             "world",
             "supply",
             "deployment",
