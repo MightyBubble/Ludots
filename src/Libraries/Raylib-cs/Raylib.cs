@@ -419,6 +419,12 @@ namespace Raylib_cs
         public static extern void EndMode3D();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginScissorMode(int x, int y, int width, int height);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndScissorMode();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlDrawRenderBatchActive();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]

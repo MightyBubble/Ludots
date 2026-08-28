@@ -152,18 +152,20 @@ namespace Ludots.Core.Systems
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PresenterEntityRuntime? _presenters;
         private bool _presentBindingArmed;
-        private List<Entity> _changedOwners = new List<Entity>(32768);
+        private readonly List<Entity> _changedOwners = new List<Entity>(32768);
         private Entity[] _spatialQueryBuffer = new Entity[65536];
         private readonly HashSet<Entity> _spatialCandidates = new(65536);
         private readonly CommandBuffer _commandBuffer = new();
         private int _lastPresenterCullSyncStructureVersion = -1;
         private bool _ownerCullChangedThisFrame;
         private bool _allCullChangesSyncedThisFrame;
-        private CameraStateSnapshot _lastStaticCullCameraState;
-        private float _lastStaticCullAspectRatio = -1f;
-        private bool _hasStaticCullCameraState;
+        private readonly List<PresentBindingCullPass> _presentBindingPasses = new(4);
+        private CameraStateSnapshot[] _passLastStaticCameraState = Array.Empty<CameraStateSnapshot>();
+        private float[] _passLastStaticAspectRatio = Array.Empty<float>();
+        private bool[] _passHasStaticCameraState = Array.Empty<bool>();
+        private int[] _passLastStaticVisibleCount = Array.Empty<int>();
+        private bool _unionPass;
         private int _staticCullEpoch;
-        private int _lastStaticVisibleCount;
         private int _visibilityRevision;
 
         public CameraCullingDebugState DebugState { get; } = new CameraCullingDebugState();
@@ -215,6 +217,8 @@ namespace Ludots.Core.Systems
             _timingDiagnostics = timingDiagnostics;
             // Unit/harness constructors supply an explicit present surface; hosts Disarm until PresentBinding sync.
             _presentBindingArmed = true;
+            _presentBindingPasses.Add(new PresentBindingCullPass(null, cameraManager, view));
+            ResetPassStaticCaches();
             cullingConfig = cullingConfig ?? throw new ArgumentNullException(nameof(cullingConfig));
             cullingConfig.Validate();
             HighLODDistCm = cullingConfig.HighLodDistanceCm;
@@ -233,10 +237,51 @@ namespace Ludots.Core.Systems
 
         public void RebindPresentBinding(CameraManager cameraManager, IViewController presentSurface)
         {
-            _cameraManager = cameraManager ?? throw new ArgumentNullException(nameof(cameraManager));
-            _view = presentSurface ?? throw new ArgumentNullException(nameof(presentSurface));
+            ArgumentNullException.ThrowIfNull(cameraManager);
+            ArgumentNullException.ThrowIfNull(presentSurface);
+            _presentBindingPasses.Clear();
+            _presentBindingPasses.Add(new PresentBindingCullPass(null, cameraManager, presentSurface));
             _presentBindingArmed = true;
-            _hasStaticCullCameraState = false;
+            ResetPassStaticCaches();
+        }
+
+        /// <summary>
+        /// Rebinds render culling to one pass per present binding. Each pass culls against its own
+        /// binding camera/surface; the shared CullState receives the union of the passes (visible in
+        /// any binding ⇒ drawn). No merged cross-binding camera or global visible set is built.
+        /// </summary>
+        public void RebindPresentBindings(IReadOnlyList<PresentBindingCullPass> passes)
+        {
+            ArgumentNullException.ThrowIfNull(passes);
+            if (passes.Count == 0)
+            {
+                throw new ArgumentException("At least one present binding cull pass is required.", nameof(passes));
+            }
+
+            _presentBindingPasses.Clear();
+            for (int i = 0; i < passes.Count; i++)
+            {
+                _presentBindingPasses.Add(passes[i]);
+            }
+
+            _presentBindingArmed = true;
+            ResetPassStaticCaches();
+        }
+
+        private void ResetPassStaticCaches()
+        {
+            int count = _presentBindingPasses.Count;
+            if (_passHasStaticCameraState.Length != count)
+            {
+                _passLastStaticCameraState = new CameraStateSnapshot[count];
+                _passLastStaticAspectRatio = new float[count];
+                _passHasStaticCameraState = new bool[count];
+                _passLastStaticVisibleCount = new int[count];
+                return;
+            }
+
+            Array.Clear(_passHasStaticCameraState);
+            Array.Clear(_passLastStaticVisibleCount);
         }
 
         public override void Update(in float dt)
@@ -247,7 +292,87 @@ namespace Ludots.Core.Systems
             }
 
             long start = Stopwatch.GetTimestamp();
-            CameraStateSnapshot cameraState = _cameraManager.GetInterpolatedState(ReadPresentationAlpha());
+            float presentationAlpha = ReadPresentationAlpha();
+            _changedOwners.Clear();
+            _ownerCullChangedThisFrame = false;
+            _allCullChangesSyncedThisFrame = true;
+            int unionVisibleCount = 0;
+            double spatialQueryMs = 0d;
+            double staticProcessMs = 0d;
+            double dynamicProcessMs = 0d;
+            float debugMinX = 0f;
+            float debugMaxX = 0f;
+            float debugMinY = 0f;
+            float debugMaxY = 0f;
+            bool hasDebugBounds = false;
+            Vector2 lastPassTarget = Vector2.Zero;
+            // A full static re-evaluation in one pass can cull entities that only a later binding
+            // sees; later passes must therefore also run full so the union can restore them.
+            bool anyPassFullStatic = false;
+            long entityProcessStart = Stopwatch.GetTimestamp();
+
+            for (int passIndex = 0; passIndex < _presentBindingPasses.Count; passIndex++)
+            {
+                _unionPass = passIndex > 0;
+                PresentBindingCullPass pass = _presentBindingPasses[passIndex];
+                _cameraManager = pass.Camera;
+                _view = pass.Surface;
+                RunCullPass(
+                    passIndex,
+                    presentationAlpha,
+                    ref anyPassFullStatic,
+                    ref unionVisibleCount,
+                    ref spatialQueryMs,
+                    ref staticProcessMs,
+                    ref dynamicProcessMs,
+                    ref debugMinX,
+                    ref debugMaxX,
+                    ref debugMinY,
+                    ref debugMaxY,
+                    ref hasDebugBounds,
+                    out Vector2 passTarget);
+                lastPassTarget = passTarget;
+            }
+
+            _unionPass = false;
+            PlaybackStructuralChanges();
+
+            DebugState.MinX = debugMinX;
+            DebugState.MaxX = debugMaxX;
+            DebugState.MinY = debugMinY;
+            DebugState.MaxY = debugMaxY;
+            DebugState.HighLodDist = HighLODDistCm;
+            DebugState.MediumLodDist = MediumLODDistCm;
+            DebugState.LowLodDist = LowLODDistCm;
+            DebugState.CameraTargetCm = new System.Numerics.Vector2(lastPassTarget.X, lastPassTarget.Y);
+            DebugState.VisibleEntityCount = unionVisibleCount;
+            DebugState.VisibilityRevision = _visibilityRevision;
+            double entityProcessMs = (Stopwatch.GetTimestamp() - entityProcessStart) * 1000.0 / Stopwatch.Frequency;
+            long presenterSyncStart = Stopwatch.GetTimestamp();
+            SyncPresenterCullVisibilityIfDirty();
+            double presenterSyncMs = (Stopwatch.GetTimestamp() - presenterSyncStart) * 1000.0 / Stopwatch.Frequency;
+            _timingDiagnostics?.ObserveCameraCullingBreakdown(entityProcessMs, presenterSyncMs);
+            _timingDiagnostics?.ObserveCameraCullingSpatialQuery(spatialQueryMs);
+            _timingDiagnostics?.ObserveCameraCullingStageBreakdown(staticProcessMs, 0d, dynamicProcessMs);
+            _timingDiagnostics?.ObserveCameraCulling((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency, unionVisibleCount);
+        }
+
+        private void RunCullPass(
+            int passIndex,
+            float presentationAlpha,
+            ref bool anyPassFullStatic,
+            ref int unionVisibleCount,
+            ref double spatialQueryMs,
+            ref double staticProcessMs,
+            ref double dynamicProcessMs,
+            ref float debugMinX,
+            ref float debugMaxX,
+            ref float debugMinY,
+            ref float debugMaxY,
+            ref bool hasDebugBounds,
+            out Vector2 passTarget)
+        {
+            CameraStateSnapshot cameraState = _cameraManager.GetInterpolatedState(presentationAlpha);
             if (_focusOverride != null)
             {
                 cameraState = _focusOverride.Apply(in cameraState);
@@ -255,6 +380,7 @@ namespace Ludots.Core.Systems
 
             var target = cameraState.TargetCm;
             float distanceCm = cameraState.DistanceCm;
+            passTarget = target;
 
             float aspectRatio = _view.AspectRatio;
             WorldAabbCm queryBounds = ComputeBroadPhaseCameraAabb(
@@ -265,16 +391,28 @@ namespace Ludots.Core.Systems
                 out float minY,
                 out float maxY);
 
-            _changedOwners.Clear();
-            _ownerCullChangedThisFrame = false;
-            _allCullChangesSyncedThisFrame = true;
+            if (!hasDebugBounds)
+            {
+                debugMinX = minX;
+                debugMaxX = maxX;
+                debugMinY = minY;
+                debugMaxY = maxY;
+                hasDebugBounds = true;
+            }
+            else
+            {
+                debugMinX = MathF.Min(debugMinX, minX);
+                debugMaxX = MathF.Max(debugMaxX, maxX);
+                debugMinY = MathF.Min(debugMinY, minY);
+                debugMaxY = MathF.Max(debugMaxY, maxY);
+            }
+
             bool hasDynamicCullWork = HasDynamicCullWork();
-            double spatialQueryMs = 0d;
             if (hasDynamicCullWork)
             {
                 long spatialQueryStart = Stopwatch.GetTimestamp();
                 RefreshSpatialCandidates(in queryBounds);
-                spatialQueryMs = ElapsedMs(spatialQueryStart);
+                spatialQueryMs += ElapsedMs(spatialQueryStart);
             }
             else if (_spatialCandidates.Count != 0)
             {
@@ -286,22 +424,19 @@ namespace Ludots.Core.Systems
             float highSq = HighLODDistCm * HighLODDistCm;
             float medSq = MediumLODDistCm * MediumLODDistCm;
             float lowSq2 = LowLODDistCm * LowLODDistCm;
-            bool hasStaticCullCameraState = _hasStaticCullCameraState;
+            bool hasStaticCullCameraState = _passHasStaticCameraState[passIndex];
             bool cameraChanged = hasStaticCullCameraState &&
-                                 HasCameraStateChanged(in cameraState, aspectRatio);
-            int visibleCount = _lastStaticVisibleCount;
-            long entityProcessStart = Stopwatch.GetTimestamp();
+                                 HasCameraStateChanged(passIndex, in cameraState, aspectRatio);
             int activeStaticCullEpoch = _staticCullEpoch == int.MaxValue ? 1 : _staticCullEpoch + 1;
-            double staticProcessMs = 0d;
-            double staticPendingRemoveMs = 0d;
-            double dynamicProcessMs = 0d;
             long staticProcessStart = Stopwatch.GetTimestamp();
+            int passStaticCount;
+            bool runFullStatic = anyPassFullStatic || cameraChanged || !hasStaticCullCameraState;
 
-            if (cameraChanged)
+            if (runFullStatic)
             {
+                anyPassFullStatic = true;
                 _staticCullEpoch = activeStaticCullEpoch;
-                _lastStaticVisibleCount = 0;
-                _lastStaticVisibleCount = ProcessStaticEntitiesFull(
+                passStaticCount = ProcessStaticEntitiesFull(
                     queryBounds,
                     target,
                     distanceCm,
@@ -310,88 +445,46 @@ namespace Ludots.Core.Systems
                     highSq,
                     medSq,
                     lowSq2,
-                    rebuildVisibleCount: true,
-                    _lastStaticVisibleCount);
-
-                staticProcessMs += ElapsedMs(staticProcessStart);
-                visibleCount = _lastStaticVisibleCount;
+                    rebuildVisibleCount: !_unionPass,
+                    staticVisibleCount: 0);
             }
             else
             {
-                if (!hasStaticCullCameraState)
-                {
-                    _staticCullEpoch = activeStaticCullEpoch;
-                    _lastStaticVisibleCount = ProcessStaticEntitiesFull(
-                        queryBounds,
-                        target,
-                        distanceCm,
-                        tx,
-                        ty,
-                        highSq,
-                        medSq,
-                        lowSq2,
-                        rebuildVisibleCount: true,
-                        staticVisibleCount: 0);
-                }
-                else
-                {
-                    _lastStaticVisibleCount = ProcessStaticEntitiesDirty(
-                        queryBounds,
-                        target,
-                        distanceCm,
-                        tx,
-                        ty,
-                        highSq,
-                        medSq,
-                        lowSq2,
-                        rebuildVisibleCount: false,
-                        _lastStaticVisibleCount);
-                }
-
-                staticProcessMs += ElapsedMs(staticProcessStart);
-
-                visibleCount = _lastStaticVisibleCount;
+                passStaticCount = ProcessStaticEntitiesDirty(
+                    queryBounds,
+                    target,
+                    distanceCm,
+                    tx,
+                    ty,
+                    highSq,
+                    medSq,
+                    lowSq2,
+                    rebuildVisibleCount: !_unionPass,
+                    _unionPass ? 0 : _passLastStaticVisibleCount[passIndex]);
             }
 
-            _hasStaticCullCameraState = true;
-            _lastStaticCullCameraState = cameraState;
-            _lastStaticCullAspectRatio = aspectRatio;
-            PlaybackStructuralChanges();
+            _passHasStaticCameraState[passIndex] = true;
+            _passLastStaticCameraState[passIndex] = cameraState;
+            _passLastStaticAspectRatio[passIndex] = aspectRatio;
+            _passLastStaticVisibleCount[passIndex] = passStaticCount;
+            staticProcessMs += ElapsedMs(staticProcessStart);
+            unionVisibleCount += passStaticCount;
 
             if (hasDynamicCullWork)
             {
                 long dynamicProcessStart = Stopwatch.GetTimestamp();
-                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, VisualBoundsLodQuery, useSpatialGate: true);
-                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, VisualBoundsQuery, useSpatialGate: true);
-                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, VisualLodQuery, useSpatialGate: true);
-                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, VisualDefaultQuery, useSpatialGate: true);
-                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, NoVisualQuery, useSpatialGate: true);
-                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedVisualBoundsLodQuery, useSpatialGate: false);
-                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedVisualBoundsQuery, useSpatialGate: false);
-                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedVisualLodQuery, useSpatialGate: false);
-                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedVisualDefaultQuery, useSpatialGate: false);
-                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedNoVisualQuery, useSpatialGate: false);
-                dynamicProcessMs = ElapsedMs(dynamicProcessStart);
+                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualBoundsLodQuery, useSpatialGate: true);
+                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualBoundsQuery, useSpatialGate: true);
+                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualLodQuery, useSpatialGate: true);
+                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualDefaultQuery, useSpatialGate: true);
+                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, NoVisualQuery, useSpatialGate: true);
+                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualBoundsLodQuery, useSpatialGate: false);
+                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualBoundsQuery, useSpatialGate: false);
+                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualLodQuery, useSpatialGate: false);
+                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualDefaultQuery, useSpatialGate: false);
+                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedNoVisualQuery, useSpatialGate: false);
+                dynamicProcessMs += ElapsedMs(dynamicProcessStart);
             }
-
-            DebugState.MinX = minX;
-            DebugState.MaxX = maxX;
-            DebugState.MinY = minY;
-            DebugState.MaxY = maxY;
-            DebugState.HighLodDist = HighLODDistCm;
-            DebugState.MediumLodDist = MediumLODDistCm;
-            DebugState.LowLodDist = LowLODDistCm;
-            DebugState.CameraTargetCm = new System.Numerics.Vector2(target.X, target.Y);
-            DebugState.VisibleEntityCount = visibleCount;
-            DebugState.VisibilityRevision = _visibilityRevision;
-            double entityProcessMs = (Stopwatch.GetTimestamp() - entityProcessStart) * 1000.0 / Stopwatch.Frequency;
-            long presenterSyncStart = Stopwatch.GetTimestamp();
-            SyncPresenterCullVisibilityIfDirty();
-            double presenterSyncMs = (Stopwatch.GetTimestamp() - presenterSyncStart) * 1000.0 / Stopwatch.Frequency;
-            _timingDiagnostics?.ObserveCameraCullingBreakdown(entityProcessMs, presenterSyncMs);
-            _timingDiagnostics?.ObserveCameraCullingSpatialQuery(spatialQueryMs);
-            _timingDiagnostics?.ObserveCameraCullingStageBreakdown(staticProcessMs, staticPendingRemoveMs, dynamicProcessMs);
-            _timingDiagnostics?.ObserveCameraCulling((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency, visibleCount);
         }
 
         public override void Dispose()
@@ -530,20 +623,21 @@ namespace Ludots.Core.Systems
             _lastPresenterCullSyncStructureVersion = structureVersion;
         }
 
-        private bool HasCameraStateChanged(in CameraStateSnapshot state, float aspectRatio)
+        private bool HasCameraStateChanged(int passIndex, in CameraStateSnapshot state, float aspectRatio)
         {
             const float scalarEpsilon = 0.01f;
             const float targetEpsilonSq = 1f;
-            return MathF.Abs(_lastStaticCullAspectRatio - aspectRatio) > scalarEpsilon ||
-                   Vector2.DistanceSquared(_lastStaticCullCameraState.TargetCm, state.TargetCm) > targetEpsilonSq ||
-                   MathF.Abs(_lastStaticCullCameraState.TargetHeightCm - state.TargetHeightCm) > scalarEpsilon ||
-                   MathF.Abs(AngleDeltaDeg(_lastStaticCullCameraState.Yaw, state.Yaw)) > scalarEpsilon ||
-                   MathF.Abs(_lastStaticCullCameraState.Pitch - state.Pitch) > scalarEpsilon ||
-                   MathF.Abs(_lastStaticCullCameraState.DistanceCm - state.DistanceCm) > scalarEpsilon ||
-                   MathF.Abs(_lastStaticCullCameraState.FovYDeg - state.FovYDeg) > scalarEpsilon ||
-                   _lastStaticCullCameraState.RigKind != state.RigKind ||
-                   _lastStaticCullCameraState.ZoomLevel != state.ZoomLevel ||
-                   _lastStaticCullCameraState.IsFollowing != state.IsFollowing;
+            CameraStateSnapshot last = _passLastStaticCameraState[passIndex];
+            return MathF.Abs(_passLastStaticAspectRatio[passIndex] - aspectRatio) > scalarEpsilon ||
+                   Vector2.DistanceSquared(last.TargetCm, state.TargetCm) > targetEpsilonSq ||
+                   MathF.Abs(last.TargetHeightCm - state.TargetHeightCm) > scalarEpsilon ||
+                   MathF.Abs(AngleDeltaDeg(last.Yaw, state.Yaw)) > scalarEpsilon ||
+                   MathF.Abs(last.Pitch - state.Pitch) > scalarEpsilon ||
+                   MathF.Abs(last.DistanceCm - state.DistanceCm) > scalarEpsilon ||
+                   MathF.Abs(last.FovYDeg - state.FovYDeg) > scalarEpsilon ||
+                   last.RigKind != state.RigKind ||
+                   last.ZoomLevel != state.ZoomLevel ||
+                   last.IsFollowing != state.IsFollowing;
         }
 
         private void RefreshSpatialCandidates(in WorldAabbCm queryBounds)
@@ -966,6 +1060,13 @@ namespace Ludots.Core.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void QueueStaticCullPendingClear(Entity entity)
         {
+            // Pass 0 always reprocesses every pending static before union passes run, and the
+            // removal defers to end-of-frame playback; union passes must not queue a duplicate.
+            if (_unionPass)
+            {
+                return;
+            }
+
             if (World.Has<PresentationStaticCullPending>(entity))
             {
                 _commandBuffer.Remove<PresentationStaticCullPending>(in entity);
@@ -987,23 +1088,25 @@ namespace Ludots.Core.Systems
             bool isVisible,
             ref int visibleCount)
         {
-            if (rebuildVisibleCount)
+            // Union passes (later bindings) only contribute entities newly visible to the union;
+            // pass 0 keeps the sole-binding counting contract unchanged.
+            if (!rebuildVisibleCount)
             {
-                if (isVisible)
+                if (!wasVisible && isVisible)
                 {
                     visibleCount++;
+                }
+                else if (wasVisible && !isVisible)
+                {
+                    visibleCount--;
                 }
 
                 return;
             }
 
-            if (!wasVisible && isVisible)
+            if (isVisible)
             {
                 visibleCount++;
-            }
-            else if (wasVisible && !isVisible)
-            {
-                visibleCount--;
             }
         }
 
@@ -1398,12 +1501,32 @@ namespace Ludots.Core.Systems
             float dx = px - tx;
             float dy = py - ty;
             float distSq = dx * dx + dy * dy;
-            cull.DistanceToCameraSq = distSq;
-            cull.ScreenCoverage01 = coverage01;
-
             LODLevel resolvedLod = hasLodProfile
                 ? ResolveLod(distSq, coverage01, in lodProfile)
                 : ResolveLod(distSq, coverage01, highSq, medSq, lowSq2);
+            if (_unionPass && cull.IsVisible)
+            {
+                if (resolvedLod < cull.LOD)
+                {
+                    cull.LOD = resolvedLod;
+                    cull.DistanceToCameraSq = distSq;
+                    cull.ScreenCoverage01 = coverage01;
+                    if (hasPayload)
+                    {
+                        TrackOrSyncCullChange(entity, in cull, in payload);
+                    }
+                    else
+                    {
+                        TrackOrSyncCullChange(entity, in cull);
+                    }
+                }
+
+                return;
+            }
+
+            cull.DistanceToCameraSq = distSq;
+            cull.ScreenCoverage01 = coverage01;
+
             bool changed = !cull.IsVisible || cull.LOD != resolvedLod;
 
             cull.LOD = resolvedLod;
@@ -1508,10 +1631,30 @@ namespace Ludots.Core.Systems
             float dx = px - tx;
             float dy = py - ty;
             float distSq = dx * dx + dy * dy;
+            LODLevel resolvedLod = ResolveLod(distSq, coverage01: 0f, highSq, medSq, lowSq2);
+            if (_unionPass && cull.IsVisible)
+            {
+                if (resolvedLod < cull.LOD)
+                {
+                    cull.LOD = resolvedLod;
+                    cull.DistanceToCameraSq = distSq;
+                    cull.ScreenCoverage01 = 0f;
+                    if (hasPayload)
+                    {
+                        TrackOrSyncCullChange(entity, in cull, in payload);
+                    }
+                    else
+                    {
+                        TrackOrSyncCullChange(entity, in cull);
+                    }
+                }
+
+                return;
+            }
+
             cull.DistanceToCameraSq = distSq;
             cull.ScreenCoverage01 = 0f;
 
-            LODLevel resolvedLod = ResolveLod(distSq, coverage01: 0f, highSq, medSq, lowSq2);
             bool changed = !cull.IsVisible || cull.LOD != resolvedLod;
 
             cull.LOD = resolvedLod;
@@ -1634,12 +1777,33 @@ namespace Ludots.Core.Systems
             float dx = px - tx;
             float dy = py - ty;
             float distSq = dx * dx + dy * dy;
-            cull.DistanceToCameraSq = distSq;
-            cull.ScreenCoverage01 = coverage01;
 
             LODLevel resolvedLod = hasLodProfile
                 ? ResolveLod(distSq, coverage01, in lodProfile)
                 : ResolveLod(distSq, coverage01, highSq, medSq, lowSq2);
+            if (_unionPass && cull.IsVisible)
+            {
+                if (resolvedLod < cull.LOD)
+                {
+                    cull.LOD = resolvedLod;
+                    cull.DistanceToCameraSq = distSq;
+                    cull.ScreenCoverage01 = coverage01;
+                    if (hasPayload)
+                    {
+                        TrackOrSyncCullChange(entity, in cull, in payload);
+                    }
+                    else
+                    {
+                        TrackOrSyncCullChange(entity, in cull);
+                    }
+                }
+
+                return;
+            }
+
+            cull.DistanceToCameraSq = distSq;
+            cull.ScreenCoverage01 = coverage01;
+
             bool changed = !cull.IsVisible || cull.LOD != resolvedLod;
 
             cull.LOD = resolvedLod;
@@ -1707,6 +1871,13 @@ namespace Ludots.Core.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ForceCull(Entity owner, ref CullState cull)
         {
+            // Union passes never remove visibility: an entity outside this binding's view may
+            // still be visible to an earlier binding, so its CullState must survive untouched.
+            if (_unionPass)
+            {
+                return;
+            }
+
             bool changed = cull.IsVisible;
             cull.IsVisible = false;
             cull.ScreenCoverage01 = 0f;

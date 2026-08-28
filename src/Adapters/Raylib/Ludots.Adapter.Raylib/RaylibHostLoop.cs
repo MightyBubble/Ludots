@@ -150,6 +150,15 @@ namespace Ludots.Adapter.Raylib
 
         private readonly record struct UiInputFrameResult(bool Handled, bool PointerCaptured, bool WheelCaptured);
 
+        /// <summary>
+        /// One driven present binding captured at drive time with the concrete camera pose the
+        /// presenter produced for it; the draw phase renders exactly one viewport per entry.
+        /// </summary>
+        private readonly record struct ViewportDrawFrame(
+            Ludots.Core.Client.PresentBindingDrawFrame Frame,
+            Camera3D Camera,
+            CameraRenderState3D CameraState);
+
         internal static bool ShouldCaptureWorldPointer(
             bool pointerCaptured,
             bool wheelCaptured,
@@ -256,7 +265,12 @@ namespace Ludots.Adapter.Raylib
                 screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
                 screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
                 engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
-                engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
+                engine.SetService(
+                    CoreServiceKeys.ScreenRayProvider,
+                    (IScreenRayProvider)new PresentBindingScreenRayProvider(
+                        engine,
+                        screenRayProvider,
+                        () => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f));
                 var cullingFocusOverride = new CameraCullingFocusOverride();
                 engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, cullingFocusOverride);
 
@@ -408,6 +422,7 @@ namespace Ludots.Adapter.Raylib
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
                 SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
+                var presentFrames = new List<ViewportDrawFrame>(4);
                 int frameIndex = 0;
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
@@ -503,6 +518,11 @@ namespace Ludots.Adapter.Raylib
                             viewController.Fov,
                             viewController,
                             cullingSystem);
+                        Ludots.Core.Client.PresentBindingPresentation.TryArmPresentBindingCullingPasses(
+                            engine,
+                            viewController.Fov,
+                            viewController,
+                            cullingSystem);
 
                         engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
                         engine.Tick(dt);
@@ -533,16 +553,22 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncPresentPipelines(
+                        presentFrames.Clear();
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TryDrivePresentBindings(
                                 engine,
                                 cameraPresenter,
                                 screenProjector,
                                 screenRayProvider,
                                 cameraAlpha,
                                 viewController.Fov,
-                                renderCameraDebug,
-                                viewController,
-                                cullingSystem))
+                                drawBinding: (in Ludots.Core.Client.PresentBindingDrawFrame frame) =>
+                                {
+                                    presentFrames.Add(
+                                        new ViewportDrawFrame(frame, cameraAdapter.Camera, cameraPresenter.SmoothedRenderState));
+                                },
+                                cameraDebug: renderCameraDebug,
+                                hostView: viewController,
+                                culling: cullingSystem))
                         {
                             if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
                                 seats != null &&
@@ -612,6 +638,7 @@ namespace Ludots.Adapter.Raylib
 
                         var activeCamera = cameraAdapter.Camera;
                         CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
+                        float windowAspect = MathF.Max(0.001f, lastW / (float)Math.Max(1, lastH));
 
                         if (skyEnvironment.HasDayPhase)
                         {
@@ -624,7 +651,6 @@ namespace Ludots.Adapter.Raylib
 
                         terrainRenderer.ApplyFrameLighting(frameLighting);
                         visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
-                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position);
                         primitiveRenderer.DrawSurfaceWireBoxes = drawDebugDraw;
 
                         bool waterOnVisualHeightmap = waterPass.IsActive &&
@@ -653,7 +679,7 @@ namespace Ludots.Adapter.Raylib
                             Camera3D reflectionCamera = waterPass.BuildReflectionCamera(in activeCamera);
                             waterPass.BeginReflectionPass(frameClearColor);
                             Restore3DDepthState();
-                            BeginCoreMode3D(reflectionCamera, in activeCameraState);
+                            BeginCoreMode3D(reflectionCamera, in activeCameraState, windowAspect);
                             Restore3DDepthState();
                             if (skyEnvironment.IsActive)
                             {
@@ -679,7 +705,7 @@ namespace Ludots.Adapter.Raylib
 
                             waterPass.BeginRefractionPass(frameClearColor);
                             Restore3DDepthState();
-                            BeginCoreMode3D(activeCamera, in activeCameraState);
+                            BeginCoreMode3D(activeCamera, in activeCameraState, windowAspect);
                             Restore3DDepthState();
                             if (skyEnvironment.IsActive)
                             {
@@ -705,217 +731,252 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         long mode3DStart = Stopwatch.GetTimestamp();
-                        Restore3DDepthState();
-                        BeginCoreMode3D(activeCamera, in activeCameraState);
-                        Restore3DDepthState();
-
-                        if (skyEnvironment.IsActive)
+                        bool multiViewport = presentFrames.Count > 1;
+                        if (presentFrames.Count == 0)
                         {
-                            skyEnvironment.Draw(in activeCamera, in activeCameraState);
+                            // No-seat fallback frame: one fullscreen viewport on the current adapter camera.
+                            presentFrames.Add(new ViewportDrawFrame(default, activeCamera, activeCameraState));
+                        }
+
+                        for (int viewportIndex = 0; viewportIndex < presentFrames.Count; viewportIndex++)
+                        {
+                            ViewportDrawFrame viewport = presentFrames[viewportIndex];
+                            Camera3D viewportCamera = viewport.Camera;
+                            CameraRenderState3D viewportCameraState = viewport.CameraState;
+                            float viewportAspect = windowAspect;
+                            primitiveRenderer.ApplyFrameLighting(frameLighting, viewportCamera.position);
+                            if (multiViewport)
+                            {
+                                Vector4 viewportRect = viewport.Frame.Binding.NormalizedScreenRect;
+                                int scissorX = (int)MathF.Floor(viewportRect.X * lastW);
+                                int scissorY = (int)MathF.Floor(viewportRect.Y * lastH);
+                                int scissorW = Math.Max(1, (int)MathF.Ceiling(viewportRect.Z * lastW));
+                                int scissorH = Math.Max(1, (int)MathF.Ceiling(viewportRect.W * lastH));
+                                Rl.BeginScissorMode(scissorX, scissorY, scissorW, scissorH);
+                                viewportAspect = MathF.Max(0.001f, scissorW / (float)scissorH);
+                            }
+
                             Restore3DDepthState();
-                        }
+                            BeginCoreMode3D(viewportCamera, in viewportCameraState, viewportAspect);
+                            Restore3DDepthState();
 
-                        if (drawDebugDraw &&
-                            !(drawVisualHeightmap && hasVisualHeightmap) &&
-                            !hostDebugGuidesSuppressed)
-                        {
-                            DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
-
-                            var target = activeCamera.target;
-                            Rl.DrawLine3D(target, target + new Vector3(2.0f, 0, 0), Color.RED);
-                            Rl.DrawLine3D(target, target + new Vector3(0, 0, 2.0f), Color.BLUE);
-                            Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
-                        }
-
-                        if (drawVisualHeightmap &&
-                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
-                            visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
-                        {
-                            long terrainStart = Stopwatch.GetTimestamp();
-                            if (waterOnVisualHeightmap)
+                            if (skyEnvironment.IsActive)
                             {
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                skyEnvironment.Draw(in viewportCamera, in viewportCameraState);
+                                Restore3DDepthState();
+                            }
+
+                            if (drawDebugDraw &&
+                                !(drawVisualHeightmap && hasVisualHeightmap) &&
+                                !hostDebugGuidesSuppressed)
+                            {
+                                DrawInfiniteGrid(viewportCamera.target, 300, 1.0f, 10);
+
+                                var target = viewportCamera.target;
+                                Rl.DrawLine3D(target, target + new Vector3(2.0f, 0, 0), Color.RED);
+                                Rl.DrawLine3D(target, target + new Vector3(0, 0, 2.0f), Color.BLUE);
+                                Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
+                            }
+
+                            if (drawVisualHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
+                                visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
+                            {
+                                long terrainStart = Stopwatch.GetTimestamp();
+                                if (waterOnVisualHeightmap)
+                                {
+                                    visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                    visualHeightmapRenderer.AbsoluteColorPeakSpanCm = visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                }
+                                else
+                                {
+                                    visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
+                                }
+
+                                visualHeightmapRenderer.Render(visualTerrainSource, viewportCamera);
+
+                                if (waterOnVisualHeightmap)
+                                {
+                                    terrainRenderer.EnsureWaterShadersReady();
+                                    terrainRenderer.BindReflectiveWater(waterPass);
+                                    // Half-extent covers the island board (~1.28km); plane follows camera target XZ.
+                                    terrainRenderer.DrawReflectiveOceanPlane(
+                                        waterPass.WaterPlaneY,
+                                        halfExtentMeters: 900f,
+                                        in viewportCamera);
+                                }
+                                else
+                                {
+                                    terrainRenderer.ClearReflectiveWater();
+                                }
+
+                                presentationTiming?.ObserveTerrain(
+                                    ElapsedMs(terrainStart),
+                                    visualHeightmapRenderer.ChunkBuildMsLastFrame,
+                                    visualHeightmapRenderer.DrawnChunkCountLastFrame,
+                                    visualHeightmapRenderer.BuiltChunkCountLastFrame);
+                            }
+                            else if (drawTerrain)
+                            {
+                                long terrainStart = Stopwatch.GetTimestamp();
+                                if (waterOnVertexMap)
+                                {
+                                    terrainRenderer.BindReflectiveWater(waterPass);
+                                }
+                                else
+                                {
+                                    terrainRenderer.ClearReflectiveWater();
+                                }
+
+                                terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), viewportCamera);
+                                presentationTiming?.ObserveTerrain(
+                                    ElapsedMs(terrainStart),
+                                    terrainRenderer.ChunkBuildMsLastFrame,
+                                    terrainRenderer.DrawnChunkCountLastFrame,
+                                    terrainRenderer.BuiltChunkCountLastFrame);
                             }
                             else
                             {
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
+                                presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
                             }
 
-                            visualHeightmapRenderer.Render(visualTerrainSource, activeCamera);
-
-                            if (waterOnVisualHeightmap)
+                            if (drawNavMeshOverlay)
                             {
-                                terrainRenderer.EnsureWaterShadersReady();
-                                terrainRenderer.BindReflectiveWater(waterPass);
-                                // Half-extent covers the island board (~1.28km); plane follows camera target XZ.
-                                terrainRenderer.DrawReflectiveOceanPlane(
-                                    waterPass.WaterPlaneY,
-                                    halfExtentMeters: 900f,
-                                    in activeCamera);
+                                navMeshPresentationRenderer.Draw(navMeshPresentationBuffer);
+                                if (viewportIndex == 0)
+                                {
+                                    // Window-anchored overlay text is composited once for the whole frame.
+                                    screenOverlayBuffer?.AddText(
+                                        10,
+                                        40,
+                                        navMeshPresentationBuffer.FormatMetadataLine(),
+                                        14,
+                                        new Vector4(1f, 0.92f, 0.5f, 1f));
+                                }
+                            }
+
+                            if (drawFieldOverlays && globalFieldVisualBuffer != null)
+                            {
+                                long fieldRenderStart = Stopwatch.GetTimestamp();
+                                fieldRenderPresenter.Draw(globalFieldVisualBuffer);
+                                presentationTiming?.ObserveGlobalFieldRender(
+                                    ElapsedMs(fieldRenderStart),
+                                    fieldRenderPresenter.LastFieldTextureCount,
+                                    fieldRenderPresenter.LastDirtyUploadCount,
+                                    fieldRenderPresenter.LastDirtyUploadArea,
+                                    fieldRenderPresenter.LastDrawCount);
                             }
                             else
                             {
-                                terrainRenderer.ClearReflectiveWater();
+                                presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
                             }
 
-                            presentationTiming?.ObserveTerrain(
-                                ElapsedMs(terrainStart),
-                                visualHeightmapRenderer.ChunkBuildMsLastFrame,
-                                visualHeightmapRenderer.DrawnChunkCountLastFrame,
-                                visualHeightmapRenderer.BuiltChunkCountLastFrame);
-                        }
-                        else if (drawTerrain)
-                        {
-                            long terrainStart = Stopwatch.GetTimestamp();
-                            if (waterOnVertexMap)
+                            // Benchmark ISM bridge and performer primitive/skinned lanes are independent.
+                            // Drawing the benchmark scene must not skip GpuSkinnedInstance / host material / VFX.
+                            if (benchmarkRenderer != null)
                             {
-                                terrainRenderer.BindReflectiveWater(waterPass);
+                                _ = benchmarkRenderer.Draw(viewportCamera);
+                            }
+
+                            if (drawPrimitives &&
+                                engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
+                                engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
+                            {
+                                if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
+                                {
+                                    System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D presenters emitting?");
+                                    _emptyBufferWarned = true;
+                                }
+                                long primitiveStart = Stopwatch.GetTimestamp();
+                                PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
+                                SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
+                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
+                                if (visualHeightmap != null)
+                                {
+                                    visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
+                                    terrainRenderer.BindStampHeightSampleSource(visualHeightmap);
+                                }
+
+                                primitiveRenderer.Draw(
+                                    draw,
+                                    viewportCamera,
+                                    snapshot,
+                                    skinnedBatch,
+                                    meshes,
+                                    renderDebug.AcceptanceScaleMultiplier,
+                                    visualHeightmap,
+                                    runtimeStopwatch.Elapsed.TotalSeconds);
+                                presentationTiming?.ObservePrimitiveRender(
+                                    ElapsedMs(primitiveStart),
+                                    primitiveRenderer.LastInstancedInstances,
+                                    primitiveRenderer.LastInstancedBatches,
+                                    primitiveRenderer.LastInstancedMatrixBuildMs,
+                                    primitiveRenderer.LastInstancedMeshDrawMs,
+                                    primitiveRenderer.LastInstancedMatrixCacheHits,
+                                    primitiveRenderer.LastInstancedMatrixCacheMisses,
+                                    primitiveRenderer.LastPersistentSyncMs,
+                                    primitiveRenderer.LastPersistentBucketDrawMs,
+                                    primitiveRenderer.LastImmediateDrawMs,
+                                    primitiveRenderer.LastImmediateSkippedCount,
+                                    skinnedBatch?.Count ?? 0,
+                                    primitiveRenderer.LastGpuSkinnedInstances,
+                                    primitiveRenderer.LastGpuSkinnedBatches,
+                                    primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
+                                    primitiveRenderer.LastGpuSkinnedMeshDrawMs);
                             }
                             else
                             {
-                                terrainRenderer.ClearReflectiveWater();
+                                presentationTiming?.ObservePrimitiveRender(0d, 0, 0);
                             }
 
-                            terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), activeCamera);
-                            presentationTiming?.ObserveTerrain(
-                                ElapsedMs(terrainStart),
-                                terrainRenderer.ChunkBuildMsLastFrame,
-                                terrainRenderer.DrawnChunkCountLastFrame,
-                                terrainRenderer.BuiltChunkCountLastFrame);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
-                        }
-
-                        if (drawNavMeshOverlay)
-                        {
-                            navMeshPresentationRenderer.Draw(navMeshPresentationBuffer);
-                            screenOverlayBuffer?.AddText(
-                                10,
-                                40,
-                                navMeshPresentationBuffer.FormatMetadataLine(),
-                                14,
-                                new Vector4(1f, 0.92f, 0.5f, 1f));
-                        }
-
-                        if (drawFieldOverlays && globalFieldVisualBuffer != null)
-                        {
-                            long fieldRenderStart = Stopwatch.GetTimestamp();
-                            fieldRenderPresenter.Draw(globalFieldVisualBuffer);
-                            presentationTiming?.ObserveGlobalFieldRender(
-                                ElapsedMs(fieldRenderStart),
-                                fieldRenderPresenter.LastFieldTextureCount,
-                                fieldRenderPresenter.LastDirtyUploadCount,
-                                fieldRenderPresenter.LastDirtyUploadArea,
-                                fieldRenderPresenter.LastDrawCount);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
-                        }
-
-                        // Benchmark ISM bridge and performer primitive/skinned lanes are independent.
-                        // Drawing the benchmark scene must not skip GpuSkinnedInstance / host material / VFX.
-                        if (benchmarkRenderer != null)
-                        {
-                            _ = benchmarkRenderer.Draw(activeCamera);
-                        }
-
-                        if (drawPrimitives &&
-                            engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
-                            engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
-                        {
-                            if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
+                            // Draw ground overlays (range circles, cones, etc.)
+                            if (!cleanPerformanceMode &&
+                                engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
+                                overlays.Count > 0)
                             {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D presenters emitting?");
-                                _emptyBufferWarned = true;
+                                long groundOverlayStart = Stopwatch.GetTimestamp();
+                                RaylibWorldOverlayRenderer.DrawGroundOverlays(overlays);
+                                presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
                             }
-                            long primitiveStart = Stopwatch.GetTimestamp();
-                            PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
-                            SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
-                            if (visualHeightmap != null)
+                            else
                             {
-                                visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
-                                terrainRenderer.BindStampHeightSampleSource(visualHeightmap);
+                                presentationTiming?.ObserveGroundOverlayRender(0d, 0);
                             }
 
-                            primitiveRenderer.Draw(
-                                draw,
-                                activeCamera,
-                                snapshot,
-                                skinnedBatch,
-                                meshes,
-                                renderDebug.AcceptanceScaleMultiplier,
-                                visualHeightmap,
-                                runtimeStopwatch.Elapsed.TotalSeconds);
-                            presentationTiming?.ObservePrimitiveRender(
-                                ElapsedMs(primitiveStart),
-                                primitiveRenderer.LastInstancedInstances,
-                                primitiveRenderer.LastInstancedBatches,
-                                primitiveRenderer.LastInstancedMatrixBuildMs,
-                                primitiveRenderer.LastInstancedMeshDrawMs,
-                                primitiveRenderer.LastInstancedMatrixCacheHits,
-                                primitiveRenderer.LastInstancedMatrixCacheMisses,
-                                primitiveRenderer.LastPersistentSyncMs,
-                                primitiveRenderer.LastPersistentBucketDrawMs,
-                                primitiveRenderer.LastImmediateDrawMs,
-                                primitiveRenderer.LastImmediateSkippedCount,
-                                skinnedBatch?.Count ?? 0,
-                                primitiveRenderer.LastGpuSkinnedInstances,
-                                primitiveRenderer.LastGpuSkinnedBatches,
-                                primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
-                                primitiveRenderer.LastGpuSkinnedMeshDrawMs);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObservePrimitiveRender(0d, 0, 0);
+                            if (!cleanPerformanceMode &&
+                                engine.GlobalContext.TryGetValue(CoreServiceKeys.SplineRibbonBuffer.Name, out var splineObj) &&
+                                splineObj is SplineRibbonBuffer splineRibbons && splineRibbons.Count > 0)
+                            {
+                                long splineRibbonStart = Stopwatch.GetTimestamp();
+                                RaylibWorldOverlayRenderer.DrawSplineRibbons(splineRibbons);
+                                presentationTiming?.ObserveSplineRibbonRender(ElapsedMs(splineRibbonStart), splineRibbons.Count);
+                            }
+                            else
+                            {
+                                presentationTiming?.ObserveSplineRibbonRender(0d, 0);
+                            }
+
+                            if (drawDebugDraw &&
+                                engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
+                            {
+                                long debugDrawStart = Stopwatch.GetTimestamp();
+                                debugDrawRenderer.Draw(dd);
+                                presentationTiming?.ObserveDebugDrawRender(
+                                    ElapsedMs(debugDrawStart),
+                                    dd.Lines.Count + dd.Circles.Count + dd.Boxes.Count);
+                            }
+                            else
+                            {
+                                presentationTiming?.ObserveDebugDrawRender(0d, 0);
+                            }
+
+                            EndCoreMode3D();
+                            if (multiViewport)
+                            {
+                                Rl.EndScissorMode();
+                            }
                         }
 
-                        // Draw ground overlays (range circles, cones, etc.)
-                        if (!cleanPerformanceMode &&
-                            engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
-                            overlays.Count > 0)
-                        {
-                            long groundOverlayStart = Stopwatch.GetTimestamp();
-                            RaylibWorldOverlayRenderer.DrawGroundOverlays(overlays);
-                            presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveGroundOverlayRender(0d, 0);
-                        }
-
-                        if (!cleanPerformanceMode &&
-                            engine.GlobalContext.TryGetValue(CoreServiceKeys.SplineRibbonBuffer.Name, out var splineObj) &&
-                            splineObj is SplineRibbonBuffer splineRibbons && splineRibbons.Count > 0)
-                        {
-                            long splineRibbonStart = Stopwatch.GetTimestamp();
-                            RaylibWorldOverlayRenderer.DrawSplineRibbons(splineRibbons);
-                            presentationTiming?.ObserveSplineRibbonRender(ElapsedMs(splineRibbonStart), splineRibbons.Count);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveSplineRibbonRender(0d, 0);
-                        }
-
-                        if (drawDebugDraw &&
-                            engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
-                        {
-                            long debugDrawStart = Stopwatch.GetTimestamp();
-                            debugDrawRenderer.Draw(dd);
-                            presentationTiming?.ObserveDebugDrawRender(
-                                ElapsedMs(debugDrawStart),
-                                dd.Lines.Count + dd.Circles.Count + dd.Boxes.Count);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveDebugDrawRender(0d, 0);
-                        }
-
-                        EndCoreMode3D();
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
                         if (postProcessWorldFrame)
                         {
@@ -1085,7 +1146,7 @@ namespace Ludots.Adapter.Raylib
             return consumer;
         }
 
-        private static unsafe void BeginCoreMode3D(in Camera3D camera, in CameraRenderState3D cameraState)
+        private static unsafe void BeginCoreMode3D(in Camera3D camera, in CameraRenderState3D cameraState, float viewportAspect)
         {
             Rl.rlDrawRenderBatchActive();
             Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
@@ -1093,7 +1154,7 @@ namespace Ludots.Adapter.Raylib
             Rl.rlLoadIdentity();
 
             CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in cameraState);
-            float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
+            float aspect = MathF.Max(0.001f, viewportAspect);
             if (camera.projection == CameraProjection.CAMERA_ORTHOGRAPHIC)
             {
                 double top = camera.fovy / 2.0;

@@ -104,6 +104,133 @@ namespace Ludots.Core.Client
             return true;
         }
 
+        /// <summary>
+        /// Pre-tick arming: render culling gets one pass per present binding in seat order. The first
+        /// pass is the baseline; each later pass unions into the shared CullState (visible in any
+        /// binding ⇒ drawn) without ever removing an earlier pass's visibility. Call after
+        /// <see cref="TryEnsurePresentBindings"/> and before the tick's presentation phase.
+        /// </summary>
+        public static bool TryArmPresentBindingCullingPasses(
+            GameEngine engine,
+            float fovYDeg,
+            IViewController hostView,
+            CameraCullingSystem? culling = null)
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            ArgumentNullException.ThrowIfNull(hostView);
+            if (fovYDeg <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(fovYDeg));
+            }
+
+            if (!TryEnsureAllPresentBindings(engine, hostView, out _))
+            {
+                culling?.DisarmPresentBindingCulling();
+                return false;
+            }
+
+            if (culling != null)
+            {
+                var passes = new List<PresentBindingCullPass>(4);
+                CollectCullPasses(engine, fovYDeg, passes);
+                culling.RebindPresentBindings(passes);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Post-tick drive, host-agnostic: per binding in seat order — rebind projector / ray to that
+        /// binding, update the presenter with the binding's interpolated camera, then hand the binding
+        /// to the host draw callback (null when the host draws nothing per binding this frame).
+        /// After the walk the presenter / projector / ray rest on the first binding in seat order, the
+        /// state single-viewport consumers (HUD projection, picking fallback, adapter readers) see today.
+        /// </summary>
+        public static bool TryDrivePresentBindings(
+            GameEngine engine,
+            CameraPresenter presenter,
+            CoreScreenProjector projector,
+            CoreScreenRayProvider rayProvider,
+            float interpolationAlpha,
+            float fovYDeg,
+            DrawPresentBinding? drawBinding = null,
+            RenderCameraDebugState? cameraDebug = null,
+            IViewController? hostView = null,
+            CameraCullingSystem? culling = null)
+        {
+            ArgumentNullException.ThrowIfNull(presenter);
+            ArgumentNullException.ThrowIfNull(projector);
+            ArgumentNullException.ThrowIfNull(rayProvider);
+            if (fovYDeg <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(fovYDeg));
+            }
+
+            if (!TryResolveHostView(engine, culling, ref hostView))
+            {
+                return false;
+            }
+
+            if (!TryEnsureAllPresentBindings(engine, hostView, out PresentBinding firstBinding))
+            {
+                culling?.DisarmPresentBindingCulling();
+                return false;
+            }
+
+            ClientLocalSeatRegistry registry = ClientLocalSeatAccess.RequireRegistry(engine);
+            LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(engine);
+            IReadOnlyList<string> seatIds = registry.SeatIds;
+            int drivenCount = 0;
+            for (int i = 0; i < seatIds.Count; i++)
+            {
+                ClientLocalSeat seat = registry.Require(seatIds[i]);
+                if (seat.PresentBinding is not PresentBinding binding)
+                {
+                    continue;
+                }
+
+                CameraManager camera = views.RequireCamera(binding.LogicViewId);
+                var surface = new PresentBindingSurface(binding, fovYDeg);
+                projector.Rebind(camera, surface);
+                rayProvider.Rebind(camera, surface);
+                presenter.Update(camera, interpolationAlpha, cameraDebug);
+                drivenCount++;
+                if (drawBinding != null)
+                {
+                    drawBinding(new PresentBindingDrawFrame(seat.SeatId, binding, camera, surface, interpolationAlpha));
+                }
+            }
+
+            if (drivenCount > 1)
+            {
+                CameraManager firstCamera = views.RequireCamera(firstBinding.LogicViewId);
+                var firstSurface = new PresentBindingSurface(firstBinding, fovYDeg);
+                projector.Rebind(firstCamera, firstSurface);
+                rayProvider.Rebind(firstCamera, firstSurface);
+                presenter.Update(firstCamera, interpolationAlpha, cameraDebug);
+            }
+
+            return drivenCount > 0;
+        }
+
+        private static void CollectCullPasses(GameEngine engine, float fovYDeg, List<PresentBindingCullPass> passes)
+        {
+            ClientLocalSeatRegistry registry = ClientLocalSeatAccess.RequireRegistry(engine);
+            LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(engine);
+            IReadOnlyList<string> seatIds = registry.SeatIds;
+            for (int i = 0; i < seatIds.Count; i++)
+            {
+                ClientLocalSeat seat = registry.Require(seatIds[i]);
+                if (seat.PresentBinding is not PresentBinding binding)
+                {
+                    continue;
+                }
+
+                CameraManager camera = views.RequireCamera(binding.LogicViewId);
+                passes.Add(new PresentBindingCullPass(seat.SeatId, camera, new PresentBindingSurface(binding, fovYDeg)));
+            }
+        }
+
         public static bool TryUpdatePresentBindingPresenter(
             GameEngine engine,
             string seatId,
