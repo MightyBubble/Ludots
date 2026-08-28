@@ -18,7 +18,7 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         [
             "Jump", "JumpIfFalse", "Call", "Return", "Yield", "AwaitCallback",
             "HaltReturnInt", "InvokeScript", "MoveInt",
-            "ConstText", "ConcatText", "IntToText", "FloatToText", "SinkPresentationText", "LoadTextKey"
+            "ConstText", "ConcatText", "IntToText", "FloatToText", "SinkPresentationText", "LoadTextKey", "StartDialogue"
         ];
         string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();
         foreach (string op in ops)
@@ -78,12 +78,31 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         }
     }
 
+    [Test]
+    public void StartDialogue_OpensSession_AndCaptions()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("StartDialogue");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("进图开一场对话"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("对话"));
+        Assert.That(runtime.Metrics.Detail, Does.Not.Contain("{"));
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
+        }
+    }
+
     [TestCase("ConstText")]
     [TestCase("ConcatText")]
     [TestCase("IntToText")]
     [TestCase("FloatToText")]
     [TestCase("SinkPresentationText")]
     [TestCase("LoadTextKey")]
+    [TestCase("StartDialogue")]
     public void FormalTextOp_CompilesFeaturedOpcode(string op)
     {
         string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();

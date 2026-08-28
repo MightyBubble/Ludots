@@ -11,7 +11,7 @@ using MessagePack.Formatters;
 
 namespace Ludots.Core.Persistence
 {
-    internal static class LudotsPersistenceSerializerFactory
+    public static class LudotsPersistenceSerializerFactory
     {
         public static LudotsBinaryWorldSerializer Create(GameEngine engine)
         {
@@ -71,3 +71,4 @@ namespace Ludots.Core.Persistence
         }
     }
 }
+

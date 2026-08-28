@@ -1,0 +1,17 @@
+{
+  "startupMapId": "field_jing_yang_transit",
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
+  "windowTitle": "Ludots - Jing Yang Transit",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "targetFps": 60,
+  "panelSkin": "markup"
+}

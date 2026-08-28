@@ -66,6 +66,11 @@ namespace Ludots.AgentBridge
             tools.Register(new SpatialQueryTool());
             tools.Register(new NavProjectTool());
             tools.Register(new NavFindPathTool());
+            tools.Register(new FieldLayersTool());
+            tools.Register(new FieldCellTool());
+            tools.Register(new FieldWriteCellTool());
+            tools.Register(new FieldHierarchyTool());
+            tools.Register(new FieldRedrawTool());
             tools.Register(new UiTreeTool());
             tools.Register(new UiQueryTool());
             tools.Register(new UiClickTool());
@@ -83,6 +88,11 @@ namespace Ludots.AgentBridge
             tools.Register(new PresentersQueryTool());
             tools.Register(new PresentersDesyncTool());
             tools.Register(new PresentersScreenTool());
+            tools.Register(new SaveSlotsTool());
+            tools.Register(new SaveCaptureTool());
+            tools.Register(new SaveWriteTool());
+            tools.Register(new SaveReadTool());
+            tools.Register(new SaveRestoreTool());
         }
 
         /// <summary>
@@ -96,3 +106,4 @@ namespace Ludots.AgentBridge
         }
     }
 }
+

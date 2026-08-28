@@ -260,6 +260,8 @@ namespace Ludots.Core.Gameplay.Teams
 
             seats.Clear();
             views.Clear();
+            string? declaredPresentLayout = ClientLocalSeatAccess.ResolveDeclaredPresentLayout(globals);
+            PresentBinding.ValidateDeclaredLayout(declaredPresentLayout);
             var built = new ClientLocalSeat[localSeats.Count];
             for (int i = 0; i < localSeats.Count; i++)
             {
@@ -272,7 +274,12 @@ namespace Ludots.Core.Gameplay.Teams
                 string viewId = views.EnsureDefaultView(possession.RepEntity);
                 if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
                 {
-                    seat.PresentBinding = PresentBinding.FullScreen(viewId, presentResolutionPx);
+                    seat.PresentBinding = PresentBinding.FromDeclaredLayout(
+                        declaredPresentLayout,
+                        viewId,
+                        i,
+                        localSeats.Count,
+                        presentResolutionPx);
                 }
 
                 built[i] = seat;
@@ -285,11 +292,13 @@ namespace Ludots.Core.Gameplay.Teams
 
         /// <summary>
         /// The sole seat's declared ControlSchemeId is the per-entry launch truth and activates the
-        /// global ControlSchemeRuntime (P2.5 sole consumption path); seats without a declaration keep
-        /// the runtime's initial/preference activation. Multi-seat scheme routing is P3: with more
-        /// than one seat nothing activates here. A declared scheme with the runtime unregistered,
-        /// uninstalled, or refused by the allowed-set is a configuration error and fails fast instead
-        /// of falling back to the initial scheme.
+        /// global ControlSchemeRuntime (P2.5 sole consumption path) as a runtime-only switch: the
+        /// map-entry truth is transient and never rewrites the persisted preference store, so the
+        /// player's own choice survives for later maps without a declaration. Seats without a
+        /// declaration keep the runtime's initial/preference activation. Multi-seat scheme routing
+        /// is P3: with more than one seat nothing activates here. A declared scheme with the
+        /// runtime unregistered, uninstalled, or refused by the allowed-set is a configuration
+        /// error and fails fast instead of falling back to the initial scheme.
         /// </summary>
         private static void ActivateSoleSeatControlScheme(
             IDictionary<string, object> globals,
@@ -320,7 +329,7 @@ namespace Ludots.Core.Gameplay.Teams
                     $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{schemeId}' which is not installed.");
             }
 
-            if (!schemes.TrySwitch(compiledSchemeId))
+            if (!schemes.TrySwitchRuntimeOnly(compiledSchemeId))
             {
                 throw new InvalidOperationException(
                     $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{schemeId}' which the mod allowed-set refuses.");

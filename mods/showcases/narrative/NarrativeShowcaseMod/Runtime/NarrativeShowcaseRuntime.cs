@@ -306,34 +306,6 @@ namespace NarrativeShowcaseMod.Runtime
             return string.Empty;
         }
 
-        /// <summary>
-        /// panelTheme 目录下可选覆盖说话人立绘/半身像（standing_*.png / portrait_*.png），证明换皮数据驱动。
-        /// </summary>
-        private static string? ResolveThemeSpeakerImage(GameEngine engine, string speakerId, bool standing)
-        {
-            string themeId = engine.MergedConfig?.PanelTheme?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(themeId) || string.IsNullOrWhiteSpace(speakerId))
-            {
-                return null;
-            }
-
-            string alias = speakerId;
-            const string speakerPrefix = "speaker.";
-            if (alias.StartsWith(speakerPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                alias = alias.Substring(speakerPrefix.Length);
-            }
-
-            if (string.IsNullOrWhiteSpace(alias))
-            {
-                return null;
-            }
-
-            string fileName = standing ? $"standing_{alias}.png" : $"portrait_{alias}.png";
-            string resolved = ResolveThemeImage(engine, themeId, fileName);
-            return string.IsNullOrWhiteSpace(resolved) ? null : resolved;
-        }
-
         internal void RebindEntities(GameEngine engine)
         {
             if (engine.GetService(CoreServiceKeys.DialogueRuntime) is not DialogueRuntime dialogue)
@@ -461,16 +433,36 @@ namespace NarrativeShowcaseMod.Runtime
 
             if (sequenceActive)
             {
-                surfaces.Add(BuildSequenceSurface(engine, sequence));
+                StoryPresentationProjector projector = RequireProjector(engine);
+                bool transmission = ContainsId(_frontendConfig.Routing.TransmissionSequenceIds, sequence.SequenceId);
+                StoryPresentationFrame frame = projector.ProjectSequence(sequence, transmission);
+                AppendStoryFrame(engine, surfaces, frame, worldProjected: false);
             }
 
             if (dialogueActive)
             {
-                surfaces.Add(BuildDialogueSurface(engine, dialogue, dialogueView));
-                if (dialogueView.Choices.Count > 0)
+                StoryPresentationProjector projector = RequireProjector(engine);
+                float? worldX = null;
+                float? worldY = null;
+                if (engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
+                    story.TryGetProfile(dialogueView.PresentationProfile, out StoryPresentationProfileDefinition profile) &&
+                    profile.Backend == StoryPresentationBackend.WorldProjected)
                 {
-                    surfaces.Add(BuildChoiceSurface(dialogueView));
+                    if (!TryProjectSpeaker(engine, dialogue, dialogueView.SpeakerId, out float screenX, out float screenY))
+                    {
+                        throw new InvalidOperationException(
+                            $"Presentation profile '{dialogueView.PresentationProfile}' requires IScreenProjector and a bound speaker entity with WorldPositionCm. Speaker '{dialogueView.SpeakerId}' could not be projected.");
+                    }
+
+                    worldX = screenX - UiMargin;
+                    worldY = screenY - UiMargin;
+                    NarrativeShowcaseSurfaceConfig bubbleChrome = _frontendConfig.DialogueBubble;
+                    engine.GlobalContext["NarrativeShowcase.LastWorldBubble"] =
+                        $"DialogueBubble|{bubbleChrome.Width}|TopLeft|{worldX:0.###}|{worldY - 96f:0.###}|{bubbleChrome.Eyebrow}";
                 }
+
+                StoryPresentationFrame frame = projector.ProjectDialogue(dialogueView, worldX, worldY);
+                AppendStoryFrame(engine, surfaces, frame, worldProjected: worldX.HasValue);
             }
 
             surfaces.RemoveAll(static surface => !surface.Visible);
@@ -482,6 +474,125 @@ namespace NarrativeShowcaseMod.Runtime
                 _frontendConfig.BackdropHex,
                 surfaces);
         }
+
+        private static StoryPresentationProjector RequireProjector(GameEngine engine)
+        {
+            return engine.GetService(CoreServiceKeys.StoryPresentationProjector)
+                ?? throw new InvalidOperationException(
+                    "Narrative showcase requires StoryPresentationProjector engine service.");
+        }
+
+        private void AppendStoryFrame(
+            GameEngine engine,
+            List<NarrativeFrontendSurfaceModel> surfaces,
+            StoryPresentationFrame frame,
+            bool worldProjected)
+        {
+            PresentationDisplayResolver? display = engine.GetService(CoreServiceKeys.PresentationDisplayResolver);
+            NarrativeFrontendPageState page = StoryPresentationFrontendAdapter.ToPage(
+                _frontendConfig.OwnerId,
+                frame,
+                display,
+                frameImageSrc: string.Empty);
+            if (page.Surfaces == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < page.Surfaces.Count; i++)
+            {
+                surfaces.Add(ApplyFrontendChrome(page.Surfaces[i], worldProjected));
+            }
+        }
+
+        /// <summary>
+        /// Content comes from the Core string bag; layout / eyebrow / footer come from frontend config.
+        /// World-projected bubbles keep projected TopLeft offsets and only take width/chrome from config.
+        /// </summary>
+        private NarrativeFrontendSurfaceModel ApplyFrontendChrome(
+            NarrativeFrontendSurfaceModel surface,
+            bool worldProjected)
+        {
+            NarrativeShowcaseSurfaceConfig? config = ResolveChromeConfig(surface.Kind);
+            if (config == null)
+            {
+                return surface with
+                {
+                    FrameImageSrc = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
+                        ? _choiceFrameSrc
+                        : _panelFrameSrc
+                };
+            }
+
+            bool keepProjectedPlacement =
+                worldProjected && surface.Kind == NarrativeFrontendSurfaceKind.DialogueBubble;
+
+            string title = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList &&
+                           !string.IsNullOrWhiteSpace(config.Title)
+                ? config.Title
+                : surface.Title;
+
+            string footer;
+            if (surface.Kind is NarrativeFrontendSurfaceKind.SubtitleBubble
+                or NarrativeFrontendSurfaceKind.TransmissionOverlay)
+            {
+                footer = _frontendConfig.Hints.SkipPrompt;
+            }
+            else if (surface.CountdownSeconds > 0f &&
+                     !string.IsNullOrWhiteSpace(_frontendConfig.Hints.AutoAdvancePrompt))
+            {
+                footer = _frontendConfig.Hints.AutoAdvancePrompt;
+            }
+            else if (!string.IsNullOrWhiteSpace(surface.Footer))
+            {
+                footer = surface.Footer;
+            }
+            else
+            {
+                footer = config.Footer;
+            }
+
+            bool skippable = surface.Kind is NarrativeFrontendSurfaceKind.SubtitleBubble
+                or NarrativeFrontendSurfaceKind.TransmissionOverlay;
+
+            return surface with
+            {
+                Title = title,
+                Subtitle = string.IsNullOrWhiteSpace(surface.Subtitle) ? config.Eyebrow : surface.Subtitle,
+                Footer = footer,
+                Anchor = keepProjectedPlacement ? surface.Anchor : config.ResolveAnchor(),
+                Width = config.Width > 0f ? config.Width : surface.Width,
+                OffsetX = keepProjectedPlacement ? surface.OffsetX : config.OffsetX,
+                OffsetY = keepProjectedPlacement ? surface.OffsetY : config.OffsetY,
+                ZIndex = config.ZIndex > 0 ? config.ZIndex : surface.ZIndex,
+                Skippable = skippable || surface.Skippable,
+                AccentHex = FirstNonEmpty(surface.AccentHex, config.AccentHex),
+                BackgroundHex = FirstNonEmpty(surface.BackgroundHex, config.BackgroundHex),
+                BorderHex = FirstNonEmpty(surface.BorderHex, config.BorderHex),
+                ForegroundHex = FirstNonEmpty(surface.ForegroundHex, config.ForegroundHex),
+                MutedHex = FirstNonEmpty(surface.MutedHex, config.MutedHex),
+                FrameImageSrc = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
+                    ? _choiceFrameSrc
+                    : _panelFrameSrc
+            };
+        }
+
+        private NarrativeShowcaseSurfaceConfig? ResolveChromeConfig(NarrativeFrontendSurfaceKind kind)
+        {
+            return kind switch
+            {
+                NarrativeFrontendSurfaceKind.OverlayDialogue => _frontendConfig.OverlayDialogue,
+                NarrativeFrontendSurfaceKind.DialogueBubble => _frontendConfig.DialogueBubble,
+                NarrativeFrontendSurfaceKind.StandingPortrait => _frontendConfig.StandingPortrait,
+                NarrativeFrontendSurfaceKind.SubtitleBubble => _frontendConfig.SubtitleBubble,
+                NarrativeFrontendSurfaceKind.ChoiceList => _frontendConfig.ChoiceList,
+                NarrativeFrontendSurfaceKind.TransmissionOverlay => _frontendConfig.TransmissionOverlay,
+                _ => null
+            };
+        }
+
+        private static string FirstNonEmpty(string primary, string fallback) =>
+            string.IsNullOrWhiteSpace(primary) ? fallback ?? string.Empty : primary;
 
         private NarrativeFrontendSurfaceModel BuildPromptSurface(
             GameEngine engine,
@@ -594,154 +705,6 @@ namespace NarrativeShowcaseMod.Runtime
                 string.Empty,
                 _frontendConfig.VariablesPanel.Footer,
                 items);
-        }
-
-        private NarrativeFrontendSurfaceModel BuildDialogueSurface(
-            GameEngine engine,
-            DialogueRuntime dialogue,
-            DialogueView dialogueView)
-        {
-            string speaker = string.IsNullOrWhiteSpace(dialogueView.ResolvedSpeakerName)
-                ? dialogueView.SpeakerId
-                : dialogueView.ResolvedSpeakerName;
-            string profile = dialogueView.PresentationProfile ?? string.Empty;
-            bool standingPortrait = string.Equals(
-                profile,
-                NarrativeShowcaseIds.PresentationStandingPortrait,
-                StringComparison.OrdinalIgnoreCase);
-            bool worldBubble = string.Equals(profile, NarrativeShowcaseIds.PresentationWorldBubble, StringComparison.OrdinalIgnoreCase);
-            bool overlay = string.Equals(profile, NarrativeShowcaseIds.PresentationDialogueOverlay, StringComparison.OrdinalIgnoreCase)
-                || (!worldBubble && !standingPortrait && dialogueView.Choices.Count > 0);
-
-            NarrativeShowcaseSurfaceConfig config = standingPortrait
-                ? _frontendConfig.StandingPortrait
-                : overlay
-                    ? _frontendConfig.OverlayDialogue
-                    : _frontendConfig.DialogueBubble;
-            NarrativeFrontendSurfaceKind kind = standingPortrait
-                ? NarrativeFrontendSurfaceKind.StandingPortrait
-                : overlay
-                    ? NarrativeFrontendSurfaceKind.OverlayDialogue
-                    : NarrativeFrontendSurfaceKind.DialogueBubble;
-            string footer = dialogueView.AutoAdvance
-                ? _frontendConfig.Hints.AutoAdvancePrompt
-                : config.Footer;
-
-            float offsetX = config.OffsetX;
-            float offsetY = config.OffsetY;
-            NarrativeFrontendAnchor anchor = config.ResolveAnchor();
-            if (worldBubble)
-            {
-                if (!TryProjectSpeaker(engine, dialogue, dialogueView.SpeakerId, out float screenX, out float screenY))
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation profile '{NarrativeShowcaseIds.PresentationWorldBubble}' requires IScreenProjector and a bound speaker entity with WorldPositionCm. Speaker '{dialogueView.SpeakerId}' could not be projected.");
-                }
-
-
-                anchor = NarrativeFrontendAnchor.TopLeft;
-                offsetX = screenX - UiMargin;
-                offsetY = screenY - UiMargin - 96f;
-                engine.GlobalContext["NarrativeShowcase.LastWorldBubble"] =
-                    $"{kind}|{config.Width}|{anchor}|{offsetX:0.###}|{offsetY:0.###}|{config.Eyebrow}";
-            }
-
-            string portraitSrc = ResolveThemeSpeakerImage(
-                engine,
-                dialogueView.SpeakerId,
-                standingPortrait)
-                ?? (standingPortrait ? dialogueView.StandingImageSrc : dialogueView.PortraitImageSrc);
-            if (standingPortrait && string.IsNullOrWhiteSpace(portraitSrc))
-            {
-                throw new InvalidOperationException(
-                    $"Presentation profile '{NarrativeShowcaseIds.PresentationStandingPortrait}' requires speaker '{dialogueView.SpeakerId}' to declare standingImageId with a resolvable image asset.");
-            }
-
-
-            return new NarrativeFrontendSurfaceModel(
-                SurfaceId: $"{_frontendConfig.OwnerId}.{kind}.{anchor}",
-                Kind: kind,
-                Anchor: anchor,
-                Title: speaker,
-                Subtitle: config.Eyebrow,
-                Body: dialogueView.ResolvedText,
-                Footer: string.IsNullOrWhiteSpace(footer) ? config.Footer : footer,
-                Width: config.Width,
-                OffsetX: offsetX,
-                OffsetY: offsetY,
-                ZIndex: config.ZIndex,
-                WaitForInput: dialogueView.WaitForInput,
-                Skippable: false,
-                Progress01: dialogueView.Progress01,
-                CountdownSeconds: dialogueView.AutoAdvanceSeconds > 0f
-                    ? Math.Max(0f, dialogueView.AutoAdvanceSeconds - dialogueView.ElapsedSeconds)
-                    : 0f,
-                AccentHex: config.AccentHex,
-                BackgroundHex: config.BackgroundHex,
-                BorderHex: config.BorderHex,
-                ForegroundHex: config.ForegroundHex,
-                MutedHex: config.MutedHex,
-                PortraitSrc: portraitSrc,
-                PortraitSize: standingPortrait ? 980f : overlay ? 112f : 84f,
-                FrameImageSrc: _panelFrameSrc);
-        }
-
-        private NarrativeFrontendSurfaceModel BuildChoiceSurface(DialogueView dialogue)
-        {
-            var items = new List<NarrativeFrontendSurfaceItem>(dialogue.Choices.Count);
-            for (int i = 0; i < dialogue.Choices.Count; i++)
-            {
-                DialogueChoiceView choice = dialogue.Choices[i];
-                items.Add(new NarrativeFrontendSurfaceItem(
-                    Label: choice.ResolvedText,
-                    Active: i == 0,
-                    Shortcut: (i + 1).ToString()));
-            }
-
-            return CreateSurface(
-                _frontendConfig.ChoiceList,
-                NarrativeFrontendSurfaceKind.ChoiceList,
-                _frontendConfig.ChoiceList.Title,
-                string.Empty,
-                _frontendConfig.ChoiceList.Footer,
-                items);
-        }
-
-        private NarrativeFrontendSurfaceModel BuildSequenceSurface(GameEngine engine, SequenceView sequence)
-        {
-            SequenceSubtitleView? subtitle = sequence.ActiveSubtitles.Count > 0
-                ? sequence.ActiveSubtitles[0]
-                : null;
-            bool transmission = ContainsId(_frontendConfig.Routing.TransmissionSequenceIds, sequence.SequenceId);
-            NarrativeShowcaseSurfaceConfig config = transmission
-                ? _frontendConfig.TransmissionOverlay
-                : _frontendConfig.SubtitleBubble;
-            NarrativeFrontendSurfaceKind kind = transmission
-                ? NarrativeFrontendSurfaceKind.TransmissionOverlay
-                : NarrativeFrontendSurfaceKind.SubtitleBubble;
-
-            string title = subtitle != null
-                ? ResolveSpeakerDisplay(engine, subtitle.SpeakerId)
-                : sequence.DisplayName;
-            string body = subtitle?.ResolvedText ?? string.Empty;
-            float progress01 = subtitle != null && subtitle.Duration > 0f
-                ? Math.Clamp(subtitle.LocalElapsed / subtitle.Duration, 0f, 1f)
-                : 0f;
-            float countdown = subtitle != null
-                ? Math.Max(0f, subtitle.Duration - subtitle.LocalElapsed)
-                : 0f;
-
-            return CreateSurface(
-                config,
-                kind,
-                title,
-                body,
-                _frontendConfig.Hints.SkipPrompt,
-                null,
-                false,
-                true,
-                progress01,
-                countdown);
         }
 
         private string ResolveSpeakerDisplay(GameEngine engine, string speakerId)
@@ -1107,7 +1070,7 @@ namespace NarrativeShowcaseMod.Runtime
             int surfaceCount)
         {
             string dialogueSig = dialogue.TryGetActiveView(out DialogueView dialogueView)
-                ? $"{dialogueView.DialogueId}|{dialogueView.NodeId}|{dialogueView.Choices.Count}|{dialogueView.Progress01:0.00}|{dialogueView.PresentationProfile}|{dialogueView.StandingImageSrc}|{dialogueView.PortraitImageSrc}"
+                ? $"{dialogueView.DialogueId}|{dialogueView.NodeId}|{dialogueView.Choices.Count}|{dialogueView.Progress01:0.00}|{dialogueView.PresentationProfile}|{dialogueView.StandingImageId}|{dialogueView.PortraitImageId}"
                 : string.Empty;
             string sequenceSig = sequencer.TryGetActiveView(out SequenceView sequence)
                 ? $"{sequence.SequenceId}|{sequence.Time:0.00}|{sequence.ActiveSubtitles.Count}|{sequence.Paused}"
@@ -1451,11 +1414,6 @@ namespace NarrativeShowcaseMod.Runtime
             screenX = screen.X;
             screenY = screen.Y;
             return true;
-        }
-
-        private static string FirstNonEmpty(string preferred, string fallback)
-        {
-            return string.IsNullOrWhiteSpace(preferred) ? fallback ?? string.Empty : preferred;
         }
 
         private static bool IsNear(WorldPositionCm a, WorldPositionCm b, float rangeCm)

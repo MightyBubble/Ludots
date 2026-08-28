@@ -1,0 +1,52 @@
+[
+  {
+    "id": "field_hierarchy_hero",
+    "components": {
+      "Name": { "Value": "HierarchyHero" },
+      "Team": { "Id": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 50, "Y": 50 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "OrderBuffer": {},
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "FieldTrackedCm": { "layer": "ownership.zones" }
+    }
+  },
+  {
+    "id": "field_hierarchy_marker_a1",
+    "components": {
+      "Name": { "Value": "MarkerZoneA1" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 50, "Y": 50 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "field_hierarchy_marker_a2",
+    "components": {
+      "Name": { "Value": "MarkerZoneA2" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 350, "Y": 50 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "field_hierarchy_marker_b1",
+    "components": {
+      "Name": { "Value": "MarkerZoneB1" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 650, "Y": 50 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {}
+    }
+  }
+]

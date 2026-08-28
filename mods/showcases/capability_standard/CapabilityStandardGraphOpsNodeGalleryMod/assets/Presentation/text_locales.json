@@ -2,10 +2,14 @@
   "defaultLocale": "zh-CN",
   "locales": {
     "zh-CN": {
-      "gallery.hello": "你好"
+      "gallery.hello": "你好",
+      "gallery.start_dialogue.speaker": "作者",
+      "gallery.start_dialogue.open": "对话会话已启动。"
     },
     "en-US": {
-      "gallery.hello": "Hello"
+      "gallery.hello": "Hello",
+      "gallery.start_dialogue.speaker": "Author",
+      "gallery.start_dialogue.open": "Dialogue session started."
     }
   }
 }

@@ -41,6 +41,14 @@ namespace Ludots.Core.Config
 
         public bool HasStartupLocalSeats => StartupLocalSeats != null && StartupLocalSeats.Count > 0;
 
+        /// <summary>
+        /// Data-declared PresentBinding layout for the startup seat table:
+        /// "fullscreen" (default) | "horizontal-equal-split" | "vertical-equal-split".
+        /// Resolved by <c>ParticipantBindingResolver.PublishLocalSeats</c>; unknown ids fail map load
+        /// with the id named. Switching split orientation is a data change, not a code branch.
+        /// </summary>
+        public string? StartupPresentLayout { get; set; }
+
         /// <summary>Build launch context from <see cref="StartupLocalSeats"/> (Epic #896 SSOT).</summary>
         public MapLaunchContext? CreateStartupLaunchContext(
             IReadOnlyDictionary<string, object>? metadata = null)

@@ -14,10 +14,19 @@ Core Field2D 是全图或大面积二维栅格数据的共享数据结构层。F
 
 - Cell: 逻辑格坐标，使用 `FieldCell2D`。
 - Grid: world cm 与 cell/chunk 的映射，使用 `FieldGridSpec2D`。
-- Chunk: 固定尺寸 cell block，按 chunk x/y 寻址。
+- Chunk: 固定尺寸 cell block，按 chunk x/y 寻址；未写入的 chunk 不分配。
 - Lane: SoA 通道。`byte` 是 struct lane，`Vector2` 是两个 float lanes。
 - Dirty: 本帧或上次清理后变化过的 cell，用于增量投影与 texture upload。
 - Non-default: 当前值不等于 default value 的 cell，用于稀疏复制和 snapshot。
+
+## 离散归属层作者格式
+
+- `Fields/cells/<layerKey>.json`：
+  - `schemaVersion: 1`：逐格 `cells: [[x,y,regionId], ...]`（小图 / 既有资产）。
+  - `schemaVersion: 2`：矩形笔画 `rects: [[x0,y0,x1,y1,regionId], ...]`，可选 `points`；禁止再写 `cells`。
+- 装载把笔画直接 `FillRect` / `Set` 进 `ChunkedField2D`，禁止先展开成千万级中间数组。
+- 存档与 FieldEditor 写出走 `FieldRectCodec`（行 RLE + 纵向合并），密实省/郡在磁盘上应是少量矩形，而不是百万 JSON 三元组。
+- 运行时内存仍是「按 chunk 懒建 + chunk 内密实」；没有 RLE 内存压缩。大陆级图请用 v2 矩形作者，不要用 v1 逐格 JSON。
 
 ## 边界红线
 

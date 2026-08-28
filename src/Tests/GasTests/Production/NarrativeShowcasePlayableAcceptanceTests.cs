@@ -230,7 +230,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(dialogue.TryGetActiveView(out DialogueView returnDialogue), Is.True);
             Assert.That(returnDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnDialogueId));
             Assert.That(returnDialogue.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationStandingPortrait));
-            Assert.That(returnDialogue.StandingImageSrc, Is.Not.Null.And.Not.Empty);
+            Assert.That(returnDialogue.StandingImageId, Is.Not.Null.And.Not.Empty);
             AssertStandingPortraitSurface(uiRoot, returnDialogue);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "standing_portrait_return");
             timeline.Add("[T+007a] Return beat opened on story.standing_portrait with a half-screen standing figure for the warden.");
@@ -662,7 +662,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(refresh, Is.Not.Null, "NarrativeShowcase.Runtime.RefreshPanel missing.");
             refresh!.Invoke(runtimeObj, new object[] { engine });
             Assert.That(engine.GlobalContext.TryGetValue("NarrativeShowcase.LastWorldBubble", out object? lastBubbleObj), Is.True,
-                "BuildDialogueSurface did not record LastWorldBubble after RefreshPanel.");
+                "BuildPage did not record LastWorldBubble after RefreshPanel.");
             string lastBubble = lastBubbleObj as string ?? string.Empty;
             TestContext.WriteLine("LastWorldBubble=" + lastBubble);
             TickPresentation(engine);
@@ -713,13 +713,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(standing, Is.Not.Null, "Expected story-standing-portrait image node.");
             string standingSrc = standing!.Attributes["src"] ?? string.Empty;
             Assert.That(standingSrc, Is.Not.Null.And.Not.Empty);
-            bool catalogMatch = string.Equals(standingSrc, view.StandingImageSrc, StringComparison.Ordinal);
-            bool themeOverride = standingSrc.Contains("PanelThemes", StringComparison.OrdinalIgnoreCase)
-                && standingSrc.Contains("standing_", StringComparison.OrdinalIgnoreCase);
-            Assert.That(
-                catalogMatch || themeOverride,
-                Is.True,
-                $"Standing portrait src should match catalog StandingImageSrc or a PanelThemes override. src='{standingSrc}', catalog='{view.StandingImageSrc}'.");
+            Assert.That(view.StandingImageId, Is.Not.Null.And.Not.Empty,
+                "DialogueView should expose standingImageId (not a filesystem path).");
+            Assert.That(standingSrc, Does.Contain("data:image").Or.Contain("/").Or.Contain("\\"),
+                "Frontend must resolve standing imageId to a drawable src.");
             Assert.That(standing.Style.Height.Unit, Is.EqualTo(UiLengthUnit.Pixel));
             Assert.That(standing.Style.Height.Value, Is.GreaterThanOrEqualTo(900f),
                 "Standing portrait should occupy roughly half-screen vertical height.");

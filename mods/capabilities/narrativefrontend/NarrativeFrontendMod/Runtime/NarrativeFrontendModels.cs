@@ -71,6 +71,9 @@ public sealed record NarrativeFrontendSurfaceModel(
     string BorderHex = "",
     string ForegroundHex = "",
     string MutedHex = "",
+    /// <summary>Presentation imageId (portrait/standing/icon). Prefer this over resolved paths.</summary>
+    string ImageId = "",
+    /// <summary>Resolved absolute/data URI filled at frontend ingest — composers may use either.</summary>
     string PortraitSrc = "",
     float PortraitSize = 96f,
     string FrameImageSrc = "");

@@ -115,6 +115,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
         public static readonly ServiceKey<Ludots.Platform.Abstractions.ISaveStorage> SaveStorage = new("SaveStorage");
         public static readonly ServiceKey<CheckpointCoordinator> CheckpointCoordinator = new("CheckpointCoordinator");
+        public static readonly ServiceKey<Ludots.Core.Fields.FieldLayerRegistry> FieldLayerRegistry = new("FieldLayerRegistry");
         public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem> AttachmentPositionSync = new("AttachmentPositionSync");
 
@@ -198,6 +199,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TaskRuntimeService> TaskRuntimeService = new("TaskRuntimeService");
         public static readonly ServiceKey<TaskPresentationBuffer> TaskPresentationBuffer = new("TaskPresentationBuffer");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Story.StoryDefinitionRegistry> StoryDefinitions = new("StoryDefinitions");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Story.StoryPresentationProjector> StoryPresentationProjector = new("StoryPresentationProjector");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Dialogue.DialogueDefinitionRegistry> DialogueDefinitions = new("DialogueDefinitions");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Sequencer.SequenceDefinitionRegistry> SequenceDefinitions = new("SequenceDefinitions");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Dialogue.DialogueRuntime> DialogueRuntime = new("DialogueRuntime");

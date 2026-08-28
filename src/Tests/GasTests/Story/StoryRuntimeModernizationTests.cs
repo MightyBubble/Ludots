@@ -275,8 +275,20 @@ namespace Ludots.Tests.GAS.Story
             dialogue.StartDialogue("dialogue.unit.choice");
             Assert.That(dialogue.TryGetActiveView(out DialogueView open), Is.True);
             Assert.That(open.Choices.Count, Is.EqualTo(1));
-            Assert.That(open.Choices[0].ConditionGraphId, Is.EqualTo(string.Empty));
-            Assert.That(open.Choices[0].ActionGraphId, Is.EqualTo(string.Empty));
+            Assert.That(open.Choices[0].ChoiceId, Is.EqualTo("go"));
+            Assert.That(open.Choices[0].LineId, Is.EqualTo("line.unit.choice"));
+            Assert.That(open.PortraitImageId, Is.Not.Null);
+            Assert.That(open.StandingImageId, Is.Not.Null);
+
+            var projector = new StoryPresentationProjector(story);
+            StoryPresentationFrame frame = projector.ProjectDialogue(open);
+            Assert.That(frame.Handle.IsValid, Is.True);
+            Assert.That(frame.Handle.StreamId, Is.EqualTo("dialogue.unit.choice"));
+            Assert.That(frame.Surfaces.Count, Is.EqualTo(2));
+            Assert.That(frame.Surfaces[0].Body, Is.EqualTo("story.unit.hello").Or.Not.Empty);
+            Assert.That(frame.Surfaces[1].SurfaceKind, Is.EqualTo("ChoiceList"));
+            Assert.That(frame.Surfaces[1].Choices![0].ChoiceId, Is.EqualTo("go"));
+            Assert.That(frame.Surfaces[1].Choices![0].Text, Is.Not.Null);
 
             dialogue.ChooseOption(0);
             Assert.That(dialogue.TryGetActiveView(out DialogueView afterChoice), Is.True);

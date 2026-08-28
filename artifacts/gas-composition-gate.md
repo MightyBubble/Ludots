@@ -51,6 +51,59 @@ N/A — trace 不是执行 op，不改变 Graph program。
 
 「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
 
+## Issue #1177 Beat 5 — Field-region ability scope — 2026-08-26
+
+- **Task / Issue**: Add the `field_jing_yang_transit` region-scoped ability demonstration.
+- **Date**: 2026-08-26
+- **Agent / Author**: GPT-5.6 Sol
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A**
+
+结论: **PASS**
+
+一句话理由: 区域过境复用现有 TriggerGraph 事件、effect tag 和 ability validation graph 组合，不新增 Graph op、profile enum、preset 开关或平行管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 区域进入/退出授予与移除 scope tag | 2 | 现有 `FieldRegionEntered` / `FieldRegionExited` TriggerGraph + `ApplyEffectTemplate` / `RemoveEffectTemplate` |
+| Ability 激活门 | 2 | 现有 Validation graph + `HasTag` + `activationPrecondition` |
+| 成功施放地图状态 | 2 | 现有 Effect graph + `ReadMapVarInt` / `AddInt` / `WriteMapVarInt` |
+| 当前区域只读查询 | Core query | `RegionMembershipCm` + `FieldSessionStore` + `RegionIdRegistry` |
+
+### 3. Reuse list
+
+- Handlers: `HasTag`, `ApplyEffectTemplate`, `RemoveEffectTemplate`, `ReadMapVarInt`, `AddInt`, `WriteMapVarInt`.
+- Queues / Systems: `FieldRegionMembershipSystem`, existing TriggerGraph dispatch, GAS effect request/processing pipeline.
+- Resolvers / Registries: `FieldSessionStore`, `RegionIdRegistry`, `TagRegistry`, `EffectTemplateIdRegistry`, `AbilityDefinitionRegistry`, `GraphProgramRegistry`.
+- Existing presets / graphs: `Buff` infinite effect, Validation graph authoring, `AbilityExecLoader.activationPrecondition`.
+
+### 4. New Layer 0 ops (if any)
+
+N/A — no new Graph op, effect handler, or lifecycle operation.
+
+### 5. Transaction boundary
+
+No new transaction boundary. Region transitions publish existing ordered exit/enter events; each graph applies one existing effect operation.
+
+### 6. Config SSOT
+
+Behavior config remains in the showcase's existing `GAS/graphs.json`, plus standard `GAS/effects.json` and `GAS/abilities.json` catalog assets. 是否新增 JSON schema: **NO**。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
+
 ## Issues #714-#719 AI/GAS Order Boundary — Pre-Implementation Gate — 2026-07-31
 
 - **Task / Issue**: Implement issues #714-#719 after PR #713, keeping ability lockout as duration Effect data, keeping Utility AI out of GAS ability eligibility, and converging AI output on typed Order contracts and read-only scoring.
@@ -235,3 +288,65 @@ N/A — 无新 graph opcode；global 派发复用 DispatchMapEvent（opcode 453�
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**（新订阅 = 新 entry + scope 声明；新 hook = 新 hookAnchor 字段指向 anchor 节点）。
+
+---
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: Dialogue Author Kit — 拆掉 narrative_hosts 假 bootstrap，进图开聊改挂 MapLoaded TriggerGraph
+- **Date**: 2026-08-27
+- **Agent / Author**: cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A**（新增 graph 节点 `StartDialogue`）
+
+结论: **PASS**
+
+一句话理由: 「进图开聊」是单一副作用，无法由现有 MapVar/FormalText/Panel op 组合出 DialogueRuntime.StartDialogue；禁止用一次性 Frontend hosts schema 冒充数据驱动。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| StartDialogue | 0 | GraphNodeOp + GasGraphRuntimeApi |
+| MapLoaded 进图开聊 | 2 | TriggerGraph 组合（entries.event=MapLoaded） |
+| 选项写/读口令 | 2 | 既有 WriteMapVarInt / ReadMapVarInt |
+| 对话上屏 | 3 | NarrativeFrontend 通用投影（无 per-mod hosts） |
+
+### 3. Reuse list
+
+- Handlers: GasGraphOpHandlerTable、ConfigKeyRegistry 符号补丁
+- Queues / Systems: TriggerGraphMounting、DialogueRuntime、StoryPresentationProjector
+- Resolvers / Registries: DialogueDefinitionRegistry、GraphProgramRegistry
+- Existing presets / graphs: FormalText MapLoaded 模式、AuthorKit GrantPass/PassGranted
+
+### 4. New Layer 0 ops (if any)
+
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| StartDialogue | 按 dialogueId 启动 DialogueRuntime 会话 | 无既有 op 调用 DialogueRuntime；SinkPresentationText 只推字符串，不建对话会话 |
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: 无（StartDialogue 失败则 fail-closed 抛错；不静默）
+
+### 6. Config SSOT
+
+行为配置落在: TriggerGraph（`GAS/graphs.json`）+ 地图 `TriggerGraphs` 挂载
+
+是否新增 JSON schema: **NO**（删除 `Frontend/narrative_hosts.json` 假 schema；仅复用既有 graph 节点字段 `dialogueId`）
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+- [x] 删除 narrative_hosts / HostCatalog / bootstrap 硬编码挂靠
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: **graph 连线**（换 dialogueId / 换 MapLoaded 入口条件）
+
+若选了 Core enum → FAIL — 本任务仅新增一个 Layer 0 op，后续变体不扩 enum。

@@ -1,0 +1,16 @@
+[
+  {
+    "parent": "group.mid",
+    "children": [
+      "zone.a1",
+      "zone.a2"
+    ]
+  },
+  {
+    "parent": "group.top",
+    "children": [
+      "group.mid",
+      "zone.b1"
+    ]
+  }
+]

@@ -156,6 +156,35 @@ namespace Ludots.Core.Input.Interaction
         /// </summary>
         public bool TrySwitch(int schemeId)
         {
+            if (!TrySwitchCore(schemeId, out bool switched))
+            {
+                return false;
+            }
+
+            if (switched)
+            {
+                _preferences?.SetActiveScheme(_schemeIds.GetName(schemeId));
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Runtime-only hot-switch: identical switching semantics to <see cref="TrySwitch"/>
+        /// (installed/allowed-set refusal, IMC context swap, no-op success on the already-active
+        /// scheme) but never writes the preference store — the caller's activation truth is
+        /// transient per scope (e.g. a seat's declared scheme for this map entry), while the
+        /// persisted preference stays the player's own choice. Explicit user switches keep using
+        /// <see cref="TrySwitch"/>.
+        /// </summary>
+        public bool TrySwitchRuntimeOnly(int schemeId)
+        {
+            return TrySwitchCore(schemeId, out _);
+        }
+
+        private bool TrySwitchCore(int schemeId, out bool switched)
+        {
+            switched = false;
             if (!IsInstalled(schemeId) || !IsAllowed(schemeId))
             {
                 return false;
@@ -188,8 +217,8 @@ namespace Ludots.Core.Input.Interaction
             _activeSchemeId = schemeId;
             _activeDefaultCommandIntentId = _schemes[schemeId].DefaultCommandIntentId;
             _activeDefaultCastDispatchProfileId = _schemes[schemeId].DefaultCastDispatchProfileId;
-            _preferences?.SetActiveScheme(_schemeIds.GetName(schemeId));
             Revision++;
+            switched = true;
             return true;
         }
 
