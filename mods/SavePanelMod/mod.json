@@ -2,7 +2,7 @@
   "name": "SavePanelMod",
   "version": "1.0.0",
   "description": "Reusable save/load panel: slot list with header metadata, save, restore, delete, autosave state. Storage flows through the engine ISaveStorage service; zero file IO.",
-  "main": "bin/net8.0/SavePanelMod.dll",
+  "main": "bin/net9.0/SavePanelMod.dll",
   "priority": 135,
   "dependencies": {
     "LudotsCoreMod": ">=1.0.0"
