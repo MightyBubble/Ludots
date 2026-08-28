@@ -288,17 +288,56 @@ namespace Ludots.Core.Gameplay.Teams
             seats.ReplaceAll(built);
             ConfigureLogicViewCameras(globals, views);
             ActivateSoleSeatControlScheme(globals, seats);
+            PublishSeatInputChannels(globals, seats);
+        }
+
+        /// <summary>
+        /// Multi-seat scheme routing: with more than one seat, every seat declaring a
+        /// controlSchemeId activates it on its own input channel (handler context stack +
+        /// authoritative input snapshot owned per seat). The sole seat keeps the engine-global
+        /// interpretation chain and never reaches this path's channel building. A declared
+        /// scheme that is uninstalled or refused by the mod allowed-set fails fast inside
+        /// <see cref="ClientLocalSeatInputRuntime.PublishSeats"/> with the same semantics as
+        /// the sole-seat activation chain.
+        /// </summary>
+        private static void PublishSeatInputChannels(
+            IDictionary<string, object> globals,
+            ClientLocalSeatRegistry seats)
+        {
+            if (globals.TryGetValue(CoreServiceKeys.ClientLocalSeatInputRuntime.Name, out object? runtimeObj) &&
+                runtimeObj is ClientLocalSeatInputRuntime seatInput)
+            {
+                seatInput.PublishSeats(seats);
+                return;
+            }
+
+            if (seats.Count > 1)
+            {
+                for (int i = 0; i < seats.SeatIds.Count; i++)
+                {
+                    ClientLocalSeat seat = seats.Require(seats.SeatIds[i]);
+                    if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{seat.ControlSchemeId}' " +
+                        $"but the ClientLocalSeatInputRuntime service is not registered.");
+                }
+            }
         }
 
         /// <summary>
         /// The sole seat's declared ControlSchemeId is the per-entry launch truth and activates the
-        /// global ControlSchemeRuntime (P2.5 sole consumption path) as a runtime-only switch: the
+        /// global ControlSchemeRuntime (sole consumption path) as a runtime-only switch: the
         /// map-entry truth is transient and never rewrites the persisted preference store, so the
         /// player's own choice survives for later maps without a declaration. Seats without a
-        /// declaration keep the runtime's initial/preference activation. Multi-seat scheme routing
-        /// is P3: with more than one seat nothing activates here. A declared scheme with the
-        /// runtime unregistered, uninstalled, or refused by the allowed-set is a configuration
-        /// error and fails fast instead of falling back to the initial scheme.
+        /// declaration keep the runtime's initial/preference activation. Multi-seat tables never
+        /// touch this global runtime; their declared schemes activate per seat in
+        /// <see cref="PublishSeatInputChannels"/>. A declared scheme with the runtime
+        /// unregistered, uninstalled, or refused by the allowed-set is a configuration error and
+        /// fails fast instead of falling back to the initial scheme.
         /// </summary>
         private static void ActivateSoleSeatControlScheme(
             IDictionary<string, object> globals,

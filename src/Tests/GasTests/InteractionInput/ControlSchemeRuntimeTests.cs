@@ -79,6 +79,38 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Install_InputContextNotDeclaredInInputConfig_FailsFastWhenInputConfigIsAvailable()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false, withInputConfig: true);
+
+            ControlSchemeDefinition typoContext = Harness.Scheme(SchemeA, DefaultIntent, ContextA, "imc.test.typo");
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(
+                new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition> { typoContext },
+                }));
+
+            Assert.That(error!.Message, Does.Contain(SchemeA));
+            Assert.That(error.Message, Does.Contain("imc.test.typo"));
+            Assert.That(error.Message, Does.Contain("unknown input context"));
+        }
+
+        [Test]
+        public void Install_InputContextsWithoutInputConfig_SkipReferenceValidation()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false, withInputConfig: false);
+
+            Assert.DoesNotThrow(() => harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, DefaultIntent, ContextA) },
+            }));
+            Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
+        }
+
+        [Test]
         public void TrySwitch_DisallowedOrUninstalledScheme_RefusedAndStateUnchanged()
         {
             using var world = World.Create();

@@ -1,15 +1,20 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Diagnostics;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Client
 {
     /// <summary>
-    /// Device-to-seat ownership for the client-local seat table (term governance: devices
-    /// belong to seats; nothing below the seat may address a device directly). Hot-plug
-    /// routing: a Connected device joins the sole seat when exactly one seat exists —
-    /// matching the single-seat cardinality the engine enforces today — while multi-seat
-    /// clients bind explicitly via BindDevice.
+    /// Device-to-seat bindings for the client-local seat table (term governance: devices
+    /// belong to seats; nothing below the seat may address a device directly). Distribution is
+    /// device → bound-seat-set fan-out: one physical device may legally serve several seats
+    /// (co-piloting, assist play, mirror acting) and its input reaches every bound seat — the
+    /// engine never arbitrates the duplicate down to a single owner, never rewrites mappings,
+    /// and never refuses to run. The first binding that overlaps another seat's device emits a
+    /// one-shot warning naming the device and the seats involved; the author owns the
+    /// consequences. Hot-plug routing: a Connected device joins the sole seat when exactly one
+    /// seat exists, while multi-seat clients bind explicitly via BindDevice.
     /// </summary>
     public sealed class ClientLocalSeatDeviceBinding
     {
@@ -42,10 +47,26 @@ namespace Ludots.Core.Client
                 throw new ArgumentException("Device id is required.", nameof(device));
             }
 
-            RemoveBinding(device.DeviceId);
+            if (IsDeviceBoundTo(seat.SeatId, device.DeviceId))
+            {
+                return;
+            }
+
+            var owners = new List<string>();
+            CopySeatIdsForDevice(device.DeviceId, owners);
+            if (owners.Count > 0)
+            {
+                owners.Add(seat.SeatId);
+                Log.Warn(
+                    in LogChannels.Input,
+                    $"Input device '{device.DeviceId}' is now bound to multiple seats [{string.Join(", ", owners)}]; " +
+                    "its input fans out to every bound seat and the engine does not arbitrate the overlap.");
+            }
+
             _bindings.Add(new Binding(seat.SeatId, device));
         }
 
+        /// <summary>Hot-unplug / explicit teardown: the device leaves every seat it was bound to.</summary>
         public void UnbindDevice(string deviceId)
         {
             RemoveBinding(deviceId);
@@ -67,19 +88,73 @@ namespace Ludots.Core.Client
             return devices;
         }
 
-        public bool TryGetSeatForDevice(string deviceId, out string seatId)
+        public bool IsDeviceBound(string deviceId)
         {
             for (int i = 0; i < _bindings.Count; i++)
             {
                 if (string.Equals(_bindings[i].Device.DeviceId, deviceId, StringComparison.Ordinal))
                 {
-                    seatId = _bindings[i].SeatId;
                     return true;
                 }
             }
 
-            seatId = string.Empty;
             return false;
+        }
+
+        /// <summary>
+        /// Every seat bound to the device, in seat-table order — the fan-out set a device's
+        /// input must reach.
+        /// </summary>
+        public void CopySeatIdsForDevice(string deviceId, List<string> destination)
+        {
+            ArgumentNullException.ThrowIfNull(destination);
+            IReadOnlyList<string> order = _seats.SeatIds;
+            for (int o = 0; o < order.Count; o++)
+            {
+                for (int i = 0; i < _bindings.Count; i++)
+                {
+                    if (string.Equals(_bindings[i].Device.DeviceId, deviceId, StringComparison.Ordinal) &&
+                        string.Equals(_bindings[i].SeatId, order[o], StringComparison.Ordinal))
+                    {
+                        destination.Add(order[o]);
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Cardinality assert in the spirit of <c>RequireSolePossessedRep</c>: true only when
+        /// exactly one seat owns the device. Devices with a multi-seat fan-out set must be
+        /// consumed through <see cref="CopySeatIdsForDevice"/> instead.
+        /// </summary>
+        public bool TryGetSoleSeatForDevice(string deviceId, out string seatId)
+        {
+            seatId = string.Empty;
+            string? found = null;
+            for (int i = 0; i < _bindings.Count; i++)
+            {
+                if (!string.Equals(_bindings[i].Device.DeviceId, deviceId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (found != null)
+                {
+                    seatId = string.Empty;
+                    return false;
+                }
+
+                found = _bindings[i].SeatId;
+            }
+
+            if (found == null)
+            {
+                return false;
+            }
+
+            seatId = found;
+            return true;
         }
 
         public void HandleDeviceChange(InputDeviceChangeEvent change)
@@ -90,13 +165,27 @@ namespace Ludots.Core.Client
                 return;
             }
 
-            if (TryGetSeatForDevice(change.Device.DeviceId, out _) ||
+            if (IsDeviceBound(change.Device.DeviceId) ||
                 !_seats.TryGetSoleSeat(out ClientLocalSeat soleSeat))
             {
                 return;
             }
 
             _bindings.Add(new Binding(soleSeat.SeatId, change.Device));
+        }
+
+        private bool IsDeviceBoundTo(string seatId, string deviceId)
+        {
+            for (int i = 0; i < _bindings.Count; i++)
+            {
+                if (string.Equals(_bindings[i].SeatId, seatId, StringComparison.Ordinal) &&
+                    string.Equals(_bindings[i].Device.DeviceId, deviceId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void RemoveBinding(string deviceId)

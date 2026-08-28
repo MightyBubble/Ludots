@@ -438,6 +438,7 @@ namespace Ludots.Core.Scripting
         // --- Client local seats & logical vision (Epic #896) ---
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatRegistry> ClientLocalSeatRegistry = new("ClientLocalSeatRegistry");
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatDeviceBinding> ClientLocalSeatDeviceBinding = new("ClientLocalSeatDeviceBinding");
+        public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatInputRuntime> ClientLocalSeatInputRuntime = new("ClientLocalSeatInputRuntime");
         public static readonly ServiceKey<Ludots.Core.Client.LogicViewRegistry> LogicViewRegistry = new("LogicViewRegistry");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
 

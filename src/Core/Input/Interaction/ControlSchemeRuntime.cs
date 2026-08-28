@@ -102,6 +102,30 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
+        /// Read-only view of an installed scheme's activation payload (the contexts to push on
+        /// an input handler plus the scheme-owned defaults). Per-seat activation stacks mirror
+        /// this data without recompiling or re-registering the catalog; the global active
+        /// scheme state above stays untouched by those readers.
+        /// </summary>
+        public bool TryGetSchemeActivation(int schemeId, out ControlSchemeActivation activation)
+        {
+            activation = default;
+            if (!IsInstalled(schemeId))
+            {
+                return false;
+            }
+
+            CompiledScheme scheme = _schemes[schemeId];
+            activation = new ControlSchemeActivation(
+                scheme.InputContexts,
+                scheme.DefaultCommandIntentId,
+                scheme.DefaultCastDispatchProfileId,
+                scheme.HasAxisMove,
+                scheme.AxisMove);
+            return true;
+        }
+
+        /// <summary>
         /// Compile and install every scheme in the config. Fails fast on duplicate installs and on
         /// <c>defaults.commandIntentId</c> references that are not installed command intent profiles.
         /// After installation, activates the persisted active scheme when present; otherwise it
@@ -254,6 +278,8 @@ namespace Ludots.Core.Input.Interaction
                 contexts[i] = definition.InputContexts[i].Trim();
             }
 
+            ValidateInputContexts(definition, contexts);
+
             var scheme = new CompiledScheme
             {
                 InputContexts = contexts,
@@ -292,6 +318,42 @@ namespace Ludots.Core.Input.Interaction
             }
 
             _schemes[schemeId] = scheme;
+        }
+
+        /// <summary>
+        /// Same fail-fast contract as the intent/dispatch reference checks, applied to the
+        /// scheme's IMC context ids: <see cref="PlayerInputHandler.PushContext(string)"/> is a
+        /// silent no-op for unknown contexts, so a typo here would otherwise drop the scheme's
+        /// bindings without any signal. Skipped when no input config is available (nothing to
+        /// validate against), mirroring <see cref="ValidateAxisMoveAction"/>.
+        /// </summary>
+        private void ValidateInputContexts(ControlSchemeDefinition definition, string[] contexts)
+        {
+            if (_inputConfig?.Contexts == null || contexts.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < contexts.Length; i++)
+            {
+                string contextId = contexts[i];
+                bool declared = false;
+                for (int c = 0; c < _inputConfig.Contexts.Count; c++)
+                {
+                    InputContextDef context = _inputConfig.Contexts[c];
+                    if (context != null && string.Equals(context.Id, contextId, StringComparison.Ordinal))
+                    {
+                        declared = true;
+                        break;
+                    }
+                }
+
+                if (!declared)
+                {
+                    throw new InvalidOperationException(
+                        $"Control scheme '{definition.Id}' inputContexts references unknown input context '{contextId}'.");
+                }
+            }
         }
 
         private void ValidateAxisMoveAction(ControlSchemeDefinition definition)
@@ -402,6 +464,36 @@ namespace Ludots.Core.Input.Interaction
             OrderTypeId = orderTypeId;
             ThrottleTicks = throttleTicks;
             StepDistanceCm = stepDistanceCm;
+        }
+    }
+
+    /// <summary>
+    /// Compiled activation payload of one installed scheme: the IMC contexts a switch must
+    /// push (and the previous scheme's pop), plus the scheme-owned default intent / cast
+    /// dispatch ids and axis move declaration. Read through
+    /// <see cref="ControlSchemeRuntime.TryGetSchemeActivation"/> by per-seat activation
+    /// stacks; the ids live in the same id spaces the runtime itself consumes.
+    /// </summary>
+    public readonly struct ControlSchemeActivation
+    {
+        public readonly string[] InputContexts;
+        public readonly int DefaultCommandIntentId;
+        public readonly int DefaultCastDispatchProfileId;
+        public readonly bool HasAxisMove;
+        public readonly ControlSchemeAxisMoveBinding AxisMove;
+
+        public ControlSchemeActivation(
+            string[] inputContexts,
+            int defaultCommandIntentId,
+            int defaultCastDispatchProfileId,
+            bool hasAxisMove,
+            ControlSchemeAxisMoveBinding axisMove)
+        {
+            InputContexts = inputContexts;
+            DefaultCommandIntentId = defaultCommandIntentId;
+            DefaultCastDispatchProfileId = defaultCastDispatchProfileId;
+            HasAxisMove = hasAxisMove;
+            AxisMove = axisMove;
         }
     }
 }
