@@ -52,14 +52,14 @@ HUD 只显示真实领域状态：当前 tick、最近检查点 tick、已记录
 ## 门户资产
 门户封面使用真实目标进程的首屏截图，展示操作按钮、HUD 与故障入口。验收资产来自同一个 preset 和真实运行过程：
 
-- 设计文档：`gitbook/architecture/persistence-online-replay-showcase-design.md`
-- UAT：`gitbook/acceptance/persistence-online-replay.feature`
-- 战报：`artifacts/acceptance/persistence-online-replay/battle-report.md`
-- 轨迹：`artifacts/acceptance/persistence-online-replay/trace.jsonl`
-- 路径图：`artifacts/acceptance/persistence-online-replay/path.mmd`
-- 首屏截图：`artifacts/acceptance/persistence-online-replay/persistence-first-viewport.png`
-- 断线恢复截图：`artifacts/acceptance/persistence-online-replay/persistence-reconnect-success.png`
-- 消融拒绝截图：`artifacts/acceptance/persistence-online-replay/persistence-rejection.png`
+- 设计文档：gitbook/architecture/persistence-online-replay-showcase-design.md
+- UAT：gitbook/acceptance/persistence-online-replay.feature
+- 战报：artifacts/acceptance/persistence-online-replay/battle-report.md
+- 轨迹：artifacts/acceptance/persistence-online-replay/trace.jsonl
+- 路径图：artifacts/acceptance/persistence-online-replay/path.mmd
+- 首屏截图：artifacts/acceptance/persistence-online-replay/persistence-first-viewport.png
+- 断线恢复截图：artifacts/acceptance/persistence-online-replay/persistence-reconnect-success.png
+- 消融拒绝截图：artifacts/acceptance/persistence-online-replay/persistence-rejection.png
 
 预览页和 HUD 读取同一份检查点/帧 DTO；不复制第二份演示数据。
 
