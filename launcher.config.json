@@ -50,14 +50,6 @@
       }
     },
     {
-      "name": "persistence_online_replay_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/persistence_online_replay/PersistenceOnlineReplayShowcaseMod",
-        "projectPath": "PersistenceOnlineReplayShowcaseMod.csproj"
-      }
-    },
-    {
       "name": "camera_acceptance",
       "target": {
         "type": "path",

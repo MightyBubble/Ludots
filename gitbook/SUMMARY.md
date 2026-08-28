@@ -60,7 +60,6 @@
   - [时间体系](architecture/time-system.md)
   - [Exchange Operations](architecture/exchange-operations.md)
   - [通用存档系统](architecture/save-system.md)
-  - [持久化、Replay 与联机追回 Showcase](architecture/persistence-online-replay-showcase-design.md)
   - [AI Utility Autocast 契约](architecture/ai-utility-autocast-contract.md)
   - [实体仿真分层与车道](architecture/entity-simulation-layering.md)
   - [实体仿真工作流拆分](architecture/entity-simulation-workstreams.md)
