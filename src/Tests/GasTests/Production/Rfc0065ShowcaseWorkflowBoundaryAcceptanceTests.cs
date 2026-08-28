@@ -88,8 +88,10 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("InteractionContextStack service is missing.");
             Assert.That(stack.TryPeek(out InteractionContextFrame frame), Is.True);
             Assert.That(stack.CollectionKeyRegistry.GetName(frame.ActiveCollectionKeyId), Is.EqualTo(EntityCollectionKeys.CommandSource));
+            Assert.That(engine.World.TryGet<CommandPref>(localPlayer, out CommandPref localPlayerPref), Is.True,
+                "map binding must seed the player CommandPref from Input/command_prefs.json.");
             Assert.That(
-                stack.CommandIntentProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes)),
+                stack.CommandIntentProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(stack, in localPlayerPref)),
                 Is.EqualTo(DefaultIntentId));
 
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
@@ -748,6 +750,10 @@ namespace Ludots.Tests.GAS.Production
                 builder.Append(mapping.CommandActionId);
                 builder.Append(" aiming=");
                 builder.Append(mapping.IsAiming.ToString(CultureInfo.InvariantCulture));
+                builder.Append(" lastActivation=");
+                builder.Append(mapping.LastActivationResult.State);
+                builder.Append("/");
+                builder.Append(mapping.LastActivationResult.Rejection);
                 if (mapping.GetMapping("Command") is InputOrderMapping commandMapping)
                 {
                     builder.Append(" commandMapping=");
@@ -789,14 +795,24 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes);
+            CommandPref repPref = default;
+            bool hasPref = ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity repEntity) &&
+                engine.World.TryGet<CommandPref>(repEntity, out repPref);
+            builder.Append("pref=");
+            builder.Append(hasPref ? "seeded" : "missing");
+            if (!hasPref)
+            {
+                return;
+            }
+
+            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(stack, in repPref);
             builder.Append("intent=");
             builder.Append(stack.CommandIntentProfileIdRegistry.GetName(intentId));
             builder.Append("(");
             builder.Append(intentId.ToString(CultureInfo.InvariantCulture));
             builder.Append(")");
             builder.Append(" dispatch=");
-            builder.Append(schemes.ActiveDefaultCastDispatchProfileId.ToString(CultureInfo.InvariantCulture));
+            builder.Append(repPref.ResolveCastDispatchProfile(abilityTemplateId: 0).ToString(CultureInfo.InvariantCulture));
 
             Entity owner = Entity.Null;
             if (frame.ContextEntity != Entity.Null && engine.World.IsAlive(frame.ContextEntity))
@@ -863,7 +879,7 @@ namespace Ludots.Tests.GAS.Production
             builder.Append(" routeType=");
             builder.Append(firstRouteOrderTypeId.ToString(CultureInfo.InvariantCulture));
 
-            if (hasRouteCount <= 0 || schemes.ActiveDefaultCastDispatchProfileId == 0)
+            if (hasRouteCount <= 0)
             {
                 return;
             }
@@ -880,7 +896,7 @@ namespace Ludots.Tests.GAS.Production
 
             var selected = new Entity[hasRouteCount];
             int dispatchCount = dispatch.SelectDispatchTargets(
-                schemes.ActiveDefaultCastDispatchProfileId,
+                repPref.ResolveCastDispatchProfile(abilityTemplateId: 0),
                 routedActors,
                 new CastDispatchContext(engine.World, Vector3.Zero, frame.OwnerToken),
                 selected,

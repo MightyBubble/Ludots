@@ -11,15 +11,21 @@ namespace Ludots.Core.Input.Interaction
     /// <c>frameActions</c> via <see cref="CastCommitProfileRegistry.TryExecuteFrameAction"/>; only
     /// when that returns false does the arbiter run. Resolution chain: the top frame's explicit
     /// <see cref="InteractionContextFrame.CommandIntentProfileId"/> wins; otherwise, if the top
-    /// frame is the reserved default frame, the active <see cref="ControlSchemeRuntime"/> default
-    /// applies; otherwise 0 — the pointer command does not route and never bubbles to lower frames
-    /// (DEC-14, no fallback).
+    /// frame is the reserved default frame, the possessed representative's
+    /// <see cref="CommandPref"/> player default applies; otherwise 0 — the pointer command does
+    /// not route and never bubbles to lower frames (DEC-14, no fallback). The default-frame
+    /// branch is the player's preference, never the active control scheme: switching schemes
+    /// changes bindings only, never routing preferences.
     /// </para>
     /// </summary>
     public static class CommandIntentArbiter
     {
-        /// <summary>Resolve the active command intent profile id; 0 = do not route.</summary>
-        public static int ResolveActiveCommandIntent(InteractionContextStack stack, ControlSchemeRuntime scheme)
+        /// <summary>
+        /// Resolve the active command intent profile id; 0 = do not route. The player preference
+        /// argument is the possessed representative's component — callers that cannot present one
+        /// fail fast upstream rather than passing a fabricated default.
+        /// </summary>
+        public static int ResolveActiveCommandIntent(InteractionContextStack stack, in CommandPref playerPref)
         {
             if (stack == null)
             {
@@ -36,14 +42,19 @@ namespace Ludots.Core.Input.Interaction
                 return frame.CommandIntentProfileId;
             }
 
-            if (scheme != null &&
-                stack.ContextIdRegistry.TryGetId(InteractionContextIds.Default, out int defaultContextId) &&
-                frame.ContextId == defaultContextId)
+            if (IsDefaultFrame(stack, in frame))
             {
-                return scheme.ActiveDefaultCommandIntentId;
+                return playerPref.DefaultCommandIntentId;
             }
 
             return 0;
+        }
+
+        /// <summary>True when the frame is the reserved bottom frame the player preference applies to.</summary>
+        public static bool IsDefaultFrame(InteractionContextStack stack, in InteractionContextFrame frame)
+        {
+            return stack.ContextIdRegistry.TryGetId(InteractionContextIds.Default, out int defaultContextId) &&
+                frame.ContextId == defaultContextId;
         }
     }
 }

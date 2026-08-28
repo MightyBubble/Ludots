@@ -780,13 +780,23 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveActiveCommandIntentLabel(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not Ludots.Core.Input.Interaction.InteractionContextStack stack ||
-                engine.GetService(CoreServiceKeys.ControlSchemeRuntime) is not Ludots.Core.Input.Interaction.ControlSchemeRuntime schemes)
+            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not Ludots.Core.Input.Interaction.InteractionContextStack stack)
             {
                 return "missing";
             }
 
-            int intentId = Ludots.Core.Input.Interaction.CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes);
+            if (!Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
+            {
+                return "no-pref";
+            }
+
+            Ludots.Core.Input.Interaction.CommandPref pref = default;
+            if (!engine.World.IsAlive(rep) || !engine.World.TryGet<Ludots.Core.Input.Interaction.CommandPref>(rep, out pref))
+            {
+                return "no-pref";
+            }
+
+            int intentId = Ludots.Core.Input.Interaction.CommandIntentArbiter.ResolveActiveCommandIntent(stack, in pref);
             return intentId == 0 ? "none" : ResolveIntentDisplayName(stack.CommandIntentProfileIdRegistry.GetName(intentId));
         }
 

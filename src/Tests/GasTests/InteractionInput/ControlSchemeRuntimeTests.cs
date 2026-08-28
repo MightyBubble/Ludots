@@ -29,8 +29,6 @@ namespace Ludots.Tests.GAS
     {
         private const string DefaultIntent = "intent.test.default";
         private const string AltIntent = "intent.test.alt";
-        private const string DefaultDispatch = "dispatch.test.default";
-        private const string AltDispatch = "dispatch.test.alt";
         private const string SchemeA = "scheme.test.a";
         private const string SchemeB = "scheme.test.b";
         private const string ContextA = "imc.test.a";
@@ -51,12 +49,6 @@ namespace Ludots.Tests.GAS
             harness.InstallTwoSchemes();
 
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
-            Assert.That(
-                harness.Runtime.ActiveDefaultCommandIntentId,
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(DefaultIntent)));
-            Assert.That(
-                harness.Runtime.ActiveDefaultCastDispatchProfileId,
-                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(DefaultDispatch)));
 
             harness.Backend.Buttons["<Keyboard>/q"] = true;
             harness.Handler.Update();
@@ -70,12 +62,6 @@ namespace Ludots.Tests.GAS
             harness.Handler.Update();
             Assert.That(harness.Handler.IsDown("CmdA"), Is.False, "scheme A's IMC context must be popped on switch.");
             Assert.That(harness.Handler.IsDown("CmdB"), Is.True, "scheme B's IMC context must be pushed on switch.");
-            Assert.That(
-                harness.Runtime.ActiveDefaultCommandIntentId,
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)));
-            Assert.That(
-                harness.Runtime.ActiveDefaultCastDispatchProfileId,
-                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(AltDispatch)));
         }
 
         [Test]
@@ -84,7 +70,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false, withInputConfig: true);
 
-            ControlSchemeDefinition typoContext = Harness.Scheme(SchemeA, DefaultIntent, ContextA, "imc.test.typo");
+            ControlSchemeDefinition typoContext = Harness.Scheme(SchemeA, ContextA, "imc.test.typo");
 
             InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(
                 new ControlSchemesConfig
@@ -105,7 +91,7 @@ namespace Ludots.Tests.GAS
 
             Assert.DoesNotThrow(() => harness.Runtime.Install(new ControlSchemesConfig
             {
-                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, DefaultIntent, ContextA) },
+                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, ContextA) },
             }));
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
         }
@@ -119,38 +105,26 @@ namespace Ludots.Tests.GAS
 
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
 
-            // Mod allowed-set refusal keeps the active scheme, its contexts, and its intent default.
+            // Mod allowed-set refusal keeps the active scheme and its contexts.
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.False);
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
             harness.Backend.Buttons["<Keyboard>/q"] = true;
             harness.Handler.Update();
             Assert.That(harness.Handler.IsDown("CmdA"), Is.True);
-            Assert.That(
-                harness.Runtime.ActiveDefaultCommandIntentId,
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(DefaultIntent)));
-            Assert.That(
-                harness.Runtime.ActiveDefaultCastDispatchProfileId,
-                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(DefaultDispatch)));
 
             Assert.That(harness.Runtime.TrySwitch(schemeId: 0), Is.False, "id 0 is never installed.");
             Assert.That(harness.Runtime.TrySwitch(schemeId: 999), Is.False, "unknown ids are refused.");
         }
 
         [Test]
-        public void TrySwitch_NullHandler_TracksIntentDefaultAndPersistsPreference()
+        public void TrySwitch_NullHandler_PersistsPreference()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
             harness.InstallTwoSchemes();
 
-            // Headless: no input handler exists; only intent default + preference bookkeeping run.
+            // Headless: no input handler exists; only preference bookkeeping runs.
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
-            Assert.That(
-                harness.Runtime.ActiveDefaultCommandIntentId,
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)));
-            Assert.That(
-                harness.Runtime.ActiveDefaultCastDispatchProfileId,
-                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(AltDispatch)));
             Assert.That(harness.Preferences.ActiveSchemeId, Is.EqualTo(SchemeB),
                 "the active scheme choice must persist into the CTX-8 preference store.");
         }
@@ -167,9 +141,6 @@ namespace Ludots.Tests.GAS
 
             Assert.That(harness.Runtime.TrySwitchRuntimeOnly(harness.SchemeId(SchemeB)), Is.True);
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeB)));
-            Assert.That(
-                harness.Runtime.ActiveDefaultCommandIntentId,
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)));
             Assert.That(harness.Preferences.ActiveSchemeId, Is.EqualTo(SchemeA),
                 "runtime-only activation must leave the persisted preference untouched.");
             Assert.That(harness.Preferences.Revision, Is.EqualTo(preferenceRevision));
@@ -189,12 +160,6 @@ namespace Ludots.Tests.GAS
             harness.InstallTwoSchemes();
 
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeB)));
-            Assert.That(
-                harness.Runtime.ActiveDefaultCommandIntentId,
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)));
-            Assert.That(
-                harness.Runtime.ActiveDefaultCastDispatchProfileId,
-                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(AltDispatch)));
         }
 
         [Test]
@@ -208,39 +173,24 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Install_UnknownCommandIntentDispatchOrDuplicateScheme_FailsFast()
+        public void Install_DuplicateScheme_FailsFast()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
 
-            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    Harness.Scheme("scheme.test.bad", "intent.test.not_installed"),
-                },
-            }));
-
-            ControlSchemeDefinition unknownDispatch = Harness.Scheme("scheme.test.bad_dispatch", DefaultIntent);
-            unknownDispatch.Defaults.CastDispatchProfileId = "dispatch.test.not_installed";
-            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition> { unknownDispatch },
-            }));
-
             harness.Runtime.Install(new ControlSchemesConfig
             {
-                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, DefaultIntent) },
+                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, ContextA) },
             });
             Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
             {
-                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, DefaultIntent) },
+                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, ContextA) },
             }));
 
             Assert.Throws<InvalidOperationException>(
                 () => ControlSchemeConfigLoader.Validate(new ControlSchemesConfig
                 {
-                    Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeB, AltIntent) },
+                    Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeB) },
                     AllowedSchemes = new List<string> { "scheme.test.undeclared" },
                 }, "test"),
                 "allowedSchemes must reference declared schemes.");
@@ -251,7 +201,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false, withInputConfig: true);
-            ControlSchemeDefinition withAxis = Harness.Scheme(SchemeA, DefaultIntent);
+            ControlSchemeDefinition withAxis = Harness.Scheme(SchemeA);
             withAxis.AxisMove = new ControlSchemeAxisMove
             {
                 ActionId = "Move",
@@ -261,7 +211,7 @@ namespace Ludots.Tests.GAS
             };
             harness.Runtime.Install(new ControlSchemesConfig
             {
-                Schemes = new List<ControlSchemeDefinition> { withAxis, Harness.Scheme(SchemeB, AltIntent) },
+                Schemes = new List<ControlSchemeDefinition> { withAxis, Harness.Scheme(SchemeB) },
             });
 
             Assert.That(harness.Runtime.TryGetActiveAxisMove(out ControlSchemeAxisMoveBinding binding), Is.True);
@@ -280,7 +230,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false, withInputConfig: true);
 
-            ControlSchemeDefinition unknownAction = Harness.Scheme(SchemeA, DefaultIntent);
+            ControlSchemeDefinition unknownAction = Harness.Scheme(SchemeA);
             unknownAction.AxisMove = new ControlSchemeAxisMove
             {
                 ActionId = "TypoMove",
@@ -294,7 +244,7 @@ namespace Ludots.Tests.GAS
                 Schemes = new List<ControlSchemeDefinition> { unknownAction },
             }));
 
-            ControlSchemeDefinition buttonAction = Harness.Scheme(SchemeB, DefaultIntent);
+            ControlSchemeDefinition buttonAction = Harness.Scheme(SchemeB);
             buttonAction.AxisMove = new ControlSchemeAxisMove
             {
                 ActionId = "CmdA",
@@ -314,7 +264,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
-            ControlSchemeDefinition scheme = Harness.Scheme(SchemeA, DefaultIntent);
+            ControlSchemeDefinition scheme = Harness.Scheme(SchemeA);
             scheme.AxisMove = new ControlSchemeAxisMove
             {
                 ActionId = "Move",
@@ -336,7 +286,7 @@ namespace Ludots.Tests.GAS
         public void Validate_AxisMoveDeclarationWithMissingOrIllegalField_FailsFast(
             string actionId, string orderTypeKey, int throttleTicks, int stepDistanceCm)
         {
-            ControlSchemeDefinition scheme = Harness.Scheme(SchemeA, DefaultIntent);
+            ControlSchemeDefinition scheme = Harness.Scheme(SchemeA);
             scheme.AxisMove = new ControlSchemeAxisMove
             {
                 ActionId = actionId,
@@ -354,11 +304,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Arbiter_TopFrameExplicitIntent_WinsOverSchemeDefault()
+        public void Arbiter_TopFrameExplicitIntent_WinsOverPlayerPref()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
-            harness.InstallTwoSchemes();
 
             harness.Stack.Push(InteractionContextFrameDescriptor.Create(
                 "context.test.targeting",
@@ -366,30 +315,30 @@ namespace Ludots.Tests.GAS
                 "view.test.targeting",
                 commandIntentProfileId: AltIntent));
 
+            CommandPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, harness.Runtime),
+                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in pref),
                 Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)),
-                "the pushed frame's explicit intent must win over the scheme default.");
+                "the pushed frame's explicit intent must win over the player default.");
         }
 
         [Test]
-        public void Arbiter_DefaultFrame_UsesActiveSchemeDefault()
+        public void Arbiter_DefaultFrame_UsesPlayerPrefDefault()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
-            harness.InstallTwoSchemes();
 
-            Assert.That(CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, scheme: null), Is.EqualTo(0));
+            CommandPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, harness.Runtime),
+                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in pref),
                 Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(DefaultIntent)),
-                "install activates the first allowed scheme, so the default frame has a scheme-owned intent.");
+                "the default frame consumes the possessed rep's player default intent (DEC-14).");
 
-            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
+            CommandPref other = NewPref(harness, AltIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, harness.Runtime),
+                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in other),
                 Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)),
-                "the default frame consumes the active scheme's default intent (DEC-14).");
+                "switching the player's preference changes the default frame's intent.");
         }
 
         [Test]
@@ -397,15 +346,15 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
-            harness.InstallTwoSchemes();
 
             harness.Stack.Push(InteractionContextFrameDescriptor.Create(
                 "context.test.modal",
                 "collection.test.targeting",
                 "view.test.targeting"));
 
+            CommandPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, harness.Runtime),
+                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in pref),
                 Is.EqualTo(0),
                 "a non-default frame without an explicit intent does not route and never bubbles (DEC-14).");
         }
@@ -415,11 +364,12 @@ namespace Ludots.Tests.GAS
         {
             var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var emptyStack = new InteractionContextStack(collectionKeys);
-            Assert.That(CommandIntentArbiter.ResolveActiveCommandIntent(emptyStack, scheme: null), Is.EqualTo(0));
+            CommandPref pref = NewPref(intentId: 1);
+            Assert.That(CommandIntentArbiter.ResolveActiveCommandIntent(emptyStack, in pref), Is.EqualTo(0));
         }
 
         [Test]
-        public void DefaultSchemesConfigFile_DeserializesAndValidates()
+        public void DefaultSchemesConfigFile_DeserializesValidatesAndCarriesNoDefaults()
         {
             string configPath = Path.Combine(FindRepoRoot(), "assets", "Input", "control_schemes.json");
             Assert.That(File.Exists(configPath), Is.True, $"Missing {configPath}");
@@ -431,10 +381,47 @@ namespace Ludots.Tests.GAS
             ControlSchemeConfigLoader.Validate(config, "assets");
             ControlSchemeDefinition defaultScheme = config!.Schemes.Single(scheme => scheme.Id == "scheme.default");
             Assert.That(defaultScheme.AxisMove, Is.Null, "default shipped scheme keeps axis movement disabled by topology.");
-            Assert.That(defaultScheme.Defaults.CastDispatchProfileId, Is.EqualTo("dispatch.all_together"));
+
+            string prefsPath = Path.Combine(FindRepoRoot(), "assets", "Input", "command_prefs.json");
+            Assert.That(File.Exists(prefsPath), Is.True, $"Missing {prefsPath}");
+            var prefs = JsonSerializer.Deserialize<CommandPrefsConfig>(
+                File.ReadAllText(prefsPath),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            CommandPrefConfigLoader.Validate(prefs!, "assets");
+            Assert.That(prefs!.Defaults.CastDispatchProfileId, Is.EqualTo("dispatch.all_together"));
 
             string catalogPath = Path.Combine(FindRepoRoot(), "assets", "config_catalog.json");
-            Assert.That(File.ReadAllText(catalogPath), Does.Not.Contain("Input/axis_move.json"));
+            string catalog = File.ReadAllText(catalogPath);
+            Assert.That(catalog, Does.Not.Contain("Input/axis_move.json"));
+            Assert.That(catalog, Does.Contain("Input/command_prefs.json"),
+                "the command preference seed config is a catalog-declared required config.");
+        }
+
+        [Test]
+        public void Load_LegacySchemeDefaultsNode_FailsFastWithMigrationHint()
+        {
+            var legacy = System.Text.Json.Nodes.JsonNode.Parse("""
+                {
+                  "schemes": [
+                    { "id": "scheme.test.a", "inputContexts": [], "defaults": { "commandIntentId": "intent.command.default", "castDispatchProfileId": "dispatch.all_together" } }
+                  ]
+                }
+                """)!.AsObject();
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ControlSchemeConfigLoader.RejectLegacySchemeDefaults(legacy, "Input/control_schemes.json"));
+            Assert.That(error!.Message, Does.Contain("scheme.test.a"));
+            Assert.That(error.Message, Does.Contain("'defaults'"));
+            Assert.That(error.Message, Does.Contain("command_prefs.json"));
+
+            var current = System.Text.Json.Nodes.JsonNode.Parse("""
+                {
+                  "schemes": [
+                    { "id": "scheme.test.a", "inputContexts": [] }
+                  ]
+                }
+                """)!.AsObject();
+            Assert.DoesNotThrow(() => ControlSchemeConfigLoader.RejectLegacySchemeDefaults(current, "test"));
         }
 
         private static string FindRepoRoot()
@@ -453,22 +440,29 @@ namespace Ludots.Tests.GAS
             throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
         }
 
+        private static CommandPref NewPref(Harness harness, string intentName)
+        {
+            return NewPref(harness.Stack.CommandIntentProfileIdRegistry.Register(intentName));
+        }
+
+        private static CommandPref NewPref(int intentId)
+        {
+            CommandPref pref = default;
+            pref.SetPlayerDefault(intentId, castDispatchProfileId: 777);
+            return pref;
+        }
+
         private sealed class Harness
         {
             public InteractionContextStack Stack = null!;
             public ControlSchemeRuntime Runtime = null!;
             public ClientCastPreferenceStore Preferences = null!;
-            public CastDispatchProfileRegistry Dispatch = null!;
             public PlayerInputHandler Handler;
             public TestInputBackend Backend;
             private StringIntRegistry _schemeIds = null!;
 
             public static Harness Create(World world, bool withHandler, bool withInputConfig = false)
             {
-                CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
-                InstallGroundIntent(intents, DefaultIntent);
-                InstallGroundIntent(intents, AltIntent);
-
                 var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var stack = new InteractionContextStack(collectionKeys);
                 stack.Push(InteractionContextFrameDescriptor.Create(
@@ -478,7 +472,7 @@ namespace Ludots.Tests.GAS
 
                 // Minimal CTX-8 store: this fixture only exercises active-scheme persistence.
                 var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var castCommitActionIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var preferences = new ClientCastPreferenceStore(
@@ -506,29 +500,8 @@ namespace Ludots.Tests.GAS
 
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
-                var dispatch = new CastDispatchProfileRegistry(
-                    new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                    new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-                dispatch.Install(CastDispatchProfileTests.Harness.Config(
-                    new CastDispatchProfileDefinition
-                    {
-                        Id = DefaultDispatch,
-                        Selector = new CastDispatchSelectorDefinition { Kind = "all" },
-                        Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
-                    },
-                    new CastDispatchProfileDefinition
-                    {
-                        Id = AltDispatch,
-                        Selector = new CastDispatchSelectorDefinition { Kind = "cycle", AdvanceOn = "orderAccepted" },
-                        Router = new CastDispatchRouterDefinition { Kind = "sequential" },
-                    }));
-                harness.Dispatch = dispatch;
-
                 harness.Runtime = new ControlSchemeRuntime(
                     harness._schemeIds,
-                    stack,
-                    intents.Intents,
-                    dispatch,
                     orderTypes,
                     withHandler ? () => harness.Handler : null,
                     preferences,
@@ -544,41 +517,20 @@ namespace Ludots.Tests.GAS
                 {
                     Schemes = new List<ControlSchemeDefinition>
                     {
-                        Scheme(SchemeA, DefaultIntent, ContextA),
-                        Scheme(SchemeB, AltIntent, ContextB),
+                        Scheme(SchemeA, ContextA),
+                        Scheme(SchemeB, ContextB),
                     },
                     AllowedSchemes = allowedSchemes,
                 });
             }
 
-            public static ControlSchemeDefinition Scheme(string id, string commandIntentId, params string[] inputContexts)
+            public static ControlSchemeDefinition Scheme(string id, params string[] inputContexts)
             {
-                string dispatchProfileId = string.Equals(commandIntentId, AltIntent, StringComparison.Ordinal)
-                    ? AltDispatch
-                    : DefaultDispatch;
                 return new ControlSchemeDefinition
                 {
                     Id = id,
                     InputContexts = new List<string>(inputContexts),
-                    Defaults = new ControlSchemeDefaults
-                    {
-                        CommandIntentId = commandIntentId,
-                        CastDispatchProfileId = dispatchProfileId,
-                    },
                 };
-            }
-
-            private static void InstallGroundIntent(CommandIntentProfileTests.Harness intents, string profileId)
-            {
-                intents.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
-                {
-                    Id = profileId,
-                    GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
-                    Rules = new List<CommandIntentRuleDefinition>
-                    {
-                        CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
-                    },
-                }));
             }
 
             private static InputConfigRoot BuildInputConfig(bool includeMoveAxis = false)

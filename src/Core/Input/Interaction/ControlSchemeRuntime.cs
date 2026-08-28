@@ -7,27 +7,19 @@ using Ludots.Core.Registry;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Control scheme catalog and hot-switch runtime (RFC-0065 INT-5, Section 5.11, DEC-15). Schemes are
-    /// declared in <c>Input/control_schemes.json</c> and compiled at install time: axis move
-    /// <c>orderTypeKey</c> references resolve against <see cref="OrderTypeRegistry"/>, default command
-    /// intent ids must be installed <see cref="CommandIntentProfileRegistry"/> profiles and register
-    /// into the <see cref="InteractionContextStack.CommandIntentProfileIdRegistry"/> id space, while
-    /// default dispatch profile ids must be installed <see cref="CastDispatchProfileRegistry"/> profiles, so
-    /// <see cref="ActiveDefaultCommandIntentId"/> is directly comparable with
-    /// <see cref="InteractionContextFrame.CommandIntentProfileId"/> (the space
-    /// <see cref="CommandIntentArbiter"/> resolves in). Switching pops the previous scheme's IMC
-    /// contexts off the <see cref="PlayerInputHandler"/> and pushes the new ones; non-default frames
-    /// on the stack are untouched, and the default frame's intent reference reads the new scheme
-    /// immediately through the arbiter. The handler is resolved through a provider per switch and
-    /// may be null (headless engine / handler bound later by the adapter); in that case only the
-    /// intent default and preference bookkeeping happen.
+    /// Control scheme catalog and hot-switch runtime (RFC-0065 INT-5, Section 5.11, DEC-15).
+    /// Schemes are pure device binding profiles declared in <c>Input/control_schemes.json</c> and
+    /// compiled at install time: axis move <c>orderTypeKey</c> references resolve against
+    /// <see cref="OrderTypeRegistry"/>. Order routing preferences are player data on the
+    /// representative (<see cref="CommandPref"/>) — switching pops the previous scheme's IMC
+    /// contexts off the <see cref="PlayerInputHandler"/> and pushes the new ones; non-default
+    /// frames on the stack are untouched. The handler is resolved through a provider per switch
+    /// and may be null (headless engine / handler bound later by the adapter); in that case only
+    /// preference bookkeeping happens.
     /// </summary>
     public sealed class ControlSchemeRuntime
     {
         private readonly StringIntRegistry _schemeIds;
-        private readonly InteractionContextStack _stack;
-        private readonly CommandIntentProfileRegistry _commandIntents;
-        private readonly CastDispatchProfileRegistry _castDispatchProfiles;
         private readonly OrderTypeRegistry _orderTypes;
         private readonly InputConfigRoot _inputConfig;
         private readonly Func<PlayerInputHandler> _handlerProvider;
@@ -37,23 +29,15 @@ namespace Ludots.Core.Input.Interaction
         private bool _allowAll = true;
         private bool[] _allowed = Array.Empty<bool>();
         private int _activeSchemeId;
-        private int _activeDefaultCommandIntentId;
-        private int _activeDefaultCastDispatchProfileId;
 
         public ControlSchemeRuntime(
             StringIntRegistry schemeIdRegistry,
-            InteractionContextStack stack,
-            CommandIntentProfileRegistry commandIntents,
-            CastDispatchProfileRegistry castDispatchProfiles,
             OrderTypeRegistry orderTypes,
             Func<PlayerInputHandler> handlerProvider = null,
             ClientCastPreferenceStore preferences = null,
             InputConfigRoot inputConfig = null)
         {
             _schemeIds = schemeIdRegistry ?? throw new ArgumentNullException(nameof(schemeIdRegistry));
-            _stack = stack ?? throw new ArgumentNullException(nameof(stack));
-            _commandIntents = commandIntents ?? throw new ArgumentNullException(nameof(commandIntents));
-            _castDispatchProfiles = castDispatchProfiles ?? throw new ArgumentNullException(nameof(castDispatchProfiles));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
             _inputConfig = inputConfig;
             _handlerProvider = handlerProvider;
@@ -65,21 +49,6 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Active scheme id; 0 = no scheme has been activated yet.</summary>
         public int ActiveSchemeId => _activeSchemeId;
-
-        /// <summary>
-        /// The active scheme's default command intent, in the
-        /// <see cref="InteractionContextStack.CommandIntentProfileIdRegistry"/> id space (DEC-14:
-        /// consumed only for the default frame). 0 when no scheme is active; pointer commands then
-        /// do not route.
-        /// </summary>
-        public int ActiveDefaultCommandIntentId => _activeDefaultCommandIntentId;
-
-        /// <summary>
-        /// The active scheme's default cast-dispatch profile, in
-        /// <see cref="CastDispatchProfileRegistry.ProfileIdRegistry"/> id space. 0 when no scheme
-        /// is active; routed pointer commands then fail fast instead of inventing a Core default.
-        /// </summary>
-        public int ActiveDefaultCastDispatchProfileId => _activeDefaultCastDispatchProfileId;
 
         /// <summary>Bumped on every successful switch.</summary>
         public uint Revision { get; private set; }
@@ -103,9 +72,9 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// Read-only view of an installed scheme's activation payload (the contexts to push on
-        /// an input handler plus the scheme-owned defaults). Per-seat activation stacks mirror
-        /// this data without recompiling or re-registering the catalog; the global active
-        /// scheme state above stays untouched by those readers.
+        /// an input handler). Per-seat activation stacks mirror this data without recompiling or
+        /// re-registering the catalog; the global active scheme state above stays untouched by
+        /// those readers.
         /// </summary>
         public bool TryGetSchemeActivation(int schemeId, out ControlSchemeActivation activation)
         {
@@ -118,19 +87,16 @@ namespace Ludots.Core.Input.Interaction
             CompiledScheme scheme = _schemes[schemeId];
             activation = new ControlSchemeActivation(
                 scheme.InputContexts,
-                scheme.DefaultCommandIntentId,
-                scheme.DefaultCastDispatchProfileId,
                 scheme.HasAxisMove,
                 scheme.AxisMove);
             return true;
         }
 
         /// <summary>
-        /// Compile and install every scheme in the config. Fails fast on duplicate installs and on
-        /// <c>defaults.commandIntentId</c> references that are not installed command intent profiles.
+        /// Compile and install every scheme in the config. Fails fast on duplicate installs.
         /// After installation, activates the persisted active scheme when present; otherwise it
-        /// activates the first allowed declaration so production startup has a scheme-owned intent
-        /// default without test-only calls.
+        /// activates the first allowed declaration so production startup has an active scheme
+        /// without test-only calls.
         /// </summary>
         public void Install(ControlSchemesConfig config)
         {
@@ -173,10 +139,11 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// Hot-switch to a scheme: pop the previous scheme's IMC contexts, push the new scheme's,
-        /// record the active default command intent, and persist the choice into the preference
-        /// store. Returns false when the scheme is not installed or the mod allowed-set refuses it
-        /// (settings UI shows the refusal); switching to the already-active scheme is a no-op
-        /// success. Tolerates a null input handler (headless).
+        /// and persist the choice into the preference store. Returns false when the scheme is not
+        /// installed or the mod allowed-set refuses it (settings UI shows the refusal); switching
+        /// to the already-active scheme is a no-op success. Tolerates a null input handler
+        /// (headless). Switching never touches order routing preferences — those live on the
+        /// player representative (<see cref="CommandPref"/>), not on the scheme.
         /// </summary>
         public bool TrySwitch(int schemeId)
         {
@@ -239,8 +206,6 @@ namespace Ludots.Core.Input.Interaction
             }
 
             _activeSchemeId = schemeId;
-            _activeDefaultCommandIntentId = _schemes[schemeId].DefaultCommandIntentId;
-            _activeDefaultCastDispatchProfileId = _schemes[schemeId].DefaultCastDispatchProfileId;
             Revision++;
             switched = true;
             return true;
@@ -254,24 +219,6 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Control scheme '{definition.Id}' is already installed.");
             }
 
-            string commandIntentId = definition.Defaults.CommandIntentId;
-            if (!_commandIntents.ProfileIdRegistry.TryGetId(commandIntentId, out int intentRegistryId) ||
-                !_commandIntents.IsInstalled(intentRegistryId))
-            {
-                throw new InvalidOperationException(
-                    $"Control scheme '{definition.Id}' defaults.commandIntentId references command intent profile " +
-                    $"'{commandIntentId}' which is not installed.");
-            }
-
-            string castDispatchProfileId = definition.Defaults.CastDispatchProfileId;
-            if (!_castDispatchProfiles.ProfileIdRegistry.TryGetId(castDispatchProfileId, out int dispatchRegistryId) ||
-                !_castDispatchProfiles.IsInstalled(dispatchRegistryId))
-            {
-                throw new InvalidOperationException(
-                    $"Control scheme '{definition.Id}' defaults.castDispatchProfileId references cast dispatch profile " +
-                    $"'{castDispatchProfileId}' which is not installed.");
-            }
-
             var contexts = new string[definition.InputContexts.Count];
             for (int i = 0; i < contexts.Length; i++)
             {
@@ -283,8 +230,6 @@ namespace Ludots.Core.Input.Interaction
             var scheme = new CompiledScheme
             {
                 InputContexts = contexts,
-                DefaultCommandIntentId = _stack.CommandIntentProfileIdRegistry.Register(commandIntentId),
-                DefaultCastDispatchProfileId = dispatchRegistryId,
             };
 
             if (definition.AxisMove != null)
@@ -321,9 +266,8 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Same fail-fast contract as the intent/dispatch reference checks, applied to the
-        /// scheme's IMC context ids: <see cref="PlayerInputHandler.PushContext(string)"/> is a
-        /// silent no-op for unknown contexts, so a typo here would otherwise drop the scheme's
+        /// Fail-fast contract for the scheme's IMC context ids: <see cref="PlayerInputHandler.PushContext(string)"/>
+        /// is a silent no-op for unknown contexts, so a typo here would otherwise drop the scheme's
         /// bindings without any signal. Skipped when no input config is available (nothing to
         /// validate against), mirroring <see cref="ValidateAxisMoveAction"/>.
         /// </summary>
@@ -440,8 +384,6 @@ namespace Ludots.Core.Input.Interaction
         private sealed class CompiledScheme
         {
             public string[] InputContexts = Array.Empty<string>();
-            public int DefaultCommandIntentId;
-            public int DefaultCastDispatchProfileId;
             public bool HasAxisMove;
             public ControlSchemeAxisMoveBinding AxisMove;
         }
@@ -468,30 +410,22 @@ namespace Ludots.Core.Input.Interaction
     }
 
     /// <summary>
-    /// Compiled activation payload of one installed scheme: the IMC contexts a switch must
-    /// push (and the previous scheme's pop), plus the scheme-owned default intent / cast
-    /// dispatch ids and axis move declaration. Read through
-    /// <see cref="ControlSchemeRuntime.TryGetSchemeActivation"/> by per-seat activation
-    /// stacks; the ids live in the same id spaces the runtime itself consumes.
+    /// Compiled activation payload of one installed scheme: the IMC contexts a switch must push
+    /// (and the previous scheme's pop), plus the axis move declaration. Read through
+    /// <see cref="ControlSchemeRuntime.TryGetSchemeActivation"/> by per-seat activation stacks.
     /// </summary>
     public readonly struct ControlSchemeActivation
     {
         public readonly string[] InputContexts;
-        public readonly int DefaultCommandIntentId;
-        public readonly int DefaultCastDispatchProfileId;
         public readonly bool HasAxisMove;
         public readonly ControlSchemeAxisMoveBinding AxisMove;
 
         public ControlSchemeActivation(
             string[] inputContexts,
-            int defaultCommandIntentId,
-            int defaultCastDispatchProfileId,
             bool hasAxisMove,
             ControlSchemeAxisMoveBinding axisMove)
         {
             InputContexts = inputContexts;
-            DefaultCommandIntentId = defaultCommandIntentId;
-            DefaultCastDispatchProfileId = defaultCastDispatchProfileId;
             HasAxisMove = hasAxisMove;
             AxisMove = axisMove;
         }
