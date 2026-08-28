@@ -64,7 +64,7 @@ public sealed class ReplayPlaybackRuntime
     private int _replayFrames;
     private string? _recordedEndDigest;
     private string? _liveRejectedSample;
-    private long _nextSequence = 1;
+    private long _nextSequence = 0;
 
     public ReplayPlaybackRuntime(GameEngine engine)
     {
