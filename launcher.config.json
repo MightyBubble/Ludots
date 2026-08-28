@@ -1985,6 +1985,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetInteractionModeEntryMod",
         "projectPath": "CapabilityStandardGraphOpSetInteractionModeEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_SetPanelAudience",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetPanelAudienceEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetPanelAudienceEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

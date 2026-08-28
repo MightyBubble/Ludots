@@ -2654,6 +2654,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetPanelAudience_raylib",
+      "name": "Graph Op SetPanelAudience Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetPanelAudience"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

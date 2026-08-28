@@ -14,7 +14,8 @@ namespace Ludots.Core.UI.PanelProjection
     {
         private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal)
         {
-            "id", "skin", "graph", "pins", "events", "intents", "collections", "layout", "subject"
+            "id", "skin", "graph", "pins", "events", "intents", "collections", "layout", "subject",
+            "ownerKind", "audienceSeats"
         };
         private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
         private static readonly HashSet<string> CollectionFields = new(StringComparer.Ordinal)
@@ -115,6 +116,16 @@ namespace Ludots.Core.UI.PanelProjection
                     $"panel template '{id}'");
             }
 
+            PanelOwnerKind ownerKind = PanelOwnerKind.Seat;
+            if (rootObject["ownerKind"] is not null)
+            {
+                ownerKind = PanelOwnerKinds.Parse(
+                    RequireString(rootObject, "ownerKind", $"panel template '{id}'"),
+                    $"panel template '{id}'");
+            }
+
+            PanelAudience audience = ParseAudience(id, rootObject);
+
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
             List<PanelIntentMapEntry> intents = ParseIntents(id, rootObject, events);
             List<PanelCollectionBinding> collections = ParseCollections(id, rootObject);
@@ -126,7 +137,53 @@ namespace Ludots.Core.UI.PanelProjection
 
             PanelLayout? layout = ParseLayout(id, rootObject, pins, collections, subject);
 
-            return new PanelTemplate(id, graph, pins, events, intents, skin, collections, layout, subject);
+            return new PanelTemplate(id, graph, pins, events, intents, skin, collections, layout, subject, ownerKind, audience);
+        }
+
+        /// <summary>
+        /// Audience axis declaration: the string <c>"all-seats"</c> or an array of seat id
+        /// strings. Anything else — numbers, objects, an empty array, absent-but-present
+        /// nulls — fails at load naming the template.
+        /// </summary>
+        private static PanelAudience ParseAudience(string templateId, JsonObject rootObject)
+        {
+            JsonNode? node = rootObject["audienceSeats"];
+            if (node is null)
+            {
+                return PanelAudience.AllSeats;
+            }
+
+            if (node is JsonValue value && value.TryGetValue<string>(out string? text))
+            {
+                if (string.Equals(text?.Trim(), "all-seats", StringComparison.Ordinal))
+                {
+                    return PanelAudience.AllSeats;
+                }
+
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' audienceSeats string must be 'all-seats', got '{text}'.");
+            }
+
+            if (node is not JsonArray array)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' audienceSeats must be 'all-seats' or an array of seat ids.");
+            }
+
+            var seatIds = new List<string>(array.Count);
+            foreach (JsonNode? entry in array)
+            {
+                if (entry is not JsonValue seatValue || !seatValue.TryGetValue<string>(out string? seatId) ||
+                    string.IsNullOrWhiteSpace(seatId))
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' audienceSeats entries must be non-empty seat id strings.");
+                }
+
+                seatIds.Add(seatId);
+            }
+
+            return PanelAudience.Seats(seatIds);
         }
 
         private static List<PanelCollectionBinding> ParseCollections(string templateId, JsonObject rootObject)
@@ -444,6 +501,7 @@ namespace Ludots.Core.UI.PanelProjection
                 string intent = RequireString(intentObject, "intent", $"panel template '{templateId}' intent for '{eventId}'");
                 string playerSource = RequireString(intentObject, "playerSource", $"panel template '{templateId}' intent '{intent}'");
                 string actorSource = RequireString(intentObject, "actorSource", $"panel template '{templateId}' intent '{intent}'");
+                PanelOwnerKinds.Parse(playerSource, $"Panel template '{templateId}' intent '{intent}'");
 
                 var args = new Dictionary<string, string>(StringComparer.Ordinal);
                 if (intentObject["args"] is JsonObject argsNode)

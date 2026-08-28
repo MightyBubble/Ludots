@@ -79,6 +79,20 @@ public sealed class GraphOpsNodeGalleryPanelOpAcceptanceTests
     }
 
     [Test]
+    public void SetPanelAudienceVignette_ExecutesOpWithoutThrow()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SetPanelAudience");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
+                $"SetPanelAudience detail missing phrase: {runtime.Metrics.Detail}");
+        }
+    }
+
+    [Test]
     public void SpawnTemplateVignette_ExecutesOpWithoutThrow()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

@@ -379,6 +379,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RequirePanelActivationApi().HidePanel(ResolvePanelTypeName(panelTypeId));
         }
 
+        public void SetPanelAudience(int panelTypeId, int seatKeyId)
+        {
+            Ludots.Core.UI.PanelActivation.PanelActivationApi api = RequirePanelActivationApi();
+            string panelType = ResolvePanelTypeName(panelTypeId);
+            if (seatKeyId == 0)
+            {
+                api.ClearPanelAudience(panelType);
+                return;
+            }
+
+            string? seatId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(seatKeyId);
+            if (string.IsNullOrWhiteSpace(seatId))
+            {
+                throw new InvalidOperationException(
+                    $"SetPanelAudience references unregistered seat key id {seatKeyId} for panel '{panelType}'.");
+            }
+
+            api.SetPanelAudience(panelType, Ludots.Core.UI.PanelProjection.PanelAudience.Seats(new[] { seatId }));
+        }
+
         public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
         {
             CreatePanel(templateKeyId, anchorKeyId, scope, UI.PanelHosting.PanelSkinIds.Unspecified, 100f);

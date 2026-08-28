@@ -35,6 +35,9 @@ public static class PanelPresentationInstaller
         PanelTheme? theme = PanelThemeCatalog.TryLoad(engine);
         var textMeasurer = engine.GetService(CoreServiceKeys.UiTextMeasurer) as Ludots.UI.Runtime.IUiTextMeasurer;
         var imageSizeProvider = engine.GetService(CoreServiceKeys.UiImageSizeProvider) as Ludots.UI.Runtime.IUiImageSizeProvider;
+        var seats = engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out Ludots.Core.Client.ClientLocalSeatRegistry? seatRegistry)
+            ? seatRegistry
+            : null;
         engine.RegisterPresentationSystem(new PanelPresentationSystem(
             panelHost,
             templates,
@@ -44,6 +47,7 @@ public static class PanelPresentationInstaller
             engine.MergedConfig?.PanelSkin,
             theme?.StyleSheet,
             textMeasurer,
-            imageSizeProvider));
+            imageSizeProvider,
+            seats));
     }
 }

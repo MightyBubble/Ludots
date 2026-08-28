@@ -284,6 +284,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.SetPanelAudience:
+                    RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.ReadMapVarInt:
                 case GraphNodeOp.ReadMapVarFloat:
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
@@ -1094,6 +1098,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
                         : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.SetPanelAudience:
+                    instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = EncodeByteSymbol(node.PanelSeat, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
 
                 case GraphNodeOp.ReadMapVarInt:

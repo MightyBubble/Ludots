@@ -8576,6 +8576,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SetInteractionMode/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SetPanelAudience",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetPanelAudienceEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSetPanelAudienceEntryMod.csproj",
+      "title": "热座换手",
+      "summary": "回合一换，面板受众跟着换到当令座位，等待的座位点不动面板。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SetPanelAudience"
+      ],
+      "binding": "capability_standard_graph_op_SetPanelAudience",
+      "preset": "capability_standard_graph_op_SetPanelAudience_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SetPanelAudience.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SetPanelAudience",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SetPanelAudience/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SetPanelAudience/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }
