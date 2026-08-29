@@ -205,7 +205,7 @@
     "showObjectiveWithDialogue": false,
     "showObjectiveWithSequence": false,
     "showPromptWithDialogue": false,
-    "showPromptWithSequence": false,
+    "showPromptWithSequence": true,
     "hideCastDuringStandingPortrait": true,
     "hidePanelsDuringStandingPortrait": true
   },
