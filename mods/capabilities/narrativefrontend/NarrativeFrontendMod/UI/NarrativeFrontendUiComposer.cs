@@ -47,9 +47,9 @@ internal static class NarrativeFrontendUiComposer
         private const float StandingCardMinWidth = 420f;
         private const float StandingCardSideGap = 32f;
         private const float CenterAnchorLiftPx = 170f;
-        // Reserve enough vertical room for portrait + wrapped body + chrome so BottomCenter
-        // panels are not pushed below the 1080 design canvas (body was landing at y≈1111).
-        private const float BottomAnchorInsetPx = 420f;
+        // Reserve enough vertical room for portrait + wrapped body + nine-slice inset so
+        // BottomCenter panels stay above the 1080 design canvas.
+        private const float BottomAnchorInsetPx = 520f;
         private const float StandingFullHeightPx = 1000f;
 
     public static UiElementBuilder BuildRoot(ReactiveContext<NarrativeFrontendRenderState> context)

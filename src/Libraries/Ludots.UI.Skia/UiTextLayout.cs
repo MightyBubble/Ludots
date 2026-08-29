@@ -188,50 +188,61 @@ public static class UiTextLayout
 		bool constrainWidth)
 	{
 		bool wrap = constrainWidth && availableWidth > 0.01f && style.WhiteSpace != UiWhiteSpace.NoWrap;
+		List<IReadOnlyList<UiStyledTextRun>> paragraphs = SplitStyledParagraphs(runs);
 		if (!wrap)
 		{
-			return new IReadOnlyList<UiStyledTextRun>[] { runs };
+			return paragraphs.Count == 0
+				? new IReadOnlyList<UiStyledTextRun>[] { Array.Empty<UiStyledTextRun>() }
+				: paragraphs;
 		}
 
 		var lines = new List<IReadOnlyList<UiStyledTextRun>>();
-		var current = new List<UiStyledTextRun>();
-		float currentWidth = 0f;
-
-		for (int i = 0; i < runs.Count; i++)
+		for (int p = 0; p < paragraphs.Count; p++)
 		{
-			UiStyledTextRun run = runs[i];
-			string text = run.Text ?? string.Empty;
-			if (text.Length == 0)
+			IReadOnlyList<UiStyledTextRun> paragraph = paragraphs[p];
+			if (paragraph.Count == 0)
 			{
+				lines.Add(Array.Empty<UiStyledTextRun>());
 				continue;
 			}
 
-			// Prefer whitespace soft-wrap; when a token still overflows (CJK / long Latin),
-			// fall back to the same progressive substring fit used by plain WrapParagraph.
-			string[] tokens = SplitKeepSeparators(text);
-			for (int t = 0; t < tokens.Length; t++)
+			var current = new List<UiStyledTextRun>();
+			float currentWidth = 0f;
+
+			for (int i = 0; i < paragraph.Count; i++)
 			{
-				string token = tokens[t];
-				if (token.Length == 0)
+				UiStyledTextRun run = paragraph[i];
+				string text = run.Text ?? string.Empty;
+				if (text.Length == 0)
 				{
 					continue;
 				}
 
-				if (char.IsWhiteSpace(token[0]))
+				string[] tokens = SplitKeepSeparators(text);
+				for (int t = 0; t < tokens.Length; t++)
 				{
-					float wsWidth = MeasureStyledSegmentWidth(token, run, style, paint);
-					AppendToStyledLine(current, run with { Text = token });
-					currentWidth += wsWidth;
-					continue;
-				}
+					string token = tokens[t];
+					if (token.Length == 0)
+					{
+						continue;
+					}
 
-				AppendFittingToken(lines, ref current, ref currentWidth, token, run, style, paint, availableWidth);
+					if (char.IsWhiteSpace(token[0]))
+					{
+						float wsWidth = MeasureStyledSegmentWidth(token, run, style, paint);
+						AppendToStyledLine(current, run with { Text = token });
+						currentWidth += wsWidth;
+						continue;
+					}
+
+					AppendFittingToken(lines, ref current, ref currentWidth, token, run, style, paint, availableWidth);
+				}
 			}
-		}
 
-		if (current.Count > 0)
-		{
-			lines.Add(CompactStyledLine(current));
+			if (current.Count > 0)
+			{
+				lines.Add(CompactStyledLine(current));
+			}
 		}
 
 		if (lines.Count == 0)
@@ -240,6 +251,61 @@ public static class UiTextLayout
 		}
 
 		return lines;
+	}
+
+	/// <summary>
+	/// Split styled runs on U+000A hard newlines, preserving style across the break.
+	/// Mirrors plain <c>BreakLines</c> paragraph splitting.
+	/// </summary>
+	private static List<IReadOnlyList<UiStyledTextRun>> SplitStyledParagraphs(IReadOnlyList<UiStyledTextRun> runs)
+	{
+		var paragraphs = new List<IReadOnlyList<UiStyledTextRun>>();
+		var current = new List<UiStyledTextRun>();
+
+		for (int i = 0; i < runs.Count; i++)
+		{
+			UiStyledTextRun run = runs[i];
+			string text = (run.Text ?? string.Empty).Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+			if (text.Length == 0)
+			{
+				continue;
+			}
+
+			int start = 0;
+			for (int c = 0; c < text.Length; c++)
+			{
+				if (text[c] != '\n')
+				{
+					continue;
+				}
+
+				if (c > start)
+				{
+					current.Add(run with { Text = text.Substring(start, c - start) });
+				}
+
+				paragraphs.Add(current.Count == 0 ? Array.Empty<UiStyledTextRun>() : current.ToArray());
+				current = new List<UiStyledTextRun>();
+				start = c + 1;
+			}
+
+			if (start < text.Length)
+			{
+				current.Add(run with { Text = start == 0 ? text : text.Substring(start) });
+			}
+		}
+
+		if (current.Count > 0)
+		{
+			paragraphs.Add(current.ToArray());
+		}
+
+		if (paragraphs.Count == 0)
+		{
+			paragraphs.Add(Array.Empty<UiStyledTextRun>());
+		}
+
+		return paragraphs;
 	}
 
 	private static void AppendFittingToken(

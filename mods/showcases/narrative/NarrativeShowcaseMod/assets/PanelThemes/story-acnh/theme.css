@@ -81,5 +81,6 @@
 /* 内容让出切边，避免字压在拟物框金边上 */
 .story-framed-body {
   position: relative;
-  padding: 22px 24px 26px 24px;
+  /* Match .story-frame image-slice (48) so glyphs clear the opaque nine-slice border. */
+  padding: 48px 48px 48px 48px;
 }

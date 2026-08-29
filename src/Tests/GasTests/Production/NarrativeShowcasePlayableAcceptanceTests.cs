@@ -779,23 +779,35 @@ namespace Ludots.Tests.GAS.Production
                 Is.Not.Null,
                 "Active briefing body must land on a story-body UiNode with TextRuns. Dump: " + string.Join(" || ", dump));
             Assert.That(richBody!.LayoutRect.Width, Is.GreaterThan(8f), "Rich story-body width collapsed. Dump: " + string.Join(" || ", dump));
-            Assert.That(richBody.LayoutRect.Height, Is.GreaterThan(8f), "Rich story-body height collapsed. Dump: " + string.Join(" || ", dump));
             Assert.That(
                 richBody.LayoutRect.Y,
-                Is.GreaterThan(500f).And.LessThan(1000f),
+                Is.GreaterThan(500f),
                 "Rich story-body must sit inside the on-screen dialogue frame. Dump: " + string.Join(" || ", dump));
             Assert.That(
                 richBody.LayoutRect.Y + richBody.LayoutRect.Height,
                 Is.LessThanOrEqualTo(1080f),
                 "Rich story-body must not fall below the 1080 canvas. Dump: " + string.Join(" || ", dump));
             Assert.That(
+                richBody.LayoutRect.Height,
+                Is.GreaterThan(30f),
+                "Rich story-body must wrap to more than one line. Dump: " + string.Join(" || ", dump));
+            // Framed nine-slice border is 48px; body text must start clear of the opaque edge.
+            UiNode? framedBody = FindAncestorByClass(richBody, "story-framed-body")
+                ?? FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
+            Assert.That(framedBody, Is.Not.Null);
+            Assert.That(
+                richBody.LayoutRect.X,
+                Is.GreaterThanOrEqualTo(framedBody!.LayoutRect.X + 48f - 0.5f),
+                "Rich story-body must not paint under the nine-slice frame border. Dump: " + string.Join(" || ", dump));
+            Assert.That(
                 richBody.TextRuns!.Any(static r => r.HasColor),
                 Is.True,
                 "Briefing BodyRuns must carry an inline color for player-visible highlight.");
+            Assert.That(dialogueView.ResolvedText, Does.Contain("余烬神龛").Or.Contain("Ember Shrine"));
             Assert.That(
-                dialogueView.ResolvedText,
-                Does.Contain(richBody.TextContent ?? string.Empty).IgnoreCase
-                    .Or.Contain("余烬神龛").Or.Contain("Ember Shrine"));
+                dialogueView.ResolvedText.Contains('\n'),
+                Is.True,
+                "Briefing locale must include a hard newline so the player sees a wrapped dialogue body.");
         }
 
         private static void CollectUiNodesByClass(UiNode? root, string className, List<UiNode> sink)
@@ -818,12 +830,13 @@ namespace Ludots.Tests.GAS.Production
 
         private static string TrimForDiag(string value, int max)
         {
-            if (string.IsNullOrEmpty(value) || value.Length <= max)
+            string normalized = (value ?? string.Empty).Replace('\n', '↵').Replace('\r', ' ');
+            if (normalized.Length <= max)
             {
-                return value ?? string.Empty;
+                return normalized;
             }
 
-            return value.Substring(0, max) + "…";
+            return normalized.Substring(0, max) + "…";
         }
 
         private static UiNode? FindAncestorByClass(UiNode? node, string className)
