@@ -14,6 +14,7 @@ Ludots GitHub Pages 门户站点组装脚本（纯标准库，无第三方依赖
   _site/site-assets/docs-nav.js       由 gitbook/SUMMARY.md 解析生成的文档目录树
   _site/site-assets/graph-op-nav.js   由 graph-node-op-wiki/README.md 解析的节点画廊目录
   _site/site-assets/engine-gallery-nav.js  由 engine-gallery-wiki/README.md 解析的引擎画廊目录
+  _site/site-assets/map-data-nav.js   由 map-data-wiki/README.md 解析的地图数据目录
   _site/site-assets/gallery-data.js   由 showcase.registry.json 注入的画廊数据
   _site/site-assets/evidence-data.js  由 artifacts/acceptance/ 实扫生成的证据索引
 
@@ -191,11 +192,12 @@ def parse_prd_catalog(readme_path: Path) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 1c. wiki README 家族目录 -> 画廊导航 JS（graph-node-op-wiki 与 engine-gallery-wiki 共用）
+# 1c. wiki README 家族目录 -> 画廊导航 JS（graph / engine-gallery / map-data 共用）
 # ---------------------------------------------------------------------------
 
 GRAPH_OP_WIKI_DIR = GITBOOK_DIR / "reference" / "graph-node-op-wiki"
 ENGINE_GALLERY_WIKI_DIR = GITBOOK_DIR / "reference" / "engine-gallery-wiki"
+MAP_DATA_WIKI_DIR = GITBOOK_DIR / "reference" / "map-data-wiki"
 WIKI_FAMILY_HEADING = re.compile(r"^## (.+?)\s*$")
 WIKI_OP_ITEM = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<file>[^)]+?\.md)\)\s*(?:—|-)\s*(?P<desc>.*)$")
 
@@ -543,6 +545,13 @@ def build(out_dir: Path) -> int:
         **parse_wiki_catalog(ENGINE_GALLERY_WIKI_DIR / "README.md", "engine-gallery-wiki"),
     }
 
+    print("-- 解析 map-data-wiki/README.md 家族目录 -> map-data-nav.js")
+    map_data_nav = {
+        "generatedAt": now,
+        "source": "gitbook/reference/map-data-wiki/README.md",
+        **parse_wiki_catalog(MAP_DATA_WIKI_DIR / "README.md", "map-data-wiki"),
+    }
+
     print("-- 解析 panel-cases/README.md 家族目录 -> panels-nav.js")
     panels_nav = {
         "generatedAt": now,
@@ -592,6 +601,7 @@ def build(out_dir: Path) -> int:
     write_js(out_dir / "site-assets" / "prd-nav.js", "PRD_NAV", prd_nav)
     write_js(out_dir / "site-assets" / "graph-op-nav.js", "GRAPH_OP_NAV", graph_op_nav)
     write_js(out_dir / "site-assets" / "engine-gallery-nav.js", "ENGINE_GALLERY_NAV", engine_gallery_nav)
+    write_js(out_dir / "site-assets" / "map-data-nav.js", "MAP_DATA_NAV", map_data_nav)
     write_js(out_dir / "site-assets" / "gallery-data.js", "GALLERY_DATA", gallery_data)
     write_js(out_dir / "site-assets" / "evidence-data.js", "EVIDENCE_DATA", evidence_data)
 
@@ -602,11 +612,12 @@ def build(out_dir: Path) -> int:
     print("-- 结构自验")
     required = [
         "index.html", "gallery.html", "tests.html", "diagrams.html", "panels.html",
-        "graph-op-wiki.html", "raylib-engine.html", "agent-bridge.html",
+        "graph-op-wiki.html", "raylib-engine.html", "map-data.html", "agent-bridge.html",
         "site-assets/site.css", "site-assets/site.js",
         "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/graph-op-nav.js",
         "site-assets/panels-nav.js",
         "site-assets/engine-gallery-nav.js",
+        "site-assets/map-data-nav.js",
         "site-assets/gallery-data.js", "site-assets/evidence-data.js",
         ".nojekyll",
     ]

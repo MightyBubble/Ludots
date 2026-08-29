@@ -231,6 +231,12 @@
         <p>35 类面板设计一站式：高保真 web 预期（三主题切换）、文档直达、showcase 预留位。</p>
         <span class="go">查看矩阵 →</span>
       </a>
+      <a class="card nav-card" href="map-data.html">
+        <div class="icon" style="background: var(--green-light); color: var(--green);">🗺️</div>
+        <h3>地图数据</h3>
+        <p>走性贴图怎么导出、像素怎么编码、地图上怎么挂。排版对齐 Graph 节点画廊。</p>
+        <span class="go">打开 Wiki →</span>
+      </a>
     </div>
   </section>
 
@@ -426,7 +432,7 @@
   }
 
   function loadDoc(path, scroll) {
-    // 画廊门户的重写链接会剥 .md（graph-op-wiki / raylib-engine 同一约定），此处统一补回
+    // 画廊门户的重写链接会剥 .md（graph-op-wiki / raylib-engine / map-data 同一约定），此处统一补回
     if (!/\.md$/i.test(path)) path = path + ".md";
     currentDoc = path;
     var body = document.getElementById("doc-body");
