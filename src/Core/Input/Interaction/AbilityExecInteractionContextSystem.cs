@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Input.Interaction
 {
@@ -16,36 +17,53 @@ namespace Ludots.Core.Input.Interaction
     /// <see cref="InteractionContextStack.RemoveByContextEntity"/>. Reconciliation is polling over
     /// component existence (no new event kinds, deterministic across every exec teardown path).
     /// Steady state is allocation free.
+    /// <para>
+    /// The same update also reconciles the entity-mounted read face: per control domain, the
+    /// topmost frame whose carrier resolves to the domain representative is projected onto that
+    /// representative as an <see cref="ActiveInteractionContext"/> component. Entity-side readers
+    /// (DEC-14 arbitration) therefore never read the stack, while the stack keeps the frame
+    /// lifecycle for the projection, collection routing, and IMC projection consumers.
+    /// </para>
     /// </summary>
     public sealed class AbilityExecInteractionContextSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _execQuery = new QueryDescription().WithAll<AbilityExecInstance>();
+        private static readonly QueryDescription _activeContextQuery = new QueryDescription().WithAll<ActiveInteractionContext>();
 
         private readonly InteractionContextStack _contextStack;
         private readonly InteractionContextProfileRegistry _contextProfiles;
         private readonly AbilityDefinitionRegistry _abilityDefinitions;
+        private readonly ControlDomainQuery _controlDomains;
 
         private Entity[] _trackedEntities = new Entity[16];
         private int[] _trackedAbilityIds = new int[16];
         private int _trackedCount;
         private Entity[] _scratch = new Entity[64];
+        private Entity[] _mountedScratch = new Entity[8];
+        private Entity[] _desiredReps = new Entity[8];
+        private ActiveInteractionContext[] _desiredStates = new ActiveInteractionContext[8];
+        private bool[] _desiredMounted = new bool[8];
+        private int _desiredCount;
 
         public AbilityExecInteractionContextSystem(
             World world,
             InteractionContextStack contextStack,
             InteractionContextProfileRegistry contextProfiles,
-            AbilityDefinitionRegistry abilityDefinitions)
+            AbilityDefinitionRegistry abilityDefinitions,
+            ControlDomainQuery controlDomains)
             : base(world)
         {
             _contextStack = contextStack ?? throw new ArgumentNullException(nameof(contextStack));
             _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
             _abilityDefinitions = abilityDefinitions ?? throw new ArgumentNullException(nameof(abilityDefinitions));
+            _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
         }
 
         public override void Update(in float dt)
         {
             ReclaimEndedExecFrames();
             PushStartedExecFrames();
+            ReconcileActiveContextState();
         }
 
         /// <summary>
@@ -113,6 +131,164 @@ namespace Ludots.Core.Input.Interaction
                 _contextStack.Push(in descriptor);
                 Track(carrier, abilityId);
             }
+        }
+
+        /// <summary>
+        /// Project the frame lifecycle onto entity-mounted interaction state: per control domain,
+        /// the topmost frame whose carrier resolves to the domain representative wins (LIFO, the
+        /// stack's top-frame arbitration). A mounted component whose carrier still owns a stack
+        /// frame but no longer resolves (dead or domain-less) stays frozen for the reclaim window
+        /// so entity-side readers fail closed exactly like the retired top-frame read; once the
+        /// carrier leaves the stack, the component is released back to the steady state.
+        /// </summary>
+        private void ReconcileActiveContextState()
+        {
+            CollectDesiredContexts();
+            RefreshMountedContexts();
+            MountMissingContexts();
+        }
+
+        private void CollectDesiredContexts()
+        {
+            _desiredCount = 0;
+            for (int i = _contextStack.Count - 1; i >= 0; i--)
+            {
+                if (!_contextStack.TryGetAt(i, out InteractionContextFrame frame))
+                {
+                    continue;
+                }
+
+                if (frame.ContextEntity == default)
+                {
+                    continue;
+                }
+
+                if (!_controlDomains.TryResolveControlDomain(frame.ContextEntity, out Entity domainRep) ||
+                    domainRep == default)
+                {
+                    continue;
+                }
+
+                if (ContainsDesiredRep(domainRep))
+                {
+                    continue;
+                }
+
+                if (_desiredCount == _desiredReps.Length)
+                {
+                    Array.Resize(ref _desiredReps, _desiredCount * 2);
+                    Array.Resize(ref _desiredStates, _desiredCount * 2);
+                    Array.Resize(ref _desiredMounted, _desiredCount * 2);
+                }
+
+                _desiredReps[_desiredCount] = domainRep;
+                _desiredStates[_desiredCount] = new ActiveInteractionContext
+                {
+                    ContextEntity = frame.ContextEntity,
+                    CommandIntentProfileId = frame.CommandIntentProfileId,
+                };
+                _desiredMounted[_desiredCount] = false;
+                _desiredCount++;
+            }
+        }
+
+        private void RefreshMountedContexts()
+        {
+            int mountedCount = World.CountEntities(in _activeContextQuery);
+            if (mountedCount == 0)
+            {
+                return;
+            }
+
+            if (mountedCount > _mountedScratch.Length)
+            {
+                _mountedScratch = new Entity[mountedCount * 2];
+            }
+
+            World.GetEntities(in _activeContextQuery, _mountedScratch);
+            for (int i = 0; i < mountedCount; i++)
+            {
+                Entity holder = _mountedScratch[i];
+                if (!World.IsAlive(holder))
+                {
+                    continue;
+                }
+
+                if (TryFindDesired(holder, out int desiredIndex))
+                {
+                    ref ActiveInteractionContext mounted = ref World.Get<ActiveInteractionContext>(holder);
+                    if (mounted.ContextEntity != _desiredStates[desiredIndex].ContextEntity ||
+                        mounted.CommandIntentProfileId != _desiredStates[desiredIndex].CommandIntentProfileId)
+                    {
+                        mounted = _desiredStates[desiredIndex];
+                    }
+
+                    _desiredMounted[desiredIndex] = true;
+                    continue;
+                }
+
+                if (CarrierStillOnStack(World.Get<ActiveInteractionContext>(holder).ContextEntity))
+                {
+                    continue;
+                }
+
+                World.Remove<ActiveInteractionContext>(holder);
+            }
+        }
+
+        private void MountMissingContexts()
+        {
+            for (int i = 0; i < _desiredCount; i++)
+            {
+                if (_desiredMounted[i] || !World.IsAlive(_desiredReps[i]))
+                {
+                    continue;
+                }
+
+                World.Add(_desiredReps[i], _desiredStates[i]);
+            }
+        }
+
+        private bool ContainsDesiredRep(Entity rep)
+        {
+            for (int i = 0; i < _desiredCount; i++)
+            {
+                if (_desiredReps[i] == rep)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryFindDesired(Entity rep, out int index)
+        {
+            for (int i = 0; i < _desiredCount; i++)
+            {
+                if (_desiredReps[i] == rep)
+                {
+                    index = i;
+                    return true;
+                }
+            }
+
+            index = -1;
+            return false;
+        }
+
+        private bool CarrierStillOnStack(Entity carrier)
+        {
+            for (int i = 0; i < _contextStack.Count; i++)
+            {
+                if (_contextStack.TryGetAt(i, out InteractionContextFrame frame) &&
+                    frame.ContextEntity == carrier)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool IsTracked(Entity carrier)

@@ -304,68 +304,61 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Arbiter_TopFrameExplicitIntent_WinsOverPlayerPref()
+        public void Arbiter_ActiveContextExplicitIntent_WinsOverPlayerPref()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
-
-            harness.Stack.Push(InteractionContextFrameDescriptor.Create(
-                "context.test.targeting",
-                "collection.test.targeting",
-                "view.test.targeting",
-                commandIntentProfileId: AltIntent));
+            Entity rep = world.Create();
+            world.Add(rep, new ActiveInteractionContext
+            {
+                ContextEntity = world.Create(),
+                CommandIntentProfileId = harness.Stack.CommandIntentProfileIdRegistry.Register(AltIntent),
+            });
 
             CommandPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in pref),
+                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)),
-                "the pushed frame's explicit intent must win over the player default.");
+                "the active context's explicit intent must win over the player default.");
         }
 
         [Test]
-        public void Arbiter_DefaultFrame_UsesPlayerPrefDefault()
+        public void Arbiter_SteadyStateNoActiveContext_UsesPlayerPrefDefault()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
+            Entity rep = world.Create();
 
             CommandPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in pref),
+                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(DefaultIntent)),
-                "the default frame consumes the possessed rep's player default intent (DEC-14).");
+                "steady state (no mounted interaction context) consumes the possessed rep's player default intent (DEC-14).");
 
             CommandPref other = NewPref(harness, AltIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in other),
+                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in other),
                 Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)),
-                "switching the player's preference changes the default frame's intent.");
+                "switching the player's preference changes the steady state's intent.");
         }
 
         [Test]
-        public void Arbiter_NonDefaultFrameWithoutIntent_ReturnsZero_NoBubbling()
+        public void Arbiter_ActiveContextWithoutIntent_ReturnsZero_NoBubbling()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
-
-            harness.Stack.Push(InteractionContextFrameDescriptor.Create(
-                "context.test.modal",
-                "collection.test.targeting",
-                "view.test.targeting"));
+            Entity rep = world.Create();
+            world.Add(rep, new ActiveInteractionContext
+            {
+                ContextEntity = world.Create(),
+                CommandIntentProfileId = 0,
+            });
 
             CommandPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in pref),
+                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
                 Is.EqualTo(0),
-                "a non-default frame without an explicit intent does not route and never bubbles (DEC-14).");
-        }
-
-        [Test]
-        public void Arbiter_EmptyStack_ReturnsZero()
-        {
-            var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var emptyStack = new InteractionContextStack(collectionKeys);
-            CommandPref pref = NewPref(intentId: 1);
-            Assert.That(CommandIntentArbiter.ResolveActiveCommandIntent(emptyStack, in pref), Is.EqualTo(0));
+                "an active context without an explicit intent does not route and never bubbles to the player default (DEC-14).");
         }
 
         [Test]

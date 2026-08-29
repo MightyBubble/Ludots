@@ -15,6 +15,9 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// String-keyed frame description. Strings are resolved to int ids by
     /// <see cref="InteractionContextStack.Push(in InteractionContextFrameDescriptor)"/>.
+    /// <see cref="CommandIntentProfileId"/> is a deprecated read face — DEC-14 arbitration reads
+    /// the entity-mounted <see cref="ActiveInteractionContext"/> state; the descriptor field
+    /// stays because profiles still declare it and the stack stores it until retirement.
     /// </summary>
     public readonly record struct InteractionContextFrameDescriptor(
         string ContextId,
@@ -82,7 +85,13 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>Registered filter profile id; 0 = undeclared.</summary>
         public readonly int FilterProfileId;
 
-        /// <summary>Registered command intent profile id; 0 = undeclared.</summary>
+        /// <summary>
+        /// Registered command intent profile id; 0 = undeclared.
+        /// Deprecated read face: DEC-14 arbitration reads the entity-mounted
+        /// <see cref="ActiveInteractionContext.CommandIntentProfileId"/> reconciled by
+        /// <see cref="AbilityExecInteractionContextSystem"/>. This storage remains the frame
+        /// lifecycle's declaration until frame-state materialization retires the stack.
+        /// </summary>
         public readonly int CommandIntentProfileId;
 
         /// <summary>Registered IMC input context id; 0 = undeclared.</summary>

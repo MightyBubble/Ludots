@@ -180,7 +180,7 @@ namespace Ludots.Tests.GAS
             Assert.That(first.OrderTypeId, Is.EqualTo(ChainHarness.MoveToOrderTypeId));
             Assert.That(
                 harness.Stack.CommandIntentProfileIdRegistry.GetName(
-                    CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in harness.Pref)),
+                    CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref)),
                 Is.EqualTo(IntentId));
         }
 
@@ -192,7 +192,7 @@ namespace Ludots.Tests.GAS
             harness.InstallSchemes();
 
             Order before = harness.SubmitPointerCommand();
-            int intentBefore = CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in harness.Pref);
+            int intentBefore = CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref);
             int dispatchBefore = harness.Pref.ResolveCastDispatchProfile(abilityTemplateId: 0);
 
             Assert.That(harness.Schemes!.TrySwitch(harness.SchemeId("scheme.pref.alternate")), Is.True);
@@ -201,7 +201,7 @@ namespace Ludots.Tests.GAS
             Order after = harness.SubmitPointerCommand();
 
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, in harness.Pref),
+                CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref),
                 Is.EqualTo(intentBefore),
                 "the player's routing preference lives on the representative and survives scheme switches");
             Assert.That(harness.Pref.ResolveCastDispatchProfile(abilityTemplateId: 0), Is.EqualTo(dispatchBefore));
@@ -223,18 +223,19 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CommandIntentRouting_NonDefaultFrameWithoutIntent_RejectsWithoutRequiringThePref()
+        public void CommandIntentRouting_ActiveContextWithoutIntent_RejectsWithoutRequiringThePref()
         {
             using var world = World.Create();
             ChainHarness harness = ChainHarness.Create(world, plantPref: false);
-            harness.Stack.Push(InteractionContextFrameDescriptor.Create(
-                "interaction.context.pref.modal",
-                EntityCollectionKeys.CommandSource,
-                "view.pref.modal"));
+            world.Add(harness.Rep, new ActiveInteractionContext
+            {
+                ContextEntity = world.Create(),
+                CommandIntentProfileId = 0,
+            });
 
             OrderSubmitResult result = harness.SubmitPointerCommandRaw();
 
-            Assert.That(result, Is.EqualTo(OrderSubmitResult.RejectedByRule), "a frame without explicit intent does not route (no bubbling)");
+            Assert.That(result, Is.EqualTo(OrderSubmitResult.RejectedByRule), "an active context without explicit intent does not route (no bubbling)");
             Assert.That(harness.Orders, Is.Empty);
         }
 

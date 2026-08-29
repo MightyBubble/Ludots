@@ -1907,33 +1907,33 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// Intent resolution with lazy preference read: frame explicit intent resolves without a
-        /// CommandPref; only when the default frame actually needs the player default does the
-        /// possessed representative's component become required (fail fast — see
+        /// Intent resolution with lazy preference read: an active context's explicit intent
+        /// resolves without a CommandPref; only when the steady state actually needs the player
+        /// default does the possessed representative's component become required (fail fast — see
         /// <see cref="RequireActingPlayerCommandPref"/>). The chain itself is the arbiter's:
-        /// frame explicit > default-frame player default > 0 (no bubbling).
+        /// active context explicit > player default > 0 (no bubbling). An active context that
+        /// declares no intent rejects without touching the preference at all.
         /// </summary>
         private int ResolveActiveCommandIntentForCommand()
         {
-            if (!_interactionContextStack!.TryPeek(out InteractionContextFrame frame) ||
-                (frame.CommandIntentProfileId == 0 &&
-                 !CommandIntentArbiter.IsDefaultFrame(_interactionContextStack, in frame)))
+            Entity rep = RequireActingPlayerRepresentative();
+            if (_commandIntentWorld!.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext context) &&
+                context.CommandIntentProfileId == 0)
             {
                 return 0;
             }
 
             CommandPref playerPref = RequireActingPlayerCommandPref();
-            return CommandIntentArbiter.ResolveActiveCommandIntent(_interactionContextStack, in playerPref);
+            return CommandIntentArbiter.ResolveActiveCommandIntent(_commandIntentWorld, rep, in playerPref);
         }
 
         /// <summary>
-        /// The acting player's representative CommandPref. Map binding seeds the game-instance
-        /// player default onto every bound player representative, so an unresolvable
-        /// representative or a missing component is a wiring error, not a fallback case. The
-        /// bound sole possessed actor may be a controlled unit — the preference is always read
-        /// through the acting player id.
+        /// The acting player's representative through the map-binding player lookup — the entity
+        /// carrying the interaction state (<see cref="ActiveInteractionContext"/>) and
+        /// <see cref="CommandPref"/>. An unresolvable representative is a wiring error: map
+        /// binding publishes player representatives alongside the CommandPref seed.
         /// </summary>
-        private CommandPref RequireActingPlayerCommandPref()
+        private Entity RequireActingPlayerRepresentative()
         {
             if (_playerRepresentativeProvider == null)
             {
@@ -1952,10 +1952,23 @@ namespace Ludots.Core.Input.Orders
                     "map binding publishes player representatives alongside the CommandPref seed.");
             }
 
+            return rep;
+        }
+
+        /// <summary>
+        /// The acting player's representative CommandPref. Map binding seeds the game-instance
+        /// player default onto every bound player representative, so a missing component is a
+        /// wiring error, not a fallback case. The bound sole possessed actor may be a controlled
+        /// unit — the preference is always read through the acting player id.
+        /// </summary>
+        private CommandPref RequireActingPlayerCommandPref()
+        {
+            Entity rep = RequireActingPlayerRepresentative();
+
             if (!_commandIntentWorld.TryGet<CommandPref>(rep, out CommandPref pref))
             {
                 throw new InvalidOperationException(
-                    $"Command intent routing requires a CommandPref on player {playerId}'s representative '{rep}'; " +
+                    $"Command intent routing requires a CommandPref on player {CurrentActivationPlayerId}'s representative '{rep}'; " +
                     "map binding seeds the player default from Input/command_prefs.json and a missing component is a wiring error.");
             }
 
