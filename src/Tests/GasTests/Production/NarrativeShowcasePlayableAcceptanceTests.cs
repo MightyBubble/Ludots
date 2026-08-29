@@ -126,6 +126,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(dialogue.TryGetActiveView(out DialogueView introDialogue), Is.True);
             Assert.That(introDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingDialogueId));
             Assert.That(introDialogue.ResolvedSpeakerName, Does.Contain("米蕾勒").Or.Contain("Mirelle"));
+            Assert.That(introDialogue.BodyRuns, Is.Not.Null.And.Not.Empty);
+            Assert.That(introDialogue.BodyRuns!.Any(static run => !run.Style.IsEmpty), Is.True);
+            Assert.That(introDialogue.ResolvedText, Does.Contain("余烬神龛").Or.Contain("Ember Shrine"));
+            Assert.That(introDialogue.ResolvedText, Does.Not.Contain("<color").And.Not.Contain("<b>"));
             Assert.That(UiContains(uiRoot, "守望者米蕾勒") || UiContains(uiRoot, "Warden Mirelle"), Is.True);
             Assert.That(UiContains(uiRoot, "回话") || UiContains(uiRoot, "1"), Is.True);
             AssertThemeFrameVisibleOnDialogue(uiRoot);
