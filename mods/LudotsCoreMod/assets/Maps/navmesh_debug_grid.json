@@ -1,12 +1,4 @@
 {
-  "NavTileGrid": {
-    "widthChunks": 16,
-    "heightChunks": 16,
-    "chunkSizeCells": 64,
-    "cellSizeCm": 100,
-    "originXcm": 0,
-    "originZcm": 0
-  },
   "Id": "navmesh_debug_grid",
   "Tags": [
     "showcase",
@@ -25,7 +17,15 @@
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 256,
       "DataFile": "navmesh_debug_openworld.bin",
-      "NavigationEnabled": true
+      "NavigationEnabled": true,
+      "NavTileGrid": {
+        "widthChunks": 16,
+        "heightChunks": 16,
+        "chunkSizeCells": 64,
+        "cellSizeCm": 100,
+        "originXcm": 0,
+        "originZcm": 0
+      }
     }
   ],
   "Entities": [],

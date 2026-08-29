@@ -53,11 +53,11 @@ namespace Ludots.Core.Map.Board
         /// 粗量化把缓坡切成不可通行的陡崖，navmesh 高度语义需与烘焙
         /// heightScaleMeters（米/高度层）= 步长/100 保持一致。
         /// </summary>
+        public int TerrainHeightStepCm { get; set; }
+
         /// <summary>Explicit nav tile grid for this board (authored with the bake).
         /// Required when the board participates in navmesh; runtime reads this declaration only.</summary>
         public NavTileGridConfig NavTileGrid { get; set; }
-
-        public int TerrainHeightStepCm { get; set; }
 
         /// <summary>
         /// Clone this config to prevent aliasing during merge operations.
@@ -79,7 +79,9 @@ namespace Ludots.Core.Map.Board
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
                 StructureAwareNavigation = StructureAwareNavigation,
-                NavigationEnabled = NavigationEnabled
+                NavigationEnabled = NavigationEnabled,
+                TerrainHeightStepCm = TerrainHeightStepCm,
+                NavTileGrid = NavTileGrid
             };
         }
     }
