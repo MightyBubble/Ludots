@@ -636,6 +636,7 @@ namespace Ludots.Core.Input.Orders
 
                 if (IsCommandAction(actionId))
                 {
+                    Console.Error.WriteLine("CMDINTENT.TRIGGER action=" + actionId);
                     SubmitCommandIntentOrder(effectiveMapping);
                     continue;
                 }
@@ -1635,6 +1636,7 @@ namespace Ludots.Core.Input.Orders
 
         private OrderSubmitResult SubmitCommandIntentOrder(InputOrderMapping mapping)
         {
+            Console.Error.WriteLine("CMDINTENT.ENTER action=" + mapping.ActionId);
             if (_commandIntentWorld == null ||
                 _interactionContextStack == null ||
                 _controlSchemeRuntime == null ||
@@ -1652,6 +1654,7 @@ namespace Ludots.Core.Input.Orders
                 _controlSchemeRuntime);
             if (activeStackIntentId == 0)
             {
+                Console.Error.WriteLine("CMDINTENT.REJECT activeStackIntentId=0");
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedByRule);
             }
 
@@ -1671,17 +1674,20 @@ namespace Ludots.Core.Input.Orders
 
             if (!HasExplicitSolePossessedActor())
             {
+                Console.Error.WriteLine("CMDINTENT.REJECT no sole possessed actor");
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
             }
 
             if (_groundPositionProvider == null || !_groundPositionProvider(out Vector3 groundWorldCm))
             {
+                Console.Error.WriteLine("CMDINTENT.REJECT ground provider failed");
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedValidation);
             }
 
             Entity actorCollectionOwner = ResolveActiveActorCollectionOwner();
             if (actorCollectionOwner == Entity.Null)
             {
+                Console.Error.WriteLine("CMDINTENT.REJECT actor collection owner null");
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
             }
 
@@ -1695,17 +1701,20 @@ namespace Ludots.Core.Input.Orders
             {
                 if (!_entityCollections.TryGet(actorCollectionOwner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle))
                 {
+                    Console.Error.WriteLine("CMDINTENT.REJECT collection not found key=" + frame.ActiveCollectionKeyId);
                     return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
                 }
 
                 if (!TryEnsureCommandIntentScratch(handle))
                 {
+                    Console.Error.WriteLine("CMDINTENT.REJECT scratch capacity");
                     return RejectCommandIntent(mapping, OrderSubmitResult.RejectedAdmissionCapacity);
                 }
                 actorCount = _entityCollections.CopyEntities(handle, 0, _commandIntentActorsScratch);
             }
             if (actorCount <= 0)
             {
+                Console.Error.WriteLine("CMDINTENT.REJECT actorCount=0");
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
             }
 
@@ -1728,6 +1737,7 @@ namespace Ludots.Core.Input.Orders
                 _commandIntentRoutedRoutesScratch);
             if (routedCount <= 0)
             {
+                Console.Error.WriteLine("CMDINTENT.REJECT routedCount=0");
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedByRule);
             }
 
@@ -1749,6 +1759,7 @@ namespace Ludots.Core.Input.Orders
 
             if (dispatchCount <= 0)
             {
+                Console.Error.WriteLine("CMDINTENT.REJECT dispatchCount=0");
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedValidation);
             }
 
@@ -1762,6 +1773,7 @@ namespace Ludots.Core.Input.Orders
             int sourceDispatchCount = dispatchCount;
             if (!CanExpandDispatchedActors(dispatchCount))
             {
+                Console.Error.WriteLine("CMDINTENT.REJECT expand capacity");
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedAdmissionCapacity);
             }
 

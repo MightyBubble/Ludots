@@ -6,12 +6,13 @@ namespace Ludots.WebUI.PanelKit;
 /// </summary>
 public static class WebUiPanelKitSampleCatalog
 {
-	public const string ResourceTopic = "panel-kit.sample.resource";
-	public const string CommandTopic = "panel-kit.sample.command";
-	public const string ObjectiveTopic = "panel-kit.sample.objective";
-	public const string ProductionTopic = "panel-kit.sample.production";
-	public const string NotificationTopic = "panel-kit.sample.notification";
-	public const string TechTreeTopic = WebUiTechTreeSampleCatalog.Topic;
+        public const string ResourceTopic = "panel-kit.sample.resource";
+        public const string CommandTopic = "panel-kit.sample.command";
+        public const string ObjectiveTopic = "panel-kit.sample.objective";
+        public const string ProductionTopic = "panel-kit.sample.production";
+        public const string NotificationTopic = "panel-kit.sample.notification";
+        public const string ActivityTopic = "panel-kit.sample.activity";
+        public const string TechTreeTopic = WebUiTechTreeSampleCatalog.Topic;
 
 	public const string CommandDeckGlobalProfileId = "profile.command-deck.global";
 	public const string CommandDeckEntityProfileId = "profile.command-deck.entity";
@@ -30,7 +31,8 @@ public static class WebUiPanelKitSampleCatalog
 		ObjectiveTopic,
 		ProductionTopic,
 		NotificationTopic,
-		TechTreeTopic
+		TechTreeTopic,
+		ActivityTopic
 	];
 
 	public static WebUiPanelKitReferenceCatalog Create(Func<string, bool> isTopicRegistered)
@@ -43,6 +45,7 @@ public static class WebUiPanelKitSampleCatalog
 			"region.top-right",
 			"region.bottom-center",
 			"region.bottom-left",
+			"region.bottom-right",
 			"region.top-center",
 			"region.center"
 		]);
@@ -52,6 +55,7 @@ public static class WebUiPanelKitSampleCatalog
 			"profile.resource.generic",
 			"profile.command.generic",
 			"profile.objective.generic",
+			WebUiActivityPanelDescriptors.GenericProfileId,
 			ProductionOverviewProfileId,
 			CommandDeckGlobalProfileId,
 			CommandDeckEntityProfileId,
@@ -79,7 +83,8 @@ public static class WebUiPanelKitSampleCatalog
 			"input.none",
 			"input.activate-slot",
 			"input.notification-action",
-			"input.activate-node"
+			"input.activate-node",
+			"input.activity-confirm"
 		]);
 
 		var visibleConditions = new WebUiPanelIdRegistry("visible condition");

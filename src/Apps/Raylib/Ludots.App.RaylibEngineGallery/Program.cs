@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Ludots.Raylib.Render;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 
@@ -165,6 +166,13 @@ namespace Ludots.App.RaylibEngineGallery
 
             scene.Dispose();
             Rl.CloseWindow();
+
+            RaylibNativeResourceSnapshot ledger = RaylibNativeResourceLedger.Snapshot();
+            Console.WriteLine(
+                $"native-resources: resident={ledger.ResidentBytes}B outstanding={ledger.OutstandingCount} " +
+                $"tracked={ledger.LifetimeTracked} untracked={ledger.LifetimeUntracked} " +
+                $"retracked={ledger.RetrackedCount} unknownUntrack={ledger.UnknownUntrackCount} " +
+                $"byKind=[{string.Join(",", ledger.OutstandingByKind)}]");
             return exitCode;
         }
 

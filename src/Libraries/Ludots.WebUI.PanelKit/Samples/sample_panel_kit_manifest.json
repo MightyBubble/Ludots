@@ -85,6 +85,20 @@
       "layoutId": "layout.tree.generic",
       "densityId": "density.comfortable",
       "inputCapabilityId": "input.activate-node"
+    },
+    {
+      "panelId": "hud.activity",
+      "panelType": "activity",
+      "surfaceRegionId": "region.bottom-right",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 28,
+      "anchor": "bottom-right",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.sample.activity",
+      "profileId": "profile.activity.generic",
+      "layoutId": "layout.list.vertical",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.activity-confirm"
     }
   ]
 }

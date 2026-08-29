@@ -43,6 +43,7 @@ namespace Ludots.Core.Input.Runtime
 
             if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>(bindings.PointerPositionActionId), out WorldCmInt2 worldCm))
             {
+                Console.Error.WriteLine("GROUND.CAPTURE.FAILED pointer=" + input.ReadAction<Vector2>(bindings.PointerPositionActionId));
                 accumulator.CaptureAction(ActionId, Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
                 return;
             }
