@@ -286,28 +286,11 @@ namespace Ludots.Adapter.Raylib
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
-                string? screenshotPath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
                 string? diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
-                string? screenshotTargetPath = string.IsNullOrWhiteSpace(screenshotPath)
-                    ? null
-                    : Path.GetFullPath(screenshotPath);
-                string? screenshotFileName = string.IsNullOrWhiteSpace(screenshotTargetPath)
-                    ? null
-                    : Path.GetFileName(screenshotTargetPath);
-                int[] screenshotFrames = ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
-                int screenshotSequenceIndex = 0;
-                bool screenshotSequenceEnabled = screenshotFrames.Length > 0;
-                bool screenshotPending = !string.IsNullOrWhiteSpace(screenshotFileName) &&
-                                         (!screenshotSequenceEnabled || screenshotFrames.Length > 0);
-                int screenshotFrame = screenshotSequenceEnabled
-                    ? screenshotFrames[0]
-                    : int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
-                    ? Math.Max(1, parsedScreenshotFrame)
-                    : 60;
+                RaylibScreenshotEvidenceRecorder? screenshotRecorder = RaylibScreenshotEvidenceRecorder.TryCreateFromEnvironment();
                 int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
                     ? Math.Max(0, parsedAutoExitFrame)
                     : 0;
-                int minRuntimeMsBeforeScreenshot = ReadEnvIntOrDefault("LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT", 0);
                 int timingLogIntervalFrames = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES"), out int parsedTimingLogIntervalFrames)
                     ? Math.Max(0, parsedTimingLogIntervalFrames)
                     : 0;
@@ -542,7 +525,7 @@ namespace Ludots.Adapter.Raylib
                         if (drawLightweightDiagnosticHud)
                         {
                             long nativeDiagnosticStart = Stopwatch.GetTimestamp();
-                            DrawLightweightDiagnosticHud(engine, presentationTiming);
+                            RaylibDiagnosticHud.Draw(engine, presentationTiming);
                             presentationTiming?.ObserveNativeDiagnosticHud(ElapsedMs(nativeDiagnosticStart));
                         }
                         else
@@ -568,61 +551,31 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                         }
 
-                        if (screenshotPending && frameIndex >= screenshotFrame &&
-                            runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
+                        if (screenshotRecorder != null &&
+                            screenshotRecorder.ShouldCapture(frameIndex, runtimeStopwatch.ElapsedMilliseconds))
                         {
-                            string fullScreenshotPath = screenshotSequenceEnabled
-                                ? BuildSequencedScreenshotPath(screenshotTargetPath!, screenshotSequenceIndex, screenshotFrame)
-                                : screenshotTargetPath!;
-                            string screenshotFile = Path.GetFileName(fullScreenshotPath);
-                            string screenshotWorkingFilePath = Path.Combine(Environment.CurrentDirectory, screenshotFile);
-                            string? screenshotDirectory = Path.GetDirectoryName(fullScreenshotPath);
-                            if (!string.IsNullOrWhiteSpace(screenshotDirectory))
-                            {
-                                Directory.CreateDirectory(screenshotDirectory);
-                            }
-
-                            AppendRaylibDiagnostic(
-                                diagnosticPath,
-                                $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
-                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
-                            AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
-                            if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshesForDiagnostics))
-                            {
-                                AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(meshesForDiagnostics));
-                            }
-
-                            AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
-
-                            long screenshotStart = Stopwatch.GetTimestamp();
-                            Rl.TakeScreenshot(screenshotFile);
-                            if (!string.Equals(screenshotWorkingFilePath, fullScreenshotPath, StringComparison.OrdinalIgnoreCase) &&
-                                File.Exists(screenshotWorkingFilePath))
-                            {
-                                File.Copy(screenshotWorkingFilePath, fullScreenshotPath, overwrite: true);
-                                File.Delete(screenshotWorkingFilePath);
-                            }
-
-                            ValidateRuntimeScreenshotEvidence(fullScreenshotPath, lastW, lastH);
-                            presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
-
-                            if (screenshotSequenceEnabled)
-                            {
-                                screenshotSequenceIndex++;
-                                screenshotPending = screenshotSequenceIndex < screenshotFrames.Length;
-                                if (screenshotPending)
+                            double screenshotElapsedMs = screenshotRecorder.CaptureFrame(
+                                frameIndex,
+                                lastW,
+                                lastH,
+                                writeDiagnostics: () =>
                                 {
-                                    screenshotFrame = screenshotFrames[screenshotSequenceIndex];
-                                }
-                            }
-                            else
-                            {
-                                screenshotPending = false;
-                            }
-                            Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
+                                    AppendRaylibDiagnostic(
+                                        diagnosticPath,
+                                        $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
+                                    AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                                    AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
+                                    if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshesForDiagnostics))
+                                    {
+                                        AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(meshesForDiagnostics));
+                                    }
+
+                                    AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
+                                });
+                            presentationTiming?.ObserveScreenshot(screenshotElapsedMs);
                         }
 
-                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame && !screenshotPending)
+                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame && screenshotRecorder?.Pending != true)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
@@ -802,49 +755,7 @@ namespace Ludots.Adapter.Raylib
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate IntPtr GlGetStringDelegate(int name);
 
-        private static int[] ReadEnvFrameList(string key)
-        {
-            string? raw = Environment.GetEnvironmentVariable(key);
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                return Array.Empty<int>();
-            }
 
-            string[] parts = raw.Split(
-                new[] { ',', ';', ' ', '\t', '\r', '\n' },
-                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var frames = new List<int>(parts.Length);
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (int.TryParse(parts[i], out int frame))
-                {
-                    frames.Add(Math.Max(1, frame));
-                }
-            }
-
-            return frames.ToArray();
-        }
-
-        private static string BuildSequencedScreenshotPath(string targetPath, int sequenceIndex, int frame)
-        {
-            string directory = Path.GetDirectoryName(targetPath) ?? string.Empty;
-            string extension = Path.GetExtension(targetPath);
-            if (string.IsNullOrWhiteSpace(extension))
-            {
-                extension = ".png";
-            }
-
-            string fileName = Path.GetFileNameWithoutExtension(targetPath);
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                fileName = "screenshot";
-            }
-
-            string sequencedFileName = $"{fileName}_{sequenceIndex + 1:000}_f{frame:0000}{extension}";
-            return string.IsNullOrWhiteSpace(directory)
-                ? Path.GetFullPath(sequencedFileName)
-                : Path.Combine(directory, sequencedFileName);
-        }
         internal static int ReadEnvIntOrDefault(string key, int defaultValue)
         {
             return RaylibAdapterEnv.ReadEnvIntOrDefault(key, defaultValue);
@@ -855,155 +766,6 @@ namespace Ludots.Adapter.Raylib
             return RaylibAdapterEnv.ReadEnvFloatOrDefault(key, defaultValue);
         }
 
-        private static void DrawLightweightDiagnosticHud(GameEngine engine, PresentationTimingDiagnostics? timing)
-        {
-            if (timing == null)
-            {
-                return;
-            }
-
-            ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
-            WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
-            Ludots.Core.Gameplay.GAS.EffectRequestQueue? effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
-            float frameMs = timing.LastWallFrameMs > 0.001f
-                ? timing.LastWallFrameMs
-                : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
-            float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
-            string line1 = $"FPS {FormatFixed(fps, 4, 0)}  FRAME {FormatFixed(frameMs, 5, 1)}MS  TICK {FormatFixed(timing.LastTotalTickMs, 5, 1)}MS";
-            string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  FIELD {FormatFixed(timing.GlobalFieldTexturesLastFrame, 4)}/{FormatFixed(timing.GlobalFieldDirtyUploadsLastFrame, 4)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
-            string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
-            string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPresenterEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPresenterBehaviorMs, 5, 1)}MS";
-            string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  AVL {FormatFixed(effectRequests?.AvailableCapacity ?? 0, 6)}";
-
-            const int x = 10;
-            const int y = 10;
-            const int fontSize = 20;
-            const int lineHeight = 25;
-            const int panelWidth = 720;
-            const int panelHeight = 137;
-            var background = new Color(0, 0, 0, 238);
-            var border = new Color(80, 255, 150, 255);
-            Rl.DrawRectangle(x - 8, y - 8, panelWidth, panelHeight, background);
-            Rl.DrawRectangleLines(x - 8, y - 8, panelWidth, panelHeight, border);
-            DrawDiagnosticText(line1, x, y, fontSize, new Color(215, 255, 220, 255));
-            DrawDiagnosticText(line2, x, y + lineHeight, fontSize, new Color(220, 240, 255, 255));
-            DrawDiagnosticText(line3, x, y + lineHeight * 2, fontSize, new Color(255, 245, 185, 255));
-            DrawDiagnosticText(line4, x, y + lineHeight * 3, fontSize, new Color(245, 210, 255, 255));
-            DrawDiagnosticText(line5, x, y + lineHeight * 4, fontSize, new Color(255, 215, 180, 255));
-        }
-
-        private static string FormatFixed(float value, int width, int decimals)
-        {
-            string text = decimals <= 0 ? value.ToString("F0") : value.ToString($"F{decimals}");
-            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
-        }
-
-        private static string FormatFixed(double value, int width, int decimals)
-        {
-            string text = decimals <= 0 ? value.ToString("F0") : value.ToString($"F{decimals}");
-            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
-        }
-
-        private static string FormatFixed(int value, int width)
-        {
-            string text = value.ToString();
-            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
-        }
-
-        private static void DrawDiagnosticText(string text, int x, int y, int fontSize, Color color)
-        {
-            _ = fontSize;
-            DrawBitmapText(text, x + 2, y + 2, 2, new Color(0, 0, 0, 255));
-            DrawBitmapText(text, x, y, 2, color);
-        }
-
-        private static void DrawBitmapText(string text, int x, int y, int scale, Color color)
-        {
-            int cursor = x;
-            for (int i = 0; i < text.Length; i++)
-            {
-                char c = char.ToUpperInvariant(text[i]);
-                if (c == ' ')
-                {
-                    cursor += 4 * scale;
-                    continue;
-                }
-
-                ulong glyph = GetDiagnosticGlyph(c);
-                for (int row = 0; row < 7; row++)
-                {
-                    int bits = (int)((glyph >> ((6 - row) * 5)) & 0b11111UL);
-                    for (int col = 0; col < 5; col++)
-                    {
-                        if ((bits & (1 << (4 - col))) == 0)
-                        {
-                            continue;
-                        }
-
-                        Rl.DrawRectangle(cursor + col * scale, y + row * scale, scale, scale, color);
-                    }
-                }
-
-                cursor += 6 * scale;
-            }
-        }
-
-        private static ulong PackDiagnosticGlyph(int r0, int r1, int r2, int r3, int r4, int r5, int r6)
-        {
-            return (((ulong)r0 & 0b11111UL) << 30) |
-                   (((ulong)r1 & 0b11111UL) << 25) |
-                   (((ulong)r2 & 0b11111UL) << 20) |
-                   (((ulong)r3 & 0b11111UL) << 15) |
-                   (((ulong)r4 & 0b11111UL) << 10) |
-                   (((ulong)r5 & 0b11111UL) << 5) |
-                   ((ulong)r6 & 0b11111UL);
-        }
-
-        private static ulong GetDiagnosticGlyph(char c)
-        {
-            return c switch
-            {
-                'A' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001),
-                'B' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110),
-                'C' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b01111),
-                'D' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110),
-                'E' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111),
-                'F' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000),
-                'G' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b10111, 0b10001, 0b10001, 0b01111),
-                'H' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001),
-                'I' => PackDiagnosticGlyph(0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b11111),
-                'K' => PackDiagnosticGlyph(0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001),
-                'L' => PackDiagnosticGlyph(0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111),
-                'M' => PackDiagnosticGlyph(0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001),
-                'N' => PackDiagnosticGlyph(0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001),
-                'O' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110),
-                'P' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000),
-                'R' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001),
-                'S' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110),
-                'T' => PackDiagnosticGlyph(0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100),
-                'U' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110),
-                'V' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b01010, 0b00100),
-                'W' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b10101, 0b01010),
-                'X' => PackDiagnosticGlyph(0b10001, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b10001),
-                'Y' => PackDiagnosticGlyph(0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100),
-                '0' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110),
-                '1' => PackDiagnosticGlyph(0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110),
-                '2' => PackDiagnosticGlyph(0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111),
-                '3' => PackDiagnosticGlyph(0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110),
-                '4' => PackDiagnosticGlyph(0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010),
-                '5' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b00001, 0b00001, 0b11110),
-                '6' => PackDiagnosticGlyph(0b01110, 0b10000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110),
-                '7' => PackDiagnosticGlyph(0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000),
-                '8' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110),
-                '9' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b01110),
-                '.' => PackDiagnosticGlyph(0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b01100, 0b01100),
-                '/' => PackDiagnosticGlyph(0b00001, 0b00010, 0b00010, 0b00100, 0b01000, 0b01000, 0b10000),
-                '-' => PackDiagnosticGlyph(0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000),
-                ':' => PackDiagnosticGlyph(0b00000, 0b01100, 0b01100, 0b00000, 0b01100, 0b01100, 0b00000),
-                '|' => PackDiagnosticGlyph(0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100),
-                _ => PackDiagnosticGlyph(0b11111, 0b10001, 0b00001, 0b00110, 0b00100, 0b00000, 0b00100),
-            };
-        }
         private static string BuildTimingDiagnostic(
             GameEngine engine,
             PresentationTimingDiagnostics? timing,
@@ -1239,93 +1001,8 @@ namespace Ludots.Adapter.Raylib
             return phase - MathF.Floor(phase);
         }
 
-        internal static void ValidateRuntimeScreenshotEvidence(string screenshotPath, int expectedWidth, int expectedHeight)
-        {
-            if (string.IsNullOrWhiteSpace(screenshotPath))
-            {
-                throw new ArgumentException("Raylib screenshot evidence path cannot be null or whitespace.", nameof(screenshotPath));
-            }
 
-            if (expectedWidth <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(expectedWidth));
-            }
 
-            if (expectedHeight <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(expectedHeight));
-            }
-
-            string fullPath = Path.GetFullPath(screenshotPath);
-            if (!File.Exists(fullPath))
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence was not written: {fullPath}");
-            }
-
-            var fileInfo = new FileInfo(fullPath);
-            if (fileInfo.Length < 24)
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence is too small to be a valid PNG: {fullPath} length={fileInfo.Length}.");
-            }
-
-            if (!string.Equals(Path.GetExtension(fullPath), ".png", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence must be a PNG so dimensions can be verified: {fullPath}");
-            }
-
-            using var bitmap = SKBitmap.Decode(fullPath);
-            if (bitmap == null)
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence is not a decodable PNG image: {fullPath}");
-            }
-
-            int actualWidth = bitmap.Width;
-            int actualHeight = bitmap.Height;
-            if (actualWidth != expectedWidth || actualHeight != expectedHeight)
-            {
-                throw new InvalidOperationException(
-                    $"Raylib screenshot evidence dimensions mismatch: {fullPath} actual={actualWidth}x{actualHeight} expected={expectedWidth}x{expectedHeight}.");
-            }
-
-            if (IsVisuallyFlat(bitmap))
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence is visually flat and cannot prove a rendered scene: {fullPath}");
-            }
-        }
-
-        private static bool IsVisuallyFlat(SKBitmap bitmap)
-        {
-            int width = bitmap.Width;
-            int height = bitmap.Height;
-            if (width <= 0 || height <= 0)
-            {
-                return true;
-            }
-
-            SKColor first = bitmap.GetPixel(0, 0);
-            int stepX = Math.Max(1, width / 16);
-            int stepY = Math.Max(1, height / 16);
-            for (int y = 0; y < height; y += stepY)
-            {
-                for (int x = 0; x < width; x += stepX)
-                {
-                    if (ColorDistance(bitmap.GetPixel(x, y), first) > 6)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return ColorDistance(bitmap.GetPixel(width - 1, height - 1), first) <= 6;
-        }
-
-        private static int ColorDistance(SKColor a, SKColor b)
-        {
-            return Math.Abs(a.Red - b.Red) +
-                Math.Abs(a.Green - b.Green) +
-                Math.Abs(a.Blue - b.Blue) +
-                Math.Abs(a.Alpha - b.Alpha);
-        }
 
         private static double ElapsedMs(long startTicks)
         {
