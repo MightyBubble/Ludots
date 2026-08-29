@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "boundsCm": {
+    "minX": -3199616,
+    "minZ": -1828352,
+    "maxX": 3199616,
+    "maxZ": 1828352
+  },
+  "width": 4096,
+  "height": 2341,
+  "encoding": {
+    "format": "RGBA8",
+    "row0": "maxZcm",
+    "alpha": "0=not-covered-or-blocked,255=walkable",
+    "rgb": "deterministic TriAreaIds palette"
+  },
+  "sourceTileCount": 448,
+  "triangleCount": 6520,
+  "blockedWaterPixelCount": 0,
+  "contentHash": "sha256:3c9cf4aeb79b34b7809add2b3fb7d500b6e47b21312ddd54278eba88d3ee6236"
+}

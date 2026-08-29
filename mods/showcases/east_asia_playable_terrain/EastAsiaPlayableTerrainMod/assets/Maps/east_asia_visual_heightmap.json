@@ -1,0 +1,44 @@
+{
+  "Id": "east_asia_visual_heightmap",
+  "VisualHeightmap": {
+    "Asset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",
+    "WorldWidthCm": 6399232,
+    "RenderProfile": {
+      "OverviewSwitchChunkSpans": 2.5,
+      "OverviewVertexLimit": 65536,
+      "ChunkLodErrorPx": 240,
+      "DisableDistanceFog": true,
+      "DisplayHeightScale": 50,
+      "AbsoluteColorPeakSpanCm": 5000
+    }
+  },
+  "Tags": [
+    "east_asia",
+    "terrain",
+    "continuous",
+    "visual-heightmap",
+    "playable",
+    "editable",
+    "visual_terrain_editable"
+  ],
+  "Metadata": {
+    "terrainProfile": "assets/terrain/east_asia_terrain_profile.json",
+    "playableSurface": "Continuous VisualHeightmap",
+    "projection": "Spherical Albers equal-area conic, sampled from the exported 14336x8192 East Asia canvas.",
+    "coverage": "East Asia with complete Vietnam coverage; India is intentionally outside the primary frame.",
+    "playableWorldWidthCm": 6399232,
+    "sourceVisualTiles": "east_asia_strategy_height_tile_x0_y0_8192x8192_u16.png + east_asia_strategy_height_tile_x1_y0_6144x8192_u16.png",
+    "note": "Source VHTM keeps continental sample density; WorldWidthCm remaps playable meters to a ~64km-wide board aligned to the 7x4 nav board (cell 3571 cm)."
+  },
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "EastAsia.Camera.PlayableTerrain",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 225,
+    "Pitch": 50,
+    "DistanceCm": 7000000,
+    "FovYDeg": 55
+  }
+}

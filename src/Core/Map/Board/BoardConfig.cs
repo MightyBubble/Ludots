@@ -55,6 +55,8 @@ namespace Ludots.Core.Map.Board
         /// </summary>
         public int TerrainHeightStepCm { get; set; }
 
+        public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
+
         /// <summary>Explicit nav tile grid for this board (authored with the bake).
         /// Required when the board participates in navmesh; runtime reads this declaration only.</summary>
         public NavTileGridConfig NavTileGrid { get; set; }
@@ -81,6 +83,7 @@ namespace Ludots.Core.Map.Board
                 StructureAwareNavigation = StructureAwareNavigation,
                 NavigationEnabled = NavigationEnabled,
                 TerrainHeightStepCm = TerrainHeightStepCm,
+                TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm,
                 NavTileGrid = NavTileGrid?.Clone()
             };
         }

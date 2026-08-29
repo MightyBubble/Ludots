@@ -169,7 +169,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 NavMeshAgentProfileConfig navProfile = context.Config.Profiles[i]
                     ?? throw new InvalidOperationException($"NavBakeContext.config.profiles[{i}] is null.");
                 AgentProfileConfig agentProfile = context.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{i}]");
-                NavBakeProfileEstimate profile = EstimateProfile(agentProfile, navProfile, tileWidthCm);
+                NavBakeProfileEstimate profile = EstimateProfile(
+                    agentProfile,
+                    navProfile,
+                    tileWidthCm,
+                    cellCm,
+                    context.Algorithm);
                 profiles.Add(profile);
                 recastColumnBudgetTotal = checked(recastColumnBudgetTotal + (long)targetTileCount * layerCount * profile.RecastColumnBudgetPerTile);
             }
@@ -261,7 +266,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         private static NavBakeProfileEstimate EstimateProfile(
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
-            int tileWidthCm)
+            int tileWidthCm,
+            int terrainCellCm,
+            NavBakeAlgorithmKind algorithm)
         {
             if (navProfile.MaxClimbCm < 0)
             {
@@ -273,12 +280,24 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException($"NavMeshBakeConfig.profile '{navProfile.Id}' requires maxSlopeDeg >= 0 and < 90.");
             }
 
-            float recastCellSizeCm = MathF.Max(5f, MathF.Min(50f, agentProfile.RadiusCm / 3f));
-            float recastCellHeightCm = recastCellSizeCm * 0.5f;
-            int columnsPerAxis = (int)MathF.Ceiling(tileWidthCm / recastCellSizeCm);
-            int columnBudget = checked(columnsPerAxis * columnsPerAxis);
-            int walkableHeightVoxels = (int)MathF.Ceiling(agentProfile.HeightCm / recastCellHeightCm);
-            int walkableClimbVoxels = (int)MathF.Floor(navProfile.MaxClimbCm / recastCellHeightCm);
+            float recastCellSizeCm = 0f;
+            float recastCellHeightCm = 0f;
+            int columnsPerAxis = 0;
+            int columnBudget = 0;
+            int walkableHeightVoxels = 0;
+            int walkableClimbVoxels = 0;
+            if (algorithm == NavBakeAlgorithmKind.Recast)
+            {
+                // Match RecastNavTileBaker: agent-radius clamp for tactical maps, but never
+                // finer than LogicTerrain cell size (continental / strategy boards).
+                float agentCellSizeCm = MathF.Max(5f, MathF.Min(50f, agentProfile.RadiusCm / 3f));
+                recastCellSizeCm = MathF.Max(agentCellSizeCm, terrainCellCm);
+                recastCellHeightCm = MathF.Max(recastCellSizeCm * 0.5f, MathF.Max(1f, navProfile.MaxClimbCm));
+                columnsPerAxis = checked((int)MathF.Ceiling(tileWidthCm / recastCellSizeCm));
+                columnBudget = checked(columnsPerAxis * columnsPerAxis);
+                walkableHeightVoxels = (int)MathF.Ceiling(agentProfile.HeightCm / recastCellHeightCm);
+                walkableClimbVoxels = (int)MathF.Floor(navProfile.MaxClimbCm / recastCellHeightCm);
+            }
 
             return new NavBakeProfileEstimate
             {

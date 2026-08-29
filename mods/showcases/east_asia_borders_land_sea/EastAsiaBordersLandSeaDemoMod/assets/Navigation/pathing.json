@@ -1,0 +1,50 @@
+{
+  "agentTypes": [
+    {
+      "id": "StrategyFoot",
+      "profileId": "Small",
+      "selection": {
+        "mode": "PreferMesh",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 2000000,
+        "useDynamicOverlay": false,
+        "requiredTagsAll": [],
+        "forbiddenTagsAny": [],
+        "tagCostRules": []
+      }
+    },
+    {
+      "id": "StrategyShip",
+      "profileId": "Medium",
+      "selection": {
+        "mode": "Direct",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 500000,
+        "useDynamicOverlay": true,
+        "requiredTagsAll": [],
+        "forbiddenTagsAny": [],
+        "tagCostRules": []
+      }
+    }
+  ]
+}

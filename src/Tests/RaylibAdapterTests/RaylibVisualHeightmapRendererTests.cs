@@ -16,12 +16,12 @@ public sealed class RaylibVisualHeightmapRendererTests
     public void ShouldUseOverviewMesh_WhenCameraFramesEastAsiaScaleTerrain()
     {
         var source = new FakeVisualHeightmapRenderSource(
-            new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304),
+            new WorldAabbCm(-3_199_616, -1_828_352, 6_399_232, 3_656_704),
             chunkColumns: 224,
             chunkRows: 128);
         var camera = new Camera3D
         {
-            position = new System.Numerics.Vector3(0f, 6_750_000f, 0f),
+            position = new System.Numerics.Vector3(0f, 70_000f, 0f),
             target = System.Numerics.Vector3.Zero,
             fovy = 55f,
             projection = CameraProjection.CAMERA_PERSPECTIVE
@@ -41,7 +41,7 @@ public sealed class RaylibVisualHeightmapRendererTests
     public void ShouldUseOverviewMesh_WhenCameraIsNearTerrain_ReturnsFalse()
     {
         var source = new FakeVisualHeightmapRenderSource(
-            new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304),
+            new WorldAabbCm(-3_199_616, -1_828_352, 6_399_232, 3_656_704),
             chunkColumns: 224,
             chunkRows: 128);
         var camera = new Camera3D
@@ -63,6 +63,42 @@ public sealed class RaylibVisualHeightmapRendererTests
     }
 
     [Test]
+    public void ResolveAbsoluteHeightBand_TreatsOceanSentinelAbovePeakSpanAsOpenWater()
+    {
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteHeightBand(
+                heightCm: 2_132f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.EqualTo(2_132f / 5_000f).Within(0.0001f));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteHeightBand(
+                heightCm: 59_563f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.LessThan(0f));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                heightCm: 59_563f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.EqualTo(0f));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                heightCm: 2_132f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.EqualTo(2_132f));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                heightCm: -6_000f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f),
+            Is.EqualTo(0f),
+            "Authored bathymetry below sea must flatten under absolute display so continental scale does not dig ocean pits.");
+    }
+
+    [Test]
     public void ResolveOverviewStepChunks_KeepsLargeMapOverviewUnderRaylibVertexLimit()
     {
         int step = RaylibVisualHeightmapRenderer.ResolveOverviewStepChunks(
@@ -81,7 +117,7 @@ public sealed class RaylibVisualHeightmapRendererTests
     public void ResolveOverviewTextureSize_UsesScreenScaledResolutionForEastAsiaEditing()
     {
         RaylibVisualHeightmapRenderer.ResolveOverviewTextureSize(
-            new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304),
+            new WorldAabbCm(-3_199_616, -1_828_352, 6_399_232, 3_656_704),
             screenWidth: 1600,
             screenHeight: 900,
             out int textureWidth,

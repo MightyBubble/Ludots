@@ -1,0 +1,20 @@
+{
+  "Id": "east_asia_visual_heightmap",
+  "Fields": {
+    "Layers": [
+      "ownership.east_asia.admin"
+    ]
+  },
+  "Variables": [
+    {
+      "name": "mapmode",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "stage",
+      "type": "int",
+      "initial": 0
+    }
+  ]
+}

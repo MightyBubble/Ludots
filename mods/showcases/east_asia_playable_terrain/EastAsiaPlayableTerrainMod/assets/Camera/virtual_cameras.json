@@ -1,0 +1,31 @@
+[
+  {
+    "id": "EastAsia.Camera.PlayableTerrain",
+    "displayName": "East Asia Playable Terrain",
+    "priority": 0,
+    "rigKind": "Orbit",
+    "distanceCm": 7000000,
+    "pitch": 50,
+    "fovYDeg": 55,
+    "yaw": 225,
+    "minDistanceCm": 35000,
+    "maxDistanceCm": 9000000,
+    "minPitchDeg": 35,
+    "maxPitchDeg": 75,
+    "confineTargetToWorldBounds": true,
+    "panMode": "Keyboard",
+    "edgePanMarginPx": 10,
+    "edgePanSpeedCmPerSec": 420000,
+    "panCmPerSecond": 420000,
+    "enableGrabDrag": true,
+    "rotateMode": "Both",
+    "rotateDegPerPixel": 0.24,
+    "rotateRequiresHold": true,
+    "rotateDegPerSecond": 90,
+    "enableZoom": true,
+    "zoomCmPerWheel": 420000,
+    "zoomFactorPerWheel": 1.35,
+    "followMode": "None",
+    "allowUserInput": true
+  }
+]

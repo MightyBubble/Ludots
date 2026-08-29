@@ -49,6 +49,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
 
       - name: Check graph-op gallery generator has no drift
         shell: pwsh

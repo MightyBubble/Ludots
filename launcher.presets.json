@@ -571,6 +571,49 @@
       "buildMode": "auto"
     },
     {
+      "id": "east_asia_navmesh_debug_raylib",
+      "name": "East Asia NavMesh Debug Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "mod:NavMeshDebugLaunchMod",
+        "$east_asia_navmesh_debug",
+        "$field_east_asia_country"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "east_asia_borders_land_sea_raylib",
+      "name": "East Asia Borders Land Sea Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "mod:NavMeshDebugLaunchMod",
+        "$east_asia_borders_land_sea"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_east_asia_country_raylib",
+      "name": "Field East Asia Country Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "$field_east_asia_country"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_east_asia_admin_raylib",
+      "name": "Field East Asia Admin Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "$field_east_asia_admin"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "field_jing_yang_transit_raylib",
       "name": "Field Jing Yang Transit Raylib",
       "selectors": [

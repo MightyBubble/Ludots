@@ -1,0 +1,60 @@
+{
+  "Id": "east_asia_grid",
+  "ParentId": null,
+  "Dependencies": {},
+  "VisualHeightmapAsset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",
+  "StructureCollisionAsset": "",
+  "StructureAwareGrounding": false,
+  "StructureAwareNavigation": false,
+  "Tags": [
+    "east_asia",
+    "terrain",
+    "grid",
+    "playable",
+    "editable",
+    "visual_terrain_editable"
+  ],
+  "Metadata": {
+    "terrainProfile": "assets/terrain/east_asia_terrain_profile.json",
+    "playableSurface": "Grid",
+    "projection": "Spherical Albers equal-area conic, sampled from the exported 14336x8192 East Asia canvas.",
+    "coverage": "East Asia with complete Vietnam coverage; India is intentionally outside the primary frame.",
+    "sourceEditorImport": "east_asia_strategy_editor_112x64_chunks_map_data.bin"
+  },
+  "Entities": [],
+  "Teams": [],
+  "Players": [],
+  "ParticipantRelationships": {
+    "Teams": [],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 28,
+      "HeightInMacroTiles": 16,
+      "GridCellSizeCm": 125649,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 64,
+      "DataFile": "samples/LudotsSample/east_asia/east_asia_grid_map_data.bin",
+      "VisualHeightmapAsset": null,
+      "StructureCollisionAsset": "",
+      "StructureAwareGrounding": false,
+      "StructureAwareNavigation": false,
+      "NavigationEnabled": false
+    }
+  ],
+  "VisualHeightmap": null,
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "EastAsia.Camera.PlayableTerrain",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 225,
+    "Pitch": 50,
+    "DistanceCm": 985000000,
+    "FovYDeg": 55
+  }
+}
