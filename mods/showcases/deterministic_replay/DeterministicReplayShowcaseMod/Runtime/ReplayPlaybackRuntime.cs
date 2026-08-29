@@ -229,6 +229,34 @@ public sealed class ReplayPlaybackRuntime
         Log($"Cold archive loaded: {files[^1]} — [Play replay] now runs it.");
     }
 
+    /// <summary>
+    /// Ablation contrast: restore a world save captured at (or near) the recording end point —
+    /// proves the end state exists without proving any tick along the way. The replay proof above
+    /// is the stronger claim; this button exists so players can feel the difference.
+    /// </summary>
+    public void JumpToEndViaWorldSave()
+    {
+        if (_engine.GetService(CoreServiceKeys.SaveStorage) is not Ludots.Platform.Abstractions.ISaveStorage storage)
+        {
+            Log("Jump-to-end unavailable: no engine save storage in this host.");
+            return;
+        }
+
+        try
+        {
+            var store = new SaveSlotStore(storage);
+            var snapshot = new WorldSnapshotService().Capture(
+                _engine, SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+            store.WriteSlot(SaveSlotId.Manual("replay-jump-end"), snapshot);
+            new WorldRestoreService().Restore(_engine, snapshot);
+            Log("Jumped to the end state via a world save — the destination is here, but NOTHING proves the ticks along the way. Only the replay proof does that.");
+        }
+        catch (Exception ex)
+        {
+            Log($"Jump-to-end rejected: {ex.Message}");
+        }
+    }
+
     public void AdvanceReplayFixedStep()
     {
         if (!_replayPlaying || _replayPaused || !_replayFrameQueued) return;
@@ -260,6 +288,22 @@ public sealed class ReplayPlaybackRuntime
         _frameActions.Clear();
         input.CopyAuthoritativeActions(_frameActions);
         _recorder.Record(new AuthoritativeFrame(_nextSequence++, _engine.GameSession.CurrentTick, _frameActions.ToArray()));
+    }
+
+    public bool WasRecording { get; internal set; }
+
+    public bool TryGetScoutPositionCm(out (int x, int y) pos)
+    {
+        var query = new Arch.Core.QueryDescription().WithAll<Ludots.Core.Components.Name, Ludots.Core.Components.WorldPositionCm>();
+        (int x, int y)? found = null;
+        _engine.World.Query(in query, (Arch.Core.Entity _, ref Ludots.Core.Components.Name name, ref Ludots.Core.Components.WorldPositionCm position) =>
+        {
+            if (found.HasValue || name.Value != DeterministicReplayShowcaseIds.HeroName) return;
+            var cm = position.ToWorldCmInt2();
+            found = (cm.X, cm.Y);
+        });
+        pos = found ?? default;
+        return found.HasValue;
     }
 
     public string WorldDigest() => SaveWorldStateDigest.Compute(_engine)[..12];
