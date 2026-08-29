@@ -38,7 +38,7 @@ namespace Ludots.Core.Gameplay.Story
             ValidateSurfaceKind(surfaceKind, view.PresentationProfile);
 
             string imageId = ResolveImageId(surfaceKind, view);
-            if (string.Equals(surfaceKind, "StandingPortrait", StringComparison.OrdinalIgnoreCase) &&
+            if (string.Equals(surfaceKind, StoryPresentationSurfaceKinds.StandingPortrait, StringComparison.OrdinalIgnoreCase) &&
                 string.IsNullOrWhiteSpace(imageId))
             {
                 throw new InvalidOperationException(
@@ -140,7 +140,7 @@ namespace Ludots.Core.Gameplay.Story
                 // Choice list is a companion surface: geometry from the same profile (single writer).
                 surfaces.Add(new StoryPresentationSurface(
                     SurfaceKey: $"dialogue.{view.DialogueId}.ChoiceList",
-                    SurfaceKind: "ChoiceList",
+                    SurfaceKind: StoryPresentationSurfaceKinds.ChoiceList,
                     Anchor: profile.ChoiceAnchor,
                     Title: string.Empty,
                     Width: profile.ChoiceWidth,
@@ -246,7 +246,7 @@ namespace Ludots.Core.Gameplay.Story
 
         private static string ResolveImageId(string surfaceKind, DialogueView view)
         {
-            if (string.Equals(surfaceKind, "StandingPortrait", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(surfaceKind, StoryPresentationSurfaceKinds.StandingPortrait, StringComparison.OrdinalIgnoreCase))
             {
                 return view.StandingImageId ?? string.Empty;
             }
@@ -264,12 +264,12 @@ namespace Ludots.Core.Gameplay.Story
 
             switch (surfaceKind)
             {
-                case "OverlayDialogue":
-                case "DialogueBubble":
-                case "StandingPortrait":
-                case "SubtitleBubble":
-                case "ChoiceList":
-                case "TransmissionOverlay":
+                case StoryPresentationSurfaceKinds.OverlayDialogue:
+                case StoryPresentationSurfaceKinds.DialogueBubble:
+                case StoryPresentationSurfaceKinds.StandingPortrait:
+                case StoryPresentationSurfaceKinds.SubtitleBubble:
+                case StoryPresentationSurfaceKinds.ChoiceList:
+                case StoryPresentationSurfaceKinds.TransmissionOverlay:
                     return;
                 default:
                     throw new InvalidOperationException(

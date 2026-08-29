@@ -833,7 +833,7 @@ namespace NarrativeShowcaseMod.Runtime
             queue.TryEnqueue(new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "interaction_enemy_bruiser",
+                TemplateId = NarrativeShowcaseIds.SpawnedBeastTemplateId,
                 MapId = new Ludots.Core.Map.MapId(NarrativeShowcaseIds.MapId),
                 HasWorldPosition = 1,
                 WorldPositionCm = Fix64Vec2.FromInt(1960, 940),
@@ -1001,7 +1001,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return false;
             }
 
-            if (TryFindEntityByName(engine.World, NarrativeShowcaseIds.SpawnedBeastTemplateName, out Entity entity) && engine.World.TryGet(entity, out Name name))
+            if (TryFindEntityByName(engine.World, NarrativeShowcaseIds.SpawnedBeastEntityName, out Entity entity) && engine.World.TryGet(entity, out Name name))
             {
                 name.Value = NarrativeShowcaseIds.BeastName;
                 engine.World.Set(entity, name);

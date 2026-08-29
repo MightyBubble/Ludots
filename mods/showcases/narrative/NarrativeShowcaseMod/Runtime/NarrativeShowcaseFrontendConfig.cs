@@ -100,7 +100,7 @@ namespace NarrativeShowcaseMod.Runtime
         {
             return Enum.TryParse(Anchor, ignoreCase: true, out NarrativeFrontendAnchor anchor)
                 ? anchor
-                : NarrativeFrontendAnchor.TopLeft;
+                : throw new InvalidOperationException($"Narrative frontend surface anchor '{Anchor}' is not a known anchor name.");
         }
     }
 
