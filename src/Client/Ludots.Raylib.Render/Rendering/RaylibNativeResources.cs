@@ -184,6 +184,21 @@ public static unsafe class RaylibNativeResources
     [DllImport("raylib", EntryPoint = "rlLoadTextureCubemap", CallingConvention = CallingConvention.Cdecl)]
     private static extern unsafe uint LoadTextureCubemapNative(void* data, int size, int format, int mipmapCount);
 
+    /// <summary>vendored 绑定缺文件级图像装载入口（不可改 vendored 文件）；本地声明 native raylib 5.5 的 LoadImage（CPU 解码，无 GL）。</summary>
+    [DllImport("raylib", EntryPoint = "LoadImage", CallingConvention = CallingConvention.Cdecl)]
+    private static extern unsafe Image LoadImageNative(string fileName);
+
+    public static unsafe Image LoadImageFile(string fileName)
+    {
+        Image image = LoadImageNative(fileName);
+        if (image.data == null || image.width <= 0 || image.height <= 0)
+        {
+            throw new InvalidOperationException($"raylib rejected image file '{fileName}' (size={image.width}x{image.height}).");
+        }
+
+        return image;
+    }
+
     private static void TrackIfResident(RaylibNativeResourceKind kind, ulong identity, long estimatedBytes)
     {
         if (identity != 0)

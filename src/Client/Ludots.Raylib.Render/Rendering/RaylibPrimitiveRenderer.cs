@@ -220,8 +220,33 @@ namespace Ludots.Raylib.Render
             _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
             _vfs = vfs;
             _materials = materials;
-            _textureStore = new RaylibAssetStore<Texture2D>(vfs, LoadTextureResource, RaylibNativeResources.UnloadTexture);
-            _modelStore = new RaylibAssetStore<Model>(vfs, LoadModelResource, RaylibNativeResources.UnloadModel);
+            bool syncAssetLoad = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNC_ASSET_LOAD") == "1";
+            if (syncAssetLoad)
+            {
+                _textureStore = new RaylibAssetStore<Texture2D>(vfs, LoadTextureResource, RaylibNativeResources.UnloadTexture);
+                _modelStore = new RaylibAssetStore<Model>(vfs, LoadModelResource, RaylibNativeResources.UnloadModel);
+            }
+            else
+            {
+                _textureStore = new RaylibAssetStore<Texture2D>(
+                    vfs,
+                    LoadTextureResource,
+                    RaylibNativeResources.UnloadTexture,
+                    cpuPrepare: fullPath => RaylibNativeResources.LoadImageFile(fullPath),
+                    uploader: payload =>
+                    {
+                        var image = (Image)payload!;
+                        Texture2D texture = RaylibNativeResources.LoadTextureFromImage(image);
+                        Rl.UnloadImage(image);
+                        return ValidateTexture(texture, "cpu-prepared image");
+                    });
+                _modelStore = new RaylibAssetStore<Model>(
+                    vfs,
+                    LoadModelResource,
+                    RaylibNativeResources.UnloadModel,
+                    cpuPrepare: fullPath => RaylibModelFileLoader.PrepareNativeLoadable(fullPath),
+                    uploader: payload => LoadModelResource((string)payload!));
+            }
             _materialLibrary = vfs != null && materials != null
                 ? new RaylibMaterialLibrary(vfs, materials, _textureStore)
                 : null;
@@ -236,6 +261,11 @@ namespace Ludots.Raylib.Render
         private static Texture2D LoadTextureResource(string fullPath)
         {
             Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
+            return ValidateTexture(texture, fullPath);
+        }
+
+        private static Texture2D ValidateTexture(Texture2D texture, string fullPath)
+        {
             if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
             {
                 if (texture.id != 0)
@@ -294,6 +324,8 @@ namespace Ludots.Raylib.Render
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             _frameViewPos = camera.position;
             _hasFrameViewPos = true;
             _frameTimeSeconds = timeSeconds;
@@ -378,6 +410,9 @@ namespace Ludots.Raylib.Render
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
+
             EnsureInitialized();
             var span = draw.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -410,6 +445,8 @@ namespace Ludots.Raylib.Render
             IRenderMeshAssets meshes,
             float scaleMul = 1f)
         {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             if (skinnedBatch == null) throw new ArgumentNullException(nameof(skinnedBatch));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
@@ -1407,8 +1444,13 @@ namespace Ludots.Raylib.Render
 
         private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, int materialId)
         {
-            if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
+            if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached, out bool textureInFlight))
             {
+                if (textureInFlight)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException(
                     $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
             }
@@ -1485,8 +1527,13 @@ namespace Ludots.Raylib.Render
             RaylibDirectionalShadowMap shadow,
             MaterialBlendMode blendMode)
         {
-            if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached))
+            if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached, out bool textureInFlight))
             {
+                if (textureInFlight)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException(
                     $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
             }
@@ -1668,27 +1715,52 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            RaylibAssetStore<Model>.Lease lease = _modelStore.Acquire(desc.SourceUris);
-            try
+            List<string>? failures = null;
+            foreach (string uri in desc.SourceUris)
             {
-                Mesh[] modelMeshes = CopyModelMeshes(lease.Resource);
-                ComputeModelLocalAabbMeters(modelMeshes, out Vector3 localMin, out Vector3 localMax);
-                cached = new CachedModel
+                if (string.IsNullOrWhiteSpace(uri))
                 {
-                    Lease = lease,
-                    Meshes = modelMeshes,
-                    LocalMin = localMin,
-                    LocalMax = localMax,
-                    Loaded = true,
-                };
-                _modelCache[meshAssetId] = cached;
-                return true;
+                    continue;
+                }
+
+                RaylibAssetAcquireOutcome outcome = _modelStore.TryAcquireOrBegin(uri, out RaylibAssetStore<Model>.Lease? lease, out string? status);
+                if (outcome == RaylibAssetAcquireOutcome.InFlight)
+                {
+                    // 两阶段装载进行中：本帧不绘制、不记负缓存，下一帧重问（#1328）。
+                    return false;
+                }
+
+                if (outcome == RaylibAssetAcquireOutcome.Failed)
+                {
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {status}");
+                    continue;
+                }
+
+                try
+                {
+                    Mesh[] modelMeshes = CopyModelMeshes(lease!.Resource);
+                    ComputeModelLocalAabbMeters(modelMeshes, out Vector3 localMin, out Vector3 localMax);
+                    cached = new CachedModel
+                    {
+                        Lease = lease,
+                        Meshes = modelMeshes,
+                        LocalMin = localMin,
+                        LocalMax = localMax,
+                        Loaded = true,
+                    };
+                    _modelCache[meshAssetId] = cached;
+                    return true;
+                }
+                catch
+                {
+                    lease!.Dispose();
+                    throw;
+                }
             }
-            catch
-            {
-                lease.Dispose();
-                throw;
-            }
+
+            throw new InvalidOperationException(
+                $"{nameof(RaylibPrimitiveRenderer)} meshAssetId={meshAssetId} could not load any sourceUri. Attempts: [{string.Join("; ", failures ?? new List<string>())}]");
         }
         private static Mesh[] CopyModelMeshes(Model model)
         {
@@ -1777,8 +1849,9 @@ namespace Ludots.Raylib.Render
             return true;
         }
 
-        private bool TryGetOrLoadTexture(int meshAssetId, in MeshAssetDescriptor desc, out CachedTexture cached)
+        private bool TryGetOrLoadTexture(int meshAssetId, in MeshAssetDescriptor desc, out CachedTexture cached, out bool inFlight)
         {
+            inFlight = false;
             if (_textureCache.TryGetValue(meshAssetId, out cached))
                 return cached.Loaded;
 
@@ -1791,16 +1864,41 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            RaylibAssetStore<Texture2D>.Lease lease = _textureStore.Acquire(desc.SourceUris);
-            Texture2D texture = lease.Resource;
-            cached = new CachedTexture
+            List<string>? failures = null;
+            foreach (string uri in desc.SourceUris)
             {
-                Lease = lease,
-                Loaded = true,
-                AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
-            };
-            _textureCache[meshAssetId] = cached;
-            return true;
+                if (string.IsNullOrWhiteSpace(uri))
+                {
+                    continue;
+                }
+
+                RaylibAssetAcquireOutcome outcome = _textureStore.TryAcquireOrBegin(uri, out RaylibAssetStore<Texture2D>.Lease? lease, out string? status);
+                if (outcome == RaylibAssetAcquireOutcome.InFlight)
+                {
+                    inFlight = true;
+                    return false;
+                }
+
+                if (outcome == RaylibAssetAcquireOutcome.Failed)
+                {
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {status}");
+                    continue;
+                }
+
+                Texture2D texture = lease!.Resource;
+                cached = new CachedTexture
+                {
+                    Lease = lease,
+                    Loaded = true,
+                    AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
+                };
+                _textureCache[meshAssetId] = cached;
+                return true;
+            }
+
+            throw new InvalidOperationException(
+                $"{nameof(RaylibPrimitiveRenderer)} texture meshAssetId={meshAssetId} could not load any sourceUri. Attempts: [{string.Join("; ", failures ?? new List<string>())}]");
         }
         private static string FormatSourceUris(string[]? sourceUris)
         {
@@ -2086,6 +2184,8 @@ namespace Ludots.Raylib.Render
 
         public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, IRenderMeshAssets meshes, float scaleMul = 1f)
         {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
@@ -2144,6 +2244,8 @@ namespace Ludots.Raylib.Render
             RaylibDirectionalShadowMap shadow,
             float scaleMul = 1f)
         {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
