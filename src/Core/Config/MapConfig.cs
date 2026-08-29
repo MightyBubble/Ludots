@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Platform.Abstractions;

@@ -1,4 +1,5 @@
 using Ludots.Core.Spatial;
+using Ludots.Core.Navigation.NavMesh.Config;
 
 namespace Ludots.Core.Map.Board
 {
@@ -54,6 +55,10 @@ namespace Ludots.Core.Map.Board
         /// </summary>
         public int TerrainHeightStepCm { get; set; }
 
+        /// <summary>Explicit nav tile grid for this board (authored with the bake).
+        /// Required when the board participates in navmesh; runtime reads this declaration only.</summary>
+        public NavTileGridConfig NavTileGrid { get; set; }
+
         /// <summary>
         /// Clone this config to prevent aliasing during merge operations.
         /// </summary>
@@ -74,7 +79,9 @@ namespace Ludots.Core.Map.Board
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
                 StructureAwareNavigation = StructureAwareNavigation,
-                NavigationEnabled = NavigationEnabled
+                NavigationEnabled = NavigationEnabled,
+                TerrainHeightStepCm = TerrainHeightStepCm,
+                NavTileGrid = NavTileGrid?.Clone()
             };
         }
     }

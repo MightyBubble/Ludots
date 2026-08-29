@@ -3657,8 +3657,6 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
-            if (LogicTerrain == null) throw new InvalidOperationException($"NavMesh enabled but LogicTerrainField is not loaded for map '{mapId}'.");
-
             var bakeConfig = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
 
@@ -3670,8 +3668,23 @@ namespace Ludots.Core.Engine
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
-            int widthChunks = LogicTerrain.WidthChunks;
-            int heightChunks = LogicTerrain.HeightChunks;
+            // Nav tiles are enumerated against the map's explicitly declared nav tile
+            // grid (authored with the bake). Runtime never derives it from boards or
+            // terrain objects; an undeclared grid is a map-authoring error.
+            var tileGrids = mapConfig.Boards
+                .Select(b => b.NavTileGrid)
+                .ToList();
+            if (tileGrids.Any(g => g == null))
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has boards without NavTileGrid declarations; author each board's nav tile grid in the map config.");
+            if (tileGrids.Any(g => g!.WidthChunks <= 0 || g!.HeightChunks <= 0 ||
+                g!.ChunkSizeCells <= 0 || g!.CellSizeCm <= 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has a board whose NavTileGrid declares non-positive dimensions.");
+            }
+            int widthChunks = tileGrids.Max(g => g!.WidthChunks);
+            int heightChunks = tileGrids.Max(g => g!.HeightChunks);
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -3705,7 +3718,8 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, LogicTerrain.ChunkWidthCm, LogicTerrain.ChunkHeightCm);
+            var chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, chunkWidthCm, chunkWidthCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
