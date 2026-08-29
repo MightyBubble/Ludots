@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
@@ -50,18 +52,56 @@ internal sealed class ReplayShowcasePresentationSystem : BaseSystem<World, float
     private readonly GameEngine _engine;
     private readonly ReplayPlaybackRuntime _runtime;
     private readonly ReplayPanelController _panel;
+    private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly List<Vector2> _liveTrail = new(256);
+    private readonly List<Vector2> _replayTrail = new(256);
+    private bool _lastWasReplaying;
 
-    public ReplayShowcasePresentationSystem(GameEngine engine, ReplayPlaybackRuntime runtime) : base(engine.World)
+    public ReplayShowcasePresentationSystem(GameEngine engine, ReplayPlaybackRuntime runtime, DebugDrawCommandBuffer debugDraw) : base(engine.World)
     {
         _engine = engine;
         _runtime = runtime;
+        _debugDraw = debugDraw;
         _panel = new ReplayPanelController(runtime);
     }
 
     public override void Update(in float dt)
     {
         if (!_runtime.IsShowcaseMap) { _panel.ClearIfOwned(); return; }
+        DrawTrails();
         _panel.MountOrRefresh(_engine);
+    }
+
+    private void DrawTrails()
+    {
+        if (_runtime.TryGetScoutPositionCm(out var scout) == false) { _debugDraw.Clear(); return; }
+        Vector2 live = new(scout.x * 0.01f, scout.y * 0.01f);
+
+        // replay start clears the replay trail; live trail resets on record start
+        if (_runtime.IsReplaying && !_lastWasReplaying) _replayTrail.Clear();
+        if (_runtime.IsRecording && !_runtime.WasRecording) _liveTrail.Clear();
+        _lastWasReplaying = _runtime.IsReplaying;
+        _runtime.WasRecording = _runtime.IsRecording;
+
+        if (_runtime.IsReplaying) _replayTrail.Add(live); else _liveTrail.Add(live);
+        if (_liveTrail.Count > 256) _liveTrail.RemoveAt(0);
+        if (_replayTrail.Count > 256) _replayTrail.RemoveAt(0);
+
+        _debugDraw.Clear();
+        var cyan = new DebugDrawColor(72, 226, 210);
+        _debugDraw.Circles.Add(new DebugDrawCircle2D { Center = live, Radius = 3.2f, Thickness = 0.22f, Color = cyan });
+
+        // recorded path (magenta, thin) vs replay path (gold, thick) — overlap is the visible proof
+        DrawTrail(_liveTrail, new DebugDrawColor(72, 226, 210, 150));
+        DrawTrail(_replayTrail, new DebugDrawColor(255, 202, 72, 220));
+    }
+
+    private void DrawTrail(List<Vector2> trail, DebugDrawColor color)
+    {
+        for (int i = 1; i < trail.Count; i++)
+        {
+            _debugDraw.Lines.Add(new DebugDrawLine2D { A = trail[i - 1], B = trail[i], Thickness = 0.10f, Color = color });
+        }
     }
 }
 
@@ -123,7 +163,8 @@ internal sealed class ReplayPanelController
                     Btn("Reset replay", "reset", r => r.ResetReplay())).Gap(6f),
                 Ui.Row(
                     Btn("Save archive", "save", r => r.SaveArchive()),
-                    Btn("Load latest archive", "load", r => r.LoadLatestArchive())).Gap(6f),
+                    Btn("Load latest archive", "load", r => r.LoadLatestArchive()),
+                    Btn("Jump to end (world save)", "jend", r => r.JumpToEndViaWorldSave())).Gap(6f),
                 Section("Proof (digest of the whole world, per tick)", new[]
                 {
                     $"recorded end  {state.RecordedEndDigest}",
@@ -142,6 +183,7 @@ internal sealed class ReplayPanelController
                     "grey verdict = not played yet · green = replay matched · amber = diverged (engine gap #1311)",
                     "frames = captured input snapshots (one per tick during record/replay)",
                     "digest = hash of every entity's every component (whole-world fingerprint)",
+                    "on stage: cyan = live scout · magenta = recorded path being replayed · overlap = proof you can see",
                 }, "#8A93A0"),
                 Section("Trace", state.LogLines, "#FFB38A"))
             .Width(560f).Padding(14f).Gap(8f).Radius(8f).Background("#0B1520").Border(1f, Color("#2F475E")))
@@ -177,8 +219,10 @@ public sealed class DeterministicReplayShowcaseModEntry : IMod
             engine.GlobalContext[DeterministicReplayShowcaseIds.InstalledKey] = true;
             var runtime = runtimeHolder[0] ??= new ReplayPlaybackRuntime(engine);
             engine.GlobalContext[DeterministicReplayShowcaseIds.RuntimeKey] = runtime;
+            var debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) ?? new DebugDrawCommandBuffer();
+            engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             engine.RegisterSystem(new ReplayShowcaseInputSystem(engine, runtime), SystemGroup.InputCollection);
-            engine.RegisterPresentationSystem(new ReplayShowcasePresentationSystem(engine, runtime));
+            engine.RegisterPresentationSystem(new ReplayShowcasePresentationSystem(engine, runtime, debugDraw));
             context.Log("[DeterministicReplayShowcaseMod] Deterministic replay showcase installed.");
             return Task.CompletedTask;
         });
