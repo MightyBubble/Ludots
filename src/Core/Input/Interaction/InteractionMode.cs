@@ -11,7 +11,7 @@ namespace Ludots.Core.Input.Interaction
     }
 
     /// <summary>
-    /// Sparse simulation-side interaction mode (#1306): present only while the entity is in a
+    /// Sparse simulation-side interaction mode: present only while the entity is in a
     /// non-default mode, absent otherwise. <see cref="ModeId"/> lives in the
     /// <see cref="InteractionModeMap.ModeIdRegistry"/> id space and rides world saves.
     /// </summary>

@@ -1627,7 +1627,7 @@ namespace Ludots.Core.Engine
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Game-instance CommandPref seed (#1306 route ③): the player-level default intent +
+            // Game-instance CommandPref seed: the player-level default intent +
             // dispatch pair map binding plants on every bound player representative lacking the
             // component. Seed ids are the kernel registries' own id spaces — the spaces the
             // arbiter and mounted contexts resolve in.
@@ -1647,7 +1647,7 @@ namespace Ludots.Core.Engine
                 MergedConfig.StartupInputContexts);
 
 
-            // Interaction mode catalog (#1306): simulation-side modes projected onto handler IMC
+            // Interaction mode catalog: simulation-side modes projected onto handler IMC
             // contexts by InputContextProjectionSystem; the SetInteractionMode graph op writes the
             // sparse component against this map (unknown modes and undefined contexts fail fast).
             var interactionModeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -2025,7 +2025,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
-            // Local IMC projection (#1306): mode components on possessed reps and the mounted
+            // Local IMC projection: mode components on possessed reps and the mounted
             // active interaction context diff into per-seat (seatId, contextId, op) commands;
             // handler resolution mirrors scheme activation — per-seat channel handler where one
             // exists, the sole-seat global handler otherwise. Runs after possession sync so the

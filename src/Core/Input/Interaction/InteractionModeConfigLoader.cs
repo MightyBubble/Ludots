@@ -5,7 +5,7 @@ using Ludots.Core.Config;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/interaction_modes.json</c> (#1306). Follows the
+    /// Loader for <c>Input/interaction_modes.json</c>. Follows the
     /// <see cref="ControlSchemeConfigLoader"/> mounting pattern: catalog-declared DeepObject merge
     /// through the shared <see cref="ConfigPipeline"/>; context id and priority references resolve
     /// at <see cref="InteractionModeMap.Install"/> (fail fast on undefined contexts).

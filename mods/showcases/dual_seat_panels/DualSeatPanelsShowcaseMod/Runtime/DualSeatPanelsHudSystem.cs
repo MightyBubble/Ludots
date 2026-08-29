@@ -19,7 +19,7 @@ namespace DualSeatPanelsShowcaseMod.Runtime
     /// guide, the shared panel's effective audience, and the most recent seat-attributed
     /// outcomes (admitted green / refused red with the engine's reason verbatim).
     /// Panels themselves are template panels rendered by the engine; this overlay only
-    /// carries cross-seat guidance and admission feedback (#1058 declared full-window
+    /// carries cross-seat guidance and admission feedback (declared full-window
     /// overlay tradeoff).
     /// </summary>
     internal sealed class DualSeatPanelsHudSystem : ISystem<float>

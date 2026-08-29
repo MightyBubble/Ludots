@@ -27,7 +27,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// #1306 routes ①②: the sparse InteractionMode component, the InteractionModeMap plaintext
+    /// The sparse InteractionMode component, the InteractionModeMap plaintext
     /// table (fail-fast on the reserved normal mode, undefined contexts, priority drift), the
     /// per-seat (seatId, contextId, op) projection diff onto the existing PlayerInputHandler
     /// stack, the SetInteractionMode graph op, and the world-save round trip.
@@ -217,7 +217,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(2), "unconsumed commands re-emit until a handler binds");
         }
 
-        // ── Mounted active-context demand contract (#1306 route ④) ──
+        // ── Mounted active-context demand contract ──
 
         [Test]
         public void Projection_FrameOwnedBySeatRep_PushesItsInputContextNextTick()
