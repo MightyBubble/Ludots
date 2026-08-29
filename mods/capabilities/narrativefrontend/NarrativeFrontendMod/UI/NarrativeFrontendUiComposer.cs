@@ -17,6 +17,17 @@ internal static class NarrativeFrontendUiComposer
     private const float CanvasHeight = 1080f;
     private const float Margin = 24f;
 
+        // Layout design constants for the fixed 1920x1080 design canvas — the frontend's own
+        // layout vocabulary, single definition; content geometry comes from surfaces/profiles.
+        private const float StandingPortraitFallbackHeight = 980f;
+        private const float StandingPortraitAspectWidth = 1024f;
+        private const float StandingPortraitAspectHeight = 1536f;
+        private const float StandingCardMinWidth = 420f;
+        private const float StandingCardSideGap = 32f;
+        private const float CenterAnchorLiftPx = 170f;
+        private const float BottomAnchorInsetPx = 280f;
+        private const float StandingFullHeightPx = 1000f;
+
     public static UiElementBuilder BuildRoot(ReactiveContext<NarrativeFrontendRenderState> context)
     {
         NarrativeFrontendRenderState state = context.State;
@@ -115,8 +126,8 @@ internal static class NarrativeFrontendUiComposer
                 $"StandingPortrait surface '{surface.SurfaceId}' requires PortraitSrc (standing image). Author standingImageId on the speaker.");
         }
 
-        float standingHeight = surface.PortraitSize > 0f ? surface.PortraitSize : 980f;
-        float standingWidth = standingHeight * (1024f / 1536f);
+        float standingHeight = surface.PortraitSize > 0f ? surface.PortraitSize : StandingPortraitFallbackHeight;
+        float standingWidth = standingHeight * (StandingPortraitAspectWidth / StandingPortraitAspectHeight);
 
         var dialogueCard = ApplyAuthorChrome(
             Ui.Column(
@@ -127,7 +138,7 @@ internal static class NarrativeFrontendUiComposer
                     BuildMetaRow(surface))
                 .Classes("story-standing-dialogue", "story-card")
                 .Gap(12f)
-                .Width(Math.Max(420f, surface.Width - standingWidth - 32f)),
+                .Width(Math.Max(StandingCardMinWidth, surface.Width - standingWidth - StandingCardSideGap)),
             surface);
 
         return Ui.Row(
@@ -519,8 +530,8 @@ internal static class NarrativeFrontendUiComposer
         float top = surface.Anchor switch
         {
             NarrativeFrontendAnchor.TopLeft or NarrativeFrontendAnchor.TopCenter or NarrativeFrontendAnchor.TopRight => Margin,
-            NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight * 0.5f) - 170f,
-            _ => CanvasHeight - 280f,
+            NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight * 0.5f) - CenterAnchorLiftPx,
+            _ => CanvasHeight - BottomAnchorInsetPx,
         };
 
         if (surface.Kind == NarrativeFrontendSurfaceKind.StandingPortrait)
@@ -528,8 +539,8 @@ internal static class NarrativeFrontendUiComposer
             top = surface.Anchor switch
             {
                 NarrativeFrontendAnchor.TopLeft or NarrativeFrontendAnchor.TopCenter or NarrativeFrontendAnchor.TopRight => Margin,
-                NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight - 980f) * 0.5f,
-                _ => CanvasHeight - 1000f,
+                NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight - StandingPortraitFallbackHeight) * 0.5f,
+                _ => CanvasHeight - StandingFullHeightPx,
             };
         }
 

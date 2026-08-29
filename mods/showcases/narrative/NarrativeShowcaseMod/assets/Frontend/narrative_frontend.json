@@ -209,6 +209,10 @@
   "bootstrap": {
     "pureStoryLane": false,
     "pureIntroSequenceId": "Sequence.Demo.Overture",
-    "pureBriefingDialogueId": "Dialogue.Demo.Audience"
+    "pureBriefingDialogueId": "Dialogue.Demo.Audience",
+    "beastSpawnXcm": 1960,
+    "beastSpawnYcm": 940,
+    "beastSpawnFacingRad": 3.14159,
+    "historyCapacity": 14
   }
 }

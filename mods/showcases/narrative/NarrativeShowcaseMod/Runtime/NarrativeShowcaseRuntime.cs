@@ -46,6 +46,7 @@ namespace NarrativeShowcaseMod.Runtime
         private bool _narrativeInputActive;
         private bool _interactionInputActive;
         private bool _taskHookInstalled;
+        private readonly NarrativeShowcaseWorldEffects _worldEffects;
         private int _historySerial;
         private string _panelFrameSrc = string.Empty;
         private string _choiceFrameSrc = string.Empty;
@@ -55,6 +56,7 @@ namespace NarrativeShowcaseMod.Runtime
             _context = context;
             using var stream = context.GetResource($"{context.ModId}:assets/Frontend/narrative_frontend.json");
             _frontendConfig = NarrativeShowcaseFrontendConfig.Load(stream);
+            _worldEffects = new NarrativeShowcaseWorldEffects(_frontendConfig, (eng, text) => AppendHistory(text));
             if (ReferenceEquals(_frontendConfig.DialogueBubble, _frontendConfig.OverlayDialogue) ||
                 ReferenceEquals(_frontendConfig.DialogueBubble, _frontendConfig.StandingPortrait))
             {
@@ -360,11 +362,11 @@ namespace NarrativeShowcaseMod.Runtime
 
             if (string.Equals(signalId, NarrativeShowcaseIds.SpawnBeastSignal, StringComparison.OrdinalIgnoreCase))
             {
-                SpawnBeast(engine);
+                _worldEffects.SpawnBeast(engine);
             }
             else if (string.Equals(signalId, NarrativeShowcaseIds.RewardSignal, StringComparison.OrdinalIgnoreCase))
             {
-                ApplyReward(engine);
+                _worldEffects.ApplyReward(engine);
             }
         }
 
@@ -823,56 +825,6 @@ namespace NarrativeShowcaseMod.Runtime
             RefreshPanel(engine);
         }
 
-        private void SpawnBeast(GameEngine engine)
-        {
-            if (BeastSpawned(engine) || engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue queue)
-            {
-                return;
-            }
-
-            queue.TryEnqueue(new RuntimeEntitySpawnRequest
-            {
-                Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = NarrativeShowcaseIds.SpawnedBeastTemplateId,
-                MapId = new Ludots.Core.Map.MapId(NarrativeShowcaseIds.MapId),
-                HasWorldPosition = 1,
-                WorldPositionCm = Fix64Vec2.FromInt(1960, 940),
-                HasFacing = 1,
-                FacingAngleRad = 3.14159f
-            });
-            engine.GlobalContext[NarrativeShowcaseIds.BeastSpawnedKey] = true;
-            AppendHistory(Tr(engine, _frontendConfig.Templates.BeastSpawned));
-        }
-
-        private void ApplyReward(GameEngine engine)
-        {
-            if (engine.GlobalContext.TryGetValue(NarrativeShowcaseIds.RewardAppliedKey, out var rewardObj) && rewardObj is bool rewardApplied && rewardApplied)
-            {
-                return;
-            }
-
-            if (engine.GetService(CoreServiceKeys.EffectRequestQueue) is not EffectRequestQueue queue ||
-                !TryFindEntityByName(engine.World, NarrativeShowcaseIds.PlayerName, out Entity player))
-            {
-                return;
-            }
-
-            int healEffectId = EffectTemplateIdRegistry.GetId("Effect.Narrative.BlessingHeal");
-            int speedEffectId = EffectTemplateIdRegistry.GetId("Effect.Narrative.BlessingSpeed");
-            if (healEffectId > 0)
-            {
-                queue.Publish(new EffectRequest { Source = player, Target = player, TemplateId = healEffectId });
-            }
-
-            if (speedEffectId > 0)
-            {
-                queue.Publish(new EffectRequest { Source = player, Target = player, TemplateId = speedEffectId });
-            }
-
-            engine.GlobalContext[NarrativeShowcaseIds.RewardAppliedKey] = true;
-            AppendHistory(Tr(engine, _frontendConfig.Templates.RewardApplied));
-        }
-
         private void ActivateInputContexts(Ludots.Core.Input.Runtime.PlayerInputHandler input)
         {
             if (input == null)
@@ -1026,7 +978,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             _historySerial++;
             _history.Add($"[{_historySerial:00}] {text}");
-            if (_history.Count > 14)
+            if (_history.Count > _frontendConfig.Bootstrap.HistoryCapacity)
             {
                 _history.RemoveAt(0);
             }

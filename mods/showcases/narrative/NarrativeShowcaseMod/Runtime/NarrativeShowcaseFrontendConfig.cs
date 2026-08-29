@@ -188,6 +188,10 @@ namespace NarrativeShowcaseMod.Runtime
         public bool PureStoryLane { get; set; }
 
         public string PureIntroSequenceId { get; set; } = "Sequence.Demo.Overture";
+        public int BeastSpawnXcm { get; set; } = 1960;
+        public int BeastSpawnYcm { get; set; } = 940;
+        public float BeastSpawnFacingRad { get; set; } = 3.14159f;
+        public int HistoryCapacity { get; set; } = 14;
         public string PureBriefingDialogueId { get; set; } = "Dialogue.Demo.Audience";
     }
 }
