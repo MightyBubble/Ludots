@@ -199,6 +199,12 @@ public sealed class MassNavigationRouteSemantics
 
     public void Validate()
     {
+        if (WaypointAdvanceStopThresholdScale < 1f)
+        {
+            throw new System.InvalidOperationException(
+                "MassNavigation route semantics requires waypointAdvanceStopThresholdScale >= 1 so the advance circle contains the solver's unit stop circle.");
+        }
+
         RequirePositive(WaypointAdvanceStopThresholdScale, nameof(WaypointAdvanceStopThresholdScale));
         RequirePositive(WaypointAdvanceBodyRadiusScale, nameof(WaypointAdvanceBodyRadiusScale));
     }
