@@ -23,7 +23,9 @@ public sealed class ReplayShowcaseState
     public int CurrentTick;
     public string RecordedEndDigest = "-";
     public string PlaybackDigest = "-";
-    public bool EndMatches;
+    public string Verdict = "Pending"; // Pending | Matched | Mismatched
+    public string VerdictHint = "press [Play replay] to run the proof";
+    public string IsolationState = "off"; // engine truth: FrozenInputActionReader.ReplayInputIsolation
     public string ArchiveLine = "no archive yet";
     public string IsolationNote = "n/a";
     public IReadOnlyList<string> LogLines = Array.Empty<string>();
@@ -40,7 +42,9 @@ public sealed class ReplayShowcaseState
             IsReplaying == other.IsReplaying && IsPaused == other.IsPaused && Frames == other.Frames &&
             PlaybackIndex == other.PlaybackIndex && CurrentTick == other.CurrentTick &&
             RecordedEndDigest == other.RecordedEndDigest && PlaybackDigest == other.PlaybackDigest &&
-            EndMatches == other.EndMatches && ArchiveLine == other.ArchiveLine && IsolationNote == other.IsolationNote;
+            Verdict == other.Verdict && VerdictHint == other.VerdictHint &&
+            IsolationState == other.IsolationState &&
+            ArchiveLine == other.ArchiveLine && IsolationNote == other.IsolationNote;
     }
 }
 
@@ -64,6 +68,7 @@ public sealed class ReplayPlaybackRuntime
     private int _replayFrames;
     private string? _recordedEndDigest;
     private string? _playbackEndDigest;
+    private string? _recordedEndDigestForArchive;
     private string? _liveRejectedSample;
     private long _nextSequence = 0;
 
@@ -75,6 +80,8 @@ public sealed class ReplayPlaybackRuntime
     public bool IsShowcaseMap => DeterministicReplayShowcaseIds.MapId == _engine.CurrentMapSession?.MapId.Value;
     public bool IsRecording => _recorder != null;
     public bool IsReplaying => _replayPlaying;
+    public string Verdict { get; private set; } = "Pending";
+    public string VerdictHint { get; private set; } = "press [Play replay] to run the proof";
 
     public const string NudgeActionId = "DeterministicReplayShowcase.Nudge";
 
@@ -129,6 +136,7 @@ public sealed class ReplayPlaybackRuntime
         _archive = _recorder.BuildArchive();
         _recorder = null;
         _recordedEndDigest = WorldDigest();
+        _recordedEndDigestForArchive = _recordedEndDigest;
         Log($"Stopped: {_archive.Frames.Count} frames; end digest {_recordedEndDigest}.");
         Phase = "Step 3 — [Play replay]: frames drive the world from the recorded checkpoint";
     }
@@ -145,6 +153,8 @@ public sealed class ReplayPlaybackRuntime
             _replayIndex = 0;
             _replayFrames = 0;
             _playbackEndDigest = null;
+            Verdict = "Pending";
+            VerdictHint = "replay in progress — proof lands when the last frame lands";
             if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader replayInput)
             {
                 replayInput.SetReplayInputIsolation(true);
@@ -193,8 +203,9 @@ public sealed class ReplayPlaybackRuntime
     {
         if (_archive == null) { Log("Nothing to archive."); return; }
         Directory.CreateDirectory(ArchiveDir);
-        string path = LatestArchivePath(preferNew: true);
+        string path = LatestArchivePath();
         File.WriteAllBytes(path, new ReplayArchiveCodec().Encode(_archive));
+        _recordedEndDigestForArchive = _recordedEndDigest;
         Log($"Archive written: {path} — relaunch cold and [Load latest archive].");
     }
 
@@ -204,8 +215,17 @@ public sealed class ReplayPlaybackRuntime
         string[] files = Directory.Exists(ArchiveDir) ? Directory.GetFiles(ArchiveDir, "*.ludotsreplay") : Array.Empty<string>();
         if (files.Length == 0) { Log("No archives on disk yet."); return; }
         Array.Sort(files, StringComparer.Ordinal);
-        _archive = new ReplayArchiveCodec().Decode(File.ReadAllBytes(files[^1])).Validate();
-        _recordedEndDigest = null;
+        try
+        {
+            _archive = new ReplayArchiveCodec().Decode(File.ReadAllBytes(files[^1])).Validate();
+        }
+        catch (Exception ex)
+        {
+            Log($"Archive rejected: {ex.Message} — the file on disk is corrupt or stale.");
+            return;
+        }
+
+        _recordedEndDigest = _recordedEndDigestForArchive;
         Log($"Cold archive loaded: {files[^1]} — [Play replay] now runs it.");
     }
 
@@ -257,7 +277,11 @@ public sealed class ReplayPlaybackRuntime
         CurrentTick = _engine.GameSession.CurrentTick,
         RecordedEndDigest = _recordedEndDigest ?? "-",
         PlaybackDigest = _playbackEndDigest ?? "-",
-        EndMatches = _recordedEndDigest != null && _playbackEndDigest != null && _playbackEndDigest == _recordedEndDigest,
+        Verdict = Verdict,
+        VerdictHint = VerdictHint,
+        IsolationState = _engine.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader reader && reader.ReplayInputIsolation
+            ? "ON — live input rejected by the engine"
+            : "off",
         ArchiveLine = _archive == null ? "no archive yet" : $"{_archive.Frames.Count} frames",
         IsolationNote = _liveRejectedSample == null
             ? (_replayPlaying ? "try [Nudge hero] now — live input is rejected" : "n/a")
@@ -278,6 +302,10 @@ public sealed class ReplayPlaybackRuntime
             string digest = WorldDigest();
             _playbackEndDigest = digest;
             bool matches = _recordedEndDigest != null && digest == _recordedEndDigest;
+            Verdict = matches ? "Matched" : "Mismatched";
+            VerdictHint = matches
+                ? "the replay reproduced the recorded end state"
+                : "the replay diverged from the recorded end state (known engine gap, #1311)";
             Log($"Replay finished {_replayFrames}/{_archive?.Frames.Count ?? 0} frames; digest {digest} " +
                 (matches ? "== recorded end — deterministic" : $"MISMATCH vs {_recordedEndDigest}"));
             return;
@@ -303,9 +331,9 @@ public sealed class ReplayPlaybackRuntime
 
     private static string ArchiveDir => Path.Combine(AppContext.BaseDirectory, "Saves", "replay-showcase");
 
-    private static string LatestArchivePath(bool preferNew) => Path.Combine(
+    private static string LatestArchivePath() => Path.Combine(
         ArchiveDir,
-        $"replay-{DateTime.UtcNow:yyyyMMdd-HHmmss}{(preferNew ? "" : "")}.ludotsreplay");
+        $"replay-{DateTime.UtcNow:yyyyMMdd-HHmmss}.ludotsreplay");
 
     private static int RandomShared(int min, int max) => Random.Shared.Next(min, max + 1);
 
