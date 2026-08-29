@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Interaction;
@@ -128,25 +126,15 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void TransitionListener_ReceivesPushAndRemoveCallbacks()
+        public void Push_InputContextIdRegistersForReverseLookup()
         {
             InteractionContextStack stack = CreateStack();
-            var listener = new RecordingListener();
-            stack.AddTransitionListener(listener);
+            stack.Push(Descriptor("ctx.a", inputContextId: "imc.tests.a"), out InteractionContextFrame pushed);
 
-            long token = stack.Push(Descriptor("ctx.a", inputContextId: "imc.tests.a"), out InteractionContextFrame pushed);
-            stack.RemoveByToken(token);
-
-            Assert.That(listener.Pushed, Has.Count.EqualTo(1));
-            Assert.That(listener.Removed, Has.Count.EqualTo(1));
-            Assert.That(listener.Pushed[0].OwnerToken, Is.EqualTo(token));
-            Assert.That(listener.Removed[0].OwnerToken, Is.EqualTo(token));
-            Assert.That(listener.Pushed[0].InputContextId, Is.EqualTo(pushed.InputContextId));
+            Assert.That(pushed.InputContextId, Is.Not.EqualTo(0));
             Assert.That(stack.InputContextIdRegistry.GetName(pushed.InputContextId), Is.EqualTo("imc.tests.a"));
-
-            Assert.That(stack.RemoveTransitionListener(listener), Is.True);
-            stack.Push(Descriptor("ctx.b"));
-            Assert.That(listener.Pushed, Has.Count.EqualTo(1));
+            Assert.That(stack.InputContextIdRegistry.TryGetId("imc.tests.a", out int id), Is.True);
+            Assert.That(id, Is.EqualTo(pushed.InputContextId));
         }
 
         [Test]
@@ -178,16 +166,6 @@ namespace Ludots.Tests.GAS
                 EntityViewKeys.ControlPlaneCommand), out InteractionContextFrame frame);
 
             Assert.That(frame.ActiveCollectionKeyId, Is.EqualTo(existingId));
-        }
-
-        private sealed class RecordingListener : IInteractionContextTransition
-        {
-            public List<InteractionContextFrame> Pushed { get; } = new();
-            public List<InteractionContextFrame> Removed { get; } = new();
-
-            public void OnFramePushed(in InteractionContextFrame frame) => Pushed.Add(frame);
-
-            public void OnFrameRemoved(in InteractionContextFrame frame) => Removed.Add(frame);
         }
     }
 }

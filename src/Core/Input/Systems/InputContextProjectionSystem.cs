@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Client;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -25,20 +26,27 @@ namespace Ludots.Core.Input.Systems
 
     /// <summary>
     /// Local input context projection (#1306): derives, per client local seat, the input context
-    /// set the seat's possessed representative's <see cref="InteractionMode"/> demands, diffs it
-    /// against what this projection has applied to the seat's handler, and emits
-    /// (seatId, contextId, op) commands onto the existing <see cref="PlayerInputHandler"/> IMC
-    /// stack. Sparse default: a rep without the component projects no mode contexts (the active
-    /// control scheme's resident contexts stay untouched). Pure derivation — mode writes come from
-    /// graph ops; this system never mutates entity state. Seats without a bound handler keep
-    /// re-emitting their diff until one consumes it, mirroring the interaction context bridge's
-    /// null-handler tolerance.
+    /// set the seat demands, diffs it against what this projection has applied to the seat's
+    /// handler, and emits (seatId, contextId, op) commands onto the existing
+    /// <see cref="PlayerInputHandler"/> IMC stack. Demand sources: the seat's possessed
+    /// representative's <see cref="InteractionMode"/> component (sparse default: a rep without
+    /// the component projects no mode contexts) and the interaction context frames whose
+    /// <see cref="InteractionContextFrame.ContextEntity"/> resolves through the control domain to
+    /// that seat's possessed representative — the retiring
+    /// <see cref="InteractionContextStack"/> remains the interaction state machine, but it no
+    /// longer touches handlers itself; this projection is the sole translator of interaction
+    /// state into IMC contexts. Frames owned by other players' domains project nowhere on this
+    /// client. Pure derivation — mode writes come from graph ops; this system never mutates
+    /// entity state. Seats without a bound handler keep re-emitting their diff until one
+    /// consumes it.
     /// </summary>
     public sealed class InputContextProjectionSystem : ISystem<float>
     {
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly InteractionModeMap _modeMap;
+        private readonly InteractionContextStack _interactionFrames;
+        private readonly ControlDomainQuery _controlDomains;
         private readonly Func<string, PlayerInputHandler?> _handlerBySeat;
         private readonly Dictionary<string, List<string>> _appliedBySeat = new(StringComparer.Ordinal);
         private readonly List<InputContextProjectionCommand> _commands = new();
@@ -48,11 +56,15 @@ namespace Ludots.Core.Input.Systems
             World world,
             Dictionary<string, object> globals,
             InteractionModeMap modeMap,
+            InteractionContextStack interactionFrames,
+            ControlDomainQuery controlDomains,
             Func<string, PlayerInputHandler?> handlerBySeat)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _modeMap = modeMap ?? throw new ArgumentNullException(nameof(modeMap));
+            _interactionFrames = interactionFrames ?? throw new ArgumentNullException(nameof(interactionFrames));
+            _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             _handlerBySeat = handlerBySeat ?? throw new ArgumentNullException(nameof(handlerBySeat));
         }
 
@@ -84,10 +96,11 @@ namespace Ludots.Core.Input.Systems
         public void Dispose() { }
 
         /// <summary>
-        /// Fills <see cref="_desired"/> with the mode's context bindings sorted by descending
-        /// priority (deterministic command order); returns the count. Entities without the sparse
-        /// component yield zero. A mode id unknown to the installed map fails fast by id and name —
-        /// the only component writer is the graph op, so this is a save/config drift signal.
+        /// Fills <see cref="_desired"/> with the seat's demanded contexts — the mode's context
+        /// bindings sorted by descending priority (deterministic command order), then interaction
+        /// frame demands appended — and returns the count. Entities without the sparse component
+        /// yield zero mode contexts. A mode id unknown to the installed map fails fast by id and
+        /// name — the only component writer is the graph op, so this is a save/config drift signal.
         /// </summary>
         private int ResolveDesiredContexts(ClientLocalSeat seat)
         {
@@ -97,23 +110,59 @@ namespace Ludots.Core.Input.Systems
                 return 0;
             }
 
-            if (!_world.TryGet<InteractionMode>(seat.PossessedRep, out InteractionMode mode))
+            if (_world.TryGet<InteractionMode>(seat.PossessedRep, out InteractionMode mode))
             {
-                return 0;
+                if (!_modeMap.TryGetContexts(mode.ModeId, out IReadOnlyList<InteractionModeContextBinding> contexts))
+                {
+                    throw InvalidModeId(seat, mode.ModeId);
+                }
+
+                for (int i = 0; i < contexts.Count; i++)
+                {
+                    _desired.Add(contexts[i]);
+                }
+
+                _desired.Sort((a, b) => b.Priority.CompareTo(a.Priority));
             }
 
-            if (!_modeMap.TryGetContexts(mode.ModeId, out IReadOnlyList<InteractionModeContextBinding> contexts))
-            {
-                throw InvalidModeId(seat, mode.ModeId);
-            }
-
-            for (int i = 0; i < contexts.Count; i++)
-            {
-                _desired.Add(contexts[i]);
-            }
-
-            _desired.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+            AppendFrameDemands(seat);
             return _desired.Count;
+        }
+
+        /// <summary>
+        /// Appends the input contexts demanded by interaction frames whose carrier entity belongs
+        /// to this seat's control domain. Effective handler order comes from
+        /// <see cref="PlayerInputHandler"/> (contexts carry their own priority), so appended frame
+        /// demands need no priority; the dedup keeps the command stream free of duplicates when a
+        /// mode and a frame demand the same context.
+        /// </summary>
+        private void AppendFrameDemands(ClientLocalSeat seat)
+        {
+            int frameCount = _interactionFrames.Count;
+            for (int i = 0; i < frameCount; i++)
+            {
+                if (!_interactionFrames.TryGetAt(i, out InteractionContextFrame frame))
+                {
+                    continue;
+                }
+
+                if (frame.InputContextId <= _interactionFrames.InputContextIdRegistry.InvalidId)
+                {
+                    continue;
+                }
+
+                if (!_controlDomains.TryResolveControlDomain(frame.ContextEntity, out Entity domainRep) ||
+                    domainRep != seat.PossessedRep)
+                {
+                    continue;
+                }
+
+                string contextId = _interactionFrames.InputContextIdRegistry.GetName(frame.InputContextId);
+                if (!ContainsDesired(contextId, _desired.Count))
+                {
+                    _desired.Add(new InteractionModeContextBinding(contextId, Priority: 0));
+                }
+            }
         }
 
         private InvalidOperationException InvalidModeId(ClientLocalSeat seat, int modeId)

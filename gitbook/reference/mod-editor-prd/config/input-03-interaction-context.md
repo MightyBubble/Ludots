@@ -30,7 +30,7 @@
 | `activeCollectionKey` | 压栈期间生效的实体集合键 |
 | `activeEntityViewKey` | 压栈期间生效的实体视图键 |
 | `filterProfileId` | 过滤档案（input-05）；可空 = 不过滤直通 |
-| `inputContextId` | 压栈期间切换的输入上下文（default_input 的 contexts，input-05） |
+| `inputContextId` | 帧在栈期间该座位应激活的输入上下文（default_input 的 contexts，input-05）；由 `InputContextProjectionSystem` 每 tick 按座位 diff 派生 push/pop，帧回收后下一 tick 弹出 |
 | `commandIntentId` | 栈帧携带的命令意图；仲裁时优先于控制方案默认 |
 
 ## 3. 文件结构

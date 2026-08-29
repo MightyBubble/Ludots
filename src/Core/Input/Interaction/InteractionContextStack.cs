@@ -113,21 +113,10 @@ namespace Ludots.Core.Input.Interaction
     }
 
     /// <summary>
-    /// Frame transition listener. Wiring layers translate <see cref="InteractionContextFrame.InputContextId"/>
-    /// into IMC push/pop; the stack itself never touches input handling.
-    /// </summary>
-    public interface IInteractionContextTransition
-    {
-        /// <summary>Called after a frame is pushed onto the stack.</summary>
-        void OnFramePushed(in InteractionContextFrame frame);
-
-        /// <summary>Called after a frame is removed from the stack.</summary>
-        void OnFrameRemoved(in InteractionContextFrame frame);
-    }
-
-    /// <summary>
     /// Local-client interaction context stack (RFC-0065 CTX-1). Frames are token-owned and
-    /// removable from any position; the top frame is the last activated context.
+    /// removable from any position; the top frame is the last activated context. The stack is
+    /// the interaction state machine only — translating its frames into input handler contexts
+    /// is <c>InputContextProjectionSystem</c>'s job, and nothing here touches input handling.
     /// </summary>
     public sealed class InteractionContextStack
     {
@@ -137,7 +126,6 @@ namespace Ludots.Core.Input.Interaction
         private readonly StringIntRegistry _filterProfileIdRegistry;
         private readonly StringIntRegistry _commandIntentProfileIdRegistry;
         private readonly StringIntRegistry _inputContextIdRegistry;
-        private readonly List<IInteractionContextTransition> _listeners = new();
         private readonly int _defaultContextId;
 
         private int[] _contextIds;
@@ -191,7 +179,7 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>Command intent profile id registry.</summary>
         public StringIntRegistry CommandIntentProfileIdRegistry => _commandIntentProfileIdRegistry;
 
-        /// <summary>IMC input context id registry; reverse lookup feeds IMC wiring.</summary>
+        /// <summary>IMC input context id registry; reverse lookup feeds the input context projection.</summary>
         public StringIntRegistry InputContextIdRegistry => _inputContextIdRegistry;
 
         /// <summary>Number of frames on the stack.</summary>
@@ -199,26 +187,6 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Bumped on every stack mutation.</summary>
         public uint Revision { get; private set; }
-
-        /// <summary>Register a transition listener.</summary>
-        public void AddTransitionListener(IInteractionContextTransition listener)
-        {
-            if (listener == null)
-            {
-                throw new ArgumentNullException(nameof(listener));
-            }
-
-            if (!_listeners.Contains(listener))
-            {
-                _listeners.Add(listener);
-            }
-        }
-
-        /// <summary>Unregister a transition listener.</summary>
-        public bool RemoveTransitionListener(IInteractionContextTransition listener)
-        {
-            return listener != null && _listeners.Remove(listener);
-        }
 
         /// <summary>Push a frame; returns the owner token addressing it.</summary>
         public long Push(in InteractionContextFrameDescriptor descriptor)
@@ -259,7 +227,6 @@ namespace Ludots.Core.Input.Interaction
             Revision++;
 
             frame = FrameAt(index);
-            NotifyPushed(in frame);
             return token;
         }
 
@@ -282,10 +249,8 @@ namespace Ludots.Core.Input.Interaction
                         $"Interaction context frame '{InteractionContextIds.Default}' is reserved and cannot be removed.");
                 }
 
-                InteractionContextFrame removed = FrameAt(index);
                 RemoveAt(index);
                 Revision++;
-                NotifyRemoved(in removed);
                 return true;
             }
 
@@ -311,10 +276,8 @@ namespace Ludots.Core.Input.Interaction
                     continue;
                 }
 
-                InteractionContextFrame removed = FrameAt(index);
                 RemoveAt(index);
                 Revision++;
-                NotifyRemoved(in removed);
                 removedCount++;
             }
 
@@ -381,22 +344,6 @@ namespace Ludots.Core.Input.Interaction
             }
 
             _count--;
-        }
-
-        private void NotifyPushed(in InteractionContextFrame frame)
-        {
-            for (int i = 0; i < _listeners.Count; i++)
-            {
-                _listeners[i].OnFramePushed(in frame);
-            }
-        }
-
-        private void NotifyRemoved(in InteractionContextFrame frame)
-        {
-            for (int i = 0; i < _listeners.Count; i++)
-            {
-                _listeners[i].OnFrameRemoved(in frame);
-            }
         }
 
         private void EnsureCapacity(int required)

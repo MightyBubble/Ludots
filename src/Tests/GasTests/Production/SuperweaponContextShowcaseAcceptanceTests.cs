@@ -439,13 +439,13 @@ namespace Ludots.Tests.GAS.Production
             builder.AppendLine("## Scenario");
             builder.AppendLine("- Showcase: `SuperweaponContextShowcaseMod` over `interaction_showcase_hub`.");
             builder.AppendLine($"- Launcher binding: `{LauncherBindingName}` (`{ManualGuiLaunchCommand}`).");
-            builder.AppendLine("- Runtime path: `castAbility.Start` -> `AbilityExecSystem` -> `AbilityExecInteractionContextSystem` -> `InteractionContextInputContextBridge` -> `CoreServiceKeys.AuthoritativeInput` -> `GameplayEventBus`.");
+            builder.AppendLine("- Runtime path: `castAbility.Start` -> `AbilityExecSystem` -> `AbilityExecInteractionContextSystem` -> `InputContextProjectionSystem` -> `CoreServiceKeys.AuthoritativeInput` -> `GameplayEventBus`.");
             builder.AppendLine("- Context profile: `ctx.ability.superweapon.confirm_targets`.");
             builder.AppendLine("- Player action: press `<Keyboard>/enter` through `imc.ability.confirm`; the test does not publish the completion event directly.");
             builder.AppendLine();
             builder.AppendLine("## Timeline");
             builder.AppendLine($"- [T+000] Launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` verified; Commander#{state.Commander.Id}.Cast(Superweapon Context) -> GateWaiting(`Event.Showcase.Superweapon.Confirmed`).");
-            builder.AppendLine($"- [T+001] AbilityFrame.Push(`ctx.ability.superweapon.confirm_targets`) -> IMC `{SuperweaponContextShowcaseIds.ConfirmInputContextId}` active.");
+            builder.AppendLine($"- [T+001] AbilityFrame.Push(`ctx.ability.superweapon.confirm_targets`) -> `InputContextProjectionSystem` next-tick diff -> IMC `{SuperweaponContextShowcaseIds.ConfirmInputContextId}` active.");
             builder.AppendLine($"- [T+002] ContextBoundCollectionWriter.CommitCast -> ability targets `{string.Join(", ", abilityTargets.Select(static e => e.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)))}`.");
             builder.AppendLine($"- [T+003] PlayerInput(`<Keyboard>/enter`) -> Authoritative `{SuperweaponContextShowcaseIds.ConfirmActionId}` -> GameplayEvent published.");
             builder.AppendLine($"- [T+004] AbilityExecSystem consumes event -> End -> frame restored to `{InteractionContextIds.Default}`.");
@@ -552,7 +552,7 @@ namespace Ludots.Tests.GAS.Production
                 "flowchart TD",
                 "    A[\"MapLoaded: interaction showcase hub\"] --> B[\"castAbility.Start: commander starts superweapon\"]",
                 "    B --> C[\"AbilityExecInteractionContextSystem: push ability-owned frame\"]",
-                "    C --> D[\"InteractionContextInputContextBridge: push imc.ability.confirm\"]",
+                "    C --> D[\"InputContextProjectionSystem: next-tick diff pushes imc.ability.confirm\"]",
                 "    D --> E[\"ContextBoundCollectionWriter: route Arcweaver + Vanguard to ability collection\"]",
                 "    E --> F{\"<Keyboard>/enter pressed?\"}",
                 "    F -- yes --> G[\"AuthoritativeInput: SuperweaponConfirm pressed\"]",
