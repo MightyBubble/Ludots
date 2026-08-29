@@ -49,35 +49,35 @@ public static class UiFontRegistry
 		}
 	}
 
-	public static SKTypeface ResolveTypeface(string? familyList, bool bold)
+	public static SKTypeface ResolveTypeface(string? familyList, bool bold, bool italic = false)
 	{
-		string key = $"{familyList ?? string.Empty}|{bold}";
+		string key = $"{familyList ?? string.Empty}|{bold}|{italic}";
 		lock (Sync)
 		{
 			if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
 			{
 				return value;
 			}
-			SKTypeface sKTypeface = CreateTypeface(familyList, bold);
+			SKTypeface sKTypeface = CreateTypeface(familyList, bold, italic);
 			CachedTypefaces[key] = sKTypeface;
 			return sKTypeface;
 		}
 	}
 
-	public static SKTypeface ResolveTypefaceForTextElement(string? familyList, bool bold, string textElement)
+	public static SKTypeface ResolveTypefaceForTextElement(string? familyList, bool bold, string textElement, bool italic = false)
 	{
 		if (string.IsNullOrEmpty(textElement))
 		{
-			return ResolveTypeface(familyList, bold);
+			return ResolveTypeface(familyList, bold, italic);
 		}
-		string key = $"glyph|{familyList ?? string.Empty}|{bold}|{textElement}";
+		string key = $"glyph|{familyList ?? string.Empty}|{bold}|{italic}|{textElement}";
 		lock (Sync)
 		{
 			if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
 			{
 				return value;
 			}
-			SKTypeface sKTypeface = CreateTypefaceForTextElement(familyList, bold, textElement);
+			SKTypeface sKTypeface = CreateTypefaceForTextElement(familyList, bold, textElement, italic);
 			CachedTypefaces[key] = sKTypeface;
 			return sKTypeface;
 		}
@@ -90,29 +90,29 @@ public static class UiFontRegistry
 		return left == right || string.Equals(left.FamilyName, right.FamilyName, StringComparison.OrdinalIgnoreCase);
 	}
 
-	private static SKTypeface CreateTypeface(string? familyList, bool bold)
+	private static SKTypeface CreateTypeface(string? familyList, bool bold, bool italic)
 	{
 		foreach (string item in ParseFamilyList(familyList))
 		{
-			SKTypeface sKTypeface = ResolveSingleFamilyTypeface(item, bold);
+			SKTypeface sKTypeface = ResolveSingleFamilyTypeface(item, bold, italic);
 			if (!IsUnresolvedFallback(sKTypeface, item))
 			{
 				return sKTypeface;
 			}
 		}
-		return ResolveDefaultTypeface(bold);
+		return ResolveDefaultTypeface(bold, italic);
 	}
 
-	private static SKTypeface CreateTypefaceForTextElement(string? familyList, bool bold, string textElement)
+	private static SKTypeface CreateTypefaceForTextElement(string? familyList, bool bold, string textElement, bool italic)
 	{
-		SKTypeface preferred = ResolveTypeface(familyList, bold);
+		SKTypeface preferred = ResolveTypeface(familyList, bold, italic);
 		if (ContainsGlyphs(preferred, textElement))
 		{
 			return preferred;
 		}
 		foreach (string item in ParseFamilyList(familyList))
 		{
-			SKTypeface candidate = ResolveSingleFamilyTypeface(item, bold);
+			SKTypeface candidate = ResolveSingleFamilyTypeface(item, bold, italic);
 			if (!IsUnresolvedFallback(candidate, item) && ContainsGlyphs(candidate, textElement))
 			{
 				return candidate;
@@ -126,7 +126,7 @@ public static class UiFontRegistry
 				string familyName = matched.FamilyName;
 				if (!string.IsNullOrWhiteSpace(familyName))
 				{
-					SKTypeface named = ResolveSingleFamilyTypeface(familyName, bold);
+					SKTypeface named = ResolveSingleFamilyTypeface(familyName, bold, italic);
 					if (ContainsGlyphs(named, textElement))
 					{
 						return named;
@@ -137,7 +137,7 @@ public static class UiFontRegistry
 		}
 		foreach (string fallbackFamily in GlyphFallbackFamilies)
 		{
-			SKTypeface fallback = ResolveSingleFamilyTypeface(fallbackFamily, bold);
+			SKTypeface fallback = ResolveSingleFamilyTypeface(fallbackFamily, bold, italic);
 			if (!IsUnresolvedFallback(fallback, fallbackFamily) && ContainsGlyphs(fallback, textElement))
 			{
 				return fallback;
@@ -147,22 +147,42 @@ public static class UiFontRegistry
 			$"No installed typeface contains glyphs for text element '{textElement}'. Register a covering font via UiFontRegistry.RegisterFile or install a CJK-capable family such as WenQuanYi Micro Hei.");
 	}
 
-	private static SKTypeface ResolveSingleFamilyTypeface(string familyName, bool bold)
+	private static SKTypeface ResolveSingleFamilyTypeface(string familyName, bool bold, bool italic)
 	{
 		string text = familyName.Trim();
-		string key = $"family|{text}|{bold}";
+		string key = $"family|{text}|{bold}|{italic}";
 		if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
 		{
 			return value;
 		}
-		SKTypeface sKTypeface = CreateSingleFamilyTypeface(text, bold);
+		SKTypeface sKTypeface = CreateSingleFamilyTypeface(text, bold, italic);
 		CachedTypefaces[key] = sKTypeface;
 		return sKTypeface;
 	}
 
-	private static SKTypeface CreateSingleFamilyTypeface(string familyName, bool bold)
+	private static SKFontStyle ResolveFontStyle(bool bold, bool italic)
 	{
-		SKFontStyle style = bold ? SKFontStyle.Bold : SKFontStyle.Normal;
+		if (bold && italic)
+		{
+			return SKFontStyle.BoldItalic;
+		}
+
+		if (bold)
+		{
+			return SKFontStyle.Bold;
+		}
+
+		if (italic)
+		{
+			return SKFontStyle.Italic;
+		}
+
+		return SKFontStyle.Normal;
+	}
+
+	private static SKTypeface CreateSingleFamilyTypeface(string familyName, bool bold, bool italic)
+	{
+		SKFontStyle style = ResolveFontStyle(bold, italic);
 		if (RegisteredFiles.TryGetValue(familyName, out string value))
 		{
 			SKTypeface fromFile = SKTypeface.FromFile(value);
@@ -201,14 +221,14 @@ public static class UiFontRegistry
 			!string.Equals(typeface.FamilyName, requestedFamily, StringComparison.OrdinalIgnoreCase);
 	}
 
-	private static SKTypeface ResolveDefaultTypeface(bool bold)
+	private static SKTypeface ResolveDefaultTypeface(bool bold, bool italic = false)
 	{
-		string key = $"default|{bold}";
+		string key = $"default|{bold}|{italic}";
 		if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
 		{
 			return value;
 		}
-		SKFontStyle style = bold ? SKFontStyle.Bold : SKFontStyle.Normal;
+		SKFontStyle style = ResolveFontStyle(bold, italic);
 		SKTypeface sKTypeface = SKTypeface.FromFamilyName(null, style) ?? SKTypeface.Default;
 		CachedTypefaces[key] = sKTypeface;
 		return sKTypeface;

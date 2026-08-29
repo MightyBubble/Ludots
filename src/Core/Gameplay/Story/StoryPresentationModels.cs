@@ -53,7 +53,8 @@ namespace Ludots.Core.Gameplay.Story
         string BorderHex = "",
         string ForegroundHex = "",
         string MutedHex = "",
-        IReadOnlyList<StoryPresentationChoice>? Choices = null);
+        IReadOnlyList<StoryPresentationChoice>? Choices = null,
+        IReadOnlyList<Ludots.Core.Presentation.Hud.PresentationTextRun>? BodyRuns = null);
 
     /// <summary>
     /// Presentation frame published to the story frontend. Content is strings + imageIds only.

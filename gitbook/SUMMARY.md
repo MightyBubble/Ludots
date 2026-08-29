@@ -25,6 +25,7 @@
   - [Story Runtime：Dialogue / Sequencer](architecture/story-runtime-dialogue-sequencer.md)
   - [关口口令：对话作者入门](architecture/dialogue-author-kit.md)
   - [语义文案与 2D 图像资产](architecture/presentation-semantic-text-and-image-assets.md)
+  - [受限标记语法说明](architecture/presentation-restricted-markup.md)
   - [术语阶梯：Machine / App / Seat / Device](architecture/terminology.md)
   - [Agent 调试桥](architecture/agent-debug-bridge.md)
   - [确定性随机与加权分布](architecture/deterministic-rng.md)

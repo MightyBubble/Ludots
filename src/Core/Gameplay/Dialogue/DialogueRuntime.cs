@@ -193,7 +193,8 @@ namespace Ludots.Core.Gameplay.Dialogue
                 node.CameraId,
                 node.AutoAdvanceSeconds,
                 _active.ElapsedSeconds,
-                choices);
+                choices,
+                ResolveLineRuns(node.LineId));
             return true;
         }
 
@@ -378,6 +379,22 @@ namespace Ludots.Core.Gameplay.Dialogue
         {
             StoryLineDefinition line = _story.RequireLine(lineId);
             return StoryTextResolution.FormatToken(_textCatalog, _display, line.TextToken, line.Args);
+        }
+
+        private IReadOnlyList<PresentationTextRun>? ResolveLineRuns(string lineId)
+        {
+            StoryLineDefinition line = _story.RequireLine(lineId);
+            IReadOnlyList<PresentationTextRun> runs =
+                StoryTextResolution.FormatTokenRuns(_textCatalog, _display, line.TextToken, line.Args);
+            for (int i = 0; i < runs.Count; i++)
+            {
+                if (!runs[i].Style.IsEmpty)
+                {
+                    return runs;
+                }
+            }
+
+            return null;
         }
 
         private void ActivateCamera(string cameraId)

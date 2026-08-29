@@ -116,7 +116,8 @@ namespace Ludots.Core.Gameplay.Story
                     BackgroundHex: profile.BackgroundHex,
                     BorderHex: profile.BorderHex,
                     ForegroundHex: profile.ForegroundHex,
-                    MutedHex: profile.MutedHex)
+                    MutedHex: profile.MutedHex,
+                    BodyRuns: view.BodyRuns)
             };
 
             if (view.Choices.Count > 0)

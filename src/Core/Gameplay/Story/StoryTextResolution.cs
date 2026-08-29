@@ -78,8 +78,10 @@ namespace Ludots.Core.Gameplay.Story
                     $"Story text token '{token}' cannot be resolved: PresentationTextCatalog is unavailable.");
             }
 
-            // display is retained for call-site symmetry with FormatToken; runs always go through catalog.
-            _ = display;
+            if (display != null)
+            {
+                return display.FormatTokenRunsOrThrow(token, args);
+            }
 
             int tokenId = catalog.GetTokenId(token);
             if (tokenId <= 0)

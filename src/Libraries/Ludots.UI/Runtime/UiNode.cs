@@ -59,6 +59,8 @@ public sealed class UiNode
 
 	public string? TextContent { get; private set; }
 
+	public IReadOnlyList<UiStyledTextRun>? TextRuns { get; private set; }
+
 	public IUiCanvasContent? CanvasContent { get; private set; }
 
 	public IReadOnlyList<string> ClassNames => _classNames;
@@ -75,7 +77,7 @@ public sealed class UiNode
 
 	public bool CanScrollVertically => Style.Overflow == UiOverflow.Scroll && MaxScrollY > 0.01f;
 
-	public UiNode(UiNodeId id, UiNodeKind kind, UiStyle? style = null, string? textContent = null, IEnumerable<UiNode>? children = null, IEnumerable<UiActionHandle>? actionHandles = null, string? tagName = null, string? elementId = null, IEnumerable<string>? classNames = null, UiAttributeBag? attributes = null, UiStyleDeclaration? inlineStyle = null, IUiCanvasContent? canvasContent = null, UiPseudoElement pseudoElement = UiPseudoElement.None)
+	public UiNode(UiNodeId id, UiNodeKind kind, UiStyle? style = null, string? textContent = null, IEnumerable<UiNode>? children = null, IEnumerable<UiActionHandle>? actionHandles = null, string? tagName = null, string? elementId = null, IEnumerable<string>? classNames = null, UiAttributeBag? attributes = null, UiStyleDeclaration? inlineStyle = null, IUiCanvasContent? canvasContent = null, UiPseudoElement pseudoElement = UiPseudoElement.None, IReadOnlyList<UiStyledTextRun>? textRuns = null)
 	{
 		if (!id.IsValid)
 		{
@@ -88,6 +90,7 @@ public sealed class UiNode
 		Style = LocalStyle;
 		RenderStyle = LocalStyle;
 		TextContent = textContent;
+		TextRuns = textRuns;
 		TagName = (string.IsNullOrWhiteSpace(tagName) ? GetDefaultTagName(kind) : tagName);
 		ElementId = ((!string.IsNullOrWhiteSpace(elementId)) ? elementId : LocalStyle.Id);
 		Attributes = attributes ?? new UiAttributeBag();
@@ -120,6 +123,7 @@ public sealed class UiNode
 		InlineStyle = template.InlineStyle;
 		LocalStyle = template.LocalStyle;
 		TextContent = template.TextContent;
+		TextRuns = template.TextRuns;
 		CanvasContent = template.CanvasContent;
 		PseudoElement = template.PseudoElement;
 		_classNames = template._classNames;
@@ -310,10 +314,34 @@ public sealed class UiNode
 			PseudoElement == other.PseudoElement &&
 			object.Equals(LocalStyle, other.LocalStyle) &&
 			string.Equals(TextContent, other.TextContent, StringComparison.Ordinal) &&
+			TextRunsEqual(TextRuns, other.TextRuns) &&
 			object.ReferenceEquals(CanvasContent, other.CanvasContent) &&
 			SequenceEqual(_classNames, other._classNames) &&
 			BagsEqual(Attributes, other.Attributes) &&
 			DeclarationsEqual(InlineStyle, other.InlineStyle);
+	}
+
+	private static bool TextRunsEqual(IReadOnlyList<UiStyledTextRun>? left, IReadOnlyList<UiStyledTextRun>? right)
+	{
+		if (ReferenceEquals(left, right))
+		{
+			return true;
+		}
+
+		if (left == null || right == null || left.Count != right.Count)
+		{
+			return false;
+		}
+
+		for (int i = 0; i < left.Count; i++)
+		{
+			if (!left[i].Equals(right[i]))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private static bool SequenceEqual(IReadOnlyList<string> left, IReadOnlyList<string> right)

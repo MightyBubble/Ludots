@@ -76,7 +76,8 @@ public sealed record NarrativeFrontendSurfaceModel(
     /// <summary>Resolved absolute/data URI filled at frontend ingest — composers may use either.</summary>
     string PortraitSrc = "",
     float PortraitSize = 96f,
-    string FrameImageSrc = "");
+    string FrameImageSrc = "",
+    IReadOnlyList<Ludots.Core.Presentation.Hud.PresentationTextRun>? BodyRuns = null);
 
 public sealed record NarrativeFrontendPageState(
     string OwnerId,

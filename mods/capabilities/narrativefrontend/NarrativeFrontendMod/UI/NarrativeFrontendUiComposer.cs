@@ -479,9 +479,32 @@ internal static class NarrativeFrontendUiComposer
 
     private static UiElementBuilder BuildBody(NarrativeFrontendSurfaceModel surface, float fontSize = 13f)
     {
-        return ApplyOptionalColor(
-            Ui.Text(surface.Body).Class("story-body").FontSize(fontSize).WhiteSpace(UiWhiteSpace.Normal),
-            surface.ForegroundHex);
+        UiElementBuilder text = Ui.Text(surface.Body).Class("story-body").FontSize(fontSize).WhiteSpace(UiWhiteSpace.Normal);
+        if (surface.BodyRuns is { Count: > 0 })
+        {
+            text = text.TextRuns(MapBodyRuns(surface.BodyRuns));
+        }
+
+        return ApplyOptionalColor(text, surface.ForegroundHex);
+    }
+
+    private static IReadOnlyList<UiStyledTextRun> MapBodyRuns(
+        IReadOnlyList<Ludots.Core.Presentation.Hud.PresentationTextRun> runs)
+    {
+        var mapped = new UiStyledTextRun[runs.Count];
+        for (int i = 0; i < runs.Count; i++)
+        {
+            Ludots.Core.Presentation.Hud.PresentationTextRun run = runs[i];
+            Ludots.Core.Presentation.Hud.PresentationTextStyleOverride style = run.Style;
+            mapped[i] = new UiStyledTextRun(
+                run.Text,
+                style.Bold,
+                style.Italic,
+                style.HasColor,
+                style.HasColor ? new UiColor(style.R, style.G, style.B, style.A) : default);
+        }
+
+        return mapped;
     }
 
     private static UiElementBuilder ApplyAuthorChrome(UiElementBuilder builder, NarrativeFrontendSurfaceModel surface)

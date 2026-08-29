@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Presentation.Hud;
 
 namespace Ludots.Core.Gameplay.Dialogue
 {
@@ -29,7 +30,8 @@ namespace Ludots.Core.Gameplay.Dialogue
         string CameraId,
         float AutoAdvanceSeconds,
         float ElapsedSeconds,
-        IReadOnlyList<DialogueChoiceView> Choices)
+        IReadOnlyList<DialogueChoiceView> Choices,
+        IReadOnlyList<PresentationTextRun>? BodyRuns = null)
     {
         public bool WaitForInput => Choices.Count == 0 && AutoAdvanceSeconds <= 0f;
         public bool AutoAdvance => Choices.Count == 0 && AutoAdvanceSeconds > 0f;

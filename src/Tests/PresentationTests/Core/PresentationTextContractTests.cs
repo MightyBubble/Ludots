@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
+using Ludots.UI.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -1025,6 +1026,21 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 () => loader.Load(catalog),
                 Throws.InvalidOperationException.With.Message.Contains("nested"));
+        }
+
+        [Test]
+        public void UiStyledTextRunNormalization_MergesMidWordStyleBoundaryIntoLaterRun()
+        {
+            var runs = new[]
+            {
+                UiStyledTextRun.Plain("Hel"),
+                new UiStyledTextRun("lo world", Bold: true),
+            };
+
+            IReadOnlyList<UiStyledTextRun> normalized = UiStyledTextRunNormalization.NormalizeWordBoundaries(runs);
+            Assert.That(normalized.Count, Is.EqualTo(1));
+            Assert.That(normalized[0].Text, Is.EqualTo("Hello world"));
+            Assert.That(normalized[0].Bold, Is.True);
         }
 
         [Test]

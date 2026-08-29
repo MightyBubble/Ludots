@@ -61,6 +61,7 @@ internal sealed class UiStyleBuilder
 	public float FontSize = 16f;
 	public string? FontFamily;
 	public bool Bold;
+	public bool Italic;
 	public UiTextDirection Direction = UiTextDirection.Ltr;
 	public UiTextAlign TextAlign = UiTextAlign.Start;
 	public UiTextDecorationLine TextDecorationLine = UiTextDecorationLine.None;
@@ -136,6 +137,7 @@ internal sealed class UiStyleBuilder
 		FontSize = style.FontSize;
 		FontFamily = style.FontFamily;
 		Bold = style.Bold;
+		Italic = style.Italic;
 		Direction = style.Direction;
 		TextAlign = style.TextAlign;
 		TextDecorationLine = style.TextDecorationLine;
@@ -213,6 +215,7 @@ internal sealed class UiStyleBuilder
 			FontSize = FontSize,
 			FontFamily = FontFamily,
 			Bold = Bold,
+			Italic = Italic,
 			Direction = Direction,
 			TextAlign = TextAlign,
 			TextDecorationLine = TextDecorationLine,

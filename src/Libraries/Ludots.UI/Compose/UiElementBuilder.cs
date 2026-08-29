@@ -26,6 +26,8 @@ public sealed class UiElementBuilder
 
 	private string? _textContent;
 
+	private IReadOnlyList<UiStyledTextRun>? _textRuns;
+
 	public UiNodeKind Kind { get; }
 
 	public string? TagName { get; }
@@ -223,6 +225,18 @@ public sealed class UiElementBuilder
 	public UiElementBuilder Text(string text)
 	{
 		_textContent = text;
+		return this;
+	}
+
+	public UiElementBuilder TextRuns(IReadOnlyList<UiStyledTextRun> runs)
+	{
+		ArgumentNullException.ThrowIfNull(runs, nameof(runs));
+		_textRuns = runs;
+		if (string.IsNullOrEmpty(_textContent))
+		{
+			_textContent = UiStyledTextRunNormalization.ConcatPlain(runs);
+		}
+
 		return this;
 	}
 
@@ -764,7 +778,7 @@ public sealed class UiElementBuilder
 		{
 			Id = _elementId,
 			ClassName = string.Join(' ', _classNames)
-		}, _textContent, array, actionHandles, TagName, _elementId, _classNames, uiAttributeBag, _inlineStyle, _canvasContent);
+		}, _textContent, array, actionHandles, TagName, _elementId, _classNames, uiAttributeBag, _inlineStyle, _canvasContent, UiPseudoElement.None, _textRuns);
 	}
 
 	public static UiElementBuilder FromElement(UiElement element)

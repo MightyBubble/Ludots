@@ -120,6 +120,8 @@ public sealed record UiStyle
 
 	public bool Bold { get; init; }
 
+	public bool Italic { get; init; }
+
 	public UiTextDirection Direction { get; init; } = UiTextDirection.Ltr;
 
 	public UiTextAlign TextAlign { get; init; } = UiTextAlign.Start;

@@ -302,9 +302,18 @@ public sealed class UiStyleResolver
 				style.Bold = true;
 			}
 		}
-		else if (tag.Equals("em", StringComparison.OrdinalIgnoreCase) ||
-			tag.Equals("i", StringComparison.OrdinalIgnoreCase) ||
-			tag.Equals("span", StringComparison.OrdinalIgnoreCase) ||
+		else if (tag.Equals("em", StringComparison.OrdinalIgnoreCase) || tag.Equals("i", StringComparison.OrdinalIgnoreCase))
+		{
+			if (!HasExplicitValue(declaration, "display"))
+			{
+				style.Display = UiDisplay.Inline;
+			}
+			if (!HasExplicitValue(declaration, "font-style"))
+			{
+				style.Italic = true;
+			}
+		}
+		else if (tag.Equals("span", StringComparison.OrdinalIgnoreCase) ||
 			tag.Equals("a", StringComparison.OrdinalIgnoreCase))
 		{
 			if (!HasExplicitValue(declaration, "display"))
@@ -352,6 +361,10 @@ public sealed class UiStyleResolver
 		if (!HasExplicitValue(declaration, "font-weight") && style.Bold == implicitStyle.Bold)
 		{
 			style.Bold = parentStyle.Bold;
+		}
+		if (!HasExplicitValue(declaration, "font-style") && style.Italic == implicitStyle.Italic)
+		{
+			style.Italic = parentStyle.Italic;
 		}
 		if (!HasExplicitValue(declaration, "font-family") && string.Equals(style.FontFamily, implicitStyle.FontFamily, StringComparison.Ordinal))
 		{
@@ -1026,6 +1039,9 @@ public sealed class UiStyleResolver
 			return;
 		case "font-weight":
 			builder.Bold = IsBold(text);
+			return;
+		case "font-style":
+			builder.Italic = IsItalic(text);
 			return;
 		case "white-space":
 			builder.WhiteSpace = ParseWhiteSpace(text);
@@ -2910,6 +2926,12 @@ public sealed class UiStyleResolver
 		}
 		int result;
 		return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out result) && result >= 600;
+	}
+
+	private static bool IsItalic(string value)
+	{
+		return string.Equals(value, "italic", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(value, "oblique", StringComparison.OrdinalIgnoreCase);
 	}
 
 	private static bool ParseBoolean(string value)
