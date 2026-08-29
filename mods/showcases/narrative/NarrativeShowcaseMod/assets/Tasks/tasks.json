@@ -1,55 +1,61 @@
 [
   {
     "id": "Task.Narrative.AshenOath.Briefing",
-    "display_name": "灰烬誓约",
-    "summary": "听守望者说完，叫醒神龛，打退灰烬兽，再回来告诉她你的裁决。",
-    "tags": [ "task.narrative" ],
+    "tags": [
+      "task.narrative"
+    ],
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
       {
         "id": "briefing",
         "kind": "signal",
-        "title": "先听米蕾勒把话说完",
         "signal_key": "showcase.briefing_accepted",
-        "hint": "走到灯台旁的金色高个子身边，按 E。"
+        "text_token": "story.task.briefing.obj0.title",
+        "hint_token": "story.task.briefing.obj0.hint"
       }
     ],
-    "next_task_id": "Task.Narrative.AshenOath.Trial"
+    "next_task_id": "Task.Narrative.AshenOath.Trial",
+    "display_token": "story.task.briefing.display",
+    "summary_token": "story.task.briefing.summary"
   },
   {
     "id": "Task.Narrative.AshenOath.Trial",
-    "display_name": "灰烬誓约",
-    "summary": "听守望者说完，叫醒神龛，打退灰烬兽，再回来告诉她你的裁决。",
-    "tags": [ "task.narrative" ],
+    "tags": [
+      "task.narrative"
+    ],
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
       {
         "id": "trial",
         "kind": "signal",
-        "title": "去神龛叫醒灰烬兽",
         "signal_key": "showcase.beast_defeated",
-        "hint": "走到高石台边上按 E。它出来后，右键靠近，按 Q 出手。"
+        "text_token": "story.task.trial.obj0.title",
+        "hint_token": "story.task.trial.obj0.hint"
       }
     ],
-    "next_task_id": "Task.Narrative.AshenOath.Return"
+    "next_task_id": "Task.Narrative.AshenOath.Return",
+    "display_token": "story.task.trial.display",
+    "summary_token": "story.task.trial.summary"
   },
   {
     "id": "Task.Narrative.AshenOath.Return",
-    "display_name": "灰烬誓约",
-    "summary": "听守望者说完，叫醒神龛，打退灰烬兽，再回来告诉她你的裁决。",
-    "tags": [ "task.narrative" ],
+    "tags": [
+      "task.narrative"
+    ],
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
       {
         "id": "return",
         "kind": "signal",
-        "title": "回去告诉米蕾勒你的裁决",
         "signal_key": "showcase.verdict_delivered",
-        "hint": "回到灯台旁按 E，再按 1 选职责，或按 2 选仁慈。"
+        "text_token": "story.task.return.obj0.title",
+        "hint_token": "story.task.return.obj0.hint"
       }
-    ]
+    ],
+    "display_token": "story.task.return.display",
+    "summary_token": "story.task.return.summary"
   }
 ]

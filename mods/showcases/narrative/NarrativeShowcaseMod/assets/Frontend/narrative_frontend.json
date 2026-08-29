@@ -7,25 +7,25 @@
     "width": 980,
     "offsetY": 140,
     "zIndex": 55,
-    "title": "灰烬谷",
+    "title": "story.ui.promptribbon_title",
     "accentHex": "#F6C56B"
   },
   "objectiveTracker": {
     "anchor": "TopLeft",
     "width": 390,
     "zIndex": 40,
-    "eyebrow": "任务",
-    "title": "灰烬誓约",
-    "footer": "跟着眼前这一步走就行。",
+    "eyebrow": "story.ui.objectivetracker_eyebrow",
+    "title": "story.ui.objectivetracker_title",
+    "footer": "story.ui.objectivetracker_footer",
     "accentHex": "#76D8FF"
   },
   "historyJournal": {
     "anchor": "TopRight",
     "width": 420,
     "zIndex": 42,
-    "eyebrow": "回顾",
-    "title": "刚才发生了什么",
-    "footer": "演过的对话与演出会出现在这里。",
+    "eyebrow": "story.ui.historyjournal_eyebrow",
+    "title": "story.ui.historyjournal_title",
+    "footer": "story.ui.historyjournal_footer",
     "accentHex": "#8BE9FD"
   },
   "variablesPanel": {
@@ -33,9 +33,9 @@
     "width": 390,
     "offsetY": 214,
     "zIndex": 41,
-    "eyebrow": "状态",
-    "title": "剧情进度",
-    "footer": "你的选择会写在这里。",
+    "eyebrow": "story.ui.variablespanel_eyebrow",
+    "title": "story.ui.variablespanel_title",
+    "footer": "story.ui.variablespanel_footer",
     "accentHex": "#A7F3D0"
   },
   "notificationStack": {
@@ -43,70 +43,65 @@
     "width": 520,
     "offsetY": 12,
     "zIndex": 70,
-    "eyebrow": "刚才",
-    "title": "有回应",
+    "eyebrow": "story.ui.notificationstack_eyebrow",
+    "title": "story.ui.notificationstack_title",
     "footer": "",
     "accentHex": "#FDE68A"
   },
   "overlayDialogue": {
-    "eyebrow": "交谈",
-    "footer": "回车听下一句 · 1/2/3 选回复"
+    "eyebrow": "story.ui.overlaydialogue_eyebrow",
+    "footer": "story.ui.overlaydialogue_footer"
   },
   "dialogueBubble": {
-    "eyebrow": "附近",
-    "footer": "回车听下一句"
+    "eyebrow": "story.ui.dialoguebubble_eyebrow",
+    "footer": "story.ui.dialoguebubble_footer"
   },
   "standingPortrait": {
-    "eyebrow": "立绘",
-    "footer": "回车继续 · 1/2/3 选回复"
+    "eyebrow": "story.ui.standingportrait_eyebrow",
+    "footer": "story.ui.standingportrait_footer"
   },
   "subtitleBubble": {
-    "eyebrow": "旁白",
-    "footer": "Tab 跳过这段"
+    "eyebrow": "story.ui.subtitlebubble_eyebrow",
+    "footer": "story.ui.subtitlebubble_footer"
   },
   "choiceList": {
-    "eyebrow": "回复",
-    "title": "你怎么说？",
-    "footer": "按数字键，马上能看到下一句。"
+    "eyebrow": "story.ui.choicelist_eyebrow",
+    "title": "story.ui.choicelist_title",
+    "footer": "story.ui.choicelist_footer"
   },
   "transmissionOverlay": {
-    "eyebrow": "传讯",
+    "eyebrow": "story.ui.transmissionoverlay_eyebrow",
     "footer": ""
   },
   "nameplate": {
     "anchor": "TopLeft",
     "width": 200,
     "zIndex": 36,
-    "eyebrow": "场上",
+    "eyebrow": "story.ui.nameplate_eyebrow",
     "footer": "",
     "accentHex": "#F6C56B"
   },
   "hints": {
-    "promptTitle": "灰烬谷",
-    "introPrompt": "灯火先照到守望者米蕾勒。回车看下一句，Tab 跳过这段。",
-    "exploreWardenPrompt": "金色高个子是守望者米蕾勒。右键走到她身边，按 E 跟她说话。",
-    "exploreWardenNearPrompt": "已经到米蕾勒身边了：按 E 跟她说话。",
-    "exploreShrinePrompt": "场地另一头那座高石台是余烬神龛。右键走过去，按 E 叫醒它。",
-    "exploreShrineNearPrompt": "已经到神龛边上了：按 E 唤醒余烬神龛。",
-    "choicePrompt": "米蕾勒在等你回话：按 1 或 2，马上能看到她的下一句。",
-    "continuePrompt": "回车听下一句。",
-    "combatPrompt": "灰烬兽已经出来了：右键靠近它，按 Q 出手。",
-    "returnPrompt": "试炼结束了。右键回到米蕾勒身边，按 E 告诉她你的裁决。",
-    "returnNearPrompt": "已经回到米蕾勒身边：按 E，再按 1 或 2 选结局。",
-    "skipPrompt": "这段演出可以用 Tab 跳过。",
-    "autoAdvancePrompt": "这句旁白会按时推进。"
+    "promptTitle": "story.ui.hints_prompttitle",
+    "introPrompt": "story.ui.hints_introprompt",
+    "exploreWardenPrompt": "story.ui.hints_explorewardenprompt",
+    "exploreWardenNearPrompt": "story.ui.hints_explorewardennearprompt",
+    "exploreShrinePrompt": "story.ui.hints_exploreshrineprompt",
+    "exploreShrineNearPrompt": "story.ui.hints_exploreshrinenearprompt",
+    "choicePrompt": "story.ui.hints_choiceprompt",
+    "continuePrompt": "story.ui.hints_continueprompt",
+    "combatPrompt": "story.ui.hints_combatprompt",
+    "returnPrompt": "story.ui.hints_returnprompt",
+    "returnNearPrompt": "story.ui.hints_returnnearprompt",
+    "skipPrompt": "story.ui.hints_skipprompt",
+    "autoAdvancePrompt": "story.ui.hints_autoadvanceprompt"
   },
   "templates": {
-    "objectiveTitleFormat": "{task}",
-    "variableCaptionFormat": "{label}: {value}",
-    "taskActivated": "下一步：{bodyText}",
-    "dialogueEntered": "{speaker}：{bodyText}",
-    "dialogueChoiceCommitted": "你说了：{bodyText}",
-    "sequenceEntered": "{speaker}：{bodyText}",
-    "taskCompleted": "这一步完成了",
-    "signal": "",
-    "beastSpawned": "灰烬兽走进了神龛场地。",
-    "rewardApplied": "你感到伤口愈合，脚步也轻了一点。"
+    "taskActivatedPrefix": "story.ui.templates.taskactivated.prefix",
+    "dialogueChoiceCommittedPrefix": "story.ui.templates.dialoguechoicecommitted.prefix",
+    "taskCompleted": "story.ui.templates_taskcompleted",
+    "beastSpawned": "story.ui.templates_beastspawned",
+    "rewardApplied": "story.ui.templates_rewardapplied"
   },
   "routing": {
     "subtitleSequenceIds": [
@@ -145,61 +140,56 @@
   "variables": [
     {
       "variableId": "trust",
-      "label": "信任",
+      "label": "story.ui.variables_0_label",
       "accentHex": "#A7F3D0"
     },
     {
       "variableId": "lore",
-      "label": "见闻",
+      "label": "story.ui.variables_1_label",
       "accentHex": "#93C5FD"
     },
     {
       "variableId": "ending",
-      "label": "结局",
+      "label": "story.ui.variables_2_label",
       "accentHex": "#FDE68A"
     },
     {
       "variableId": "trial_phase",
-      "label": "试炼阶段",
+      "label": "story.ui.variables_3_label",
       "accentHex": "#FDBA74"
     }
   ],
   "endingLabels": {
-    "0": "未定",
-    "1": "职责",
-    "2": "仁慈"
-  },
-  "speakerLabels": {
-    "speaker.warden": "守望者米蕾勒",
-    "speaker.player": "织弧者",
-    "speaker.shrine": "余烬神龛"
+    "0": "story.ui.endinglabels_0",
+    "1": "story.ui.endinglabels_1",
+    "2": "story.ui.endinglabels_2"
   },
   "cast": [
     {
       "entityName": "Arcweaver",
-      "title": "织弧者",
-      "role": "你",
+      "title": "story.ui.cast_0_title",
+      "role": "story.ui.cast_0_role",
       "accentHex": "#76D8FF",
       "headOffsetYCm": 170
     },
     {
       "entityName": "WardenMirelle",
-      "title": "米蕾勒",
-      "role": "守望者",
+      "title": "story.ui.cast_1_title",
+      "role": "story.ui.cast_1_role",
       "accentHex": "#F6C56B",
       "headOffsetYCm": 190
     },
     {
       "entityName": "EmberShrine",
-      "title": "余烬神龛",
-      "role": "试炼入口",
+      "title": "story.ui.cast_2_title",
+      "role": "story.ui.cast_2_role",
       "accentHex": "#F59E0B",
       "headOffsetYCm": 240
     },
     {
       "entityName": "AshenBeast",
-      "title": "灰烬兽",
-      "role": "敌人",
+      "title": "story.ui.cast_3_title",
+      "role": "story.ui.cast_3_role",
       "accentHex": "#F87171",
       "headOffsetYCm": 180
     }

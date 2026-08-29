@@ -1950,7 +1950,9 @@ namespace Ludots.Core.Engine
                 World,
                 taskDefinitions,
                 providerServices,
-                taskPresentation);
+                taskPresentation,
+                GetService(CoreServiceKeys.PresentationTextCatalog),
+                GetService(CoreServiceKeys.PresentationDisplayResolver));
             TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);

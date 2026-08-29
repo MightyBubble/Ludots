@@ -51,16 +51,23 @@ namespace Ludots.Core.Gameplay.Tasks
         private readonly List<Entity> _scratch = new(64);
         private int _nextInstanceId = 1;
 
+        private readonly Ludots.Core.Presentation.Hud.PresentationTextCatalog? _textCatalog;
+        private readonly Ludots.Core.Presentation.PresentationDisplayResolver? _display;
+
         public TaskRuntimeService(
             World world,
             TaskDefinitionRegistry definitions,
             ProviderServices providers,
-            TaskPresentationBuffer presentation)
+            TaskPresentationBuffer presentation,
+            Ludots.Core.Presentation.Hud.PresentationTextCatalog? textCatalog = null,
+            Ludots.Core.Presentation.PresentationDisplayResolver? display = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _providers = providers ?? throw new ArgumentNullException(nameof(providers));
             _presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
+            _textCatalog = textCatalog;
+            _display = display;
             RebuildIndexFromWorld();
         }
 
@@ -324,8 +331,8 @@ namespace Ludots.Core.Gameplay.Tasks
                     : 1;
                 objectives.Add(new TaskObjectiveProgressView(
                     objective.Id,
-                    objective.Title,
-                    objective.Hint,
+                    ResolveObjectiveText(objective.TextToken, objective.Title, definition.Id, objective.Id),
+                    ResolveObjectiveText(objective.HintToken, objective.Hint, definition.Id, objective.Id),
                     objective.Kind,
                     completed,
                     current,
@@ -335,8 +342,12 @@ namespace Ludots.Core.Gameplay.Tasks
             view = new TaskView(
                 taskEntity,
                 definition.Id,
-                definition.DisplayName,
-                definition.Summary,
+                string.IsNullOrWhiteSpace(definition.DisplayToken)
+                    ? definition.DisplayName
+                    : Ludots.Core.Gameplay.Story.StoryTextResolution.FormatToken(_textCatalog, _display, definition.DisplayToken),
+                string.IsNullOrWhiteSpace(definition.SummaryToken)
+                    ? definition.Summary
+                    : Ludots.Core.Gameplay.Story.StoryTextResolution.FormatToken(_textCatalog, _display, definition.SummaryToken),
                 task.State,
                 definition.CompletionRule,
                 task.InstanceId,
@@ -427,6 +438,17 @@ namespace Ludots.Core.Gameplay.Tasks
             }
 
             Fail(entity, reason);
+        }
+
+        /// <summary>
+        /// Objective text contract: token is authoritative when authored (cross-mod migration in
+        /// progress — non-narrative lines still author literal title/hint).
+        /// </summary>
+        private string ResolveObjectiveText(string token, string literal, string taskId, string objectiveId)
+        {
+            return string.IsNullOrWhiteSpace(token)
+                ? literal
+                : Ludots.Core.Gameplay.Story.StoryTextResolution.FormatToken(_textCatalog, _display, token);
         }
 
         public List<TaskView> CaptureViews()

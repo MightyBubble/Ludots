@@ -32,7 +32,6 @@ namespace NarrativeShowcaseMod.Runtime
         public NarrativeShowcaseCastMemberConfig[] Cast { get; set; } = Array.Empty<NarrativeShowcaseCastMemberConfig>();
         public NarrativeShowcaseVariableConfig[] Variables { get; set; } = Array.Empty<NarrativeShowcaseVariableConfig>();
         public Dictionary<string, string> EndingLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-        public Dictionary<string, string> SpeakerLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         public static NarrativeShowcaseFrontendConfig Load(Stream stream)
         {
@@ -48,18 +47,6 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             return config;
-        }
-
-        public string ResolveSpeakerLabel(string speakerId)
-        {
-            if (!string.IsNullOrWhiteSpace(speakerId) &&
-                SpeakerLabels.TryGetValue(speakerId, out string? label) &&
-                !string.IsNullOrWhiteSpace(label))
-            {
-                return label;
-            }
-
-            return speakerId ?? string.Empty;
         }
 
         public string ResolveEndingLabel(int ending)
@@ -150,16 +137,12 @@ namespace NarrativeShowcaseMod.Runtime
         public float HeadOffsetYCm { get; set; } = 160f;
     }
 
+    /// <summary>Template tokens: words live in the text catalog; composition shape (order/punctuation) stays in code.</summary>
     internal sealed class NarrativeShowcaseTemplateConfig
     {
-        public string ObjectiveTitleFormat { get; set; } = "{task}";
-        public string VariableCaptionFormat { get; set; } = "{label}: {value}";
-        public string TaskActivated { get; set; } = string.Empty;
-        public string DialogueEntered { get; set; } = string.Empty;
-        public string DialogueChoiceCommitted { get; set; } = string.Empty;
-        public string SequenceEntered { get; set; } = string.Empty;
+        public string TaskActivatedPrefix { get; set; } = string.Empty;
+        public string DialogueChoiceCommittedPrefix { get; set; } = string.Empty;
         public string TaskCompleted { get; set; } = string.Empty;
-        public string Signal { get; set; } = string.Empty;
         public string BeastSpawned { get; set; } = string.Empty;
         public string RewardApplied { get; set; } = string.Empty;
     }
