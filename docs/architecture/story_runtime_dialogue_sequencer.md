@@ -191,7 +191,7 @@ DialogueRuntime / SequencerRuntime
 | DialogueView | `ResolvedText`、`PortraitImageId` / `StandingImageId`、选项 `ChoiceId`+文案 | 绝对路径、`conditionGraphId` / `nextNode` |
 | `StoryPresentationStreamHandle` | `StreamId` + `Generation`（一帧对话流实例句柄） | 业务逻辑 |
 | `StoryPresentationFrame` | 句柄 + 字符串袋（Title/Body/Subtitle/Footer）+ `ImageId` + 选项标签 | 文件系统路径、图 id |
-| NarrativeFrontend / Showcase chrome | 锚点、宽高、眉题、页脚、九宫格框、`imageId→src` | 再读 Dialogue 图结构 |
+| NarrativeFrontend / Showcase chrome | 眉题、页脚、选项标题（TextToken）、九宫格框、`imageId→src` | 写几何/色——几何与色归 profile 单一写入者 |
 
 Showcase 只负责：世界投影坐标补给、HUD（任务/回顾/提示）、把前端 chrome 叠到字符串袋上。不再手写「对话表面 / 选项表面 / 字幕表面」三套硬编码路由。
 
@@ -212,6 +212,10 @@ Showcase 只负责：世界投影坐标补给、HUD（任务/回顾/提示）、
 - MapVariable 仅 Int/Float；离散结局用 Int 枚举，不用 Narrative String 变量
 - DialogueRuntime 不解析图像路径；路径只在 Frontend 边界解析
 - 选项视图不携带 Graph / next；跳转仍只在 DialogueRuntime 内
+- 全部玩家可见文本走 TextToken（PresentationTextCatalog/locales）；解析单一权威 `StoryTextResolution`，无 resolver / 未注册 token / 未注册 speaker 一律抛错，禁止明文 speakerLabels 或 token id 兜底上屏
+- 表现几何（宽/锚/偏移/zIndex/图尺寸/遮罩色）与颜色唯一来源是 `presentation_profiles.json`；前端 chrome 只供皮肤文字；`theme.css` 只管视觉皮肤——同属性禁止双源
+- 故事输入（Advance/Choice1-3/Skip）统一由 `StoryRuntimeSystem`（InputCollection 组）分发：序列优先、对话次之；域 runtime 只暴露纯 API，不轮询输入
+- Story line/speaker/profile/dialogue/sequence id 跨 mod 必须唯一（命名空间化，如 `author_kit.*`）；装载期重复 id fail-closed
 
 ## 6. UAT
 
