@@ -33,6 +33,8 @@
   <ItemGroup>
     <None Include="..\..\Platforms\Desktop\skinning_instanced.vs"><Link>skinning_instanced.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\skinning_instanced.fs"><Link>skinning_instanced.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\skinning_instanced_pose_texture.vs"><Link>skinning_instanced_pose_texture.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\shadow_depth_skinning_pose_texture.vs"><Link>shadow_depth_skinning_pose_texture.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\vfx_unlit_tint.vs"><Link>vfx_unlit_tint.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\vfx_unlit_tint.fs"><Link>vfx_unlit_tint.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\decal_project.vs"><Link>decal_project.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
