@@ -381,11 +381,101 @@ namespace Ludots.Core.Navigation.NavMesh
             walkableTriCount++;
         }
 
-        private static byte ResolveAreaId(byte a, byte b, byte c)
+        internal static byte ResolveAreaId(byte a, byte b, byte c)
         {
             if (a == b || a == c) return a;
             if (b == c) return b;
             return a;
+        }
+
+        /// <summary>Per-triangle walkable emission decision, mirroring AddFace/AppendWalkableTri
+        /// order: blocked corners cut, water above ground cuts, ramps emit their full height
+        /// range unless too steep for MinWalkableUpDot, single-level floors emit flat,
+        /// three distinct levels drop, two-level triangles split at the lone-corner midpoint.
+        /// The direct heightfield feed consumes this classifier so both bake tracks share
+        /// one semantic source instead of hand-mirroring each other.</summary>
+        internal enum NavWalkableEmissionKind : byte
+        {
+            Drop = 0,
+            FlatFloor = 1,
+            RampRange = 2,
+            TwoLevelSplit = 3
+        }
+
+        internal readonly struct NavWalkableEmission
+        {
+            public NavWalkableEmissionKind Kind { get; init; }
+            public byte AreaId { get; init; }
+            public byte LowLevel { get; init; }
+            public byte HighLevel { get; init; }
+            public byte LoneLevel { get; init; }
+            public bool LoneIsA { get; init; }
+            public bool LoneIsB { get; init; }
+
+            public static NavWalkableEmission Drop => default;
+        }
+
+        internal static NavWalkableEmission ClassifyTriangleEmission(
+            byte aLevel, byte aWater, bool aBlocked, bool aRamp, byte aArea,
+            byte bLevel, byte bWater, bool bBlocked, bool bRamp, byte bArea,
+            byte cLevel, byte cWater, bool cBlocked, bool cRamp, byte cArea,
+            float heightScaleMeters,
+            float minWalkableUpDot,
+            float horizontalRunMeters)
+        {
+            if (aBlocked || bBlocked || cBlocked)
+            {
+                return NavWalkableEmission.Drop;
+            }
+
+            if (aWater * heightScaleMeters > aLevel * heightScaleMeters ||
+                bWater * heightScaleMeters > bLevel * heightScaleMeters ||
+                cWater * heightScaleMeters > cLevel * heightScaleMeters)
+            {
+                return NavWalkableEmission.Drop;
+            }
+
+            byte area = ResolveAreaId(aArea, bArea, cArea);
+            byte lo = Math.Min(aLevel, Math.Min(bLevel, cLevel));
+            byte hi = Math.Max(aLevel, Math.Max(bLevel, cLevel));
+
+            if (aRamp || bRamp || cRamp)
+            {
+                float rise = (hi - lo) * heightScaleMeters;
+                float run = MathF.Max(1e-4f, horizontalRunMeters);
+                float upDot = run / MathF.Sqrt(run * run + rise * rise);
+                if (upDot < minWalkableUpDot)
+                {
+                    return NavWalkableEmission.Drop;
+                }
+
+                return new NavWalkableEmission { Kind = NavWalkableEmissionKind.RampRange, AreaId = area, LowLevel = lo, HighLevel = hi };
+            }
+
+            if (lo == hi)
+            {
+                return new NavWalkableEmission { Kind = NavWalkableEmissionKind.FlatFloor, AreaId = area, LowLevel = lo };
+            }
+
+            if (aLevel != bLevel && bLevel != cLevel && aLevel != cLevel)
+            {
+                return new NavWalkableEmission { Kind = NavWalkableEmissionKind.Drop, AreaId = area };
+            }
+
+            bool loneIsA = aLevel != bLevel && aLevel != cLevel;
+            bool loneIsB = !loneIsA && bLevel != aLevel;
+            byte loneLevel = loneIsA ? aLevel : loneIsB ? bLevel : cLevel;
+            byte pairLevel = loneLevel == lo ? hi : lo;
+            return new NavWalkableEmission
+            {
+                Kind = NavWalkableEmissionKind.TwoLevelSplit,
+                AreaId = area,
+                LowLevel = pairLevel,
+                HighLevel = pairLevel,
+                LoneLevel = loneLevel,
+                LoneIsA = loneIsA,
+                LoneIsB = loneIsB
+            };
         }
 
         private static int GetOrAddVertex(Vector3 p, Dictionary<VertexKey, int> vertexIndex, List<int> vx, List<int> vy, List<int> vz)

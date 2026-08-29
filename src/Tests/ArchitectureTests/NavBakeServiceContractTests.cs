@@ -564,8 +564,8 @@ namespace Ludots.Tests.Architecture
             Assert.That(estimate.TileWorldWidthCm, Is.EqualTo(400));
             Assert.That(estimate.TileWorldHeightCm, Is.EqualTo(400));
             Assert.That(estimate.TerrainCellSampleCount, Is.EqualTo(32));
-            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(128));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(128));
+            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(1152));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(1152));
             Assert.That(estimate.EstimatedTileBytesLow, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationLow));
             Assert.That(estimate.EstimatedTileBytesHigh, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationHigh));
             Assert.That(estimate.EstimatedSerialSecondsLow, Is.EqualTo(0.64d).Within(0.0001d));
@@ -633,7 +633,7 @@ namespace Ludots.Tests.Architecture
             NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
 
             Assert.That(estimate.BakeOperationCount, Is.EqualTo(204_800));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(3_276_800));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(29_491_200));
             Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Large));
             Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.True);
             Assert.Throws<InvalidOperationException>(
@@ -652,7 +652,7 @@ namespace Ludots.Tests.Architecture
             NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
 
             Assert.That(estimate.BakeOperationCount, Is.EqualTo(12_595_200));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(201_523_200));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(1_813_708_800));
             Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Reject));
             Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.False);
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
@@ -1221,13 +1221,7 @@ namespace Ludots.Tests.Architecture
         }
 
         private static NavMeshBakeConfig LoadTempConfig(string root, AgentProfileRegistry profiles)
-        {
-            var vfs = new VirtualFileSystem();
-            vfs.Mount("Core", root);
-            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
-            var catalog = ConfigCatalogLoader.Load(pipeline);
-            return new NavMeshBakeConfigLoader(pipeline, profiles).Load(catalog);
-        }
+            => NavBakeConfigLoaderTestHelpers.Load(root, profiles);
 
         private static IReadOnlyList<byte[]> CollectDetourTileBytes(NavBakeResult bake)
         {
@@ -1254,19 +1248,7 @@ namespace Ludots.Tests.Architecture
         }
 
         private static string CreateTempNavConfig(string navmeshJson)
-        {
-            string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-bake-service-" + Guid.NewGuid().ToString("N"));
-            string configs = tempRoot;
-            Directory.CreateDirectory(Path.Combine(configs, "Navigation"));
-            File.WriteAllText(Path.Combine(configs, "config_catalog.json"),
-                """
-                [
-                  { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" }
-                ]
-                """);
-            File.WriteAllText(Path.Combine(configs, "Navigation", "navmesh.json"), navmeshJson);
-            return tempRoot;
-        }
+            => NavBakeConfigLoaderTestHelpers.CreateTempNavConfig(navmeshJson);
 
         private static string CreateTempRepoNavigationConfig()
         {

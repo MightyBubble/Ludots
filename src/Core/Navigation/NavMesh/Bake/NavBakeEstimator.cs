@@ -183,6 +183,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 ? recastColumnBudgetTotal
                 : checked(terrainCellSampleCount * layerCount * profileCount);
             NavBakeBudgetStatus budgetStatus = GetBudgetStatus(budgetWorkUnitCount);
+            if (profiles.Any(profile =>
+                    profile.RecastColumnsPerAxis > RecastNavTileBaker.MaxRecastVoxelsPerAxis ||
+                    profile.RecastColumnBudgetPerTile > RecastNavTileBaker.MaxSolidVoxelColumns))
+            {
+                budgetStatus = NavBakeBudgetStatus.Reject;
+            }
             long estimatedBytesLow = checked((long)operationCount * EstimatedBytesPerOperationLow);
             long estimatedBytesHigh = checked((long)operationCount * EstimatedBytesPerOperationHigh);
             GetMsBand(context.Algorithm, out float lowMs, out float highMs);
@@ -294,7 +300,15 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 recastCellSizeCm = MathF.Max(agentCellSizeCm, terrainCellCm);
                 recastCellHeightCm = MathF.Max(recastCellSizeCm * 0.5f, MathF.Max(1f, navProfile.MaxClimbCm));
                 columnsPerAxis = checked((int)MathF.Ceiling(tileWidthCm / recastCellSizeCm));
-                columnBudget = checked(columnsPerAxis * columnsPerAxis);
+                // The real baker allocates (tileSize + 2*border)^2 solid columns and throws
+                // past MaxRecastVoxelsPerAxis / MaxSolidVoxelColumns — the estimate must
+                // count the same footprint and refuse the same budgets, or approval can
+                // green-light a bake that dies mid-run.
+                int borderVoxels = DotRecast.Recast.RcConfig.CalcBorder(
+                    agentProfile.RadiusCm / SpatialScaleDefaults.CellCm,
+                    recastCellSizeCm / SpatialScaleDefaults.CellCm);
+                int solidSide = checked(columnsPerAxis + 2 * borderVoxels);
+                columnBudget = checked(solidSide * solidSide);
                 walkableHeightVoxels = (int)MathF.Ceiling(agentProfile.HeightCm / recastCellHeightCm);
                 walkableClimbVoxels = (int)MathF.Floor(navProfile.MaxClimbCm / recastCellHeightCm);
             }
@@ -433,13 +447,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         {
             using var sha = SHA256.Create();
             var sb = new StringBuilder(1024);
-            sb.Append("v2|")
+            sb.Append("v3|")
                 .Append(context.MapId).Append('|')
                 .Append(context.ModId).Append('|')
                 .Append(context.SourceUri).Append('|')
                 .Append(terrainContentHash).Append('|')
                 .Append(NavBakeNames.FormatMode(context.Mode)).Append('|')
                 .Append(NavBakeNames.FormatAlgorithm(context.Algorithm)).Append('|')
+                .Append(context.Config?.TerrainFeed ?? NavBakeNames.TerrainFeedTriangles).Append('|')
                 .Append(context.Terrain.Topology).Append('|')
                 .Append(context.Terrain.WidthCells).Append('x').Append(context.Terrain.HeightCells).Append('|')
                 .Append(context.Terrain.ChunkSizeCells).Append('|')
