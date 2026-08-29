@@ -24,7 +24,7 @@ namespace Ludots.Core.Input.Systems
     public readonly record struct InputContextProjectionCommand(string SeatId, string ContextId, InputContextProjectionOp Op);
 
     /// <summary>
-    /// Local input context projection (#1306): derives, per client local seat, the input context
+    /// Local input context projection: derives, per client local seat, the input context
     /// set the seat demands, diffs it against what this projection has applied to the seat's
     /// handler, and emits (seatId, contextId, op) commands onto the existing
     /// <see cref="PlayerInputHandler"/> IMC stack. Demand sources: the seat's possessed
