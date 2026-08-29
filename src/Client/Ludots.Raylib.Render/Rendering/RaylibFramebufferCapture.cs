@@ -4,16 +4,17 @@ using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using SkiaSharp;
 
-namespace Ludots.Adapter.Raylib.Services
+namespace Ludots.Raylib.Render
 {
     /// <summary>
     /// Framebuffer-true screenshot capture. <c>TakeScreenshot</c>/<c>LoadImageFromScreen</c>
     /// compose the capture at the monitor's physical size while the Raylib framebuffer stays
     /// logical on Windows display scaling, anchoring the frame bottom-left and leaving black
     /// bands over the uncovered margin. Reading the framebuffer directly keeps evidence PNGs
-    /// exactly what the GPU presented, at every DPI scale.
+    /// exactly what the GPU presented, at every DPI scale. Shared by the engine host loop,
+    /// the AgentBridge capture lane, and the standalone raylib apps.
     /// </summary>
-    internal static unsafe class RaylibFramebufferCapture
+    public static unsafe class RaylibFramebufferCapture
     {
         public static byte[] EncodeFramebufferPng()
         {
@@ -62,7 +63,7 @@ namespace Ludots.Adapter.Raylib.Services
         /// image-ordered (top-down) rows, so this is a straight row copy; the source is RGBA
         /// bytes, which is the bitmap's own <see cref="SKColorType.Rgba8888"/> row encoding.
         /// </summary>
-        internal static void FillBitmapRgba(SKBitmap bitmap, ReadOnlySpan<byte> rgbaRows)
+        public static void FillBitmapRgba(SKBitmap bitmap, ReadOnlySpan<byte> rgbaRows)
         {
             int width = bitmap.Width;
             int height = bitmap.Height;

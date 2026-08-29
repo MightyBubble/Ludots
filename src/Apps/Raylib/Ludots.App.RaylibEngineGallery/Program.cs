@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Ludots.Raylib.Render;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 
@@ -57,22 +58,12 @@ namespace Ludots.App.RaylibEngineGallery
             string? stillDirectory = stillSequence
                 ? Path.GetDirectoryName(Path.GetFullPath(stillBasePath!))
                 : null;
-            var stillMoves = new List<(string Source, string Target)>();
+            var stillTargets = new List<string>();
 
             bool headless = screenshotPath != null || stillSequence;
             if (headless)
             {
                 Rl.SetConfigFlags(GalleryWindowFlags.FlagWindowHidden);
-            }
-
-            if (screenshotPath != null)
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(screenshotPath!))!);
-            }
-
-            if (stillDirectory != null)
-            {
-                Directory.CreateDirectory(stillDirectory);
             }
 
             GalleryFont.Reset();
@@ -104,17 +95,18 @@ namespace Ludots.App.RaylibEngineGallery
                 GalleryFont.Flush();
                 if (screenshotPath != null && drawn == frames - 1)
                 {
-                    // raylib 5.5 TakeScreenshot 读取当前帧缓冲，须先冲刷 Skia 文字与 rl 渲染批次。
+                    // 直读帧缓冲（DPI 无假黑边）前先冲刷 rl 渲染批次，Skia 文字已由 Flush 入批。
                     Rl.rlDrawRenderBatchActive();
-                    Rl.TakeScreenshot(Path.GetFileName(screenshotPath));
+                    RaylibFramebufferCapture.WriteFramebufferPng(screenshotPath);
                 }
 
                 if (stillSequence && stillIndex < stillFrames.Length && drawn == stillFrames[stillIndex] - 1)
                 {
                     Rl.rlDrawRenderBatchActive();
-                    string stillName = BuildStillFileName(stillBasePath!, stillIndex, stillFrames[stillIndex]);
-                    Rl.TakeScreenshot(stillName);
-                    stillMoves.Add((stillName, Path.Combine(stillDirectory!, stillName)));
+                    string stillTarget = Path.Combine(
+                        stillDirectory!, BuildStillFileName(stillBasePath!, stillIndex, stillFrames[stillIndex]));
+                    RaylibFramebufferCapture.WriteFramebufferPng(stillTarget);
+                    stillTargets.Add(stillTarget);
                     stillIndex++;
                 }
 
@@ -123,38 +115,18 @@ namespace Ludots.App.RaylibEngineGallery
             }
 
             int exitCode = 0;
-            if (screenshotPath != null)
+            if (screenshotPath != null && !File.Exists(Path.GetFullPath(screenshotPath)))
             {
-                string fullScreenshotPath = Path.GetFullPath(screenshotPath);
-                string workingPath = Path.Combine(Environment.CurrentDirectory, Path.GetFileName(screenshotPath));
-                if (!string.Equals(workingPath, fullScreenshotPath, StringComparison.OrdinalIgnoreCase) &&
-                    File.Exists(workingPath))
-                {
-                    File.Copy(workingPath, fullScreenshotPath, overwrite: true);
-                    File.Delete(workingPath);
-                }
-
-                if (!File.Exists(fullScreenshotPath))
-                {
-                    Console.Error.WriteLine($"Failed to write screenshot '{screenshotPath}'.");
-                    exitCode = 3;
-                }
+                Console.Error.WriteLine($"Failed to write screenshot '{screenshotPath}'.");
+                exitCode = 3;
             }
 
-            foreach ((string source, string target) in stillMoves)
+            foreach (string target in stillTargets)
             {
-                string workingPath = Path.Combine(Environment.CurrentDirectory, source);
-                if (!File.Exists(workingPath))
+                if (!File.Exists(target))
                 {
-                    Console.Error.WriteLine($"Failed to write still '{source}'.");
+                    Console.Error.WriteLine($"Failed to write still '{target}'.");
                     exitCode = exitCode == 0 ? 3 : exitCode;
-                    continue;
-                }
-
-                if (!string.Equals(workingPath, target, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Copy(workingPath, target, overwrite: true);
-                    File.Delete(workingPath);
                 }
             }
 
@@ -243,16 +215,8 @@ namespace Ludots.App.RaylibEngineGallery
 
                 if (interactiveShot != null && frameIndex == 120)
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(interactiveShot))!);
                     Rl.rlDrawRenderBatchActive();
-                    Rl.TakeScreenshot(Path.GetFileName(interactiveShot));
-                    string full = Path.GetFullPath(interactiveShot);
-                    string working = Path.Combine(Environment.CurrentDirectory, Path.GetFileName(interactiveShot));
-                    if (!string.Equals(working, full, StringComparison.OrdinalIgnoreCase) && File.Exists(working))
-                    {
-                        File.Copy(working, full, overwrite: true);
-                        File.Delete(working);
-                    }
+                    RaylibFramebufferCapture.WriteFramebufferPng(interactiveShot);
 
                     Rl.EndDrawing();
                     break;

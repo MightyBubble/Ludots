@@ -10,38 +10,6 @@ namespace Ludots.AgentBridge
     /// </summary>
     public static class BuiltinAgentTools
     {
-        public static IReadOnlyList<string> ExpectedNames { get; } = new[]
-        {
-            "ludots.session.info",
-            "ludots.time.get",
-            "ludots.time.control",
-            "ludots.camera.control",
-            "ludots.logs.tail",
-            "ludots.events.fire",
-            "ludots.entities.query",
-            "ludots.entities.pick",
-            "ludots.spatial.query",
-            "ludots.nav.project",
-            "ludots.nav.findPath",
-            "ludots.ui.tree",
-            "ludots.ui.query",
-            "ludots.ui.click",
-            "ludots.gas.entity",
-            "ludots.gas.diagnostics",
-            "ludots.orders.inspect",
-            "ludots.orders.issue",
-            "ludots.input.state",
-            "ludots.input.inject",
-            "ludots.input.raw",
-            "ludots.screenshot",
-            "ludots.recording.start",
-            "ludots.recording.stop",
-            "ludots.graph.debug",
-            "ludots.presenters.query",
-            "ludots.presenters.desync",
-            "ludots.presenters.screen",
-        };
-
         public static void RegisterAll(
             AgentToolRegistry tools,
             AgentBridgeRuntime runtime,
