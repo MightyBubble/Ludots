@@ -877,6 +877,157 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationTextCatalogLoader_ParsesRestrictedMarkup_IntoStyledParts()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""story.warden.warn"", ""argCount"": 0 },
+  { ""id"": ""story.line.wrap_arg"", ""argCount"": 1 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""zh-CN"",
+  ""locales"": {
+    ""zh-CN"": {
+      ""story.warden.warn"": ""灯还亮着，<b>别走神</b>，山谷在等<color=#FFF6C56B>见证者</color>"",
+      ""story.line.wrap_arg"": ""称呼：<b>{0}</b>""
+    },
+    ""en-US"": {
+      ""story.warden.warn"": ""Lanterns still burn. Stay <i>focused</i>."",
+      ""story.line.wrap_arg"": ""Call me <b>{0}</b>""
+    }
+  }
+}");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var loader = new PresentationTextCatalogLoader(pipeline);
+            PresentationTextCatalog textCatalog = loader.Load(catalog);
+
+            int warnId = textCatalog.GetTokenId("story.warden.warn");
+            Assert.That(textCatalog.TryGetTemplate(textCatalog.DefaultLocaleId, warnId, out var warnTemplate), Is.True);
+            Assert.That(warnTemplate.HasStyledParts, Is.True);
+
+            var packet = PresentationTextPacket.FromToken(warnId);
+            Assert.That(PresentationTextFormatter.TryFormat(textCatalog, textCatalog.DefaultLocaleId, in packet, out string plain), Is.True);
+            Assert.That(plain, Is.EqualTo("灯还亮着，别走神，山谷在等见证者"));
+
+            Assert.That(PresentationTextFormatter.TryFormatRuns(textCatalog, textCatalog.DefaultLocaleId, in packet, out var runs), Is.True);
+            Assert.That(runs.Count, Is.EqualTo(4));
+            Assert.That(runs[0].Text, Is.EqualTo("灯还亮着，"));
+            Assert.That(runs[0].Style.IsEmpty, Is.True);
+            Assert.That(runs[1].Text, Is.EqualTo("别走神"));
+            Assert.That(runs[1].Style.Bold, Is.True);
+            Assert.That(runs[2].Text, Is.EqualTo("，山谷在等"));
+            Assert.That(runs[3].Text, Is.EqualTo("见证者"));
+            Assert.That(runs[3].Style.HasColor, Is.True);
+            Assert.That(runs[3].Style.A, Is.EqualTo(0xFF));
+            Assert.That(runs[3].Style.R, Is.EqualTo(0xF6));
+            Assert.That(runs[3].Style.G, Is.EqualTo(0xC5));
+            Assert.That(runs[3].Style.B, Is.EqualTo(0x6B));
+
+            int wrapId = textCatalog.GetTokenId("story.line.wrap_arg");
+            var wrapPacket = PresentationTextPacket.FromToken(wrapId);
+            wrapPacket.SetArg(0, PresentationTextArg.FromString(textCatalog.StringPool, "米蕾勒"));
+            Assert.That(PresentationTextFormatter.TryFormatRuns(textCatalog, textCatalog.DefaultLocaleId, in wrapPacket, out var wrapRuns), Is.True);
+            Assert.That(wrapRuns.Count, Is.EqualTo(2));
+            Assert.That(wrapRuns[0].Text, Is.EqualTo("称呼："));
+            Assert.That(wrapRuns[1].Text, Is.EqualTo("米蕾勒"));
+            Assert.That(wrapRuns[1].Style.Bold, Is.True);
+        }
+
+        [Test]
+        public void PresentationTextCatalogLoader_FailsClosed_OnIllegalMarkup()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""story.bad.unclosed"", ""argCount"": 0 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""zh-CN"",
+  ""locales"": {
+    ""zh-CN"": {
+      ""story.bad.unclosed"": ""未闭合 <b>词""
+    },
+    ""en-US"": {
+      ""story.bad.unclosed"": ""ok""
+    }
+  }
+}");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var loader = new PresentationTextCatalogLoader(pipeline);
+            Assert.That(
+                () => loader.Load(catalog),
+                Throws.InvalidOperationException.With.Message.Contains("story.bad.unclosed"));
+        }
+
+        [Test]
+        public void PresentationTextCatalogLoader_FailsClosed_OnBadColorAndNesting()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""story.bad.color"", ""argCount"": 0 },
+  { ""id"": ""story.bad.nest"", ""argCount"": 0 }
+]");
+
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""zh-CN"",
+  ""locales"": {
+    ""zh-CN"": {
+      ""story.bad.color"": ""坏色 <color=#ZZ>x</color>"",
+      ""story.bad.nest"": ""ok""
+    },
+    ""en-US"": {
+      ""story.bad.color"": ""ok"",
+      ""story.bad.nest"": ""ok""
+    }
+  }
+}");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var loader = new PresentationTextCatalogLoader(pipeline);
+            Assert.That(
+                () => loader.Load(catalog),
+                Throws.InvalidOperationException.With.Message.Contains("story.bad.color"));
+
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""zh-CN"",
+  ""locales"": {
+    ""zh-CN"": {
+      ""story.bad.color"": ""ok"",
+      ""story.bad.nest"": ""嵌套 <b>外<i>内</i></b>""
+    },
+    ""en-US"": {
+      ""story.bad.color"": ""ok"",
+      ""story.bad.nest"": ""ok""
+    }
+  }
+}");
+
+            Assert.That(
+                () => loader.Load(catalog),
+                Throws.InvalidOperationException.With.Message.Contains("nested"));
+        }
+
+        [Test]
         public void GameEngine_RegistersPresentationTextCatalogServices()
         {
             using var engine = CreateEngine("LudotsCoreMod", "CoreInputMod");

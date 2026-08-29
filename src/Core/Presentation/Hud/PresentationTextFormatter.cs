@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
@@ -24,6 +25,24 @@ namespace Ludots.Core.Presentation.Hud
             return true;
         }
 
+        public static bool TryFormatRuns(
+            PresentationTextCatalog catalog,
+            int localeId,
+            in PresentationTextPacket packet,
+            out IReadOnlyList<PresentationTextRun> runs)
+        {
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+
+            if (!packet.HasValue || !catalog.TryGetTemplate(localeId, packet.TokenId, out var template))
+            {
+                runs = Array.Empty<PresentationTextRun>();
+                return false;
+            }
+
+            runs = FormatRuns(template, in packet, catalog.StringPool);
+            return true;
+        }
+
         public static string Format(
             PresentationTextTemplate template,
             in PresentationTextPacket packet,
@@ -34,6 +53,52 @@ namespace Ludots.Core.Presentation.Hud
             var builder = new StringBuilder(Math.Max(template.Source.Length, packet.ArgCount * 8));
             AppendFormatted(builder, template, in packet, stringPool);
             return builder.ToString();
+        }
+
+        public static IReadOnlyList<PresentationTextRun> FormatRuns(
+            PresentationTextTemplate template,
+            in PresentationTextPacket packet,
+            PresentationTextStringPool? stringPool = null)
+        {
+            if (template == null) throw new ArgumentNullException(nameof(template));
+
+            if (!template.HasStyledParts)
+            {
+                string plain = Format(template, in packet, stringPool);
+                if (string.IsNullOrEmpty(plain))
+                {
+                    return Array.Empty<PresentationTextRun>();
+                }
+
+                return new[] { new PresentationTextRun(plain, PresentationTextStyleOverride.None) };
+            }
+
+            var runs = new List<PresentationTextRun>(template.GetParts().Length);
+            var scratch = new StringBuilder(32);
+            ReadOnlySpan<PresentationTextTemplatePart> parts = template.GetParts();
+            for (int i = 0; i < parts.Length; i++)
+            {
+                PresentationTextTemplatePart part = parts[i];
+                scratch.Clear();
+                if (part.Kind == PresentationTextTemplatePartKind.Literal ||
+                    part.Kind == PresentationTextTemplatePartKind.StyledLiteral)
+                {
+                    scratch.Append(part.Literal);
+                }
+                else if ((uint)part.ArgIndex < packet.ArgCount)
+                {
+                    AppendArg(scratch, packet.GetArg(part.ArgIndex), stringPool);
+                }
+
+                if (scratch.Length == 0)
+                {
+                    continue;
+                }
+
+                runs.Add(new PresentationTextRun(scratch.ToString(), part.Style));
+            }
+
+            return runs;
         }
 
         public static void AppendFormatted(
@@ -49,9 +114,15 @@ namespace Ludots.Core.Presentation.Hud
             for (int i = 0; i < parts.Length; i++)
             {
                 PresentationTextTemplatePart part = parts[i];
-                if (part.Kind == PresentationTextTemplatePartKind.Literal)
+                if (part.Kind == PresentationTextTemplatePartKind.Literal ||
+                    part.Kind == PresentationTextTemplatePartKind.StyledLiteral)
                 {
                     builder.Append(part.Literal);
+                    continue;
+                }
+
+                if (part.Kind != PresentationTextTemplatePartKind.Argument)
+                {
                     continue;
                 }
 
