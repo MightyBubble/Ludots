@@ -38,6 +38,7 @@ namespace NarrativeShowcaseMod.Runtime
     {
         private const int ShowcaseLocalPlayerId = 1;
         private const float UiMargin = 24f;
+        private const float NameplateLiftPx = 52f;
         private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private readonly IModContext _context;
@@ -534,15 +535,11 @@ namespace NarrativeShowcaseMod.Runtime
                 footer = Tr(engine, config.Footer);
             }
 
-            bool skippable = surface.Kind is NarrativeFrontendSurfaceKind.SubtitleBubble
-                or NarrativeFrontendSurfaceKind.TransmissionOverlay;
-
             return surface with
             {
                 Title = title,
                 Subtitle = string.IsNullOrWhiteSpace(surface.Subtitle) ? Tr(engine, config.Eyebrow) : surface.Subtitle,
                 Footer = footer,
-                Skippable = skippable || surface.Skippable,
                 FrameImageSrc = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
                     ? _choiceFrameSrc
                     : _panelFrameSrc
@@ -1088,7 +1085,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return false;
             }
 
-            float headOffsetYCm = 140f;
+            float headOffsetYCm = NarrativeShowcaseCastDefaults.HeadOffsetYCm;
             if (engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
                 story.TryGetProfile(NarrativeShowcaseIds.PresentationWorldBubble, out StoryPresentationProfileDefinition profile))
             {
@@ -1257,7 +1254,7 @@ namespace NarrativeShowcaseMod.Runtime
                     Subtitle: Tr(engine, member.Role),
                     Width: plate.Width,
                     OffsetX: screenX - UiMargin - (plate.Width * 0.5f),
-                    OffsetY: screenY - UiMargin - 52f,
+                    OffsetY: screenY - UiMargin - NameplateLiftPx,
                     ZIndex: plate.ZIndex,
                     AccentHex: FirstNonEmpty(member.AccentHex, plate.AccentHex),
                     BackgroundHex: plate.BackgroundHex,

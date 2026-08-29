@@ -31,7 +31,7 @@ namespace Ludots.Core.Gameplay.Sequencer
             _registry.Clear();
             var entry = ConfigPipeline.RequireEntry(catalog, SequencesPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
-            ThrowOnDuplicateIds(report, "config.json", "Sequence definition");
+            ThrowOnDuplicateIds(report, SequencesPath, "Sequence definition");
             for (int i = 0; i < merged.Count; i++)
             {
                 JsonObject node = merged[i].Node;

@@ -30,6 +30,8 @@ namespace Ludots.Core.Gameplay.Dialogue
     {
         public string Id { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
+
+        public string DisplayToken { get; set; } = string.Empty;
         public string EntryNode { get; set; } = string.Empty;
         public List<DialogueNodeDefinition> Nodes { get; set; } = new();
     }

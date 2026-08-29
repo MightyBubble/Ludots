@@ -31,7 +31,7 @@ namespace Ludots.Core.Gameplay.Dialogue
             _registry.Clear();
             var entry = ConfigPipeline.RequireEntry(catalog, DialoguesPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
-            ThrowOnDuplicateIds(report, "config.json", "Dialogue definition");
+            ThrowOnDuplicateIds(report, DialoguesPath, "Dialogue definition");
             for (int i = 0; i < merged.Count; i++)
             {
                 JsonObject node = merged[i].Node;

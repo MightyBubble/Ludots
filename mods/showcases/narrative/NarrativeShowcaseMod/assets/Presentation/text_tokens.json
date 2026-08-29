@@ -434,5 +434,17 @@
   {
     "id": "story.ui.punct.colon",
     "argCount": 0
+  },
+  {
+    "id": "story.dialogue.briefing.display",
+    "argCount": 0
+  },
+  {
+    "id": "story.dialogue.return.display",
+    "argCount": 0
+  },
+  {
+    "id": "story.dialogue.audience.display",
+    "argCount": 0
   }
 ]

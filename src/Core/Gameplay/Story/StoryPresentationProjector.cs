@@ -233,9 +233,11 @@ namespace Ludots.Core.Gameplay.Story
                         Width: profile.Width,
                         OffsetX: profile.OffsetX,
                         OffsetY: profile.OffsetY,
-                        ZIndex: 45,
+                        ZIndex: profile.ZIndex,
                         Progress01: progress01,
                         CountdownSeconds: countdown,
+                        Skippable: surfaceKind is StoryPresentationSurfaceKinds.SubtitleBubble
+                            or StoryPresentationSurfaceKinds.TransmissionOverlay,
                         AccentHex: profile.AccentHex,
                         BackgroundHex: profile.BackgroundHex,
                         BorderHex: profile.BorderHex,

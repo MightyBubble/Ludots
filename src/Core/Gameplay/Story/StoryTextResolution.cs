@@ -23,16 +23,16 @@ namespace Ludots.Core.Gameplay.Story
                 throw new InvalidOperationException("Story text token is required.");
             }
 
-            if (display != null && args is not { Count: > 0 })
-            {
-                // Display resolver is the zero-arg fast path; parameterized tokens format via the catalog below.
-                return display.FormatTokenOrThrow(token);
-            }
-
             if (catalog == null)
             {
+                // The catalog is the text SSOT; the display resolver is only a formatting fast path over it.
                 throw new InvalidOperationException(
-                    $"Story text token '{token}' cannot be resolved: neither PresentationDisplayResolver nor PresentationTextCatalog is available.");
+                    $"Story text token '{token}' cannot be resolved: PresentationTextCatalog is unavailable.");
+            }
+
+            if (display != null && args is not { Count: > 0 })
+            {
+                return display.FormatTokenOrThrow(token);
             }
 
             int tokenId = catalog.GetTokenId(token);

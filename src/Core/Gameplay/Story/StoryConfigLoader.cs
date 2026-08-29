@@ -37,7 +37,7 @@ namespace Ludots.Core.Gameplay.Story
         {
             var entry = ConfigPipeline.RequireEntry(catalog, LinesPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
-            ThrowOnDuplicateIds(report, "Story/*.json", "Story line");
+            ThrowOnDuplicateIds(report, LinesPath, "Story line");
             for (int i = 0; i < merged.Count; i++)
             {
                 var definition = JsonSerializer.Deserialize<StoryLineDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)
@@ -50,7 +50,7 @@ namespace Ludots.Core.Gameplay.Story
         {
             var entry = ConfigPipeline.RequireEntry(catalog, ProfilesPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
-            ThrowOnDuplicateIds(report, "Story/*.json", "Story presentation profile");
+            ThrowOnDuplicateIds(report, ProfilesPath, "Story presentation profile");
             for (int i = 0; i < merged.Count; i++)
             {
                 var definition = JsonSerializer.Deserialize<StoryPresentationProfileDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)
@@ -63,7 +63,7 @@ namespace Ludots.Core.Gameplay.Story
         {
             var entry = ConfigPipeline.RequireEntry(catalog, SpeakersPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
-            ThrowOnDuplicateIds(report, "Story/*.json", "Story speaker");
+            ThrowOnDuplicateIds(report, SpeakersPath, "Story speaker");
             for (int i = 0; i < merged.Count; i++)
             {
                 var definition = JsonSerializer.Deserialize<StorySpeakerDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)

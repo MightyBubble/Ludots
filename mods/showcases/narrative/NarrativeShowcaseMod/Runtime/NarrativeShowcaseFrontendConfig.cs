@@ -51,13 +51,11 @@ namespace NarrativeShowcaseMod.Runtime
 
         public string ResolveEndingLabel(int ending)
         {
-            if (EndingLabels.TryGetValue(ending.ToString(), out string? label) &&
-                !string.IsNullOrWhiteSpace(label))
-            {
-                return label;
-            }
-
-            return ending.ToString();
+            return EndingLabels.TryGetValue(ending.ToString(), out string? label) &&
+                   !string.IsNullOrWhiteSpace(label)
+                ? label
+                : throw new InvalidOperationException(
+                    $"Narrative frontend config has no endingLabels entry for ending '{ending}'.");
         }
 
         public IReadOnlyList<string> ResolveChoiceSignals(string choiceId)
@@ -138,6 +136,11 @@ namespace NarrativeShowcaseMod.Runtime
     }
 
     /// <summary>Template tokens: words live in the text catalog; composition shape (order/punctuation) stays in code.</summary>
+    internal static class NarrativeShowcaseCastDefaults
+    {
+        public const float HeadOffsetYCm = 140f;
+    }
+
     internal sealed class NarrativeShowcaseTemplateConfig
     {
         public string TaskActivatedPrefix { get; set; } = string.Empty;

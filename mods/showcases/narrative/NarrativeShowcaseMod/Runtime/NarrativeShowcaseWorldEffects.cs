@@ -32,10 +32,8 @@ namespace NarrativeShowcaseMod.Runtime
                 return;
             }
 
-            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue queue)
-            {
-                return;
-            }
+            RuntimeEntitySpawnQueue queue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) as RuntimeEntitySpawnQueue
+                ?? throw new InvalidOperationException("Narrative showcase beast spawn requires RuntimeEntitySpawnQueue.");
 
             queue.TryEnqueue(new RuntimeEntitySpawnRequest
             {
@@ -58,10 +56,12 @@ namespace NarrativeShowcaseMod.Runtime
                 return;
             }
 
-            if (engine.GetService(CoreServiceKeys.EffectRequestQueue) is not EffectRequestQueue queue ||
-                !TryFindPlayer(engine, out Entity player))
+            EffectRequestQueue queue = engine.GetService(CoreServiceKeys.EffectRequestQueue) as EffectRequestQueue
+                ?? throw new InvalidOperationException("Narrative showcase reward requires EffectRequestQueue.");
+            if (!TryFindPlayer(engine, out Entity player))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"Narrative showcase reward requires a player entity named '{NarrativeShowcaseIds.PlayerName}'.");
             }
 
             PublishBlessing(engine, queue, player, NarrativeShowcaseIds.BlessingHealEffectId);
@@ -73,10 +73,13 @@ namespace NarrativeShowcaseMod.Runtime
         private static void PublishBlessing(GameEngine engine, EffectRequestQueue queue, in Entity player, string effectId)
         {
             int templateId = EffectTemplateIdRegistry.GetId(effectId);
-            if (templateId > 0)
+            if (templateId <= 0)
             {
-                queue.Publish(new Ludots.Core.Gameplay.GAS.EffectRequest { Source = player, Target = player, TemplateId = templateId });
+                throw new InvalidOperationException(
+                    $"Narrative showcase blessing effect '{effectId}' is not registered in the effect template registry.");
             }
+
+            queue.Publish(new Ludots.Core.Gameplay.GAS.EffectRequest { Source = player, Target = player, TemplateId = templateId });
         }
 
         private static string ResolveToken(GameEngine engine, string token)

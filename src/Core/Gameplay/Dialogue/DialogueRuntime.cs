@@ -178,7 +178,9 @@ namespace Ludots.Core.Gameplay.Dialogue
                 out string standingImageId);
             view = new DialogueView(
                 _active.Definition.Id,
-                _active.Definition.DisplayName,
+                string.IsNullOrWhiteSpace(_active.Definition.DisplayToken)
+                    ? _active.Definition.DisplayName
+                    : StoryTextResolution.FormatToken(_textCatalog, _display, _active.Definition.DisplayToken),
                 node.Id,
                 node.LineId,
                 line.SpeakerId,
