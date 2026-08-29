@@ -31,6 +31,10 @@ internal sealed class ReplayShowcaseInputSystem : BaseSystem<World, float>
             return;
         }
 
+        // Mirrors the recording end boundary: the replay's last tick has now completed its full
+        // tail, so sampling here is phase-identical to FinishRecordingAtFixedBoundary.
+        _runtime.SettleEndDigestIfPending();
+
         if (_runtime.StopRequested)
         {
             _runtime.FinishRecordingAtFixedBoundary();
