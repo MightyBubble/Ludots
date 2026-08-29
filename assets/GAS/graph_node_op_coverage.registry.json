@@ -3178,6 +3178,28 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "ModifyAttributeSet",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_ModifyAttributeSet",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAttrAcceptanceTests.ModifyAttributeSet_TriggerGraphWritesTargetHealth",
+        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_WritesThroughAuthority",
+        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_UnknownEntityFailsClosed",
+        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_UnknownAttributeFailsClosedByName",
+        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
+        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "WriteSelfAttribute",
       "authorableKinds": [
         "Derived",

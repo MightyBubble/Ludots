@@ -294,6 +294,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         SetPanelAudience = 464,
 
+        /// <summary>
+        /// Set the selected target entity's current attribute value through the
+        /// AttributeMutationOps authority. E[A] = target entity; F[B] = value;
+        /// Imm = attribute symbol patched at load time.
+        /// </summary>
+        ModifyAttributeSet = 465,
+
     }
 
     public static class GraphNodeOpParser

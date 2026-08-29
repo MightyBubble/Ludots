@@ -8628,6 +8628,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SetPanelAudience/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_ModifyAttributeSet",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpModifyAttributeSetEntryMod",
+      "projectPath": "CapabilityStandardGraphOpModifyAttributeSetEntryMod.csproj",
+      "title": "图内把血量写成 42",
+      "summary": "面板按钮触发 TriggerGraph，木桩当前生命直接写成 42，属性变化仍从 GAS 正式入口落账。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ModifyAttributeSet"
+      ],
+      "binding": "capability_standard_graph_op_ModifyAttributeSet",
+      "preset": "capability_standard_graph_op_ModifyAttributeSet_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ModifyAttributeSet.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ModifyAttributeSet",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ModifyAttributeSet/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ModifyAttributeSet/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

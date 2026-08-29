@@ -75,6 +75,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             if (kind is GraphKind.Script or GraphKind.TriggerGraph)
             {
+                if (kind == GraphKind.TriggerGraph &&
+                    op == GraphNodeOp.ModifyAttributeSet &&
+                    metadata.Kind == EffectOperationKind.GasTransactional)
+                {
+                    return true;
+                }
+
                 return metadata.Kind == EffectOperationKind.Pure;
             }
 

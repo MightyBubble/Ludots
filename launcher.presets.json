@@ -2672,6 +2672,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ModifyAttributeSet_raylib",
+      "name": "Graph Op ModifyAttributeSet Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ModifyAttributeSet"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

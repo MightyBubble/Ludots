@@ -47,6 +47,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
+                    case GraphNodeOp.ModifyAttributeSet:
                     case GraphNodeOp.QueryFilterAttributeRange:
                     case GraphNodeOp.QuerySortByAttribute:
                     case GraphNodeOp.AggSumAttribute:

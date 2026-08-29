@@ -154,6 +154,9 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             case "ModifyAttributeAdd":
                 DrawDamageFloat(ctx, debugDraw, target);
                 break;
+            case "ModifyAttributeSet":
+                DrawDamageFloat(ctx, debugDraw, target);
+                break;
             case "LoadSelfAttribute":
                 DrawSelfLoop(ctx, debugDraw, caster);
                 break;
@@ -1022,6 +1025,12 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         if (string.Equals(op, "ModifyAttributeAdd", StringComparison.Ordinal) && targetAfter >= targetBefore)
         {
             throw new InvalidOperationException("ModifyAttributeAdd gallery must actually 扣血.");
+        }
+
+        if (string.Equals(op, "ModifyAttributeSet", StringComparison.Ordinal) &&
+            MathF.Abs(targetAfter - 42f) > 0.01f)
+        {
+            throw new InvalidOperationException($"ModifyAttributeSet gallery expected target health 42, got {targetAfter}.");
         }
 
         if (string.Equals(op, "WriteSelfAttribute", StringComparison.Ordinal) && casterAfter <= casterBefore)

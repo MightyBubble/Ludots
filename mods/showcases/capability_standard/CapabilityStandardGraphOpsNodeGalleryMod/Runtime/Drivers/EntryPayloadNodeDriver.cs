@@ -77,7 +77,7 @@ public sealed class EntryPayloadNodeDriver : IGraphOpsNodeDriver
                 _callStack,
                 ref _cursor,
                 SliceBudget,
-                GraphKind.Script,
+                GraphKind.TriggerGraph,
                 entryPayload: _entryPayload);
             if (!result.Halted)
             {

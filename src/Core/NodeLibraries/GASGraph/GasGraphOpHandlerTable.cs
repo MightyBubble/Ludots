@@ -166,6 +166,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.FanOutDispatchEffect or
                 GraphNodeOp.FanOutDispatchEffectDynamic or
                 GraphNodeOp.ModifyAttributeAdd or
+                GraphNodeOp.ModifyAttributeSet or
                 GraphNodeOp.SendEvent or
                 GraphNodeOp.WriteBlackboardFloat or
                 GraphNodeOp.WriteBlackboardInt or
@@ -758,6 +759,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.FanOutApplyEffect, HandleFanOutApplyEffect, "FanOutApplyEffect graph opcode.");
             Register(GraphNodeOp.RemoveEffectTemplate, HandleRemoveEffectTemplate, "RemoveEffectTemplate graph opcode.");
             Register(GraphNodeOp.ModifyAttributeAdd, HandleModifyAttributeAdd, "ModifyAttributeAdd graph opcode.");
+            Register(GraphNodeOp.ModifyAttributeSet, HandleModifyAttributeSet, "ModifyAttributeSet graph opcode.");
             Register(GraphNodeOp.SendEvent, HandleSendEvent, "SendEvent graph opcode.");
             Register(GraphNodeOp.RelationshipEnsureLink, HandleRelationshipEnsureLink, "RelationshipEnsureLink graph opcode.");
             Register(GraphNodeOp.RelationshipRemoveLink, HandleRelationshipRemoveLink, "RelationshipRemoveLink graph opcode.");
@@ -1645,6 +1647,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 s.Api.ModifyAttributeAdd(s.Caster, target, ins.Imm, s.F[ins.B]);
             }
+        }
+
+        private static void HandleModifyAttributeSet(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = s.E[ins.A];
+            if (!s.World.IsAlive(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ModifyAttributeSetTargetDead: target entity {target} is not alive.");
+            }
+
+            if (!s.World.Has<AttributeBuffer>(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ModifyAttributeSetTargetMissingAttributes: target entity {target} has no AttributeBuffer.");
+            }
+
+            s.Api.ModifyAttributeSet(s.Caster, target, ins.Imm, s.F[ins.B]);
         }
 
         private static void HandleRemoveEffectTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

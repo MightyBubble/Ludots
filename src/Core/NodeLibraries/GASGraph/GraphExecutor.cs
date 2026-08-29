@@ -178,10 +178,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int budgetSteps,
             bool programAlreadyValidated = false)
         {
-            if (frame.Kind != GraphKind.Script)
+            if (frame.Kind is not (GraphKind.Script or GraphKind.TriggerGraph))
             {
                 throw new InvalidOperationException(
-                    $"{GraphKindOperationPolicy.KindMismatchError}: ExecuteSlice 只接受 Script，收到的种类是「{frame.Kind}」。");
+                    $"{GraphKindOperationPolicy.KindMismatchError}: ExecuteSlice 只接受 Script 或 TriggerGraph，收到的种类是「{frame.Kind}」。");
             }
 
             if (!programAlreadyValidated)
@@ -399,7 +399,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphEntryPayloadTable? entryPayload = null,
             GraphEntryPayloadTable? invokeArgs = null)
         {
-            RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
+            if (kind is not (GraphKind.Script or GraphKind.TriggerGraph))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphKindOperationPolicy.KindMismatchError}: ExecuteScriptSlice 只接受 Script 或 TriggerGraph，收到的种类是「{kind}」。");
+            }
             GraphFrame frame = GraphFrame.Bind(
                 kind,
                 GraphEntityPreset.None,

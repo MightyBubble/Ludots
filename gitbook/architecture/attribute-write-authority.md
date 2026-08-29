@@ -28,6 +28,10 @@
 
 派生属性仍走已有围栏：`BeginDerivedAttributeWrites` / `EndDerivedAttributeWrites` / `RejectDerivedAttributeSideEffect`。该围栏是对的，本页不改它的语义。派生图对 current 的显式写入会保留；聚合修正本身不会覆盖 current。
 
+## TriggerGraph 属性写边界
+
+`ModifyAttributeSet` 在 TriggerGraph 中只作为权威属性写入口使用：图可以决定目标和值，但最终仍由 `GasGraphRuntimeApi` 调用 `AttributeMutationOps`，不会绕过 GAS 结算或另建一套存储。TriggerGraph 放行是为了让地图事件、面板按钮等运行时触发器能执行确定的属性写入；Script 图继续保持 Pure-only，不开放这个有副作用的操作。Effect 图的既有放行不变。
+
 ## 强制手段
 
 `AttributeBuffer.SetBase` / `SetCurrent` / `SetAggregatedCurrent` 不是玩法写入面。Core 与展厅程序集里只有白名单类型可以调用它们：

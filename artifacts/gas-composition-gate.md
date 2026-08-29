@@ -350,3 +350,63 @@ N/A — 无新 graph opcode；global 派发复用 DispatchMapEvent（opcode 453�
 「下一个 Mod 变体」将修改: **graph 连线**（换 dialogueId / 换 MapLoaded 入口条件）
 
 若选了 Core enum → FAIL — 本任务仅新增一个 Layer 0 op，后续变体不扩 enum。
+
+---
+
+## GAS Composition Gate - TriggerGraph Attribute Write (#1013)
+
+- **Task / Issue**: Add the `ModifyAttributeSet` graph op so a TriggerGraph can set a target attribute current value.
+- **Date**: 2026-08-29
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery is a new graph atomic op: **A**.
+
+Conclusion: **PASS**.
+
+Reason: `ModifyAttributeSet` has one responsibility (set one target current attribute value) and is composed into existing TriggerGraph graphs. It does not add a profile enum, preset switch, loader, registry, or second VM.
+
+### 2. Layer assignment
+
+| Capability | Layer | Existing carrier |
+|-----------|-------|------------------|
+| `ModifyAttributeSet` instruction and handler | 0 | `GraphNodeOp` + `GasGraphOpHandlerTable` |
+| Attribute symbol loading | 3 | `GraphProgramSymbolPatcher` + existing attribute resolver |
+| TriggerGraph authoring and gallery | 2 | `GraphOpDescriptorTable`, compiler, vignette and authored graph |
+| Authoritative current-value mutation | 0 service | `IGraphRuntimeApi.ModifyAttributeSet` -> `AttributeMutationOps.SetCurrent` |
+
+### 3. Reuse list
+
+- Handler table, graph compiler, descriptor table, and symbol patcher.
+- `IGraphRuntimeApi.ModifyAttributeSet` and `GasGraphRuntimeApi`.
+- `AttributeMutationOps.SetCurrent`, including dirty flags and gameplay-attribute change bits.
+- Existing gallery generator, coverage registry, launcher binding, and TriggerGraph mount path.
+
+### 4. New Layer 0 op
+
+| Op | Single responsibility | Why existing ops cannot compose it |
+|----|----------------------|-------------------------------------|
+| `ModifyAttributeSet` (465) | Set `E[A]`'s current attribute `Imm` to `F[B]`. | `ModifyAttributeAdd` only applies a delta and rejects unsupported domains; `WriteSelfAttribute` targets the caster/derived path. Neither expresses an arbitrary TriggerGraph target set. |
+
+The handler does not mutate `AttributeBuffer` directly. It delegates to the existing runtime API, whose normal path calls `AttributeMutationOps.SetCurrent`; therefore this is not a parallel write channel.
+
+### 5. Transaction boundary
+
+No new transaction boundary. The operation is one existing authoritative mutation. Dead targets and targets without `AttributeBuffer` fail fast; no silent no-op is introduced.
+
+### 6. Config SSOT
+
+Behavior remains in the existing TriggerGraph node shape (`attribute` symbol plus `target` and `value` value edges). No new JSON schema or parallel loader was added.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum.
+- [x] No parallel attribute buffer, write queue, or mutation registry.
+- [x] No direct buffer write from the graph handler.
+- [x] Unknown attribute symbols fail during symbol patching.
+- [x] Dead/missing-attribute entities fail fast at execution.
+
+### 8. Next variant test
+
+The next variant should modify graph wiring or attribute symbol data, not add another mutation path or enum.

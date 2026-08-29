@@ -156,6 +156,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.ModifyAttributeAdd:
+                case GraphNodeOp.ModifyAttributeSet:
                     RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
@@ -888,6 +889,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.ModifyAttributeAdd:
+                case GraphNodeOp.ModifyAttributeSet:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Target, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
