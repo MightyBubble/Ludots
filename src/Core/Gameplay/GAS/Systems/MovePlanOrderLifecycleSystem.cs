@@ -44,7 +44,7 @@ public sealed class MovePlanOrderLifecycleSystem : BaseSystem<World, float>
                 if (!buffer.HasActive ||
                     buffer.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId ||
                     result.Kind == MovePlanExecutionResultKind.None ||
-                    result.CommandGroupToken != buffer.ActiveOrder.Order.CommandCorrelationId)
+                    result.CommandGroupToken != buffer.ActiveOrder.Order.OrderId)
                 {
                     continue;
                 }
