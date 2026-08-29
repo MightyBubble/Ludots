@@ -123,15 +123,12 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void SeedResolution_RequiresInstalledProfiles_AndRegistersIntoTheStackIdSpace()
+        public void SeedResolution_RequiresInstalledProfiles_AndResolvesInTheKernelIdSpace()
         {
             using var world = World.Create();
             CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
             intents.Intents.Install(CommandIntentProfileTests.Harness.Config(NewIntentDefinition(IntentId)));
             var dispatch = NewDispatchRegistry();
-
-            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
 
             CommandPrefSeed seed = CommandPrefConfigLoader.ResolveSeed(
                 new CommandPrefsConfig
@@ -139,9 +136,8 @@ namespace Ludots.Tests.GAS
                     Defaults = new CommandPrefDefaultsDefinition { CommandIntentId = IntentId, CastDispatchProfileId = DispatchId },
                 },
                 intents.Intents,
-                dispatch,
-                stack.CommandIntentProfileIdRegistry);
-            Assert.That(seed.CommandIntentId, Is.EqualTo(stack.CommandIntentProfileIdRegistry.GetId(IntentId)));
+                dispatch);
+            Assert.That(seed.CommandIntentId, Is.EqualTo(intents.Intents.ProfileIdRegistry.GetId(IntentId)));
             Assert.That(seed.CastDispatchProfileId, Is.EqualTo(dispatch.ProfileIdRegistry.GetId(DispatchId)));
 
             Assert.That(
@@ -151,8 +147,7 @@ namespace Ludots.Tests.GAS
                         Defaults = new CommandPrefDefaultsDefinition { CommandIntentId = "intent.command.not_installed", CastDispatchProfileId = DispatchId },
                     },
                     intents.Intents,
-                    dispatch,
-                    stack.CommandIntentProfileIdRegistry),
+                    dispatch),
                 Throws.InvalidOperationException.With.Message.Contains("intent.command.not_installed"));
 
             Assert.That(
@@ -162,8 +157,7 @@ namespace Ludots.Tests.GAS
                         Defaults = new CommandPrefDefaultsDefinition { CommandIntentId = IntentId, CastDispatchProfileId = "dispatch.not_installed" },
                     },
                     intents.Intents,
-                    dispatch,
-                    stack.CommandIntentProfileIdRegistry),
+                    dispatch),
                 Throws.InvalidOperationException.With.Message.Contains("dispatch.not_installed"));
         }
 
@@ -179,7 +173,7 @@ namespace Ludots.Tests.GAS
 
             Assert.That(first.OrderTypeId, Is.EqualTo(ChainHarness.MoveToOrderTypeId));
             Assert.That(
-                harness.Stack.CommandIntentProfileIdRegistry.GetName(
+                harness.Intents.ProfileIdRegistry.GetName(
                     CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref)),
                 Is.EqualTo(IntentId));
         }
@@ -334,7 +328,6 @@ namespace Ludots.Tests.GAS
         {
             public const int MoveToOrderTypeId = 2;
 
-            public InteractionContextStack Stack = null!;
             public CommandIntentProfileRegistry Intents = null!;
             public CastDispatchProfileRegistry Dispatch = null!;
             public EntityCollectionStore Collections = null!;
@@ -398,12 +391,20 @@ namespace Ludots.Tests.GAS
                 harness.Intents = intents.Intents;
 
                 var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var stack = new InteractionContextStack(collectionKeys);
-                stack.Push(InteractionContextFrameDescriptor.Create(
-                    InteractionContextIds.Default,
-                    EntityCollectionKeys.CommandSource,
-                    "view.pref.command"));
-                harness.Stack = stack;
+                var contextProfiles = new InteractionContextProfileRegistry(
+                    new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+                contextProfiles.Install(new InteractionContextProfilesConfig
+                {
+                    Profiles = new List<InteractionContextProfileDefinition>
+                    {
+                        new()
+                        {
+                            Id = InteractionContextIds.Default,
+                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                            ActiveEntityViewKey = "view.pref.command",
+                        },
+                    },
+                }, collectionKeys, new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal), intents.Intents.ProfileIdRegistry);
 
                 harness.Dispatch = NewDispatchRegistry();
 
@@ -411,7 +412,7 @@ namespace Ludots.Tests.GAS
                 {
                     CommandPref pref = default;
                     pref.SetPlayerDefault(
-                        stack.CommandIntentProfileIdRegistry.Register(IntentId),
+                        intents.Intents.ProfileIdRegistry.Register(IntentId),
                         harness.Dispatch.ProfileIdRegistry.GetId(DispatchId));
                     world.Add(rep, pref);
                     harness.Pref = pref;
@@ -427,7 +428,7 @@ namespace Ludots.Tests.GAS
 
                 system.SetCommandIntentRouting(
                     world,
-                    stack,
+                    contextProfiles,
                     intents.Intents,
                     harness.Dispatch,
                     collections,

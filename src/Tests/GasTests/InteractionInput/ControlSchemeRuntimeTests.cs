@@ -312,13 +312,13 @@ namespace Ludots.Tests.GAS
             world.Add(rep, new ActiveInteractionContext
             {
                 ContextEntity = world.Create(),
-                CommandIntentProfileId = harness.Stack.CommandIntentProfileIdRegistry.Register(AltIntent),
+                CommandIntentProfileId = harness.IntentIds.Register(AltIntent),
             });
 
             CommandPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)),
+                Is.EqualTo(harness.IntentIds.GetId(AltIntent)),
                 "the active context's explicit intent must win over the player default.");
         }
 
@@ -332,13 +332,13 @@ namespace Ludots.Tests.GAS
             CommandPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(DefaultIntent)),
+                Is.EqualTo(harness.IntentIds.GetId(DefaultIntent)),
                 "steady state (no mounted interaction context) consumes the possessed rep's player default intent (DEC-14).");
 
             CommandPref other = NewPref(harness, AltIntent);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in other),
-                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)),
+                Is.EqualTo(harness.IntentIds.GetId(AltIntent)),
                 "switching the player's preference changes the steady state's intent.");
         }
 
@@ -435,7 +435,7 @@ namespace Ludots.Tests.GAS
 
         private static CommandPref NewPref(Harness harness, string intentName)
         {
-            return NewPref(harness.Stack.CommandIntentProfileIdRegistry.Register(intentName));
+            return NewPref(harness.IntentIds.Register(intentName));
         }
 
         private static CommandPref NewPref(int intentId)
@@ -447,7 +447,7 @@ namespace Ludots.Tests.GAS
 
         private sealed class Harness
         {
-            public InteractionContextStack Stack = null!;
+            public StringIntRegistry IntentIds = null!;
             public ControlSchemeRuntime Runtime = null!;
             public ClientCastPreferenceStore Preferences = null!;
             public PlayerInputHandler Handler;
@@ -456,12 +456,7 @@ namespace Ludots.Tests.GAS
 
             public static Harness Create(World world, bool withHandler, bool withInputConfig = false)
             {
-                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var stack = new InteractionContextStack(collectionKeys);
-                stack.Push(InteractionContextFrameDescriptor.Create(
-                    InteractionContextIds.Default,
-                    "collection.test.command_source",
-                    "view.test.default"));
+                var intentIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
 
                 // Minimal CTX-8 store: this fixture only exercises active-scheme persistence.
                 var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -472,7 +467,7 @@ namespace Ludots.Tests.GAS
                     new CastCommitProfileRegistry(
                         castCommitIds,
                         castCommitActionIds,
-                        new InteractionContextProfileRegistry(stack.ContextIdRegistry)),
+                        new InteractionContextProfileRegistry(new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal))),
                     templateKeys.Register,
                     templateKeys.GetName,
                     formSetKeys.Register,
@@ -480,7 +475,7 @@ namespace Ludots.Tests.GAS
 
                 var harness = new Harness
                 {
-                    Stack = stack,
+                    IntentIds = intentIds,
                     Preferences = preferences,
                     _schemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 };

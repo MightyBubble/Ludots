@@ -217,7 +217,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(2), "unconsumed commands re-emit until a handler binds");
         }
 
-        // ── Interaction frame demand contract (#1306 route ④ first slice) ──
+        // ── Mounted active-context demand contract (#1306 route ④) ──
 
         [Test]
         public void Projection_FrameOwnedBySeatRep_PushesItsInputContextNextTick()
@@ -229,7 +229,7 @@ namespace Ludots.Tests.GAS
             Entity carrier = world.Create();
             harness.Ownership.EnsureOwnership(rep, carrier);
 
-            harness.Frames.Push(FrameDescriptor(carrier));
+            harness.MountContext(rep, ContextA);
             harness.System.Update(0.016f);
 
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(1));
@@ -255,11 +255,11 @@ namespace Ludots.Tests.GAS
             Entity carrier = world.Create();
             harness.Ownership.EnsureOwnership(rep, carrier);
 
-            long token = harness.Frames.Push(FrameDescriptor(carrier));
+            harness.MountContext(rep, ContextA);
             harness.System.Update(0.016f);
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(1));
 
-            harness.Frames.RemoveByToken(token);
+            world.Remove<ActiveInteractionContext>(rep);
             harness.System.Update(0.016f);
 
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(1));
@@ -283,10 +283,10 @@ namespace Ludots.Tests.GAS
             Entity carrier = world.Create();
             harness.Ownership.EnsureOwnership(otherRep, carrier);
 
-            harness.Frames.Push(FrameDescriptor(carrier));
+            harness.MountContext(otherRep, ContextA);
             harness.System.Update(0.016f);
 
-            Assert.That(harness.System.LastCommands, Is.Empty, "frames outside the seat's control domain must not project onto it");
+            Assert.That(harness.System.LastCommands, Is.Empty, "contexts mounted on other players' subjects must not project onto this seat");
         }
 
         [Test]
@@ -300,7 +300,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(rep, carrier);
             world.Add(rep, new InteractionMode { ModeId = harness.Map.ModeIdRegistry.GetId(ModeSiege) });
 
-            harness.Frames.Push(FrameDescriptor(carrier, inputContextId: ContextB));
+            harness.MountContext(rep, ContextB);
             harness.System.Update(0.016f);
 
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(1), "a context demanded by both the mode and the frame pushes once");
@@ -317,7 +317,7 @@ namespace Ludots.Tests.GAS
             Entity carrier = world.Create();
             harness.Ownership.EnsureOwnership(rep, carrier);
 
-            harness.Frames.Push(FrameDescriptor(carrier, inputContextId: "imc.test.undefined"));
+            harness.MountContext(rep, "imc.test.undefined");
 
             Assert.That(
                 () => harness.System.Update(0.016f),
@@ -421,8 +421,7 @@ namespace Ludots.Tests.GAS
                 restored,
                 globals,
                 fixture.Map,
-                new InteractionContextStack(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal)),
-                NewControlDomainQuery(restored, out _),
+                NewContextProfiles(),
                 seatId => null);
             system.Update(0.016f);
             Assert.That(system.LastCommands.Count, Is.EqualTo(2));
@@ -465,14 +464,21 @@ namespace Ludots.Tests.GAS
             public InteractionModeMap Map { get; }
         }
 
+        private static InteractionContextProfileRegistry NewContextProfiles()
+        {
+            return new InteractionContextProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+        }
+
         private sealed class ProjectionHarness
         {
             public PlayerInputHandler Handler = null!;
             public TestInputBackend Backend = null!;
             public InteractionModeMap Map = null!;
             public InputContextProjectionSystem System = null!;
-            public InteractionContextStack Frames = null!;
+            public InteractionContextProfileRegistry ContextProfiles = null!;
             public OwnershipResolver Ownership = null!;
+            private World _world = null!;
             private readonly Dictionary<string, object> _globals = new();
 
             public static ProjectionHarness Create(World world, bool withHandler)
@@ -480,12 +486,8 @@ namespace Ludots.Tests.GAS
                 var harness = new ProjectionHarness { Map = new ModeMapFixture().Map };
                 var domains = NewControlDomainQuery(world, out OwnershipResolver ownership);
                 harness.Ownership = ownership;
-                harness.Frames = new InteractionContextStack(
-                    new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-                harness.Frames.Push(InteractionContextFrameDescriptor.Create(
-                    InteractionContextIds.Default,
-                    EntityCollectionKeys.CommandSource,
-                    "view.tests.default"));
+                harness.ContextProfiles = NewContextProfiles();
+                harness._world = world;
                 if (withHandler)
                 {
                     harness.Backend = new TestInputBackend();
@@ -496,26 +498,24 @@ namespace Ludots.Tests.GAS
                     world,
                     harness._globals,
                     harness.Map,
-                    harness.Frames,
-                    domains,
+                    harness.ContextProfiles,
                     seatId => harness.Handler);
                 return harness;
+            }
+
+            public void MountContext(Entity subject, string inputContextId)
+            {
+                _world.Add(subject, new ActiveInteractionContext
+                {
+                    InputContextId = ContextProfiles.InputContextIdRegistry.Register(inputContextId),
+                    Source = ActiveInteractionContextSource.ExecLifecycle,
+                });
             }
 
             public void BindSoleSeat(Entity rep)
             {
                 ClientLocalSeatBindings.BindSoleSeat(_globals, rep, playerId: 7, SeatId);
             }
-        }
-
-        private static InteractionContextFrameDescriptor FrameDescriptor(Entity carrier, string inputContextId = ContextA)
-        {
-            return InteractionContextFrameDescriptor.Create(
-                "ctx.tests.confirm",
-                "collection.tests.confirm",
-                "view.tests.confirm",
-                carrier,
-                inputContextId: inputContextId);
         }
 
         private static InteractionModesConfig Config(params InteractionModeDefinition[] modes)

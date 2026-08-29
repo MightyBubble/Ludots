@@ -128,11 +128,8 @@ namespace Ludots.Tests.GAS
 
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
 
-            // Ability frame declares no filter profile: explicit 0 = pass-through, no fallback lookup.
-            long token = harness.Stack.Push(InteractionContextFrameDescriptor.Create(
-                "ctx.ability.test.confirm_targets",
-                "collection.ability.test.targets",
-                "view.ability.test.targets"));
+            // Ability context declares no filter profile: explicit 0 = pass-through, no fallback lookup.
+            harness.MountContext(p1Rep, "collection.ability.test.targets", filterProfileId: 0);
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m05, m06 }, EntityCollectionSourceKind.UiAcquisition);
 
             int abilityKeyId = harness.Store.KeyRegistry.GetId("collection.ability.test.targets");
@@ -145,7 +142,7 @@ namespace Ludots.Tests.GAS
             count = harness.Store.CopyEntities(commandHandle, 0, rows);
             Assert.That(rows[..count].ToArray(), Is.EqualTo(new[] { m01, m02 }), "command.source must stay untouched while the ability frame is active.");
 
-            Assert.That(harness.Stack.RemoveByToken(token), Is.True);
+            harness.UnmountContext(p1Rep);
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01 }, EntityCollectionSourceKind.UiAcquisition);
 
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out commandHandle), Is.True);
@@ -164,12 +161,9 @@ namespace Ludots.Tests.GAS
             Entity neutral = world.Create();
             harness.Ownership.EnsureOwnership(p1Rep, m01);
 
-            // Frame without a filter profile: raw hits pass through, so the configurer owns routability.
+            // Context without a filter profile: raw hits pass through, so the configurer owns routability.
             // A domainless entity reaching the domain-routed command source must fail loudly (semantic guardrail).
-            harness.Stack.Push(InteractionContextFrameDescriptor.Create(
-                "ctx.test.pass_through",
-                EntityCollectionKeys.CommandSource,
-                "view.test.pass_through"));
+            harness.MountContext(p1Rep, EntityCollectionKeys.CommandSource, filterProfileId: 0);
 
             Entity[] raw = { m01, neutral };
             Assert.Throws<InvalidOperationException>(
@@ -223,8 +217,8 @@ namespace Ludots.Tests.GAS
         {
             public RelationshipRuntime Relationships = null!;
             public OwnershipResolver Ownership = null!;
+            public World World = null!;
             public EntityCollectionStore Store = null!;
-            public InteractionContextStack Stack = null!;
             public FilterProfileRegistry Filters = null!;
             public ContextBoundCollectionWriter Writer = null!;
             public int ControlsTypeId;
@@ -247,17 +241,13 @@ namespace Ludots.Tests.GAS
                 var ownership = new OwnershipResolver(relationships, ownsTypeId);
                 var domains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
 
-                // One key registry shared by the stack and the store, mirroring GameEngine wiring.
+                // One key registry shared by the context profiles and the store, mirroring GameEngine wiring.
                 var keyRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var store = new EntityCollectionStore(keyRegistry, initialCollectionCapacity: 16, initialRowCapacity: 128);
-                var stack = new InteractionContextStack(keyRegistry);
-                stack.Push(InteractionContextFrameDescriptor.Create(
-                    InteractionContextIds.Default,
-                    EntityCollectionKeys.CommandSource,
-                    "view.test.default",
-                    filterProfileId: DefaultProfileId));
 
-                var filters = new FilterProfileRegistry(stack.FilterProfileIdRegistry, world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget()));
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
+                var filterProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var filters = new FilterProfileRegistry(filterProfileIds, world, tagOps);
                 filters.RegisterExpander(
                     FilterAssociationExpandKinds.Controls,
                     domains.CollectControlled,
@@ -276,18 +266,50 @@ namespace Ludots.Tests.GAS
                     },
                 });
 
+                var commandIntentProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var contextProfiles = new InteractionContextProfileRegistry(
+                    new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+                contextProfiles.Install(new InteractionContextProfilesConfig
+                {
+                    Profiles = new List<InteractionContextProfileDefinition>
+                    {
+                        new()
+                        {
+                            Id = InteractionContextIds.Default,
+                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                            ActiveEntityViewKey = "view.test.default",
+                            FilterProfileId = DefaultProfileId,
+                        },
+                    },
+                }, keyRegistry, filterProfileIds, commandIntentProfileIds);
+
                 return new Harness
                 {
                     Relationships = relationships,
                     Ownership = ownership,
+                    World = world,
                     Store = store,
-                    Stack = stack,
                     Filters = filters,
-                    Writer = new ContextBoundCollectionWriter(stack, filters, new DomainRoutedCollectionWriter(store, domains), store),
+                    Writer = new ContextBoundCollectionWriter(world, contextProfiles, filters, new DomainRoutedCollectionWriter(store, domains), store),
                     ControlsTypeId = controlsTypeId,
                     CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
                     UiCastRawKeyId = keyRegistry.Register(EntityCollectionKeys.UiCastRaw),
                 };
+            }
+
+            public void MountContext(Entity anchorRep, string collectionKey, int filterProfileId)
+            {
+                World.Add(anchorRep, new ActiveInteractionContext
+                {
+                    ActiveCollectionKeyId = Store.KeyRegistry.Register(collectionKey),
+                    FilterProfileId = filterProfileId,
+                    Source = ActiveInteractionContextSource.ExecLifecycle,
+                });
+            }
+
+            public void UnmountContext(Entity anchorRep)
+            {
+                World.Remove<ActiveInteractionContext>(anchorRep);
             }
         }
     }

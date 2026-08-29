@@ -252,9 +252,8 @@ namespace Ludots.Tests.GAS
 
             public static Harness Create()
             {
-                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var stack = new InteractionContextStack(collectionKeys);
-                var contextProfiles = new InteractionContextProfileRegistry(stack.ContextIdRegistry);
+                var contextProfiles = new InteractionContextProfileRegistry(
+                    new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
                 var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var actionIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var castCommits = new CastCommitProfileRegistry(castCommitIds, actionIds, contextProfiles);

@@ -6,13 +6,13 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// Frame command-intent arbitration (RFC-0065 INT-7, DEC-14). Resolves which command intent
     /// profile an un-intercepted pointer command action routes through, in the
-    /// <see cref="InteractionContextStack.CommandIntentProfileIdRegistry"/> id space.
+    /// <see cref="CommandIntentProfileRegistry.ProfileIdRegistry"/> id space.
     /// <para>
     /// Calling convention: the caller first offers the action to the active context's
     /// <c>frameActions</c> via <see cref="CastCommitProfileRegistry.TryExecuteFrameAction"/>; only
     /// when that returns false does the arbiter run. Resolution chain reads the entity-mounted
     /// interaction state: the subject's <see cref="ActiveInteractionContext.CommandIntentProfileId"/>
-    /// wins when positive (frame explicit); zero on a mounted context means the context declares
+    /// wins when positive (context explicit); zero on a mounted context means the context declares
     /// no intent and the pointer command does not route; with no context mounted (steady state)
     /// the possessed representative's <see cref="CommandPref"/> player default applies. Never
     /// bubbles to anything else (DEC-14, no fallback). The steady-state branch is the player's

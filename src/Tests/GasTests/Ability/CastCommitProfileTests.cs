@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Arch.Core;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Registry;
 using NUnit.Framework;
@@ -12,9 +13,10 @@ namespace Ludots.Tests.GAS
     /// <summary>
     /// RFC-0065 CTX-7 (§5.5, §6.1 M7, DEC-11/DEC-13): CastCommitProfile kernel — activation and
     /// frame-action op sequences over the interaction op registry (pushFrame/popFrame/submitOrder),
-    /// real frame pushes onto the InteractionContextStack, payload value sources as registry items,
-    /// load-time fail-fast (unknown ops, FSM-shaped schema keys), and steady-state zero allocation.
-    /// Profile ids and action names ("Confirm"/"Back") are test data, never Core concepts.
+    /// real entity-mounted active contexts written by the frame ops, payload value sources as
+    /// registry items, load-time fail-fast (unknown ops, FSM-shaped schema keys), and steady-state
+    /// zero allocation. Profile ids and action names ("Confirm"/"Back") are test data, never Core
+    /// concepts.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
@@ -54,11 +56,11 @@ namespace Ludots.Tests.GAS
             Assert.That(
                 harness.Submits.LastValueSourceId,
                 Is.EqualTo(harness.Commit.PayloadValueSourceRegistry.GetId(CastCommitPayloadValueSources.CursorWorld)));
-            Assert.That(harness.Stack.Count, Is.EqualTo(1), "quick activation never touches the frame stack.");
+            Assert.That(harness.SubjectHasActiveContext(), Is.False, "quick activation never mounts an interaction context.");
         }
 
         [Test]
-        public void ExecuteActivation_AimConfirm_PushesTargetingFrameOntoTheStack()
+        public void ExecuteActivation_AimConfirm_MountsTheTargetingContextOnTheSubject()
         {
             Harness harness = Harness.Create();
             harness.InstallExemplarProfiles();
@@ -67,16 +69,17 @@ namespace Ludots.Tests.GAS
             harness.Commit.ExecuteActivation(harness.ProfileId(AimConfirmProfileId), in ctx);
 
             Assert.That(harness.Submits.CallCount, Is.EqualTo(0), "no order until the frame action fires.");
-            Assert.That(harness.Stack.Count, Is.EqualTo(2));
-            Assert.That(harness.Stack.TryPeek(out InteractionContextFrame frame), Is.True);
+            Assert.That(harness.SubjectContext(out ActiveInteractionContext mounted), Is.True);
+            Assert.That(mounted.Source, Is.EqualTo(ActiveInteractionContextSource.CastCommitOp));
+            Assert.That(mounted.ContextEntity, Is.EqualTo(harness.Subject));
             Assert.That(
-                frame.ActiveCollectionKeyId,
-                Is.EqualTo(harness.Stack.CollectionKeyRegistry.GetId(Harness.TargetingCollectionKey)),
-                "the pushed frame is the real targeting context profile.");
+                mounted.ActiveCollectionKeyId,
+                Is.EqualTo(harness.CollectionKeys.GetId(Harness.TargetingCollectionKey)),
+                "the mounted context is the real targeting context profile.");
         }
 
         [Test]
-        public void FrameAction_Confirm_SubmitsWithFramePointer_ThenPopsTheFrame()
+        public void FrameAction_Confirm_SubmitsWithFramePointer_ThenPopsTheContext()
         {
             Harness harness = Harness.Create();
             harness.InstallExemplarProfiles();
@@ -92,8 +95,8 @@ namespace Ludots.Tests.GAS
             Assert.That(
                 harness.Submits.LastValueSourceId,
                 Is.EqualTo(harness.Commit.PayloadValueSourceRegistry.GetId(CastCommitPayloadValueSources.FramePointer)));
-            Assert.That(harness.Submits.LastStackCountAtSubmit, Is.EqualTo(2), "submit runs before popFrame in the declared sequence.");
-            Assert.That(harness.Stack.Count, Is.EqualTo(1), "popFrame restores the stack to the default frame.");
+            Assert.That(harness.Submits.LastSubjectHadContextAtSubmit, Is.True, "submit runs before popFrame in the declared sequence.");
+            Assert.That(harness.SubjectHasActiveContext(), Is.False, "popFrame releases the subject back to the steady state.");
         }
 
         [Test]
@@ -110,7 +113,20 @@ namespace Ludots.Tests.GAS
 
             Assert.That(handled, Is.True);
             Assert.That(harness.Submits.CallCount, Is.EqualTo(0), "Back never produces an order.");
-            Assert.That(harness.Stack.Count, Is.EqualTo(1));
+            Assert.That(harness.SubjectHasActiveContext(), Is.False);
+        }
+
+        [Test]
+        public void PopFrame_WithoutAPushedContext_FailsFast()
+        {
+            Harness harness = Harness.Create();
+            harness.InstallExemplarProfiles();
+            var ctx = harness.CreateContext();
+
+            Assert.That(
+                () => harness.Commit.TryExecuteFrameAction(
+                    harness.ProfileId(AimConfirmProfileId), harness.Commit.ActionIdRegistry.GetId(BackActionName), in ctx),
+                Throws.InvalidOperationException);
         }
 
         [Test]
@@ -140,7 +156,7 @@ namespace Ludots.Tests.GAS
             harness.Commit.Install(config);
             var ctx = harness.CreateContext();
             harness.Commit.ExecuteActivation(harness.ProfileId(AimConfirmProfileId), in ctx);
-            Assert.That(harness.Stack.Count, Is.EqualTo(2), "JSON-declared pushFrame must execute for real.");
+            Assert.That(harness.SubjectHasActiveContext(), Is.True, "JSON-declared pushFrame must execute for real.");
         }
 
         [Test]
@@ -254,7 +270,7 @@ namespace Ludots.Tests.GAS
             int aimId = harness.ProfileId(AimConfirmProfileId);
             int confirmActionId = harness.Commit.ActionIdRegistry.GetId(ConfirmActionName);
 
-            // Warmup registers every lazily-registered id (stack registries) once.
+            // Warmup registers every lazily-registered id once.
             harness.Commit.ExecuteActivation(quickId, in ctx);
             harness.Commit.ExecuteActivation(aimId, in ctx);
             harness.Commit.TryExecuteFrameAction(aimId, confirmActionId, in ctx);
@@ -305,13 +321,13 @@ namespace Ludots.Tests.GAS
             public int LastPayloadCount;
             public int LastKeyId;
             public int LastValueSourceId;
-            public int LastStackCountAtSubmit;
+            public bool LastSubjectHadContextAtSubmit;
 
             public void Submit(in InteractionOpContext ctx, in CastCommitOrderPayload payload)
             {
                 CallCount++;
                 LastPayloadCount = payload.Count;
-                LastStackCountAtSubmit = ctx.Stack.Count;
+                LastSubjectHadContextAtSubmit = ctx.World.Has<ActiveInteractionContext>(ctx.Subject);
                 if (payload.Count > 0)
                 {
                     LastKeyId = payload[0].KeyId;
@@ -325,8 +341,10 @@ namespace Ludots.Tests.GAS
             public const string TargetingCollectionKey = "collection.test.targeting";
 
             public CastCommitProfileRegistry Commit = null!;
-            public InteractionContextStack Stack = null!;
             public StringIntRegistry ProfileIds = null!;
+            public StringIntRegistry CollectionKeys = null!;
+            public Entity Subject;
+            private World _world = null!;
             private SubmitRecorder _submits = null!;
             private CastCommitOrderSubmit _submitDelegate = null!;
 
@@ -334,14 +352,14 @@ namespace Ludots.Tests.GAS
 
             public static Harness Create()
             {
-                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var stack = new InteractionContextStack(collectionKeys);
-                stack.Push(InteractionContextFrameDescriptor.Create(
-                    InteractionContextIds.Default,
-                    "collection.test.command_source",
-                    "view.test.default"));
+                var world = World.Create();
+                Entity subject = world.Create();
 
-                var contextProfiles = new InteractionContextProfileRegistry(stack.ContextIdRegistry);
+                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var filterProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var commandIntentProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var contextProfiles = new InteractionContextProfileRegistry(
+                    new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
                 contextProfiles.Install(new InteractionContextProfilesConfig
                 {
                     Profiles = new List<InteractionContextProfileDefinition>
@@ -353,7 +371,7 @@ namespace Ludots.Tests.GAS
                             ActiveEntityViewKey = "view.test.targeting",
                         },
                     },
-                });
+                }, collectionKeys, filterProfileIds, commandIntentProfileIds);
 
                 var profileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var actionIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -361,8 +379,10 @@ namespace Ludots.Tests.GAS
                 return new Harness
                 {
                     Commit = new CastCommitProfileRegistry(profileIds, actionIds, contextProfiles),
-                    Stack = stack,
                     ProfileIds = profileIds,
+                    CollectionKeys = collectionKeys,
+                    Subject = subject,
+                    _world = world,
                     _submits = recorder,
                     _submitDelegate = recorder.Submit,
                 };
@@ -370,9 +390,14 @@ namespace Ludots.Tests.GAS
 
             public int ProfileId(string name) => ProfileIds.GetId(name);
 
+            public bool SubjectHasActiveContext() => _world.Has<ActiveInteractionContext>(Subject);
+
+            public bool SubjectContext(out ActiveInteractionContext context) =>
+                _world.TryGet(Subject, out context);
+
             public InteractionOpContext CreateContext()
             {
-                return new InteractionOpContext(Stack, _submitDelegate);
+                return new InteractionOpContext(_world, Subject, _submitDelegate);
             }
 
             /// <summary>The §5.5 exemplars, mirroring the JSON schema as typed definitions.</summary>

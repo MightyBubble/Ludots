@@ -11,8 +11,8 @@ namespace Ludots.Core.Input.Interaction
     /// references must be installed <see cref="InteractionContextProfileRegistry"/> rows, payload
     /// value sources resolve against the value source registry, and frame action names register into
     /// the action id space. Execution is a flat walk over compiled op rows — there is no state
-    /// machine anywhere: the only client-side interaction state is the frames the ops push onto the
-    /// <see cref="InteractionContextStack"/>. Steady-state execution is allocation free.
+    /// machine anywhere: the only client-side interaction state is the entity-mounted active
+    /// context the frame ops write. Steady-state execution is allocation free.
     /// </summary>
     public sealed class CastCommitProfileRegistry
     {
@@ -150,26 +150,42 @@ namespace Ludots.Core.Input.Interaction
 
         private void ExecutePushFrame(in InteractionOpContext ctx, in InteractionOpArgs args)
         {
-            if (!_contextProfiles.TryCreateFrameDescriptor(args.ContextProfileId, ctx.ContextEntity, out InteractionContextFrameDescriptor descriptor))
+            if (!_contextProfiles.TryCreateActiveContext(
+                    args.ContextProfileId,
+                    ctx.ContextEntity,
+                    ActiveInteractionContextSource.CastCommitOp,
+                    out ActiveInteractionContext context))
             {
                 throw new InvalidOperationException(
                     $"Interaction op '{InteractionOpKinds.PushFrame}' references interaction context profile id {args.ContextProfileId} which is not installed.");
             }
 
-            ctx.Stack.Push(in descriptor);
+            if (ctx.World.Has<ActiveInteractionContext>(ctx.Subject))
+            {
+                ctx.World.Get<ActiveInteractionContext>(ctx.Subject) = context;
+                return;
+            }
+
+            ctx.World.Add(ctx.Subject, context);
         }
 
         private static void ExecutePopFrame(in InteractionOpContext ctx, in InteractionOpArgs args)
         {
-            if (!ctx.Stack.TryPeek(out InteractionContextFrame frame))
+            if (!ctx.World.TryGet<ActiveInteractionContext>(ctx.Subject, out ActiveInteractionContext mounted))
             {
                 throw new InvalidOperationException(
-                    $"Interaction op '{InteractionOpKinds.PopFrame}' executed on an empty context stack.");
+                    $"Interaction op '{InteractionOpKinds.PopFrame}' executed on a subject with no active interaction context.");
             }
 
-            // The stack rejects removing the reserved default frame — popping past a profile's own
-            // pushes is a configuration error and fails fast there.
-            ctx.Stack.RemoveByToken(frame.OwnerToken);
+            // Only the op's own mounts are poppable — popping an exec-carried context or the
+            // steady state is a configuration error and fails fast here.
+            if (mounted.Source != ActiveInteractionContextSource.CastCommitOp)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction op '{InteractionOpKinds.PopFrame}' cannot remove the active interaction context on entity {ctx.Subject}; it was mounted by {mounted.Source}.");
+            }
+
+            ctx.World.Remove<ActiveInteractionContext>(ctx.Subject);
         }
 
         private static void ExecuteSubmitOrder(in InteractionOpContext ctx, in InteractionOpArgs args)

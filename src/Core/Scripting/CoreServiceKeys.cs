@@ -311,7 +311,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<DomainRoutedCollectionWriter> DomainRoutedCollectionWriter = new("DomainRoutedCollectionWriter");
         public static readonly ServiceKey<ControlPlaneView> ControlPlaneView = new("ControlPlaneView");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
-        public static readonly ServiceKey<InteractionContextStack> InteractionContextStack = new("InteractionContextStack");
         public static readonly ServiceKey<FilterProfileRegistry> FilterProfileRegistry = new("FilterProfileRegistry");
         public static readonly ServiceKey<CommandIntentProfileRegistry> CommandIntentProfileRegistry = new("CommandIntentProfileRegistry");
         public static readonly ServiceKey<CastDispatchProfileRegistry> CastDispatchProfileRegistry = new("CastDispatchProfileRegistry");

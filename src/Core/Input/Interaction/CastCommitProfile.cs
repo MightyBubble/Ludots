@@ -11,10 +11,10 @@ namespace Ludots.Core.Input.Interaction
     /// </summary>
     public static class InteractionOpKinds
     {
-        /// <summary>Push the frame declared by the op's <c>contextProfileId</c> onto the context stack.</summary>
+        /// <summary>Mount the context declared by the op's <c>contextProfileId</c> on the op subject.</summary>
         public const string PushFrame = "pushFrame";
 
-        /// <summary>Remove the top context stack frame (token addressed; the default frame is irremovable).</summary>
+        /// <summary>Remove the cast-commit-op context mounted on the op subject (subject addressed).</summary>
         public const string PopFrame = "popFrame";
 
         /// <summary>Invoke the order submit delegate with the op's payload value sources.</summary>
@@ -85,26 +85,37 @@ namespace Ludots.Core.Input.Interaction
     public delegate bool CastCommitPayloadValueResolver(int payloadKeyId, int valueSourceId, out Vector3 worldCm);
 
     /// <summary>
-    /// Execution context handed to every interaction op: the client context stack, the order submit
-    /// delegate, the payload value resolver, and the owning entity for pushed frames (default for
-    /// client-initiated pushes; the exec carrier for sim-driven ones).
+    /// Execution context handed to every interaction op: the world, the interaction subject the
+    /// frame ops mount and unmount the active context on, the order submit delegate, the payload
+    /// value resolver, and the owning carrier entity recorded in mounted contexts (defaults to
+    /// the subject for client-initiated pushes; the exec carrier for sim-driven ones).
     /// </summary>
     public readonly struct InteractionOpContext
     {
         public InteractionOpContext(
-            InteractionContextStack stack,
+            World world,
+            Entity subject,
             CastCommitOrderSubmit submitOrder = null,
             CastCommitPayloadValueResolver valueResolver = null,
             Entity contextEntity = default)
         {
-            Stack = stack ?? throw new ArgumentNullException(nameof(stack));
+            World = world ?? throw new ArgumentNullException(nameof(world));
+            if (subject == default)
+            {
+                throw new ArgumentException("Interaction op subject entity is required.", nameof(subject));
+            }
+
+            Subject = subject;
             SubmitOrder = submitOrder;
             ValueResolver = valueResolver;
-            ContextEntity = contextEntity;
+            ContextEntity = contextEntity == default ? subject : contextEntity;
         }
 
-        /// <summary>Client interaction context stack the frame ops act on.</summary>
-        public InteractionContextStack Stack { get; }
+        /// <summary>World the frame ops write entity-mounted context state in.</summary>
+        public World World { get; }
+
+        /// <summary>Interaction subject whose active context the frame ops mount and unmount.</summary>
+        public Entity Subject { get; }
 
         /// <summary>Order submit delegate; required before a <c>submitOrder</c> op executes.</summary>
         public CastCommitOrderSubmit SubmitOrder { get; }
@@ -112,7 +123,7 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>Payload value source resolver; consumed by the submit delegate.</summary>
         public CastCommitPayloadValueResolver ValueResolver { get; }
 
-        /// <summary>Owner entity recorded on frames pushed by <c>pushFrame</c>.</summary>
+        /// <summary>Carrier entity recorded on contexts mounted by <c>pushFrame</c>.</summary>
         public Entity ContextEntity { get; }
     }
 

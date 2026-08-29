@@ -65,15 +65,14 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Resolve the seed ids: the command intent profile must be installed and is registered
-        /// into the interaction stack's id space (the space frames and the arbiter resolve in);
-        /// the cast dispatch profile must be installed and resolves in its own registry space.
+        /// Resolve the seed ids: both the command intent profile and the cast dispatch profile
+        /// must be installed; the seed ids are the registries' own id spaces (the spaces the
+        /// arbiter, mounted contexts, and dispatch resolution resolve in).
         /// </summary>
         public static CommandPrefSeed ResolveSeed(
             CommandPrefsConfig config,
             CommandIntentProfileRegistry commandIntents,
             CastDispatchProfileRegistry castDispatchProfiles,
-            StringIntRegistry commandIntentIdSpace,
             string source = "Input/command_prefs.json")
         {
             if (config == null)
@@ -97,7 +96,7 @@ namespace Ludots.Core.Input.Interaction
                     $"{source} defaults.castDispatchProfileId references cast dispatch profile '{dispatchName}' which is not installed.");
             }
 
-            return new CommandPrefSeed(commandIntentIdSpace.Register(intentName), dispatchRegistryId);
+            return new CommandPrefSeed(intentRegistryId, dispatchRegistryId);
         }
 
         private static void RequireTrimmedNonEmpty(string value, string path)
