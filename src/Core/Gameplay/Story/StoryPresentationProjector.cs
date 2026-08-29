@@ -13,10 +13,6 @@ namespace Ludots.Core.Gameplay.Story
     /// </summary>
     public sealed class StoryPresentationProjector
     {
-        private const float WorldProjectedHeadOffsetPx = 96f;
-        private const float ChoiceListStackOffsetY = 168f;
-        private const float SequencePortraitSize = 72f;
-
         private readonly StoryDefinitionRegistry _story;
         private uint _generation;
 
@@ -74,10 +70,28 @@ namespace Ludots.Core.Gameplay.Story
 
                 anchor = "TopLeft";
                 offsetX = worldScreenX.Value;
-                offsetY = worldScreenY.Value - WorldProjectedHeadOffsetPx;
+                if (profile.WorldScreenHeadOffsetPx <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation profile '{view.PresentationProfile}' requires worldScreenHeadOffsetPx > 0 (WorldProjected).");
+                }
+
+                offsetY = worldScreenY.Value - profile.WorldScreenHeadOffsetPx;
             }
 
-            float imageSize = ImageSizeFor(surfaceKind);
+            if (profile.ImageSize <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation profile '{view.PresentationProfile}' requires imageSize > 0.");
+            }
+
+            if (profile.DimBackdrop && string.IsNullOrWhiteSpace(profile.BackdropHex))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation profile '{view.PresentationProfile}' requires backdropHex when dimBackdrop is set.");
+            }
+
+            float imageSize = profile.ImageSize;
             var surfaces = new List<StoryPresentationSurface>(2)
             {
                 new StoryPresentationSurface(
@@ -91,7 +105,7 @@ namespace Ludots.Core.Gameplay.Story
                     Width: profile.Width,
                     OffsetX: offsetX,
                     OffsetY: offsetY,
-                    ZIndex: 50,
+                    ZIndex: profile.ZIndex,
                     WaitForInput: view.WaitForInput || profile.WaitForInput,
                     DimBackdrop: profile.DimBackdrop,
                     Progress01: view.Progress01,
@@ -117,15 +131,21 @@ namespace Ludots.Core.Gameplay.Story
                         (i + 1).ToString()));
                 }
 
-                // Choice list stacks under the dialogue surface; title stays empty — labels are the choices.
+                if (string.IsNullOrWhiteSpace(profile.ChoiceAnchor) || profile.ChoiceWidth <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation profile '{view.PresentationProfile}' requires choiceAnchor and choiceWidth when the node offers choices.");
+                }
+
+                // Choice list is a companion surface: geometry from the same profile (single writer).
                 surfaces.Add(new StoryPresentationSurface(
                     SurfaceKey: $"dialogue.{view.DialogueId}.ChoiceList",
                     SurfaceKind: "ChoiceList",
-                    Anchor: anchor,
+                    Anchor: profile.ChoiceAnchor,
                     Title: string.Empty,
-                    Width: profile.Width,
-                    OffsetY: offsetY + ChoiceListStackOffsetY,
-                    ZIndex: 55,
+                    Width: profile.ChoiceWidth,
+                    OffsetY: profile.ChoiceOffsetY,
+                    ZIndex: profile.ChoiceZIndex,
                     Choices: choices,
                     AccentHex: profile.AccentHex,
                     BackgroundHex: profile.BackgroundHex,
@@ -139,11 +159,11 @@ namespace Ludots.Core.Gameplay.Story
                 new StoryPresentationStreamHandle(view.DialogueId, _generation),
                 StoryPresentationStreamKind.Dialogue,
                 view.DialogueId,
-                profile.DimBackdrop ? "#00000099" : string.Empty,
+                profile.DimBackdrop ? profile.BackdropHex : string.Empty,
                 surfaces);
         }
 
-        public StoryPresentationFrame ProjectSequence(SequenceView view, bool transmission = false)
+        public StoryPresentationFrame ProjectSequence(SequenceView view)
         {
             ArgumentNullException.ThrowIfNull(view);
             SequenceSubtitleView? subtitle = view.ActiveSubtitles.Count > 0 ? view.ActiveSubtitles[0] : null;
@@ -166,7 +186,7 @@ namespace Ludots.Core.Gameplay.Story
 
             string profileId = subtitle.PresentationProfile.Trim();
             StoryPresentationProfileDefinition profile = _story.RequireProfile(profileId);
-            string surfaceKind = transmission ? "TransmissionOverlay" : profile.SurfaceKind.Trim();
+            string surfaceKind = profile.SurfaceKind.Trim();
             ValidateSurfaceKind(surfaceKind, profileId);
 
             if (string.IsNullOrWhiteSpace(profile.Anchor))
@@ -209,7 +229,7 @@ namespace Ludots.Core.Gameplay.Story
                         Title: title,
                         Body: body,
                         ImageId: imageId,
-                        ImageSize: SequencePortraitSize,
+                        ImageSize: profile.ImageSize,
                         Width: profile.Width,
                         OffsetX: profile.OffsetX,
                         OffsetY: profile.OffsetY,
@@ -232,21 +252,6 @@ namespace Ludots.Core.Gameplay.Story
             }
 
             return view.PortraitImageId ?? string.Empty;
-        }
-
-        private static float ImageSizeFor(string surfaceKind)
-        {
-            if (string.Equals(surfaceKind, "StandingPortrait", StringComparison.OrdinalIgnoreCase))
-            {
-                return 980f;
-            }
-
-            if (string.Equals(surfaceKind, "OverlayDialogue", StringComparison.OrdinalIgnoreCase))
-            {
-                return 112f;
-            }
-
-            return 84f;
         }
 
         private static void ValidateSurfaceKind(string surfaceKind, string profileId)

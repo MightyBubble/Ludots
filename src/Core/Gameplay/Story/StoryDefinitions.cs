@@ -40,6 +40,7 @@ namespace Ludots.Core.Gameplay.Story
         public float OffsetX { get; set; }
         public float OffsetY { get; set; }
         public float WorldHeadOffsetYCm { get; set; } = 120f;
+        public float WorldScreenHeadOffsetPx { get; set; }
         public bool WaitForInput { get; set; }
         public bool DimBackdrop { get; set; }
         public string AccentHex { get; set; } = string.Empty;
@@ -47,6 +48,13 @@ namespace Ludots.Core.Gameplay.Story
         public string BorderHex { get; set; } = string.Empty;
         public string ForegroundHex { get; set; } = string.Empty;
         public string MutedHex { get; set; } = string.Empty;
+        public string BackdropHex { get; set; } = string.Empty;
+        public float ImageSize { get; set; }
+        public int ZIndex { get; set; }
+        public string ChoiceAnchor { get; set; } = string.Empty;
+        public float ChoiceWidth { get; set; }
+        public float ChoiceOffsetY { get; set; }
+        public int ChoiceZIndex { get; set; }
     }
 
     public sealed class StoryDefinitionRegistry

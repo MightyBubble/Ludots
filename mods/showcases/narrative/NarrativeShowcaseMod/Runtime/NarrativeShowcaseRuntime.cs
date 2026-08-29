@@ -434,9 +434,8 @@ namespace NarrativeShowcaseMod.Runtime
             if (sequenceActive)
             {
                 StoryPresentationProjector projector = RequireProjector(engine);
-                bool transmission = ContainsId(_frontendConfig.Routing.TransmissionSequenceIds, sequence.SequenceId);
-                StoryPresentationFrame frame = projector.ProjectSequence(sequence, transmission);
-                AppendStoryFrame(engine, surfaces, frame, worldProjected: false);
+                StoryPresentationFrame frame = projector.ProjectSequence(sequence);
+                AppendStoryFrame(engine, surfaces, frame);
             }
 
             if (dialogueActive)
@@ -456,13 +455,12 @@ namespace NarrativeShowcaseMod.Runtime
 
                     worldX = screenX - UiMargin;
                     worldY = screenY - UiMargin;
-                    NarrativeShowcaseSurfaceConfig bubbleChrome = _frontendConfig.DialogueBubble;
                     engine.GlobalContext["NarrativeShowcase.LastWorldBubble"] =
-                        $"DialogueBubble|{bubbleChrome.Width}|TopLeft|{worldX:0.###}|{worldY - 96f:0.###}|{bubbleChrome.Eyebrow}";
+                        $"DialogueBubble|{profile.Width}|TopLeft|{worldX:0.###}|{worldY - profile.WorldScreenHeadOffsetPx:0.###}|{_frontendConfig.DialogueBubble.Eyebrow}";
                 }
 
                 StoryPresentationFrame frame = projector.ProjectDialogue(dialogueView, worldX, worldY);
-                AppendStoryFrame(engine, surfaces, frame, worldProjected: worldX.HasValue);
+                AppendStoryFrame(engine, surfaces, frame);
             }
 
             surfaces.RemoveAll(static surface => !surface.Visible);
@@ -485,8 +483,7 @@ namespace NarrativeShowcaseMod.Runtime
         private void AppendStoryFrame(
             GameEngine engine,
             List<NarrativeFrontendSurfaceModel> surfaces,
-            StoryPresentationFrame frame,
-            bool worldProjected)
+            StoryPresentationFrame frame)
         {
             PresentationDisplayResolver? display = engine.GetService(CoreServiceKeys.PresentationDisplayResolver);
             NarrativeFrontendPageState page = StoryPresentationFrontendAdapter.ToPage(
@@ -501,7 +498,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             for (int i = 0; i < page.Surfaces.Count; i++)
             {
-                surfaces.Add(ApplyFrontendChrome(page.Surfaces[i], worldProjected));
+                surfaces.Add(ApplyFrontendChrome(page.Surfaces[i]));
             }
         }
 
@@ -510,9 +507,10 @@ namespace NarrativeShowcaseMod.Runtime
         /// World-projected bubbles keep projected TopLeft offsets and only take width/chrome from config.
         /// </summary>
         private NarrativeFrontendSurfaceModel ApplyFrontendChrome(
-            NarrativeFrontendSurfaceModel surface,
-            bool worldProjected)
+            NarrativeFrontendSurfaceModel surface)
         {
+            // Geometry and colors are profile-owned (single writer, Core projector).
+            // Chrome contributes skin text only: eyebrow / footer / choice title.
             NarrativeShowcaseSurfaceConfig? config = ResolveChromeConfig(surface.Kind);
             if (config == null)
             {
@@ -523,9 +521,6 @@ namespace NarrativeShowcaseMod.Runtime
                         : _panelFrameSrc
                 };
             }
-
-            bool keepProjectedPlacement =
-                worldProjected && surface.Kind == NarrativeFrontendSurfaceKind.DialogueBubble;
 
             string title = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList &&
                            !string.IsNullOrWhiteSpace(config.Title)
@@ -560,17 +555,7 @@ namespace NarrativeShowcaseMod.Runtime
                 Title = title,
                 Subtitle = string.IsNullOrWhiteSpace(surface.Subtitle) ? config.Eyebrow : surface.Subtitle,
                 Footer = footer,
-                Anchor = keepProjectedPlacement ? surface.Anchor : config.ResolveAnchor(),
-                Width = config.Width > 0f ? config.Width : surface.Width,
-                OffsetX = keepProjectedPlacement ? surface.OffsetX : config.OffsetX,
-                OffsetY = keepProjectedPlacement ? surface.OffsetY : config.OffsetY,
-                ZIndex = config.ZIndex > 0 ? config.ZIndex : surface.ZIndex,
                 Skippable = skippable || surface.Skippable,
-                AccentHex = FirstNonEmpty(surface.AccentHex, config.AccentHex),
-                BackgroundHex = FirstNonEmpty(surface.BackgroundHex, config.BackgroundHex),
-                BorderHex = FirstNonEmpty(surface.BorderHex, config.BorderHex),
-                ForegroundHex = FirstNonEmpty(surface.ForegroundHex, config.ForegroundHex),
-                MutedHex = FirstNonEmpty(surface.MutedHex, config.MutedHex),
                 FrameImageSrc = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
                     ? _choiceFrameSrc
                     : _panelFrameSrc

@@ -49,61 +49,29 @@
     "accentHex": "#FDE68A"
   },
   "overlayDialogue": {
-    "anchor": "BottomCenter",
-    "width": 760,
-    "offsetY": 28,
-    "zIndex": 60,
     "eyebrow": "交谈",
-    "footer": "回车听下一句 · 1/2/3 选回复",
-    "accentHex": "#F6C56B"
+    "footer": "回车听下一句 · 1/2/3 选回复"
   },
   "dialogueBubble": {
-    "anchor": "BottomLeft",
-    "width": 520,
-    "offsetX": 28,
-    "offsetY": 12,
-    "zIndex": 58,
     "eyebrow": "附近",
-    "footer": "回车听下一句",
-    "accentHex": "#F0C36B"
+    "footer": "回车听下一句"
   },
   "standingPortrait": {
-    "anchor": "BottomLeft",
-    "width": 1180,
-    "offsetX": 24,
-    "offsetY": 20,
-    "zIndex": 62,
     "eyebrow": "立绘",
-    "footer": "回车继续 · 1/2/3 选回复",
-    "accentHex": "#F6C56B"
+    "footer": "回车继续 · 1/2/3 选回复"
   },
   "subtitleBubble": {
-    "anchor": "BottomCenter",
-    "width": 720,
-    "offsetY": 84,
-    "zIndex": 59,
     "eyebrow": "旁白",
-    "footer": "Tab 跳过这段",
-    "accentHex": "#F59E0B"
+    "footer": "Tab 跳过这段"
   },
   "choiceList": {
-    "anchor": "BottomRight",
-    "width": 440,
-    "offsetY": 12,
-    "zIndex": 61,
     "eyebrow": "回复",
     "title": "你怎么说？",
-    "footer": "按数字键，马上能看到下一句。",
-    "accentHex": "#F6C56B"
+    "footer": "按数字键，马上能看到下一句。"
   },
   "transmissionOverlay": {
-    "anchor": "TopRight",
-    "width": 420,
-    "offsetY": 236,
-    "zIndex": 56,
     "eyebrow": "传讯",
-    "footer": "",
-    "accentHex": "#7DD3FC"
+    "footer": ""
   },
   "nameplate": {
     "anchor": "TopLeft",
@@ -141,9 +109,6 @@
     "rewardApplied": "你感到伤口愈合，脚步也轻了一点。"
   },
   "routing": {
-    "transmissionSequenceIds": [
-      "Sequence.Narrative.Intro"
-    ],
     "subtitleSequenceIds": [
       "Sequence.Narrative.TrialReveal",
       "Sequence.Demo.Overture"

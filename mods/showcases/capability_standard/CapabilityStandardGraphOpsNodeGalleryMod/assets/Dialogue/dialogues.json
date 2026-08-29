@@ -7,7 +7,7 @@
       {
         "id": "open",
         "lineId": "line.gallery.start_dialogue.open",
-        "presentationProfile": "story.dialogue_overlay"
+        "presentationProfile": "gallery.dialogue_overlay"
       }
     ]
   }

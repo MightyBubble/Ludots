@@ -16,7 +16,7 @@
       {
         "type": "Subtitle",
         "lineId": "line.warden.intro.elder",
-        "presentationProfile": "story.immersive_subtitle",
+        "presentationProfile": "story.transmission",
         "start": 0.0,
         "duration": 1.8
       },
@@ -29,7 +29,7 @@
       {
         "type": "Subtitle",
         "lineId": "line.warden.intro.shrine",
-        "presentationProfile": "story.immersive_subtitle",
+        "presentationProfile": "story.transmission",
         "start": 2.0,
         "duration": 1.8
       }

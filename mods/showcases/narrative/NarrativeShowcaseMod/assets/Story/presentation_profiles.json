@@ -12,21 +12,37 @@
     "backgroundHex": "#08111BEF",
     "borderHex": "#5AD7E9FF",
     "foregroundHex": "#F8FAFC",
-    "mutedHex": "#C6D3DE"
+    "mutedHex": "#C6D3DE",
+    "zIndex": 60,
+    "imageSize": 112,
+    "backdropHex": "#00000099",
+    "choiceAnchor": "BottomRight",
+    "choiceWidth": 440,
+    "choiceOffsetY": 12,
+    "choiceZIndex": 61
   },
   {
     "id": "story.world_bubble",
     "backend": "WorldProjected",
     "surfaceKind": "DialogueBubble",
     "anchor": "TopLeft",
-    "width": 420,
+    "width": 520,
     "worldHeadOffsetYCm": 140,
     "waitForInput": true,
     "accentHex": "#F0C36B",
     "backgroundHex": "#0C1622E8",
     "borderHex": "#49FFFFFF",
     "foregroundHex": "#F5F7FA",
-    "mutedHex": "#A9B9C9"
+    "mutedHex": "#A9B9C9",
+    "offsetX": 28,
+    "offsetY": 12,
+    "zIndex": 58,
+    "imageSize": 84,
+    "worldScreenHeadOffsetPx": 96,
+    "choiceAnchor": "BottomRight",
+    "choiceWidth": 440,
+    "choiceOffsetY": 12,
+    "choiceZIndex": 61
   },
   {
     "id": "story.immersive_subtitle",
@@ -39,7 +55,9 @@
     "backgroundHex": "#08121CE8",
     "borderHex": "#31546B",
     "foregroundHex": "#F2F6FA",
-    "mutedHex": "#AFC3D4"
+    "mutedHex": "#AFC3D4",
+    "zIndex": 59,
+    "imageSize": 72
   },
   {
     "id": "story.standing_portrait",
@@ -55,6 +73,29 @@
     "backgroundHex": "#08111BEF",
     "borderHex": "#5AD7E9FF",
     "foregroundHex": "#F8FAFC",
-    "mutedHex": "#C6D3DE"
+    "mutedHex": "#C6D3DE",
+    "zIndex": 62,
+    "imageSize": 980,
+    "choiceAnchor": "BottomRight",
+    "choiceWidth": 440,
+    "choiceOffsetY": 12,
+    "choiceZIndex": 61,
+    "backdropHex": "#00000099"
+  },
+  {
+    "id": "story.transmission",
+    "backend": "ScreenOverlay",
+    "surfaceKind": "TransmissionOverlay",
+    "anchor": "TopRight",
+    "width": 420,
+    "offsetX": 0,
+    "offsetY": 236,
+    "imageSize": 72,
+    "zIndex": 56,
+    "accentHex": "#7DD3FC",
+    "backgroundHex": "#0C141EEB",
+    "borderHex": "#38BDF8",
+    "foregroundHex": "#E0F2FE",
+    "mutedHex": "#94A3B8"
   }
 ]

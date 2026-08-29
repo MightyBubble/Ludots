@@ -7,7 +7,7 @@
       {
         "id": "open",
         "lineId": "line.author_kit.guard.open",
-        "presentationProfile": "story.dialogue_overlay",
+        "presentationProfile": "author_kit.dialogue_overlay",
         "choices": [
           {
             "id": "write_pass",
@@ -31,7 +31,7 @@
       {
         "id": "recorded",
         "lineId": "line.author_kit.guard.recorded",
-        "presentationProfile": "story.dialogue_overlay",
+        "presentationProfile": "author_kit.dialogue_overlay",
         "choices": [
           {
             "id": "back_to_open",
@@ -43,12 +43,12 @@
       {
         "id": "allowed",
         "lineId": "line.author_kit.guard.allowed",
-        "presentationProfile": "story.dialogue_overlay"
+        "presentationProfile": "author_kit.dialogue_overlay"
       },
       {
         "id": "bye",
         "lineId": "line.author_kit.guard.bye",
-        "presentationProfile": "story.dialogue_overlay"
+        "presentationProfile": "author_kit.dialogue_overlay"
       }
     ]
   }

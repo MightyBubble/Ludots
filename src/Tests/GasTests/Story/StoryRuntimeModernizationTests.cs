@@ -242,7 +242,14 @@ namespace Ludots.Tests.GAS.Story
                 Id = "story.dialogue_overlay",
                 Backend = StoryPresentationBackend.ScreenOverlay,
                 SurfaceKind = "OverlayDialogue",
-                Anchor = "BottomCenter"
+                Anchor = "BottomCenter",
+                Width = 760f,
+                ImageSize = 112f,
+                ZIndex = 60,
+                ChoiceAnchor = "BottomRight",
+                ChoiceWidth = 440f,
+                ChoiceOffsetY = 12f,
+                ChoiceZIndex = 61
             });
             dialogues.Register(new DialogueDefinition
             {
@@ -329,7 +336,14 @@ namespace Ludots.Tests.GAS.Story
                 Id = "story.dialogue_overlay",
                 Backend = StoryPresentationBackend.ScreenOverlay,
                 SurfaceKind = "OverlayDialogue",
-                Anchor = "BottomCenter"
+                Anchor = "BottomCenter",
+                Width = 760f,
+                ImageSize = 112f,
+                ZIndex = 60,
+                ChoiceAnchor = "BottomRight",
+                ChoiceWidth = 440f,
+                ChoiceOffsetY = 12f,
+                ChoiceZIndex = 61
             });
             dialogues.Register(new DialogueDefinition
             {

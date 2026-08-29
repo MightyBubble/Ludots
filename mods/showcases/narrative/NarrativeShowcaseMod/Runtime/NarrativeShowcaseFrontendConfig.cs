@@ -166,7 +166,6 @@ namespace NarrativeShowcaseMod.Runtime
 
     internal sealed class NarrativeShowcaseRoutingConfig
     {
-        public string[] TransmissionSequenceIds { get; set; } = Array.Empty<string>();
         public string[] SubtitleSequenceIds { get; set; } = Array.Empty<string>();
         public NarrativeShowcaseChoiceSignalRoute[] ChoiceSignals { get; set; } = Array.Empty<NarrativeShowcaseChoiceSignalRoute>();
     }
