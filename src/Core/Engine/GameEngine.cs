@@ -3305,9 +3305,17 @@ namespace Ludots.Core.Engine
 
             int widthCm = checked(widthCells * cellSizeCm);
             int heightCm = checked(heightCells * cellSizeCm);
+
+            // The origin-aware bounds contract (exact extent match + authored WorldWidthCm
+            // remap + TerrainBlockedAtOrBelow) is opt-in via the map's VisualHeightmap
+            // binding. Boards declared through the legacy VisualHeightmapAsset field keep
+            // the origin-0 positive-quadrant behavior they were authored against — their
+            // flat fallback must stay origin-0 or origin-naive consumers miss by the
+            // board's half extent (the 64km massnav relief is the canonical case).
+            bool authoredBounds = session.MapConfig?.VisualHeightmap?.WorldWidthCm > 0;
             originXcm = 0;
             originZcm = 0;
-            if (heightmap is IVisualHeightmapRenderSource renderSource)
+            if (authoredBounds && heightmap is IVisualHeightmapRenderSource renderSource)
             {
                 WorldAabbCm bounds = renderSource.Bounds;
                 if (bounds.Width != widthCm || bounds.Height != heightCm)
@@ -3320,11 +3328,15 @@ namespace Ludots.Core.Engine
                 originZcm = bounds.Top;
             }
 
-            bool covers =
-                heightmap.TrySampleHeightCm(originXcm, originZcm, out _) &&
-                heightmap.TrySampleHeightCm(checked(originXcm + widthCm), originZcm, out _) &&
-                heightmap.TrySampleHeightCm(originXcm, checked(originZcm + heightCm), out _) &&
-                heightmap.TrySampleHeightCm(checked(originXcm + widthCm), checked(originZcm + heightCm), out _);
+            bool covers = authoredBounds
+                ? heightmap.TrySampleHeightCm(originXcm, originZcm, out _) &&
+                  heightmap.TrySampleHeightCm(checked(originXcm + widthCm), originZcm, out _) &&
+                  heightmap.TrySampleHeightCm(originXcm, checked(originZcm + heightCm), out _) &&
+                  heightmap.TrySampleHeightCm(checked(originXcm + widthCm), checked(originZcm + heightCm), out _)
+                : heightmap.TrySampleHeightCm(0f, 0f, out _) &&
+                  heightmap.TrySampleHeightCm(widthCm, 0f, out _) &&
+                  heightmap.TrySampleHeightCm(0f, heightCm, out _) &&
+                  heightmap.TrySampleHeightCm(widthCm, heightCm, out _);
             if (!covers)
             {
                 Diagnostics.Log.Info(
@@ -3355,7 +3367,7 @@ namespace Ludots.Core.Engine
                 cellSizeCm,
                 new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
                     heightStepCm,
-                    blockedAtOrBelowHeightCm: boardConfig.TerrainBlockedAtOrBelowHeightCm,
+                    blockedAtOrBelowHeightCm: authoredBounds ? boardConfig.TerrainBlockedAtOrBelowHeightCm : null,
                     originXcm: originXcm,
                     originZcm: originZcm));
         }
