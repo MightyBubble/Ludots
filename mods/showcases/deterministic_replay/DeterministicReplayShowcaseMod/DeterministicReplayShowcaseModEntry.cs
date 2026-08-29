@@ -98,36 +98,51 @@ internal sealed class ReplayPanelController
     private UiElementBuilder BuildRoot(ReactiveContext<ReplayShowcaseState> context)
     {
         ReplayShowcaseState state = context.State;
-        string digestColor = state.EndMatches ? "#8DE3AE" : "#F0C36B";
+        // Verdict color carries the only semantic weight on the panel: green = proof landed,
+        // amber = proof failed (diverged), grey = no verdict yet (not played).
+        (string verdictColor, string verdictLabel) = state.Verdict switch
+        {
+            "Matched" => ("#8DE3AE", $"MATCH — {state.VerdictHint}"),
+            "Mismatched" => ("#F0C36B", $"MISMATCH — {state.VerdictHint}"),
+            _ => ("#9AA8B5", state.VerdictHint),
+        };
         return Ui.Column(
             Ui.Column(
-                Ui.Text("Deterministic Replay — same inputs, same world").FontSize(20f).Bold().Color("#F5F7FA"),
-                Ui.Text("Record authoritative input frames while you command the hero, then replay them: the world re-evolves identically from the recorded checkpoint, and live input during playback is rejected.")
+                Ui.Text("Deterministic Replay — record, replay, compare").FontSize(20f).Bold().Color("#F5F7FA"),
+                Ui.Text("Command the hero while recording, then replay the same inputs: the world must re-evolve identically. Random nudges included — the replay reproduces them exactly.")
                     .FontSize(11f).Color("#D6E0EA").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text(state.Phase).FontSize(12f).Bold().Color("#8AD7FF").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
                     Btn("Nudge hero", "nudge", r => r.NudgeHero()),
                     Btn("Start record", "record", r => r.StartRecording()),
-                    Btn("Stop record", "stop", r => r.StopRecording()),
+                    Btn("Stop record", "stop", r => r.StopRecording())).Gap(6f),
+                Ui.Row(
                     Btn("Play replay", "play", r => r.PlayReplay()),
                     Btn("Pause / Resume", "pause", r => r.TogglePause()),
                     Btn("Step one frame", "step", r => r.StepOne()),
-                    Btn("Reset replay", "reset", r => r.ResetReplay()),
+                    Btn("Reset replay", "reset", r => r.ResetReplay())).Gap(6f),
+                Ui.Row(
                     Btn("Save archive", "save", r => r.SaveArchive()),
-                    Btn("Load latest archive", "load", r => r.LoadLatestArchive())).Gap(6f).Wrap(),
-                Section("Determinism proof", new[]
+                    Btn("Load latest archive", "load", r => r.LoadLatestArchive())).Gap(6f),
+                Section("Proof (digest of the whole world, per tick)", new[]
                 {
-                    $"recorded end digest  {state.RecordedEndDigest}",
-                    $"playback digest      {state.PlaybackDigest}",
-                    state.EndMatches ? "MATCH — the replay reproduced the recorded end state" : "pending: play the replay to the end, then compare",
-                    $"input isolation: {state.IsolationNote}",
-                }, digestColor),
+                    $"recorded end  {state.RecordedEndDigest}",
+                    $"replay end    {state.PlaybackDigest}",
+                    verdictLabel,
+                    $"live-input isolation (engine): {state.IsolationState}",
+                }, verdictColor),
                 Section("Live state", new[]
                 {
-                    $"tick {state.CurrentTick}   frames {state.Frames}   playback index {state.PlaybackIndex}",
+                    $"tick {state.CurrentTick}   frames {state.Frames}   playback frame {System.Math.Max(state.PlaybackIndex, 0)}{(state.PlaybackIndex < 0 ? " (not playing)" : "")}",
                     $"recording {state.IsRecording}   replaying {state.IsReplaying}   paused {state.IsPaused}",
-                    $"archive {state.ArchiveLine}",
-                }, "#8DE3AE"),
+                    $"archive on disk: {state.ArchiveLine}",
+                }, "#7FB4D8"),
+                Section("Legend", new[]
+                {
+                    "grey verdict = not played yet · green = replay matched · amber = diverged (engine gap #1311)",
+                    "frames = captured input snapshots (one per tick during record/replay)",
+                    "digest = hash of every entity's every component (whole-world fingerprint)",
+                }, "#8A93A0"),
                 Section("Trace", state.LogLines, "#FFB38A"))
             .Width(560f).Padding(14f).Gap(8f).Radius(8f).Background("#0B1520").Border(1f, Color("#2F475E")))
             .WidthPercent(100f).HeightPercent(100f).Padding(16f).Align(UiAlignItems.Start).ZIndex(55);
