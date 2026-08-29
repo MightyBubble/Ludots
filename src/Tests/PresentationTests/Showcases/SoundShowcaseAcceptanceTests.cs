@@ -6,7 +6,10 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
@@ -148,6 +151,112 @@ public sealed class SoundShowcaseAcceptanceTests
                 Is.True,
                 $"host sound source '{uri}' must exist on disk");
         }
+    }
+
+    [Test]
+    public void SoundShowcase_HotkeyToggle_SurvivesPacemakerTickSkip()
+    {
+        string repoRoot = FindRepoRoot();
+        List<string> modPaths = RepoModPaths.ResolveExplicit(
+            repoRoot,
+            new[] { "LudotsCoreMod", "CapabilityStandardSoundShowcaseMod" });
+
+        using var engine = new GameEngine();
+        engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
+        HeadlessPresentationTestHost.Install(engine);
+
+        MeshAssetRegistry meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+            ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
+        PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+        SoundRequestBuffer soundRequests = engine.GetService(CoreServiceKeys.SoundRequestBuffer)
+            ?? throw new InvalidOperationException("SoundRequestBuffer missing.");
+        GameSession session = engine.GetService(CoreServiceKeys.GameSession)
+            ?? throw new InvalidOperationException("GameSession missing.");
+        // Headless init binds no adapter handler; install one over an empty backend so the
+        // per-frame input pump folds injected presses into the authoritative accumulator.
+        var handler = new PlayerInputHandler(new EmptyInputBackend(), BuildShowcaseOnlyInputConfig());
+        engine.SetService(CoreServiceKeys.InputHandler, handler);
+        int emitterToneAssetId = meshes.GetId(EmitterToneAssetKey);
+        int emitterDefinitionId = definitions.GetId(EmitterDefinitionKey);
+
+        engine.Start();
+        engine.LoadMap(MapId);
+        TickFrames(engine, 12);
+        Assert.That(FindPresenterByDefinition(engine, emitterDefinitionId), Is.Not.EqualTo(Entity.Null),
+            "the showcase must have spawned its presenter hierarchy before the hotkey phase");
+
+        // Three visual frames per logic tick: the hotkey press lands on a frame whose
+        // logic tick is skipped, so only the frozen tick snapshot can still deliver it.
+        float frameDt = Time.FixedDeltaTime / 3f;
+        TickUntilLogicTickAdvances(engine, session, frameDt);
+        long tickAtPress = session.CurrentTick;
+
+        handler.InjectButtonPress("SoundShowcase.ToggleEmitter");
+        engine.Tick(frameDt);
+        HeadlessPresentationTestHost.UpdateCamera(engine);
+        Assert.That(session.CurrentTick, Is.EqualTo(tickAtPress),
+            "the press frame must run without a logic tick (pacemaker skip)");
+        engine.Tick(frameDt);
+        HeadlessPresentationTestHost.UpdateCamera(engine);
+        Assert.That(session.CurrentTick, Is.EqualTo(tickAtPress),
+            "the frame after the press must still run without a logic tick");
+
+        TickUntilLogicTickAdvances(engine, session, frameDt);
+
+        bool playSeen = false;
+        for (int frame = 0; frame < 6 && !playSeen; frame++)
+        {
+            playSeen = CountRequests(soundRequests, SoundRequestKind.PlayOrUpdate, emitterToneAssetId) > 0;
+            if (!playSeen)
+            {
+                engine.Tick(frameDt);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+            }
+        }
+
+        Assert.That(playSeen, Is.True,
+            "a hotkey pressed on a frame whose logic tick is skipped must still toggle the emitter through the authoritative tick snapshot");
+    }
+
+    private static void TickUntilLogicTickAdvances(GameEngine engine, GameSession session, float dt, int maxFrames = 12)
+    {
+        long tickBefore = session.CurrentTick;
+        for (int frame = 0; frame < maxFrames && session.CurrentTick == tickBefore; frame++)
+        {
+            engine.Tick(dt);
+            HeadlessPresentationTestHost.UpdateCamera(engine);
+        }
+
+        Assert.That(session.CurrentTick, Is.GreaterThan(tickBefore),
+            "the pacemaker must run a logic tick within the frame budget");
+    }
+
+    private static InputConfigRoot BuildShowcaseOnlyInputConfig()
+    {
+        return new InputConfigRoot
+        {
+            Actions = new List<InputActionDef>
+            {
+                new() { Id = "SoundShowcase.ToggleEmitter", Type = InputActionType.Button },
+                new() { Id = "SoundShowcase.FireBeacon", Type = InputActionType.Button },
+                new() { Id = "SoundShowcase.StopAll", Type = InputActionType.Button },
+            },
+            Contexts = new List<InputContextDef>
+            {
+                new()
+                {
+                    Id = "SoundShowcase.Controls",
+                    Priority = 1,
+                    Bindings = new List<InputBindingDef>
+                    {
+                        new() { ActionId = "SoundShowcase.ToggleEmitter", Path = "<Keyboard>/1" },
+                        new() { ActionId = "SoundShowcase.FireBeacon", Path = "<Keyboard>/2" },
+                        new() { ActionId = "SoundShowcase.StopAll", Path = "<Keyboard>/3" },
+                    },
+                },
+            },
+        };
     }
 
     private static void TickFrames(GameEngine engine, int frames)
