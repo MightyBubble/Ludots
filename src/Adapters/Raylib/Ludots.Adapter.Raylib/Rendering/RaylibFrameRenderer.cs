@@ -17,7 +17,6 @@ using Ludots.UI;
 using Ludots.UI.Skia;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
-using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
 using Ludots.Core.Presentation.Rendering;
 
@@ -27,15 +26,19 @@ namespace Ludots.Adapter.Raylib
     {
         Clear,
         BeginWorldTexture,
+        WaterReflection,
+        WaterRefraction,
         BeginWorld3D,
         Skybox,
         DebugGuides,
         Terrain,
+        NavMeshOverlay,
         GlobalField,
         BenchmarkScene,
         PrimitiveVisuals,
         GroundOverlay,
         SplineRibbon,
+        TrailMeshes,
         DebugDraw,
         EndWorld3D,
         PostProcessComposite,
@@ -47,12 +50,15 @@ namespace Ludots.Adapter.Raylib
         bool DrawDebugGuides,
         bool DrawTerrain,
         bool DrawVisualHeightmap,
+        bool WaterEnabled,
         bool HasGlobalFieldBuffer,
         bool DrawFieldOverlays,
         bool HasBenchmarkRenderer,
         bool DrawPrimitives,
         bool HasGroundOverlays,
         bool HasSplineRibbons,
+        bool HasTrailMeshes,
+        bool DrawNavMeshOverlay,
         bool DrawDebugDraw,
         bool DrawSkiaUi,
         bool DrawEnvironment,
@@ -66,6 +72,7 @@ namespace Ludots.Adapter.Raylib
         int Width,
         int Height,
         double TimeSeconds,
+        float DeltaSeconds,
         bool ActiveMapRequestsDeepBackground,
         bool HostDebugGuidesSuppressed,
         bool DrawTerrain,
@@ -75,29 +82,47 @@ namespace Ludots.Adapter.Raylib
         bool DrawDebugDraw,
         bool DrawFieldOverlays,
         bool DrawSkiaUi,
+        bool DrawNavMeshOverlay,
         bool CleanPerformanceMode,
         bool HostDiagnosticUiSuppressed,
         bool EmptyBufferWarned);
 
     internal readonly record struct RaylibRenderFrameResult(bool EmptyBufferWarned);
 
-    internal sealed class RaylibFrameRenderer
+    /// <summary>
+    /// 唯一生产帧执行者：RaylibHostLoop 构建一帧输入后由本类执行 BeginDrawing..覆盖层合成的完整 pass 序列。
+    /// 执行方式是先经 BuildPassPlan 声明本帧 pass，再按声明顺序逐项执行——声明顺序与执行顺序由结构保证一致；
+    /// LastExecutedPasses 在 RenderFrame 入口清零、按"已进入"记录（进入后抛错的 pass 也在轨迹内），供诊断与漂移测试消费。
+    /// EndDrawing 及其后的截图取证仍归宿主循环（ENG-1c）。
+    /// </summary>
+    internal sealed class RaylibFrameRenderer : IDisposable
     {
+        private const int MaxPassesPerFrame = 32;
+
         private readonly GameEngine _engine;
         private readonly UIRoot _uiRoot;
         private readonly SkiaUiRenderer _skiaRenderer;
         private readonly RaylibOverlayCompositor _overlayCompositor;
         private readonly RaylibBrowserLayerRenderer _browserLayerRenderer;
         private readonly RaylibRenderEnvironmentRenderer _environmentRenderer;
+        private readonly RaylibSkyEnvironment _skyEnvironment;
+        private readonly RaylibWaterPass _waterPass;
+        private readonly RaylibFrameLighting _frameLighting;
         private readonly RaylibTerrainRenderer _terrainRenderer;
         private readonly RaylibVisualHeightmapRenderer _visualHeightmapRenderer;
         private readonly RaylibFieldRenderPresenter _fieldRenderPresenter;
+        private readonly RaylibNavMeshPresentationRenderer _navMeshPresentationRenderer;
+        private readonly Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer _navMeshPresentationBuffer;
         private readonly RaylibPrimitiveRenderer _primitiveRenderer;
         private readonly RaylibDebugDrawRenderer _debugDrawRenderer;
         private readonly RaylibBenchmarkRenderService? _benchmarkRenderer;
         private readonly GlobalFieldVisualBuffer? _globalFieldVisualBuffer;
         private readonly ScreenOverlayBuffer? _screenOverlayBuffer;
         private readonly PresentationTimingDiagnostics? _presentationTiming;
+
+        private readonly RaylibFramePass[] _lastExecutedPasses = new RaylibFramePass[MaxPassesPerFrame];
+        private int _lastExecutedPassCount;
+        private long _mode3DStartTicks;
 
         public RaylibFrameRenderer(
             GameEngine engine,
@@ -106,9 +131,14 @@ namespace Ludots.Adapter.Raylib
             RaylibOverlayCompositor overlayCompositor,
             RaylibBrowserLayerRenderer browserLayerRenderer,
             RaylibRenderEnvironmentRenderer environmentRenderer,
+            RaylibSkyEnvironment skyEnvironment,
+            RaylibWaterPass waterPass,
+            RaylibFrameLighting frameLighting,
             RaylibTerrainRenderer terrainRenderer,
             RaylibVisualHeightmapRenderer visualHeightmapRenderer,
             RaylibFieldRenderPresenter fieldRenderPresenter,
+            RaylibNavMeshPresentationRenderer navMeshPresentationRenderer,
+            Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer navMeshPresentationBuffer,
             RaylibPrimitiveRenderer primitiveRenderer,
             RaylibDebugDrawRenderer debugDrawRenderer,
             RaylibBenchmarkRenderService? benchmarkRenderer,
@@ -122,9 +152,14 @@ namespace Ludots.Adapter.Raylib
             _overlayCompositor = overlayCompositor ?? throw new ArgumentNullException(nameof(overlayCompositor));
             _browserLayerRenderer = browserLayerRenderer ?? throw new ArgumentNullException(nameof(browserLayerRenderer));
             _environmentRenderer = environmentRenderer ?? throw new ArgumentNullException(nameof(environmentRenderer));
+            _skyEnvironment = skyEnvironment ?? throw new ArgumentNullException(nameof(skyEnvironment));
+            _waterPass = waterPass ?? throw new ArgumentNullException(nameof(waterPass));
+            _frameLighting = frameLighting ?? throw new ArgumentNullException(nameof(frameLighting));
             _terrainRenderer = terrainRenderer ?? throw new ArgumentNullException(nameof(terrainRenderer));
             _visualHeightmapRenderer = visualHeightmapRenderer ?? throw new ArgumentNullException(nameof(visualHeightmapRenderer));
             _fieldRenderPresenter = fieldRenderPresenter ?? throw new ArgumentNullException(nameof(fieldRenderPresenter));
+            _navMeshPresentationRenderer = navMeshPresentationRenderer ?? throw new ArgumentNullException(nameof(navMeshPresentationRenderer));
+            _navMeshPresentationBuffer = navMeshPresentationBuffer ?? throw new ArgumentNullException(nameof(navMeshPresentationBuffer));
             _primitiveRenderer = primitiveRenderer ?? throw new ArgumentNullException(nameof(primitiveRenderer));
             _debugDrawRenderer = debugDrawRenderer ?? throw new ArgumentNullException(nameof(debugDrawRenderer));
             _benchmarkRenderer = benchmarkRenderer;
@@ -133,6 +168,10 @@ namespace Ludots.Adapter.Raylib
             _presentationTiming = presentationTiming;
         }
 
+        public int LastExecutedPassCount => _lastExecutedPassCount;
+
+        internal ReadOnlySpan<RaylibFramePass> LastExecutedPasses => _lastExecutedPasses.AsSpan(0, _lastExecutedPassCount);
+
         public RaylibRenderFrameResult RenderFrame(in RaylibRenderFrame frame)
         {
             bool emptyBufferWarned = frame.EmptyBufferWarned;
@@ -140,6 +179,7 @@ namespace Ludots.Adapter.Raylib
             bool worldFrameActive = false;
             bool mode3DActive = false;
             bool frameCompleted = false;
+            _lastExecutedPassCount = 0;
 
             try
             {
@@ -148,34 +188,104 @@ namespace Ludots.Adapter.Raylib
                 drawingActive = true;
                 _presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
                 Restore3DDepthState();
-                worldFrameActive = true;
-                _environmentRenderer.BeginWorldFrame(frame.Width, frame.Height, frame.ActiveMapRequestsDeepBackground);
 
-                long mode3DStart = Stopwatch.GetTimestamp();
-                Restore3DDepthState();
-                CameraRenderState3D activeCameraState = frame.ActiveCameraState;
-                mode3DActive = true;
-                BeginCoreMode3D(frame.ActiveCamera, in activeCameraState);
-                Restore3DDepthState();
+                RaylibFrameWaterFrame waterFrame = PrepareFrameEnvironment(in frame);
+                Span<RaylibFramePass> plan = stackalloc RaylibFramePass[MaxPassesPerFrame];
+                int passCount = BuildPassPlan(BuildPlanInput(in frame, waterFrame), plan);
 
-                _environmentRenderer.DrawSkybox(frame.ActiveCamera, frame.TimeSeconds);
-                DrawDebugGuides(in frame);
-                DrawTerrain(in frame);
-                DrawGlobalFields(in frame);
-                bool benchmarkDrew = DrawBenchmarkScene(frame.ActiveCamera);
-                emptyBufferWarned = DrawPrimitiveVisuals(in frame, benchmarkDrew, emptyBufferWarned);
-                DrawGroundOverlays(frame.CleanPerformanceMode);
-                DrawSplineRibbons(frame.CleanPerformanceMode);
-                DrawTrailMeshes(frame.CleanPerformanceMode);
-                DrawDebugCommands(in frame);
+                for (int i = 0; i < passCount; i++)
+                {
+                    RaylibFramePass pass = plan[i];
+                    _lastExecutedPasses[_lastExecutedPassCount++] = pass;
+                    switch (pass)
+                    {
+                        case RaylibFramePass.Clear:
+                            if (!waterFrame.PostProcessWorldFrame)
+                            {
+                                Rl.ClearBackground(waterFrame.ClearColor);
+                            }
 
-                EndCoreMode3D();
-                mode3DActive = false;
-                _presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
-                _environmentRenderer.EndWorldFrame(frame.TimeSeconds);
-                worldFrameActive = false;
+                            break;
+                        case RaylibFramePass.BeginWorldTexture:
+                            _environmentRenderer.BeginWorldFrame(frame.Width, frame.Height, waterFrame.ClearColor);
+                            worldFrameActive = true;
+                            break;
+                        case RaylibFramePass.WaterReflection:
+                            RenderWaterReflection(in frame, in waterFrame);
+                            break;
+                        case RaylibFramePass.WaterRefraction:
+                            RenderWaterRefraction(in frame, in waterFrame);
+                            break;
+                        case RaylibFramePass.BeginWorld3D:
+                        {
+                            long mode3DStart = Stopwatch.GetTimestamp();
+                            Restore3DDepthState();
+                            CameraRenderState3D activeCameraState = frame.ActiveCameraState;
+                            BeginCoreMode3D(frame.ActiveCamera, in activeCameraState);
+                            Restore3DDepthState();
+                            mode3DActive = true;
+                            _mode3DStartTicks = mode3DStart;
+                            break;
+                        }
 
-                DrawUiLayers(in frame);
+                        case RaylibFramePass.Skybox:
+                            _skyEnvironment.Draw(frame.ActiveCamera, frame.ActiveCameraState);
+                            Restore3DDepthState();
+                            break;
+                        case RaylibFramePass.DebugGuides:
+                            DrawDebugGuides(in frame);
+                            break;
+                        case RaylibFramePass.Terrain:
+                            DrawTerrain(in frame, in waterFrame);
+                            break;
+                        case RaylibFramePass.NavMeshOverlay:
+                            DrawNavMeshOverlay();
+                            break;
+                        case RaylibFramePass.GlobalField:
+                            DrawGlobalFields(in frame);
+                            break;
+                        case RaylibFramePass.BenchmarkScene:
+                            _ = _benchmarkRenderer!.Draw(frame.ActiveCamera);
+                            break;
+                        case RaylibFramePass.PrimitiveVisuals:
+                            emptyBufferWarned = DrawPrimitiveVisuals(in frame, emptyBufferWarned);
+                            break;
+                        case RaylibFramePass.GroundOverlay:
+                            DrawGroundOverlays(frame.CleanPerformanceMode);
+                            break;
+                        case RaylibFramePass.SplineRibbon:
+                            DrawSplineRibbons(frame.CleanPerformanceMode);
+                            break;
+                        case RaylibFramePass.TrailMeshes:
+                            DrawTrailMeshes(frame.CleanPerformanceMode);
+                            break;
+                        case RaylibFramePass.DebugDraw:
+                            DrawDebugCommands(in frame);
+                            break;
+                        case RaylibFramePass.EndWorld3D:
+                        {
+                            EndCoreMode3D();
+                            mode3DActive = false;
+                            _presentationTiming?.ObserveMode3D(ElapsedMs(_mode3DStartTicks));
+                            break;
+                        }
+
+                        case RaylibFramePass.PostProcessComposite:
+                            _environmentRenderer.EndWorldFrame(frame.TimeSeconds);
+                            worldFrameActive = false;
+                            break;
+                        case RaylibFramePass.BrowserLayer:
+                            _browserLayerRenderer.Render(_uiRoot.Scene, frame.Width, frame.Height);
+                            break;
+                        case RaylibFramePass.OverlayComposite:
+                            DrawUiLayers(in frame);
+                            break;
+                        default:
+                            throw new InvalidOperationException($"Unhandled Raylib frame pass {pass}.");
+                    }
+                }
+
+                ObserveSkippedPassTimings(plan, passCount);
                 frameCompleted = true;
                 return new RaylibRenderFrameResult(emptyBufferWarned);
             }
@@ -201,6 +311,128 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
+        /// <summary>
+        /// 计划层省略的可选 pass 与旧宿主一样每帧补零观测，避免诊断序列保留上一帧数值。
+        /// </summary>
+        private void ObserveSkippedPassTimings(Span<RaylibFramePass> plan, int passCount)
+        {
+            if (_presentationTiming == null)
+            {
+                return;
+            }
+
+            if (!WasPlanned(plan, passCount, RaylibFramePass.Terrain))
+            {
+                _presentationTiming.ObserveTerrain(0d, 0d, 0, 0);
+            }
+
+            if (!WasPlanned(plan, passCount, RaylibFramePass.GlobalField))
+            {
+                _presentationTiming.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
+            }
+
+            if (!WasPlanned(plan, passCount, RaylibFramePass.PrimitiveVisuals))
+            {
+                _presentationTiming.ObservePrimitiveRender(0d, 0, 0);
+            }
+
+            if (!WasPlanned(plan, passCount, RaylibFramePass.DebugDraw))
+            {
+                _presentationTiming.ObserveDebugDrawRender(0d, 0);
+            }
+        }
+
+        private static bool WasPlanned(Span<RaylibFramePass> plan, int count, RaylibFramePass pass)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (plan[i] == pass)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public void Dispose()
+        {
+            // 组合渲染器均由宿主持有；本类不拥有可释放资源。
+        }
+
+        private readonly record struct RaylibFrameWaterFrame(
+            bool WaterOnVisualHeightmap,
+            bool WaterOnVertexMap,
+            bool WaterFboEnabled,
+            bool PostProcessWorldFrame,
+            Color ClearColor);
+
+        private RaylibFrameWaterFrame PrepareFrameEnvironment(in RaylibRenderFrame frame)
+        {
+            string? activeMapId = _engine.CurrentMapSession?.MapId.Value;
+            _skyEnvironment.EnsureActiveForMap(activeMapId);
+            _waterPass.EnsureActiveForMap(activeMapId);
+            _visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
+            Color clearColor = _skyEnvironment.IsActive
+                ? _skyEnvironment.ResolveClearColor()
+                : (frame.ActiveMapRequestsDeepBackground
+                    ? new Color(6, 10, 16, 255)
+                    : new Color(0, 0, 0, 255));
+
+            if (_skyEnvironment.HasDayPhase)
+            {
+                _frameLighting.SetDayPhase(_skyEnvironment.DayPhase01);
+            }
+            else
+            {
+                _frameLighting.Evaluate();
+            }
+
+            _terrainRenderer.ApplyFrameLighting(_frameLighting);
+            _visualHeightmapRenderer.ApplyFrameLighting(_frameLighting);
+            _primitiveRenderer.ApplyFrameLighting(_frameLighting, frame.ActiveCamera.position);
+            _primitiveRenderer.DrawSurfaceWireBoxes = frame.DrawDebugDraw;
+
+            bool waterOnVisualHeightmap = _waterPass.IsActive &&
+                                          frame.DrawTerrain &&
+                                          frame.DrawVisualHeightmap &&
+                                          frame.HasVisualHeightmap;
+            bool waterOnVertexMap = _waterPass.IsActive &&
+                                    frame.DrawTerrain &&
+                                    !waterOnVisualHeightmap &&
+                                    _engine.VertexMap != null;
+            bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
+            return new RaylibFrameWaterFrame(
+                waterOnVisualHeightmap,
+                waterOnVertexMap,
+                waterFboEnabled,
+                !waterFboEnabled,
+                clearColor);
+        }
+
+        private RaylibFramePassPlanInput BuildPlanInput(in RaylibRenderFrame frame, in RaylibFrameWaterFrame waterFrame)
+        {
+            return new RaylibFramePassPlanInput(
+                DrawDebugGuides: frame.DrawDebugDraw &&
+                    !(frame.DrawVisualHeightmap && frame.HasVisualHeightmap) &&
+                    !frame.HostDebugGuidesSuppressed,
+                DrawTerrain: frame.DrawTerrain,
+                DrawVisualHeightmap: frame.DrawVisualHeightmap,
+                WaterEnabled: waterFrame.WaterFboEnabled,
+                HasGlobalFieldBuffer: _globalFieldVisualBuffer != null,
+                DrawFieldOverlays: frame.DrawFieldOverlays,
+                HasBenchmarkRenderer: _benchmarkRenderer != null,
+                DrawPrimitives: frame.DrawPrimitives,
+                HasGroundOverlays: true,
+                HasSplineRibbons: true,
+                HasTrailMeshes: true,
+                DrawNavMeshOverlay: frame.DrawNavMeshOverlay,
+                DrawDebugDraw: frame.DrawDebugDraw,
+                DrawSkiaUi: frame.DrawSkiaUi,
+                DrawEnvironment: _skyEnvironment.IsActive,
+                UsePostProcess: waterFrame.PostProcessWorldFrame);
+        }
+
         public static int BuildPassPlan(in RaylibFramePassPlanInput input, Span<RaylibFramePass> output)
         {
             int count = 0;
@@ -208,6 +440,12 @@ namespace Ludots.Adapter.Raylib
             if (input.UsePostProcess)
             {
                 Add(output, ref count, RaylibFramePass.BeginWorldTexture);
+            }
+
+            if (input.WaterEnabled)
+            {
+                Add(output, ref count, RaylibFramePass.WaterReflection);
+                Add(output, ref count, RaylibFramePass.WaterRefraction);
             }
 
             Add(output, ref count, RaylibFramePass.BeginWorld3D);
@@ -224,6 +462,11 @@ namespace Ludots.Adapter.Raylib
             if (input.DrawTerrain || input.DrawVisualHeightmap)
             {
                 Add(output, ref count, RaylibFramePass.Terrain);
+            }
+
+            if (input.DrawNavMeshOverlay)
+            {
+                Add(output, ref count, RaylibFramePass.NavMeshOverlay);
             }
 
             if (input.DrawFieldOverlays && input.HasGlobalFieldBuffer)
@@ -249,6 +492,11 @@ namespace Ludots.Adapter.Raylib
             if (input.HasSplineRibbons)
             {
                 Add(output, ref count, RaylibFramePass.SplineRibbon);
+            }
+
+            if (input.HasTrailMeshes)
+            {
+                Add(output, ref count, RaylibFramePass.TrailMeshes);
             }
 
             if (input.DrawDebugDraw)
@@ -282,15 +530,93 @@ namespace Ludots.Adapter.Raylib
             output[count++] = pass;
         }
 
-        private void DrawDebugGuides(in RaylibRenderFrame frame)
+        private void RenderWaterReflection(in RaylibRenderFrame frame, in RaylibFrameWaterFrame waterFrame)
         {
-            if (!frame.DrawDebugDraw ||
-                (frame.DrawVisualHeightmap && frame.HasVisualHeightmap) ||
-                frame.HostDebugGuidesSuppressed)
+            _waterPass.EnsureRenderTargets(frame.Width, frame.Height);
+            _waterPass.Advance(frame.DeltaSeconds);
+
+            Camera3D reflectionCamera = _waterPass.BuildReflectionCamera(frame.ActiveCamera);
+            _waterPass.BeginReflectionPass(waterFrame.ClearColor);
+            Restore3DDepthState();
+            BeginCoreMode3D(reflectionCamera, frame.ActiveCameraState);
+            Restore3DDepthState();
+            try
             {
-                return;
+                if (_skyEnvironment.IsActive)
+                {
+                    _skyEnvironment.Draw(reflectionCamera, frame.ActiveCameraState);
+                    Restore3DDepthState();
+                }
+
+                if (waterFrame.WaterOnVisualHeightmap &&
+                    _engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
+                    vhReflect is IVisualHeightmapRenderSource reflectSource)
+                {
+                    _visualHeightmapRenderer.AbsoluteColorSeaLevelCm = _waterPass.WaterPlaneY * 100f;
+                    _visualHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                    _visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
+                }
+                else
+                {
+                    _terrainRenderer.RenderTerrainOnly(TerrainSource(), reflectionCamera);
+                }
+            }
+            finally
+            {
+                EndCoreMode3D();
+                _waterPass.EndPass();
+            }
+        }
+
+        private void RenderWaterRefraction(in RaylibRenderFrame frame, in RaylibFrameWaterFrame waterFrame)
+        {
+            _waterPass.BeginRefractionPass(waterFrame.ClearColor);
+            Restore3DDepthState();
+            BeginCoreMode3D(frame.ActiveCamera, frame.ActiveCameraState);
+            Restore3DDepthState();
+            try
+            {
+                if (_skyEnvironment.IsActive)
+                {
+                    _skyEnvironment.Draw(frame.ActiveCamera, frame.ActiveCameraState);
+                    Restore3DDepthState();
+                }
+
+                if (waterFrame.WaterOnVisualHeightmap &&
+                    _engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhRefract) &&
+                    vhRefract is IVisualHeightmapRenderSource refractSource)
+                {
+                    _visualHeightmapRenderer.AbsoluteColorSeaLevelCm = _waterPass.WaterPlaneY * 100f;
+                    _visualHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                    _visualHeightmapRenderer.Render(refractSource, frame.ActiveCamera);
+                }
+                else
+                {
+                    _terrainRenderer.RenderTerrainOnly(TerrainSource(), frame.ActiveCamera);
+                }
+            }
+            finally
+            {
+                EndCoreMode3D();
+                _waterPass.EndPass();
+            }
+        }
+
+        private VertexMapTerrainChunkMeshSource? _terrainSource;
+
+        private Ludots.Platform.Abstractions.ITerrainChunkMeshSource TerrainSource()
+        {
+            _terrainSource ??= new VertexMapTerrainChunkMeshSource(null);
+            if (!ReferenceEquals(_terrainSource.Map, _engine.VertexMap))
+            {
+                _terrainSource = new VertexMapTerrainChunkMeshSource(_engine.VertexMap);
             }
 
+            return _terrainSource;
+        }
+
+        private void DrawDebugGuides(in RaylibRenderFrame frame)
+        {
             DrawInfiniteGrid(frame.ActiveCamera.target, 300, 1.0f, 10);
 
             Vector3 target = frame.ActiveCamera.target;
@@ -299,14 +625,40 @@ namespace Ludots.Adapter.Raylib
             Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
         }
 
-        private void DrawTerrain(in RaylibRenderFrame frame)
+        private void DrawTerrain(in RaylibRenderFrame frame, in RaylibFrameWaterFrame waterFrame)
         {
             if (frame.DrawVisualHeightmap &&
                 _engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
                 visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
             {
                 long terrainStart = Stopwatch.GetTimestamp();
+                if (waterFrame.WaterOnVisualHeightmap)
+                {
+                    _visualHeightmapRenderer.AbsoluteColorSeaLevelCm = _waterPass.WaterPlaneY * 100f;
+                    _visualHeightmapRenderer.AbsoluteColorPeakSpanCm = visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                }
+                else
+                {
+                    _visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
+                }
+
                 _visualHeightmapRenderer.Render(visualTerrainSource, frame.ActiveCamera);
+
+                if (waterFrame.WaterOnVisualHeightmap)
+                {
+                    _terrainRenderer.EnsureWaterShadersReady();
+                    _terrainRenderer.BindReflectiveWater(_waterPass);
+                    // Half-extent covers the island board (~1.28km); plane follows camera target XZ.
+                    _terrainRenderer.DrawReflectiveOceanPlane(
+                        _waterPass.WaterPlaneY,
+                        halfExtentMeters: 900f,
+                        frame.ActiveCamera);
+                }
+                else
+                {
+                    _terrainRenderer.ClearReflectiveWater();
+                }
+
                 _presentationTiming?.ObserveTerrain(
                     ElapsedMs(terrainStart),
                     _visualHeightmapRenderer.ChunkBuildMsLastFrame,
@@ -318,8 +670,16 @@ namespace Ludots.Adapter.Raylib
             if (frame.DrawTerrain)
             {
                 long terrainStart = Stopwatch.GetTimestamp();
-                var terrainSource = new Ludots.Client.Raylib.Rendering.VertexMapTerrainChunkMeshSource(_engine.VertexMap);
-                _terrainRenderer.Render(terrainSource, frame.ActiveCamera);
+                if (waterFrame.WaterOnVertexMap)
+                {
+                    _terrainRenderer.BindReflectiveWater(_waterPass);
+                }
+                else
+                {
+                    _terrainRenderer.ClearReflectiveWater();
+                }
+
+                _terrainRenderer.Render(TerrainSource(), frame.ActiveCamera);
                 _presentationTiming?.ObserveTerrain(
                     ElapsedMs(terrainStart),
                     _terrainRenderer.ChunkBuildMsLastFrame,
@@ -329,6 +689,17 @@ namespace Ludots.Adapter.Raylib
             }
 
             _presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
+        }
+
+        private void DrawNavMeshOverlay()
+        {
+            _navMeshPresentationRenderer.Draw(_navMeshPresentationBuffer);
+            _screenOverlayBuffer?.AddText(
+                10,
+                40,
+                _navMeshPresentationBuffer.FormatMetadataLine(),
+                14,
+                new Vector4(1f, 0.92f, 0.5f, 1f));
         }
 
         private void DrawGlobalFields(in RaylibRenderFrame frame)
@@ -349,15 +720,7 @@ namespace Ludots.Adapter.Raylib
             _presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
         }
 
-        private bool DrawBenchmarkScene(in Camera3D activeCamera)
-        {
-            return _benchmarkRenderer != null && _benchmarkRenderer.Draw(activeCamera);
-        }
-
-        private bool DrawPrimitiveVisuals(
-            in RaylibRenderFrame frame,
-            bool benchmarkDrew,
-            bool emptyBufferWarned)
+        private bool DrawPrimitiveVisuals(in RaylibRenderFrame frame, bool emptyBufferWarned)
         {
             if (frame.DrawPrimitives &&
                 _engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
@@ -372,7 +735,13 @@ namespace Ludots.Adapter.Raylib
                 long primitiveStart = Stopwatch.GetTimestamp();
                 PrimitiveDrawBuffer? snapshot = _engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
                 SkinnedVisualBatchBuffer? skinnedBatch = _engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                _engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
+                if (_engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap) &&
+                    visualHeightmap != null)
+                {
+                    _visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
+                    _terrainRenderer.BindStampHeightSampleSource(visualHeightmap);
+                }
+
                 _primitiveRenderer.Draw(
                     draw,
                     frame.ActiveCamera,
@@ -465,11 +834,6 @@ namespace Ludots.Adapter.Raylib
 
         private void DrawUiLayers(in RaylibRenderFrame frame)
         {
-            if (frame.DrawSkiaUi)
-            {
-                _browserLayerRenderer.Render(_uiRoot.Scene, frame.Width, frame.Height);
-            }
-
             long overlayStart = Stopwatch.GetTimestamp();
             OverlayCompositeResult overlayResult = _overlayCompositor.Render(
                 frame.OverlayScene,
@@ -545,7 +909,7 @@ namespace Ludots.Adapter.Raylib
                 matrix.m0, matrix.m1, matrix.m2, matrix.m3,
                 matrix.m4, matrix.m5, matrix.m6, matrix.m7,
                 matrix.m8, matrix.m9, matrix.m10, matrix.m11,
-                matrix.m12, matrix.m13, matrix.m14, matrix.m15
+                matrix.m12, matrix.m13, matrix.m14, matrix.m15,
             };
             Rl.rlMultMatrixf(values);
         }
