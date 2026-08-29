@@ -1,7 +1,7 @@
 ﻿flowchart TD
     A["MapLoaded: interaction showcase hub"] --> B["castAbility.Start: commander starts superweapon"]
     B --> C["AbilityExecInteractionContextSystem: push ability-owned frame"]
-    C --> D["InteractionContextInputContextBridge: push imc.ability.confirm"]
+    C --> D["InputContextProjectionSystem: next-tick diff pushes imc.ability.confirm"]
     D --> E["ContextBoundCollectionWriter: route Arcweaver + Vanguard to ability collection"]
     E --> F{"<Keyboard>/enter pressed?"}
     F -- yes --> G["AuthoritativeInput: SuperweaponConfirm pressed"]

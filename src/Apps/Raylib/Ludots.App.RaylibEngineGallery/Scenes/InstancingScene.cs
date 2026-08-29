@@ -42,7 +42,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _benchmark = new RaylibBenchmarkRenderer(_primitives, _meshes);
             _lit = new RaylibLitModel();
             _shadowMap = new RaylibDirectionalShadowMap();
-            _groundMesh = Rl.GenMeshCube(440f, 0.3f, 150f);
+            _groundMesh = RaylibNativeResources.GenMeshCube(440f, 0.3f, 150f);
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
@@ -143,7 +143,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _lit?.Dispose();
             _shadowMap?.Dispose();
             _skybox.Dispose();
-            Rl.UnloadMesh(_groundMesh);
+            RaylibNativeResources.UnloadMesh(_groundMesh);
             _primitives = null!;
             _lit = null!;
             _shadowMap = null!;

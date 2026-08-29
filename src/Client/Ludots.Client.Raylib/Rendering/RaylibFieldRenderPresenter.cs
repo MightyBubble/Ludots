@@ -4,6 +4,7 @@ using System.Numerics;
 using Ludots.Core.Fields;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Raylib.Render;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
@@ -242,20 +243,20 @@ namespace Ludots.Client.Raylib.Rendering
                 FieldTextureState state = _states[i];
                 if (state.TextureLoaded)
                 {
-                    Rl.UnloadTexture(state.Texture);
+                    RaylibNativeResources.UnloadTexture(state.Texture);
                     state.TextureLoaded = false;
                 }
             }
 
             if (_quadMeshLoaded)
             {
-                Rl.UnloadMesh(_quadMesh);
+                RaylibNativeResources.UnloadMesh(_quadMesh);
                 _quadMeshLoaded = false;
             }
 
             if (_materialLoaded)
             {
-                Rl.UnloadMaterial(_material);
+                RaylibNativeResources.UnloadMaterial(_material);
                 _materialLoaded = false;
             }
 
@@ -681,13 +682,13 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (state.TextureLoaded)
             {
-                Rl.UnloadTexture(state.Texture);
+                RaylibNativeResources.UnloadTexture(state.Texture);
                 state.Texture = default;
                 state.TextureLoaded = false;
             }
 
             Image image = Rl.GenImageColor(state.Width, state.Height, Color.BLANK);
-            state.Texture = Rl.LoadTextureFromImage(image);
+            state.Texture = RaylibNativeResources.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
             state.TextureLoaded = true;
             state.GpuUploaded = false;
@@ -787,7 +788,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (!_materialLoaded)
             {
-                _material = Rl.LoadMaterialDefault();
+                _material = RaylibNativeResources.LoadMaterialDefault();
                 _solidTexture = _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].texture;
                 _materialLoaded = true;
             }
@@ -834,7 +835,7 @@ namespace Ludots.Client.Raylib.Rendering
             mesh.indices[4] = 2;
             mesh.indices[5] = 3;
 
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
 

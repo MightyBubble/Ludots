@@ -4,6 +4,7 @@ using Ludots.Platform.Abstractions;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using SkiaSharp;
+using Ludots.Raylib.Render;
 
 namespace Ludots.App.RaylibEngineGallery
 {
@@ -281,7 +282,7 @@ namespace Ludots.App.RaylibEngineGallery
                 throw new FileNotFoundException($"Gallery texture '{uri}' was not generated before load.", uri);
             }
 
-            Texture2D texture = Rl.LoadTexture(path);
+            Texture2D texture = RaylibNativeResources.LoadTexture(path);
             if (texture.id == 0)
             {
                 throw new InvalidOperationException($"Gallery texture LoadTexture failed for '{path}'.");

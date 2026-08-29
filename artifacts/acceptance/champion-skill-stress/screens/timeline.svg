@@ -28,9 +28,9 @@
   <rect x="40" y="640" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="676" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">007 combat_active</text>
   <text x="420" y="676" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View Command Snapshot | A 48/48 | B 48/48 | Proj 6 peak 21 | HUD BTF</text>
-  <text x="72" y="704" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=3 | feedback=106/377</text>
+  <text x="72" y="704" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=3 | feedback=109/377</text>
   <rect x="40" y="736" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="772" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">008 scaled_up</text>
   <text x="420" y="772" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View Command Snapshot | A 48/56 | B 48/56 | Proj 3 peak 21 | HUD BTF</text>
-  <text x="72" y="800" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=4 | feedback=115/402</text>
+  <text x="72" y="800" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=4 | feedback=121/402</text>
 </svg>

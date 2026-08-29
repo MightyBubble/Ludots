@@ -145,14 +145,14 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _primitives.RegisterInstancingShader("emissive", _emissiveLane);
 
             _binder = new RaylibMaterialLibrary(_paths, _materials);
-            _cube = Rl.GenMeshCube(3f, 3f, 3f);
+            _cube = RaylibNativeResources.GenMeshCube(3f, 3f, 3f);
 
             for (int i = 0; i < _slots.Length; i++)
             {
-                Material material = Rl.LoadMaterialDefault();
+                Material material = RaylibNativeResources.LoadMaterialDefault();
                 if (!_binder.TryApplyMaps(ref material, _slots[i].MaterialId))
                 {
-                    Rl.UnloadMaterial(material);
+                    RaylibNativeResources.UnloadMaterial(material);
                     throw new InvalidOperationException($"Gallery material '{_slots[i].Label}' has no host albedo binding.");
                 }
 
@@ -267,7 +267,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             if (_cube.vertexCount > 0)
             {
-                Rl.UnloadMesh(_cube);
+                RaylibNativeResources.UnloadMesh(_cube);
             }
 
             for (int i = 0; i < _boundMaterials.Length; i++)
@@ -282,14 +282,14 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 _boundMaterials[i].maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
                 _boundMaterials[i].maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
                 _boundMaterials[i].shader = default;
-                Rl.UnloadMaterial(_boundMaterials[i]);
+                RaylibNativeResources.UnloadMaterial(_boundMaterials[i]);
             }
 
             _binder?.Dispose();
             _primitives?.Dispose();
             if (_emissiveLane != null)
             {
-                Rl.UnloadShader(_emissiveLane.Shader);
+                RaylibNativeResources.UnloadShader(_emissiveLane.Shader);
                 _emissiveLane = null!;
             }
 

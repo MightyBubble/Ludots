@@ -22,7 +22,8 @@ capability_standard 专项把一组词条组织成一场可玩的能力演示：
    `capability_standard_graph_op_ConstInt_raylib` → `capability_standard_graph_op_CompareEqInt_raylib`（整数/枚举比较词条）→ `capability_standard_graph_op_SendEvent_raylib` → `capability_standard_graph_op_QueryRadius_raylib`
 2. **专项进阶**——把词条组织成控制流与状态：
    `capability_standard_script_flow_sandbox_raylib`（脚本控制流 / 跨拍 Yield）→ `capability_standard_behavior_tree_arena_raylib`（行为树）→ `capability_standard_hfsm_sentry_arena_raylib`（状态机）→ `capability_standard_graph_score_raylib`（组合短剧）→ `capability_standard_graph_formal_text_raylib`（拼句上字幕）→ `capability_standard_ability_graph_sandbox_raylib`（GAS 能力图）→ `capability_standard_live_skill_workbench_raylib`（技能热改）
-3. **夜袭总装**——词条与专项全部汇进一场戏：
+3. **活动拍板台**——把「事件发生 → 玩家拍板 → 当场结算」整条链走通：`activity_dispatch_cef_raylib`（forced 弹层四形态选项 / pooled 确定性抽签 / automatic 通报，内容纯 JSON 可改）
+4. **夜袭总装**——词条与专项全部汇进一场戏：
    `map_trigger_night_raid_raylib` → `map_trigger_night_raid_override_raylib`（叠加 override 看跨 mod 改写）
 
 启动器菜单里的 preset 是平铺列表；上面这条推荐顺序是作者视角的导读，launcher 的结构化分组是后续独立工作。

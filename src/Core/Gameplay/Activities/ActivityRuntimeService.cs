@@ -23,9 +23,13 @@ namespace Ludots.Core.Gameplay.Activities
         string Summary,
         ActivityInstanceState State,
         ActivityDispatchPolicy DispatchPolicy,
-        int InstanceId);
+        int InstanceId,
+        string SelectedOptionId,
+        Entity ScopeHost);
 
-    public sealed record ActivityRuntimeSnapshot(int NextInstanceId);
+    public sealed record ActivityRuntimeSnapshot(
+        int NextInstanceId,
+        IReadOnlyList<string>? ProcessedSignalIds = null);
 
     public static class ActivityAdmissionRejections
     {
@@ -92,9 +96,14 @@ namespace Ludots.Core.Gameplay.Activities
 
         public ActivityLifecycleBuffer Lifecycle => _lifecycle;
 
+        public bool TryGetDefinition(string activityId, out ActivityDefinition definition)
+            => _definitions.TryGet(activityId, out definition);
+
         public ActivityRuntimeSnapshot CaptureSnapshot()
         {
-            return new ActivityRuntimeSnapshot(_nextInstanceId);
+            return new ActivityRuntimeSnapshot(
+                _nextInstanceId,
+                new List<string>(_processedSignalIds));
         }
 
         public void RestoreSnapshot(ActivityRuntimeSnapshot snapshot)
@@ -107,6 +116,22 @@ namespace Ludots.Core.Gameplay.Activities
             }
 
             _nextInstanceId = snapshot.NextInstanceId;
+            _processedSignalIds.Clear();
+            if (snapshot.ProcessedSignalIds != null)
+            {
+                for (int i = 0; i < snapshot.ProcessedSignalIds.Count; i++)
+                {
+                    string id = snapshot.ProcessedSignalIds[i];
+                    if (string.IsNullOrWhiteSpace(id))
+                    {
+                        throw new InvalidOperationException(
+                            $"Activity snapshot contains an invalid processed signal id '{id}'.");
+                    }
+
+                    _processedSignalIds.Add(id);
+                }
+            }
+
             RebuildIndexFromWorld();
         }
 
@@ -129,6 +154,7 @@ namespace Ludots.Core.Gameplay.Activities
             _index.Clear();
             _presentation.Clear();
             _lifecycle.Clear();
+            _processedSignalIds.Clear();
             _nextInstanceId = 1;
         }
 
@@ -341,6 +367,12 @@ namespace Ludots.Core.Gameplay.Activities
             }
 
             ActivityInstanceCm instance = _world.Get<ActivityInstanceCm>(activityEntity);
+            if (instance.State != ActivityInstanceState.Active)
+            {
+                results.Clear();
+                return false;
+            }
+
             if (!_definitions.TryGet(instance.DefinitionId, out ActivityDefinition definition))
             {
                 return false;
@@ -371,7 +403,8 @@ namespace Ludots.Core.Gameplay.Activities
                         definition.Id,
                         instance.InstanceId,
                         option.Id,
-                        reason));
+                        reason,
+                        ScopeKey(instance.ScopeHost)));
                 }
 
                 results.Add(new ActivityOptionView(
@@ -465,7 +498,8 @@ namespace Ludots.Core.Gameplay.Activities
                 definition.Id,
                 instance.InstanceId,
                 option.Id,
-                string.Empty));
+                string.Empty,
+                ScopeKey(instance.ScopeHost)));
             EmitLifecycle(ActivityLifecycleKeys.OptionSelected, definition, instance, option.Id);
             EmitLifecycle(ActivityLifecycleKeys.Settled, definition, instance, option.Id);
             EmitLifecycle(ActivityLifecycleKeys.Archived, definition, instance, option.Id);
@@ -507,7 +541,9 @@ namespace Ludots.Core.Gameplay.Activities
                     definition.Summary,
                     instance.State,
                     definition.DispatchPolicy,
-                    instance.InstanceId));
+                    instance.InstanceId,
+                    SelectedOptionId(definition, in instance),
+                    instance.ScopeHost));
             });
             return views;
         }
@@ -571,7 +607,8 @@ namespace Ludots.Core.Gameplay.Activities
                 definition.Id,
                 instance.InstanceId,
                 string.Empty,
-                string.Empty));
+                string.Empty,
+                ScopeKey(instance.ScopeHost)));
             EmitLifecycle(ActivityLifecycleKeys.Presented, definition, instance, string.Empty);
         }
 
@@ -590,7 +627,8 @@ namespace Ludots.Core.Gameplay.Activities
                 definition.Id,
                 instance.InstanceId,
                 string.Empty,
-                string.Empty));
+                string.Empty,
+                ScopeKey(instance.ScopeHost)));
             EmitLifecycle(ActivityLifecycleKeys.Settled, definition, instance, string.Empty);
             EmitLifecycle(ActivityLifecycleKeys.Archived, definition, instance, string.Empty);
         }
@@ -827,6 +865,17 @@ namespace Ludots.Core.Gameplay.Activities
 
         private static bool TracksPendingInstance(ActivityRepeatPolicy policy) =>
             policy is ActivityRepeatPolicy.PendingDedupe or ActivityRepeatPolicy.Unique;
+
+        private static string SelectedOptionId(ActivityDefinition definition, in ActivityInstanceCm instance)
+        {
+            if (instance.State != ActivityInstanceState.Resolved ||
+                (uint)instance.SelectedOptionIndex >= (uint)definition.Options.Count)
+            {
+                return string.Empty;
+            }
+
+            return definition.Options[instance.SelectedOptionIndex].Id;
+        }
 
         private static int ScopeKey(Entity scopeHost) =>
             scopeHost == Entity.Null ? 0 : scopeHost.Id;
