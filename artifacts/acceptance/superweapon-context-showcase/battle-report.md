@@ -8,13 +8,13 @@
 ## Scenario
 - Showcase: `SuperweaponContextShowcaseMod` over `interaction_showcase_hub`.
 - Launcher binding: `superweapon_context_showcase` (`.\scripts\run-mod-launcher.cmd cli launch superweapon_context_showcase --adapter raylib`).
-- Runtime path: `castAbility.Start` -> `AbilityExecSystem` -> `AbilityExecInteractionContextSystem` -> `InteractionContextInputContextBridge` -> `CoreServiceKeys.AuthoritativeInput` -> `GameplayEventBus`.
+- Runtime path: `castAbility.Start` -> `AbilityExecSystem` -> `AbilityExecInteractionContextSystem` -> `InputContextProjectionSystem` -> `CoreServiceKeys.AuthoritativeInput` -> `GameplayEventBus`.
 - Context profile: `ctx.ability.superweapon.confirm_targets`.
 - Player action: press `<Keyboard>/enter` through `imc.ability.confirm`; the test does not publish the completion event directly.
 
 ## Timeline
 - [T+000] Launcher binding `superweapon_context_showcase` -> `mods/showcases/superweapon_context/SuperweaponContextShowcaseMod` verified; Commander#8.Cast(Superweapon Context) -> GateWaiting(`Event.Showcase.Superweapon.Confirmed`).
-- [T+001] AbilityFrame.Push(`ctx.ability.superweapon.confirm_targets`) -> IMC `imc.ability.confirm` active.
+- [T+001] AbilityFrame.Push(`ctx.ability.superweapon.confirm_targets`) -> `InputContextProjectionSystem` next-tick diff -> IMC `imc.ability.confirm` active.
 - [T+002] ContextBoundCollectionWriter.CommitCast -> ability targets `6, 7`.
 - [T+003] PlayerInput(`<Keyboard>/enter`) -> Authoritative `SuperweaponConfirm` -> GameplayEvent published.
 - [T+004] AbilityExecSystem consumes event -> End -> frame restored to `interaction.context.default`.
@@ -23,13 +23,13 @@
 | Field | Value |
 |-------|-------|
 | Ability id | 26 |
-| Local player | Entity = { Id = 8, WorldId = 14, Version = 1 } |
-| Commander context entity | Entity = { Id = 8, WorldId = 14, Version = 1 } |
-| Ability targets | Entity = { Id = 6, WorldId = 14, Version = 1 }, Entity = { Id = 7, WorldId = 14, Version = 1 } |
-| Raw local targets | Entity = { Id = 6, WorldId = 14, Version = 1 }, Entity = { Id = 7, WorldId = 14, Version = 1 } |
+| Local player | Entity = { Id = 8, WorldId = 32, Version = 1 } |
+| Commander context entity | Entity = { Id = 8, WorldId = 32, Version = 1 } |
+| Ability targets | Entity = { Id = 6, WorldId = 32, Version = 1 }, Entity = { Id = 7, WorldId = 32, Version = 1 } |
+| Raw local targets | Entity = { Id = 6, WorldId = 32, Version = 1 }, Entity = { Id = 7, WorldId = 32, Version = 1 } |
 | Confirm input observed | True |
 | Confirm events published | 1 |
-| Command source after frame restore | Entity = { Id = 8, WorldId = 14, Version = 1 } |
+| Command source after frame restore | Entity = { Id = 8, WorldId = 32, Version = 1 } |
 
 ## Summary Stats
 - total actions: 1 physical confirm press
