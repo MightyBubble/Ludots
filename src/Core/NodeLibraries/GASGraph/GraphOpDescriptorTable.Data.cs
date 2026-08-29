@@ -222,7 +222,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // DispatchMapEvent payload ports are dynamic (one per non-String schema parameter,
             // named after the parameter); the static table intentionally declares none.
             Add(rows, GraphNodeOp.DispatchMapEvent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.OfferActivity, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ControlDomainResolve, LinearAll, GraphValueType.Entity, portSource);
             Add(rows, GraphNodeOp.ControlDomainControls, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.KnowledgeHasProjection, LinearAll, GraphValueType.Bool, portAB);

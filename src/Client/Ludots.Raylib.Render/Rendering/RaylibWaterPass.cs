@@ -173,8 +173,8 @@ namespace Ludots.Raylib.Render
             }
 
             UnloadRenderTargets();
-            _reflection = RaylibNativeResources.LoadRenderTexture(width, height);
-            _refraction = RaylibNativeResources.LoadRenderTexture(width, height);
+            _reflection = Rl.LoadRenderTexture(width, height);
+            _refraction = Rl.LoadRenderTexture(width, height);
             if (_reflection.id == 0 || _reflection.texture.id == 0 ||
                 _refraction.id == 0 || _refraction.texture.id == 0)
             {
@@ -313,12 +313,12 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibWaterPass)} water DUDV file missing: uri='{dudvUri}' fullPath='{fullPath}'.");
             }
 
-            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
+            Texture2D texture = Rl.LoadTexture(fullPath);
             if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
             {
                 if (texture.id != 0)
                 {
-                    RaylibNativeResources.UnloadTexture(texture);
+                    Rl.UnloadTexture(texture);
                 }
 
                 throw new InvalidOperationException(
@@ -334,7 +334,7 @@ namespace Ludots.Raylib.Render
         {
             // RG = 0.5 → zero distortion when sampled as (xy * 2 - 1).
             Image image = Rl.GenImageColor(1, 1, new Color(128, 128, 128, 255));
-            Texture2D texture = RaylibNativeResources.LoadTextureFromImage(image);
+            Texture2D texture = Rl.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
             if (texture.id == 0)
             {
@@ -349,13 +349,13 @@ namespace Ludots.Raylib.Render
         {
             if (_reflection.id != 0)
             {
-                RaylibNativeResources.UnloadRenderTexture(_reflection);
+                Rl.UnloadRenderTexture(_reflection);
                 _reflection = default;
             }
 
             if (_refraction.id != 0)
             {
-                RaylibNativeResources.UnloadRenderTexture(_refraction);
+                Rl.UnloadRenderTexture(_refraction);
                 _refraction = default;
             }
 
@@ -366,7 +366,7 @@ namespace Ludots.Raylib.Render
         {
             if (_ownsDudvTexture && _dudvTexture.id != 0)
             {
-                RaylibNativeResources.UnloadTexture(_dudvTexture);
+                Rl.UnloadTexture(_dudvTexture);
             }
 
             _dudvTexture = default;

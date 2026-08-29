@@ -108,12 +108,12 @@ namespace Ludots.Raylib.Render
 
             if (_targetLoaded)
             {
-                RaylibNativeResources.UnloadRenderTexture(_target);
+                Rl.UnloadRenderTexture(_target);
                 _target = default;
                 _targetLoaded = false;
             }
 
-            _target = RaylibNativeResources.LoadRenderTexture(width, height);
+            _target = Rl.LoadRenderTexture(width, height);
             if (_target.id == 0 || _target.texture.id == 0)
             {
                 throw new InvalidOperationException($"Raylib LoadRenderTexture returned an empty world target for {width}x{height}.");
@@ -133,7 +133,7 @@ namespace Ludots.Raylib.Render
             }
 
             string baseDir = AppContext.BaseDirectory;
-            _shader = RaylibNativeResources.LoadShader(null!, Path.Combine(baseDir, "postprocess.fs"));
+            _shader = Rl.LoadShader(null!, Path.Combine(baseDir, "postprocess.fs"));
             if (_shader.id == 0)
             {
                 throw new InvalidOperationException("Failed to load post-process shader (shader.id == 0).");
@@ -171,14 +171,14 @@ namespace Ludots.Raylib.Render
 
             if (_targetLoaded)
             {
-                RaylibNativeResources.UnloadRenderTexture(_target);
+                Rl.UnloadRenderTexture(_target);
                 _target = default;
                 _targetLoaded = false;
             }
 
             if (_shaderLoaded)
             {
-                RaylibNativeResources.UnloadShader(_shader);
+                Rl.UnloadShader(_shader);
                 _shaderLoaded = false;
             }
         }

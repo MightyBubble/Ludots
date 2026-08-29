@@ -36,8 +36,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         {
             _litProps.Load();
             _shadowMap = new RaylibDirectionalShadowMap();
-            _shadowMesh = RaylibNativeResources.GenMeshSphere(0.5f, 24, 16);
-            _podium = RaylibNativeResources.GenMeshCube(RoughnessSteps * 3.4f, 0.24f, MetallicLanes * 3.4f);
+            _shadowMesh = Rl.GenMeshSphere(0.5f, 24, 16);
+            _podium = Rl.GenMeshCube(RoughnessSteps * 3.4f, 0.24f, MetallicLanes * 3.4f);
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
@@ -128,9 +128,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return;
             }
 
-            RaylibNativeResources.UnloadMesh(_podium);
+            Rl.UnloadMesh(_podium);
             _shadowMap?.Dispose();
-            RaylibNativeResources.UnloadMesh(_shadowMesh);
+            Rl.UnloadMesh(_shadowMesh);
             _skybox.Dispose();
             _litProps.Dispose();
             _disposed = true;

@@ -27,7 +27,7 @@ namespace Ludots.Raylib.Render
                 fsFileName,
                 depth: 0);
 
-            Shader shader = RaylibNativeResources.LoadShaderFromMemory(vsText, fsText);
+            Shader shader = Rl.LoadShaderFromMemory(vsText, fsText);
             if (shader.id == 0)
             {
                 throw new InvalidOperationException(

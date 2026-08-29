@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using Ludots.Raylib.Render;
 using NUnit.Framework;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
@@ -51,60 +50,6 @@ public sealed class RaylibSoundNativeDeviceTests
         }
         finally
         {
-            Rl.CloseAudioDevice();
-        }
-    }
-
-    [Test]
-    public void NativeAudioDevice_SoundAndAliasLifecycle_BalancesNativeResourceLedger()
-    {
-        string wavPath = FindShowcaseToneWav();
-        Assert.That(File.Exists(wavPath), Is.True, $"expected generated tone asset at {wavPath}");
-
-        try
-        {
-            Rl.InitAudioDevice();
-        }
-        catch (Exception ex)
-        {
-            Assert.Ignore($"SKIP (explicit): raylib InitAudioDevice threw on this host ({ex.GetType().Name}: {ex.Message}); native audio round-trip cannot run.");
-            return;
-        }
-
-        if (!Rl.IsAudioDeviceReady())
-        {
-            Assert.Ignore("SKIP (explicit): raylib audio device is not ready on this host (no audio device); native audio round-trip cannot run.");
-        }
-
-        try
-        {
-            RaylibNativeResourceLedger.Reset();
-            Sound sound = RaylibNativeResources.LoadSound(wavPath);
-            Assert.That(Rl.IsSoundValid(sound), Is.True, "LoadSound must return a valid sound for the generated tone WAV");
-            Sound firstAlias = RaylibNativeResources.LoadSoundAlias(sound);
-            Sound secondAlias = RaylibNativeResources.LoadSoundAlias(sound);
-
-            RaylibNativeResourceSnapshot loaded = RaylibNativeResourceLedger.Snapshot();
-            Assert.That(loaded.OutstandingByKind[(int)RaylibNativeResourceKind.Sound], Is.EqualTo(1),
-                "sound base must be tracked exactly once");
-            Assert.That(loaded.OutstandingByKind[(int)RaylibNativeResourceKind.SoundAlias], Is.EqualTo(2),
-                "two aliases of one sound must hold distinct ledger identities (raylib allocates a distinct alias buffer per LoadSoundAlias)");
-            Assert.That(loaded.RetrackedCount, Is.EqualTo(0));
-            Assert.That(loaded.UnknownUntrackCount, Is.EqualTo(0));
-
-            RaylibNativeResources.UnloadSoundAlias(firstAlias);
-            RaylibNativeResources.UnloadSoundAlias(secondAlias);
-            RaylibNativeResources.UnloadSound(sound);
-
-            RaylibNativeResourceSnapshot unloaded = RaylibNativeResourceLedger.Snapshot();
-            Assert.That(unloaded.OutstandingCount, Is.EqualTo(0));
-            Assert.That(unloaded.ResidentBytes, Is.EqualTo(0));
-            Assert.That(unloaded.RetrackedCount, Is.EqualTo(0));
-            Assert.That(unloaded.UnknownUntrackCount, Is.EqualTo(0));
-        }
-        finally
-        {
-            RaylibNativeResourceLedger.Reset();
             Rl.CloseAudioDevice();
         }
     }

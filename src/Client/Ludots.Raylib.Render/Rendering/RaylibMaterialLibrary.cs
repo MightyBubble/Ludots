@@ -19,45 +19,14 @@ namespace Ludots.Raylib.Render
 
         private readonly IRenderAssetPathResolver _vfs;
         private readonly IRenderMaterialAssets _materials;
-        private readonly RaylibAssetStore<Texture2D> _textureStore;
-        private readonly Dictionary<int, List<RaylibAssetStore<Texture2D>.Lease>> _bindingLeases = new();
         private readonly Dictionary<int, MaterialBinding> _bindingsByMaterialId = new();
         private readonly HashSet<uint> _ownedTextureIds = new();
         private bool _disposed;
 
-        private readonly bool _ownsTextureStore;
-
         public RaylibMaterialLibrary(IRenderAssetPathResolver vfs, IRenderMaterialAssets materials)
-            : this(vfs, materials, CreateStandaloneTextureStore(vfs))
-        {
-            _ownsTextureStore = true;
-        }
-
-        public RaylibMaterialLibrary(IRenderAssetPathResolver vfs, IRenderMaterialAssets materials, RaylibAssetStore<Texture2D> textureStore)
         {
             _vfs = vfs ?? throw new ArgumentNullException(nameof(vfs));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
-            _textureStore = textureStore ?? throw new ArgumentNullException(nameof(textureStore));
-        }
-
-        private static RaylibAssetStore<Texture2D> CreateStandaloneTextureStore(IRenderAssetPathResolver? vfs)
-        {
-            return new RaylibAssetStore<Texture2D>(vfs, fullPath =>
-            {
-                Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
-                if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
-                {
-                    if (texture.id != 0)
-                    {
-                        RaylibNativeResources.UnloadTexture(texture);
-                    }
-
-                    throw new InvalidOperationException(
-                        $"raylib rejected texture '{fullPath}' (textureId={texture.id}, size={texture.width}x{texture.height}).");
-                }
-
-                return texture;
-            }, RaylibNativeResources.UnloadTexture);
         }
 
         /// <summary>解析后的材质视图（shaderKey/命名参数/命名贴图 URI）；未注册返回 false。</summary>
@@ -210,21 +179,7 @@ namespace Ludots.Raylib.Render
             }
 
             _bindingsByMaterialId.Clear();
-            foreach (List<RaylibAssetStore<Texture2D>.Lease> leases in _bindingLeases.Values)
-            {
-                foreach (RaylibAssetStore<Texture2D>.Lease lease in leases)
-                {
-                    lease.Dispose();
-                }
-            }
-
-            _bindingLeases.Clear();
             _ownedTextureIds.Clear();
-            if (_ownsTextureStore)
-            {
-                _textureStore.Dispose();
-            }
-
             _disposed = true;
         }
 
@@ -262,35 +217,13 @@ namespace Ludots.Raylib.Render
                 }
             }
 
-            Texture2D albedo;
+            Texture2D albedo = LoadRequiredMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Albedo);
             Texture2D roughness = default;
             Texture2D metallic = default;
             Texture2D normal = default;
-            bool hasRoughness;
-            bool hasMetallic;
-            bool hasNormal;
-            try
-            {
-                albedo = LoadRequiredMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Albedo);
-                hasRoughness = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Roughness, out roughness);
-                hasMetallic = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Metallic, out metallic);
-                hasNormal = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Normal, out normal);
-            }
-            catch
-            {
-                // 绑定未成立：回收本次已取得的租约，避免部分失败累积引用（#1327 复核修复）。
-                if (_bindingLeases.TryGetValue(materialAssetId, out List<RaylibAssetStore<Texture2D>.Lease>? partial))
-                {
-                    foreach (RaylibAssetStore<Texture2D>.Lease lease in partial)
-                    {
-                        lease.Dispose();
-                    }
-
-                    _bindingLeases.Remove(materialAssetId);
-                }
-
-                throw;
-            }
+            bool hasRoughness = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Roughness, out roughness);
+            bool hasMetallic = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Metallic, out metallic);
+            bool hasNormal = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Normal, out normal);
 
             binding = new MaterialBinding(
                 albedo,
@@ -352,25 +285,30 @@ namespace Ludots.Raylib.Render
             string uri,
             string slotName)
         {
-            RaylibAssetStore<Texture2D>.Lease lease;
-            try
-            {
-                lease = _textureStore.Acquire(uri);
-            }
-            catch (Exception ex)
+            if (!_vfs.TryResolveFullPath(uri, out string fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibMaterialLibrary)} {slotName} texture load failed for materialId={materialAssetId} ({materialName}): uri='{uri}': {ex.Message}");
+                    $"{nameof(RaylibMaterialLibrary)} cannot resolve {slotName} URI '{uri}' for materialId={materialAssetId} ({materialName}).");
             }
 
-            if (!_bindingLeases.TryGetValue(materialAssetId, out List<RaylibAssetStore<Texture2D>.Lease>? leases))
+            if (!File.Exists(fullPath))
             {
-                leases = new List<RaylibAssetStore<Texture2D>.Lease>();
-                _bindingLeases[materialAssetId] = leases;
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibMaterialLibrary)} {slotName} file missing for materialId={materialAssetId} ({materialName}): uri='{uri}' fullPath='{fullPath}'.");
             }
 
-            leases.Add(lease);
-            Texture2D texture = lease.Resource;
+            Texture2D texture = Rl.LoadTexture(fullPath);
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                if (texture.id != 0)
+                {
+                    Rl.UnloadTexture(texture);
+                }
+
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibMaterialLibrary)} LoadTexture failed for {slotName} materialId={materialAssetId} ({materialName}): uri='{uri}' fullPath='{fullPath}'.");
+            }
+
             _ownedTextureIds.Add(texture.id);
             return texture;
         }
@@ -393,7 +331,10 @@ namespace Ludots.Raylib.Render
 
         private void UnloadOwned(Texture2D texture)
         {
-            // 贴图生命周期归 RaylibAssetStore：库只在 Dispose 释放租约，实际销毁延迟到存储冲刷（#1327）。
+            if (texture.id != 0)
+            {
+                Rl.UnloadTexture(texture);
+            }
         }
 
         private void ThrowIfDisposed()

@@ -129,7 +129,7 @@ public sealed class PanelKitSmallShowcaseTests
 	}
 
 	[Test]
-	public void SampleManifest_StillLoadsSevenPanels_WithoutGameFlavor()
+	public void SampleManifest_StillLoadsSixPanels_WithoutGameFlavor()
 	{
 		var registered = new HashSet<string>(WebUiPanelKitSampleCatalog.SampleTopics, StringComparer.Ordinal);
 		WebUiPanelKitReferenceCatalog catalog = WebUiPanelKitSampleCatalog.Create(registered.Contains);
@@ -137,11 +137,10 @@ public sealed class PanelKitSmallShowcaseTests
 			WebUiPanelKitSampleCatalog.SampleManifestPath(),
 			catalog);
 
-		Assert.That(manifest.Panels, Has.Count.EqualTo(7));
+		Assert.That(manifest.Panels, Has.Count.EqualTo(6));
 		Assert.That(manifest.Panels.Select(p => p.PanelType), Does.Contain("notification"));
 		Assert.That(manifest.Panels.Select(p => p.PanelType), Does.Contain("production-overview"));
 		Assert.That(manifest.Panels.Select(p => p.PanelType), Does.Contain("techtree"));
-		Assert.That(manifest.Panels.Select(p => p.PanelType), Does.Contain("activity"));
 	}
 
 	private static string ResolveRepoPath(string relative)

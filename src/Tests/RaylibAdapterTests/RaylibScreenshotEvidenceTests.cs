@@ -8,71 +8,6 @@ namespace Ludots.Tests.RaylibAdapter;
 public sealed class RaylibScreenshotEvidenceTests
 {
     [Test]
-    public void TryCreateFromEnvironment_RejectsDirectoryStylePath()
-    {
-        string previous = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
-        try
-        {
-            Environment.SetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH", AppContext.BaseDirectory);
-            Assert.Throws<InvalidOperationException>(() =>
-                RaylibScreenshotEvidenceRecorder.TryCreateFromEnvironment());
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH", previous);
-        }
-    }
-
-    [Test]
-    public void TryCreateFromEnvironment_AbsentPathYieldsNullRecorder()
-    {
-        string previous = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
-        try
-        {
-            Environment.SetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH", null);
-            Assert.That(RaylibScreenshotEvidenceRecorder.TryCreateFromEnvironment(), Is.Null);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH", previous);
-        }
-    }
-
-    [Test]
-    public void ShouldCapture_GatesOnFrameAndRuntimeFloor()
-    {
-        string previousPath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
-        string previousMinRuntime = Environment.GetEnvironmentVariable("LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT");
-        try
-        {
-            string target = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"evidence-{Guid.NewGuid():N}.png");
-            Environment.SetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH", target);
-            Environment.SetEnvironmentVariable("LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT", "50");
-            RaylibScreenshotEvidenceRecorder recorder =
-                RaylibScreenshotEvidenceRecorder.TryCreateFromEnvironment()!;
-            Assert.That(recorder.Pending, Is.True);
-
-            Assert.That(recorder.ShouldCapture(frameIndex: 59, runtimeElapsedMs: 999), Is.False, "帧号未到不得截图");
-            Assert.That(recorder.ShouldCapture(frameIndex: 60, runtimeElapsedMs: 49), Is.False, "最小运行时长未到不得截图");
-            Assert.That(recorder.ShouldCapture(frameIndex: 60, runtimeElapsedMs: 50), Is.True);
-            Assert.That(recorder.ShouldCapture(frameIndex: 61, runtimeElapsedMs: 999), Is.True);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH", previousPath);
-            Environment.SetEnvironmentVariable("LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT", previousMinRuntime);
-        }
-    }
-
-    [Test]
-    public void BuildSequencedScreenshotPath_UsesIndexAndFrameNumberContract()
-    {
-        string target = Path.Combine(TestContext.CurrentContext.WorkDirectory, "shot.png");
-        string sequenced = RaylibScreenshotEvidenceRecorder.BuildSequencedScreenshotPath(target, sequenceIndex: 2, frame: 340);
-        Assert.That(sequenced, Does.EndWith($"shot_{2 + 1:000}_f0340.png"));
-    }
-
-    [Test]
     public void ValidateRuntimeScreenshotEvidence_AcceptsPngWithExpectedDimensions()
     {
         string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"raylib-screenshot-{Guid.NewGuid():N}.png");
@@ -80,7 +15,7 @@ public sealed class RaylibScreenshotEvidenceTests
         {
             WritePng(path, width: 1280, height: 720, flat: false);
 
-            RaylibScreenshotEvidenceRecorder.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720);
+            RaylibHostLoop.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720);
         }
         finally
         {
@@ -97,7 +32,7 @@ public sealed class RaylibScreenshotEvidenceTests
         string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"missing-raylib-screenshot-{Guid.NewGuid():N}.png");
 
         Assert.That(
-            () => RaylibScreenshotEvidenceRecorder.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720),
+            () => RaylibHostLoop.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720),
             Throws.InvalidOperationException.With.Message.Contains("was not written"));
     }
 
@@ -110,7 +45,7 @@ public sealed class RaylibScreenshotEvidenceTests
             WritePng(path, width: 640, height: 360, flat: false);
 
             Assert.That(
-                () => RaylibScreenshotEvidenceRecorder.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720),
+                () => RaylibHostLoop.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720),
                 Throws.InvalidOperationException.With.Message.Contains("dimensions mismatch"));
         }
         finally
@@ -138,7 +73,7 @@ public sealed class RaylibScreenshotEvidenceTests
             });
 
             Assert.That(
-                () => RaylibScreenshotEvidenceRecorder.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720),
+                () => RaylibHostLoop.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720),
                 Throws.InvalidOperationException.With.Message.Contains("decodable PNG"));
         }
         finally
@@ -159,7 +94,7 @@ public sealed class RaylibScreenshotEvidenceTests
             WritePng(path, width: 1280, height: 720, flat: true);
 
             Assert.That(
-                () => RaylibScreenshotEvidenceRecorder.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720),
+                () => RaylibHostLoop.ValidateRuntimeScreenshotEvidence(path, expectedWidth: 1280, expectedHeight: 720),
                 Throws.InvalidOperationException.With.Message.Contains("visually flat"));
         }
         finally

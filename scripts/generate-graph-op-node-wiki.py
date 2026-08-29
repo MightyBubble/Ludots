@@ -58,7 +58,6 @@ HANDBOOK_BY_DRIVER = {
     "invokeGraph": ("map-02-triggers.md", "地图触发器 · map-02"),
     "placedEntity": ("map-02-triggers.md", "地图触发器 · map-02"),
     "placedRegion": ("map-02-triggers.md", "地图触发器 · map-02"),
-    "activity": ("map-02-triggers.md", "地图触发器 · map-02"),
     "sandbox": ("gr-02-document.md", "图文档写法 · gr-02"),
 }
 
@@ -321,7 +320,6 @@ FAMILY_USE_CASES = {
     "blackboard": "跨节点跨图传值、决策记忆（记住要盯的人）、按名册配置出招。",
     "script": "跨帧等待（读条、喝药回满）、子图复用、循环收口。",
     "sandbox": "多节点串成完整小玩法的组合示范，可整段抄走改。",
-    "activity": "地图事件发生后把一次拍板摆到玩家面前：补给超限、过境商队、归属通报这类 CK3 弹层的调度入口。",
 }
 
 

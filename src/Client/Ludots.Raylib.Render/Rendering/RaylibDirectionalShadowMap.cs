@@ -38,30 +38,30 @@ namespace Ludots.Raylib.Render
             MapSize = effective.MapSize;
             ReceiverBiasWorld = effective.ReceiverBiasWorld;
 
-            _rt = RaylibNativeResources.LoadRenderTexture(MapSize, MapSize);
+            _rt = Rl.LoadRenderTexture(MapSize, MapSize);
             Rl.SetTextureFilter(_rt.texture, Rl.TextureFilter.TEXTURE_FILTER_POINT);
             Rl.SetTextureWrap(_rt.texture, Rl.TextureWrap.TEXTURE_WRAP_CLAMP);
             string baseDir = AppContext.BaseDirectory;
             string fsPath = System.IO.Path.Combine(baseDir, "shadow_depth.fs");
-            _depthShader = RaylibNativeResources.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth.vs"), fsPath);
+            _depthShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth.vs"), fsPath);
             if (_depthShader.id == 0)
             {
                 throw new InvalidOperationException("Failed to load shadow_depth shader (shader.id == 0).");
             }
 
-            _depthInstancedShader = RaylibNativeResources.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_instanced.vs"), fsPath);
+            _depthInstancedShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_instanced.vs"), fsPath);
             if (_depthInstancedShader.id == 0)
             {
                 throw new InvalidOperationException("Failed to load shadow_depth_instanced shader (shader.id == 0).");
             }
 
-            _depthSkinningInstancedShader = RaylibNativeResources.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_skinning_instanced.vs"), fsPath);
+            _depthSkinningInstancedShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_skinning_instanced.vs"), fsPath);
             if (_depthSkinningInstancedShader.id == 0)
             {
                 throw new InvalidOperationException("Failed to load shadow_depth_skinning_instanced shader (shader.id == 0).");
             }
 
-            _depthCutoutShader = RaylibNativeResources.LoadShader(
+            _depthCutoutShader = Rl.LoadShader(
                 System.IO.Path.Combine(baseDir, "shadow_depth_cutout.vs"),
                 System.IO.Path.Combine(baseDir, "shadow_depth_cutout.fs"));
             if (_depthCutoutShader.id == 0)
@@ -76,13 +76,13 @@ namespace Ludots.Raylib.Render
                 "shadow_depth_skinning_instanced");
             _locCutoutAlphaCutoff = ConfigureCutoutDepthShader(_depthCutoutShader, "shadow_depth_cutout");
 
-            _depthMaterial = RaylibNativeResources.LoadMaterialDefault();
+            _depthMaterial = Rl.LoadMaterialDefault();
             _depthMaterial.shader = _depthShader;
-            _depthInstancedMaterial = RaylibNativeResources.LoadMaterialDefault();
+            _depthInstancedMaterial = Rl.LoadMaterialDefault();
             _depthInstancedMaterial.shader = _depthInstancedShader;
-            _depthSkinningInstancedMaterial = RaylibNativeResources.LoadMaterialDefault();
+            _depthSkinningInstancedMaterial = Rl.LoadMaterialDefault();
             _depthSkinningInstancedMaterial.shader = _depthSkinningInstancedShader;
-            _depthCutoutMaterial = RaylibNativeResources.LoadMaterialDefault();
+            _depthCutoutMaterial = Rl.LoadMaterialDefault();
             _depthCutoutMaterial.shader = _depthCutoutShader;
         }
 
@@ -258,15 +258,15 @@ namespace Ludots.Raylib.Render
             _depthInstancedMaterial.shader = default;
             _depthSkinningInstancedMaterial.shader = default;
             _depthCutoutMaterial.shader = default;
-            RaylibNativeResources.UnloadMaterial(_depthMaterial);
-            RaylibNativeResources.UnloadMaterial(_depthInstancedMaterial);
-            RaylibNativeResources.UnloadMaterial(_depthSkinningInstancedMaterial);
-            RaylibNativeResources.UnloadMaterial(_depthCutoutMaterial);
-            RaylibNativeResources.UnloadShader(_depthShader);
-            RaylibNativeResources.UnloadShader(_depthInstancedShader);
-            RaylibNativeResources.UnloadShader(_depthSkinningInstancedShader);
-            RaylibNativeResources.UnloadShader(_depthCutoutShader);
-            RaylibNativeResources.UnloadRenderTexture(_rt);
+            Rl.UnloadMaterial(_depthMaterial);
+            Rl.UnloadMaterial(_depthInstancedMaterial);
+            Rl.UnloadMaterial(_depthSkinningInstancedMaterial);
+            Rl.UnloadMaterial(_depthCutoutMaterial);
+            Rl.UnloadShader(_depthShader);
+            Rl.UnloadShader(_depthInstancedShader);
+            Rl.UnloadShader(_depthSkinningInstancedShader);
+            Rl.UnloadShader(_depthCutoutShader);
+            Rl.UnloadRenderTexture(_rt);
             _disposed = true;
         }
 

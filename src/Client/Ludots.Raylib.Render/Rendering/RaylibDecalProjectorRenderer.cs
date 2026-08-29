@@ -195,13 +195,13 @@ namespace Ludots.Raylib.Render
             {
                 _materialLibrary?.DetachOwnedMaps(ref _decalMaterial);
                 _decalMaterial.shader = default;
-                RaylibNativeResources.UnloadMaterial(_decalMaterial);
+                Rl.UnloadMaterial(_decalMaterial);
                 _decalMaterialLoaded = false;
             }
 
             if (_decalProjectShaderReady)
             {
-                RaylibNativeResources.UnloadShader(_decalProjectShader);
+                Rl.UnloadShader(_decalProjectShader);
                 _decalProjectShaderReady = false;
             }
         }
@@ -210,7 +210,7 @@ namespace Ludots.Raylib.Render
         {
             if (!_decalMaterialLoaded)
             {
-                _decalMaterial = RaylibNativeResources.LoadMaterialDefault();
+                _decalMaterial = Rl.LoadMaterialDefault();
                 _decalMaterialLoaded = true;
             }
         }
@@ -223,7 +223,7 @@ namespace Ludots.Raylib.Render
             }
 
             string baseDir = AppContext.BaseDirectory;
-            _decalProjectShader = RaylibNativeResources.LoadShader(
+            _decalProjectShader = Rl.LoadShader(
                 Path.Combine(baseDir, "decal_project.vs"),
                 Path.Combine(baseDir, "decal_project.fs"));
             if (_decalProjectShader.id == 0)

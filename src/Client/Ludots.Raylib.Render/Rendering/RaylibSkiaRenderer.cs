@@ -41,11 +41,11 @@ namespace Ludots.Raylib.Render
             _bitmap = null;
             if (_texture.id != 0)
             {
-                RaylibNativeResources.UnloadTexture(_texture);
+                Raylib_cs.Raylib.UnloadTexture(_texture);
             }
 
             Image img = Raylib_cs.Raylib.GenImageColor(width, height, Raylib_cs.Color.BLANK);
-            _texture = RaylibNativeResources.LoadTextureFromImage(img);
+            _texture = Raylib_cs.Raylib.LoadTextureFromImage(img);
             Raylib_cs.Raylib.UnloadImage(img);
 
             var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
@@ -115,7 +115,7 @@ namespace Ludots.Raylib.Render
             _bitmap = null;
             if (_texture.id != 0)
             {
-                RaylibNativeResources.UnloadTexture(_texture);
+                Raylib_cs.Raylib.UnloadTexture(_texture);
             }
         }
     }

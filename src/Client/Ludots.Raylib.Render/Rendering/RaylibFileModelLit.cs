@@ -327,7 +327,7 @@ namespace Ludots.Raylib.Render
 
             _skyIbl?.Dispose();
             _skyIbl = null;
-            RaylibNativeResources.UnloadShader(_shader);
+            Rl.UnloadShader(_shader);
             _disposed = true;
         }
 

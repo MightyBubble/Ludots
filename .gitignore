@@ -152,9 +152,3 @@ dist/
 # FieldEditor local session sidecars (must not enter repo)
 *.field-editor-history.json
 *.field-editor-meta.json
-
-.pi-worktrees/
-.epic-briefs/
-.tmp-dotnet*/
-tmp/wt-*
-tmp/wt-issue*

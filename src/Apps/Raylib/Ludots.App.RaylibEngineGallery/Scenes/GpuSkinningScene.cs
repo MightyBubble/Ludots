@@ -64,7 +64,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.35f);
             _lit = new RaylibLitModel();
             _shadowMap = new RaylibDirectionalShadowMap();
-            _groundMesh = RaylibNativeResources.GenMeshCube(48f, 0.3f, 48f);
+            _groundMesh = Rl.GenMeshCube(48f, 0.3f, 48f);
             _entry = _modelCache.GetOrLoad(MeshAssetId, in descriptor);
             _lit.AttachToModel(_entry.Model);
             for (int i = 0; i < InstanceCount; i++)
@@ -141,7 +141,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _lit?.Dispose();
             _shadowMap?.Dispose();
             _skybox.Dispose();
-            RaylibNativeResources.UnloadMesh(_groundMesh);
+            Rl.UnloadMesh(_groundMesh);
             _modelCache = null!;
             _lit = null!;
             _shadowMap = null!;

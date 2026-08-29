@@ -10,7 +10,7 @@
     "required": ["id", "assetKind", "assetId", "backendId"],
     "properties": {
       "id": { "type": "string", "minLength": 1 },
-      "assetKind": { "enum": ["Mesh", "Material", "Sound"] },
+      "assetKind": { "enum": ["Mesh", "Material"] },
       "assetId": { "type": "string", "minLength": 1 },
       "backendId": { "type": "string", "minLength": 1 },
       "sourceUris": {

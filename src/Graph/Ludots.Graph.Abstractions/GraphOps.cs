@@ -271,13 +271,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadTextKey = 461,
 
         /// <summary>
-        /// Offer the activity named by Symbols[Imm] to E[A] as scope host via
-        /// ActivityRuntimeService. Admission/repeat policy decides outcome; rejection
-        /// emits an AdmissionRejected presentation cue instead of failing the graph.
-        /// Unknown activity id fails closed at execution time (activities load after
-        /// graph compilation, so this cannot be a compile-time symbol patch).
-        /// </summary>
-        OfferActivity = 466,
 
         /// Start DialogueRuntime session. Imm = dialogueId config key (patched from dialogueId symbol).
         /// TriggerGraph / Script only; MapLoaded entry is the data-driven auto-start path.

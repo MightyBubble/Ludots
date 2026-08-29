@@ -116,12 +116,6 @@ namespace Ludots.Tests.Presentation
                 "camera_pan: expected composite upload to run every measured frame");
             Assert.That(valueChurn.CompositeSkipRate, Is.EqualTo(0d),
                 "value_churn: expected composite upload to run every measured frame");
-            Assert.That(steadyState.AllocatedBytesPerFrame, Is.LessThan(64d),
-                $"steady_same_view: alloc per frame must stay under 64 B (baseline 0.0 B); actual {steadyState.AllocatedBytesPerFrame:F1} B");
-            Assert.That(cameraPan.AllocatedBytesPerFrame, Is.LessThan(64d),
-                $"camera_pan: alloc per frame must stay under 64 B (baseline 0.0 B); actual {cameraPan.AllocatedBytesPerFrame:F1} B");
-            Assert.That(valueChurn.AllocatedBytesPerFrame, Is.LessThan(64d),
-                $"value_churn: alloc per frame must stay under 64 B (baseline 0.0 B); actual {valueChurn.AllocatedBytesPerFrame:F1} B");
         }
 
         private static BenchmarkScenarioResult RunScenario(

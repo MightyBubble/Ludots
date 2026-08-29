@@ -107,13 +107,26 @@ namespace Ludots.Raylib.Render
 
             if (_envCubemap.id != 0)
             {
-                RaylibNativeResources.UnloadTexture(_envCubemap);
+                Rl.UnloadTexture(_envCubemap);
                 _envCubemap = default;
             }
 
             fixed (byte* data = buffer)
             {
-                _envCubemap = RaylibNativeResources.LoadTextureCubemap(data, EnvFaceSize, PixelFormatR8G8B8A8, MipCount);
+                uint id = RaylibSkyIblInterop.LoadTextureCubemap(data, EnvFaceSize, PixelFormatR8G8B8A8, MipCount);
+                if (id == 0)
+                {
+                    throw new InvalidOperationException($"{nameof(RaylibSkyIbl)} failed to upload the baked environment cubemap.");
+                }
+
+                _envCubemap = new Texture2D
+                {
+                    id = id,
+                    width = EnvFaceSize,
+                    height = EnvFaceSize,
+                    mipmaps = MipCount,
+                    format = PixelFormatR8G8B8A8,
+                };
             }
 
             _bakedPhase = lighting.DayPhase01;
@@ -266,7 +279,7 @@ namespace Ludots.Raylib.Render
                 }
             });
 
-            Texture2D lut = RaylibNativeResources.LoadTextureFromImage(image);
+            Texture2D lut = Rl.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
             if (lut.id == 0)
             {
@@ -348,13 +361,13 @@ namespace Ludots.Raylib.Render
 
             if (_envCubemap.id != 0)
             {
-                RaylibNativeResources.UnloadTexture(_envCubemap);
+                Rl.UnloadTexture(_envCubemap);
                 _envCubemap = default;
             }
 
             if (_brdfLut.id != 0)
             {
-                RaylibNativeResources.UnloadTexture(_brdfLut);
+                Rl.UnloadTexture(_brdfLut);
                 _brdfLut = default;
             }
 
@@ -370,4 +383,15 @@ namespace Ludots.Raylib.Render
         }
     }
 
+    /// <summary>
+    /// vendored Raylib-cs 绑定缺 cubemap 装载入口（不可改 vendored 文件）；
+    /// 本地直接声明 native raylib 5.5 导出的 rlLoadTextureCubemap（数据布局：
+    /// 逐 mip 6 face 连续，face 序 +X/-X/+Y/-Y/+Z/-Z），采样参数由 native 侧
+    /// 设为 LINEAR_MIPMAP_LINEAR + CLAMP_TO_EDGE。
+    /// </summary>
+    internal static class RaylibSkyIblInterop
+    {
+        [DllImport("raylib", EntryPoint = "rlLoadTextureCubemap", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe uint LoadTextureCubemap(void* data, int size, int format, int mipmapCount);
+    }
 }

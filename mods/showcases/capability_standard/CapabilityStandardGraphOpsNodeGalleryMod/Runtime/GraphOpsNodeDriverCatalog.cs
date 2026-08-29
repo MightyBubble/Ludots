@@ -20,7 +20,6 @@ public static class GraphOpsNodeDriverCatalog
             "entryPayload" => new Drivers.EntryPayloadNodeDriver(),
             "invokeGraph" => new Drivers.InvokeGraphNodeDriver(),
             "placedEntity" => new Drivers.PlacedEntityNodeDriver(),
-            "activity" => new Drivers.ActivityNodeDriver(),
             "placedRegion" => new Drivers.PlacedRegionNodeDriver(),
             "blackboard" => new Drivers.BlackboardNodeDriver(),
             "rel" => new Drivers.RelNodeDriver(),

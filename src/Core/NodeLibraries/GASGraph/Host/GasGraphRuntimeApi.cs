@@ -121,7 +121,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.GraphRuntime.GraphCallbackService? _graphCallbacks;
         private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
         private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
-        private Gameplay.Activities.ActivityRuntimeService? _activityRuntime;
         private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
@@ -341,18 +340,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindRngPickService(Gameplay.Rng.RngPickService rngPickService)
         {
             _rngPickService = rngPickService ?? throw new ArgumentNullException(nameof(rngPickService));
-        }
-
-        public void BindActivityRuntimeService(Gameplay.Activities.ActivityRuntimeService activityRuntime)
-        {
-            _activityRuntime = activityRuntime ?? throw new ArgumentNullException(nameof(activityRuntime));
-        }
-
-        public void OfferActivity(string activityId, Entity scopeHost)
-        {
-            var activities = _activityRuntime
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ActivityRuntimeUnavailable");
-            activities.OfferOrActivate(activityId, scopeHost);
         }
 
         public int WeightedPick(int distributionKeyId, int modulationPermille)

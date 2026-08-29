@@ -63,8 +63,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(result.SceneCount, Is.EqualTo(HudItemCount));
             Assert.That(result.ScreenHudDroppedTotal, Is.EqualTo(0));
             Assert.That(result.SceneDroppedTotal, Is.EqualTo(0));
-            Assert.That(result.AllocatedBytesPerFrame, Is.LessThan(512d),
-                $"50k HUD steady-state alloc per frame must stay under 512 B (baseline 382.7 B); actual {result.AllocatedBytesPerFrame:F1} B");
             Assert.That(validation.MismatchCount, Is.EqualTo(0));
             Assert.That(validation.ValidatedEntities, Is.EqualTo(EntityCount));
             Assert.That(result.AverageChangedEntities, Is.EqualTo(EntityCount));

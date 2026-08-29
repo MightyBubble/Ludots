@@ -98,18 +98,10 @@ public sealed class RaylibTerrainRendererTests
                 "Raylib",
                 "Ludots.Adapter.Raylib",
                 "RaylibHostLoop.cs"));
-            string frameRendererSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Adapters",
-                "Raylib",
-                "Ludots.Adapter.Raylib",
-                "Rendering",
-                "RaylibFrameRenderer.cs"));
 
             Assert.That(hostSource, Does.Contain("new MapLaneReceiverMeshProjector(engine, visualHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector)"));
-            Assert.That(frameRendererSource, Does.Contain("_visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap)"));
-            Assert.That(frameRendererSource, Does.Contain("_terrainRenderer.BindStampHeightSampleSource(visualHeightmap)"));
+            Assert.That(hostSource, Does.Contain("visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap)"));
+            Assert.That(hostSource, Does.Contain("terrainRenderer.BindStampHeightSampleSource(visualHeightmap)"));
             Assert.That(
                 hostSource.IndexOf("primitiveRenderer.BindReceiverMeshProjector(visualHeightmapRenderer)", StringComparison.Ordinal),
                 Is.EqualTo(-1),

@@ -62,7 +62,7 @@ src/Client/.../RaylibPrimitiveRenderer.cs
 - 离线工具只保证骨名映射 + 绑定姿势填充；极端体型差需人工调映射，不在运行时“智能修复”。
 - 单桶骨骼数上限由着色器 `MAX_BONE_NUM`（默认 128）约束，超出 fail-loud。
 - 每实例完全独立时间线会使桶数上升；仍是 GPU 蒙皮，不是 VAT。
-- OBJ/FBX/DAE 在运行时经 `RaylibModelFileConverter`（Assimp）转 GLB 后装载，转换结果按源文件哈希磁盘缓存；纯 GLTF/GLB 直接原生装载。
+- FBX 不进入运行时加载；离线可先转 GLB。
 
 ## 6. UAT
 

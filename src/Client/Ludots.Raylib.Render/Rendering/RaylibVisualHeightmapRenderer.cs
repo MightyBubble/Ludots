@@ -575,7 +575,7 @@ namespace Ludots.Raylib.Render
             string baseDir = AppContext.BaseDirectory;
             _terrainShader = RaylibShaderLoader.Load(baseDir, "terrain.vs", "terrain.fs", "visual-heightmap terrain");
 
-            _terrainMaterial = RaylibNativeResources.LoadMaterialDefault();
+            _terrainMaterial = Rl.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
             _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "visual-heightmap terrain");
             _terrainShadowLocs = RaylibShadowSamplingLocations.ResolveOrThrow(
@@ -873,13 +873,13 @@ namespace Ludots.Raylib.Render
                 {
                     if (loaded[i].id != 0)
                     {
-                        RaylibNativeResources.UnloadTexture(loaded[i]);
+                        Rl.UnloadTexture(loaded[i]);
                     }
                 }
 
                 if (controlMap.id != 0)
                 {
-                    RaylibNativeResources.UnloadTexture(controlMap);
+                    Rl.UnloadTexture(controlMap);
                 }
 
                 throw;
@@ -900,12 +900,12 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibVisualHeightmapRenderer)} terrain albedo file missing: uri='{uri}' fullPath='{fullPath}' (descriptor '{descriptorId}' {fieldLabel}).");
             }
 
-            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
+            Texture2D texture = Rl.LoadTexture(fullPath);
             if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
             {
                 if (texture.id != 0)
                 {
-                    RaylibNativeResources.UnloadTexture(texture);
+                    Rl.UnloadTexture(texture);
                 }
 
                 throw new InvalidOperationException(
@@ -936,12 +936,12 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
-            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
+            Texture2D texture = Rl.LoadTexture(fullPath);
             if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
             {
                 if (texture.id != 0)
                 {
-                    RaylibNativeResources.UnloadTexture(texture);
+                    Rl.UnloadTexture(texture);
                 }
 
                 throw new InvalidOperationException(
@@ -959,7 +959,7 @@ namespace Ludots.Raylib.Render
                 {
                     if (_albedoTextures[i].id != 0)
                     {
-                        RaylibNativeResources.UnloadTexture(_albedoTextures[i]);
+                        Rl.UnloadTexture(_albedoTextures[i]);
                     }
 
                     _albedoTextures[i] = default;
@@ -980,7 +980,7 @@ namespace Ludots.Raylib.Render
         {
             if (_ownsControlMapTexture && _controlMapTexture.id != 0)
             {
-                RaylibNativeResources.UnloadTexture(_controlMapTexture);
+                Rl.UnloadTexture(_controlMapTexture);
             }
 
             _controlMapTexture = default;
@@ -992,7 +992,7 @@ namespace Ludots.Raylib.Render
         {
             if (_navWalkabilityTexture.id != 0)
             {
-                RaylibNativeResources.UnloadTexture(_navWalkabilityTexture);
+                Rl.UnloadTexture(_navWalkabilityTexture);
             }
 
             _navWalkabilityTexture = default;
@@ -1265,7 +1265,7 @@ namespace Ludots.Raylib.Render
                 }
             }
 
-            RaylibNativeResources.UploadMesh(ref mesh, false);
+            Rl.UploadMesh(ref mesh, false);
             return mesh;
         }
 
@@ -1431,7 +1431,7 @@ namespace Ludots.Raylib.Render
         {
             if (_overviewMeshLoaded && _overviewMesh.vertexCount > 0)
             {
-                RaylibNativeResources.UnloadMesh(_overviewMesh);
+                Rl.UnloadMesh(_overviewMesh);
             }
 
             _overviewMesh = default;
@@ -1614,7 +1614,7 @@ namespace Ludots.Raylib.Render
                 }
             }
 
-            RaylibNativeResources.UploadMesh(ref mesh, false);
+            Rl.UploadMesh(ref mesh, false);
             return mesh;
         }
 
@@ -1845,8 +1845,8 @@ namespace Ludots.Raylib.Render
 
             RaylibShadowSampling.ClearTexture(ref _terrainMaterial);
             _terrainMaterial.shader = default;
-            RaylibNativeResources.UnloadMaterial(_terrainMaterial);
-            RaylibNativeResources.UnloadShader(_terrainShader);
+            Rl.UnloadMaterial(_terrainMaterial);
+            Rl.UnloadShader(_terrainShader);
             _initialized = false;
         }
 
@@ -1919,7 +1919,7 @@ namespace Ludots.Raylib.Render
             {
                 if (Mesh.vertexCount > 0)
                 {
-                    RaylibNativeResources.UnloadMesh(Mesh);
+                    Rl.UnloadMesh(Mesh);
                 }
             }
         }

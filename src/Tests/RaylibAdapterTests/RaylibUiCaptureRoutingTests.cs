@@ -9,7 +9,7 @@ public sealed class RaylibUiCaptureRoutingTests
     [Test]
     public void FocusedBrowserCanvasWithoutPointerCapture_DoesNotBlockWorldPointer()
     {
-        bool captured = RaylibHostInputRouter.ShouldCaptureWorldPointer(
+        bool captured = RaylibHostLoop.ShouldCaptureWorldPointer(
             pointerCaptured: false,
             wheelCaptured: false,
             inputHandled: false);
@@ -20,7 +20,7 @@ public sealed class RaylibUiCaptureRoutingTests
     [Test]
     public void PointerCapturedByUi_BlocksWorldPointerEvenWhenCanvasIsFocused()
     {
-        bool captured = RaylibHostInputRouter.ShouldCaptureWorldPointer(
+        bool captured = RaylibHostLoop.ShouldCaptureWorldPointer(
             pointerCaptured: true,
             wheelCaptured: false,
             inputHandled: false);
@@ -31,7 +31,7 @@ public sealed class RaylibUiCaptureRoutingTests
     [Test]
     public void WheelCapturedByUi_BlocksWorldPointerZoom()
     {
-        bool captured = RaylibHostInputRouter.ShouldCaptureWorldPointer(
+        bool captured = RaylibHostLoop.ShouldCaptureWorldPointer(
             pointerCaptured: false,
             wheelCaptured: true,
             inputHandled: false);
@@ -42,7 +42,7 @@ public sealed class RaylibUiCaptureRoutingTests
     [Test]
     public void PlainUiHandledInput_BlocksWorldPointerWhenNoCanvasOwnsKeyboardFocus()
     {
-        bool captured = RaylibHostInputRouter.ShouldCaptureWorldPointer(
+        bool captured = RaylibHostLoop.ShouldCaptureWorldPointer(
             pointerCaptured: false,
             wheelCaptured: false,
             inputHandled: true);
@@ -53,7 +53,7 @@ public sealed class RaylibUiCaptureRoutingTests
     [Test]
     public void UiHandledPointerInput_BlocksWorldPointerEvenWhenCanvasStaysFocused()
     {
-        bool captured = RaylibHostInputRouter.ShouldCaptureWorldPointer(
+        bool captured = RaylibHostLoop.ShouldCaptureWorldPointer(
             pointerCaptured: false,
             wheelCaptured: false,
             inputHandled: true);

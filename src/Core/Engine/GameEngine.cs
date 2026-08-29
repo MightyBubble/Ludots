@@ -1943,8 +1943,23 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ConditionProviderRegistry, providerServices.Conditions);
             SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
             SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
-            // Tasks install before Activities: their bridge registers the task.state_changed
-            // source / task.create effect that activity definitions reference at load time.
+            var activityDefinitions = new ActivityDefinitionRegistry();
+            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var activityPresentation = new ActivityPresentationBuffer();
+            var activityLifecycle = new ActivityLifecycleBuffer();
+            var activityRuntime = new ActivityRuntimeService(
+                World,
+                activityDefinitions,
+                providerServices,
+                activityPresentation,
+                clock,
+                rngPickService,
+                activityLifecycle);
+            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
+            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
+            SetService(CoreServiceKeys.ActivityLifecycleBuffer, activityLifecycle);
+            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
             var taskDefinitions = new TaskDefinitionRegistry();
             new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
                 .Load(ConfigCatalog, ConfigConflictReport);
@@ -1960,27 +1975,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
-            // Activity bridge installs before activity configs load for the same reason
-            // (world.subject_attribute / activity.offer are load-time-validated keys).
-            var activityDefinitions = new ActivityDefinitionRegistry();
-            var activityPresentation = new ActivityPresentationBuffer();
-            var activityLifecycle = new ActivityLifecycleBuffer();
-            var activityRuntime = new ActivityRuntimeService(
-                World,
-                activityDefinitions,
-                providerServices,
-                activityPresentation,
-                clock,
-                rngPickService,
-                activityLifecycle);
-            ActivityBridgeProviderInstaller.Install(providerServices, activityRuntime);
-            _gasGraphRuntimeApi?.BindActivityRuntimeService(activityRuntime);
-            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
-                .Load(ConfigCatalog, ConfigConflictReport);
-            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
-            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
-            SetService(CoreServiceKeys.ActivityLifecycleBuffer, activityLifecycle);
-            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
             LegacyNarrativeConfigGuard.RejectIfPresent(ConfigCatalog);
             var storyDefinitions = new StoryDefinitionRegistry();
             new StoryConfigLoader(ConfigPipeline, storyDefinitions).Load(ConfigCatalog, ConfigConflictReport);
@@ -2252,11 +2246,6 @@ namespace Ludots.Core.Engine
             RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
             RegisterSystem(new OrderAdmissionGenerationEndSystem(orderAdmissionResults), SystemGroup.ClearPresentationFlags);
-            RegisterSystem(
-                new ActivityPresentationDrainSystem(
-                    GetService(CoreServiceKeys.ActivityPresentationBuffer),
-                    GetService(CoreServiceKeys.ActivityLifecycleBuffer)),
-                SystemGroup.ClearPresentationFlags);
             RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,

@@ -5,7 +5,6 @@ using Ludots.Presentation.Skia;
 using Raylib_cs;
 using SkiaSharp;
 using Rl = Raylib_cs.Raylib;
-using Ludots.Raylib.Render;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -119,7 +118,7 @@ namespace Ludots.Adapter.Raylib
             _renderTarget = null;
             if (_target.id != 0)
             {
-                RaylibNativeResources.UnloadRenderTexture(_target);
+                Rl.UnloadRenderTexture(_target);
                 _target = default;
             }
 
@@ -142,13 +141,13 @@ namespace Ludots.Adapter.Raylib
             _renderTarget = null;
             if (_target.id != 0)
             {
-                RaylibNativeResources.UnloadRenderTexture(_target);
+                Rl.UnloadRenderTexture(_target);
                 _target = default;
             }
 
             try
             {
-                _target = RaylibNativeResources.LoadRenderTexture(width, height);
+                _target = Rl.LoadRenderTexture(width, height);
                 if (_target.id == 0 || _target.texture.id == 0)
                 {
                     throw new InvalidOperationException("Raylib LoadRenderTexture returned an empty render target.");
@@ -189,7 +188,7 @@ namespace Ludots.Adapter.Raylib
                 _renderTarget = null;
                 if (_target.id != 0)
                 {
-                    RaylibNativeResources.UnloadRenderTexture(_target);
+                    Rl.UnloadRenderTexture(_target);
                     _target = default;
                 }
 
