@@ -148,7 +148,6 @@ namespace Ludots.Core.Gameplay.Dialogue
 
         public void Update(float dt)
         {
-            ConsumeInput();
             TickAutoAdvance(dt);
         }
 
@@ -316,28 +315,6 @@ namespace Ludots.Core.Gameplay.Dialogue
             }
 
             return available;
-        }
-
-        private void ConsumeInput()
-        {
-            var input = _engine.GetService(CoreServiceKeys.AuthoritativeInput);
-            if (input == null || _active == null)
-            {
-                return;
-            }
-
-            if (_active.Choices.Count > 0)
-            {
-                if (input.PressedThisFrame(DialogueInputActionIds.Choice1)) ChooseOption(0);
-                if (input.PressedThisFrame(DialogueInputActionIds.Choice2)) ChooseOption(1);
-                if (input.PressedThisFrame(DialogueInputActionIds.Choice3)) ChooseOption(2);
-                return;
-            }
-
-            if (input.PressedThisFrame(DialogueInputActionIds.Advance))
-            {
-                AdvanceDialogue();
-            }
         }
 
         private void TickAutoAdvance(float dt)

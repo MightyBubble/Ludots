@@ -2019,7 +2019,7 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
-            RegisterSystem(new StoryRuntimeSystem(dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
+            RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);

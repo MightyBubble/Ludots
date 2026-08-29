@@ -439,7 +439,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string path = actionId switch
             {
-                DialogueInputActionIds.Interact => "<Keyboard>/e",
+                DialogueInputActionIds.Interact => "<Keyboard>/f",
                 DialogueInputActionIds.Advance => "<Keyboard>/enter",
                 DialogueInputActionIds.Skip => "<Keyboard>/tab",
                 DialogueInputActionIds.Choice1 => "<Keyboard>/1",

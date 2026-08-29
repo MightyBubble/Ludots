@@ -50,6 +50,8 @@ namespace Ludots.Core.Gameplay.Sequencer
 
         public bool HasActiveSequence => _active != null;
 
+        public bool IsPaused => _active?.Paused ?? false;
+
         public void ResetState() => _active = null;
 
         public void Start(string sequenceId)
@@ -118,7 +120,6 @@ namespace Ludots.Core.Gameplay.Sequencer
 
         public void Update(float dt)
         {
-            ConsumeInput();
             if (_active == null || _active.Paused)
             {
                 return;
@@ -331,32 +332,6 @@ namespace Ludots.Core.Gameplay.Sequencer
             });
         }
 
-        private void ConsumeInput()
-        {
-            var input = _engine.GetService(CoreServiceKeys.AuthoritativeInput);
-            if (input == null || _active == null)
-            {
-                return;
-            }
-
-            if (input.PressedThisFrame(DialogueInputActionIds.Skip))
-            {
-                Skip();
-                return;
-            }
-
-            if (input.PressedThisFrame(DialogueInputActionIds.Advance))
-            {
-                if (_active.Paused)
-                {
-                    Resume();
-                }
-                else
-                {
-                    Pause();
-                }
-            }
-        }
 
         private void HandleTaskStateChanged(TaskStateChangedInfo change)
         {
