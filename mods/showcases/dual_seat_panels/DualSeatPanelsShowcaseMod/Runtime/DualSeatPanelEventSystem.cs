@@ -16,9 +16,9 @@ namespace DualSeatPanelsShowcaseMod.Runtime
 {
     /// <summary>
     /// Seat-attributed panel operations for the dual-seat showcase: per-seat hotkeys are
-    /// read from each seat channel's frozen tick snapshot (<c>channel.Reader</c> — the
-    /// handler's own PressedThisFrame edge only spans one visual frame and is lost when
-    /// the pacemaker skips a logic tick), fired through
+    /// read from each seat channel's frozen tick snapshot (<c>channel.Reader</c>,
+    /// <c>PressedThisTick</c> — the handler's own frame edge only spans one visual frame
+    /// and is lost when the pacemaker skips a logic tick), fired through
     /// <see cref="PanelEventDispatcher.FireFromSeat"/> (audience admission), and admitted
     /// payloads fan out as map custom events consumed by the showcase trigger graphs —
     /// this system never mutates gameplay itself. The shared panel's audience rotation
@@ -79,27 +79,27 @@ namespace DualSeatPanelsShowcaseMod.Runtime
                     ? DualSeatPanelsShowcaseIds.SeatOnePanelId
                     : DualSeatPanelsShowcaseIds.SeatZeroPanelId;
 
-                if (channel.Reader.PressedThisFrame(DualSeatPanelsShowcaseIds.BoostAction))
+                if (channel.Reader.PressedThisTick(DualSeatPanelsShowcaseIds.BoostAction))
                 {
                     FirePanelEvent(ownPanelId, seatId, DualSeatPanelsShowcaseIds.ModifyEventId, BoostAmount);
                 }
 
-                if (channel.Reader.PressedThisFrame(DualSeatPanelsShowcaseIds.StrikeAction))
+                if (channel.Reader.PressedThisTick(DualSeatPanelsShowcaseIds.StrikeAction))
                 {
                     FirePanelEvent(ownPanelId, seatId, DualSeatPanelsShowcaseIds.ModifyEventId, StrikeAmount);
                 }
 
-                if (channel.Reader.PressedThisFrame(DualSeatPanelsShowcaseIds.PokeAction))
+                if (channel.Reader.PressedThisTick(DualSeatPanelsShowcaseIds.PokeAction))
                 {
                     FirePanelEvent(otherPanelId, seatId, DualSeatPanelsShowcaseIds.ModifyEventId, PokeAmount);
                 }
 
-                if (channel.Reader.PressedThisFrame(DualSeatPanelsShowcaseIds.ChargeAction))
+                if (channel.Reader.PressedThisTick(DualSeatPanelsShowcaseIds.ChargeAction))
                 {
                     FirePanelEvent(DualSeatPanelsShowcaseIds.SharedPanelId, seatId, DualSeatPanelsShowcaseIds.ChargeEventId, ChargeAmount);
                 }
 
-                if (channel.Reader.PressedThisFrame(DualSeatPanelsShowcaseIds.RotateTurnAction))
+                if (channel.Reader.PressedThisTick(DualSeatPanelsShowcaseIds.RotateTurnAction))
                 {
                     RotateSharedAudience(seatId);
                 }

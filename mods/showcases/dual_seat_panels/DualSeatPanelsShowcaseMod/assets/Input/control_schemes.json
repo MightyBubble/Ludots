@@ -2,27 +2,15 @@
   "schemes": [
     {
       "id": "scheme.default",
-      "inputContexts": [],
-      "defaults": {
-        "commandIntentId": "intent.command.default",
-        "castDispatchProfileId": "dispatch.all_together"
-      }
+      "inputContexts": []
     },
     {
       "id": "scheme.dsp.left",
-      "inputContexts": ["DSP.Controls.Left"],
-      "defaults": {
-        "commandIntentId": "intent.command.default",
-        "castDispatchProfileId": "dispatch.all_together"
-      }
+      "inputContexts": ["DSP.Controls.Left"]
     },
     {
       "id": "scheme.dsp.right",
-      "inputContexts": ["DSP.Controls.Right"],
-      "defaults": {
-        "commandIntentId": "intent.command.default",
-        "castDispatchProfileId": "dispatch.all_together"
-      }
+      "inputContexts": ["DSP.Controls.Right"]
     }
   ],
   "allowedSchemes": [
