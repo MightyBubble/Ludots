@@ -504,9 +504,7 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 return surface with
                 {
-                    FrameImageSrc = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
-                        ? _choiceFrameSrc
-                        : _panelFrameSrc
+                    FrameImageSrc = ResolveFrameImageSrc(surface.Kind)
                 };
             }
 
@@ -540,9 +538,27 @@ namespace NarrativeShowcaseMod.Runtime
                 Title = title,
                 Subtitle = string.IsNullOrWhiteSpace(surface.Subtitle) ? Tr(engine, config.Eyebrow) : surface.Subtitle,
                 Footer = footer,
-                FrameImageSrc = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
-                    ? _choiceFrameSrc
-                    : _panelFrameSrc
+                FrameImageSrc = ResolveFrameImageSrc(surface.Kind)
+            };
+        }
+
+        /// <summary>
+        /// Ornate nine-slice frames belong on dialogue / choice surfaces only.
+        /// PromptRibbon and chrome panels already have theme.css skins; wrapping them
+        /// in panel_frame stacks a second dialog-looking bar behind OverlayDialogue.
+        /// </summary>
+        private string ResolveFrameImageSrc(NarrativeFrontendSurfaceKind kind)
+        {
+            return kind switch
+            {
+                NarrativeFrontendSurfaceKind.ChoiceList => _choiceFrameSrc,
+                NarrativeFrontendSurfaceKind.OverlayDialogue
+                    or NarrativeFrontendSurfaceKind.DialogueBubble
+                    or NarrativeFrontendSurfaceKind.StandingPortrait
+                    or NarrativeFrontendSurfaceKind.SubtitleBubble
+                    or NarrativeFrontendSurfaceKind.TransmissionOverlay
+                    or NarrativeFrontendSurfaceKind.EventCard => _panelFrameSrc,
+                _ => string.Empty
             };
         }
 
@@ -733,9 +749,7 @@ namespace NarrativeShowcaseMod.Runtime
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
-                FrameImageSrc: kind == NarrativeFrontendSurfaceKind.ChoiceList
-                    ? _choiceFrameSrc
-                    : _panelFrameSrc);
+                FrameImageSrc: ResolveFrameImageSrc(kind));
         }
 
         private void EnsureBootstrapped(GameEngine engine)

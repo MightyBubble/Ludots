@@ -738,9 +738,14 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AssertThemeFrameVisibleOnDialogue(UIRoot uiRoot)
         {
-            UiNode? frame = FindUiNodeByClass(uiRoot.Scene?.Root, "story-frame");
-            Assert.That(frame, Is.Not.Null, "Dialogue overlay must mount themed nine-slice story-frame.");
-            string src = frame!.Attributes["src"] ?? string.Empty;
+            var frames = new List<UiNode>();
+            CollectUiNodesByClass(uiRoot.Scene?.Root, "story-frame", frames);
+            Assert.That(
+                frames.Count,
+                Is.EqualTo(1),
+                "Only the active dialogue panel may wear panel_frame; PromptRibbon must not stack a second ornate bar.");
+            UiNode frame = frames[0];
+            string src = frame.Attributes["src"] ?? string.Empty;
             Assert.That(src, Does.Contain("panel_frame.png").IgnoreCase,
                 $"story-frame src must point at PanelThemes panel_frame.png, got '{src}'.");
             Assert.That(frame.Style.ImageSlice.Left, Is.GreaterThan(0f),
@@ -749,6 +754,16 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(framed, Is.Not.Null);
             UiNode? body = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
             Assert.That(body, Is.Not.Null, "Framed dialogue content must use story-framed-body inset.");
+            UiNode? prompt = FindUiNodeByClass(uiRoot.Scene?.Root, "story-prompt-ribbon");
+            Assert.That(prompt, Is.Not.Null, "Prompt ribbon should remain mounted under dialogue.");
+            Assert.That(
+                FindAncestorByClass(prompt, "story-framed"),
+                Is.Null,
+                "Prompt ribbon theme.css already owns chrome; it must not wrap in story-framed.");
+            Assert.That(
+                FindUiNodeByClass(uiRoot.Scene?.Root, "story-overlay-copy"),
+                Is.Not.Null,
+                "Overlay dialogue must place speaker name and body in story-overlay-copy beside the portrait.");
         }
 
         private static void AssertDialogueBodyRunsVisibleOnUi(UIRoot uiRoot, DialogueView dialogueView)

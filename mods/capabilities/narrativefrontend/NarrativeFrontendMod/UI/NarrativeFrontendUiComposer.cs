@@ -178,15 +178,32 @@ internal static class NarrativeFrontendUiComposer
 
     private static UiElementBuilder BuildOverlayDialogue(NarrativeFrontendSurfaceModel surface)
     {
-        return ApplyAuthorChrome(
-            Ui.Column(
+        UiElementBuilder mainColumn = string.IsNullOrWhiteSpace(surface.PortraitSrc)
+            ? Ui.Column(
                     BuildEyebrow(surface),
-                    BuildPortraitTitleRow(surface),
+                    BuildTitle(surface, fontSize: 22f),
                     BuildBody(surface, fontSize: 15f),
                     BuildItemsColumn(surface),
                     BuildMetaRow(surface))
-                .Classes("story-overlay-dialogue", "story-card")
-                .Gap(GapSection),
+                .Gap(GapSection)
+            : Ui.Column(
+                    BuildEyebrow(surface),
+                    Ui.Row(
+                            BuildPortraitImage(surface),
+                            Ui.Column(
+                                    BuildTitle(surface, fontSize: 22f),
+                                    BuildBody(surface, fontSize: 15f),
+                                    BuildItemsColumn(surface),
+                                    BuildMetaRow(surface))
+                                .Gap(GapSection)
+                                .Class("story-overlay-copy"))
+                        .Class("story-portrait-row")
+                        .Gap(GapPanel)
+                        .Align(UiAlignItems.Start))
+                .Gap(GapSection);
+
+        return ApplyAuthorChrome(
+            mainColumn.Classes("story-overlay-dialogue", "story-card"),
             surface);
     }
 
@@ -198,16 +215,22 @@ internal static class NarrativeFrontendUiComposer
             return titleColumn;
         }
 
-        float size = surface.PortraitSize > 0f ? surface.PortraitSize : 96f;
         return Ui.Row(
-                Ui.Image(surface.PortraitSrc)
-                    .Class("story-portrait")
-                    .Width(size)
-                    .Height(size),
+                BuildPortraitImage(surface),
                 titleColumn)
             .Class("story-portrait-row")
             .Gap(GapPanel)
             .Align(UiAlignItems.Center);
+    }
+
+    private static UiElementBuilder BuildPortraitImage(NarrativeFrontendSurfaceModel surface)
+    {
+        float size = surface.PortraitSize > 0f ? surface.PortraitSize : 96f;
+        return Ui.Image(surface.PortraitSrc)
+            .Class("story-portrait")
+            .Width(size)
+            .Height(size)
+            .ObjectFit(UiObjectFit.Contain);
     }
 
     private static UiElementBuilder BuildCard(NarrativeFrontendSurfaceModel surface, string extraClass)
