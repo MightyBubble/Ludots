@@ -685,6 +685,9 @@ namespace Ludots.Tests.Gas.Graph
             // third TriggerGraph-only family.
             GraphNodeOp[] triggerGraphOnlyOps =
             {
+                // Named carve-out: the authority-channel attribute write is TriggerGraph-only;
+                // Script stays Pure-only by the attribute-write-authority contract.
+                GraphNodeOp.ModifyAttributeSet,
                 GraphNodeOp.LoadEntryPayloadEntity,
                 GraphNodeOp.LoadEntryPayloadInt,
                 GraphNodeOp.LoadEntryPayloadFloat,

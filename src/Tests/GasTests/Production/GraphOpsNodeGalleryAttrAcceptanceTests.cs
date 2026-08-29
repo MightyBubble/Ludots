@@ -28,6 +28,19 @@ public sealed class GraphOpsNodeGalleryAttrAcceptanceTests
     }
 
     [Test]
+    public void ModifyAttributeSet_TriggerGraphWritesTargetHealth()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("ModifyAttributeSet");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Metrics.Detail, Does.Contain("TriggerGraph 写入落地"));
+        Assert.That(runtime.Context.ActorHealth[1], Is.EqualTo(42f).Within(0.01f));
+    }
+
+    [Test]
     public void WriteSelfAttribute_RaisesCasterHealth()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
@@ -242,6 +255,7 @@ public sealed class GraphOpsNodeGalleryAttrAcceptanceTests
             "ApplyEffectTemplate",
             "RemoveEffectTemplate",
             "ModifyAttributeAdd",
+            "ModifyAttributeSet",
             "LoadContextTarget",
             "LoadSelfAttribute",
             "WriteSelfAttribute"

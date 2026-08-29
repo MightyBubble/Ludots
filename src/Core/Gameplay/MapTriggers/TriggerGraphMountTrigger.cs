@@ -499,7 +499,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     _vmCallStack,
                     ref _cursor,
                     TriggerGraphLimits.SliceBudgetSteps,
-                    GraphKind.Script,
+                    GraphKind.TriggerGraph,
                     _debugTrace,
                     mapScope,
                     _graphId,
