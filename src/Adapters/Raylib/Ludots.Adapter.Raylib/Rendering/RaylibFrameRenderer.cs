@@ -397,7 +397,7 @@ namespace Ludots.Adapter.Raylib
             _shadowActive = frame.RenderDebug.DrawShadows;
             if (_shadowActive && _shadowMap == null)
             {
-                _shadowMap = new RaylibDirectionalShadowMap();
+                _shadowMap = new RaylibDirectionalShadowMap(_environmentRenderer.Config.Shadow);
             }
 
             RaylibDirectionalShadowMap? frameShadow = _shadowActive ? _shadowMap : null;
@@ -627,7 +627,7 @@ namespace Ludots.Adapter.Raylib
         private RaylibDirectionalShadowMap? _shadowMap;
         private bool _shadowActive;
 
-        private const float ShadowSceneRadiusMeters = 48f;
+        private readonly float _shadowSceneRadiusMeters = RaylibHostLoop.ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SHADOW_SCENE_RADIUS", 48f);
         private const float PrimitiveShadowTexelWorld = 0.04f;
         private const float TerrainShadowTexelWorld = 0.08f;
 
@@ -645,9 +645,22 @@ namespace Ludots.Adapter.Raylib
         private void RenderShadowDepth(in RaylibRenderFrame frame)
         {
             RaylibDirectionalShadowMap shadow = _shadowMap!;
-            shadow.BeginFrame(_frameLighting.SunDirectionToward, frame.ActiveCamera.target, ShadowSceneRadiusMeters);
+            shadow.BeginFrame(_frameLighting.SunDirectionToward, frame.ActiveCamera.target, _shadowSceneRadiusMeters);
             try
             {
+                if (frame.DrawVisualHeightmap &&
+                    _engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhCaster) &&
+                    vhCaster is IVisualHeightmapRenderSource heightmapCaster)
+                {
+                    _visualHeightmapRenderer.RenderShadow(heightmapCaster, frame.ActiveCamera, shadow);
+                }
+                else if (frame.DrawTerrain)
+                {
+                    _terrainRenderer.RenderTerrainShadow(TerrainSource(), frame.ActiveCamera, shadow);
+                }
+
+                _benchmarkRenderer?.DrawShadow(frame.ActiveCamera, shadow);
+
                 if (_engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer? draw) &&
                     _engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? meshes))
                 {
