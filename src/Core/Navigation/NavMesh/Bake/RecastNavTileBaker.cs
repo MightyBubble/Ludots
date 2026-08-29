@@ -31,6 +31,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             out byte[] detourTileBytes,
             out NavBakeArtifact artifact)
         {
+            NavTerrainFeedKind feed = context.Config != null
+                ? context.Config.ParsedTerrainFeed
+                : NavTerrainFeedKind.Triangles;
             return RecastNavTileBaker.TryBake(
                 context.Terrain,
                 target.ChunkX,
@@ -44,13 +47,21 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 context.Obstacles,
                 out tile,
                 out detourTileBytes,
-                out artifact);
+                out artifact,
+                feed);
         }
     }
 
     public static class RecastNavTileBaker
     {
         private const float CmPerMeter = SpatialScaleDefaults.CellCm;
+
+        /// <summary>
+        /// Hard cap on the solid heightfield column count. RcHeightfield allocates one
+        /// span reference per column, so the column count must stay far below the int32
+        /// product wrap-around; tiles above the cap are a configuration error, not a bake.
+        /// </summary>
+        public const long MaxSolidVoxelColumns = 33_554_432;
 
         public static bool TryBake(
             VertexMap map,
@@ -91,7 +102,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             NavObstacleSet obstacles,
             out NavTile tile,
             out byte[] detourTileBytes,
-            out NavBakeArtifact artifact)
+            out NavBakeArtifact artifact,
+            NavTerrainFeedKind terrainFeed = NavTerrainFeedKind.Triangles)
         {
             tile = null!;
             detourTileBytes = Array.Empty<byte>();
@@ -107,24 +119,64 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             {
                 ComputeTileFootprintBounds(terrain, chunkX, chunkY, out float tileMinX, out float tileMinZ, out float tileMaxX, out float tileMaxZ);
                 var rcCfg = BuildRcConfig(agentProfile, navProfile, tileMinX, tileMinZ, tileMaxX, tileMaxZ);
-                BuildExpandedRecastTriangleMesh(terrain, chunkX, chunkY, tileVersion, legacyConfig, rcCfg, obstacles, layerId, out var verts, out var tris);
-                if (tris.Count == 0)
+
+                long solidColumns = (long)(rcCfg.TileSizeX + rcCfg.BorderSize * 2) * (rcCfg.TileSizeZ + rcCfg.BorderSize * 2);
+                if (solidColumns > MaxSolidVoxelColumns)
                 {
-                    artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.NoWalkableDomain, "No triangles after obstacle filtering.", 0, 0, 0, 0);
+                    artifact = new NavBakeArtifact(
+                        new NavTileId(chunkX, chunkY, layer),
+                        tileVersion,
+                        NavBakeStage.WalkMask,
+                        NavBakeErrorCode.VoxelBudgetExceeded,
+                        $"Tile solid heightfield needs {solidColumns:N0} voxel columns (tile {tileMaxX - tileMinX:F0}m × {tileMaxZ - tileMinZ:F0}m at cs={rcCfg.Cs}m); cap is {MaxSolidVoxelColumns:N0}. Coarsen the cell size or bake smaller tiles.",
+                        0, 0, 0, 0);
                     return false;
                 }
 
-                var geom = new RcSampleInputGeomProvider(verts.ToArray(), tris.ToArray());
-                RcVec3f geomMin = geom.GetMeshBoundsMin();
-                RcVec3f geomMax = geom.GetMeshBoundsMax();
-                var tileBmin = new RcVec3f(tileMinX, geomMin.Y, tileMinZ);
-                var tileBmax = new RcVec3f(
-                    tileMinX + rcCfg.TileSizeX * rcCfg.Cs,
-                    geomMax.Y,
-                    tileMinZ + rcCfg.TileSizeZ * rcCfg.Cs);
-                var bcfg = new RcBuilderConfig(rcCfg, tileBmin, tileBmax, tileX: 0, tileZ: 0);
-                var rcBuilder = new RcBuilder();
-                var rcResult = rcBuilder.Build(geom, bcfg, keepInterResults: false);
+                RcVec3f tileBmin;
+                RcVec3f tileBmax;
+                RcBuilderResult rcResult;
+                bool areasFromPolymesh;
+                if (terrainFeed == NavTerrainFeedKind.Direct)
+                {
+                    RcHeightfield? solid = RecastDirectFeedHeightfield.BuildSolidHeightfield(
+                        terrain, chunkX, chunkY, legacyConfig, rcCfg,
+                        tileMinX, tileMinZ, tileMaxX, tileMaxZ, obstacles, layerId);
+                    if (solid == null)
+                    {
+                        artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.WalkMask, NavBakeErrorCode.NoWalkableDomain, "No walkable columns after direct heightfield feed.", 0, 0, 0, 0);
+                        return false;
+                    }
+
+                    tileBmin = new RcVec3f(tileMinX, solid.bmin.Y, tileMinZ);
+                    tileBmax = new RcVec3f(
+                        tileMinX + rcCfg.TileSizeX * rcCfg.Cs,
+                        solid.bmax.Y,
+                        tileMinZ + rcCfg.TileSizeZ * rcCfg.Cs);
+                    rcResult = new RcBuilder().Build(new RcContext(), tileX: 0, tileZ: 0, geom: null!, rcCfg, solid, keepInterResults: false);
+                    areasFromPolymesh = true;
+                }
+                else
+                {
+                    BuildExpandedRecastTriangleMesh(terrain, chunkX, chunkY, tileVersion, legacyConfig, rcCfg, obstacles, layerId, out var verts, out var tris);
+                    if (tris.Count == 0)
+                    {
+                        artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.NoWalkableDomain, "No triangles after obstacle filtering.", 0, 0, 0, 0);
+                        return false;
+                    }
+
+                    var geom = new RcSampleInputGeomProvider(verts.ToArray(), tris.ToArray());
+                    RcVec3f geomMin = geom.GetMeshBoundsMin();
+                    RcVec3f geomMax = geom.GetMeshBoundsMax();
+                    tileBmin = new RcVec3f(tileMinX, geomMin.Y, tileMinZ);
+                    tileBmax = new RcVec3f(
+                        tileMinX + rcCfg.TileSizeX * rcCfg.Cs,
+                        geomMax.Y,
+                        tileMinZ + rcCfg.TileSizeZ * rcCfg.Cs);
+                    var bcfg = new RcBuilderConfig(rcCfg, tileBmin, tileBmax, tileX: 0, tileZ: 0);
+                    rcResult = new RcBuilder().Build(geom, bcfg, keepInterResults: false);
+                    areasFromPolymesh = false;
+                }
 
                 if (rcResult?.Mesh == null || rcResult.MeshDetail == null || rcResult.MeshDetail.ntris <= 0)
                 {
@@ -132,7 +184,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     return false;
                 }
 
-                PrepareDetourPolygons(baseTile, rcResult.Mesh);
+                PrepareDetourPolygons(baseTile, rcResult.Mesh, resolveAreasFromBaseTile: !areasFromPolymesh);
 
                 BuildNavTileFromDetailMesh(
                     baseTile,
@@ -140,6 +192,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     tileVersion,
                     legacyConfig.ComputeHash(),
                     rcResult.MeshDetail,
+                    rcResult.Mesh,
+                    areaFromPolymesh: areasFromPolymesh,
                     out tile);
 
                 detourTileBytes = BuildDetourTileBytes(
@@ -164,7 +218,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
         }
 
-        private static void PrepareDetourPolygons(NavTile baseTile, RcPolyMesh mesh)
+        private static void PrepareDetourPolygons(NavTile baseTile, RcPolyMesh mesh, bool resolveAreasFromBaseTile)
         {
             if (mesh.flags == null || mesh.flags.Length < mesh.npolys)
             {
@@ -174,7 +228,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             for (int i = 0; i < mesh.npolys; i++)
             {
                 mesh.flags[i] = 1;
-                byte areaId = ResolveAreaIdFromPolyMesh(baseTile, mesh, i);
+                // Direct feed carries Recast's own walkable marker; the tile vocabulary
+                // uses 0 for default walkable, matching the triangle path's resolution.
+                byte areaId = resolveAreasFromBaseTile
+                    ? ResolveAreaIdFromPolyMesh(baseTile, mesh, i)
+                    : (mesh.areas[i] == RcRecast.RC_WALKABLE_AREA ? (byte)0 : (byte)mesh.areas[i]);
                 if (areaId >= DtDetour.DT_MAX_AREAS)
                 {
                     throw new InvalidOperationException(
@@ -500,6 +558,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             uint tileVersion,
             ulong buildHash,
             RcPolyMeshDetail detail,
+            RcPolyMesh polymesh,
+            bool areaFromPolymesh,
             out NavTile tile)
         {
             var vertexIndex = new Dictionary<(int X, int Y, int Z), int>(detail.nverts);
@@ -516,6 +576,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 int baseVert = detail.meshes[m * 4 + 0];
                 int triBase = detail.meshes[m * 4 + 2];
                 int triCount = detail.meshes[m * 4 + 3];
+                byte polyArea = areaFromPolymesh && m < polymesh.npolys ? (byte)polymesh.areas[m] : (byte)0;
 
                 for (int t = 0; t < triCount; t++)
                 {
@@ -533,7 +594,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     triA.Add(ia);
                     triB.Add(ib);
                     triC.Add(ic);
-                    triAreaIds.Add(ResolveAreaIdFromBaseTile(baseTile, vx[ia], vz[ia], vx[ib], vz[ib], vx[ic], vz[ic]));
+                    triAreaIds.Add(areaFromPolymesh
+                        ? polyArea
+                        : ResolveAreaIdFromBaseTile(baseTile, vx[ia], vz[ia], vx[ib], vz[ib], vx[ic], vz[ic]));
                 }
             }
 

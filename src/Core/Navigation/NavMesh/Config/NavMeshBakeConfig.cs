@@ -11,10 +11,13 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public List<NavLayerConfig> Layers { get; set; } = new List<NavLayerConfig>();
         public List<NavAreaCostConfig> Areas { get; set; } = new List<NavAreaCostConfig>();
         public NavRuntimeIncrementalConfig RuntimeIncremental { get; set; } = new NavRuntimeIncrementalConfig();
+        public string TerrainFeed { get; set; } = NavBakeNames.TerrainFeedTriangles;
 
         public NavBakeMode ParsedMode => NavBakeNames.ParseMode(Mode, "NavMeshBakeConfig.mode");
 
         public NavBakeAlgorithmKind ParsedAlgorithm => NavBakeNames.ParseAlgorithm(Algorithm, "NavMeshBakeConfig.algorithm");
+
+        public NavTerrainFeedKind ParsedTerrainFeed => NavBakeNames.ParseTerrainFeed(TerrainFeed, "NavMeshBakeConfig.terrainFeed");
     }
 
     public sealed class NavMeshAgentProfileConfig

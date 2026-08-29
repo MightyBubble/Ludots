@@ -184,11 +184,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         private void ValidateRaw(JsonObject root, string relativePath)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental");
+            RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed" });
             string mode = RequireString(root, "mode", "NavMeshBakeConfig");
             string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
             _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
             _ = NavBakeNames.ParseAlgorithm(algorithm, "NavMeshBakeConfig.algorithm");
+            if (root["terrainFeed"] is not null)
+            {
+                _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
+            }
 
             if (root["profiles"] is not JsonArray profiles || profiles.Count == 0)
             {
@@ -299,6 +303,12 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         }
 
         private static void RequireOnlyProperties(JsonObject obj, string path, params string[] allowed)
+            => RequireOnlyProperties(obj, path, allowed, Array.Empty<string>());
+
+        /// <summary>Unknown-key rejection is absolute; `optional` keys are validated when
+        /// present but carry no presence requirement, so new vocabulary lands without
+        /// forcing every existing navmesh.json to repeat it.</summary>
+        private static void RequireOnlyProperties(JsonObject obj, string path, string[] allowed, string[] optional)
         {
             foreach (var property in obj)
             {
@@ -306,6 +316,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 for (int i = 0; i < allowed.Length; i++)
                 {
                     if (string.Equals(property.Key, allowed[i], StringComparison.Ordinal))
+                    {
+                        known = true;
+                        break;
+                    }
+                }
+
+                for (int i = 0; !known && i < optional.Length; i++)
+                {
+                    if (string.Equals(property.Key, optional[i], StringComparison.Ordinal))
                     {
                         known = true;
                         break;

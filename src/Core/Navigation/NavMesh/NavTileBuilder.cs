@@ -775,7 +775,7 @@ namespace Ludots.Core.Navigation.NavMesh
             dst.Add(new NavBorderPortal(side, su0, v, su1, v, x0cm, z0cm, x1cm, z1cm, clearance));
         }
 
-        private static bool IsCellAnyTriangleWalkable(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)
+        internal static bool IsCellAnyTriangleWalkable(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)
         {
             if (r < 0 || c < 0 || r >= mapHeight - 1 || c >= mapWidth - 1) return false;
             bool isOdd = terrain.Topology == LogicTerrainTopology.Hex && (r & 1) == 1;
