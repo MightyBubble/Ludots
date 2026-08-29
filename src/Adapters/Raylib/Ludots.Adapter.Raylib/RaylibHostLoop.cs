@@ -185,6 +185,7 @@ namespace Ludots.Adapter.Raylib
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
             RaylibSoundConsumer? soundConsumer = null;
+            RaylibFrameRenderer? frameRenderer = null;
 
             var terrainRenderer = new RaylibTerrainRenderer
             {
@@ -363,7 +364,7 @@ namespace Ludots.Adapter.Raylib
                     viewController,
                     cullingSystem);
 
-                var frameRenderer = new RaylibFrameRenderer(
+                frameRenderer = new RaylibFrameRenderer(
                     engine,
                     uiRoot,
                     skiaRenderer,
@@ -461,6 +462,11 @@ namespace Ludots.Adapter.Raylib
                         float dt = Rl.GetFrameTime();
                         presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
+                        if (!ReadEnvBoolOrDefault("LUDOTS_RAYLIB_SHADOW", defaultValue: true))
+                        {
+                            renderDebug.DrawShadows = false;
+                        }
+
                         bool activeMapRequestsDeepBackground = ActiveMapHasTag(engine, MapTags.RaylibDeepBackground);
                         bool activeMapHidesDebugGuides = ActiveMapHasTag(engine, MapTags.RaylibHideDebugGuides);
                         IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
@@ -733,6 +739,7 @@ namespace Ludots.Adapter.Raylib
             }
             finally
             {
+                frameRenderer?.Dispose();
                 soundConsumer?.Dispose();
                 if (windowOpened) Rl.CloseWindow();
                 terrainRenderer.Dispose();

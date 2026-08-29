@@ -13,6 +13,7 @@ public sealed class RaylibFrameRendererTests
         bool drawTerrain = true,
         bool drawVisualHeightmap = false,
         bool waterEnabled = false,
+        bool hasShadowFrame = false,
         bool hasGlobalFieldBuffer = true,
         bool drawFieldOverlays = true,
         bool hasBenchmarkRenderer = true,
@@ -31,6 +32,7 @@ public sealed class RaylibFrameRendererTests
             drawTerrain,
             drawVisualHeightmap,
             waterEnabled,
+            hasShadowFrame,
             hasGlobalFieldBuffer,
             drawFieldOverlays,
             hasBenchmarkRenderer,
@@ -101,22 +103,26 @@ public sealed class RaylibFrameRendererTests
     }
 
     [Test]
-    public void BuildPassPlan_WaterFrameRunsReflectionRefractionBeforeWorldAndSkipsPostProcessRt()
+    public void BuildPassPlan_WaterFrameRunsReflectionRefractionBeforeWorldAndKeepsPostProcess()
     {
         Span<RaylibFramePass> passes = stackalloc RaylibFramePass[32];
         int count = RaylibFrameRenderer.BuildPassPlan(
-            PlanInput(waterEnabled: true, usePostProcess: false),
+            PlanInput(waterEnabled: true, hasShadowFrame: true, usePostProcess: true),
             passes);
         RaylibFramePass[] plan = passes[..count].ToArray();
 
         Assert.That(plan, Does.Contain(RaylibFramePass.WaterReflection));
         Assert.That(plan, Does.Contain(RaylibFramePass.WaterRefraction));
-        Assert.That(plan, Does.Not.Contain(RaylibFramePass.BeginWorldTexture));
-        Assert.That(plan, Does.Not.Contain(RaylibFramePass.PostProcessComposite));
+        Assert.That(plan, Does.Contain(RaylibFramePass.BeginWorldTexture),
+            "水面帧必须保留后处理调色（旧宿主互斥是 RT 绑定丢失的规避，不是能力边界）");
+        Assert.That(plan, Does.Contain(RaylibFramePass.PostProcessComposite));
         Assert.That(Array.IndexOf(plan, RaylibFramePass.WaterReflection) + 1,
             Is.EqualTo(Array.IndexOf(plan, RaylibFramePass.WaterRefraction)), "水面双 pass 必须相邻");
-        Assert.That(Array.IndexOf(plan, RaylibFramePass.WaterRefraction),
-            Is.LessThan(Array.IndexOf(plan, RaylibFramePass.BeginWorld3D)));
+        AssertIndexOrder(plan, RaylibFramePass.Clear, RaylibFramePass.WaterReflection);
+        AssertIndexOrder(plan, RaylibFramePass.WaterRefraction, RaylibFramePass.ShadowDepth);
+        AssertIndexOrder(plan, RaylibFramePass.ShadowDepth, RaylibFramePass.BeginWorldTexture);
+        AssertIndexOrder(plan, RaylibFramePass.WaterRefraction, RaylibFramePass.BeginWorld3D);
+        AssertIndexOrder(plan, RaylibFramePass.BeginWorldTexture, RaylibFramePass.BeginWorld3D);
     }
 
     [Test]
@@ -140,75 +146,83 @@ public sealed class RaylibFrameRendererTests
         int combinationsChecked = 0;
         foreach (bool usePostProcess in values)
         foreach (bool waterEnabled in values)
+        foreach (bool hasShadowFrame in values)
+        foreach (bool drawEnvironment in values)
+        foreach (bool drawTerrain in values)
+        foreach (bool drawPrimitives in values)
+        foreach (bool drawNavMeshOverlay in values)
+        foreach (bool drawSkiaUi in values)
+        foreach (bool drawDebugDraw in values)
         {
-            if (usePostProcess && waterEnabled)
+            int count = RaylibFrameRenderer.BuildPassPlan(
+                PlanInput(
+                                    drawTerrain: drawTerrain,
+                                    waterEnabled: waterEnabled,
+                                    hasShadowFrame: hasShadowFrame,
+                                    drawPrimitives: drawPrimitives,
+                                    drawNavMeshOverlay: drawNavMeshOverlay,
+                                    drawDebugDraw: drawDebugDraw,
+                                    drawSkiaUi: drawSkiaUi,
+                                    drawEnvironment: drawEnvironment,
+                                    usePostProcess: usePostProcess),
+                passes);
+            RaylibFramePass[] plan = passes[..count].ToArray();
+            combinationsChecked++;
+
+            Assert.That(plan[0], Is.EqualTo(RaylibFramePass.Clear), $"首 pass 必须是 Clear：{Format(plan)}");
+            Assert.That(plan[^1], Is.EqualTo(RaylibFramePass.OverlayComposite), $"末 pass 必须是 OverlayComposite：{Format(plan)}");
+            Assert.That(plan.Distinct().Count(), Is.EqualTo(plan.Length), $"pass 不得重复：{Format(plan)}");
+            AssertIndexOrder(plan, RaylibFramePass.BeginWorld3D, RaylibFramePass.EndWorld3D);
+            AssertIndexOrder(plan, RaylibFramePass.EndWorld3D, RaylibFramePass.OverlayComposite);
+
+            if (usePostProcess)
             {
-                // 生产合同：水面 FBO 与后处理 RT 互斥（RaylibHostLoop 的 postProcessWorldFrame = !waterFboEnabled）。
-                continue;
+                AssertIndexOrder(plan, RaylibFramePass.Clear, RaylibFramePass.BeginWorldTexture);
+                AssertIndexOrder(plan, RaylibFramePass.BeginWorldTexture, RaylibFramePass.BeginWorld3D);
+                AssertIndexOrder(plan, RaylibFramePass.EndWorld3D, RaylibFramePass.PostProcessComposite);
+                AssertIndexOrder(plan, RaylibFramePass.PostProcessComposite, RaylibFramePass.OverlayComposite);
             }
 
-            foreach (bool drawEnvironment in values)
-            foreach (bool drawTerrain in values)
-            foreach (bool drawPrimitives in values)
-            foreach (bool drawNavMeshOverlay in values)
-            foreach (bool drawSkiaUi in values)
-            foreach (bool drawDebugDraw in values)
+            if (waterEnabled)
             {
-                int count = RaylibFrameRenderer.BuildPassPlan(
-                    PlanInput(
-                                        drawTerrain: drawTerrain,
-                                        waterEnabled: waterEnabled,
-                                        drawPrimitives: drawPrimitives,
-                                        drawNavMeshOverlay: drawNavMeshOverlay,
-                                        drawDebugDraw: drawDebugDraw,
-                                        drawSkiaUi: drawSkiaUi,
-                                        drawEnvironment: drawEnvironment,
-                                        usePostProcess: usePostProcess),
-                    passes);
-                RaylibFramePass[] plan = passes[..count].ToArray();
-                combinationsChecked++;
-
-                Assert.That(plan[0], Is.EqualTo(RaylibFramePass.Clear), $"首 pass 必须是 Clear：{Format(plan)}");
-                Assert.That(plan[^1], Is.EqualTo(RaylibFramePass.OverlayComposite), $"末 pass 必须是 OverlayComposite：{Format(plan)}");
-                Assert.That(plan.Distinct().Count(), Is.EqualTo(plan.Length), $"pass 不得重复：{Format(plan)}");
-                AssertIndexOrder(plan, RaylibFramePass.BeginWorld3D, RaylibFramePass.EndWorld3D);
-                AssertIndexOrder(plan, RaylibFramePass.EndWorld3D, RaylibFramePass.OverlayComposite);
-
+                AssertIndexOrder(plan, RaylibFramePass.Clear, RaylibFramePass.WaterReflection);
+                AssertIndexOrder(plan, RaylibFramePass.WaterReflection, RaylibFramePass.WaterRefraction);
+                AssertIndexOrder(plan, RaylibFramePass.WaterRefraction, RaylibFramePass.BeginWorld3D);
                 if (usePostProcess)
                 {
-                    AssertIndexOrder(plan, RaylibFramePass.Clear, RaylibFramePass.BeginWorldTexture);
-                    AssertIndexOrder(plan, RaylibFramePass.BeginWorldTexture, RaylibFramePass.BeginWorld3D);
-                    AssertIndexOrder(plan, RaylibFramePass.EndWorld3D, RaylibFramePass.PostProcessComposite);
-                    AssertIndexOrder(plan, RaylibFramePass.PostProcessComposite, RaylibFramePass.OverlayComposite);
+                    AssertIndexOrder(plan, RaylibFramePass.WaterRefraction, RaylibFramePass.BeginWorldTexture);
                 }
+            }
 
-                if (waterEnabled)
+            if (hasShadowFrame)
+            {
+                AssertIndexOrder(plan, RaylibFramePass.Clear, RaylibFramePass.ShadowDepth);
+                AssertIndexOrder(plan, RaylibFramePass.ShadowDepth, RaylibFramePass.BeginWorld3D);
+                if (usePostProcess)
                 {
-                    AssertIndexOrder(plan, RaylibFramePass.Clear, RaylibFramePass.WaterReflection);
-                    AssertIndexOrder(plan, RaylibFramePass.WaterReflection, RaylibFramePass.WaterRefraction);
-                    AssertIndexOrder(plan, RaylibFramePass.WaterRefraction, RaylibFramePass.BeginWorld3D);
+                    AssertIndexOrder(plan, RaylibFramePass.ShadowDepth, RaylibFramePass.BeginWorldTexture);
                 }
+            }
 
-                if (drawEnvironment)
-                {
-                    AssertIndexOrder(plan, RaylibFramePass.BeginWorld3D, RaylibFramePass.Skybox);
-                }
+            if (drawEnvironment)
+            {
+                AssertIndexOrder(plan, RaylibFramePass.BeginWorld3D, RaylibFramePass.Skybox);
+            }
 
-                if (drawNavMeshOverlay)
-                {
-                    AssertIndexOrder(plan, RaylibFramePass.BeginWorld3D, RaylibFramePass.NavMeshOverlay);
-                    AssertIndexOrder(plan, RaylibFramePass.NavMeshOverlay, RaylibFramePass.EndWorld3D);
-                }
+            if (drawNavMeshOverlay)
+            {
+                AssertIndexOrder(plan, RaylibFramePass.BeginWorld3D, RaylibFramePass.NavMeshOverlay);
+                AssertIndexOrder(plan, RaylibFramePass.NavMeshOverlay, RaylibFramePass.EndWorld3D);
+            }
 
-                if (drawSkiaUi)
-                {
-                    AssertIndexOrder(plan, RaylibFramePass.EndWorld3D, RaylibFramePass.BrowserLayer);
-                    AssertIndexOrder(plan, RaylibFramePass.BrowserLayer, RaylibFramePass.OverlayComposite);
-                }
+            if (drawSkiaUi)
+            {
+                AssertIndexOrder(plan, RaylibFramePass.EndWorld3D, RaylibFramePass.BrowserLayer);
+                AssertIndexOrder(plan, RaylibFramePass.BrowserLayer, RaylibFramePass.OverlayComposite);
             }
         }
 
-        Assert.That(combinationsChecked, Is.GreaterThan(120));
+        Assert.That(combinationsChecked, Is.GreaterThan(500));
     }
 
     [Test]

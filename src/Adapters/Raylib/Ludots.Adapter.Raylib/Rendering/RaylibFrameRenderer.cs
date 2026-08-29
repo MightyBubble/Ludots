@@ -25,9 +25,10 @@ namespace Ludots.Adapter.Raylib
     internal enum RaylibFramePass
     {
         Clear,
-        BeginWorldTexture,
         WaterReflection,
         WaterRefraction,
+        ShadowDepth,
+        BeginWorldTexture,
         BeginWorld3D,
         Skybox,
         DebugGuides,
@@ -51,6 +52,7 @@ namespace Ludots.Adapter.Raylib
         bool DrawTerrain,
         bool DrawVisualHeightmap,
         bool WaterEnabled,
+        bool HasShadowFrame,
         bool HasGlobalFieldBuffer,
         bool DrawFieldOverlays,
         bool HasBenchmarkRenderer,
@@ -216,6 +218,9 @@ namespace Ludots.Adapter.Raylib
                         case RaylibFramePass.WaterRefraction:
                             RenderWaterRefraction(in frame, in waterFrame);
                             break;
+                        case RaylibFramePass.ShadowDepth:
+                            RenderShadowDepth(in frame);
+                            break;
                         case RaylibFramePass.BeginWorld3D:
                         {
                             long mode3DStart = Stopwatch.GetTimestamp();
@@ -357,7 +362,8 @@ namespace Ludots.Adapter.Raylib
 
         public void Dispose()
         {
-            // 组合渲染器均由宿主持有；本类不拥有可释放资源。
+            _shadowMap?.Dispose();
+            _shadowMap = null;
         }
 
         private readonly record struct RaylibFrameWaterFrame(
@@ -388,9 +394,16 @@ namespace Ludots.Adapter.Raylib
                 _frameLighting.Evaluate();
             }
 
-            _terrainRenderer.ApplyFrameLighting(_frameLighting);
-            _visualHeightmapRenderer.ApplyFrameLighting(_frameLighting);
-            _primitiveRenderer.ApplyFrameLighting(_frameLighting, frame.ActiveCamera.position);
+            _shadowActive = frame.RenderDebug.DrawShadows;
+            if (_shadowActive && _shadowMap == null)
+            {
+                _shadowMap = new RaylibDirectionalShadowMap();
+            }
+
+            RaylibDirectionalShadowMap? frameShadow = _shadowActive ? _shadowMap : null;
+            _terrainRenderer.ApplyFrameLighting(_frameLighting, frameShadow, TerrainShadowTexelWorld);
+            _visualHeightmapRenderer.ApplyFrameLighting(_frameLighting, frameShadow, TerrainShadowTexelWorld);
+            _primitiveRenderer.ApplyFrameLighting(_frameLighting, frame.ActiveCamera.position, frameShadow, PrimitiveShadowTexelWorld);
             _primitiveRenderer.DrawSurfaceWireBoxes = frame.DrawDebugDraw;
 
             bool waterOnVisualHeightmap = _waterPass.IsActive &&
@@ -419,6 +432,7 @@ namespace Ludots.Adapter.Raylib
                 DrawTerrain: frame.DrawTerrain,
                 DrawVisualHeightmap: frame.DrawVisualHeightmap,
                 WaterEnabled: waterFrame.WaterFboEnabled,
+                HasShadowFrame: _shadowActive,
                 HasGlobalFieldBuffer: _globalFieldVisualBuffer != null,
                 DrawFieldOverlays: frame.DrawFieldOverlays,
                 HasBenchmarkRenderer: _benchmarkRenderer != null,
@@ -430,22 +444,29 @@ namespace Ludots.Adapter.Raylib
                 DrawDebugDraw: frame.DrawDebugDraw,
                 DrawSkiaUi: frame.DrawSkiaUi,
                 DrawEnvironment: _skyEnvironment.IsActive,
-                UsePostProcess: waterFrame.PostProcessWorldFrame);
+                UsePostProcess: _environmentRenderer.Config.PostProcess.Enabled);
         }
 
         public static int BuildPassPlan(in RaylibFramePassPlanInput input, Span<RaylibFramePass> output)
         {
             int count = 0;
             Add(output, ref count, RaylibFramePass.Clear);
-            if (input.UsePostProcess)
-            {
-                Add(output, ref count, RaylibFramePass.BeginWorldTexture);
-            }
-
             if (input.WaterEnabled)
             {
                 Add(output, ref count, RaylibFramePass.WaterReflection);
                 Add(output, ref count, RaylibFramePass.WaterRefraction);
+            }
+
+            if (input.HasShadowFrame)
+            {
+                Add(output, ref count, RaylibFramePass.ShadowDepth);
+            }
+
+            // 后处理 RT 必须在水面 RT pass 之后开启：水面 EndTextureMode 会把渲染目标切回默认帧缓冲，
+            // 先开后处理 RT 再画水面会丢失 RT 绑定（旧宿主水面帧直接熄掉调色的根因）。
+            if (input.UsePostProcess)
+            {
+                Add(output, ref count, RaylibFramePass.BeginWorldTexture);
             }
 
             Add(output, ref count, RaylibFramePass.BeginWorld3D);
@@ -603,6 +624,12 @@ namespace Ludots.Adapter.Raylib
         }
 
         private VertexMapTerrainChunkMeshSource? _terrainSource;
+        private RaylibDirectionalShadowMap? _shadowMap;
+        private bool _shadowActive;
+
+        private const float ShadowSceneRadiusMeters = 48f;
+        private const float PrimitiveShadowTexelWorld = 0.04f;
+        private const float TerrainShadowTexelWorld = 0.08f;
 
         private Ludots.Platform.Abstractions.ITerrainChunkMeshSource TerrainSource()
         {
@@ -613,6 +640,40 @@ namespace Ludots.Adapter.Raylib
             }
 
             return _terrainSource;
+        }
+
+        private void RenderShadowDepth(in RaylibRenderFrame frame)
+        {
+            RaylibDirectionalShadowMap shadow = _shadowMap!;
+            shadow.BeginFrame(_frameLighting.SunDirectionToward, frame.ActiveCamera.target, ShadowSceneRadiusMeters);
+            try
+            {
+                if (_engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer? draw) &&
+                    _engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? meshes))
+                {
+                    _primitiveRenderer.DrawShadow(
+                        draw,
+                        shadow,
+                        meshes,
+                        frame.ActiveCamera,
+                        frame.RenderDebug.AcceptanceScaleMultiplier);
+                }
+
+                SkinnedVisualBatchBuffer? skinnedBatch = _engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
+                if (skinnedBatch != null &&
+                    _engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? skinMeshes))
+                {
+                    _primitiveRenderer.DrawShadow(
+                        skinnedBatch,
+                        shadow,
+                        skinMeshes,
+                        frame.RenderDebug.AcceptanceScaleMultiplier);
+                }
+            }
+            finally
+            {
+                shadow.EndFrame();
+            }
         }
 
         private void DrawDebugGuides(in RaylibRenderFrame frame)
