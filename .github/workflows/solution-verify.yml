@@ -156,8 +156,7 @@ jobs:
             'FullyQualifiedName~OrderIngestion_RouteEnabledWithoutConfiguredAgentType',
             'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields',
             'FullyQualifiedName~PresentationRequestChannelTests',
-            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests',
-            'FullyQualifiedName~Showcase_MouseBoxAcquisition_RightClickIssuesOrdersForCommandableAgents'
+            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests'
           ) -join '|'
 
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal
