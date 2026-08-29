@@ -204,7 +204,10 @@
     "showVariablesWhenNonZero": true,
     "showObjectiveWithDialogue": false,
     "showObjectiveWithSequence": false,
-    "hideCastDuringStandingPortrait": true
+    "showPromptWithDialogue": false,
+    "showPromptWithSequence": false,
+    "hideCastDuringStandingPortrait": true,
+    "hidePanelsDuringStandingPortrait": true
   },
   "bootstrap": {
     "pureStoryLane": false,

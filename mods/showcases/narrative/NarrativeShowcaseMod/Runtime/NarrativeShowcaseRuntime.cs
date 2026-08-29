@@ -380,39 +380,44 @@ namespace NarrativeShowcaseMod.Runtime
             bool dialogueActive = dialogue.TryGetActiveView(out DialogueView dialogueView);
             bool sequenceActive = sequencer.TryGetActiveView(out SequenceView sequence);
             NarrativeShowcaseStageHudConfig hud = _frontendConfig.StageHud ?? new NarrativeShowcaseStageHudConfig();
+            bool standingPortrait = dialogueActive &&
+                string.Equals(
+                    dialogueView.PresentationProfile,
+                    NarrativeShowcaseIds.PresentationStandingPortrait,
+                    StringComparison.OrdinalIgnoreCase);
+            bool showPanels = !standingPortrait || !hud.HidePanelsDuringStandingPortrait;
 
-            var surfaces = new List<NarrativeFrontendSurfaceModel>(6)
+            var surfaces = new List<NarrativeFrontendSurfaceModel>(6);
+            if ((!dialogueActive || hud.ShowPromptWithDialogue) &&
+                (!sequenceActive || hud.ShowPromptWithSequence))
             {
-                BuildPromptSurface(engine, dialogue, sequencer),
-            };
+                surfaces.Add(BuildPromptSurface(engine, dialogue, sequencer));
+            }
 
-            bool showObjective = (!dialogueActive || hud.ShowObjectiveWithDialogue)
+            bool showObjective = showPanels
+                && (!dialogueActive || hud.ShowObjectiveWithDialogue)
                 && (!sequenceActive || hud.ShowObjectiveWithSequence);
             if (showObjective)
             {
                 surfaces.Add(BuildObjectiveSurface(engine, tasks));
             }
 
-            if (hud.ShowHistoryAlways)
+            if (showPanels && hud.ShowHistoryAlways)
             {
                 surfaces.Add(BuildHistorySurface(engine));
             }
 
-            if (hud.ShowVariablesAlways || (hud.ShowVariablesWhenNonZero && HasNonZeroStoryVariable(engine)))
+            if (showPanels &&
+                (hud.ShowVariablesAlways || (hud.ShowVariablesWhenNonZero && HasNonZeroStoryVariable(engine))))
             {
                 surfaces.Add(BuildVariablesSurface(engine));
             }
 
-            if (_history.Count > 0)
+            if (showPanels && _history.Count > 0)
             {
                 surfaces.Add(BuildNotificationSurface(engine));
             }
 
-            bool standingPortrait = dialogueActive &&
-                string.Equals(
-                    dialogueView.PresentationProfile,
-                    NarrativeShowcaseIds.PresentationStandingPortrait,
-                    StringComparison.OrdinalIgnoreCase);
             if (!hud.HideCastDuringStandingPortrait || !standingPortrait)
             {
                 AddCastNameplates(engine, surfaces);

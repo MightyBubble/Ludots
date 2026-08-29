@@ -166,7 +166,10 @@ namespace NarrativeShowcaseMod.Runtime
         public bool ShowVariablesWhenNonZero { get; set; }
         public bool ShowObjectiveWithDialogue { get; set; }
         public bool ShowObjectiveWithSequence { get; set; }
+        public bool ShowPromptWithDialogue { get; set; }
+        public bool ShowPromptWithSequence { get; set; }
         public bool HideCastDuringStandingPortrait { get; set; } = true;
+        public bool HidePanelsDuringStandingPortrait { get; set; } = true;
     }
 
     internal sealed class NarrativeShowcaseChoiceSignalRoute

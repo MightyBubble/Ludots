@@ -736,6 +736,14 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(composition!.Style.Width.Unit, Is.EqualTo(UiLengthUnit.Pixel));
             Assert.That(composition.Style.Width.Value, Is.GreaterThanOrEqualTo(900f),
                 "Standing portrait composition should span a half-screen-plus dialogue strip.");
+            Assert.That(
+                FindUiNodeByClass(uiRoot.Scene?.Root, "story-prompt-ribbon"),
+                Is.Null,
+                "Prompt ribbon must not run behind a standing-portrait dialogue.");
+            Assert.That(
+                FindUiNodeByClass(uiRoot.Scene?.Root, "story-status"),
+                Is.Null,
+                "Status panels must not sit behind the standing portrait.");
         }
 
         private static void AssertThemeFrameVisibleOnDialogue(UIRoot uiRoot)
@@ -757,11 +765,7 @@ namespace Ludots.Tests.GAS.Production
             UiNode? body = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
             Assert.That(body, Is.Not.Null, "Framed dialogue content must use story-framed-body inset.");
             UiNode? prompt = FindUiNodeByClass(uiRoot.Scene?.Root, "story-prompt-ribbon");
-            Assert.That(prompt, Is.Not.Null, "Prompt ribbon should remain mounted under dialogue.");
-            Assert.That(
-                FindAncestorByClass(prompt, "story-framed"),
-                Is.Null,
-                "Prompt ribbon theme.css already owns chrome; it must not wrap in story-framed.");
+            Assert.That(prompt, Is.Null, "Prompt ribbon must not run behind active dialogue.");
             Assert.That(
                 FindUiNodeByClass(uiRoot.Scene?.Root, "story-overlay-copy"),
                 Is.Not.Null,
