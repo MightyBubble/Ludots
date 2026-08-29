@@ -4,7 +4,6 @@
 - [快速开始](quick-start.md)
 - [Showcase 画廊导览](showcases/README.md)
 - [叙事内容运行时 Wiki（Activity · Task · 剧情）](reference/narrative-runtime-wiki/README.md)
-  - [Activity 活动：一次拍板](reference/narrative-runtime-wiki/activity.md)
   - [Task 任务：持续进度](reference/narrative-runtime-wiki/task.md)
   - [Story · Dialogue · Sequencer：剧情与演出](reference/narrative-runtime-wiki/story-runtime.md)
 - [Agent Bridge](agent-bridge.md)

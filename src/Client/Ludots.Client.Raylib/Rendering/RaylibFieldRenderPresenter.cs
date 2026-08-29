@@ -4,10 +4,10 @@ using System.Numerics;
 using Ludots.Core.Fields;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Raylib.Render;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
-using Ludots.Raylib.Render;
 
 namespace Ludots.Client.Raylib.Rendering
 {
@@ -54,11 +54,22 @@ namespace Ludots.Client.Raylib.Rendering
         private byte[] _uploadScratch = Array.Empty<byte>();
         private Mesh _quadMesh;
         private Material _material;
+        private Texture2D _solidTexture;
         private bool _quadMeshLoaded;
         private bool _materialLoaded;
         private bool _disposed;
 
         public float FogOverlayY { get; set; } = 0.08f;
+        public float DiscreteOwnershipOverlayY { get; set; } = 0.06f;
+        public IVisualHeightmap? HeightSampleSource { get; set; }
+        public float HeightSampleDisplayScale { get; set; } = 1f;
+        public float DiscreteOwnershipDrapeOffsetMeters { get; set; } = 2f;
+
+        /// <summary>
+        /// Cell edge at or above this size uses a single textured plane instead of per-cell drapes.
+        /// Continental admin cells are kilometers wide; draping each texel draws a square mosaic and hides terrain.
+        /// </summary>
+        public int DiscreteOwnershipDrapeMaxCellSizeCm { get; set; } = 5_000;
 
         public int LastFieldTextureCount { get; private set; }
         public int LastFieldCellCount { get; private set; }
@@ -94,17 +105,29 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 GlobalFieldVisualDescriptor descriptor = record.Descriptor;
-                if (descriptor.Id.Kind != GlobalFieldVisualKind.Fog)
+                if (descriptor.Id.Kind is not (
+                    GlobalFieldVisualKind.Fog or
+                    GlobalFieldVisualKind.DiscreteOwnership))
                 {
                     LastUnsupportedFieldCount++;
                     throw new InvalidOperationException(
                         $"Raylib Global Field renderer does not support field kind '{descriptor.Id.Kind}' yet. Publish through the shared buffer, then add an explicit Raylib renderer contract for that kind.");
                 }
 
-                if (descriptor.ValueKind != GlobalFieldVisualValueKind.Byte)
+                if (descriptor.Id.Kind == GlobalFieldVisualKind.Fog &&
+                    descriptor.ValueKind != GlobalFieldVisualValueKind.Byte)
                 {
                     throw new InvalidOperationException(
                         $"Raylib fog field renderer requires byte-valued cells, but field '{descriptor.Id}' published {descriptor.ValueKind}.");
+                }
+
+                if (descriptor.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership &&
+                    descriptor.ValueKind is not (
+                        GlobalFieldVisualValueKind.Byte or
+                        GlobalFieldVisualValueKind.Vector4))
+                {
+                    throw new InvalidOperationException(
+                        $"Raylib discrete ownership renderer requires byte or Vector4 cells, but field '{descriptor.Id}' published {descriptor.ValueKind}.");
                 }
 
                 if (descriptor.BoundsCells.Width <= 0 || descriptor.BoundsCells.Height <= 0)
@@ -113,13 +136,13 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 FieldTextureState state = GetOrCreateState(descriptor.Id);
-                bool fullUpload = EnsureStateSize(state, descriptor.BoundsCells);
+                bool fullUpload = EnsureStateContract(state, in descriptor);
                 ReadOnlySpan<GlobalFieldVisualCell> cells = buffer.GetCells(record);
                 ReadOnlySpan<IntRect> dirtyRects = buffer.GetDirtyRects(record);
 
                 if (fullUpload)
                 {
-                    FillRect(state.Pixels, state.Width, new IntRect(0, 0, state.Width, state.Height), FogVisibilityUnseen);
+                    ClearRect(state, new IntRect(0, 0, state.Width, state.Height));
                     ApplyCells(state, cells);
                     SetSingleDirtyRect(state, new IntRect(0, 0, state.Width, state.Height));
                 }
@@ -189,7 +212,17 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly RaylibFieldTexturePlan plan = ref plans[i];
                 FieldTextureState state = _stateById[plan.Id];
                 UploadDirtyRects(state);
-                DrawTexturePlane(state, plan.CellSizeCm);
+                if (state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership &&
+                    HeightSampleSource is IVisualHeightmap heightSampleSource &&
+                    ShouldDrapeDiscreteOwnership(plan.CellSizeCm, DiscreteOwnershipDrapeMaxCellSizeCm))
+                {
+                    DrawDrapedDiscreteOwnership(state, plan.CellSizeCm, heightSampleSource);
+                }
+                else
+                {
+                    DrawTexturePlane(state, plan.CellSizeCm);
+                }
+
                 LastDrawCount++;
             }
 
@@ -243,11 +276,19 @@ namespace Ludots.Client.Raylib.Rendering
             return state;
         }
 
-        private static bool EnsureStateSize(FieldTextureState state, IntRect boundsCells)
+        private static bool EnsureStateContract(
+            FieldTextureState state,
+            in GlobalFieldVisualDescriptor descriptor)
         {
+            IntRect boundsCells = descriptor.BoundsCells;
             int width = boundsCells.Width;
             int height = boundsCells.Height;
-            bool changed = state.Width != width || state.Height != height || state.BoundsCells != boundsCells;
+            bool changed =
+                state.Width != width ||
+                state.Height != height ||
+                state.BoundsCells != boundsCells ||
+                state.ValueKind != descriptor.ValueKind ||
+                state.PaletteId != descriptor.PaletteId;
             if (!changed && state.Pixels.Length >= width * height * 4)
             {
                 state.DirtyRectCount = 0;
@@ -257,6 +298,8 @@ namespace Ludots.Client.Raylib.Rendering
             state.BoundsCells = boundsCells;
             state.Width = width;
             state.Height = height;
+            state.ValueKind = descriptor.ValueKind;
+            state.PaletteId = descriptor.PaletteId;
             int byteCount = checked(width * height * 4);
             if (state.Pixels.Length < byteCount)
             {
@@ -278,7 +321,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SetPixel(state.Pixels, state.Width, x, y, cell.ByteValue);
+                SetPixel(state, x, y, in cell);
             }
         }
 
@@ -301,7 +344,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             for (int i = 0; i < state.DirtyRectCount; i++)
             {
-                FillRect(state.Pixels, state.Width, state.DirtyRects[i], FogVisibilityUnseen);
+                ClearRect(state, state.DirtyRects[i]);
             }
         }
 
@@ -360,39 +403,203 @@ namespace Ludots.Client.Raylib.Rendering
             return true;
         }
 
-        private static void FillRect(byte[] pixels, int textureWidth, IntRect rect, byte visibility)
+        private static void ClearRect(FieldTextureState state, IntRect rect)
         {
-            ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
+            ResolveClearColorBytes(state.Id.Kind, out byte r, out byte g, out byte b, out byte a);
             int endY = rect.Y + rect.Height;
             int endX = rect.X + rect.Width;
             for (int y = rect.Y; y < endY; y++)
             {
-                int row = y * textureWidth;
+                int row = y * state.Width;
                 for (int x = rect.X; x < endX; x++)
                 {
                     int pixel = (row + x) * 4;
-                    pixels[pixel] = r;
-                    pixels[pixel + 1] = g;
-                    pixels[pixel + 2] = b;
-                    pixels[pixel + 3] = a;
+                    state.Pixels[pixel] = r;
+                    state.Pixels[pixel + 1] = g;
+                    state.Pixels[pixel + 2] = b;
+                    state.Pixels[pixel + 3] = a;
                 }
             }
         }
 
-        private static void SetPixel(byte[] pixels, int textureWidth, int x, int y, byte visibility)
+        private static void SetPixel(
+            FieldTextureState state,
+            int x,
+            int y,
+            in GlobalFieldVisualCell cell)
         {
-            ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
-            int pixel = ((y * textureWidth) + x) * 4;
-            pixels[pixel] = r;
-            pixels[pixel + 1] = g;
-            pixels[pixel + 2] = b;
-            pixels[pixel + 3] = a;
+            ResolveCellColorBytes(
+                state.Id.Kind,
+                state.ValueKind,
+                state.PaletteId,
+                in cell,
+                out byte r,
+                out byte g,
+                out byte b,
+                out byte a);
+            int pixel = ((y * state.Width) + x) * 4;
+            state.Pixels[pixel] = r;
+            state.Pixels[pixel + 1] = g;
+            state.Pixels[pixel + 2] = b;
+            state.Pixels[pixel + 3] = a;
         }
 
         public static Color ResolveFogColor(byte visibility)
         {
             ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
             return new Color(r, g, b, a);
+        }
+
+        public static Color ResolveDiscreteOwnershipColor(int projectedId, int paletteId = 0)
+        {
+            ResolveDiscreteOwnershipColorBytes(
+                projectedId,
+                paletteId,
+                out byte r,
+                out byte g,
+                out byte b,
+                out byte a);
+            return new Color(r, g, b, a);
+        }
+
+        public static Vector4 ResolveDiscreteOwnershipColorVector(int projectedId)
+        {
+            ResolveDiscreteOwnershipColorBytes(
+                projectedId,
+                paletteId: 0,
+                out byte r,
+                out byte g,
+                out byte b,
+                out byte a);
+            const float scale = 1f / byte.MaxValue;
+            return new Vector4(r * scale, g * scale, b * scale, a * scale);
+        }
+
+        internal static bool ShouldDrapeDiscreteOwnership(int cellSizeCm, int drapeMaxCellSizeCm)
+        {
+            if (cellSizeCm <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
+            }
+
+            if (drapeMaxCellSizeCm <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(drapeMaxCellSizeCm));
+            }
+
+            return cellSizeCm < drapeMaxCellSizeCm;
+        }
+
+        internal static bool TryResolveDiscreteOwnershipDrape(
+            IVisualHeightmap heightSampleSource,
+            IntRect boundsCells,
+            int cellSizeCm,
+            int textureX,
+            int textureY,
+            float heightSampleDisplayScale,
+            float drapeOffsetMeters,
+            out Vector3 centerMeters)
+        {
+            ArgumentNullException.ThrowIfNull(heightSampleSource);
+
+            float halfCellSizeCm = cellSizeCm * 0.5f;
+            float worldXCm = ((boundsCells.X + textureX) * (float)cellSizeCm) + halfCellSizeCm;
+            float worldYCm = ((boundsCells.Y + textureY) * (float)cellSizeCm) + halfCellSizeCm;
+            if (!heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
+            {
+                centerMeters = default;
+                return false;
+            }
+
+            float visualYMeters = (heightCm * heightSampleDisplayScale / WorldUnits.CmPerMeter) +
+                                  drapeOffsetMeters;
+            centerMeters = new Vector3(
+                WorldUnits.CmToM(worldXCm),
+                visualYMeters,
+                WorldUnits.CmToM(worldYCm));
+            return true;
+        }
+
+        private static void ResolveClearColorBytes(
+            GlobalFieldVisualKind kind,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            if (kind == GlobalFieldVisualKind.Fog)
+            {
+                ResolveFogColorBytes(FogVisibilityUnseen, out r, out g, out b, out a);
+                return;
+            }
+
+            r = 0;
+            g = 0;
+            b = 0;
+            a = 0;
+        }
+
+        private static void ResolveCellColorBytes(
+            GlobalFieldVisualKind kind,
+            GlobalFieldVisualValueKind valueKind,
+            int paletteId,
+            in GlobalFieldVisualCell cell,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            if (kind == GlobalFieldVisualKind.Fog)
+            {
+                ResolveFogColorBytes(cell.ByteValue, out r, out g, out b, out a);
+                return;
+            }
+
+            if (valueKind == GlobalFieldVisualValueKind.Byte)
+            {
+                ResolveDiscreteOwnershipColorBytes(cell.ByteValue, paletteId, out r, out g, out b, out a);
+                return;
+            }
+
+            Vector4 color = cell.FloatValue;
+            r = ToColorByte(color.X);
+            g = ToColorByte(color.Y);
+            b = ToColorByte(color.Z);
+            a = ToColorByte(color.W);
+        }
+
+        private static void ResolveDiscreteOwnershipColorBytes(
+            int projectedId,
+            int paletteId,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            if (projectedId <= 0)
+            {
+                r = 0;
+                g = 0;
+                b = 0;
+                a = 0;
+                return;
+            }
+
+            uint hash = unchecked((uint)projectedId * 0x9E3779B1u) ^
+                        unchecked((uint)paletteId * 0x85EBCA77u);
+            hash ^= hash >> 16;
+            hash *= 0x7FEB352Du;
+            hash ^= hash >> 15;
+            r = (byte)(72 + (hash & 0x7F));
+            g = (byte)(72 + ((hash >> 8) & 0x7F));
+            b = (byte)(72 + ((hash >> 16) & 0x7F));
+            a = 72;
+        }
+
+        private static byte ToColorByte(float value)
+        {
+            float clamped = Math.Clamp(value, 0f, 1f);
+            return (byte)MathF.Round(clamped * byte.MaxValue);
         }
 
         private static void ResolveFogColorBytes(byte visibility, out byte r, out byte g, out byte b, out byte a)
@@ -499,11 +706,76 @@ namespace Ludots.Client.Raylib.Rendering
             WorldCmInt2 originWorld = new(
                 state.BoundsCells.X * cellSizeCm,
                 state.BoundsCells.Y * cellSizeCm);
-            Vector3 origin = WorldUnits.WorldCmToVisualMeters(in originWorld, FogOverlayY);
+            float overlayY = state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership
+                ? DiscreteOwnershipOverlayY
+                : FogOverlayY;
+            Vector3 origin = WorldUnits.WorldCmToVisualMeters(in originWorld, overlayY);
             RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(widthMeters, 1f, heightMeters) *
                 Matrix4x4.CreateTranslation(origin));
+            // Continental ownership sits under elevated heightmap geometry when depth-tested at Y≈0;
+            // composite the tint as an overlay so terrain albedo remains the readable base.
+            bool overlayWithoutDepth = state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership;
+            if (overlayWithoutDepth)
+            {
+                Rl.rlDisableDepthTest();
+            }
+
             Rl.DrawMesh(_quadMesh, _material, transform);
+            if (overlayWithoutDepth)
+            {
+                Rl.rlEnableDepthTest();
+            }
+        }
+
+        private void DrawDrapedDiscreteOwnership(
+            FieldTextureState state,
+            int cellSizeCm,
+            IVisualHeightmap heightSampleSource)
+        {
+            EnsureRaylibResources();
+            Rl.rlEnableDepthTest();
+
+            int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
+            _material.maps[albedoIndex].texture = _solidTexture;
+            float cellSizeMeters = WorldUnits.CmToM(cellSizeCm);
+            float halfCellSizeMeters = cellSizeMeters * 0.5f;
+
+            for (int y = 0; y < state.Height; y++)
+            {
+                int rowPixel = y * state.Width * 4;
+                for (int x = 0; x < state.Width; x++)
+                {
+                    int pixel = rowPixel + (x * 4);
+                    byte alpha = state.Pixels[pixel + 3];
+                    if (alpha == 0 ||
+                        !TryResolveDiscreteOwnershipDrape(
+                            heightSampleSource,
+                            state.BoundsCells,
+                            cellSizeCm,
+                            x,
+                            y,
+                            HeightSampleDisplayScale,
+                            DiscreteOwnershipDrapeOffsetMeters,
+                            out Vector3 centerMeters))
+                    {
+                        continue;
+                    }
+
+                    _material.maps[albedoIndex].color = new Color(
+                        state.Pixels[pixel],
+                        state.Pixels[pixel + 1],
+                        state.Pixels[pixel + 2],
+                        alpha);
+                    RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                        Matrix4x4.CreateScale(cellSizeMeters, 1f, cellSizeMeters) *
+                        Matrix4x4.CreateTranslation(
+                            centerMeters.X - halfCellSizeMeters,
+                            centerMeters.Y,
+                            centerMeters.Z - halfCellSizeMeters));
+                    Rl.DrawMesh(_quadMesh, _material, transform);
+                }
+            }
         }
 
         private void EnsureRaylibResources()
@@ -517,6 +789,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (!_materialLoaded)
             {
                 _material = RaylibNativeResources.LoadMaterialDefault();
+                _solidTexture = _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].texture;
                 _materialLoaded = true;
             }
         }
@@ -632,6 +905,8 @@ namespace Ludots.Client.Raylib.Rendering
             public IntRect BoundsCells;
             public int Width;
             public int Height;
+            public GlobalFieldVisualValueKind ValueKind;
+            public int PaletteId;
             public byte[] Pixels = Array.Empty<byte>();
             public IntRect[] DirtyRects = Array.Empty<IntRect>();
             public int DirtyRectCount;

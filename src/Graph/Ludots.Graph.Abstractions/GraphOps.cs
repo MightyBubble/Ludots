@@ -277,7 +277,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Unknown activity id fails closed at execution time (activities load after
         /// graph compilation, so this cannot be a compile-time symbol patch).
         /// </summary>
-        OfferActivity = 462,
+        OfferActivity = 466,
 
         /// Start DialogueRuntime session. Imm = dialogueId config key (patched from dialogueId symbol).
         /// TriggerGraph / Script only; MapLoaded entry is the data-driven auto-start path.

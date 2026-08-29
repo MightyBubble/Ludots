@@ -936,12 +936,12 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
-            Texture2D texture = Rl.LoadTexture(fullPath);
+            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
             if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
             {
                 if (texture.id != 0)
                 {
-                    Rl.UnloadTexture(texture);
+                    RaylibNativeResources.UnloadTexture(texture);
                 }
 
                 throw new InvalidOperationException(
@@ -992,7 +992,7 @@ namespace Ludots.Raylib.Render
         {
             if (_navWalkabilityTexture.id != 0)
             {
-                Rl.UnloadTexture(_navWalkabilityTexture);
+                RaylibNativeResources.UnloadTexture(_navWalkabilityTexture);
             }
 
             _navWalkabilityTexture = default;
@@ -1431,7 +1431,7 @@ namespace Ludots.Raylib.Render
         {
             if (_overviewMeshLoaded && _overviewMesh.vertexCount > 0)
             {
-                Rl.UnloadMesh(_overviewMesh);
+                RaylibNativeResources.UnloadMesh(_overviewMesh);
             }
 
             _overviewMesh = default;
@@ -1614,7 +1614,7 @@ namespace Ludots.Raylib.Render
                 }
             }
 
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
 
