@@ -35,6 +35,7 @@ using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
+using SkiaSharp;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -74,6 +75,7 @@ namespace Ludots.Tests.GAS.Production
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "narrative-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
+            AssertThemeAssetsHaveTransparentBackgrounds(repoRoot);
 
             var snapshots = new List<AcceptanceSnapshot>();
             var frames = new List<UiAcceptanceEvidenceFrame>();
@@ -764,6 +766,40 @@ namespace Ludots.Tests.GAS.Production
                 FindUiNodeByClass(uiRoot.Scene?.Root, "story-overlay-copy"),
                 Is.Not.Null,
                 "Overlay dialogue must place speaker name and body in story-overlay-copy beside the portrait.");
+        }
+
+        private static void AssertThemeAssetsHaveTransparentBackgrounds(string repoRoot)
+        {
+            string themeRoot = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "narrative",
+                "NarrativeShowcaseMod",
+                "assets",
+                "PanelThemes");
+            string[] themeIds = { "story-ember", "story-sanguo", "story-fantasy", "story-acnh" };
+            string[] imageNames = { "panel_frame.png", "choice_frame.png", "portrait_warden.png", "standing_warden.png" };
+
+            foreach (string themeId in themeIds)
+            {
+                foreach (string imageName in imageNames)
+                {
+                    string path = Path.Combine(themeRoot, themeId, "images", imageName);
+                    using SKBitmap bitmap = SKBitmap.Decode(path)
+                        ?? throw new InvalidOperationException($"Unable to decode theme asset '{path}'.");
+                    Assert.That(
+                        new[]
+                        {
+                            bitmap.GetPixel(0, 0).Alpha,
+                            bitmap.GetPixel(bitmap.Width - 1, 0).Alpha,
+                            bitmap.GetPixel(0, bitmap.Height - 1).Alpha,
+                            bitmap.GetPixel(bitmap.Width - 1, bitmap.Height - 1).Alpha
+                        },
+                        Is.All.EqualTo((byte)0),
+                        $"{themeId}/{imageName} must have transparent outer corners.");
+                }
+            }
         }
 
         private static void AssertDialogueBodyRunsVisibleOnUi(UIRoot uiRoot, DialogueView dialogueView)
