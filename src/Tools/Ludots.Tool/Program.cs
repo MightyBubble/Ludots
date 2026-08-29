@@ -15,6 +15,7 @@ using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Tool
@@ -145,6 +146,7 @@ namespace Ludots.Tool
             var navOutDirOption = new Option<string?>("--outDir", () => null, "Output directory (default: assets/Data/Nav)");
             var navHeightScaleOption = new Option<float>("--heightScale", () => 2.0f, "Height scale in meters per height unit");
             var navHeightStepOption = new Option<int>("--heightStep", () => SpatialScaleDefaults.CellCm, "VisualHeightmap projection quantization step in cm");
+            var navSeaLevelOption = new Option<int>("--seaLevelCm", () => 0, "VisualHeightmap samples at or below this height are blocked");
             var navMinUpDotOption = new Option<float>("--minUpDot", () => 0.6f, "Triangle walkability threshold by normal.Y");
             var navCliffThresholdOption = new Option<int>("--cliffThreshold", () => 1, "Max height delta allowed for non-ramp base triangles");
             var navArtifactOption = new Option<bool>("--artifact", () => true, "Write BakeArtifact json for each tile");
@@ -249,14 +251,18 @@ namespace Ludots.Tool
             navCommand.AddCommand(bakeRecastReactNavCommand);
 
             var bakeVhtmNavCommand = new Command("bake-vhtm", "Bake NavTiles from a VisualHeightmap .vhtm via logic-terrain projection");
+            var vhtmInOption = new Option<string>("--in", "Input VisualHeightmap .vhtm path") { IsRequired = true };
+            var vhtmOutputRootOption = new Option<string?>("--outputRoot", () => null, "Output root containing assets/ (default: target mod root)");
             bakeVhtmNavCommand.AddOption(mapIdOption);
             bakeVhtmNavCommand.AddOption(navModIdOption);
-            bakeVhtmNavCommand.AddOption(reactInOption);
+            bakeVhtmNavCommand.AddOption(vhtmInOption);
             bakeVhtmNavCommand.AddOption(reactDirtyOption);
             bakeVhtmNavCommand.AddOption(reactIncludeNeighborsOption);
             bakeVhtmNavCommand.AddOption(navOutDirOption);
+            bakeVhtmNavCommand.AddOption(vhtmOutputRootOption);
             bakeVhtmNavCommand.AddOption(navHeightScaleOption);
             bakeVhtmNavCommand.AddOption(navHeightStepOption);
+            bakeVhtmNavCommand.AddOption(navSeaLevelOption);
             bakeVhtmNavCommand.AddOption(navMinUpDotOption);
             bakeVhtmNavCommand.AddOption(navCliffThresholdOption);
             bakeVhtmNavCommand.AddOption(navArtifactOption);
@@ -269,10 +275,11 @@ namespace Ludots.Tool
             {
                 var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
                 var modId = ctx.ParseResult.GetValueForOption(navModIdOption);
-                var inputPath = ctx.ParseResult.GetValueForOption(reactInOption);
+                var inputPath = ctx.ParseResult.GetValueForOption(vhtmInOption);
                 var dirtyPath = ctx.ParseResult.GetValueForOption(reactDirtyOption);
                 var includeNeighbors = ctx.ParseResult.GetValueForOption(reactIncludeNeighborsOption);
                 var outDir = ctx.ParseResult.GetValueForOption(navOutDirOption);
+                var outputRoot = ctx.ParseResult.GetValueForOption(vhtmOutputRootOption);
                 var heightScale = ctx.ParseResult.GetValueForOption(navHeightScaleOption);
                 var minUpDot = ctx.ParseResult.GetValueForOption(navMinUpDotOption);
                 var cliffThreshold = ctx.ParseResult.GetValueForOption(navCliffThresholdOption);
@@ -283,9 +290,144 @@ namespace Ludots.Tool
                 var largeBake = ctx.ParseResult.GetValueForOption(navLargeBakeOption);
                 var estimateHash = ctx.ParseResult.GetValueForOption(navEstimateHashOption);
                 var heightStep = ctx.ParseResult.GetValueForOption(navHeightStepOption);
-                ctx.ExitCode = BakeNavFromVhtm(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, heightStep, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
+                var seaLevel = ctx.ParseResult.GetValueForOption(navSeaLevelOption);
+                ctx.ExitCode = BakeNavFromVhtm(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, outputRoot, heightScale, heightStep, seaLevel, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
             });
             navCommand.AddCommand(bakeVhtmNavCommand);
+
+            var exportWalkabilityCommand = new Command("export-walkability-texture", "Rasterize NavTile walkability and area ids to an RGBA PNG");
+            var textureInDirOption = new Option<string?>("--inDir", () => null, "Directory containing .ntil files");
+            var textureMapIdOption = new Option<string?>("--mapId", () => null, "Map id used to resolve the NavTile directory");
+            var textureModIdOption = new Option<string?>("--modId", () => null, "Target mod containing the NavTile directory");
+            var textureProfileOption = new Option<string?>("--profile", () => null, "NavMesh profile id used with --mapId");
+            var textureLayerOption = new Option<int>("--layer", () => 0, "NavMesh layer used with --mapId");
+            var textureRepoRootOption = new Option<string?>("--repoRoot", () => null, "Repository root used with --mapId");
+            var textureOutOption = new Option<string>("--out", "Output PNG path") { IsRequired = true };
+            var textureWidthOption = new Option<int>("--width", () => 2048, "Output texture width in pixels");
+            var textureHeightOption = new Option<int>("--height", () => 0, "Output texture height in pixels (0 derives it from bounds)");
+            var textureMinXOption = new Option<int?>("--minXcm", "Explicit minimum world X bound in centimeters");
+            var textureMinZOption = new Option<int?>("--minZcm", "Explicit minimum world Z bound in centimeters");
+            var textureMaxXOption = new Option<int?>("--maxXcm", "Explicit maximum world X bound in centimeters");
+            var textureMaxZOption = new Option<int?>("--maxZcm", "Explicit maximum world Z bound in centimeters");
+            var texturePaintBlockedWaterOption = new Option<bool>(
+                "--paintLandBlockedWater",
+                () => false,
+                "Paint LogicTerrain land-blocked water (sea/lake/river cells) as red under walkable pixels");
+            var textureVhtmOption = new Option<string?>(
+                "--vhtm",
+                () => null,
+                "VisualHeightmap .vhtm used with --paintLandBlockedWater");
+            var textureSeaLevelOption = new Option<int?>(
+                "--seaLevelCm",
+                () => null,
+                "Override board TerrainBlockedAtOrBelowHeightCm when painting blocked water");
+            exportWalkabilityCommand.AddOption(textureInDirOption);
+            exportWalkabilityCommand.AddOption(textureMapIdOption);
+            exportWalkabilityCommand.AddOption(textureModIdOption);
+            exportWalkabilityCommand.AddOption(textureProfileOption);
+            exportWalkabilityCommand.AddOption(textureLayerOption);
+            exportWalkabilityCommand.AddOption(textureRepoRootOption);
+            exportWalkabilityCommand.AddOption(textureOutOption);
+            exportWalkabilityCommand.AddOption(textureWidthOption);
+            exportWalkabilityCommand.AddOption(textureHeightOption);
+            exportWalkabilityCommand.AddOption(textureMinXOption);
+            exportWalkabilityCommand.AddOption(textureMinZOption);
+            exportWalkabilityCommand.AddOption(textureMaxXOption);
+            exportWalkabilityCommand.AddOption(textureMaxZOption);
+            exportWalkabilityCommand.AddOption(texturePaintBlockedWaterOption);
+            exportWalkabilityCommand.AddOption(textureVhtmOption);
+            exportWalkabilityCommand.AddOption(textureSeaLevelOption);
+            exportWalkabilityCommand.SetHandler((InvocationContext ctx) =>
+            {
+                try
+                {
+                    string? inputDirectory = ctx.ParseResult.GetValueForOption(textureInDirOption);
+                    string? textureMapId = ctx.ParseResult.GetValueForOption(textureMapIdOption);
+                    string? textureModId = ctx.ParseResult.GetValueForOption(textureModIdOption);
+                    string? profileId = ctx.ParseResult.GetValueForOption(textureProfileOption);
+                    int layer = ctx.ParseResult.GetValueForOption(textureLayerOption);
+                    string? textureRepoRoot = ctx.ParseResult.GetValueForOption(textureRepoRootOption);
+                    string outputPath = ctx.ParseResult.GetValueForOption(textureOutOption)!;
+                    int width = ctx.ParseResult.GetValueForOption(textureWidthOption);
+                    int height = ctx.ParseResult.GetValueForOption(textureHeightOption);
+                    bool paintLandBlockedWater = ctx.ParseResult.GetValueForOption(texturePaintBlockedWaterOption);
+                    string? vhtmPath = ctx.ParseResult.GetValueForOption(textureVhtmOption);
+                    int? seaLevelOverride = ctx.ParseResult.GetValueForOption(textureSeaLevelOption);
+
+                    string repoRoot = string.IsNullOrWhiteSpace(textureRepoRoot)
+                        ? FindAssetsRoot()
+                        : Path.GetFullPath(textureRepoRoot);
+
+                    if (string.IsNullOrWhiteSpace(inputDirectory))
+                    {
+                        if (string.IsNullOrWhiteSpace(textureMapId) || string.IsNullOrWhiteSpace(profileId))
+                        {
+                            throw new InvalidOperationException("Pass --inDir, or pass both --mapId and --profile.");
+                        }
+
+                        string assetRoot = string.IsNullOrWhiteSpace(textureModId)
+                            ? repoRoot
+                            : ToolMapConfigResolver.ResolveModRoot(repoRoot, textureModId);
+                        string sampleRelativePath = NavAssetPaths.GetNavTileRelativePath(textureMapId, layer, profileId, 0, 0);
+                        inputDirectory = Path.Combine(
+                            assetRoot,
+                            Path.GetDirectoryName(Path.GetDirectoryName(sampleRelativePath))!);
+                    }
+
+                    int? minX = ctx.ParseResult.GetValueForOption(textureMinXOption);
+                    int? minZ = ctx.ParseResult.GetValueForOption(textureMinZOption);
+                    int? maxX = ctx.ParseResult.GetValueForOption(textureMaxXOption);
+                    int? maxZ = ctx.ParseResult.GetValueForOption(textureMaxZOption);
+                    bool anyBound = minX.HasValue || minZ.HasValue || maxX.HasValue || maxZ.HasValue;
+                    bool allBounds = minX.HasValue && minZ.HasValue && maxX.HasValue && maxZ.HasValue;
+                    if (anyBound && !allBounds)
+                    {
+                        throw new InvalidOperationException("Explicit texture bounds require --minXcm, --minZcm, --maxXcm, and --maxZcm.");
+                    }
+
+                    WalkabilityTextureBounds? bounds = allBounds
+                        ? new WalkabilityTextureBounds(minX!.Value, minZ!.Value, maxX!.Value, maxZ!.Value)
+                        : null;
+
+                    LogicTerrainField? blockedWaterTerrain = null;
+                    if (paintLandBlockedWater)
+                    {
+                        if (string.IsNullOrWhiteSpace(textureMapId))
+                        {
+                            throw new InvalidOperationException("--paintLandBlockedWater requires --mapId.");
+                        }
+
+                        if (string.IsNullOrWhiteSpace(vhtmPath))
+                        {
+                            throw new InvalidOperationException("--paintLandBlockedWater requires --vhtm.");
+                        }
+
+                        blockedWaterTerrain = BuildLandBlockedWaterTerrain(
+                            repoRoot,
+                            textureMapId,
+                            textureModId,
+                            vhtmPath,
+                            seaLevelOverride);
+                    }
+
+                    WalkabilityTextureExportResult result = WalkabilityTextureExporter.ExportDirectory(
+                        inputDirectory,
+                        outputPath,
+                        width,
+                        height,
+                        bounds,
+                        blockedWaterTerrain);
+                    Console.WriteLine(
+                        $"ExportWalkabilityTexture done. tiles={result.TileCount} triangles={result.TriangleCount} blockedWaterPixels={result.BlockedWaterPixelCount} size={result.Width}x{result.Height} hash={result.ContentHash} out={Path.GetFullPath(outputPath)}");
+                    ctx.ExitCode = 0;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    ctx.ExitCode = 2;
+                }
+            });
+            navCommand.AddCommand(exportWalkabilityCommand);
 
             var estimateRecastReactNavCommand = new Command("estimate-recast-react", "Estimate Recast NavTile bake cost from React editor map_data.bin");
             estimateRecastReactNavCommand.AddOption(mapIdOption);
@@ -658,8 +800,10 @@ namespace {modId}
             string? dirtyChunksPath,
             bool includeNeighbors,
             string? outDir,
+            string? outputRoot,
             float heightScale,
             int heightStep,
+            int seaLevelCm,
             float minUpDot,
             int cliffThreshold,
             bool writeArtifact,
@@ -680,6 +824,7 @@ namespace {modId}
                     outDir,
                     heightScale,
                     heightStep,
+                    seaLevelCm,
                     minUpDot,
                     cliffThreshold,
                     parallel,
@@ -693,7 +838,8 @@ namespace {modId}
                 Console.WriteLine($"BakeNavVhtm estimate: status={estimate.BudgetStatusText} hash={estimate.EstimateHash} terrainHash={estimate.TerrainContentHash} targets={estimate.TargetTileCount} operations={estimate.BakeOperationCount} workUnits={estimate.BudgetWorkUnitCount} seconds={estimate.EstimatedSecondsLow:F1}-{estimate.EstimatedSecondsHigh:F1}");
                 NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved, acceptedEstimateHash);
 
-                var result = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(context);
+                NavBakeResult result = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(context);
+                result = MaterializeFullyBlockedVhtmTiles(context, terrain, result, out int emptyTileCount);
                 if (result.FailureCount > 0)
                 {
                     PrintNavBakeFailures(result, "BakeNavVhtm");
@@ -701,8 +847,9 @@ namespace {modId}
                     return 1;
                 }
 
-                WriteNavBakeResultToRepository(repoRoot, mapId, result, writeArtifact, "BakeNavVhtm");
-                Console.WriteLine($"BakeNavVhtm done. ok={result.SuccessCount} fail={result.FailureCount} repoRoot={Path.GetFullPath(repoRoot)}");
+                string navOutputRoot = ResolveNavOutputRoot(repoRoot, modId, outputRoot);
+                WriteNavBakeResultToRepository(navOutputRoot, mapId, result, writeArtifact, "BakeNavVhtm");
+                Console.WriteLine($"BakeNavVhtm done. ok={result.SuccessCount} empty={emptyTileCount} fail={result.FailureCount} outputRoot={Path.GetFullPath(navOutputRoot)}");
                 return result.FailureCount == 0 ? 0 : 1;
             }
             catch (Exception ex)
@@ -721,6 +868,7 @@ namespace {modId}
             string? outDir,
             float heightScale,
             int heightStep,
+            int seaLevelCm,
             float minUpDot,
             int cliffThreshold,
             bool parallel,
@@ -779,16 +927,28 @@ namespace {modId}
                 asset = Ludots.Core.Presentation.Terrain.VisualHeightmapBinary.Read(vhtmStream);
             }
 
+            asset = Ludots.Core.Presentation.Terrain.MapVisualHeightmapLoader.ApplyWorldWidthOverride(
+                asset,
+                mapConfig.VisualHeightmap);
+
             var heightmap = new Ludots.Core.Presentation.Terrain.VisualHeightmapRuntime(asset);
             int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
             int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
             int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-            float widthCm = checked(widthCells * cellSizeCm);
-            float heightCm = checked(heightCells * cellSizeCm);
-            if (!heightmap.TrySampleHeightCm(0f, 0f, out _) ||
-                !heightmap.TrySampleHeightCm(widthCm, 0f, out _) ||
-                !heightmap.TrySampleHeightCm(0f, heightCm, out _) ||
-                !heightmap.TrySampleHeightCm(widthCm, heightCm, out _))
+            int widthCm = checked(widthCells * cellSizeCm);
+            int heightCm = checked(heightCells * cellSizeCm);
+            if (asset.Bounds.Width != widthCm || asset.Bounds.Height != heightCm)
+            {
+                throw new InvalidOperationException(
+                    $"VisualHeightmap '{inputVhtmPath}' bounds {asset.Bounds.Width}x{asset.Bounds.Height}cm do not match board extent {widthCm}x{heightCm}cm.");
+            }
+
+            int originXcm = asset.Bounds.Left;
+            int originZcm = asset.Bounds.Top;
+            if (!heightmap.TrySampleHeightCm(originXcm, originZcm, out _) ||
+                !heightmap.TrySampleHeightCm(checked(originXcm + widthCm), originZcm, out _) ||
+                !heightmap.TrySampleHeightCm(originXcm, checked(originZcm + heightCm), out _) ||
+                !heightmap.TrySampleHeightCm(checked(originXcm + widthCm), checked(originZcm + heightCm), out _))
             {
                 throw new InvalidOperationException(
                     $"VisualHeightmap '{inputVhtmPath}' does not cover the board extent {widthCm}x{heightCm}cm required for projection.");
@@ -799,7 +959,11 @@ namespace {modId}
                 widthCells,
                 heightCells,
                 cellSizeCm,
-                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(heightStep));
+                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
+                    heightStep,
+                    blockedAtOrBelowHeightCm: seaLevelCm,
+                    originXcm: originXcm,
+                    originZcm: originZcm));
 
             IReadOnlyList<NavBakeTileCoord> targets;
             if (!string.IsNullOrWhiteSpace(dirtyChunksPath))
@@ -1068,6 +1232,146 @@ namespace {modId}
         {
             throw new InvalidOperationException(
                 "BakeTiles requires an authored NavMeshBakeConfig from the unified config pipeline; generated layer/profile defaults are forbidden.");
+        }
+
+        static NavBakeResult MaterializeFullyBlockedVhtmTiles(
+            NavBakeContext context,
+            LogicTerrainField terrain,
+            NavBakeResult result,
+            out int emptyTileCount)
+        {
+            var entries = new NavBakeResultEntry[result.Entries.Count];
+            emptyTileCount = 0;
+            for (int i = 0; i < result.Entries.Count; i++)
+            {
+                NavBakeResultEntry entry = result.Entries[i];
+                if (entry.Success || entry.Artifact.ErrorCode != NavBakeErrorCode.NoWalkableDomain)
+                {
+                    entries[i] = entry;
+                    continue;
+                }
+
+                int startCol = checked(entry.Target.ChunkX * terrain.ChunkSizeCells);
+                int startRow = checked(entry.Target.ChunkY * terrain.ChunkSizeCells);
+                terrain.GetWorldPositionMeters(startCol, startRow, out float originXMeters, out float originZMeters);
+                int originXcm = checked((int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originXMeters)));
+                int originZcm = checked((int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originZMeters)));
+                var emptyTile = new NavTile(
+                    new NavTileId(entry.Target.ChunkX, entry.Target.ChunkY, entry.Layer),
+                    context.TileVersion,
+                    context.BuildConfig.ComputeHash(),
+                    checksum: 0,
+                    originXcm,
+                    originZcm,
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<byte>(),
+                    Array.Empty<NavBorderPortal>());
+                using (var stream = new MemoryStream())
+                {
+                    NavTileBinary.Write(stream, emptyTile);
+                    stream.Position = 0;
+                    emptyTile = NavTileBinary.Read(stream);
+                }
+
+                var artifact = new NavBakeArtifact(
+                    emptyTile.TileId,
+                    emptyTile.TileVersion,
+                    NavBakeStage.Serialize,
+                    NavBakeErrorCode.None,
+                    "Fully blocked tile emitted without walkable triangles.",
+                    walkableTriangleCount: 0,
+                    vertexCount: 0,
+                    triangleCount: 0,
+                    portalCount: 0,
+                    entry.Artifact.DebugLog);
+                entries[i] = new NavBakeResultEntry(
+                    entry.Target,
+                    entry.ProfileId,
+                    entry.Layer,
+                    success: true,
+                    emptyTile,
+                    Array.Empty<byte>(),
+                    artifact);
+                emptyTileCount++;
+            }
+
+            if (entries.Length > 0 && emptyTileCount == entries.Length)
+            {
+                throw new InvalidOperationException(
+                    "VisualHeightmap projection produced no walkable NavTiles at the configured sea level.");
+            }
+
+            return emptyTileCount == 0 ? result : new NavBakeResult(entries);
+        }
+
+        static LogicTerrainField BuildLandBlockedWaterTerrain(
+            string repoRoot,
+            string mapId,
+            string? modId,
+            string vhtmPath,
+            int? seaLevelOverrideCm)
+        {
+            if (!File.Exists(vhtmPath))
+            {
+                throw new InvalidOperationException($"VisualHeightmap not found: {vhtmPath}");
+            }
+
+            MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+            BoardConfig boardConfig = ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig)
+                ?? throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
+            int seaLevelCm = seaLevelOverrideCm
+                ?? boardConfig.TerrainBlockedAtOrBelowHeightCm
+                ?? throw new InvalidOperationException(
+                    $"Map '{mapId}' board has no TerrainBlockedAtOrBelowHeightCm; pass --seaLevelCm.");
+            int heightStep = boardConfig.TerrainHeightStepCm > 0 ? boardConfig.TerrainHeightStepCm : SpatialScaleDefaults.CellCm;
+            int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
+            int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+            int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+
+            Ludots.Core.Presentation.Terrain.VisualHeightmapAsset asset;
+            using (var stream = File.OpenRead(vhtmPath))
+            {
+                asset = Ludots.Core.Presentation.Terrain.VisualHeightmapBinary.Read(stream);
+            }
+
+            asset = Ludots.Core.Presentation.Terrain.MapVisualHeightmapLoader.ApplyWorldWidthOverride(
+                asset,
+                mapConfig.VisualHeightmap);
+
+            var heightmap = new Ludots.Core.Presentation.Terrain.VisualHeightmapRuntime(asset);
+            return VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+                heightmap,
+                widthCells,
+                heightCells,
+                cellSizeCm,
+                new LogicTerrainProjectionOptions(
+                    heightStep,
+                    blockedAtOrBelowHeightCm: seaLevelCm,
+                    originXcm: asset.Bounds.Left,
+                    originZcm: asset.Bounds.Top));
+        }
+
+        static string ResolveNavOutputRoot(string repoRoot, string? modId, string? outputRoot)
+        {
+            string resolved = !string.IsNullOrWhiteSpace(outputRoot)
+                ? Path.GetFullPath(outputRoot)
+                : !string.IsNullOrWhiteSpace(modId)
+                    ? ToolMapConfigResolver.ResolveModRoot(repoRoot, modId)
+                    : Path.GetFullPath(repoRoot);
+            if (!Directory.Exists(Path.Combine(resolved, "assets")))
+            {
+                throw new InvalidOperationException($"Invalid navigation output root (missing assets/): {resolved}");
+            }
+
+            return resolved;
         }
 
         static void WriteNavBakeResultToRepository(string repoRoot, string mapId, NavBakeResult result, bool writeArtifact, string logPrefix)

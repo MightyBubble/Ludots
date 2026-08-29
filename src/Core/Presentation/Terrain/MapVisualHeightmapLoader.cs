@@ -31,7 +31,80 @@ namespace Ludots.Core.Presentation.Terrain
 
             using Stream stream = OpenDeclaredAsset(vfs, loadedModIds, assetPath);
             VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
+            asset = ApplyWorldWidthOverride(asset, mapConfig.VisualHeightmap);
             return new VisualHeightmapRuntime(asset, ResolveRenderProfile(mapConfig));
+        }
+
+        /// <summary>
+        /// Uniformly scales asset world bounds to an authored playable width while keeping sample counts.
+        /// </summary>
+        internal static VisualHeightmapAsset ApplyWorldWidthOverride(
+            VisualHeightmapAsset asset,
+            VisualHeightmapBindingConfig? binding)
+        {
+            if (asset == null)
+            {
+                throw new ArgumentNullException(nameof(asset));
+            }
+
+            int worldWidthCm = binding?.WorldWidthCm ?? 0;
+            if (worldWidthCm <= 0)
+            {
+                return asset;
+            }
+
+            if (asset.Bounds.Width <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Visual heightmap world-width override requires a positive authored asset width.");
+            }
+
+            if (asset.Bounds.Width == worldWidthCm)
+            {
+                return asset;
+            }
+
+            double scale = worldWidthCm / (double)asset.Bounds.Width;
+            int worldHeightCm = checked((int)Math.Round(asset.Bounds.Height * scale));
+            if (worldHeightCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Visual heightmap world-width override {worldWidthCm}cm produced a non-positive height.");
+            }
+
+            long centerX = asset.Bounds.Left + (asset.Bounds.Width / 2L);
+            long centerY = asset.Bounds.Top + (asset.Bounds.Height / 2L);
+            int left = checked((int)(centerX - (worldWidthCm / 2L)));
+            int top = checked((int)(centerY - (worldHeightCm / 2L)));
+            var bounds = new WorldAabbCm(left, top, worldWidthCm, worldHeightCm);
+            return CloneWithBounds(asset, bounds);
+        }
+
+        internal static VisualHeightmapAsset CloneWithBounds(VisualHeightmapAsset asset, WorldAabbCm bounds)
+        {
+            if (asset.UsesRawUInt16Samples)
+            {
+                return new VisualHeightmapAsset(
+                    bounds,
+                    asset.SampleColumns,
+                    asset.SampleRows,
+                    asset.HeightSamplesRaw,
+                    asset.Layers,
+                    asset.SampleScale,
+                    asset.StorageLayout,
+                    asset.DefaultLayerIndex,
+                    asset.InterpolationMode);
+            }
+
+            return new VisualHeightmapAsset(
+                bounds,
+                asset.SampleColumns,
+                asset.SampleRows,
+                asset.HeightSamplesCm,
+                asset.Layers,
+                asset.StorageLayout,
+                asset.DefaultLayerIndex,
+                asset.InterpolationMode);
         }
 
         public static string? ResolveDeclaredAssetPath(MapConfig mapConfig)

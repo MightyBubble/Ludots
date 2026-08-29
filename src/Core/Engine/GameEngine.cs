@@ -3245,12 +3245,17 @@ namespace Ludots.Core.Engine
                             heightCells,
                             boardConfig.GridCellSizeCm,
                             board.Name,
-                            boardConfig);
+                            boardConfig,
+                            out int projectedOriginXcm,
+                            out int projectedOriginZcm);
                         gridBoard.LogicTerrain = projected ?? new FlatGridLogicTerrainField(
                             widthCells,
                             heightCells,
                             boardConfig.GridCellSizeCm,
-                            boardConfig.ChunkSizeCells);
+                            boardConfig.ChunkSizeCells,
+                            default,
+                            projectedOriginXcm,
+                            projectedOriginZcm);
                         if (LogicTerrain == null)
                         {
                             LogicTerrain = gridBoard.LogicTerrain;
@@ -3286,26 +3291,57 @@ namespace Ludots.Core.Engine
             int heightCells,
             int cellSizeCm,
             string boardName,
-            BoardConfig boardConfig)
+            BoardConfig boardConfig,
+            out int originXcm,
+            out int originZcm)
         {
             Ludots.Platform.Abstractions.IVisualHeightmap? heightmap = session.VisualHeightmap;
             if (heightmap == null)
             {
+                originXcm = 0;
+                originZcm = 0;
                 return null;
             }
 
-            float widthCm = checked(widthCells * cellSizeCm);
-            float heightCm = checked(heightCells * cellSizeCm);
+            int widthCm = checked(widthCells * cellSizeCm);
+            int heightCm = checked(heightCells * cellSizeCm);
+            originXcm = 0;
+            originZcm = 0;
+            if (heightmap is IVisualHeightmapRenderSource renderSource)
+            {
+                WorldAabbCm bounds = renderSource.Bounds;
+                if (bounds.Width != widthCm || bounds.Height != heightCm)
+                {
+                    throw new InvalidOperationException(
+                        $"VisualHeightmap bounds {bounds.Width}x{bounds.Height}cm do not match board '{boardName}' extent {widthCm}x{heightCm}cm.");
+                }
+
+                originXcm = bounds.Left;
+                originZcm = bounds.Top;
+            }
+
             bool covers =
-                heightmap.TrySampleHeightCm(0f, 0f, out _) &&
-                heightmap.TrySampleHeightCm(widthCm, 0f, out _) &&
-                heightmap.TrySampleHeightCm(0f, heightCm, out _) &&
-                heightmap.TrySampleHeightCm(widthCm, heightCm, out _);
+                heightmap.TrySampleHeightCm(originXcm, originZcm, out _) &&
+                heightmap.TrySampleHeightCm(checked(originXcm + widthCm), originZcm, out _) &&
+                heightmap.TrySampleHeightCm(originXcm, checked(originZcm + heightCm), out _) &&
+                heightmap.TrySampleHeightCm(checked(originXcm + widthCm), checked(originZcm + heightCm), out _);
             if (!covers)
             {
                 Diagnostics.Log.Info(
                     in LogChannels.Engine,
                     $"VisualHeightmap does not cover board '{boardName}' extent {widthCm}x{heightCm}cm; keeping flat grid terrain.");
+                return null;
+            }
+
+            // Origin-offset boards (e.g. a 64km center-symmetric heightmap) can demand
+            // billions of logic cells; a flat dense array cannot back that scale, so the
+            // projection degrades to flat grid terrain instead of overflowing.
+            const long MaxProjectedLogicCells = 100_000_000;
+            if ((long)widthCells * heightCells > MaxProjectedLogicCells)
+            {
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"VisualHeightmap projection for board '{boardName}' needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); keeping flat grid terrain.");
                 return null;
             }
 
@@ -3317,7 +3353,11 @@ namespace Ludots.Core.Engine
                 widthCells,
                 heightCells,
                 cellSizeCm,
-                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(heightStepCm));
+                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
+                    heightStepCm,
+                    blockedAtOrBelowHeightCm: boardConfig.TerrainBlockedAtOrBelowHeightCm,
+                    originXcm: originXcm,
+                    originZcm: originZcm));
         }
 
         private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)
@@ -3668,6 +3708,7 @@ namespace Ludots.Core.Engine
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
+
             // Nav tiles are enumerated against the map's explicitly declared nav tile
             // grid (authored with the bake). Runtime never derives it from boards or
             // terrain objects; an undeclared grid is a map-authoring error.

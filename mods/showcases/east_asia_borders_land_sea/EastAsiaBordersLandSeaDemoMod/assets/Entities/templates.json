@@ -1,0 +1,64 @@
+[
+  {
+    "id": "east_asia_player_team",
+    "components": {
+      "Name": { "Value": "EastAsia.PlayerTeam" }
+    }
+  },
+  {
+    "id": "east_asia_army",
+    "components": {
+      "Name": { "Value": "EastAsia.Army" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 200000, "Y": 100000 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "OrderBuffer": {},
+      "OrderSpatialPayloadBuffer": {},
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "EntityLayer": {
+        "category": ["massNavigation.agent"],
+        "mask": ["massNavigation.agent"]
+      },
+      "MassNavigationAgent": { "profileId": "Small" },
+      "FieldTrackedCm": { "layer": "ownership.east_asia.country" }
+    }
+  },
+  {
+    "id": "east_asia_ship",
+    "components": {
+      "Name": { "Value": "EastAsia.Ship" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 855397, "Y": 58235 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "OrderBuffer": {},
+      "OrderSpatialPayloadBuffer": {},
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "EntityLayer": {
+        "category": ["massNavigation.agent"],
+        "mask": ["massNavigation.agent"]
+      },
+      "MassNavigationAgent": { "profileId": "Medium" },
+      "FieldTrackedCm": { "layer": "ownership.east_asia.country" }
+    }
+  },
+  {
+    "id": "east_asia_local_player",
+    "components": {
+      "Name": { "Value": "EastAsia.LocalPlayer" },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceDragState": {}
+    }
+  }
+]

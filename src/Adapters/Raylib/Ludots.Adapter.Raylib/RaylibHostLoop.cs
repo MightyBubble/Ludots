@@ -424,6 +424,7 @@ namespace Ludots.Adapter.Raylib
                 SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
                 var presentFrames = new List<ViewportDrawFrame>(4);
                 int frameIndex = 0;
+                string? navWalkabilityOverlayMapId = null;
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
@@ -630,6 +631,12 @@ namespace Ludots.Adapter.Raylib
                         skyEnvironment.EnsureActiveForMap(activeMapId);
                         waterPass.EnsureActiveForMap(activeMapId);
                         visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
+                        ConfigureNavWalkabilityOverlay(
+                            engine.CurrentMapSession,
+                            engine.VFS,
+                            visualHeightmapRenderer,
+                            renderDebug.DrawNavWalkabilityTexture,
+                            ref navWalkabilityOverlayMapId);
                         Color frameClearColor = skyEnvironment.IsActive
                             ? skyEnvironment.ResolveClearColor()
                             : (activeMapRequestsDeepBackground
@@ -693,6 +700,7 @@ namespace Ludots.Adapter.Raylib
                             {
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
                                 visualHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                visualHeightmapRenderer.DisplayHeightScale = reflectSource.RenderProfile.DisplayHeightScale;
                                 visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
                             }
                             else
@@ -719,6 +727,7 @@ namespace Ludots.Adapter.Raylib
                             {
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
                                 visualHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                visualHeightmapRenderer.DisplayHeightScale = refractSource.RenderProfile.DisplayHeightScale;
                                 visualHeightmapRenderer.Render(refractSource, activeCamera);
                             }
                             else
@@ -783,15 +792,15 @@ namespace Ludots.Adapter.Raylib
                                 visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
                             {
                                 long terrainStart = Stopwatch.GetTimestamp();
-                                if (waterOnVisualHeightmap)
-                                {
-                                    visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                    visualHeightmapRenderer.AbsoluteColorPeakSpanCm = visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
-                                }
-                                else
-                                {
-                                    visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
-                                }
+                                // Absolute elevation tint keeps continental land readable even when the
+                                // reflective water pass is off; water FBO still overrides sea from the plane.
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm =
+                                    visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                visualHeightmapRenderer.DisplayHeightScale =
+                                    visualTerrainSource.RenderProfile.DisplayHeightScale;
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterOnVisualHeightmap
+                                    ? waterPass.WaterPlaneY * 100f
+                                    : visualTerrainSource.RenderProfile.SeaLevelCm;
 
                                 visualHeightmapRenderer.Render(visualTerrainSource, viewportCamera);
 
@@ -853,6 +862,21 @@ namespace Ludots.Adapter.Raylib
                                         14,
                                         new Vector4(1f, 0.92f, 0.5f, 1f));
                                 }
+                            }
+
+                            if (engine.TryGetService(
+                                    CoreServiceKeys.VisualHeightmap,
+                                    out IVisualHeightmap? fieldHeightSampleSource))
+                            {
+                                fieldRenderPresenter.HeightSampleSource = fieldHeightSampleSource;
+                                // Match RaylibVisualHeightmapRenderer mesh Y (heightCm * 0.01f) — that path
+                                // does not multiply DisplayHeightScale, so neither does the drape.
+                                fieldRenderPresenter.HeightSampleDisplayScale = 1f;
+                            }
+                            else
+                            {
+                                fieldRenderPresenter.HeightSampleSource = null;
+                                fieldRenderPresenter.HeightSampleDisplayScale = 1f;
                             }
 
                             if (drawFieldOverlays && globalFieldVisualBuffer != null)
@@ -1635,6 +1659,38 @@ namespace Ludots.Adapter.Raylib
             }
 
             throw new InvalidOperationException($"Required service missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
+        }
+
+        internal static void ConfigureNavWalkabilityOverlay(
+            MapSession? session,
+            IRenderAssetPathResolver assetPaths,
+            RaylibVisualHeightmapRenderer renderer,
+            bool enabled,
+            ref string? configuredMapId)
+        {
+            if (!enabled)
+            {
+                renderer.ClearNavWalkabilityOverlay();
+                configuredMapId = null;
+                return;
+            }
+
+            MapConfig mapConfig = session?.MapConfig
+                ?? throw new InvalidOperationException(
+                    "DrawNavWalkabilityTexture requires an active map session.");
+            if (renderer.NavWalkabilityOverlayActive &&
+                string.Equals(configuredMapId, mapConfig.Id, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            NavWalkabilityOverlayDescriptor descriptor =
+                NavWalkabilityOverlayDescriptorResolver.ResolveOrThrow(mapConfig, assetPaths);
+            renderer.SetNavWalkabilityOverlay(
+                descriptor.TextureUri,
+                descriptor.BoundsCm,
+                enabled: true);
+            configuredMapId = mapConfig.Id;
         }
 
         private static UiInputFrameResult UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath, SyntheticInputDevice? syntheticInput)

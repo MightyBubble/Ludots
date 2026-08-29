@@ -1,0 +1,22 @@
+{
+  "name": "EastAsiaBordersLandSeaDemoMod",
+  "version": "1.0.0",
+  "description": "East Asia land army PreferMesh + ship Direct move, with national-border FieldRegion popups on Natural Earth country cells.",
+  "priority": 100,
+  "dependencies": {
+    "EastAsiaPlayableTerrainMod": "^1.0.0",
+    "EastAsiaNavMeshDebugMod": "^1.0.0",
+    "FieldEastAsiaCountryMod": "^1.0.0",
+    "MassNavigationMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "east-asia",
+    "borders",
+    "navmesh",
+    "transport",
+    "showcase"
+  ]
+}

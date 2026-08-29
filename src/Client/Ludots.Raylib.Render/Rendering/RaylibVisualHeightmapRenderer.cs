@@ -19,9 +19,16 @@ namespace Ludots.Raylib.Render
         private const int OverviewTextureMinLongEdgePixels = 1024;
         private const int OverviewTextureMaxLongEdgePixels = 3072;
         private const int OverviewTextureScreenScale = 2;
+        private const Rl.MaterialMapIndex NavWalkabilityMaterialSlot = Rl.MaterialMapIndex.MATERIAL_MAP_HEIGHT;
+        private const Rl.ShaderLocationIndex NavWalkabilityShaderSlot = Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT;
 
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
+        private Mesh _overviewMesh;
+        private int _overviewRevision = int.MinValue;
+        private long _overviewBoundsKey;
+        private int _overviewVertexLimit = -1;
+        private bool _overviewMeshLoaded;
         private readonly IRenderAssetPathResolver? _assetPaths;
         private readonly string _backendId;
         private readonly List<TerrainAlbedoDescriptor> _albedoDescriptors = new();
@@ -44,17 +51,24 @@ namespace Ludots.Raylib.Render
         private int _locUseControlMap = -1;
         private int _locControlBounds = -1;
         private int _locControlMap = -1;
+        private int _locUseNavWalkability = -1;
+        private int _locNavWalkabilityBounds = -1;
+        private int _locNavWalkabilityMap = -1;
         private TerrainAlbedoDescriptor? _activeAlbedo;
         private string? _activeAlbedoMapId;
         private IVisualHeightmap? _stampHeightSampleSource;
         private readonly Texture2D[] _albedoTextures = new Texture2D[TerrainAlbedoLayerCount];
         private Texture2D _controlMapTexture;
+        private Texture2D _navWalkabilityTexture;
         private bool _ownsAlbedoTextures;
         private bool _ownsControlMapTexture;
         private bool _albedoEnabled;
         private bool _controlMapEnabled;
+        private bool _navWalkabilityEnabled;
         private float _terrainTileScale = 0.25f;
         private Vector4 _controlBoundsMeters;
+        private Vector4 _navWalkabilityBoundsCm;
+        private string? _navWalkabilityTextureUri;
 
         public int DrawnChunkCountLastFrame { get; private set; }
 
@@ -72,8 +86,11 @@ namespace Ludots.Raylib.Render
 
         public bool TerrainAlbedoActive => _albedoEnabled;
 
+        public bool NavWalkabilityOverlayActive => _navWalkabilityEnabled;
+
         private float? _absoluteColorSeaLevelCm;
         private float _absoluteColorPeakSpanCm = 3600f;
+        private float _displayHeightScale = 1f;
 
         /// <summary>
         /// When set, terrain vertex colors use absolute elevation relative to this sea level (cm)
@@ -107,6 +124,29 @@ namespace Ludots.Raylib.Render
                 }
 
                 _absoluteColorPeakSpanCm = clamped;
+                ClearChunkGpuCache();
+            }
+        }
+
+        /// <summary>
+        /// Multiplies authored height samples for mesh Y only (colors still use raw cm).
+        /// Continental boards need a large scale so relief reads at overview distance.
+        /// </summary>
+        public float DisplayHeightScale
+        {
+            get => _displayHeightScale;
+            set
+            {
+                float clamped = Math.Clamp(
+                    value,
+                    VisualHeightmapRenderProfile.MinDisplayHeightScale,
+                    VisualHeightmapRenderProfile.MaxDisplayHeightScale);
+                if (MathF.Abs(_displayHeightScale - clamped) <= 1e-4f)
+                {
+                    return;
+                }
+
+                _displayHeightScale = clamped;
                 ClearChunkGpuCache();
             }
         }
@@ -244,6 +284,82 @@ namespace Ludots.Raylib.Render
             }
         }
 
+        public void SetNavWalkabilityOverlay(
+            string textureUri,
+            WorldAabbCm bounds,
+            bool enabled)
+        {
+            if (!enabled)
+            {
+                ClearNavWalkabilityOverlay();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(textureUri) ||
+                !string.Equals(textureUri, textureUri.Trim(), StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"{nameof(SetNavWalkabilityOverlay)} texture URI must be non-empty without surrounding whitespace.",
+                    nameof(textureUri));
+            }
+
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(bounds),
+                    bounds,
+                    $"{nameof(SetNavWalkabilityOverlay)} bounds must have positive extents.");
+            }
+
+            long right = (long)bounds.X + bounds.Width;
+            long bottom = (long)bounds.Y + bounds.Height;
+            if (right > int.MaxValue || bottom > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(bounds),
+                    bounds,
+                    $"{nameof(SetNavWalkabilityOverlay)} bounds maxima must fit Int32 centimeters.");
+            }
+
+            Vector4 boundsCm = new(bounds.Left, bounds.Top, (int)right, (int)bottom);
+            if (_navWalkabilityTexture.id != 0 &&
+                string.Equals(_navWalkabilityTextureUri, textureUri, StringComparison.Ordinal))
+            {
+                _navWalkabilityBoundsCm = boundsCm;
+                _navWalkabilityEnabled = true;
+                ApplyNavWalkabilityMaterialMap();
+                ApplyNavWalkabilityUniforms();
+                return;
+            }
+
+            Texture2D loaded = LoadNavWalkabilityTextureOrThrow(textureUri);
+            UnloadNavWalkabilityTexture();
+            _navWalkabilityTexture = loaded;
+            _navWalkabilityTextureUri = textureUri;
+            _navWalkabilityBoundsCm = boundsCm;
+            _navWalkabilityEnabled = true;
+            ApplyNavWalkabilityMaterialMap();
+            ApplyNavWalkabilityUniforms();
+        }
+
+        public void ClearNavWalkabilityOverlay()
+        {
+            if (!_navWalkabilityEnabled && _navWalkabilityTexture.id == 0)
+            {
+                return;
+            }
+
+            UnloadNavWalkabilityTexture();
+            _navWalkabilityEnabled = false;
+            _navWalkabilityBoundsCm = default;
+            _navWalkabilityTextureUri = null;
+            if (_initialized)
+            {
+                _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
+                ApplyNavWalkabilityUniforms();
+            }
+        }
+
         public void ApplyFrameLighting(
             RaylibFrameLighting lighting,
             RaylibDirectionalShadowMap? shadow = null,
@@ -267,6 +383,7 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
+            VisualHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
             if (_controlMapEnabled)
             {
                 WorldAabbCm bounds = source.Bounds;
@@ -277,7 +394,7 @@ namespace Ludots.Raylib.Render
                     MathF.Max(bounds.Height * 0.01f, 1e-5f));
             }
 
-            UpdateUniforms(camera);
+            UpdateUniforms(camera, profile.DisableDistanceFog);
 
             _frameIndex++;
             DrawnChunkCountLastFrame = 0;
@@ -285,6 +402,37 @@ namespace Ludots.Raylib.Render
             MissingChunkCountLastFrame = 0;
             TerrainVertexCountLastFrame = 0;
             ChunkBuildMsLastFrame = 0d;
+
+            float aspect = ResolveFrameAspect();
+            bool useOverview = ShouldUseOverviewMesh(
+                source,
+                in camera,
+                aspect,
+                VisibleRadiusCm,
+                profile.OverviewSwitchChunkSpans);
+            if (useOverview)
+            {
+                if (source is not IVisualHeightmap heightSampleSource)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibVisualHeightmapRenderer)} overview mesh requires the render source to also implement {nameof(IVisualHeightmap)}.");
+                }
+
+                long buildStart = Stopwatch.GetTimestamp();
+                EnsureOverviewMesh(source, heightSampleSource, profile.OverviewVertexLimit);
+                ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
+                // Keep albedo/control so authored weight maps stay readable; drop nav walkability wash only.
+                ApplyOverviewWithoutNavWalkabilityUniforms();
+                RaylibMatrix identity = RaylibMatrix.Identity;
+                Rl.rlDisableBackfaceCulling();
+                Rl.DrawMesh(_overviewMesh, _terrainMaterial, identity);
+                Rl.rlEnableBackfaceCulling();
+                ApplyNavWalkabilityUniforms();
+                DrawnChunkCountLastFrame = 1;
+                TerrainVertexCountLastFrame = _overviewMesh.vertexCount;
+                EvictUnusedChunks(240);
+                return;
+            }
 
             int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
@@ -448,6 +596,9 @@ namespace Ludots.Raylib.Render
             _locUseControlMap = Rl.GetShaderLocation(_terrainShader, "uUseControlMap");
             _locControlBounds = Rl.GetShaderLocation(_terrainShader, "uControlBounds");
             _locControlMap = Rl.GetShaderLocation(_terrainShader, "uControlMap");
+            _locUseNavWalkability = Rl.GetShaderLocation(_terrainShader, "uUseNavWalkability");
+            _locNavWalkabilityBounds = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityBounds");
+            _locNavWalkabilityMap = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityMap");
             int locSand = Rl.GetShaderLocation(_terrainShader, "texture0");
             int locGrass = Rl.GetShaderLocation(_terrainShader, "texture1");
             int locDirt = Rl.GetShaderLocation(_terrainShader, "texture2");
@@ -458,13 +609,16 @@ namespace Ludots.Raylib.Render
                 _locUseControlMap < 0 ||
                 _locControlBounds < 0 ||
                 _locControlMap < 0 ||
+                _locUseNavWalkability < 0 ||
+                _locNavWalkabilityBounds < 0 ||
+                _locNavWalkabilityMap < 0 ||
                 locSand < 0 ||
                 locGrass < 0 ||
                 locDirt < 0 ||
                 locRock < 0)
             {
                 throw new InvalidOperationException(
-                    "Visual heightmap terrain shader is missing albedo uniforms/samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/texture0..texture3).");
+                    "Visual heightmap terrain shader is missing albedo/nav uniforms or samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/uUseNavWalkability/uNavWalkabilityBounds/uNavWalkabilityMap/texture0..texture3).");
             }
 
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
@@ -478,9 +632,12 @@ namespace Ludots.Raylib.Render
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locRock;
             // DrawMesh binds MATERIAL_MAP_* slots; wire occlusion map slot to explicit uControlMap sampler.
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = _locControlMap;
+            _terrainShader.locs[(int)NavWalkabilityShaderSlot] = _locNavWalkabilityMap;
 
             _initialized = true;
             ApplyAlbedoUniforms();
+            ApplyNavWalkabilityMaterialMap();
+            ApplyNavWalkabilityUniforms();
             ApplyTerrainShadow();
             if (_frameLighting != null)
             {
@@ -488,7 +645,7 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        private void UpdateUniforms(in Camera3D camera)
+        private void UpdateUniforms(in Camera3D camera, bool disableDistanceFog)
         {
             if (_frameLighting == null)
             {
@@ -497,9 +654,31 @@ namespace Ludots.Raylib.Render
             }
 
             ApplySkyIrradianceUniforms();
+            if (disableDistanceFog)
+            {
+                ApplyDisabledDistanceFog();
+            }
+
             _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, camera.position);
             ApplyTerrainShadow();
             ApplyAlbedoUniforms();
+            ApplyNavWalkabilityUniforms();
+        }
+
+        private unsafe void ApplyDisabledDistanceFog()
+        {
+            Vector4 fogParams = Vector4.Zero;
+            Vector3 fogColor = Vector3.Zero;
+            Rl.SetShaderValue(
+                _terrainShader,
+                _terrainLightingLocs.FogParams,
+                &fogParams,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _terrainLightingLocs.FogColor,
+                &fogColor,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
         }
 
         private void ApplySkyIrradianceUniforms()
@@ -556,6 +735,21 @@ namespace Ludots.Raylib.Render
                 (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
         }
 
+        private void ApplyOverviewWithoutNavWalkabilityUniforms()
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            int off = 0;
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseNavWalkability,
+                &off,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+        }
+
         private void ApplyAlbedoMaterialMaps()
         {
             Rl.SetMaterialTexture(ref _terrainMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO, _albedoTextures[0]);
@@ -572,6 +766,47 @@ namespace Ludots.Raylib.Render
             else
             {
                 _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_OCCLUSION].texture = default;
+            }
+        }
+
+        private void ApplyNavWalkabilityUniforms()
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            int useNavWalkability = _navWalkabilityEnabled ? 1 : 0;
+            Vector4 bounds = _navWalkabilityBoundsCm;
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseNavWalkability,
+                &useNavWalkability,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locNavWalkabilityBounds,
+                &bounds,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
+        private void ApplyNavWalkabilityMaterialMap()
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            if (_navWalkabilityEnabled && _navWalkabilityTexture.id != 0)
+            {
+                Rl.SetMaterialTexture(
+                    ref _terrainMaterial,
+                    (int)NavWalkabilityMaterialSlot,
+                    _navWalkabilityTexture);
+            }
+            else
+            {
+                _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
             }
         }
 
@@ -680,6 +915,42 @@ namespace Ludots.Raylib.Render
             return texture;
         }
 
+        private Texture2D LoadNavWalkabilityTextureOrThrow(string uri)
+        {
+            if (_assetPaths == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot load nav walkability texture without an asset path resolver.");
+            }
+
+            if (!_assetPaths.TryResolveFullPath(uri, out string fullPath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot resolve nav walkability texture URI '{uri}'.");
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} nav walkability texture file missing: uri='{uri}' fullPath='{fullPath}'.");
+            }
+
+            EnsureInitialized();
+            Texture2D texture = Rl.LoadTexture(fullPath);
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                if (texture.id != 0)
+                {
+                    Rl.UnloadTexture(texture);
+                }
+
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} LoadTexture failed for nav walkability texture uri='{uri}' fullPath='{fullPath}'.");
+            }
+
+            return texture;
+        }
+
         private void UnloadOwnedAlbedoTextures()
         {
             if (_ownsAlbedoTextures)
@@ -715,6 +986,16 @@ namespace Ludots.Raylib.Render
             _controlMapTexture = default;
             _ownsControlMapTexture = false;
             _controlMapEnabled = false;
+        }
+
+        private void UnloadNavWalkabilityTexture()
+        {
+            if (_navWalkabilityTexture.id != 0)
+            {
+                Rl.UnloadTexture(_navWalkabilityTexture);
+            }
+
+            _navWalkabilityTexture = default;
         }
 
         private static void ValidateAlbedoTexture(Texture2D texture, string layerName)
@@ -902,6 +1183,7 @@ namespace Ludots.Raylib.Render
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
+            float displayHeightScale = _displayHeightScale;
             for (int y = 0; y < rows; y++)
             {
                 int sourceY = ResolveChunkSourceSampleIndex(y, chunk.SampleRows, sampleStride);
@@ -912,37 +1194,55 @@ namespace Ludots.Raylib.Render
                     float worldXCm = chunk.Bounds.Left + (sourceX * stepXCm);
                     float worldYCm = chunk.Bounds.Top + (sourceY * stepYCm);
                     chunk.TryReadHeightCm(sourceX, sourceY, out float heightCm);
-                    Vector3 normal = ComputeNormal(in chunk, sourceX, sourceY, stepXCm, stepYCm);
+                    float displayHeightCm = heightCm;
                     int f = vertex * 3;
-                    mesh.vertices[f + 0] = worldXCm * 0.01f;
-                    mesh.vertices[f + 1] = heightCm * 0.01f;
-                    mesh.vertices[f + 2] = worldYCm * 0.01f;
-                    mesh.normals[f + 0] = normal.X;
-                    mesh.normals[f + 1] = normal.Y;
-                    mesh.normals[f + 2] = normal.Z;
-
                     int c = vertex * 4;
-                    float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
                     float heightBand;
                     byte red;
                     byte green;
                     byte blue;
                     if (absoluteSeaCm is float seaCm)
                     {
-                        // Keep negative bands for submerged shelf/abyss tint (refraction reads depth).
-                        heightBand = MathF.Min(1f, (heightCm - seaCm) / absolutePeakSpanCm);
-                        ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
+                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
+                        displayHeightCm = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, absolutePeakSpanCm);
                     }
                     else
                     {
                         heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
+                    }
+
+                    Vector3 normal = ComputeNormal(
+                        in chunk,
+                        sourceX,
+                        sourceY,
+                        stepXCm,
+                        stepYCm,
+                        displayHeightScale,
+                        absoluteSeaCm,
+                        absolutePeakSpanCm);
+                    float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
+                    if (absoluteSeaCm is float)
+                    {
+                        ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+                    else
+                    {
                         ResolveTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
 
+                    mesh.vertices[f + 0] = worldXCm * 0.01f;
+                    mesh.vertices[f + 1] = displayHeightCm * displayHeightScale * 0.01f;
+                    mesh.vertices[f + 2] = worldYCm * 0.01f;
+                    mesh.normals[f + 0] = normal.X;
+                    mesh.normals[f + 1] = normal.Y;
+                    mesh.normals[f + 2] = normal.Z;
                     mesh.colors[c + 0] = red;
                     mesh.colors[c + 1] = green;
                     mesh.colors[c + 2] = blue;
-                    mesh.colors[c + 3] = ClampToByte(Math.Clamp(heightBand, 0f, 1f) * 255f);
+                    // Alpha 0 marks open-water fill so terrain.fs skips albedo/control over ocean sentinels.
+                    mesh.colors[c + 3] = heightBand <= 0f
+                        ? (byte)0
+                        : ClampToByte(Math.Clamp(heightBand, 1f / 255f, 1f) * 255f);
                 }
             }
 
@@ -1013,6 +1313,30 @@ namespace Ludots.Raylib.Render
             blue = ClampToByte(color.Z * shade);
         }
 
+        internal static float ResolveAbsoluteHeightBand(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
+        {
+            float peakSpanCm = MathF.Max(1f, absolutePeakSpanCm);
+            float relative = (heightCm - seaLevelCm) / peakSpanCm;
+            // Authored land peaks sit within AbsoluteColorPeakSpanCm. Continental assets may fill
+            // ocean/void with sentinel values far above that span — tint those as open water, not peaks.
+            if (relative > 1f)
+            {
+                float overshoot = relative - 1f;
+                return -Math.Clamp(overshoot * 0.02f, 0.01f, 0.08f);
+            }
+
+            return relative;
+        }
+
+        internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
+        {
+            float peakSpanCm = MathF.Max(1f, absolutePeakSpanCm);
+            float relative = (heightCm - seaLevelCm) / peakSpanCm;
+            // Absolute tint treats open water (below sea) and overshoot sentinels as a flat sea plane.
+            // Continental DisplayHeightScale would otherwise excavate multi-kilometer ocean pits.
+            return relative <= 0f || relative > 1f ? seaLevelCm : heightCm;
+        }
+
         private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
         {
             // Bands are elevation / peak-span: negative = submerged depth, positive = land.
@@ -1056,7 +1380,15 @@ namespace Ludots.Raylib.Render
             blue = ClampToByte(color.Z * shade);
         }
 
-        private static Vector3 ComputeNormal(in VisualHeightmapRenderChunk chunk, int x, int y, float stepXCm, float stepYCm)
+        private static Vector3 ComputeNormal(
+            in VisualHeightmapRenderChunk chunk,
+            int x,
+            int y,
+            float stepXCm,
+            float stepYCm,
+            float displayHeightScale,
+            float? absoluteSeaCm,
+            float absolutePeakSpanCm)
         {
             int left = Math.Max(0, x - 1);
             int right = Math.Min(chunk.SampleColumns - 1, x + 1);
@@ -1066,10 +1398,19 @@ namespace Ludots.Raylib.Render
             chunk.TryReadHeightCm(right, y, out float hRight);
             chunk.TryReadHeightCm(x, top, out float hTop);
             chunk.TryReadHeightCm(x, bottom, out float hBottom);
+            if (absoluteSeaCm is float seaCm)
+            {
+                hLeft = ResolveAbsoluteDisplayHeightCm(hLeft, seaCm, absolutePeakSpanCm);
+                hRight = ResolveAbsoluteDisplayHeightCm(hRight, seaCm, absolutePeakSpanCm);
+                hTop = ResolveAbsoluteDisplayHeightCm(hTop, seaCm, absolutePeakSpanCm);
+                hBottom = ResolveAbsoluteDisplayHeightCm(hBottom, seaCm, absolutePeakSpanCm);
+            }
 
+            float scale = MathF.Max(VisualHeightmapRenderProfile.MinDisplayHeightScale, displayHeightScale);
             float dx = MathF.Max(1f, (right - left) * stepXCm);
             float dz = MathF.Max(1f, (bottom - top) * stepYCm);
-            Vector3 normal = Vector3.Normalize(new Vector3(-(hRight - hLeft) / dx, 1f, -(hBottom - hTop) / dz));
+            Vector3 normal = Vector3.Normalize(
+                new Vector3(-(hRight - hLeft) * scale / dx, 1f, -(hBottom - hTop) * scale / dz));
             return float.IsFinite(normal.X) && float.IsFinite(normal.Y) && float.IsFinite(normal.Z)
                 ? normal
                 : Vector3.UnitY;
@@ -1083,6 +1424,210 @@ namespace Ludots.Raylib.Render
             }
 
             _chunks.Clear();
+            ClearOverviewMesh();
+        }
+
+        private void ClearOverviewMesh()
+        {
+            if (_overviewMeshLoaded && _overviewMesh.vertexCount > 0)
+            {
+                Rl.UnloadMesh(_overviewMesh);
+            }
+
+            _overviewMesh = default;
+            _overviewMeshLoaded = false;
+            _overviewRevision = int.MinValue;
+            _overviewBoundsKey = 0;
+            _overviewVertexLimit = -1;
+        }
+
+        private static float ResolveFrameAspect()
+        {
+            int width = Math.Max(1, Rl.GetScreenWidth());
+            int height = Math.Max(1, Rl.GetScreenHeight());
+            return width / (float)height;
+        }
+
+        private void EnsureOverviewMesh(
+            IVisualHeightmapRenderSource source,
+            IVisualHeightmap heightSampleSource,
+            int overviewVertexLimit)
+        {
+            long boundsKey = PackBoundsKey(source.Bounds);
+            if (_overviewMeshLoaded &&
+                _overviewRevision == source.Revision &&
+                _overviewBoundsKey == boundsKey &&
+                _overviewVertexLimit == overviewVertexLimit)
+            {
+                return;
+            }
+
+            ClearOverviewMesh();
+            _overviewMesh = CreateOverviewMesh(source, heightSampleSource, overviewVertexLimit);
+            _overviewMeshLoaded = true;
+            _overviewRevision = source.Revision;
+            _overviewBoundsKey = boundsKey;
+            _overviewVertexLimit = overviewVertexLimit;
+            BuiltChunkCountLastFrame++;
+        }
+
+        private unsafe Mesh CreateOverviewMesh(
+            IVisualHeightmapRenderSource source,
+            IVisualHeightmap heightSampleSource,
+            int overviewVertexLimit)
+        {
+            int stepChunks = ResolveOverviewStepChunks(source.ChunkColumns, source.ChunkRows, overviewVertexLimit);
+            int columns = ResolveOverviewAxisPointCount(source.ChunkColumns, stepChunks);
+            int rows = ResolveOverviewAxisPointCount(source.ChunkRows, stepChunks);
+            int vertexCount = checked(columns * rows);
+            if (vertexCount > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} overview mesh vertex count {vertexCount} exceeds Raylib ushort index limit.");
+            }
+
+            int indexCount = checked((columns - 1) * (rows - 1) * 6);
+            Mesh mesh = new()
+            {
+                vertexCount = vertexCount,
+                triangleCount = indexCount / 3,
+            };
+
+            int vertexFloatCount = vertexCount * 3;
+            int colorByteCount = vertexCount * 4;
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.colors = (byte*)Rl.MemAlloc(sizeof(byte) * colorByteCount);
+            mesh.indices = (ushort*)Rl.MemAlloc(sizeof(ushort) * indexCount);
+
+            WorldAabbCm bounds = source.Bounds;
+            float stepXCm = columns > 1 ? bounds.Width / (float)(columns - 1) : 0f;
+            float stepZCm = rows > 1 ? bounds.Height / (float)(rows - 1) : 0f;
+            float? absoluteSeaCm = _absoluteColorSeaLevelCm;
+            float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
+            float displayHeightScale = _displayHeightScale;
+            float minHeightCm = float.PositiveInfinity;
+            float maxHeightCm = float.NegativeInfinity;
+            var heights = new float[vertexCount];
+            var displayHeights = new float[vertexCount];
+            for (int y = 0; y < rows; y++)
+            {
+                float worldYCm = bounds.Top + (y * stepZCm);
+                for (int x = 0; x < columns; x++)
+                {
+                    float worldXCm = bounds.Left + (x * stepXCm);
+                    int vertex = (y * columns) + x;
+                    if (!heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
+                    {
+                        heightCm = absoluteSeaCm ?? 0f;
+                    }
+
+                    float displayHeightCm = absoluteSeaCm is float seaForDisplay
+                        ? ResolveAbsoluteDisplayHeightCm(heightCm, seaForDisplay, absolutePeakSpanCm)
+                        : heightCm;
+                    heights[vertex] = heightCm;
+                    displayHeights[vertex] = displayHeightCm;
+                    minHeightCm = MathF.Min(minHeightCm, heightCm);
+                    maxHeightCm = MathF.Max(maxHeightCm, heightCm);
+                    int f = vertex * 3;
+                    mesh.vertices[f + 0] = worldXCm * 0.01f;
+                    mesh.vertices[f + 1] = displayHeightCm * displayHeightScale * 0.01f;
+                    mesh.vertices[f + 2] = worldYCm * 0.01f;
+                    mesh.normals[f + 0] = 0f;
+                    mesh.normals[f + 1] = 1f;
+                    mesh.normals[f + 2] = 0f;
+                }
+            }
+
+            if (!float.IsFinite(minHeightCm) || !float.IsFinite(maxHeightCm))
+            {
+                minHeightCm = 0f;
+                maxHeightCm = 1f;
+            }
+
+            float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    int vertex = (y * columns) + x;
+                    float heightCm = heights[vertex];
+                    float hL = displayHeights[(y * columns) + Math.Max(0, x - 1)];
+                    float hR = displayHeights[(y * columns) + Math.Min(columns - 1, x + 1)];
+                    float hT = displayHeights[(Math.Max(0, y - 1) * columns) + x];
+                    float hB = displayHeights[(Math.Min(rows - 1, y + 1) * columns) + x];
+                    float dx = MathF.Max(1f, stepXCm);
+                    float dz = MathF.Max(1f, stepZCm);
+                    Vector3 normal = Vector3.Normalize(
+                        new Vector3(-(hR - hL) * displayHeightScale / dx, 1f, -(hB - hT) * displayHeightScale / dz));
+                    if (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z))
+                    {
+                        normal = Vector3.UnitY;
+                    }
+
+                    int f = vertex * 3;
+                    mesh.normals[f + 0] = normal.X;
+                    mesh.normals[f + 1] = normal.Y;
+                    mesh.normals[f + 2] = normal.Z;
+
+                    float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
+                    float heightBand;
+                    byte red;
+                    byte green;
+                    byte blue;
+                    if (absoluteSeaCm is float seaCm)
+                    {
+                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
+                        ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+                    else
+                    {
+                        heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
+                        ResolveTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+
+                    int c = vertex * 4;
+                    mesh.colors[c + 0] = red;
+                    mesh.colors[c + 1] = green;
+                    mesh.colors[c + 2] = blue;
+                    mesh.colors[c + 3] = heightBand <= 0f
+                        ? (byte)0
+                        : ClampToByte(Math.Clamp(heightBand, 1f / 255f, 1f) * 255f);
+                }
+            }
+
+            int cursor = 0;
+            for (int y = 0; y < rows - 1; y++)
+            {
+                for (int x = 0; x < columns - 1; x++)
+                {
+                    int p00 = (y * columns) + x;
+                    int p10 = p00 + 1;
+                    int p01 = p00 + columns;
+                    int p11 = p01 + 1;
+                    mesh.indices[cursor++] = checked((ushort)p00);
+                    mesh.indices[cursor++] = checked((ushort)p01);
+                    mesh.indices[cursor++] = checked((ushort)p10);
+                    mesh.indices[cursor++] = checked((ushort)p11);
+                    mesh.indices[cursor++] = checked((ushort)p10);
+                    mesh.indices[cursor++] = checked((ushort)p01);
+                }
+            }
+
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
+        }
+
+        private static long PackBoundsKey(WorldAabbCm bounds)
+        {
+            unchecked
+            {
+                long key = bounds.Left;
+                key = (key * 397) ^ bounds.Top;
+                key = (key * 397) ^ bounds.Width;
+                key = (key * 397) ^ bounds.Height;
+                return key;
+            }
         }
 
         private void EvictUnusedChunks(int maxAgeFrames)
@@ -1289,6 +1834,8 @@ namespace Ludots.Raylib.Render
             }
 
             _chunks.Clear();
+            ClearOverviewMesh();
+            ClearNavWalkabilityOverlay();
             ClearTerrainAlbedo();
             _albedoDescriptors.Clear();
             if (!_initialized)

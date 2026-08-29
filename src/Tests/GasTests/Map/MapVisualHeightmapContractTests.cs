@@ -164,6 +164,74 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
+        public void LoadMap_WhenDisableDistanceFog_IsHonoredOnRenderProfile()
+        {
+            WriteHeightmap("outer.vhtm", 40);
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "visualHeightmap": {
+                "asset": "assets/terrain/outer.vhtm",
+                "renderProfile": {
+                  "disableDistanceFog": true
+                }
+              }
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("outer_map");
+
+            var renderSource = (IVisualHeightmapRenderSource)engine.GetService(CoreServiceKeys.VisualHeightmap);
+            Assert.That(renderSource.RenderProfile.DisableDistanceFog, Is.True);
+        }
+
+        [Test]
+        public void LoadMap_WhenWorldWidthCmOverride_RemapsBoundsKeepingAspectAndSamples()
+        {
+            WriteHeightmap("outer.vhtm", 40);
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "visualHeightmap": {
+                "asset": "assets/terrain/outer.vhtm",
+                "worldWidthCm": 6400000
+              }
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("outer_map");
+
+            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            var renderSource = (IVisualHeightmapRenderSource)heightmap;
+            Assert.That(renderSource.Bounds.Width, Is.EqualTo(6_400_000));
+            Assert.That(renderSource.Bounds.Height, Is.EqualTo(6_400_000),
+                "Fixture heightmap is square; scaled height must match width.");
+            Assert.That(heightmap.TrySampleHeightCm(0f, 0f, out float heightCm), Is.True);
+            Assert.That(heightCm, Is.EqualTo(40f).Within(0.001f));
+        }
+
+        [Test]
+        public void ApplyWorldWidthOverride_ScalesEastAsiaAspectAroundCenter()
+        {
+            var source = VisualHeightmapAsset.CreateSingleLayer(
+                new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304),
+                sampleColumns: 3,
+                sampleRows: 3,
+                new short[] { 0, 0, 0, 0, 100, 0, 0, 0, 0 });
+            var binding = new VisualHeightmapBindingConfig { WorldWidthCm = 6_399_232 };
+
+            VisualHeightmapAsset scaled = MapVisualHeightmapLoader.ApplyWorldWidthOverride(source, binding);
+
+            Assert.That(scaled.Bounds.Width, Is.EqualTo(6_399_232));
+            Assert.That(scaled.Bounds.Height, Is.EqualTo(3_656_704));
+            Assert.That(scaled.Bounds.Left + (scaled.Bounds.Width / 2), Is.EqualTo(0));
+            Assert.That(scaled.SampleColumns, Is.EqualTo(3));
+            Assert.That(scaled.HeightSamplesCm[4], Is.EqualTo((short)100));
+        }
+
+        [Test]
         public void LoadMap_WhenDeclaredVisualHeightmapMissing_ThrowsExplicitly()
         {
             WriteMap("outer_map", """

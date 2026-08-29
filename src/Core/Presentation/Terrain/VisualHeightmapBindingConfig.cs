@@ -23,6 +23,12 @@ namespace Ludots.Core.Presentation.Terrain
         public int DefaultLayerIndex { get; set; } = -1;
 
         /// <summary>
+        /// When &gt; 0, remaps the asset's world AABB to this width (cm), preserving aspect ratio and center.
+        /// Authored samples stay the same; only horizontal playable meters change (e.g. continental → 64km board).
+        /// </summary>
+        public int WorldWidthCm { get; set; }
+
+        /// <summary>
         /// Presentation-only render profile for adapters. This never changes sampling truth.
         /// </summary>
         public VisualHeightmapRenderProfile RenderProfile { get; set; } = VisualHeightmapRenderProfile.CreateDefault();
@@ -34,6 +40,7 @@ namespace Ludots.Core.Presentation.Terrain
                 Asset = Asset,
                 BoardName = BoardName,
                 DefaultLayerIndex = DefaultLayerIndex,
+                WorldWidthCm = WorldWidthCm,
                 RenderProfile = (RenderProfile ?? VisualHeightmapRenderProfile.CreateDefault()).NormalizeAndValidate(),
             };
         }

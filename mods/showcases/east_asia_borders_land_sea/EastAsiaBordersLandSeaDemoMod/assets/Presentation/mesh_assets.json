@@ -1,0 +1,12 @@
+[
+  {
+    "id": "east_asia_borders.army",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "east_asia_borders.ship",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  }
+]

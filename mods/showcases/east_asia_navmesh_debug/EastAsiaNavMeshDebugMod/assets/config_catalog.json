@@ -1,0 +1,5 @@
+[
+  { "Path": "TransportNetwork/transport_network.json", "Policy": "Replace" },
+  { "Path": "Navigation/transport_nav_obstacle_sink.json", "Policy": "Replace" },
+  { "Path": "Navigation/pathing.json", "Policy": "DeepObject" }
+]

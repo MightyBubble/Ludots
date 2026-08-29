@@ -27,6 +27,8 @@ Map / template components
   -> Recast nav bake obstacle carve input
 ```
 
+Transport corridors may also project into the same `NavObstacleSet` when a map opts in with `Navigation/transport_nav_obstacle_sink.json`. That sink expands tagged `TransportNetwork` segments into equal-width polygons (or filled rings) and merges them beside map-authored obstacles. It is a derived projection from the transport SSOT, not a second obstacle authoring format and not a cost-area system.
+
 Do not create `ObstacleGeometryProfile2D`. It is not a mainline type. The mainline SSOT is `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState`.
 
 ## Supported Geometry

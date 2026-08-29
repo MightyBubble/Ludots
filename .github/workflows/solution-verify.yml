@@ -49,6 +49,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
 
       - name: Check graph-op gallery generator has no drift
         shell: pwsh
@@ -153,7 +156,8 @@ jobs:
             'FullyQualifiedName~OrderIngestion_RouteEnabledWithoutConfiguredAgentType',
             'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields',
             'FullyQualifiedName~PresentationRequestChannelTests',
-            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests'
+            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests',
+            'FullyQualifiedName~Showcase_MouseBoxAcquisition_RightClickIssuesOrdersForCommandableAgents'
           ) -join '|'
 
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal

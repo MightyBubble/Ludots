@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.TransportNetwork;
 
 namespace Ludots.Core.Physics2D.Navigation;
 
@@ -40,7 +41,39 @@ public static class NavObstacleAuthoringCatalog
 
         MapConfig map = LoadMergedMap(root, mods, loadOrder, mapId);
         Dictionary<string, EntityTemplate> templates = LoadMergedTemplates(root, mods, loadOrder);
-        return NavObstacleAuthoringAdapter.BuildFromMapAuthoring(map, templates, layerId);
+        NavObstacleSet obstacles = NavObstacleAuthoringAdapter.BuildFromMapAuthoring(map, templates, layerId);
+        TransportNavObstacleSinkFiles.MergeFromExplicitFiles(
+            obstacles,
+            FindLatestExisting(root, mods, loadOrder, TransportNavObstacleSinkFiles.SinkConfigRelativePath),
+            FindLatestExisting(root, mods, loadOrder, TransportNavObstacleSinkFiles.TransportAssetRelativePath),
+            mapId);
+        return obstacles;
+    }
+
+    private static string? FindLatestExisting(
+        string repoRoot,
+        IReadOnlyList<ModInfo> mods,
+        IReadOnlyList<string> loadOrder,
+        string relativePath)
+    {
+        string? latest = null;
+        string corePath = Path.Combine(repoRoot, "assets", relativePath);
+        if (File.Exists(corePath))
+        {
+            latest = corePath;
+        }
+
+        var byId = mods.ToDictionary(mod => mod.Id, StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < loadOrder.Count; i++)
+        {
+            string path = Path.Combine(byId[loadOrder[i]].RootPath, "assets", relativePath);
+            if (File.Exists(path))
+            {
+                latest = path;
+            }
+        }
+
+        return latest;
     }
 
     private static List<ModInfo> DiscoverMods(string repoRoot)
