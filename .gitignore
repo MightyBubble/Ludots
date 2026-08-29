@@ -113,6 +113,8 @@ artifacts/evidence/raylib_asset_acceptance_*/*
 # acceptance evidence already force-tracked historically; keep pattern open
 !artifacts/acceptance/
 !artifacts/acceptance/**
+!artifacts/benchmarks/
+!artifacts/benchmarks/**
 BrowserRuntime/
 _temp_export/
 .codex_out/
