@@ -6,7 +6,7 @@ using Ludots.Core.Registry;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Compiled <c>Input/interaction_modes.json</c> catalog (#1306): mode id → activated IMC
+    /// Compiled <c>Input/interaction_modes.json</c> catalog: mode id → activated IMC
     /// input context set. Read-only lookup consumed by <c>InputContextProjectionSystem</c> and the
     /// <c>SetInteractionMode</c> graph op; unknown mode ids fail fast by name.
     /// </summary>

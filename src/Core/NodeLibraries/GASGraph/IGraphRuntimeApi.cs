@@ -101,7 +101,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void SetWorldPosition(Entity target, int xCm, int yCm);
 
         /// <summary>
-        /// Sets an entity's interaction mode (#1306): writes the sparse InteractionMode component,
+        /// Sets an entity's interaction mode: writes the sparse InteractionMode component,
         /// or removes it when the mode is the reserved normal default. Fail-closed on dead targets
         /// and mode key ids that do not resolve to an installed interaction mode.
         /// </summary>
