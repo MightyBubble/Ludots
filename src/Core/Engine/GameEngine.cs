@@ -1164,9 +1164,6 @@ namespace Ludots.Core.Engine
                 InteractionContextIds.Default,
                 EntityCollectionKeys.CommandSource,
                 EntityViewKeys.ControlPlaneCommand));
-            interactionContextStack.AddTransitionListener(new InteractionContextInputContextBridge(
-                interactionContextStack,
-                () => GetService(CoreServiceKeys.InputHandler)));
             var filterProfileRegistry = new FilterProfileRegistry(interactionContextStack.FilterProfileIdRegistry, World, tagOps);
             // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
             filterProfileRegistry.RegisterExpander(
@@ -1999,15 +1996,18 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
-            // Local IMC projection (#1306): mode components on possessed reps diff into per-seat
-            // (seatId, contextId, op) commands; handler resolution mirrors scheme activation —
-            // per-seat channel handler where one exists, the sole-seat global handler otherwise.
-            // Runs after possession sync so the same tick's possession is what gets projected.
+            // Local IMC projection (#1306): mode components on possessed reps and interaction
+            // frames attributed through the control domain diff into per-seat (seatId, contextId,
+            // op) commands; handler resolution mirrors scheme activation — per-seat channel
+            // handler where one exists, the sole-seat global handler otherwise. Runs after
+            // possession sync so the same tick's possession is what gets projected.
             RegisterSystem(
                 new Ludots.Core.Input.Systems.InputContextProjectionSystem(
                     World,
                     GlobalContext,
                     interactionModeMap,
+                    interactionContextStack,
+                    controlDomainQuery,
                     seatId => clientLocalSeatInputRuntime.TryGetChannel(seatId, out Client.ClientLocalSeatInputChannel channel)
                         ? channel.Handler
                         : GetService(CoreServiceKeys.InputHandler)),
