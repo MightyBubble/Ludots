@@ -137,6 +137,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 - 仅 ClientLocalSeat 可选字段；**启用呈现面才有**
 - Presentation：对每个 binding，读 LogicView 权威态 → 插值 → adapter 画到 rect
 - 拾取：有 binding 时用呈现度量 + 该 LogicView；无 binding 的逻辑 Cast 只用 LogicView 逻辑度量
+- 拾取路由（多 binding）：窗口点按半开矩形包含归到所属 binding，共享边归座位序后位；点落在所有声明 rect 之外时回退座位序首个 binding，拾取不静默丢点。单源原语 `PresentBindingRouting.RouteWindowPoint`，host 拾取（`PresentBindingScreenRayProvider`）与 AgentBridge 座位工具同用
 - 画面剔除 / 视觉 LOD / 跳过绘制：仅对 PresentBinding 计算；姿态取自绑定 LogicView，矩形与分辨率取自 PresentBinding
 - 禁止：仅因存在 LogicView 就跑呈现剔除
 - Adapter 仍不拥有镜头权威（沿用 camera/presentation 纪律）

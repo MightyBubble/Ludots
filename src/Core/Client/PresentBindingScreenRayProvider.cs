@@ -71,25 +71,7 @@ namespace Ludots.Core.Client
                 return _sole.GetRay(screenPosition);
             }
 
-            float nx = screenPosition.X / hostResolution.X;
-            float ny = screenPosition.Y / hostResolution.Y;
-            int routeIndex = -1;
-            for (int i = 0; i < _bindings.Count; i++)
-            {
-                Vector4 rect = _bindings[i].Binding.NormalizedScreenRect;
-                // Half-open containment: a shared edge belongs to the later binding in seat order.
-                if (nx >= rect.X && nx < rect.X + rect.Z && ny >= rect.Y && ny < rect.Y + rect.W)
-                {
-                    routeIndex = i;
-                    break;
-                }
-            }
-
-            if (routeIndex < 0)
-            {
-                // Point outside every declared rect: fall back to the first binding in seat order.
-                routeIndex = 0;
-            }
+            int routeIndex = PresentBindingRouting.RouteWindowPoint(screenPosition, hostResolution, _bindings);
 
             PresentBinding binding = _bindings[routeIndex].Binding;
             Vector4 routedRect = binding.NormalizedScreenRect;
