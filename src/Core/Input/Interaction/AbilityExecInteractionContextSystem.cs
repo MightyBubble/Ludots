@@ -184,6 +184,7 @@ namespace Ludots.Core.Input.Interaction
                 _desiredReps[_desiredCount] = domainRep;
                 _desiredStates[_desiredCount] = new ActiveInteractionContext
                 {
+                    ContextId = frame.ContextId,
                     ContextEntity = frame.ContextEntity,
                     CommandIntentProfileId = frame.CommandIntentProfileId,
                 };
@@ -217,7 +218,8 @@ namespace Ludots.Core.Input.Interaction
                 if (TryFindDesired(holder, out int desiredIndex))
                 {
                     ref ActiveInteractionContext mounted = ref World.Get<ActiveInteractionContext>(holder);
-                    if (mounted.ContextEntity != _desiredStates[desiredIndex].ContextEntity ||
+                    if (mounted.ContextId != _desiredStates[desiredIndex].ContextId ||
+                        mounted.ContextEntity != _desiredStates[desiredIndex].ContextEntity ||
                         mounted.CommandIntentProfileId != _desiredStates[desiredIndex].CommandIntentProfileId)
                     {
                         mounted = _desiredStates[desiredIndex];

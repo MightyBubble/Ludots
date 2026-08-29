@@ -340,6 +340,10 @@ namespace Ludots.Tests.GAS
                 "the active context frame must be mounted on its carrier's control-domain rep.");
             Assert.That(mounted.ContextEntity, Is.EqualTo(actor));
             Assert.That(
+                harness.Stack.ContextIdRegistry.GetName(mounted.ContextId),
+                Is.EqualTo(ContextProfileName),
+                "the mounted state carries the frame's context identity.");
+            Assert.That(
                 mounted.CommandIntentProfileId,
                 Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(ContextIntentName)));
 

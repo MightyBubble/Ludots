@@ -815,13 +815,14 @@ namespace Ludots.Tests.GAS.Production
             builder.Append(repPref.ResolveCastDispatchProfile(abilityTemplateId: 0).ToString(CultureInfo.InvariantCulture));
 
             Entity owner = Entity.Null;
-            if (frame.ContextEntity != Entity.Null && engine.World.IsAlive(frame.ContextEntity))
+            if (engine.World.TryGet<ActiveInteractionContext>(repEntity, out ActiveInteractionContext activeContext) &&
+                engine.World.IsAlive(activeContext.ContextEntity))
             {
-                owner = frame.ContextEntity;
+                owner = activeContext.ContextEntity;
             }
-            else if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer))
+            else
             {
-                owner = localPlayer;
+                owner = repEntity;
             }
 
             builder.Append(" owner=");

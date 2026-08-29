@@ -23,10 +23,17 @@ namespace Ludots.Core.Input.Interaction
     public struct ActiveInteractionContext
     {
         /// <summary>
+        /// Registered context profile id in the
+        /// <see cref="InteractionContextStack.ContextIdRegistry"/> id space — the active frame's
+        /// identity, read by showcase frame-identity checks.
+        /// </summary>
+        public int ContextId;
+
+        /// <summary>
         /// Carrier entity of the active context frame (e.g. the ability exec instance entity).
-        /// Command source owner resolution and showcase frame identity read this; the reclaim
-        /// window keeps a dead carrier mounted so the owner resolves to nothing rather than
-        /// silently falling back to the subject.
+        /// Command source owner resolution reads this; the reclaim window keeps a dead carrier
+        /// mounted so the owner resolves to nothing rather than silently falling back to the
+        /// subject.
         /// </summary>
         public Entity ContextEntity;
 

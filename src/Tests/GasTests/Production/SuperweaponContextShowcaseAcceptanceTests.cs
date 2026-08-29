@@ -105,6 +105,15 @@ namespace Ludots.Tests.GAS.Production
                 Is.EqualTo(SuperweaponContextShowcaseIds.ConfirmInputContextId));
             Assert.That(frame.ContextEntity, Is.EqualTo(state.Commander));
 
+            Assert.That(
+                engine.World.TryGet<ActiveInteractionContext>(state.SolePossessedRep, out ActiveInteractionContext mountedContext),
+                Is.True,
+                "the ability-owned context must be mounted on the sole possessed rep as entity interaction state.");
+            Assert.That(mountedContext.ContextEntity, Is.EqualTo(state.Commander));
+            Assert.That(
+                stack.ContextIdRegistry.GetName(mountedContext.ContextId),
+                Is.EqualTo(SuperweaponContextShowcaseIds.ContextProfileId));
+
             Assert.That(engine.World.Has<AbilityExecInstance>(state.Commander), Is.True);
             Assert.That(engine.World.Get<AbilityExecInstance>(state.Commander).AbilityId, Is.EqualTo(state.AbilityId));
             Assert.That(state.AbilityId, Is.EqualTo(AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId)));
@@ -147,6 +156,10 @@ namespace Ludots.Tests.GAS.Production
                 stack.ContextIdRegistry.GetName(frame.ContextId),
                 Is.EqualTo(InteractionContextIds.Default),
                 "confirming the ability must remove the ability-owned context frame.");
+            Assert.That(
+                engine.World.Has<ActiveInteractionContext>(state.SolePossessedRep),
+                Is.False,
+                "confirming the ability must release the entity-mounted context back to the steady-state anchor.");
 
             var writer = engine.GetService(CoreServiceKeys.ContextBoundCollectionWriter)
                 ?? throw new InvalidOperationException("ContextBoundCollectionWriter service is missing.");
