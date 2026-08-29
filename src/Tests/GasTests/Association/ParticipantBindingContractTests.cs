@@ -721,41 +721,11 @@ namespace Ludots.Tests.GAS
             List<string> allowedSchemes = null,
             ClientCastPreferenceStore preferences = null)
         {
-            CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
-            InstallSeatGroundIntent(intents, "intent.seat.default");
-            InstallSeatGroundIntent(intents, "intent.seat.alt");
-
-            var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                "collection.seat.command_source",
-                "view.seat.default"));
-
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
-            var dispatch = new CastDispatchProfileRegistry(
-                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            dispatch.Install(CastDispatchProfileTests.Harness.Config(
-                new CastDispatchProfileDefinition
-                {
-                    Id = "dispatch.seat.default",
-                    Selector = new CastDispatchSelectorDefinition { Kind = "all" },
-                    Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
-                },
-                new CastDispatchProfileDefinition
-                {
-                    Id = "dispatch.seat.alt",
-                    Selector = new CastDispatchSelectorDefinition { Kind = "cycle", AdvanceOn = "orderAccepted" },
-                    Router = new CastDispatchRouterDefinition { Kind = "sequential" },
-                }));
 
             var runtime = new ControlSchemeRuntime(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                intents.Intents,
-                dispatch,
                 orderTypes,
                 preferences: preferences);
             runtime.Install(new ControlSchemesConfig
@@ -766,21 +736,11 @@ namespace Ludots.Tests.GAS
                     {
                         Id = initialScheme,
                         InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.seat.default",
-                            CastDispatchProfileId = "dispatch.seat.default",
-                        },
                     },
                     new()
                     {
                         Id = alternateScheme,
                         InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.seat.alt",
-                            CastDispatchProfileId = "dispatch.seat.alt",
-                        },
                     },
                 },
                 AllowedSchemes = allowedSchemes,
@@ -791,7 +751,7 @@ namespace Ludots.Tests.GAS
         private static ClientCastPreferenceStore CreateSeatPreferenceStore()
         {
             var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castCommitActionIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var contextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -804,19 +764,6 @@ namespace Ludots.Tests.GAS
                 templateKeys.GetName,
                 formSetKeys.Register,
                 formSetKeys.GetName);
-        }
-
-        private static void InstallSeatGroundIntent(CommandIntentProfileTests.Harness intents, string profileId)
-        {
-            intents.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
-            {
-                Id = profileId,
-                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
-                Rules = new List<CommandIntentRuleDefinition>
-                {
-                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
-                },
-            }));
         }
 
         [Test]

@@ -1,0 +1,6 @@
+{
+  "defaults": {
+    "commandIntentId": "intent.command.default",
+    "castDispatchProfileId": "dispatch.all_together"
+  }
+}

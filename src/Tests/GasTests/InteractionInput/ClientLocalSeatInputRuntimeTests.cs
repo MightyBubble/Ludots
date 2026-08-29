@@ -24,10 +24,6 @@ namespace Ludots.Tests.GAS
         private const string SchemeA = "scheme.perseat.a";
         private const string SchemeB = "scheme.perseat.b";
         private const string PerSeatContext = "imc.perseat";
-        private const string IntentA = "intent.perseat.a";
-        private const string IntentB = "intent.perseat.b";
-        private const string DispatchA = "dispatch.perseat.a";
-        private const string DispatchB = "dispatch.perseat.b";
 
         [Test]
         public void PublishSeats_SoleSeatTable_HoldsNoChannels()
@@ -176,24 +172,6 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
 
-                CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
-                InstallGroundIntent(intents, IntentA);
-                InstallGroundIntent(intents, IntentB);
-
-                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var stack = new InteractionContextStack(collectionKeys);
-                stack.Push(InteractionContextFrameDescriptor.Create(
-                    InteractionContextIds.Default,
-                    "collection.perseat.command_source",
-                    "view.perseat.default"));
-
-                var dispatchIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var dispatchAdvanceIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var dispatch = new CastDispatchProfileRegistry(dispatchIds, dispatchAdvanceIds);
-                dispatch.Install(CastDispatchProfileTests.Harness.Config(
-                    DispatchDefinition(DispatchA),
-                    DispatchDefinition(DispatchB)));
-
                 if (withPreferences)
                 {
                     harness.Preferences = CreatePreferenceStore();
@@ -222,9 +200,6 @@ namespace Ludots.Tests.GAS
 
                 harness.Schemes = new ControlSchemeRuntime(
                     new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                    stack,
-                    intents.Intents,
-                    dispatch,
                     orderTypes,
                     preferences: harness.Preferences,
                     inputConfig: inputConfig);
@@ -236,11 +211,6 @@ namespace Ludots.Tests.GAS
                         {
                             Id = SchemeA,
                             InputContexts = new List<string> { PerSeatContext },
-                            Defaults = new ControlSchemeDefaults
-                            {
-                                CommandIntentId = IntentA,
-                                CastDispatchProfileId = DispatchA,
-                            },
                             AxisMove = new ControlSchemeAxisMove
                             {
                                 ActionId = "Move",
@@ -253,11 +223,6 @@ namespace Ludots.Tests.GAS
                         {
                             Id = SchemeB,
                             InputContexts = new List<string>(),
-                            Defaults = new ControlSchemeDefaults
-                            {
-                                CommandIntentId = IntentB,
-                                CastDispatchProfileId = DispatchB,
-                            },
                         },
                     },
                     AllowedSchemes = allowedSchemes,
@@ -285,29 +250,6 @@ namespace Ludots.Tests.GAS
             public void Dispose()
             {
                 World.Destroy(World);
-            }
-
-            private static void InstallGroundIntent(CommandIntentProfileTests.Harness intents, string profileId)
-            {
-                intents.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
-                {
-                    Id = profileId,
-                    GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
-                    Rules = new List<CommandIntentRuleDefinition>
-                    {
-                        CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
-                    },
-                }));
-            }
-
-            private static CastDispatchProfileDefinition DispatchDefinition(string id)
-            {
-                return new CastDispatchProfileDefinition
-                {
-                    Id = id,
-                    Selector = new CastDispatchSelectorDefinition { Kind = "all" },
-                    Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
-                };
             }
 
             private static ClientCastPreferenceStore CreatePreferenceStore()

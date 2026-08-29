@@ -279,8 +279,6 @@ namespace CoreInputMod.Systems
         {
             if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) ||
                 stackObj is not InteractionContextStack stack ||
-                !_globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out var schemeObj) ||
-                schemeObj is not ControlSchemeRuntime schemes ||
                 !_globals.TryGetValue(CoreServiceKeys.CommandIntentProfileRegistry.Name, out var intentsObj) ||
                 intentsObj is not CommandIntentProfileRegistry intents ||
                 !_globals.TryGetValue(CoreServiceKeys.CastDispatchProfileRegistry.Name, out var dispatchObj) ||
@@ -295,11 +293,27 @@ namespace CoreInputMod.Systems
             mapping.SetCommandIntentRouting(
                 _world,
                 stack,
-                schemes,
                 intents,
                 dispatch,
                 collections,
-                TryGetCommandSourceOwner);
+                TryGetCommandSourceOwner,
+                TryGetPlayerRepresentative);
+        }
+
+        /// <summary>
+        /// Player id → representative entity through the map-binding player lookup — the entity
+        /// that carries the player's CommandPref. The bound sole possessed actor may be a
+        /// controlled unit, so order routing preferences resolve through the player instead.
+        /// </summary>
+        private bool TryGetPlayerRepresentative(int playerId, out Entity rep)
+        {
+            rep = Entity.Null;
+            return playerId > 0 &&
+                _globals.TryGetValue(CoreServiceKeys.PlayerEntityLookup.Name, out object? lookupObj) &&
+                lookupObj is PlayerEntityLookup players &&
+                players.TryGet(playerId, out rep) &&
+                rep != Entity.Null &&
+                _world.IsAlive(rep);
         }
 
         public bool TryGetSolePossessedPlayerId(out int playerId)

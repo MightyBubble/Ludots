@@ -28,7 +28,6 @@ namespace Ludots.Tests.GAS
         private const int MoveToOrderTypeId = 2;
         private const int StartXcm = 1000;
         private const int StartYcm = 2000;
-        private const string Intent = "intent.test.default";
         private const string AxisScheme = "scheme.test.axis";
         private const string PlainScheme = "scheme.test.plain";
 
@@ -300,7 +299,6 @@ namespace Ludots.Tests.GAS
             public ControlSchemeRuntime Schemes = null!;
             public Entity Avatar;
             private StringIntRegistry _schemeIds = null!;
-            private const string DispatchProfileId = "dispatch.test.axis";
 
             public static Harness Create(World world)
             {
@@ -309,34 +307,8 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = MoveToOrderTypeId });
 
-                CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
-                intents.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
-                {
-                    Id = Intent,
-                    GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
-                    Rules = new List<CommandIntentRuleDefinition>
-                    {
-                        CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
-                    },
-                }));
-
-                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var schemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var dispatch = new CastDispatchProfileRegistry(
-                    new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                    new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-                dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
-                {
-                    Id = DispatchProfileId,
-                    Selector = new CastDispatchSelectorDefinition { Kind = "all" },
-                    Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
-                }));
-                var schemes = new ControlSchemeRuntime(
-                    schemeIds,
-                    new InteractionContextStack(collectionKeys),
-                    intents.Intents,
-                    dispatch,
-                    orderTypes);
+                var schemes = new ControlSchemeRuntime(schemeIds, orderTypes);
 
                 var input = new FrozenInputActionReader();
                 var admissionResults = new OrderAdmissionResultBuffer(64, 64);
@@ -392,11 +364,6 @@ namespace Ludots.Tests.GAS
                 {
                     Id = id,
                     InputContexts = new List<string>(),
-                    Defaults = new ControlSchemeDefaults
-                    {
-                        CommandIntentId = Intent,
-                        CastDispatchProfileId = DispatchProfileId,
-                    },
                     AxisMove = axisMove,
                 };
             }

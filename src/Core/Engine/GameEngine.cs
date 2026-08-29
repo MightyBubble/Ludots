@@ -128,6 +128,9 @@ namespace Ludots.Core.Engine
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
 
+        /// <summary>Game-instance CommandPref seed resolved at boot; map binding plants it on player representatives.</summary>
+        private Ludots.Core.Input.Interaction.CommandPrefSeed _commandPrefSeed;
+
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
 
@@ -1591,19 +1594,28 @@ namespace Ludots.Core.Engine
             var castDispatchProfileRegistry = new CastDispatchProfileRegistry(castDispatchProfileIds, castDispatchAdvanceEventIds);
             castDispatchProfileRegistry.Install(new CastDispatchProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). The player input
-            // handler is adapter-bound after engine init, so it is resolved per switch (null tolerated).
+            // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). Schemes are pure
+            // device binding profiles; order routing preferences are player data (CommandPref below).
+            // The player input handler is adapter-bound after engine init, so it is resolved per
+            // switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var controlSchemeRuntime = new ControlSchemeRuntime(
                 controlSchemeIds,
-                interactionContextStack,
-                commandIntentProfileRegistry,
-                castDispatchProfileRegistry,
                 orderTypeRegistry,
                 () => GetService(CoreServiceKeys.InputHandler),
                 clientCastPreferences,
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Game-instance CommandPref seed (#1306 route ③): the player-level default intent +
+            // dispatch pair map binding plants on every bound player representative lacking the
+            // component. Intent ids register into the stack's id space — the space the arbiter
+            // and frames resolve in.
+            _commandPrefSeed = CommandPrefConfigLoader.ResolveSeed(
+                new CommandPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                commandIntentProfileRegistry,
+                castDispatchProfileRegistry,
+                interactionContextStack.CommandIntentProfileIdRegistry);
 
 
             // Per-seat input interpretation channels: zero channels for sole-seat clients (their

@@ -500,9 +500,31 @@ namespace Ludots.Core.Engine
             session.LocalSeats = participants.LocalSeats;
             session.TeamRelationships = participants.TeamRelationships;
 
+            SeedPlayerCommandPrefs(participants.Players);
+
             if (CurrentMapSession == session)
             {
                 ParticipantBindingResolver.PublishFocused(GlobalContext, participants);
+            }
+        }
+
+        /// <summary>
+        /// Plant the game-instance CommandPref seed on every bound player representative that
+        /// carries no component yet (player data survives map switches and world saves; seeding
+        /// never overwrites an existing preference). Readers of the component fail fast on a
+        /// missing seed, so this is the only writer at map binding time.
+        /// </summary>
+        private void SeedPlayerCommandPrefs(PlayerEntityLookup players)
+        {
+            foreach (KeyValuePair<int, Entity> entry in players.Entries)
+            {
+                Entity rep = entry.Value;
+                if (rep == Entity.Null || !World.IsAlive(rep) || World.Has<Input.Interaction.CommandPref>(rep))
+                {
+                    continue;
+                }
+
+                World.Add(rep, Input.Interaction.CommandPref.FromSeed(_commandPrefSeed));
             }
         }
 

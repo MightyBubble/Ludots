@@ -462,21 +462,13 @@ namespace Ludots.Tests.GasTests.UI
                 Entity repZero = world.Create();
                 Entity repOne = world.Create();
 
-                var intentProfiles = Ludots.Tests.GAS.CommandIntentProfileTests.Harness.Create(world);
-                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var stack = new InteractionContextStack(collectionKeys);
                 var orderTypes = new Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry(
                     new Ludots.Core.Gameplay.GAS.Orders.OrderTerminalResultBuffer(
                         capacity: Ludots.Core.Gameplay.GAS.Orders.OrderTerminalResultBuffer.DefaultCapacity));
-                var dispatchIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var dispatch = new CastDispatchProfileRegistry(dispatchIds, dispatchIds);
                 var inputConfig = new InputConfigRoot();
 
                 var schemes = new ControlSchemeRuntime(
                     new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                    stack,
-                    intentProfiles.Intents,
-                    dispatch,
                     orderTypes,
                     inputConfig: inputConfig);
 

@@ -1482,8 +1482,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 EntityCollectionKeys.CommandSource,
                 "view.test.command"));
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
-            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
             var dispatch = new CastDispatchProfileRegistry(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
@@ -1493,12 +1491,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandIntents,
-                dispatch,
-                orderTypes);
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.CommandSource,
@@ -1508,7 +1500,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetCommandIntentRouting(
                 world,
                 stack,
-                schemes,
                 commandIntents,
                 dispatch,
                 collections,
@@ -1516,6 +1507,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -1614,28 +1610,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.capacity",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, stack, dispatch, "intent.command.capacity", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(
                 collectionKeys,
@@ -1649,7 +1624,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetCommandIntentRouting(
                 world,
                 stack,
-                schemes,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1657,6 +1631,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
             system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
             {
@@ -1765,28 +1744,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.programmatic",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, stack, dispatch, "intent.command.programmatic", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1797,7 +1755,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetCommandIntentRouting(
                 world,
                 stack,
-                schemes,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1805,6 +1762,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.SetActivationActorValidator((actor, _) => world.IsAlive(actor));
@@ -1915,28 +1877,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.atomic_batch",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, stack, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1947,7 +1888,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetCommandIntentRouting(
                 world,
                 stack,
-                schemes,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1955,6 +1895,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             Assert.DoesNotThrow(() => system.Update(0f));
@@ -2055,28 +2000,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.routed_only",
-                            CastDispatchProfileId = "dispatch.nearest_one",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, stack, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2087,7 +2011,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetCommandIntentRouting(
                 world,
                 stack,
-                schemes,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2095,6 +2018,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -2186,28 +2114,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.atomic_authorization",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.atomic_authorization",
-                            CastDispatchProfileId = "dispatch.atomic_authorization",
-                        },
-                    },
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, stack, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2218,7 +2125,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetCommandIntentRouting(
                 world,
                 stack,
-                schemes,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2226,6 +2132,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -2308,28 +2219,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.test",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, stack, dispatch, "intent.command.test", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2340,7 +2230,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetCommandIntentRouting(
                 world,
                 stack,
-                schemes,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2348,6 +2237,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -2365,6 +2259,25 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
                 return false;
             });
+        }
+
+        /// <summary>
+        /// Plant the player-level CommandPref on the possessed representative, mirroring the
+        /// production map-binding seed (game-instance defaults from Input/command_prefs.json).
+        /// </summary>
+        private static void PlantPlayerCommandPref(
+            World world,
+            Entity rep,
+            InteractionContextStack stack,
+            CastDispatchProfileRegistry dispatch,
+            string intentId,
+            string dispatchProfileId)
+        {
+            CommandPref pref = default;
+            pref.SetPlayerDefault(
+                stack.CommandIntentProfileIdRegistry.Register(intentId),
+                dispatch.ProfileIdRegistry.GetId(dispatchProfileId));
+            world.Add(rep, pref);
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()

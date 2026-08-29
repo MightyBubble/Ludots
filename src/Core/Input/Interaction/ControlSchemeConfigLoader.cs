@@ -8,9 +8,11 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11). Follows the
     /// <c>CastCommitProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge
-    /// through the shared <see cref="ConfigPipeline"/>. Command intent and axis move order type
-    /// references resolve at <see cref="ControlSchemeRuntime.Install"/> (fail fast on uninstalled
-    /// command intent profiles, cast dispatch profiles, or unknown order type keys).
+    /// through the shared <see cref="ConfigPipeline"/>. Schemes are pure device binding profiles:
+    /// order routing preferences live on the player representative (<see cref="CommandPref"/>) and
+    /// a legacy <c>defaults</c> node fails fast by name instead of being silently dropped. Axis
+    /// move order type references resolve at <see cref="ControlSchemeRuntime.Install"/> (fail fast
+    /// on unknown order type keys).
     /// </summary>
     public sealed class ControlSchemeConfigLoader
     {
@@ -41,13 +43,53 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
+            RejectLegacySchemeDefaults(mergedObject, relativePath);
             var config = mergedObject.Deserialize<ControlSchemesConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
             Validate(config, relativePath);
             return config;
         }
 
-        /// <summary>Structural fail-fast validation; intent/context id resolution happens at install.</summary>
+        /// <summary>
+        /// The scheme <c>defaults</c> node is removed: command intent and cast dispatch defaults are
+        /// player data (<see cref="CommandPref"/>, seeded from <c>Input/command_prefs.json</c>).
+        /// A config still declaring it fails fast by scheme id with the migration target named —
+        /// deserialization would otherwise silently ignore the node.
+        /// </summary>
+        public static void RejectLegacySchemeDefaults(System.Text.Json.Nodes.JsonObject merged, string source)
+        {
+            if (merged == null)
+            {
+                throw new ArgumentNullException(nameof(merged));
+            }
+
+            if (merged["schemes"] is not System.Text.Json.Nodes.JsonArray schemes)
+            {
+                return;
+            }
+
+            for (int i = 0; i < schemes.Count; i++)
+            {
+                if (schemes[i] is not System.Text.Json.Nodes.JsonObject scheme)
+                {
+                    continue;
+                }
+
+                foreach (KeyValuePair<string, System.Text.Json.Nodes.JsonNode?> property in scheme)
+                {
+                    if (string.Equals(property.Key, "defaults", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string schemeId = scheme["id"] is { } idNode ? idNode.GetValue<string>() : $"schemes[{i}]";
+                        throw new InvalidOperationException(
+                            $"{source} scheme '{schemeId}' still declares a 'defaults' node: command intent and cast dispatch " +
+                            "defaults moved to the player CommandPref (Input/command_prefs.json seeds the player default; " +
+                            "remove the scheme defaults node).");
+                    }
+                }
+            }
+        }
+
+        /// <summary>Structural fail-fast validation; context id resolution happens at install.</summary>
         public static void Validate(ControlSchemesConfig config, string source)
         {
             if (config == null)
@@ -81,14 +123,6 @@ namespace Ludots.Core.Input.Interaction
                 {
                     RequireTrimmedNonEmpty(scheme.InputContexts[c], $"{path}.inputContexts[{c}]");
                 }
-
-                if (scheme.Defaults == null)
-                {
-                    throw new InvalidOperationException($"{path}.defaults must be explicitly declared.");
-                }
-
-                RequireTrimmedNonEmpty(scheme.Defaults.CommandIntentId, $"{path}.defaults.commandIntentId");
-                RequireTrimmedNonEmpty(scheme.Defaults.CastDispatchProfileId, $"{path}.defaults.castDispatchProfileId");
 
                 if (scheme.AxisMove != null)
                 {

@@ -447,6 +447,10 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Input/command_prefs.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "UI/ability_aggregation_profiles.json",
     "Policy": "ArrayById",
     "IdField": "id"

@@ -11,9 +11,11 @@
 | 机器 | **Machine / 机器**（原设计稿称 Client，已更名） | 唯一表达形式 = 一个 AgentBridge discovery 目录（环回 + pid/port 集合点）；launcher / 部署层概念 | 不建（跨机需求出现前） |
 | 进程 | **App**（进程宿主） | launcher 启动构型 + Adapter（进程内宿主能力库）+ HostLoop（App 帧循环，`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs`）；多进程编排归 [#711](https://github.com/MightyBubble/Ludots/issues/711) 联机线（待合入，main 上暂无） | 已有 |
 | 席位 | **Seat** | `ClientLocalSeatRegistry`（已落地，`src/Core/Client/ClientLocalSeatRegistry.cs`） | 已是 |
-| 设备 | **Device（Seat 域内）** | ControlScheme = 设备布局档案；Input Action Mapping 解释设备参数为语义；Mock = SyntheticInputDevice（`src/Core/Input/Runtime/SyntheticInputDevice.cs`）/ AgentBridge | 暂不建设备注册表；P3 预留唯一钩子 = ClientLocalSeat 设备句柄集合（见 #1058） |
+| 设备 | **Device（Seat 域内）** | ControlScheme = 设备布局档案（纯键位：IMC context 组合 + axisMove 拓扑，#1306 路线③收窄）；Input Action Mapping 解释设备参数为语义；Mock = SyntheticInputDevice（`src/Core/Input/Runtime/SyntheticInputDevice.cs`）/ AgentBridge | 暂不建设备注册表；P3 预留唯一钩子 = ClientLocalSeat 设备句柄集合（见 #1058） |
 
 Machine 不建 C# 类型：跨宿主真实需求出现前，「一台机器」就是它在 AgentBridge discovery 目录里的那个条目，不是代码对象。
+
+ControlScheme 归设备层，但玩家的下单偏好不归它（#1306 路线③定案）：CommandPref 是挂在玩家 representative 上的稀疏实体组件——玩家级默认 command intent / cast dispatch profile + per-ability-template 覆盖，进图绑定期由 `Input/command_prefs.json` 种子补种，随世界存档 round-trip；读取方（下单路由）fail-fast。scheme 只管键位，换 scheme 不动偏好。
 
 ## 2. 「client」一词的两个合法义
 
