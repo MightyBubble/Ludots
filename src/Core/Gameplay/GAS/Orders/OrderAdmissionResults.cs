@@ -705,14 +705,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
 
         /// <summary>
-        /// Aborts all volatile admission work after the authoritative world is replaced.
-        /// Order ids remain monotonic so callers cannot confuse post-restore submissions with
-        /// outcomes observed before the restore boundary.
+        /// Aborts all volatile admission work after the authoritative world is replaced and rewinds
+        /// the order-id counter to the snapshot boundary. Monotonic ids across a restore would leak
+        /// the pre-restore tick count into every post-restore Order.OrderId byte, which is persisted
+        /// world state — determinism requires the counter to follow the checkpoint, not the wall.
         /// </summary>
         public void ResetForWorldRestore()
         {
             _currentCount = 0;
             _pendingCount = 0;
+            _nextOrderId = 1;
             _currentRejectionCount = 0;
             _pendingRejectionCount = 0;
             _currentReserved = 0;
