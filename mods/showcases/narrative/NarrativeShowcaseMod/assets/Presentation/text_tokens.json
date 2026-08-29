@@ -126,5 +126,17 @@
   {
     "id": "story.demo.audience.mercy_end",
     "argCount": 0
+  },
+  {
+    "id": "story.sequence.narrative.intro",
+    "argCount": 0
+  },
+  {
+    "id": "story.sequence.narrative.trial_reveal",
+    "argCount": 0
+  },
+  {
+    "id": "story.sequence.demo.overture",
+    "argCount": 0
   }
 ]

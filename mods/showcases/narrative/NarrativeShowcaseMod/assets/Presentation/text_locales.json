@@ -33,7 +33,10 @@
       "story.demo.player.duty": "I choose duty.",
       "story.demo.player.mercy": "I choose mercy.",
       "story.demo.audience.duty_end": "Then keep the gate. The valley will remember your spine.",
-      "story.demo.audience.mercy_end": "Then spare what can learn. The valley will remember your hand."
+      "story.demo.audience.mercy_end": "Then spare what can learn. The valley will remember your hand.",
+      "story.sequence.narrative.intro": "Ash Oath · Opening",
+      "story.sequence.narrative.trial_reveal": "Ash Oath · Shrine Awakens",
+      "story.sequence.demo.overture": "Pure Cinematic: Camera Pass"
     },
     "zh-CN": {
       "story.speaker.warden.name": "守望者米蕾勒",
@@ -67,7 +70,10 @@
       "story.demo.player.duty": "我选择职责。",
       "story.demo.player.mercy": "我选择仁慈。",
       "story.demo.audience.duty_end": "那就守住门。山谷会记得你的脊梁。",
-      "story.demo.audience.mercy_end": "那就放过还能学的。山谷会记得你的手。"
+      "story.demo.audience.mercy_end": "那就放过还能学的。山谷会记得你的手。",
+      "story.sequence.narrative.intro": "灰烬誓约·开场",
+      "story.sequence.narrative.trial_reveal": "灰烬誓约·神龛醒来",
+      "story.sequence.demo.overture": "纯演出：镜头过场"
     }
   }
 }

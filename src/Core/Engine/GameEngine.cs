@@ -1977,14 +1977,14 @@ namespace Ludots.Core.Engine
                 taskRuntime,
                 textCatalog,
                 displayResolver);
-            var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog);
+            var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog, displayResolver);
             SetService(CoreServiceKeys.StoryGraphInvoker, storyGraphs);
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
             SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
             _gasGraphRuntimeApi?.BindStartDialogue(dialogueId => dialogueRuntime.StartDialogue(dialogueId));
             SetService(
                 CoreServiceKeys.StoryPresentationProjector,
-                new StoryPresentationProjector(storyDefinitions, displayResolver));
+                new StoryPresentationProjector(storyDefinitions));
             AttributeRegistry.Freeze();
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);

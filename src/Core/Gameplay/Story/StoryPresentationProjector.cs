@@ -18,15 +18,11 @@ namespace Ludots.Core.Gameplay.Story
         private const float SequencePortraitSize = 72f;
 
         private readonly StoryDefinitionRegistry _story;
-        private readonly PresentationDisplayResolver? _display;
         private uint _generation;
 
-        public StoryPresentationProjector(
-            StoryDefinitionRegistry story,
-            PresentationDisplayResolver? display = null)
+        public StoryPresentationProjector(StoryDefinitionRegistry story)
         {
             _story = story ?? throw new ArgumentNullException(nameof(story));
-            _display = display;
         }
 
         public StoryPresentationFrame ProjectDialogue(
@@ -185,7 +181,7 @@ namespace Ludots.Core.Gameplay.Story
                     $"Presentation profile '{profileId}' requires width > 0.");
             }
 
-            string title = ResolveSpeakerDisplayName(subtitle.SpeakerId);
+            string title = subtitle.ResolvedSpeakerName;
             string body = subtitle.ResolvedText ?? string.Empty;
             float progress01 = subtitle.Duration > 0f
                 ? Math.Clamp(subtitle.LocalElapsed / subtitle.Duration, 0f, 1f)
@@ -236,22 +232,6 @@ namespace Ludots.Core.Gameplay.Story
             }
 
             return view.PortraitImageId ?? string.Empty;
-        }
-
-        private string ResolveSpeakerDisplayName(string speakerId)
-        {
-            if (string.IsNullOrWhiteSpace(speakerId) ||
-                !_story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
-            {
-                return speakerId ?? string.Empty;
-            }
-
-            if (_display != null)
-            {
-                return _display.FormatTokenOrThrow(speaker.DisplayNameToken);
-            }
-
-            return speaker.DisplayNameToken;
         }
 
         private static float ImageSizeFor(string surfaceKind)

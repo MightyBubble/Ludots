@@ -12,6 +12,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -215,6 +216,7 @@ namespace Ludots.Tests.GAS.Story
             using GameEngine engine = CreateCoreEngine();
             var dialogues = new DialogueDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
 
             story.Register(new StoryLineDefinition
@@ -307,6 +309,7 @@ namespace Ludots.Tests.GAS.Story
                 ?? throw new InvalidOperationException("GraphCallbackService missing.");
             var dialogues = new DialogueDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
 
             story.Register(new StoryLineDefinition
@@ -396,6 +399,7 @@ namespace Ludots.Tests.GAS.Story
 
             var sequences = new SequenceDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             SequencerRuntime sequencer = CreateIsolatedSequencerRuntime(engine, sequences, story);
 
             story.Register(new StoryLineDefinition
@@ -408,7 +412,7 @@ namespace Ludots.Tests.GAS.Story
             sequences.Register(new SequenceDefinition
             {
                 Id = "Sequence.Unit.CameraSubtitleSignal",
-                DisplayName = "Unit Sequence",
+                DisplayNameToken = "story.unit.sequence.main",
                 ClearCameraOnComplete = false,
                 Clock = new SequenceClockDefinition { Rate = 1f },
                 Tracks =
@@ -465,7 +469,7 @@ namespace Ludots.Tests.GAS.Story
             Assert.That(sequencer.TryGetActiveView(out SequenceView atStart), Is.True);
             Assert.That(atStart.ActiveCameraProfile, Is.EqualTo("Camera.Unit.Close"));
             Assert.That(atStart.ActiveSubtitles.Count, Is.EqualTo(1));
-            Assert.That(atStart.ActiveSubtitles[0].ResolvedText, Is.EqualTo("story.unit.subtitle"));
+            Assert.That(atStart.ActiveSubtitles[0].ResolvedText, Is.EqualTo("字幕轨"));
             Assert.That(sectionEntered, Is.EqualTo(2));
             Assert.That(engine.GetService(CoreServiceKeys.VirtualCameraRequest)?.Id, Is.EqualTo("Camera.Unit.Close"));
             Assert.That(lastCameraProfile, Is.EqualTo("Camera.Unit.Close"));
@@ -488,12 +492,13 @@ namespace Ludots.Tests.GAS.Story
 
             var sequences = new SequenceDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             SequencerRuntime sequencer = CreateIsolatedSequencerRuntime(engine, sequences, story);
 
             sequences.Register(new SequenceDefinition
             {
                 Id = "Sequence.Unit.ClockControls",
-                DisplayName = "Clock Controls",
+                DisplayNameToken = "story.unit.sequence.clock",
                 ClearCameraOnComplete = false,
                 Clock = new SequenceClockDefinition { Rate = 1f },
                 Tracks =
@@ -571,6 +576,7 @@ namespace Ludots.Tests.GAS.Story
 
             var dialogues = new DialogueDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
 
             story.Register(new StoryLineDefinition
@@ -640,6 +646,69 @@ namespace Ludots.Tests.GAS.Story
             return engine;
         }
 
+
+        private static void RegisterUnitSpeakers(StoryDefinitionRegistry story)
+        {
+            story.Register(new StorySpeakerDefinition
+            {
+                Id = "speaker.guide",
+                DisplayNameToken = "story.unit.speaker.guide",
+                PortraitImageId = "image.unit.guide.portrait",
+                StandingImageId = "image.unit.guide.standing"
+            });
+            story.Register(new StorySpeakerDefinition
+            {
+                Id = "speaker.player",
+                DisplayNameToken = "story.unit.speaker.player",
+                PortraitImageId = "image.unit.player.portrait",
+                StandingImageId = "image.unit.player.standing"
+            });
+        }
+
+        private static PresentationTextCatalog CreateUnitTextCatalog()
+        {
+            var templates = new (string Token, string Text)[]
+            {
+                ("story.unit.speaker.guide", "单元向导"),
+                ("story.unit.speaker.player", "单元玩家"),
+                ("story.unit.hello", "向导打招呼"),
+                ("story.unit.choice", "选择离开"),
+                ("story.unit.exit", "道别"),
+                ("story.unit.subtitle", "字幕轨"),
+                ("story.unit.gate", "闸门开放"),
+                ("story.unit.locked", "闸门锁定"),
+                ("story.unit.open", "闸门开启"),
+                ("story.unit.sequence.main", "单元演出"),
+                ("story.unit.sequence.clock", "时钟控制"),
+                ("story.unit.sequence.gated", "闸控"),
+            };
+
+            var tokenIds = new Ludots.Core.Registry.StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var tokens = new PresentationTextTokenDefinition[64];
+            foreach (var (token, _) in templates)
+            {
+                int tokenId = tokenIds.Register(token);
+                tokens[tokenId] = new PresentationTextTokenDefinition { TokenId = tokenId, Key = token, ArgCount = 0 };
+            }
+            tokenIds.Freeze();
+
+            var localeIds = new Ludots.Core.Registry.StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int localeId = localeIds.Register("zh-CN");
+            localeIds.Freeze();
+            var localeTemplates = new PresentationTextTemplate[64];
+            foreach (var (token, text) in templates)
+            {
+                int tokenId = tokenIds.GetId(token);
+                localeTemplates[tokenId] = new PresentationTextTemplate(
+                    text,
+                    new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, text, 0) });
+            }
+            var locales = new PresentationTextLocaleTable[2];
+            locales[localeId] = new PresentationTextLocaleTable(localeId, "zh-CN", localeTemplates);
+
+            return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: localeId);
+        }
+
         private static DialogueRuntime CreateIsolatedDialogueRuntime(
             GameEngine engine,
             DialogueDefinitionRegistry dialogues,
@@ -649,7 +718,7 @@ namespace Ludots.Tests.GAS.Story
                 ?? throw new InvalidOperationException("TaskRuntimeService missing.");
             StoryGraphInvoker graphs = engine.GetService(CoreServiceKeys.StoryGraphInvoker)
                 ?? new StoryGraphInvoker(engine);
-            return new DialogueRuntime(engine, dialogues, story, graphs, tasks, textCatalog: null);
+            return new DialogueRuntime(engine, dialogues, story, graphs, tasks, CreateUnitTextCatalog());
         }
 
         private static SequencerRuntime CreateIsolatedSequencerRuntime(
@@ -661,7 +730,7 @@ namespace Ludots.Tests.GAS.Story
                 ?? throw new InvalidOperationException("TaskRuntimeService missing.");
             StoryGraphInvoker graphs = engine.GetService(CoreServiceKeys.StoryGraphInvoker)
                 ?? new StoryGraphInvoker(engine);
-            return new SequencerRuntime(engine, sequences, story, graphs, tasks, textCatalog: null);
+            return new SequencerRuntime(engine, sequences, story, graphs, tasks, CreateUnitTextCatalog());
         }
 
         private static void RegisterHaltTriggerGraph(GameEngine engine, string graphName)

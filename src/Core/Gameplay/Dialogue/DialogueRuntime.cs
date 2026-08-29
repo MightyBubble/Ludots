@@ -202,40 +202,23 @@ namespace Ludots.Core.Gameplay.Dialogue
             out string portraitImageId,
             out string standingImageId)
         {
-            speakerName = speakerId ?? string.Empty;
             portraitImageId = string.Empty;
             standingImageId = string.Empty;
-            if (string.IsNullOrWhiteSpace(speakerId) || !_story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
+            if (string.IsNullOrWhiteSpace(speakerId))
             {
+                speakerName = string.Empty;
                 return;
+            }
+
+            if (!_story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
+            {
+                throw new InvalidOperationException(
+                    $"Speaker '{speakerId}' is not registered in Story/speakers.json.");
             }
 
             portraitImageId = speaker.PortraitImageId ?? string.Empty;
             standingImageId = speaker.StandingImageId ?? string.Empty;
-
-            if (_display != null)
-            {
-                speakerName = _display.FormatTokenOrThrow(speaker.DisplayNameToken);
-                return;
-            }
-
-            if (_textCatalog != null)
-            {
-                int tokenId = _textCatalog.GetTokenId(speaker.DisplayNameToken);
-                if (tokenId > 0)
-                {
-                    var packet = PresentationTextPacket.FromToken(tokenId);
-                    if (PresentationTextFormatter.TryFormat(
-                            _textCatalog,
-                            _textCatalog.DefaultLocaleId,
-                            in packet,
-                            out string formatted) &&
-                        !string.IsNullOrWhiteSpace(formatted))
-                    {
-                        speakerName = formatted;
-                    }
-                }
-            }
+            speakerName = StoryTextResolution.FormatToken(_textCatalog, _display, speaker.DisplayNameToken);
         }
 
         public DialogueRuntimeSnapshot CaptureSnapshot()
@@ -415,32 +398,7 @@ namespace Ludots.Core.Gameplay.Dialogue
         private string ResolveLineText(string lineId)
         {
             StoryLineDefinition line = _story.RequireLine(lineId);
-            if (_textCatalog == null)
-            {
-                return line.TextToken;
-            }
-
-            int tokenId = _textCatalog.GetTokenId(line.TextToken);
-            if (tokenId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Story line '{lineId}' textToken '{line.TextToken}' is not registered in PresentationTextCatalog.");
-            }
-
-            var packet = PresentationTextPacket.FromToken(tokenId);
-            for (int i = 0; i < line.Args.Count; i++)
-            {
-                packet.SetArg(i, line.Args[i]);
-            }
-
-            if (!PresentationTextFormatter.TryFormat(_textCatalog, _textCatalog.DefaultLocaleId, in packet, out string text) ||
-                string.IsNullOrWhiteSpace(text))
-            {
-                throw new InvalidOperationException(
-                    $"Story line '{lineId}' textToken '{line.TextToken}' has no locale template for default locale.");
-            }
-
-            return text;
+            return StoryTextResolution.FormatToken(_textCatalog, _display, line.TextToken, line.Args);
         }
 
         private void ActivateCamera(string cameraId)
