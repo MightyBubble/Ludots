@@ -609,9 +609,19 @@ namespace Ludots.Core.Persistence
             public JsonNode CaptureState()
             {
                 ActivityRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
+                var processedSignalIds = new JsonArray();
+                if (snapshot.ProcessedSignalIds != null)
+                {
+                    for (int i = 0; i < snapshot.ProcessedSignalIds.Count; i++)
+                    {
+                        processedSignalIds.Add(snapshot.ProcessedSignalIds[i]);
+                    }
+                }
+
                 return new JsonObject
                 {
-                    ["nextInstanceId"] = snapshot.NextInstanceId
+                    ["nextInstanceId"] = snapshot.NextInstanceId,
+                    ["processedSignalIds"] = processedSignalIds,
                 };
             }
 
@@ -621,9 +631,20 @@ namespace Ludots.Core.Persistence
 
                 JsonObject root = state.AsObject();
                 int nextInstanceId = RequireInt(root, "nextInstanceId");
+                List<string>? processedSignalIds = null;
+                if (root.TryGetPropertyValue("processedSignalIds", out JsonNode? idsNode) && idsNode != null)
+                {
+                    JsonArray idsArray = idsNode.AsArray();
+                    processedSignalIds = new List<string>(idsArray.Count);
+                    for (int i = 0; i < idsArray.Count; i++)
+                    {
+                        processedSignalIds.Add(RequireStringValue(idsArray[i], $"processedSignalIds[{i}]"));
+                    }
+                }
+
                 try
                 {
-                    _runtime.RestoreSnapshot(new ActivityRuntimeSnapshot(nextInstanceId));
+                    _runtime.RestoreSnapshot(new ActivityRuntimeSnapshot(nextInstanceId, processedSignalIds));
                 }
                 catch (InvalidOperationException ex)
                 {

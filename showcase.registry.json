@@ -8392,6 +8392,56 @@
       "tier": "T2",
       "category": "demo",
       "status": "active"
+    },
+    {
+      "id": "activity_dispatch",
+      "path": "mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod",
+      "projectPath": "ActivityDispatchShowcaseMod.csproj",
+      "title": "活动派发台：三条派发路径 + 通用事件面板",
+      "summary": "forced/pooled/automatic 三条 Activity 派发路径的可玩演示，PanelKit activity 事件面板只读投影活动实例；内容纯 JSON（activities/graphs/RNG 分布），0 编码新增演示活动。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "activity_dispatch_showcase",
+      "preset": "activity_dispatch_cef_raylib",
+      "docsPath": null,
+      "readmePath": "README.md",
+      "acceptanceTest": "ActivityDispatchShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/activity_dispatch",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "activity",
+        "panel-kit",
+        "webui",
+        "y5k"
+      ]
+    },
+    {
+      "id": "capability_standard_graph_op_OfferActivity",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
+      "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj",
+      "title": "点名即派发：待办活动应声上桌",
+      "summary": "军需官每点名一次，案头就添一件待办活动；件件单层拍板，绝不嵌套。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "OfferActivity"
+      ],
+      "binding": "capability_standard_graph_op_OfferActivity",
+      "preset": "capability_standard_graph_op_OfferActivity_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/OfferActivity.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_OfferActivity",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_OfferActivity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_OfferActivity/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

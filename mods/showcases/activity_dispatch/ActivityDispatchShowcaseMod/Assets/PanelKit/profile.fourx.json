@@ -1,0 +1,18 @@
+{
+  "profileId": "profile.activity.showcase",
+  "genre": "fourx",
+  "coachLine": "回合结算点上拍板：看选项为何被锁、为何根本不出现。",
+  "activity": {
+    "topic": "wpk.activity.dispatch",
+    "confirmCommand": "activity.confirm",
+    "triggerCommand": "activity.showcase.trigger",
+    "historyLimit": 32
+  },
+  "tokens": {
+    "token.activity.trigger.forced": "触发 forced 活动",
+    "token.activity.trigger.pooled": "触发 pooled 抽取",
+    "token.activity.trigger.automatic": "触发 automatic 通报",
+    "token.activity.option.baseline": "基础选项",
+    "token.activity.history.empty": "尚无已结算活动"
+  }
+}

@@ -2582,6 +2582,30 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "activity_dispatch_cef_raylib",
+      "name": "Activity Dispatch Showcase CEF Raylib",
+      "selectors": [
+        "$activity_dispatch_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "capability_standard_graph_op_OfferActivity_raylib",
+      "name": "Graph Op OfferActivity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_OfferActivity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

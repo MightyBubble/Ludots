@@ -269,6 +269,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Zero-arg tokens only in this slice; argCount&gt;0 fails closed.
         /// </summary>
         LoadTextKey = 461,
+
+        /// <summary>
+        /// Offer the activity named by Symbols[Imm] to E[A] as scope host via
+        /// ActivityRuntimeService. Admission/repeat policy decides outcome; rejection
+        /// emits an AdmissionRejected presentation cue instead of failing the graph.
+        /// Unknown activity id fails closed at execution time (activities load after
+        /// graph compilation, so this cannot be a compile-time symbol patch).
+        /// </summary>
+        OfferActivity = 462,
     }
 
     public static class GraphNodeOpParser

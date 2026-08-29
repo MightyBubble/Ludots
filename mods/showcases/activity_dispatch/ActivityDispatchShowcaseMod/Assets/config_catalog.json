@@ -1,0 +1,8 @@
+[
+  { "Path": "Activities/activities.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Tasks/tasks.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Rng/distributions.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Events/custom_events.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" }
+]

@@ -1,0 +1,113 @@
+[
+  {
+    "id": "showcase.forced_supply",
+    "display_name": "补给超限：前线必须拍板",
+    "summary": "连通子网供给超限的宽限期已到。撤回、推进或按兵不动，选一个，当场结算。",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "forced",
+    "repeat_policy": "repeatable",
+    "options": [
+      {
+        "id": "hold",
+        "title": "按兵不动",
+        "body": "维持当前补给配置，接受宽限期结束后的断补减员风险。",
+        "is_baseline": true,
+        "effects": [
+          { "effect_key": "task.create", "parameters": { "task_id": "showcase.task.hold" }, "execution_order": 1 }
+        ]
+      },
+      {
+        "id": "withdraw",
+        "title": "撤回前线的野战单位",
+        "body": "把超限子网上的野战单位撤回后方锚点，供给需求立即回落。",
+        "is_baseline": false,
+        "effects": [
+          { "effect_key": "task.create", "parameters": { "task_id": "showcase.task.withdraw" }, "execution_order": 1 }
+        ]
+      },
+      {
+        "id": "forward_camp",
+        "title": "在锚点展开前进补给营地",
+        "body": "把前进营地推上去，扩大子网供给上限——需要议事会仍有余力。",
+        "is_baseline": false,
+        "execute_condition": {
+          "condition_key": "world.subject_attribute",
+          "parameters": { "attribute_key": "Health", "op": "greater_equal", "value": 50 }
+        },
+        "effects": [
+          { "effect_key": "task.create", "parameters": { "task_id": "showcase.task.forward_camp" }, "execution_order": 1 }
+        ]
+      },
+      {
+        "id": "request_aid",
+        "title": "向盟友求援",
+        "body": "请求盟友分担供给压力——双方尚无协议时此选项不应出现。",
+        "is_baseline": false,
+        "show_condition": {
+          "condition_key": "world.subject_attribute",
+          "parameters": { "attribute_key": "Health", "op": "greater_equal", "value": 9999 }
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "showcase.pool_dispatch",
+    "display_name": "周期机遇：候选池抽取",
+    "summary": "周期结算点的机遇活动进入候选池，由确定性随机流抽出一个交给玩家。",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "pooled",
+    "pool_key": "activity.showcase_pool",
+    "repeat_policy": "repeatable"
+  },
+  {
+    "id": "showcase.pool_caravan",
+    "display_name": "过境商队馈赠",
+    "summary": "一支过境商队愿以低价出售给养。收下，还是放行？",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "forced",
+    "repeat_policy": "repeatable",
+    "options": [
+      {
+        "id": "let_pass",
+        "title": "放行",
+        "body": "不与商队交易，目送其离境。",
+        "is_baseline": true,
+        "effects": [
+          { "effect_key": "task.create", "parameters": { "task_id": "showcase.task.caravan_pass" }, "execution_order": 1 }
+        ]
+      },
+      {
+        "id": "buy",
+        "title": "低价收购给养",
+        "body": "花一笔现金换回给养物资。",
+        "is_baseline": false,
+        "effects": [
+          { "effect_key": "task.create", "parameters": { "task_id": "showcase.task.caravan_buy" }, "execution_order": 1 }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "showcase.pool_omen",
+    "display_name": "天象异闻",
+    "summary": "占星官记录到一次异常天象，自动归档为一条通报。",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "automatic",
+    "repeat_policy": "repeatable",
+    "automatic_effects": [
+      { "effect_key": "task.create", "parameters": { "task_id": "showcase.task.omen" }, "execution_order": 1 }
+    ]
+  },
+  {
+    "id": "showcase.auto_report",
+    "display_name": "通报：聚落完成归属切换",
+    "summary": "城·河口完成归属切换。无需拍板，已自动归档为通报并创建追踪任务。",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "automatic",
+    "repeat_policy": "repeatable",
+    "automatic_effects": [
+      { "effect_key": "task.create", "parameters": { "task_id": "showcase.task.report" }, "execution_order": 1 }
+    ]
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ActivityShowcase.Forced",
+    "description": "Showcase rail: offers the forced dispatch activity to the council scope.",
+    "scope": "map",
+    "params": []
+  },
+  {
+    "id": "ActivityShowcase.Pooled",
+    "description": "Showcase rail: draws from the pooled candidate distribution and offers the drawn activity.",
+    "scope": "map",
+    "params": []
+  },
+  {
+    "id": "ActivityShowcase.Automatic",
+    "description": "Showcase rail: offers the automatic dispatch activity which settles without options.",
+    "scope": "map",
+    "params": []
+  }
+]

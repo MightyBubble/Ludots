@@ -1,0 +1,114 @@
+[
+  {
+    "id": "showcase.task.hold",
+    "display_name": "决议：按兵不动",
+    "summary": "补给超限活动的结算产物——接受断补风险。",
+    "tags": ["showcase.activity"],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "hold_logged",
+        "kind": "signal",
+        "title": "等待下一次周期结算复查补给状态。",
+        "signal_key": "showcase.activity.hold_logged"
+      }
+    ]
+  },
+  {
+    "id": "showcase.task.withdraw",
+    "display_name": "决议：撤回野战单位",
+    "summary": "补给超限活动的结算产物——撤军令已下达。",
+    "tags": ["showcase.activity"],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "withdraw_done",
+        "kind": "signal",
+        "title": "等待撤回单位抵达后方锚点。",
+        "signal_key": "showcase.activity.withdraw_done"
+      }
+    ]
+  },
+  {
+    "id": "showcase.task.forward_camp",
+    "display_name": "决议：展开前进补给营地",
+    "summary": "补给超限活动的结算产物——前进营地开始铺设。",
+    "tags": ["showcase.activity"],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "camp_built",
+        "kind": "signal",
+        "title": "等待前进营地铺设完成。",
+        "signal_key": "showcase.activity.camp_built"
+      }
+    ]
+  },
+  {
+    "id": "showcase.task.caravan_pass",
+    "display_name": "决议：商队放行",
+    "summary": "过境商队活动的结算产物——商队已放行。",
+    "tags": ["showcase.activity"],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "caravan_left",
+        "kind": "signal",
+        "title": "等待商队离境。",
+        "signal_key": "showcase.activity.caravan_left"
+      }
+    ]
+  },
+  {
+    "id": "showcase.task.caravan_buy",
+    "display_name": "决议：收购给养",
+    "summary": "过境商队活动的结算产物——给养已入库。",
+    "tags": ["showcase.activity"],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "supplies_stored",
+        "kind": "signal",
+        "title": "等待给养入库登记。",
+        "signal_key": "showcase.activity.supplies_stored"
+      }
+    ]
+  },
+  {
+    "id": "showcase.task.omen",
+    "display_name": "通报：天象异闻已归档",
+    "summary": "池抽自动结算活动的产物——占星记录已归档。",
+    "tags": ["showcase.activity"],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "omen_filed",
+        "kind": "signal",
+        "title": "等待下一卷占星记录汇编。",
+        "signal_key": "showcase.activity.omen_filed"
+      }
+    ]
+  },
+  {
+    "id": "showcase.task.report",
+    "display_name": "通报：城·河口归属切换",
+    "summary": "自动通报活动的产物——归属变更已登记追踪。",
+    "tags": ["showcase.activity"],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "ownership_logged",
+        "kind": "signal",
+        "title": "等待行政司完成归属变更归档。",
+        "signal_key": "showcase.activity.ownership_logged"
+      }
+    ]
+  }
+]
