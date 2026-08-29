@@ -1,0 +1,18 @@
+[
+  {
+    "id": "gallery.op.offer_activity",
+    "display_name": "点名待办：补给超限",
+    "summary": "军需官点名带出的 gallery 演示活动，点名几次案头就摆几件，单层拍板。",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "forced",
+    "repeat_policy": "repeatable",
+    "options": [
+      {
+        "id": "hold",
+        "title": "按兵不动",
+        "body": "维持现状，稍后再议。",
+        "is_baseline": true
+      }
+    ]
+  }
+]

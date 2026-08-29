@@ -1,0 +1,11 @@
+[
+  {
+    "id": "activity.showcase_pool",
+    "stream": "activity_showcase",
+    "streamSeed": 20260828,
+    "entries": [
+      { "id": "showcase.pool_caravan", "weight": 60, "enabled": true },
+      { "id": "showcase.pool_omen", "weight": 40, "enabled": true }
+    ]
+  }
+]

@@ -1,0 +1,106 @@
+[
+  {
+    "id": "showcase.graph_op.OfferActivity",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "offer_on_load",
+        "event": "MapLoaded",
+        "start": "load_council"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "load_council",
+        "op": "LoadPlacedEntity",
+        "instanceId": "caster"
+      },
+      {
+        "id": "offer",
+        "op": "OfferActivity",
+        "activityId": "gallery.op.offer_activity"
+      },
+      {
+        "id": "read_count",
+        "op": "ReadMapVarInt",
+        "var": "gallery.offer_count"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "add",
+        "op": "AddInt"
+      },
+      {
+        "id": "write_count",
+        "op": "WriteMapVarInt",
+        "var": "gallery.offer_count"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "load_council",
+        "fromPort": "next",
+        "to": "offer"
+      },
+      {
+        "from": "offer",
+        "fromPort": "next",
+        "to": "read_count"
+      },
+      {
+        "from": "read_count",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "add"
+      },
+      {
+        "from": "add",
+        "fromPort": "next",
+        "to": "write_count"
+      },
+      {
+        "from": "write_count",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "load_council",
+        "fromPort": "value",
+        "to": "offer",
+        "toPort": "source"
+      },
+      {
+        "from": "read_count",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "b"
+      },
+      {
+        "from": "add",
+        "fromPort": "value",
+        "to": "write_count",
+        "toPort": "value"
+      }
+    ]
+  }
+]
