@@ -506,6 +506,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.TextKey, "textKey", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.OfferActivity:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.ActivityId, "activityId", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.StartDialogue:
                     RequireNonEmpty(node.DialogueId, "dialogueId", node, graphId, diagnostics);
                     break;
@@ -1418,6 +1423,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.LoadTextKey:
                     instruction.Imm = RequireSymbol(node.TextKey, "textKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.OfferActivity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.ActivityId, "activityId", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.StartDialogue:

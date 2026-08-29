@@ -12,7 +12,6 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Gameplay.FieldRegions;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
@@ -51,122 +50,10 @@ namespace Ludots.Adapter.Raylib
 {
     internal static class RaylibHostLoop
     {
-        private static VertexMapTerrainChunkMeshSource? _terrainSource;
 
         private const uint FlagWindowResizable = 4;
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
-        private static bool _uiPointerCaptured;
-        private static PointerButton? _uiCapturedPointerButton;
-        private static bool _hasLastUiPointerMove;
-        private static float _lastUiPointerMoveX;
-        private static float _lastUiPointerMoveY;
         private static bool _emptyBufferWarned;
-        private static readonly MouseButton[] MouseButtonsInPriorityOrder =
-        {
-            MouseButton.MOUSE_LEFT_BUTTON,
-            MouseButton.MOUSE_RIGHT_BUTTON,
-            MouseButton.MOUSE_MIDDLE_BUTTON
-        };
-        private static readonly KeyboardKey[] BrowserForwardedKeys =
-        {
-            KeyboardKey.KEY_ENTER,
-            KeyboardKey.KEY_TAB,
-            KeyboardKey.KEY_BACKSPACE,
-            KeyboardKey.KEY_DELETE,
-            KeyboardKey.KEY_ESCAPE,
-            KeyboardKey.KEY_LEFT,
-            KeyboardKey.KEY_RIGHT,
-            KeyboardKey.KEY_UP,
-            KeyboardKey.KEY_DOWN,
-            KeyboardKey.KEY_HOME,
-            KeyboardKey.KEY_END,
-            KeyboardKey.KEY_PAGE_UP,
-            KeyboardKey.KEY_PAGE_DOWN,
-            KeyboardKey.KEY_SPACE,
-            KeyboardKey.KEY_A,
-            KeyboardKey.KEY_B,
-            KeyboardKey.KEY_C,
-            KeyboardKey.KEY_D,
-            KeyboardKey.KEY_E,
-            KeyboardKey.KEY_F,
-            KeyboardKey.KEY_G,
-            KeyboardKey.KEY_H,
-            KeyboardKey.KEY_I,
-            KeyboardKey.KEY_J,
-            KeyboardKey.KEY_K,
-            KeyboardKey.KEY_L,
-            KeyboardKey.KEY_M,
-            KeyboardKey.KEY_N,
-            KeyboardKey.KEY_O,
-            KeyboardKey.KEY_P,
-            KeyboardKey.KEY_Q,
-            KeyboardKey.KEY_R,
-            KeyboardKey.KEY_S,
-            KeyboardKey.KEY_T,
-            KeyboardKey.KEY_U,
-            KeyboardKey.KEY_V,
-            KeyboardKey.KEY_W,
-            KeyboardKey.KEY_X,
-            KeyboardKey.KEY_Y,
-            KeyboardKey.KEY_Z,
-            KeyboardKey.KEY_ZERO,
-            KeyboardKey.KEY_ONE,
-            KeyboardKey.KEY_TWO,
-            KeyboardKey.KEY_THREE,
-            KeyboardKey.KEY_FOUR,
-            KeyboardKey.KEY_FIVE,
-            KeyboardKey.KEY_SIX,
-            KeyboardKey.KEY_SEVEN,
-            KeyboardKey.KEY_EIGHT,
-            KeyboardKey.KEY_NINE
-        };
-
-        private sealed class SyntheticUiPlayback
-        {
-            public bool Enabled { get; init; }
-
-            public int StartFrame { get; init; }
-
-            public int EndFrame { get; init; }
-
-            public float StartX { get; init; }
-
-            public float StartY { get; init; }
-
-            public float EndX { get; init; }
-
-            public float EndY { get; init; }
-
-            public int ScrollFrame { get; init; }
-
-            public float ScrollDeltaY { get; init; }
-
-            public int KeyFrame { get; init; }
-
-            public string Key { get; init; } = string.Empty;
-
-            public string KeyText { get; init; } = string.Empty;
-        }
-
-        private readonly record struct UiInputFrameResult(bool Handled, bool PointerCaptured, bool WheelCaptured);
-
-        /// <summary>
-        /// One driven present binding captured at drive time with the concrete camera pose the
-        /// presenter produced for it; the draw phase renders exactly one viewport per entry.
-        /// </summary>
-        private readonly record struct ViewportDrawFrame(
-            Ludots.Core.Client.PresentBindingDrawFrame Frame,
-            Camera3D Camera,
-            CameraRenderState3D CameraState);
-
-        internal static bool ShouldCaptureWorldPointer(
-            bool pointerCaptured,
-            bool wheelCaptured,
-            bool inputHandled)
-        {
-            return pointerCaptured || wheelCaptured || inputHandled;
-        }
-
         public static void Run(RaylibHostSetup setup)
         {
             Ludots.Raylib.Render.RenderDiagnostics.InfoSink = static message =>
@@ -196,6 +83,7 @@ namespace Ludots.Adapter.Raylib
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
             RaylibSoundConsumer? soundConsumer = null;
+            RaylibFrameRenderer? frameRenderer = null;
 
             var terrainRenderer = new RaylibTerrainRenderer
             {
@@ -203,7 +91,6 @@ namespace Ludots.Adapter.Raylib
                 VisibleRadius = 900f,
                 SimplifiedCliffRadius = 350f,
             };
-            _terrainSource = new VertexMapTerrainChunkMeshSource(engine.VertexMap);
             var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer(engine.VFS)
             {
                 VisibleRadiusCm = 140_000f,
@@ -265,12 +152,7 @@ namespace Ludots.Adapter.Raylib
                 screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
                 screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
                 engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
-                engine.SetService(
-                    CoreServiceKeys.ScreenRayProvider,
-                    (IScreenRayProvider)new PresentBindingScreenRayProvider(
-                        engine,
-                        screenRayProvider,
-                        () => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f));
+                engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
                 var cullingFocusOverride = new CameraCullingFocusOverride();
                 engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, cullingFocusOverride);
 
@@ -317,8 +199,6 @@ namespace Ludots.Adapter.Raylib
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
-                var discreteFieldProjector = new FieldDiscreteVisualProjector(
-                    RaylibFieldRenderPresenter.ResolveDiscreteOwnershipColorVector);
                 using var fieldRenderPresenter = new RaylibFieldRenderPresenter();
                 Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer navMeshPresentationBuffer =
                     engine.GetService(CoreServiceKeys.NavMeshPresentationBuffer)
@@ -374,7 +254,7 @@ namespace Ludots.Adapter.Raylib
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
                 engine.LoadStartupMap();
-                Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
+                Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
                     engine,
                     screenProjector,
                     screenRayProvider,
@@ -382,30 +262,35 @@ namespace Ludots.Adapter.Raylib
                     viewController,
                     cullingSystem);
 
+                frameRenderer = new RaylibFrameRenderer(
+                    engine,
+                    uiRoot,
+                    skiaRenderer,
+                    overlayCompositor,
+                    browserLayerRenderer,
+                    environmentRenderer,
+                    skyEnvironment,
+                    waterPass,
+                    frameLighting,
+                    terrainRenderer,
+                    visualHeightmapRenderer,
+                    fieldRenderPresenter,
+                    navMeshPresentationRenderer,
+                    navMeshPresentationBuffer,
+                    primitiveRenderer,
+                    debugDrawRenderer,
+                    benchmarkRenderer,
+                    globalFieldVisualBuffer,
+                    screenOverlayBuffer,
+                    presentationTiming);
+
                 int lastW = screenWidth;
                 int lastH = screenHeight;
-                string? screenshotPath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
                 string? diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
-                string? screenshotTargetPath = string.IsNullOrWhiteSpace(screenshotPath)
-                    ? null
-                    : Path.GetFullPath(screenshotPath);
-                string? screenshotFileName = string.IsNullOrWhiteSpace(screenshotTargetPath)
-                    ? null
-                    : Path.GetFileName(screenshotTargetPath);
-                int[] screenshotFrames = ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
-                int screenshotSequenceIndex = 0;
-                bool screenshotSequenceEnabled = screenshotFrames.Length > 0;
-                bool screenshotPending = !string.IsNullOrWhiteSpace(screenshotFileName) &&
-                                         (!screenshotSequenceEnabled || screenshotFrames.Length > 0);
-                int screenshotFrame = screenshotSequenceEnabled
-                    ? screenshotFrames[0]
-                    : int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
-                    ? Math.Max(1, parsedScreenshotFrame)
-                    : 60;
+                RaylibScreenshotEvidenceRecorder? screenshotRecorder = RaylibScreenshotEvidenceRecorder.TryCreateFromEnvironment();
                 int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
                     ? Math.Max(0, parsedAutoExitFrame)
                     : 0;
-                int minRuntimeMsBeforeScreenshot = ReadEnvIntOrDefault("LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT", 0);
                 int timingLogIntervalFrames = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES"), out int parsedTimingLogIntervalFrames)
                     ? Math.Max(0, parsedTimingLogIntervalFrames)
                     : 0;
@@ -421,10 +306,9 @@ namespace Ludots.Adapter.Raylib
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
-                SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
-                var presentFrames = new List<ViewportDrawFrame>(4);
+                var inputRouter = new RaylibHostInputRouter();
+            SyntheticUiPlayback syntheticUiPlayback = RaylibHostInputRouter.ReadSyntheticUiPlayback();
                 int frameIndex = 0;
-                string? navWalkabilityOverlayMapId = null;
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
@@ -460,6 +344,11 @@ namespace Ludots.Adapter.Raylib
                         float dt = Rl.GetFrameTime();
                         presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
+                        if (!ReadEnvBoolOrDefault("LUDOTS_RAYLIB_SHADOW", defaultValue: true))
+                        {
+                            renderDebug.DrawShadows = false;
+                        }
+
                         bool activeMapRequestsDeepBackground = ActiveMapHasTag(engine, MapTags.RaylibDeepBackground);
                         bool activeMapHidesDebugGuides = ActiveMapHasTag(engine, MapTags.RaylibHideDebugGuides);
                         IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
@@ -495,7 +384,7 @@ namespace Ludots.Adapter.Raylib
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();
-                            UiInputFrameResult uiInput = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath, syntheticInput);
+                            UiInputFrameResult uiInput = inputRouter.UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath, syntheticInput);
                             uiCaptured = uiInput.PointerCaptured;
                             uiWheelCaptured = uiInput.WheelCaptured;
                             uiInputHandled = uiInput.Handled;
@@ -505,22 +394,17 @@ namespace Ludots.Adapter.Raylib
                         presentationTiming?.ObserveUiInput(uiInputMs);
                         engine.SetService(
                             CoreServiceKeys.UiCaptured,
-                            ShouldCaptureWorldPointer(
+                            RaylibHostInputRouter.ShouldCaptureWorldPointer(
                                 uiCaptured,
                                 uiWheelCaptured,
                                 uiInputHandled));
                         engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
-                        Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
+                        Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
                             engine,
                             screenProjector,
                             screenRayProvider,
-                            viewController.Fov,
-                            viewController,
-                            cullingSystem);
-                        Ludots.Core.Client.PresentBindingPresentation.TryArmPresentBindingCullingPasses(
-                            engine,
                             viewController.Fov,
                             viewController,
                             cullingSystem);
@@ -540,7 +424,7 @@ namespace Ludots.Adapter.Raylib
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
                         {
-                            var authorityCamera = Ludots.Core.Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine);
+                            var authorityCamera = Ludots.Core.Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine);
                             CameraState cameraState = authorityCamera.State;
                             authorityCamera.ApplyPose(new CameraPoseRequest
                             {
@@ -554,22 +438,16 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-                        presentFrames.Clear();
-                        if (!Ludots.Core.Client.PresentBindingPresentation.TryDrivePresentBindings(
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncSolePresentPipeline(
                                 engine,
                                 cameraPresenter,
                                 screenProjector,
                                 screenRayProvider,
                                 cameraAlpha,
                                 viewController.Fov,
-                                drawBinding: (in Ludots.Core.Client.PresentBindingDrawFrame frame) =>
-                                {
-                                    presentFrames.Add(
-                                        new ViewportDrawFrame(frame, cameraAdapter.Camera, cameraPresenter.SmoothedRenderState));
-                                },
-                                cameraDebug: renderCameraDebug,
-                                hostView: viewController,
-                                culling: cullingSystem))
+                                renderCameraDebug,
+                                viewController,
+                                cullingSystem))
                         {
                             if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
                                 seats != null &&
@@ -579,7 +457,7 @@ namespace Ludots.Adapter.Raylib
                                     "ClientLocalSeatRegistry is published but PresentBinding pipeline failed to sync.");
                             }
 
-                            cameraPresenter.Update(ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine), cameraAlpha, renderCameraDebug);
+                            cameraPresenter.Update(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), cameraAlpha, renderCameraDebug);
                         }
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(
@@ -593,18 +471,6 @@ namespace Ludots.Adapter.Raylib
                             if (engine.TryGetService(CoreServiceKeys.VisionFogFieldStore, out FogFieldStore fogFieldsForProjection))
                             {
                                 fogFieldProjector.Project(fogFieldsForProjection, globalFieldVisualBuffer);
-                            }
-
-                            MapSession? fieldSession = engine.CurrentMapSession;
-                            if (fieldSession?.Fields != null)
-                            {
-                                FieldDiscreteVisualMapMode mapMode = ResolveDiscreteFieldMapMode(fieldSession);
-                                discreteFieldProjector.Project(
-                                    ResolveFieldScopeKeyId(fieldSession.MapId),
-                                    fieldSession.Fields,
-                                    fieldSession.RegionGroups,
-                                    in mapMode,
-                                    globalFieldVisualBuffer);
                             }
                         }
 
@@ -623,414 +489,30 @@ namespace Ludots.Adapter.Raylib
                         }
                         presentationTiming?.ObserveHostPostTick(ElapsedMs(postTickStart));
 
-                        long beginDrawingStart = Stopwatch.GetTimestamp();
-                        Rl.BeginDrawing();
-                        presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
-                        Restore3DDepthState();
-                        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
-                        skyEnvironment.EnsureActiveForMap(activeMapId);
-                        waterPass.EnsureActiveForMap(activeMapId);
-                        visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
-                        ConfigureNavWalkabilityOverlay(
-                            engine.CurrentMapSession,
-                            engine.VFS,
-                            visualHeightmapRenderer,
-                            renderDebug.DrawNavWalkabilityTexture,
-                            ref navWalkabilityOverlayMapId);
-                        Color frameClearColor = skyEnvironment.IsActive
-                            ? skyEnvironment.ResolveClearColor()
-                            : (activeMapRequestsDeepBackground
-                                ? new Raylib_cs.Color(6, 10, 16, 255)
-                                : new Raylib_cs.Color(0, 0, 0, 255));
-
                         var activeCamera = cameraAdapter.Camera;
-                        CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
-                        float windowAspect = MathF.Max(0.001f, lastW / (float)Math.Max(1, lastH));
-
-                        if (skyEnvironment.HasDayPhase)
-                        {
-                            frameLighting.SetDayPhase(skyEnvironment.DayPhase01);
-                        }
-                        else
-                        {
-                            frameLighting.Evaluate();
-                        }
-
-                        terrainRenderer.ApplyFrameLighting(frameLighting);
-                        visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
-                        primitiveRenderer.DrawSurfaceWireBoxes = drawDebugDraw;
-
-                        bool waterOnVisualHeightmap = waterPass.IsActive &&
-                                                      drawTerrain &&
-                                                      drawVisualHeightmap &&
-                                                      hasVisualHeightmap;
-                        bool waterOnVertexMap = waterPass.IsActive &&
-                                                drawTerrain &&
-                                                !waterOnVisualHeightmap &&
-                                                engine.VertexMap != null;
-                        bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
-                        bool postProcessWorldFrame = !waterFboEnabled;
-                        if (postProcessWorldFrame)
-                        {
-                            environmentRenderer.BeginWorldFrame(lastW, lastH, frameClearColor);
-                        }
-                        else
-                        {
-                            Rl.ClearBackground(frameClearColor);
-                        }
-                        if (waterFboEnabled)
-                        {
-                            waterPass.EnsureRenderTargets(lastW, lastH);
-                            waterPass.Advance(dt);
-
-                            Camera3D reflectionCamera = waterPass.BuildReflectionCamera(in activeCamera);
-                            waterPass.BeginReflectionPass(frameClearColor);
-                            Restore3DDepthState();
-                            BeginCoreMode3D(reflectionCamera, in activeCameraState, windowAspect);
-                            Restore3DDepthState();
-                            if (skyEnvironment.IsActive)
-                            {
-                                skyEnvironment.Draw(in reflectionCamera, in activeCameraState);
-                                Restore3DDepthState();
-                            }
-
-                            if (waterOnVisualHeightmap &&
-                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
-                                vhReflect is IVisualHeightmapRenderSource reflectSource)
-                            {
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
-                                visualHeightmapRenderer.DisplayHeightScale = reflectSource.RenderProfile.DisplayHeightScale;
-                                visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
-                            }
-                            else
-                            {
-                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine.VertexMap), reflectionCamera);
-                            }
-
-                            EndCoreMode3D();
-                            waterPass.EndPass();
-
-                            waterPass.BeginRefractionPass(frameClearColor);
-                            Restore3DDepthState();
-                            BeginCoreMode3D(activeCamera, in activeCameraState, windowAspect);
-                            Restore3DDepthState();
-                            if (skyEnvironment.IsActive)
-                            {
-                                skyEnvironment.Draw(in activeCamera, in activeCameraState);
-                                Restore3DDepthState();
-                            }
-
-                            if (waterOnVisualHeightmap &&
-                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhRefract) &&
-                                vhRefract is IVisualHeightmapRenderSource refractSource)
-                            {
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
-                                visualHeightmapRenderer.DisplayHeightScale = refractSource.RenderProfile.DisplayHeightScale;
-                                visualHeightmapRenderer.Render(refractSource, activeCamera);
-                            }
-                            else
-                            {
-                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine.VertexMap), activeCamera);
-                            }
-
-                            EndCoreMode3D();
-                            waterPass.EndPass();
-                        }
-
-                        long mode3DStart = Stopwatch.GetTimestamp();
-                        bool multiViewport = presentFrames.Count > 1;
-                        if (presentFrames.Count == 0)
-                        {
-                            // No-seat fallback frame: one fullscreen viewport on the current adapter camera.
-                            presentFrames.Add(new ViewportDrawFrame(default, activeCamera, activeCameraState));
-                        }
-
-                        for (int viewportIndex = 0; viewportIndex < presentFrames.Count; viewportIndex++)
-                        {
-                            ViewportDrawFrame viewport = presentFrames[viewportIndex];
-                            Camera3D viewportCamera = viewport.Camera;
-                            CameraRenderState3D viewportCameraState = viewport.CameraState;
-                            float viewportAspect = windowAspect;
-                            primitiveRenderer.ApplyFrameLighting(frameLighting, viewportCamera.position);
-                            if (multiViewport)
-                            {
-                                Vector4 viewportRect = viewport.Frame.Binding.NormalizedScreenRect;
-                                int scissorX = (int)MathF.Floor(viewportRect.X * lastW);
-                                int scissorY = (int)MathF.Floor(viewportRect.Y * lastH);
-                                int scissorW = Math.Max(1, (int)MathF.Ceiling(viewportRect.Z * lastW));
-                                int scissorH = Math.Max(1, (int)MathF.Ceiling(viewportRect.W * lastH));
-                                Rl.BeginScissorMode(scissorX, scissorY, scissorW, scissorH);
-                                viewportAspect = MathF.Max(0.001f, scissorW / (float)scissorH);
-                            }
-
-                            Restore3DDepthState();
-                            BeginCoreMode3D(viewportCamera, in viewportCameraState, viewportAspect);
-                            Restore3DDepthState();
-
-                            if (skyEnvironment.IsActive)
-                            {
-                                skyEnvironment.Draw(in viewportCamera, in viewportCameraState);
-                                Restore3DDepthState();
-                            }
-
-                            if (drawDebugDraw &&
-                                !(drawVisualHeightmap && hasVisualHeightmap) &&
-                                !hostDebugGuidesSuppressed)
-                            {
-                                DrawInfiniteGrid(viewportCamera.target, 300, 1.0f, 10);
-
-                                var target = viewportCamera.target;
-                                Rl.DrawLine3D(target, target + new Vector3(2.0f, 0, 0), Color.RED);
-                                Rl.DrawLine3D(target, target + new Vector3(0, 0, 2.0f), Color.BLUE);
-                                Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
-                            }
-
-                            if (drawVisualHeightmap &&
-                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
-                                visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
-                            {
-                                long terrainStart = Stopwatch.GetTimestamp();
-                                // Absolute elevation tint keeps continental land readable even when the
-                                // reflective water pass is off; water FBO still overrides sea from the plane.
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm =
-                                    visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
-                                visualHeightmapRenderer.DisplayHeightScale =
-                                    visualTerrainSource.RenderProfile.DisplayHeightScale;
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterOnVisualHeightmap
-                                    ? waterPass.WaterPlaneY * 100f
-                                    : visualTerrainSource.RenderProfile.SeaLevelCm;
-
-                                visualHeightmapRenderer.Render(visualTerrainSource, viewportCamera);
-
-                                if (waterOnVisualHeightmap)
-                                {
-                                    terrainRenderer.EnsureWaterShadersReady();
-                                    terrainRenderer.BindReflectiveWater(waterPass);
-                                    // Half-extent covers the island board (~1.28km); plane follows camera target XZ.
-                                    terrainRenderer.DrawReflectiveOceanPlane(
-                                        waterPass.WaterPlaneY,
-                                        halfExtentMeters: 900f,
-                                        in viewportCamera);
-                                }
-                                else
-                                {
-                                    terrainRenderer.ClearReflectiveWater();
-                                }
-
-                                presentationTiming?.ObserveTerrain(
-                                    ElapsedMs(terrainStart),
-                                    visualHeightmapRenderer.ChunkBuildMsLastFrame,
-                                    visualHeightmapRenderer.DrawnChunkCountLastFrame,
-                                    visualHeightmapRenderer.BuiltChunkCountLastFrame);
-                            }
-                            else if (drawTerrain)
-                            {
-                                long terrainStart = Stopwatch.GetTimestamp();
-                                if (waterOnVertexMap)
-                                {
-                                    terrainRenderer.BindReflectiveWater(waterPass);
-                                }
-                                else
-                                {
-                                    terrainRenderer.ClearReflectiveWater();
-                                }
-
-                                terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), viewportCamera);
-                                presentationTiming?.ObserveTerrain(
-                                    ElapsedMs(terrainStart),
-                                    terrainRenderer.ChunkBuildMsLastFrame,
-                                    terrainRenderer.DrawnChunkCountLastFrame,
-                                    terrainRenderer.BuiltChunkCountLastFrame);
-                            }
-                            else
-                            {
-                                presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
-                            }
-
-                            if (drawNavMeshOverlay)
-                            {
-                                navMeshPresentationRenderer.Draw(navMeshPresentationBuffer);
-                                if (viewportIndex == 0)
-                                {
-                                    // Window-anchored overlay text is composited once for the whole frame.
-                                    screenOverlayBuffer?.AddText(
-                                        10,
-                                        40,
-                                        navMeshPresentationBuffer.FormatMetadataLine(),
-                                        14,
-                                        new Vector4(1f, 0.92f, 0.5f, 1f));
-                                }
-                            }
-
-                            if (engine.TryGetService(
-                                    CoreServiceKeys.VisualHeightmap,
-                                    out IVisualHeightmap? fieldHeightSampleSource))
-                            {
-                                fieldRenderPresenter.HeightSampleSource = fieldHeightSampleSource;
-                                // Match RaylibVisualHeightmapRenderer mesh Y (heightCm * 0.01f) — that path
-                                // does not multiply DisplayHeightScale, so neither does the drape.
-                                fieldRenderPresenter.HeightSampleDisplayScale = 1f;
-                            }
-                            else
-                            {
-                                fieldRenderPresenter.HeightSampleSource = null;
-                                fieldRenderPresenter.HeightSampleDisplayScale = 1f;
-                            }
-
-                            if (drawFieldOverlays && globalFieldVisualBuffer != null)
-                            {
-                                long fieldRenderStart = Stopwatch.GetTimestamp();
-                                fieldRenderPresenter.Draw(globalFieldVisualBuffer);
-                                presentationTiming?.ObserveGlobalFieldRender(
-                                    ElapsedMs(fieldRenderStart),
-                                    fieldRenderPresenter.LastFieldTextureCount,
-                                    fieldRenderPresenter.LastDirtyUploadCount,
-                                    fieldRenderPresenter.LastDirtyUploadArea,
-                                    fieldRenderPresenter.LastDrawCount);
-                            }
-                            else
-                            {
-                                presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
-                            }
-
-                            // Benchmark ISM bridge and performer primitive/skinned lanes are independent.
-                            // Drawing the benchmark scene must not skip GpuSkinnedInstance / host material / VFX.
-                            if (benchmarkRenderer != null)
-                            {
-                                _ = benchmarkRenderer.Draw(viewportCamera);
-                            }
-
-                            if (drawPrimitives &&
-                                engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
-                                engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
-                            {
-                                if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
-                                {
-                                    System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D presenters emitting?");
-                                    _emptyBufferWarned = true;
-                                }
-                                long primitiveStart = Stopwatch.GetTimestamp();
-                                PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
-                                SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
-                                if (visualHeightmap != null)
-                                {
-                                    visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
-                                    terrainRenderer.BindStampHeightSampleSource(visualHeightmap);
-                                }
-
-                                primitiveRenderer.Draw(
-                                    draw,
-                                    viewportCamera,
-                                    snapshot,
-                                    skinnedBatch,
-                                    meshes,
-                                    renderDebug.AcceptanceScaleMultiplier,
-                                    visualHeightmap,
-                                    runtimeStopwatch.Elapsed.TotalSeconds);
-                                presentationTiming?.ObservePrimitiveRender(
-                                    ElapsedMs(primitiveStart),
-                                    primitiveRenderer.LastInstancedInstances,
-                                    primitiveRenderer.LastInstancedBatches,
-                                    primitiveRenderer.LastInstancedMatrixBuildMs,
-                                    primitiveRenderer.LastInstancedMeshDrawMs,
-                                    primitiveRenderer.LastInstancedMatrixCacheHits,
-                                    primitiveRenderer.LastInstancedMatrixCacheMisses,
-                                    primitiveRenderer.LastPersistentSyncMs,
-                                    primitiveRenderer.LastPersistentBucketDrawMs,
-                                    primitiveRenderer.LastImmediateDrawMs,
-                                    primitiveRenderer.LastImmediateSkippedCount,
-                                    skinnedBatch?.Count ?? 0,
-                                    primitiveRenderer.LastGpuSkinnedInstances,
-                                    primitiveRenderer.LastGpuSkinnedBatches,
-                                    primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
-                                    primitiveRenderer.LastGpuSkinnedMeshDrawMs);
-                            }
-                            else
-                            {
-                                presentationTiming?.ObservePrimitiveRender(0d, 0, 0);
-                            }
-
-                            // Draw ground overlays (range circles, cones, etc.)
-                            if (!cleanPerformanceMode &&
-                                engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
-                                overlays.Count > 0)
-                            {
-                                long groundOverlayStart = Stopwatch.GetTimestamp();
-                                RaylibWorldOverlayRenderer.DrawGroundOverlays(overlays);
-                                presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
-                            }
-                            else
-                            {
-                                presentationTiming?.ObserveGroundOverlayRender(0d, 0);
-                            }
-
-                            if (!cleanPerformanceMode &&
-                                engine.GlobalContext.TryGetValue(CoreServiceKeys.SplineRibbonBuffer.Name, out var splineObj) &&
-                                splineObj is SplineRibbonBuffer splineRibbons && splineRibbons.Count > 0)
-                            {
-                                long splineRibbonStart = Stopwatch.GetTimestamp();
-                                RaylibWorldOverlayRenderer.DrawSplineRibbons(splineRibbons);
-                                presentationTiming?.ObserveSplineRibbonRender(ElapsedMs(splineRibbonStart), splineRibbons.Count);
-                            }
-                            else
-                            {
-                                presentationTiming?.ObserveSplineRibbonRender(0d, 0);
-                            }
-
-                            if (drawDebugDraw &&
-                                engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
-                            {
-                                long debugDrawStart = Stopwatch.GetTimestamp();
-                                debugDrawRenderer.Draw(dd);
-                                presentationTiming?.ObserveDebugDrawRender(
-                                    ElapsedMs(debugDrawStart),
-                                    dd.Lines.Count + dd.Circles.Count + dd.Boxes.Count);
-                            }
-                            else
-                            {
-                                presentationTiming?.ObserveDebugDrawRender(0d, 0);
-                            }
-
-                            EndCoreMode3D();
-                            if (multiViewport)
-                            {
-                                Rl.EndScissorMode();
-                            }
-                        }
-
-                        presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
-                        if (postProcessWorldFrame)
-                        {
-                            environmentRenderer.EndWorldFrame(runtimeStopwatch.Elapsed.TotalSeconds);
-                        }
-
-                        if (drawSkiaUi)
-                        {
-                            browserLayerRenderer.Render(uiRoot.Scene, lastW, lastH);
-                        }
-
-                        long overlayStart = Stopwatch.GetTimestamp();
-                        OverlayCompositeResult overlayResult = overlayCompositor.Render(
-                            overlayScene,
-                            uiRoot,
-                            skiaRenderer,
-                            drawSkiaUi,
-                            hostDiagnosticUiSuppressed);
-                        presentationTiming?.ObserveUiRender(overlayResult.UiRenderMs);
-                        presentationTiming?.ObserveUiUpload(overlayResult.UploadMs);
-                        presentationTiming?.ObserveCompositeSkip(!overlayResult.RefreshComposite);
-                        screenOverlayBuffer?.Clear();
-                        presentationTiming?.ObserveScreenOverlayDraw(
-                            ElapsedMs(overlayStart),
-                            overlayResult.PaintMs,
-                            overlayResult.CompositeMs,
-                            overlayResult.UploadMs,
-                            overlayResult.FinalDrawMs,
-                            overlayCompositor.OverlayRenderer.RebuiltLaneCountLastFrame,
-                            overlayCompositor.OverlayRenderer.CachedTextLayoutCount);
+                        var renderFrame = new RaylibRenderFrame(
+                            ActiveCamera: activeCamera,
+                            ActiveCameraState: cameraPresenter.SmoothedRenderState,
+                            RenderDebug: renderDebug,
+                            OverlayScene: overlayScene,
+                            Width: lastW,
+                            Height: lastH,
+                            TimeSeconds: runtimeStopwatch.Elapsed.TotalSeconds,
+                            DeltaSeconds: dt,
+                            ActiveMapRequestsDeepBackground: activeMapRequestsDeepBackground,
+                            HostDebugGuidesSuppressed: hostDebugGuidesSuppressed,
+                            DrawTerrain: drawTerrain,
+                            DrawVisualHeightmap: drawVisualHeightmap,
+                            HasVisualHeightmap: hasVisualHeightmap,
+                            DrawPrimitives: drawPrimitives,
+                            DrawDebugDraw: drawDebugDraw,
+                            DrawFieldOverlays: drawFieldOverlays,
+                            DrawSkiaUi: drawSkiaUi,
+                            DrawNavMeshOverlay: drawNavMeshOverlay,
+                            CleanPerformanceMode: cleanPerformanceMode,
+                            HostDiagnosticUiSuppressed: hostDiagnosticUiSuppressed,
+                            EmptyBufferWarned: _emptyBufferWarned);
+                        _emptyBufferWarned = frameRenderer.RenderFrame(renderFrame).EmptyBufferWarned;
                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
                         {
                             SkiaOverlayRenderer overlaySkiaRenderer = overlayCompositor.OverlayRenderer;
@@ -1043,7 +525,7 @@ namespace Ludots.Adapter.Raylib
                         if (drawLightweightDiagnosticHud)
                         {
                             long nativeDiagnosticStart = Stopwatch.GetTimestamp();
-                            DrawLightweightDiagnosticHud(engine, presentationTiming);
+                            RaylibDiagnosticHud.Draw(engine, presentationTiming);
                             presentationTiming?.ObserveNativeDiagnosticHud(ElapsedMs(nativeDiagnosticStart));
                         }
                         else
@@ -1069,50 +551,31 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                         }
 
-                        if (screenshotPending && frameIndex >= screenshotFrame &&
-                            runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
+                        if (screenshotRecorder != null &&
+                            screenshotRecorder.ShouldCapture(frameIndex, runtimeStopwatch.ElapsedMilliseconds))
                         {
-                            string fullScreenshotPath = screenshotSequenceEnabled
-                                ? BuildSequencedScreenshotPath(screenshotTargetPath!, screenshotSequenceIndex, screenshotFrame)
-                                : screenshotTargetPath!;
-
-                            AppendRaylibDiagnostic(
-                                diagnosticPath,
-                                $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
-                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
-                            AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
-                            if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshesForDiagnostics))
-                            {
-                                AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(meshesForDiagnostics));
-                            }
-
-                            AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
-
-                            long screenshotStart = Stopwatch.GetTimestamp();
-                            RaylibFramebufferCapture.WriteFramebufferPng(fullScreenshotPath);
-                            ValidateRuntimeScreenshotEvidence(
-                                fullScreenshotPath,
-                                Math.Max(1, Rl.GetRenderWidth()),
-                                Math.Max(1, Rl.GetRenderHeight()));
-                            presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
-
-                            if (screenshotSequenceEnabled)
-                            {
-                                screenshotSequenceIndex++;
-                                screenshotPending = screenshotSequenceIndex < screenshotFrames.Length;
-                                if (screenshotPending)
+                            double screenshotElapsedMs = screenshotRecorder.CaptureFrame(
+                                frameIndex,
+                                lastW,
+                                lastH,
+                                writeDiagnostics: () =>
                                 {
-                                    screenshotFrame = screenshotFrames[screenshotSequenceIndex];
-                                }
-                            }
-                            else
-                            {
-                                screenshotPending = false;
-                            }
-                            Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
+                                    AppendRaylibDiagnostic(
+                                        diagnosticPath,
+                                        $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
+                                    AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                                    AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
+                                    if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshesForDiagnostics))
+                                    {
+                                        AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(meshesForDiagnostics));
+                                    }
+
+                                    AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
+                                });
+                            presentationTiming?.ObserveScreenshot(screenshotElapsedMs);
                         }
 
-                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame && !screenshotPending)
+                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame && screenshotRecorder?.Pending != true)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
@@ -1128,6 +591,7 @@ namespace Ludots.Adapter.Raylib
             }
             finally
             {
+                frameRenderer?.Dispose();
                 soundConsumer?.Dispose();
                 if (windowOpened) Rl.CloseWindow();
                 terrainRenderer.Dispose();
@@ -1158,74 +622,9 @@ namespace Ludots.Adapter.Raylib
             consumer.InitializeDevice();
             return consumer;
         }
-
-        private static unsafe void BeginCoreMode3D(in Camera3D camera, in CameraRenderState3D cameraState, float viewportAspect)
+        internal static void AppendRaylibDiagnostic(string? diagnosticPath, string message)
         {
-            Rl.rlDrawRenderBatchActive();
-            Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
-            Rl.rlPushMatrix();
-            Rl.rlLoadIdentity();
-
-            CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in cameraState);
-            float aspect = MathF.Max(0.001f, viewportAspect);
-            if (camera.projection == CameraProjection.CAMERA_ORTHOGRAPHIC)
-            {
-                double top = camera.fovy / 2.0;
-                double right = top * aspect;
-                Rl.rlOrtho(-right, right, -top, top, clipPlanes.NearMeters, clipPlanes.FarMeters);
-            }
-            else
-            {
-                double top = clipPlanes.NearMeters * Math.Tan(WorldPlane2D.DegToRadValue(camera.fovy) * 0.5);
-                double right = top * aspect;
-                Rl.rlFrustum(-right, right, -top, top, clipPlanes.NearMeters, clipPlanes.FarMeters);
-            }
-
-            Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
-            Rl.rlLoadIdentity();
-            Matrix4x4 view = Matrix4x4.CreateLookAt(camera.position, camera.target, camera.up);
-            RaylibMatrix raylibView = RaylibMatrix.FromSystemNumerics(in view);
-            MultMatrix(in raylibView);
-            Rl.rlEnableDepthTest();
-        }
-
-        private static unsafe void MultMatrix(in RaylibMatrix matrix)
-        {
-            float* values = stackalloc float[16]
-            {
-                matrix.m0, matrix.m1, matrix.m2, matrix.m3,
-                matrix.m4, matrix.m5, matrix.m6, matrix.m7,
-                matrix.m8, matrix.m9, matrix.m10, matrix.m11,
-                matrix.m12, matrix.m13, matrix.m14, matrix.m15
-            };
-            Rl.rlMultMatrixf(values);
-        }
-
-        private static void EndCoreMode3D()
-        {
-            Rl.rlDrawRenderBatchActive();
-            Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
-            Rl.rlPopMatrix();
-            Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
-            Rl.rlLoadIdentity();
-            Rl.rlDisableDepthTest();
-        }
-
-        private static void AppendRaylibDiagnostic(string? diagnosticPath, string message)
-        {
-            if (string.IsNullOrWhiteSpace(diagnosticPath))
-            {
-                return;
-            }
-
-            string fullPath = Path.GetFullPath(diagnosticPath);
-            string? directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
+            RaylibAdapterEnv.AppendDiagnostic(diagnosticPath, message);
         }
 
         private static bool IsCleanPerformanceScene(IBenchmarkSceneController? benchmarkController)
@@ -1254,18 +653,9 @@ namespace Ludots.Adapter.Raylib
             return false;
         }
 
-        private static bool ReadEnvBoolOrDefault(string key, bool defaultValue)
+        internal static bool ReadEnvBoolOrDefault(string key, bool defaultValue)
         {
-            string? raw = Environment.GetEnvironmentVariable(key);
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                return defaultValue;
-            }
-
-            return raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+            return RaylibAdapterEnv.ReadEnvBoolOrDefault(key, defaultValue);
         }
 
         /// Instanced DrawMeshInstanced can crash on some software GL stacks when Material.maps is null.
@@ -1365,246 +755,15 @@ namespace Ludots.Adapter.Raylib
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate IntPtr GlGetStringDelegate(int name);
 
-        private static int[] ReadEnvFrameList(string key)
+
+        internal static int ReadEnvIntOrDefault(string key, int defaultValue)
         {
-            string? raw = Environment.GetEnvironmentVariable(key);
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                return Array.Empty<int>();
-            }
-
-            string[] parts = raw.Split(
-                new[] { ',', ';', ' ', '\t', '\r', '\n' },
-                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var frames = new List<int>(parts.Length);
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (int.TryParse(parts[i], out int frame))
-                {
-                    frames.Add(Math.Max(1, frame));
-                }
-            }
-
-            return frames.ToArray();
+            return RaylibAdapterEnv.ReadEnvIntOrDefault(key, defaultValue);
         }
 
-        private static string BuildSequencedScreenshotPath(string targetPath, int sequenceIndex, int frame)
+        internal static float ReadEnvFloatOrDefault(string key, float defaultValue)
         {
-            string directory = Path.GetDirectoryName(targetPath) ?? string.Empty;
-            string extension = Path.GetExtension(targetPath);
-            if (string.IsNullOrWhiteSpace(extension))
-            {
-                extension = ".png";
-            }
-
-            string fileName = Path.GetFileNameWithoutExtension(targetPath);
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                fileName = "screenshot";
-            }
-
-            string sequencedFileName = $"{fileName}_{sequenceIndex + 1:000}_f{frame:0000}{extension}";
-            return string.IsNullOrWhiteSpace(directory)
-                ? Path.GetFullPath(sequencedFileName)
-                : Path.Combine(directory, sequencedFileName);
-        }
-
-        private static SyntheticUiPlayback ReadSyntheticUiPlayback()
-        {
-            bool enabled = ReadEnvBoolOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_PLAYBACK", defaultValue: false);
-            int startFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_FRAME", 180);
-            int endFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_FRAME", 260);
-            if (endFrame <= startFrame)
-            {
-                endFrame = startFrame + 1;
-            }
-
-            return new SyntheticUiPlayback
-            {
-                Enabled = enabled,
-                StartFrame = startFrame,
-                EndFrame = endFrame,
-                StartX = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_X", 190f),
-                StartY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_Y", 205f),
-                EndX = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_X", 310f),
-                EndY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_Y", 270f),
-                ScrollFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_FRAME", -1),
-                ScrollDeltaY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_DELTA_Y", 0f),
-                KeyFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY_FRAME", -1),
-                Key = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY") ?? string.Empty,
-                KeyText = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY_TEXT") ?? string.Empty
-            };
-        }
-
-        private static int ReadEnvIntOrDefault(string key, int defaultValue)
-        {
-            return int.TryParse(Environment.GetEnvironmentVariable(key), out int value)
-                ? value
-                : defaultValue;
-        }
-
-        private static float ReadEnvFloatOrDefault(string key, float defaultValue)
-        {
-            return float.TryParse(Environment.GetEnvironmentVariable(key), out float value)
-                ? value
-                : defaultValue;
-        }
-
-        private static void DrawLightweightDiagnosticHud(GameEngine engine, PresentationTimingDiagnostics? timing)
-        {
-            if (timing == null)
-            {
-                return;
-            }
-
-            ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
-            WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
-            Ludots.Core.Gameplay.GAS.EffectRequestQueue? effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
-            float frameMs = timing.LastWallFrameMs > 0.001f
-                ? timing.LastWallFrameMs
-                : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
-            float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
-            string line1 = $"FPS {FormatFixed(fps, 4, 0)}  FRAME {FormatFixed(frameMs, 5, 1)}MS  TICK {FormatFixed(timing.LastTotalTickMs, 5, 1)}MS";
-            string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  FIELD {FormatFixed(timing.GlobalFieldTexturesLastFrame, 4)}/{FormatFixed(timing.GlobalFieldDirtyUploadsLastFrame, 4)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
-            string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
-            string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPresenterEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPresenterBehaviorMs, 5, 1)}MS";
-            string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  AVL {FormatFixed(effectRequests?.AvailableCapacity ?? 0, 6)}";
-
-            const int x = 10;
-            const int y = 10;
-            const int fontSize = 20;
-            const int lineHeight = 25;
-            const int panelWidth = 720;
-            const int panelHeight = 137;
-            var background = new Color(0, 0, 0, 238);
-            var border = new Color(80, 255, 150, 255);
-            Rl.DrawRectangle(x - 8, y - 8, panelWidth, panelHeight, background);
-            Rl.DrawRectangleLines(x - 8, y - 8, panelWidth, panelHeight, border);
-            DrawDiagnosticText(line1, x, y, fontSize, new Color(215, 255, 220, 255));
-            DrawDiagnosticText(line2, x, y + lineHeight, fontSize, new Color(220, 240, 255, 255));
-            DrawDiagnosticText(line3, x, y + lineHeight * 2, fontSize, new Color(255, 245, 185, 255));
-            DrawDiagnosticText(line4, x, y + lineHeight * 3, fontSize, new Color(245, 210, 255, 255));
-            DrawDiagnosticText(line5, x, y + lineHeight * 4, fontSize, new Color(255, 215, 180, 255));
-        }
-
-        private static string FormatFixed(float value, int width, int decimals)
-        {
-            string text = decimals <= 0 ? value.ToString("F0") : value.ToString($"F{decimals}");
-            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
-        }
-
-        private static string FormatFixed(double value, int width, int decimals)
-        {
-            string text = decimals <= 0 ? value.ToString("F0") : value.ToString($"F{decimals}");
-            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
-        }
-
-        private static string FormatFixed(int value, int width)
-        {
-            string text = value.ToString();
-            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
-        }
-
-        private static void DrawDiagnosticText(string text, int x, int y, int fontSize, Color color)
-        {
-            _ = fontSize;
-            DrawBitmapText(text, x + 2, y + 2, 2, new Color(0, 0, 0, 255));
-            DrawBitmapText(text, x, y, 2, color);
-        }
-
-        private static void DrawBitmapText(string text, int x, int y, int scale, Color color)
-        {
-            int cursor = x;
-            for (int i = 0; i < text.Length; i++)
-            {
-                char c = char.ToUpperInvariant(text[i]);
-                if (c == ' ')
-                {
-                    cursor += 4 * scale;
-                    continue;
-                }
-
-                ulong glyph = GetDiagnosticGlyph(c);
-                for (int row = 0; row < 7; row++)
-                {
-                    int bits = (int)((glyph >> ((6 - row) * 5)) & 0b11111UL);
-                    for (int col = 0; col < 5; col++)
-                    {
-                        if ((bits & (1 << (4 - col))) == 0)
-                        {
-                            continue;
-                        }
-
-                        Rl.DrawRectangle(cursor + col * scale, y + row * scale, scale, scale, color);
-                    }
-                }
-
-                cursor += 6 * scale;
-            }
-        }
-
-        private static ulong PackDiagnosticGlyph(int r0, int r1, int r2, int r3, int r4, int r5, int r6)
-        {
-            return (((ulong)r0 & 0b11111UL) << 30) |
-                   (((ulong)r1 & 0b11111UL) << 25) |
-                   (((ulong)r2 & 0b11111UL) << 20) |
-                   (((ulong)r3 & 0b11111UL) << 15) |
-                   (((ulong)r4 & 0b11111UL) << 10) |
-                   (((ulong)r5 & 0b11111UL) << 5) |
-                   ((ulong)r6 & 0b11111UL);
-        }
-
-        private static ulong GetDiagnosticGlyph(char c)
-        {
-            return c switch
-            {
-                'A' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001),
-                'B' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110),
-                'C' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b01111),
-                'D' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110),
-                'E' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111),
-                'F' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000),
-                'G' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b10111, 0b10001, 0b10001, 0b01111),
-                'H' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001),
-                'I' => PackDiagnosticGlyph(0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b11111),
-                'K' => PackDiagnosticGlyph(0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001),
-                'L' => PackDiagnosticGlyph(0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111),
-                'M' => PackDiagnosticGlyph(0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001),
-                'N' => PackDiagnosticGlyph(0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001),
-                'O' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110),
-                'P' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000),
-                'R' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001),
-                'S' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110),
-                'T' => PackDiagnosticGlyph(0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100),
-                'U' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110),
-                'V' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b01010, 0b00100),
-                'W' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b10101, 0b01010),
-                'X' => PackDiagnosticGlyph(0b10001, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b10001),
-                'Y' => PackDiagnosticGlyph(0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100),
-                '0' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110),
-                '1' => PackDiagnosticGlyph(0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110),
-                '2' => PackDiagnosticGlyph(0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111),
-                '3' => PackDiagnosticGlyph(0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110),
-                '4' => PackDiagnosticGlyph(0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010),
-                '5' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b00001, 0b00001, 0b11110),
-                '6' => PackDiagnosticGlyph(0b01110, 0b10000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110),
-                '7' => PackDiagnosticGlyph(0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000),
-                '8' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110),
-                '9' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b01110),
-                '.' => PackDiagnosticGlyph(0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b01100, 0b01100),
-                '/' => PackDiagnosticGlyph(0b00001, 0b00010, 0b00010, 0b00100, 0b01000, 0b01000, 0b10000),
-                '-' => PackDiagnosticGlyph(0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000),
-                ':' => PackDiagnosticGlyph(0b00000, 0b01100, 0b01100, 0b00000, 0b01100, 0b01100, 0b00000),
-                '|' => PackDiagnosticGlyph(0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100),
-                _ => PackDiagnosticGlyph(0b11111, 0b10001, 0b00001, 0b00110, 0b00100, 0b00000, 0b00100),
-            };
-        }
-
-        private static void Restore3DDepthState()
-        {
-            Rl.rlEnableDepthTest();
-            Rl.rlEnableDepthMask();
-            Rl.rlEnableBackfaceCulling();
+            return RaylibAdapterEnv.ReadEnvFloatOrDefault(key, defaultValue);
         }
 
         private static string BuildTimingDiagnostic(
@@ -1660,516 +819,6 @@ namespace Ludots.Adapter.Raylib
 
             throw new InvalidOperationException($"Required service missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
         }
-
-        internal static void ConfigureNavWalkabilityOverlay(
-            MapSession? session,
-            IRenderAssetPathResolver assetPaths,
-            RaylibVisualHeightmapRenderer renderer,
-            bool enabled,
-            ref string? configuredMapId)
-        {
-            if (!enabled)
-            {
-                renderer.ClearNavWalkabilityOverlay();
-                configuredMapId = null;
-                return;
-            }
-
-            MapConfig mapConfig = session?.MapConfig
-                ?? throw new InvalidOperationException(
-                    "DrawNavWalkabilityTexture requires an active map session.");
-            if (renderer.NavWalkabilityOverlayActive &&
-                string.Equals(configuredMapId, mapConfig.Id, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            NavWalkabilityOverlayDescriptor descriptor =
-                NavWalkabilityOverlayDescriptorResolver.ResolveOrThrow(mapConfig, assetPaths);
-            renderer.SetNavWalkabilityOverlay(
-                descriptor.TextureUri,
-                descriptor.BoundsCm,
-                enabled: true);
-            configuredMapId = mapConfig.Id;
-        }
-
-        private static UiInputFrameResult UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath, SyntheticInputDevice? syntheticInput)
-        {
-            if (syntheticUiPlayback.Enabled &&
-                HandleSyntheticUiPlayback(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath) is { Handled: true } syntheticResult)
-            {
-                ForwardKeyboardInput(uiRoot, syntheticInput);
-                return syntheticResult;
-            }
-
-            var mousePos = syntheticInput is { HasPointerOverride: true } ? syntheticInput.PointerPosition : Rl.GetMousePosition();
-            bool windowFocused = Rl.IsWindowFocused() || syntheticInput is { HasPointerOverride: true };
-            float mouseWheel = Rl.GetMouseWheelMove() + (syntheticInput?.WheelDeltaThisFrame ?? 0f);
-            UiNode? hitNode = _uiPointerCaptured ? null : uiRoot.Scene?.HitTest(mousePos.X, mousePos.Y);
-            bool hitInteractiveUi = !_uiPointerCaptured && IsInteractiveUiNode(hitNode);
-            bool uiWheelCaptured = false;
-            bool uiInputHandled = false;
-
-            if (_uiPointerCaptured)
-            {
-                bool capturedButtonDown = _uiCapturedPointerButton.HasValue &&
-                    (Rl.IsMouseButtonDown(ToMouseButton(_uiCapturedPointerButton.Value)) ||
-                     (syntheticInput?.IsButtonDown(RaylibInputBackend.ToSyntheticButton(ToMouseButton(_uiCapturedPointerButton.Value))) ?? false));
-                bool capturedButtonReleased = _uiCapturedPointerButton.HasValue &&
-                    (Rl.IsMouseButtonReleased(ToMouseButton(_uiCapturedPointerButton.Value)) ||
-                     (syntheticInput?.WasButtonReleasedThisFrame(RaylibInputBackend.ToSyntheticButton(ToMouseButton(_uiCapturedPointerButton.Value))) ?? false));
-
-                if (!windowFocused || (!_uiCapturedPointerButton.HasValue && !capturedButtonDown && !capturedButtonReleased) || capturedButtonReleased)
-                {
-                    if (windowFocused && _uiCapturedPointerButton.HasValue && capturedButtonReleased)
-                    {
-                        uiInputHandled |= uiRoot.HandleInput(new PointerEvent
-                        {
-                            DeviceType = InputDeviceType.Mouse,
-                            PointerId = 0,
-                            Action = PointerAction.Up,
-                            Button = _uiCapturedPointerButton.Value,
-                            X = mousePos.X,
-                            Y = mousePos.Y
-                        });
-                    }
-
-                    _uiPointerCaptured = false;
-                    _uiCapturedPointerButton = null;
-                    ResetUiPointerMoveCache();
-                }
-            }
-
-            if ((_uiPointerCaptured || hitInteractiveUi) && ShouldForwardUiPointerMove(mousePos.X, mousePos.Y))
-            {
-                uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Move,
-                    Button = _uiCapturedPointerButton,
-                    X = mousePos.X,
-                    Y = mousePos.Y
-                });
-            }
-
-            if ((_uiPointerCaptured || hitInteractiveUi) && Math.Abs(mouseWheel) > float.Epsilon)
-            {
-                uiWheelCaptured = uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Scroll,
-                    X = mousePos.X,
-                    Y = mousePos.Y,
-                    DeltaX = 0f,
-                    DeltaY = -mouseWheel * 120f
-                });
-            }
-
-            bool shouldRouteMouseDownToUi = hitInteractiveUi || uiRoot.HasFocusedCanvas || _uiPointerCaptured;
-            foreach (MouseButton mouseButton in MouseButtonsInPriorityOrder)
-            {
-                bool syntheticPressed = syntheticInput?.WasButtonPressedThisFrame(RaylibInputBackend.ToSyntheticButton(mouseButton)) ?? false;
-                if (!Rl.IsMouseButtonPressed(mouseButton) && !syntheticPressed)
-                {
-                    continue;
-                }
-
-                PointerButton pointerButton = ToPointerButton(mouseButton);
-                if (!shouldRouteMouseDownToUi)
-                {
-                    continue;
-                }
-
-                bool handled = uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Down,
-                    Button = pointerButton,
-                    X = mousePos.X,
-                    Y = mousePos.Y
-                });
-
-                uiInputHandled |= handled;
-                if (handled)
-                {
-                    _uiPointerCaptured = true;
-                    _uiCapturedPointerButton = pointerButton;
-                    ResetUiPointerMoveCache();
-                }
-            }
-
-            // Same-frame synthetic releases (e.g. Click) arrive after the capture
-            // check above; without this the UI capture would latch forever.
-            if (_uiPointerCaptured && _uiCapturedPointerButton.HasValue &&
-                (syntheticInput?.WasButtonReleasedThisFrame(RaylibInputBackend.ToSyntheticButton(ToMouseButton(_uiCapturedPointerButton.Value))) ?? false))
-            {
-                uiInputHandled |= uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Up,
-                    Button = _uiCapturedPointerButton.Value,
-                    X = mousePos.X,
-                    Y = mousePos.Y
-                });
-                _uiPointerCaptured = false;
-                _uiCapturedPointerButton = null;
-                ResetUiPointerMoveCache();
-            }
-
-            ForwardKeyboardInput(uiRoot, syntheticInput);
-            return new UiInputFrameResult(Handled: uiInputHandled, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
-        }
-
-        private static bool ShouldForwardUiPointerMove(float x, float y)
-        {
-            if (!_hasLastUiPointerMove ||
-                Math.Abs(_lastUiPointerMoveX - x) > 0.01f ||
-                Math.Abs(_lastUiPointerMoveY - y) > 0.01f)
-            {
-                _hasLastUiPointerMove = true;
-                _lastUiPointerMoveX = x;
-                _lastUiPointerMoveY = y;
-                return true;
-            }
-
-            return false;
-        }
-
-        private static void ResetUiPointerMoveCache()
-        {
-            _hasLastUiPointerMove = false;
-            _lastUiPointerMoveX = 0f;
-            _lastUiPointerMoveY = 0f;
-        }
-
-        private static MouseButton ToMouseButton(PointerButton button)
-        {
-            return button switch
-            {
-                PointerButton.Left => MouseButton.MOUSE_LEFT_BUTTON,
-                PointerButton.Middle => MouseButton.MOUSE_MIDDLE_BUTTON,
-                PointerButton.Right => MouseButton.MOUSE_RIGHT_BUTTON,
-                _ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported pointer button.")
-            };
-        }
-
-        private static PointerButton ToPointerButton(MouseButton button)
-        {
-            return button switch
-            {
-                MouseButton.MOUSE_LEFT_BUTTON => PointerButton.Left,
-                MouseButton.MOUSE_MIDDLE_BUTTON => PointerButton.Middle,
-                MouseButton.MOUSE_RIGHT_BUTTON => PointerButton.Right,
-                _ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported mouse button.")
-            };
-        }
-
-        private static void ForwardKeyboardInput(UIRoot uiRoot, SyntheticInputDevice? syntheticInput = null)
-        {
-            if (!uiRoot.HasFocusedCanvas)
-            {
-                DrainCharQueue();
-                return;
-            }
-
-            int modifiers = ReadBrowserInputModifiers();
-            foreach (KeyboardKey key in BrowserForwardedKeys)
-            {
-                if (Rl.IsKeyPressed(key))
-                {
-                    uiRoot.HandleInput(new KeyboardEvent
-                    {
-                        DeviceType = InputDeviceType.Keyboard,
-                        Action = KeyboardAction.Down,
-                        Key = MapKeyboardKey(key),
-                        Code = key.ToString(),
-                        Modifiers = modifiers
-                    });
-                }
-
-                if (Rl.IsKeyReleased(key))
-                {
-                    uiRoot.HandleInput(new KeyboardEvent
-                    {
-                        DeviceType = InputDeviceType.Keyboard,
-                        Action = KeyboardAction.Up,
-                        Key = MapKeyboardKey(key),
-                        Code = key.ToString(),
-                        Modifiers = modifiers
-                    });
-                }
-            }
-
-            if (syntheticInput != null)
-            {
-                foreach (string key in syntheticInput.KeysDownSnapshotPressedThisFrame())
-                {
-                    uiRoot.HandleInput(new KeyboardEvent
-                    {
-                        DeviceType = InputDeviceType.Keyboard,
-                        Action = KeyboardAction.Down,
-                        Key = key,
-                        Code = key,
-                        Modifiers = modifiers
-                    });
-                }
-
-                foreach (string key in syntheticInput.KeysReleasedThisFrameSnapshot())
-                {
-                    uiRoot.HandleInput(new KeyboardEvent
-                    {
-                        DeviceType = InputDeviceType.Keyboard,
-                        Action = KeyboardAction.Up,
-                        Key = key,
-                        Code = key,
-                        Modifiers = modifiers
-                    });
-                }
-            }
-
-            while (true)
-            {
-                int codePoint = Rl.GetCharPressed();
-                if (codePoint == 0)
-                {
-                    break;
-                }
-
-                string text = char.ConvertFromUtf32(codePoint);
-                uiRoot.HandleInput(new KeyboardEvent
-                {
-                    DeviceType = InputDeviceType.Keyboard,
-                    Action = KeyboardAction.Character,
-                    Key = text,
-                    Text = text,
-                    Modifiers = modifiers
-                });
-            }
-
-            if (syntheticInput != null)
-            {
-                foreach (char c in syntheticInput.CharsThisFrame)
-                {
-                    string text = c.ToString();
-                    uiRoot.HandleInput(new KeyboardEvent
-                    {
-                        DeviceType = InputDeviceType.Keyboard,
-                        Action = KeyboardAction.Character,
-                        Key = text,
-                        Text = text,
-                        Modifiers = modifiers
-                    });
-                }
-            }
-        }
-
-        private static void DrainCharQueue()
-        {
-            while (Rl.GetCharPressed() != 0)
-            {
-            }
-        }
-
-        private static int ReadBrowserInputModifiers()
-        {
-            BrowserInputModifiers modifiers = BrowserInputModifiers.None;
-            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_SHIFT))
-            {
-                modifiers |= BrowserInputModifiers.Shift;
-            }
-
-            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_CONTROL))
-            {
-                modifiers |= BrowserInputModifiers.Control;
-            }
-
-            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_ALT) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_ALT))
-            {
-                modifiers |= BrowserInputModifiers.Alt;
-            }
-
-            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_SUPER) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_SUPER))
-            {
-                modifiers |= BrowserInputModifiers.Meta;
-            }
-
-            return (int)modifiers;
-        }
-
-        private static string MapKeyboardKey(KeyboardKey key)
-        {
-            return key switch
-            {
-                KeyboardKey.KEY_ENTER => "Enter",
-                KeyboardKey.KEY_TAB => "Tab",
-                KeyboardKey.KEY_BACKSPACE => "Backspace",
-                KeyboardKey.KEY_DELETE => "Delete",
-                KeyboardKey.KEY_ESCAPE => "Escape",
-                KeyboardKey.KEY_LEFT => "ArrowLeft",
-                KeyboardKey.KEY_RIGHT => "ArrowRight",
-                KeyboardKey.KEY_UP => "ArrowUp",
-                KeyboardKey.KEY_DOWN => "ArrowDown",
-                KeyboardKey.KEY_HOME => "Home",
-                KeyboardKey.KEY_END => "End",
-                KeyboardKey.KEY_PAGE_UP => "PageUp",
-                KeyboardKey.KEY_PAGE_DOWN => "PageDown",
-                KeyboardKey.KEY_SPACE => "Space",
-                KeyboardKey.KEY_ZERO => "0",
-                KeyboardKey.KEY_ONE => "1",
-                KeyboardKey.KEY_TWO => "2",
-                KeyboardKey.KEY_THREE => "3",
-                KeyboardKey.KEY_FOUR => "4",
-                KeyboardKey.KEY_FIVE => "5",
-                KeyboardKey.KEY_SIX => "6",
-                KeyboardKey.KEY_SEVEN => "7",
-                KeyboardKey.KEY_EIGHT => "8",
-                KeyboardKey.KEY_NINE => "9",
-                >= KeyboardKey.KEY_A and <= KeyboardKey.KEY_Z => key.ToString()[4..],
-                _ => key.ToString()
-            };
-        }
-
-        private static UiInputFrameResult HandleSyntheticUiPlayback(UIRoot uiRoot, SyntheticUiPlayback playback, int frameIndex, string? diagnosticPath)
-        {
-            if (frameIndex < playback.StartFrame)
-            {
-                return default;
-            }
-
-            if (frameIndex == playback.StartFrame)
-            {
-                uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Move,
-                    X = playback.StartX,
-                    Y = playback.StartY
-                });
-                _uiPointerCaptured = uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Down,
-                    Button = PointerButton.Left,
-                    X = playback.StartX,
-                    Y = playback.StartY
-                });
-                AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui down frame={frameIndex} x={playback.StartX:F1} y={playback.StartY:F1} captured={_uiPointerCaptured}");
-                return new UiInputFrameResult(Handled: true, PointerCaptured: _uiPointerCaptured, WheelCaptured: false);
-            }
-
-            if (frameIndex > playback.StartFrame && frameIndex < playback.EndFrame)
-            {
-                (float x, float y) = InterpolateSyntheticPointer(playback, frameIndex);
-                uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Move,
-                    Button = PointerButton.Left,
-                    X = x,
-                    Y = y
-                });
-
-                bool uiWheelCaptured = false;
-                if (playback.ScrollFrame == frameIndex && Math.Abs(playback.ScrollDeltaY) > float.Epsilon)
-                {
-                    uiWheelCaptured = uiRoot.HandleInput(new PointerEvent
-                    {
-                        DeviceType = InputDeviceType.Mouse,
-                        PointerId = 0,
-                        Action = PointerAction.Scroll,
-                        X = x,
-                        Y = y,
-                        DeltaX = 0f,
-                        DeltaY = playback.ScrollDeltaY
-                    });
-                    AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui scroll frame={frameIndex} x={x:F1} y={y:F1} deltaY={playback.ScrollDeltaY:F1}");
-                }
-
-                if (playback.KeyFrame == frameIndex)
-                {
-                    if (!string.IsNullOrWhiteSpace(playback.Key))
-                    {
-                        RaylibSyntheticKeyboardInput.SendKeyStroke(uiRoot, playback.Key);
-                    }
-
-                    if (!string.IsNullOrEmpty(playback.KeyText))
-                    {
-                        RaylibSyntheticKeyboardInput.SendTextInput(uiRoot, playback.KeyText);
-                    }
-
-                    AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui key frame={frameIndex} key={playback.Key} textLength={playback.KeyText.Length}");
-                }
-
-                return new UiInputFrameResult(Handled: true, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
-            }
-
-            if (frameIndex == playback.EndFrame)
-            {
-                uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Move,
-                    Button = PointerButton.Left,
-                    X = playback.EndX,
-                    Y = playback.EndY
-                });
-                uiRoot.HandleInput(new PointerEvent
-                {
-                    DeviceType = InputDeviceType.Mouse,
-                    PointerId = 0,
-                    Action = PointerAction.Up,
-                    Button = PointerButton.Left,
-                    X = playback.EndX,
-                    Y = playback.EndY
-                });
-                AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui up frame={frameIndex} x={playback.EndX:F1} y={playback.EndY:F1}");
-                _uiPointerCaptured = false;
-                return new UiInputFrameResult(Handled: true, PointerCaptured: false, WheelCaptured: false);
-            }
-
-            return default;
-        }
-
-        private static (float X, float Y) InterpolateSyntheticPointer(SyntheticUiPlayback playback, int frameIndex)
-        {
-            int moveFrames = Math.Max(1, playback.EndFrame - playback.StartFrame);
-            float progress = Math.Clamp((frameIndex - playback.StartFrame) / (float)moveFrames, 0f, 1f);
-            float x = playback.StartX + ((playback.EndX - playback.StartX) * progress);
-            float y = playback.StartY + ((playback.EndY - playback.StartY) * progress);
-            return (x, y);
-        }
-
-        private static bool IsInteractiveUiNode(UiNode? node)
-        {
-            for (UiNode? current = node; current != null; current = current.Parent)
-            {
-                if (current.ActionHandles.Count > 0)
-                {
-                    return true;
-                }
-
-                if (current.CanvasContent is Ludots.UI.Runtime.IUiCanvasInputSink)
-                {
-                    return true;
-                }
-
-                if (current.Style.Overflow == UiOverflow.Scroll)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private static string BuildInputSelectionDiagnostic(GameEngine engine)
         {
             string pointerSummary = "pointer=(n/a)";
@@ -2352,175 +1001,13 @@ namespace Ludots.Adapter.Raylib
             return phase - MathF.Floor(phase);
         }
 
-        internal static void ValidateRuntimeScreenshotEvidence(string screenshotPath, int expectedWidth, int expectedHeight)
-        {
-            if (string.IsNullOrWhiteSpace(screenshotPath))
-            {
-                throw new ArgumentException("Raylib screenshot evidence path cannot be null or whitespace.", nameof(screenshotPath));
-            }
 
-            if (expectedWidth <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(expectedWidth));
-            }
 
-            if (expectedHeight <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(expectedHeight));
-            }
-
-            string fullPath = Path.GetFullPath(screenshotPath);
-            if (!File.Exists(fullPath))
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence was not written: {fullPath}");
-            }
-
-            var fileInfo = new FileInfo(fullPath);
-            if (fileInfo.Length < 24)
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence is too small to be a valid PNG: {fullPath} length={fileInfo.Length}.");
-            }
-
-            if (!string.Equals(Path.GetExtension(fullPath), ".png", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence must be a PNG so dimensions can be verified: {fullPath}");
-            }
-
-            using var bitmap = SKBitmap.Decode(fullPath);
-            if (bitmap == null)
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence is not a decodable PNG image: {fullPath}");
-            }
-
-            int actualWidth = bitmap.Width;
-            int actualHeight = bitmap.Height;
-            if (actualWidth != expectedWidth || actualHeight != expectedHeight)
-            {
-                throw new InvalidOperationException(
-                    $"Raylib screenshot evidence dimensions mismatch: {fullPath} actual={actualWidth}x{actualHeight} expected={expectedWidth}x{expectedHeight}.");
-            }
-
-            if (IsVisuallyFlat(bitmap))
-            {
-                throw new InvalidOperationException($"Raylib screenshot evidence is visually flat and cannot prove a rendered scene: {fullPath}");
-            }
-        }
-
-        private static bool IsVisuallyFlat(SKBitmap bitmap)
-        {
-            int width = bitmap.Width;
-            int height = bitmap.Height;
-            if (width <= 0 || height <= 0)
-            {
-                return true;
-            }
-
-            SKColor first = bitmap.GetPixel(0, 0);
-            int stepX = Math.Max(1, width / 16);
-            int stepY = Math.Max(1, height / 16);
-            for (int y = 0; y < height; y += stepY)
-            {
-                for (int x = 0; x < width; x += stepX)
-                {
-                    if (ColorDistance(bitmap.GetPixel(x, y), first) > 6)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return ColorDistance(bitmap.GetPixel(width - 1, height - 1), first) <= 6;
-        }
-
-        private static int ColorDistance(SKColor a, SKColor b)
-        {
-            return Math.Abs(a.Red - b.Red) +
-                Math.Abs(a.Green - b.Green) +
-                Math.Abs(a.Blue - b.Blue) +
-                Math.Abs(a.Alpha - b.Alpha);
-        }
-
-        private static FieldDiscreteVisualMapMode ResolveDiscreteFieldMapMode(MapSession session)
-        {
-            if (session.Variables == null || !session.Variables.Contains("mapmode"))
-            {
-                return FieldDiscreteVisualMapMode.Leaf;
-            }
-
-            int mapmode = session.Variables.ReadInt("mapmode");
-            return mapmode switch
-            {
-                0 => FieldDiscreteVisualMapMode.Leaf,
-                > 0 => FieldDiscreteVisualMapMode.AncestorDepth(mapmode),
-                _ => throw new InvalidOperationException(
-                    $"Map '{session.MapId.Value}' has invalid negative mapmode {mapmode}."),
-            };
-        }
-
-        private static int ResolveFieldScopeKeyId(MapId mapId)
-        {
-            uint hash = 2166136261u;
-            string value = mapId.Value;
-            for (int i = 0; i < value.Length; i++)
-            {
-                hash ^= value[i];
-                hash *= 16777619u;
-            }
-
-            int resolved = (int)(hash & 0x7FFFFFFF);
-            return resolved == 0 ? 1 : resolved;
-        }
 
         private static double ElapsedMs(long startTicks)
         {
             return (Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency;
         }
-
-        private static void DrawInfiniteGrid(Vector3 anchor, int halfCount, float spacing, int majorEvery)
-        {
-            float y = -0.05f;
-            float extent = halfCount * spacing;
-
-            float minX = anchor.X - extent;
-            float minZ = anchor.Z - extent;
-
-            float startX = MathF.Floor(minX / spacing) * spacing;
-            float startZ = MathF.Floor(minZ / spacing) * spacing;
-
-            float endX = startX + 2f * extent;
-            float endZ = startZ + 2f * extent;
-
-            var minor = new Color(80, 80, 80, 255);
-            var major = new Color(130, 130, 130, 255);
-
-            int lineCount = halfCount * 2;
-            for (int i = 0; i <= lineCount; i++)
-            {
-                float x = startX + i * spacing;
-                float z = startZ + i * spacing;
-
-                int xi = (int)MathF.Round(x / spacing);
-                int zi = (int)MathF.Round(z / spacing);
-
-                var xCol = majorEvery > 0 && (xi % majorEvery) == 0 ? major : minor;
-                var zCol = majorEvery > 0 && (zi % majorEvery) == 0 ? major : minor;
-
-                Rl.DrawLine3D(new Vector3(x, y, startZ), new Vector3(x, y, endZ), xCol);
-                Rl.DrawLine3D(new Vector3(startX, y, z), new Vector3(endX, y, z), zCol);
-            }
-        }
-
-
-    private static Ludots.Platform.Abstractions.ITerrainChunkMeshSource TerrainSourceFor(Ludots.Core.Map.Hex.VertexMap? map)
-    {
-        _terrainSource ??= new VertexMapTerrainChunkMeshSource(null);
-        if (!ReferenceEquals(_terrainSource.Map, map))
-        {
-            _terrainSource = new VertexMapTerrainChunkMeshSource(map);
-        }
-        return _terrainSource;
-    }
-
     /// <summary>
     /// 按聚焦地图的车道组合 Decal 接收面：地形接收面（vhtm 渲染源优先，其次 VertexMap）承担 stamp 高度拟合；
     /// 单件静态网格接收面与地形接收面同时重画相交网格——贴花可同时落在地面与道具/建筑上。
