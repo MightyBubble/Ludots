@@ -1481,6 +1481,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 "interaction.context.ability.test",
                 EntityCollectionKeys.CommandSource,
                 "view.test.command"));
+            world.Add(localPlayer, new ActiveInteractionContext
+            {
+                ContextEntity = actor,
+                CommandIntentProfileId = 0,
+            });
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
             var dispatch = new CastDispatchProfileRegistry(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),

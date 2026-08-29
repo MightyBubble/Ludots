@@ -91,7 +91,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.World.TryGet<CommandPref>(localPlayer, out CommandPref localPlayerPref), Is.True,
                 "map binding must seed the player CommandPref from Input/command_prefs.json.");
             Assert.That(
-                stack.CommandIntentProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(stack, in localPlayerPref)),
+                stack.CommandIntentProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, localPlayer, in localPlayerPref)),
                 Is.EqualTo(DefaultIntentId));
 
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
@@ -805,7 +805,7 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(stack, in repPref);
+            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, repEntity, in repPref);
             builder.Append("intent=");
             builder.Append(stack.CommandIntentProfileIdRegistry.GetName(intentId));
             builder.Append("(");
@@ -815,13 +815,14 @@ namespace Ludots.Tests.GAS.Production
             builder.Append(repPref.ResolveCastDispatchProfile(abilityTemplateId: 0).ToString(CultureInfo.InvariantCulture));
 
             Entity owner = Entity.Null;
-            if (frame.ContextEntity != Entity.Null && engine.World.IsAlive(frame.ContextEntity))
+            if (engine.World.TryGet<ActiveInteractionContext>(repEntity, out ActiveInteractionContext activeContext) &&
+                engine.World.IsAlive(activeContext.ContextEntity))
             {
-                owner = frame.ContextEntity;
+                owner = activeContext.ContextEntity;
             }
-            else if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer))
+            else
             {
-                owner = localPlayer;
+                owner = repEntity;
             }
 
             builder.Append(" owner=");

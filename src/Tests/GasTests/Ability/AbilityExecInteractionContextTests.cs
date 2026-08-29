@@ -39,6 +39,8 @@ namespace Ludots.Tests.GAS
         private const int CastOrderTypeId = 100;
         private const int WaitEventTagId = 5001;
         private const string ContextProfileName = "ctx.ability.test.confirm_targets";
+        private const string ContextIntentName = "intent.context.test.declared";
+        private const string PlayerDefaultIntentName = "intent.context.test.player_default";
         private const string AbilityTargetsCollectionKey = "collection.ability.test.targets";
         private const string StunTagName = "test.state.stunned";
         private const string TerminalCapacityTagName = "test.exec.terminal_capacity_side_effect";
@@ -323,6 +325,152 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ExecStart_MountsActiveContextOnTheDomainRep_ArbiterPrefersItOverPlayerDefault()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity actor = harness.CreateCastingActor(AbilityWithContextId);
+            harness.Ownership.EnsureOwnership(rep, actor);
+
+            harness.ExecSystem.Update(0f);
+            harness.ContextSystem.Update(0f);
+
+            Assert.That(world.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext mounted), Is.True,
+                "the active context frame must be mounted on its carrier's control-domain rep.");
+            Assert.That(mounted.ContextEntity, Is.EqualTo(actor));
+            Assert.That(
+                harness.Stack.ContextIdRegistry.GetName(mounted.ContextId),
+                Is.EqualTo(ContextProfileName),
+                "the mounted state carries the frame's context identity.");
+            Assert.That(
+                mounted.CommandIntentProfileId,
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(ContextIntentName)));
+
+            CommandPref pref = NewPlayerDefaultPref(harness);
+            Assert.That(
+                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(ContextIntentName)),
+                "DEC-14: the mounted context's explicit intent must win over the player default.");
+        }
+
+        [Test]
+        public void ExecEnd_ReleasesMountedContext_SteadyStateArbiterAppliesPlayerDefault()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity actor = harness.CreateCastingActor(AbilityWithContextId);
+            harness.Ownership.EnsureOwnership(rep, actor);
+
+            harness.ExecSystem.Update(0f);
+            harness.ContextSystem.Update(0f);
+            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.True);
+
+            harness.EventBus.Publish(new GameplayEvent { TagId = WaitEventTagId, Source = actor });
+            harness.EventBus.Update();
+            harness.ExecSystem.Update(0f);
+            harness.ExecSystem.Update(0f);
+            harness.ContextSystem.Update(0f);
+
+            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.False,
+                "the mounted context must be released with the frame when the exec ends.");
+            CommandPref pref = NewPlayerDefaultPref(harness);
+            Assert.That(
+                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                Is.EqualTo(pref.DefaultCommandIntentId),
+                "DEC-14: steady state (no mounted context) routes through the player default.");
+        }
+
+        [Test]
+        public void ExecCarrierDeath_KeepsMountedContextFrozenUntilReclaim()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity actor = harness.CreateCastingActor(AbilityWithContextId);
+            harness.Ownership.EnsureOwnership(rep, actor);
+
+            harness.ExecSystem.Update(0f);
+            harness.ContextSystem.Update(0f);
+
+            world.Destroy(actor);
+            Assert.That(
+                world.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext frozen) &&
+                frozen.ContextEntity == actor,
+                Is.True,
+                "the pre-reclaim window keeps the dead carrier mounted so owner resolution fails closed instead of silently falling back.");
+
+            harness.ContextSystem.Update(0f);
+            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.False,
+                "reclaim must release the mounted context with the frame.");
+        }
+
+        [Test]
+        public void ExecCarrierWithoutControlDomain_MountsNoInteractionState()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            Entity actor = harness.CreateCastingActor(AbilityWithContextId);
+
+            harness.ExecSystem.Update(0f);
+            harness.ContextSystem.Update(0f);
+            Assert.That(harness.Stack.Count, Is.EqualTo(2), "The frame itself still mounts on the stack.");
+
+            Assert.That(
+                world.CountEntities(new QueryDescription().WithAll<ActiveInteractionContext>()),
+                Is.Zero,
+                "a frame whose carrier resolves to no control domain projects onto no interaction subject.");
+        }
+
+        [Test]
+        public void TwoContextExecsInOneDomain_TopmostFrameArbitrates_RemovalExposesTheLowerOne()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+
+            Entity first = harness.CreateCastingActor(AbilityWithContextId);
+            harness.Ownership.EnsureOwnership(rep, first);
+            harness.ExecSystem.Update(0f);
+            harness.ContextSystem.Update(0f);
+            Assert.That(
+                world.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext mounted) &&
+                mounted.ContextEntity == first,
+                Is.True);
+
+            Entity second = harness.CreateCastingActor(AbilityWithContextId);
+            harness.Ownership.EnsureOwnership(rep, second);
+            harness.ExecSystem.Update(0f);
+            harness.ContextSystem.Update(0f);
+            Assert.That(
+                world.TryGet<ActiveInteractionContext>(rep, out mounted) && mounted.ContextEntity == second,
+                Is.True,
+                "the topmost frame's carrier must arbitrate for the domain (LIFO).");
+
+            // End only the topmost exec: the event gate wakes every waiter of the tag, so the
+            // per-actor interrupt tag is the precise teardown path here.
+            ref var secondTags = ref world.Get<GameplayTagContainer>(second);
+            secondTags.AddTag(TagRegistry.GetId(StunTagName));
+            harness.ExecSystem.Update(0f);
+            harness.ContextSystem.Update(0f);
+
+            Assert.That(
+                world.TryGet<ActiveInteractionContext>(rep, out mounted) && mounted.ContextEntity == first,
+                Is.True,
+                "removing the top frame must expose the still-active lower context, matching stack pop semantics.");
+        }
+
+        private static CommandPref NewPlayerDefaultPref(Harness harness)
+        {
+            CommandPref pref = default;
+            pref.SetPlayerDefault(
+                harness.Stack.CommandIntentProfileIdRegistry.Register(PlayerDefaultIntentName),
+                castDispatchProfileId: 777);
+            return pref;
+        }
+
+        [Test]
         public void AbilityWithoutProfile_NeverTouchesTheStack()
         {
             using var world = World.Create();
@@ -444,6 +592,7 @@ namespace Ludots.Tests.GAS
                             Id = ContextProfileName,
                             ActiveCollectionKey = AbilityTargetsCollectionKey,
                             ActiveEntityViewKey = "view.ability.test.targets",
+                            CommandIntentId = ContextIntentName,
                         },
                     },
                 });
@@ -510,7 +659,7 @@ namespace Ludots.Tests.GAS
                     PresentationEvents = presentationEvents,
                     Definitions = definitions,
                     ExecSystem = execSystem,
-                    ContextSystem = new AbilityExecInteractionContextSystem(world, stack, contextProfiles, definitions),
+                    ContextSystem = new AbilityExecInteractionContextSystem(world, stack, contextProfiles, definitions, domains),
                     CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
                     AbilityTargetsKeyId = keyRegistry.Register(AbilityTargetsCollectionKey),
                 };

@@ -28,7 +28,6 @@ namespace CoreInputMod.Systems
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly EntityCollectionStore? _entityCollections;
-        private readonly InteractionContextStack? _interactionContextStack;
         private readonly Entity[] _collectionScratch;
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
@@ -39,10 +38,6 @@ namespace CoreInputMod.Systems
             _entityCollections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                                  collectionsObj is EntityCollectionStore collections
                 ? collections
-                : null;
-            _interactionContextStack = globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) &&
-                                       stackObj is InteractionContextStack stack
-                ? stack
                 : null;
         }
 
@@ -256,20 +251,25 @@ namespace CoreInputMod.Systems
         public bool TryGetCommandSourceOwner(out Entity owner)
         {
             owner = default;
-            if (_interactionContextStack != null &&
-                _interactionContextStack.TryPeek(out InteractionContextFrame frame) &&
-                HasEntityValue(frame.ContextEntity))
+            if (!TryResolveLocalCommandSourceOwner(out Entity subject) ||
+                !_world.IsAlive(subject))
             {
-                if (!_world.IsAlive(frame.ContextEntity))
+                return false;
+            }
+
+            if (_world.TryGet<ActiveInteractionContext>(subject, out ActiveInteractionContext context))
+            {
+                if (!HasEntityValue(context.ContextEntity) || !_world.IsAlive(context.ContextEntity))
                 {
                     return false;
                 }
 
-                owner = frame.ContextEntity;
+                owner = context.ContextEntity;
                 return true;
             }
 
-            return TryResolveLocalCommandSourceOwner(out owner);
+            owner = subject;
+            return true;
         }
 
         private static bool HasEntityValue(Entity entity)
