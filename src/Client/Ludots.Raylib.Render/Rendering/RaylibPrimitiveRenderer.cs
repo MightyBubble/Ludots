@@ -79,6 +79,8 @@ namespace Ludots.Raylib.Render
         private double _frameTimeSeconds;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
+        private readonly RaylibAssetStore<Texture2D> _textureStore;
+        private readonly RaylibAssetStore<Model> _modelStore;
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
         private readonly HashSet<int> _reportedMissingModelDraws = new HashSet<int>();
@@ -218,15 +220,55 @@ namespace Ludots.Raylib.Render
             _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
             _vfs = vfs;
             _materials = materials;
+            _textureStore = new RaylibAssetStore<Texture2D>(vfs, LoadTextureResource, RaylibNativeResources.UnloadTexture);
+            _modelStore = new RaylibAssetStore<Model>(vfs, LoadModelResource, RaylibNativeResources.UnloadModel);
             _materialLibrary = vfs != null && materials != null
-                ? new RaylibMaterialLibrary(vfs, materials)
+                ? new RaylibMaterialLibrary(vfs, materials, _textureStore)
                 : null;
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
-            _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
+            _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs, _modelStore);
             _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
             _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
-            _vfxRenderer = new RaylibVfxRenderer(vfs);
+            _vfxRenderer = new RaylibVfxRenderer(vfs, _textureStore);
             _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
+        }
+
+        private static Texture2D LoadTextureResource(string fullPath)
+        {
+            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                if (texture.id != 0)
+                {
+                    RaylibNativeResources.UnloadTexture(texture);
+                }
+
+                throw new InvalidOperationException(
+                    $"raylib rejected texture '{fullPath}' (textureId={texture.id}, size={texture.width}x{texture.height}).");
+            }
+
+            return texture;
+        }
+
+        private static Model LoadModelResource(string fullPath)
+        {
+            // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
+            // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
+            Model model = RaylibModelFileLoader.LoadModel(fullPath);
+            if (model.meshCount <= 0)
+            {
+                RaylibNativeResources.UnloadModel(model);
+                throw new InvalidOperationException($"model '{fullPath}' loaded with meshCount=0.");
+            }
+
+            return model;
+        }
+
+        /// <summary>帧末冲刷引用归零的退役资产；由唯一帧执行者在 pass 序列后调用（#1327 帧末延迟销毁）。</summary>
+        public void FlushRetiredAssets()
+        {
+            _textureStore.FlushRetired();
+            _modelStore.FlushRetired();
         }
 
         public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
@@ -1626,50 +1668,28 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            for (int u = 0; u < desc.SourceUris.Length; u++)
+            RaylibAssetStore<Model>.Lease lease = _modelStore.Acquire(desc.SourceUris);
+            try
             {
-                string uri = desc.SourceUris[u];
-                if (string.IsNullOrWhiteSpace(uri)) continue;
-
-                if (!_vfs.TryResolveFullPath(uri, out string fullPath)) continue;
-                if (!File.Exists(fullPath)) continue;
-
-                // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
-                // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
-                Model model;
-                try
+                Mesh[] modelMeshes = CopyModelMeshes(lease.Resource);
+                ComputeModelLocalAabbMeters(modelMeshes, out Vector3 localMin, out Vector3 localMax);
+                cached = new CachedModel
                 {
-                    model = RaylibModelFileLoader.LoadModel(fullPath);
-                }
-                catch (Exception ex)
-                {
-                    RenderDiagnostics.Warn($"RaylibPrimitiveRenderer meshAssetId={meshAssetId} 模型装载失败（'{fullPath}'）：{ex.Message}");
-                    continue;
-                }
-
-                if (model.meshCount > 0)
-                {
-                    Mesh[] modelMeshes = CopyModelMeshes(model);
-                    ComputeModelLocalAabbMeters(modelMeshes, out Vector3 localMin, out Vector3 localMax);
-                    cached = new CachedModel
-                    {
-                        Model = model,
-                        Meshes = modelMeshes,
-                        LocalMin = localMin,
-                        LocalMax = localMax,
-                        Loaded = true,
-                    };
-                    _modelCache[meshAssetId] = cached;
-                    return true;
-                }
-
-                RaylibNativeResources.UnloadModel(model);
+                    Lease = lease,
+                    Meshes = modelMeshes,
+                    LocalMin = localMin,
+                    LocalMax = localMax,
+                    Loaded = true,
+                };
+                _modelCache[meshAssetId] = cached;
+                return true;
             }
-
-            _modelCache[meshAssetId] = cached;
-            return false;
+            catch
+            {
+                lease.Dispose();
+                throw;
+            }
         }
-
         private static Mesh[] CopyModelMeshes(Model model)
         {
             var modelMeshes = new Mesh[model.meshCount];
@@ -1771,47 +1791,17 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            for (int u = 0; u < desc.SourceUris.Length; u++)
+            RaylibAssetStore<Texture2D>.Lease lease = _textureStore.Acquire(desc.SourceUris);
+            Texture2D texture = lease.Resource;
+            cached = new CachedTexture
             {
-                string uri = desc.SourceUris[u];
-                if (string.IsNullOrWhiteSpace(uri)) continue;
-
-                if (!_vfs.TryResolveFullPath(uri, out string fullPath))
-                {
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-resolve failed; uri={uri}");
-                    continue;
-                }
-
-                if (!File.Exists(fullPath))
-                {
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-file missing; uri={uri}; fullPath={fullPath}");
-                    continue;
-                }
-
-                var texture = RaylibNativeResources.LoadTexture(fullPath);
-                if (texture.id != 0 && texture.width > 0 && texture.height > 0)
-                {
-                    cached = new CachedTexture
-                    {
-                        Texture = texture,
-                        Loaded = true,
-                        AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
-                    };
-                    _textureCache[meshAssetId] = cached;
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load success; uri={uri}; fullPath={fullPath}; size={texture.width}x{texture.height}");
-                    return true;
-                }
-
-                RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load failed; uri={uri}; fullPath={fullPath}; textureId={texture.id}; size={texture.width}x{texture.height}");
-
-                if (texture.id != 0)
-                    RaylibNativeResources.UnloadTexture(texture);
-            }
-
+                Lease = lease,
+                Loaded = true,
+                AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
+            };
             _textureCache[meshAssetId] = cached;
-            return false;
+            return true;
         }
-
         private static string FormatSourceUris(string[]? sourceUris)
         {
             return sourceUris == null || sourceUris.Length == 0
@@ -2947,9 +2937,8 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                Model model = kvp.Value.Model;
-                _materialLibrary?.DetachOwnedMaps(model);
-                RaylibNativeResources.UnloadModel(model);
+                _materialLibrary?.DetachOwnedMaps(kvp.Value.Model);
+                kvp.Value.Lease?.Dispose();
             }
             _modelCache.Clear();
 
@@ -2963,7 +2952,7 @@ namespace Ludots.Raylib.Render
             foreach (var kvp in _textureCache)
             {
                 if (kvp.Value.Loaded)
-                    RaylibNativeResources.UnloadTexture(kvp.Value.Texture);
+                    kvp.Value.Lease?.Dispose();
             }
             _textureCache.Clear();
 
@@ -3010,24 +2999,31 @@ namespace Ludots.Raylib.Render
             RaylibNativeResources.UnloadMaterial(_material);
             RaylibNativeResources.UnloadShader(_shader);
             _initialized = false;
+
+            // 存储销毁必须最晚：蒙皮缓存/材质库/VFX 的释放回调（DetachOwnedMaps 等）仍要触碰模型与贴图，
+            // 先销毁存储会产生悬空指针；模型先于贴图销毁保持与旧实现一致（模型内部纹理随模型释放）。
+            _modelStore.Dispose();
+            _textureStore.Dispose();
         }
 
         private struct CachedModel
         {
-            public Model Model;
+            public RaylibAssetStore<Model>.Lease? Lease;
             public Mesh[] Meshes;
             public Vector3 LocalMin;
             public Vector3 LocalMax;
             public bool Loaded;
-        }
 
+            public readonly Model Model => Lease!.Resource;
+        }
         private struct CachedTexture
         {
-            public Texture2D Texture;
+            public RaylibAssetStore<Texture2D>.Lease? Lease;
             public bool Loaded;
             public float AspectRatio;
-        }
 
+            public readonly Texture2D Texture => Lease!.Resource;
+        }
         private struct CachedProceduralMesh
         {
             public Mesh Mesh;

@@ -291,6 +291,7 @@ namespace Ludots.Adapter.Raylib
                 }
 
                 ObserveSkippedPassTimings(plan, passCount);
+                _primitiveRenderer.FlushRetiredAssets();
                 frameCompleted = true;
                 return new RaylibRenderFrameResult(emptyBufferWarned);
             }
@@ -312,6 +313,9 @@ namespace Ludots.Adapter.Raylib
                     {
                         Rl.EndDrawing();
                     }
+
+                    // 退役资源按定义无引用，异常帧冲刷同样安全；持续异常不再累积退役队列（复核修复）。
+                    _primitiveRenderer.FlushRetiredAssets();
                 }
             }
         }

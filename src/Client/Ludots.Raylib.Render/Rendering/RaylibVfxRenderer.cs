@@ -15,14 +15,36 @@ namespace Ludots.Raylib.Render
     public sealed class RaylibVfxRenderer : IDisposable
     {
         private readonly IRenderAssetPathResolver? _vfs;
+        private readonly RaylibAssetStore<Texture2D> _textureStore;
+        private readonly bool _ownsTextureStore;
         private readonly Dictionary<RaylibVfxKey, RaylibParticleVfxInstance> _particleVfx = new();
         private readonly HashSet<RaylibVfxKey> _activeKeys = new();
         private readonly List<RaylibVfxKey> _inactiveKeys = new();
-        private readonly Dictionary<int, Texture2D> _textureCache = new();
+        private readonly Dictionary<int, RaylibAssetStore<Texture2D>.Lease> _textureCache = new();
 
-        public RaylibVfxRenderer(IRenderAssetPathResolver? vfs = null)
+        public RaylibVfxRenderer(IRenderAssetPathResolver? vfs = null, RaylibAssetStore<Texture2D>? textureStore = null)
         {
             _vfs = vfs;
+            _ownsTextureStore = textureStore == null;
+            _textureStore = textureStore ?? new RaylibAssetStore<Texture2D>(
+                vfs,
+                fullPath =>
+                {
+                    Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
+                    if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+                    {
+                        if (texture.id != 0)
+                        {
+                            RaylibNativeResources.UnloadTexture(texture);
+                        }
+
+                        throw new InvalidOperationException(
+                            $"raylib rejected particle sheet '{fullPath}' (textureId={texture.id}, size={texture.width}x{texture.height}).");
+                    }
+
+                    return texture;
+                },
+                RaylibNativeResources.UnloadTexture);
         }
 
         public int LastDrawnVfxCount { get; private set; }
@@ -243,17 +265,17 @@ namespace Ludots.Raylib.Render
                     $"Particle texture sheet asset '{textureSheet.TextureAssetId}' must be a Billboard mesh asset, but was '{textureDescriptor.Type}'.");
             }
 
-            if (_textureCache.TryGetValue(textureAssetId, out Texture2D cached))
+            if (_textureCache.TryGetValue(textureAssetId, out RaylibAssetStore<Texture2D>.Lease? cached))
             {
-                return cached;
+                return cached.Resource;
             }
 
-            Texture2D loaded = LoadTexture(textureSheet.TextureAssetId, textureDescriptor);
+            RaylibAssetStore<Texture2D>.Lease loaded = LoadTexture(textureSheet.TextureAssetId, textureDescriptor);
             _textureCache.Add(textureAssetId, loaded);
-            return loaded;
+            return loaded.Resource;
         }
 
-        private Texture2D LoadTexture(string textureAssetKey, in MeshAssetDescriptor textureDescriptor)
+        private RaylibAssetStore<Texture2D>.Lease LoadTexture(string textureAssetKey, in MeshAssetDescriptor textureDescriptor)
         {
             if (_vfs == null)
             {
@@ -267,46 +289,16 @@ namespace Ludots.Raylib.Render
                     $"Particle texture sheet asset '{textureAssetKey}' requires raylib sourceUris from Presentation/host_assets.json.");
             }
 
-            var failures = new StringBuilder();
-            for (int i = 0; i < textureDescriptor.SourceUris.Length; i++)
+            try
             {
-                string uri = textureDescriptor.SourceUris[i];
-                if (string.IsNullOrWhiteSpace(uri))
-                {
-                    failures.Append($"[{i}] blank uri; ");
-                    continue;
-                }
-
-                if (!_vfs.TryResolveFullPath(uri, out string fullPath))
-                {
-                    failures.Append($"[{i}] unresolved uri '{uri}'; ");
-                    continue;
-                }
-
-                if (!File.Exists(fullPath))
-                {
-                    failures.Append($"[{i}] missing file '{uri}' -> '{fullPath}'; ");
-                    continue;
-                }
-
-                Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
-                if (texture.id != 0 && texture.width > 0 && texture.height > 0)
-                {
-                    return texture;
-                }
-
-                if (texture.id != 0)
-                {
-                    RaylibNativeResources.UnloadTexture(texture);
-                }
-
-                failures.Append($"[{i}] raylib rejected '{uri}' ({fullPath}); ");
+                return _textureStore.Acquire(textureDescriptor.SourceUris);
             }
-
-            throw new InvalidOperationException(
-                $"Particle texture sheet asset '{textureAssetKey}' could not load any sourceUri. Attempts: {failures}");
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Particle texture sheet asset '{textureAssetKey}' could not load any sourceUri. {ex.Message}");
+            }
         }
-
         internal static Rectangle BuildTextureSourceRectangle(
             Texture2D texture,
             ParticleTextureSheetAsset textureSheet,
@@ -359,15 +351,16 @@ namespace Ludots.Raylib.Render
 
         public void Dispose()
         {
-            foreach (Texture2D texture in _textureCache.Values)
+            foreach (RaylibAssetStore<Texture2D>.Lease lease in _textureCache.Values)
             {
-                if (texture.id != 0)
-                {
-                    RaylibNativeResources.UnloadTexture(texture);
-                }
+                lease.Dispose();
             }
 
             _textureCache.Clear();
+            if (_ownsTextureStore)
+            {
+                _textureStore.Dispose();
+            }
         }
 
         internal static RaylibVfxKey ComposeVfxKey(int stableId, int effectAssetId)

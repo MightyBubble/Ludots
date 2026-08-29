@@ -4,6 +4,12 @@
 
 生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 与引擎描述表生成，勿手改正文）。
 
+## activity
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [点名即派发：待办活动应声上桌](OfferActivity.md) — 军需官每点名一次，案头就添一件待办活动；件件单层拍板，绝不嵌套。
+
 ## 事件与吸附
 
 > 作者语义与全量字段见手册分册 [事件与情境 · gr-op-01](../mod-editor-prd/config/gr-op-01-context.md)。
