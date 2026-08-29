@@ -830,6 +830,12 @@ public sealed class MassNavigationSimulationRuntime
         return MassNavigationFlow.GetBodyRadiusCm(agentIndex);
     }
 
+    public bool IsAgentSettled(int agentIndex)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassNavigationFlow.IsUnitSettled(agentIndex);
+    }
+
     public MassNavigationObstacleSnapshot GetObstacleWorldSnapshot(int obstacleIndex)
     {
         RequireObstacleIndex(obstacleIndex);
