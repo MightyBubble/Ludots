@@ -79,9 +79,14 @@ namespace Ludots.Core.Persistence
                 foreach (ComponentType componentType in signature.Components)
                 {
                     Type type = componentType.Type;
-                    // Volatile perf markers flip per render frame purely from diagnostics bookkeeping;
-                    // their presence/absence is not simulation state.
-                    if (type.Name.StartsWith("PerfHas", StringComparison.Ordinal))
+                    // Excluded from the deterministic digest: perf bookkeeping markers (Perf* family)
+                    // and presentation-mount bookkeeping (PresenterChildren/PresenterAnimatorSlot)
+                    // flip per render frame or get rebuilt by presentation systems — none of it is
+                    // simulation state, so none of it belongs in a replay-equality fingerprint.
+                    if (type.Name.StartsWith("Perf", StringComparison.Ordinal) ||
+                        type.Name.StartsWith("Presenter", StringComparison.Ordinal) ||
+                        type.Name == "PresenterChildren" ||
+                        type.Name == "PresenterAnimatorSlot")
                     {
                         continue;
                     }
@@ -99,33 +104,8 @@ namespace Ludots.Core.Persistence
 
         public static string ComputeRows(World canonicalWorld)
         {
-            MessagePackSerializerOptions options = MessagePackSerializerOptions.Standard.WithResolver(
-                CompositeResolver.Create(
-                    LudotsCorePersistenceFormatters.CreateFormatters(),
-                    new IFormatterResolver[]
-                    {
-                        BuiltinResolver.Instance,
-                        ContractlessStandardResolverAllowPrivate.Instance
-                    }));
-
             var rows = new List<string>();
-            canonicalWorld.Query(in QueryDescription.Null, entity =>
-            {
-                Signature signature = canonicalWorld.GetSignature(entity);
-                var componentRows = new List<string>(signature.Components.Length);
-                foreach (ComponentType componentType in signature.Components)
-                {
-                    Type type = componentType.Type;
-                    object? component = canonicalWorld.Get(entity, componentType);
-                    componentRows.Add(component == null
-                        ? $"{type.FullName ?? type.Name}=<null>"
-                        : $"{type.FullName ?? type.Name}={Convert.ToHexString(MessagePackSerializer.Serialize(type, component, options))}");
-                }
-
-                componentRows.Sort(StringComparer.Ordinal);
-                rows.Add($"{entity.Id}:{entity.Version}|{string.Join("|", componentRows)}");
-            });
-
+            CollectRows(canonicalWorld, rows);
             rows.Sort(StringComparer.Ordinal);
             return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", rows))));
         }
