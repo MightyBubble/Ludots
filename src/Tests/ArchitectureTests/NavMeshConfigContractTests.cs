@@ -198,7 +198,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void GameEngine_NavBootstrap_PassesGridTerrainTileDimensionsToQueryRegistry()
+        public void GameEngine_NavBootstrap_PassesDeclaredTileGridDimensionsToQueryRegistry()
         {
             string repoRoot = FindRepoRoot();
             string mapId = "nav_bootstrap_grid_tile_dims_contract";
@@ -325,6 +325,11 @@ namespace Ludots.Tests.Architecture
 
         private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId, LogicTerrainField? terrain = null)
         {
+            var effectiveTerrain = terrain ?? new FlatGridLogicTerrainField(
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.TerrainChunkCells,
+                chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells);
+
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
@@ -336,10 +341,7 @@ namespace Ludots.Tests.Architecture
 
             typeof(GameEngine)
                 .GetProperty(nameof(GameEngine.LogicTerrain), BindingFlags.Instance | BindingFlags.Public)!
-                .SetValue(engine, terrain ?? new FlatGridLogicTerrainField(
-                    SpatialScaleDefaults.TerrainChunkCells,
-                    SpatialScaleDefaults.TerrainChunkCells,
-                    chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells));
+                .SetValue(engine, effectiveTerrain);
 
             engine.LoadNavForMapForTests(
                 mapId,
@@ -352,12 +354,14 @@ namespace Ludots.Tests.Architecture
                         new BoardConfig
                         {
                             Name = "default",
+                            // The declared grid must match the tile geometry written by
+                            // WriteAllChunkTileFiles: 64-cell chunks at 250 cm per cell.
                             NavTileGrid = new NavTileGridConfig
                             {
-                                WidthChunks = 3,
-                                HeightChunks = 2,
+                                WidthChunks = effectiveTerrain.WidthChunks,
+                                HeightChunks = effectiveTerrain.HeightChunks,
                                 ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
-                                CellSizeCm = SpatialScaleDefaults.CellCm
+                                CellSizeCm = 250
                             }
                         }
                     }
