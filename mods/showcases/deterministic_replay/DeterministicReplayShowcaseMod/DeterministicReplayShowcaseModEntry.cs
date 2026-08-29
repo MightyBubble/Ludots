@@ -24,10 +24,23 @@ internal sealed class ReplayShowcaseInputSystem : BaseSystem<World, float>
         if (!_runtime.IsShowcaseMap) return;
         if (_runtime.IsReplaying)
         {
+            _runtime.ConsumeNudgeAction();
             _runtime.AdvanceReplayFixedStep();
             return;
         }
 
+        if (_runtime.StopRequested)
+        {
+            _runtime.FinishRecordingAtFixedBoundary();
+            return;
+        }
+
+        if (_runtime.StartRequested)
+        {
+            _runtime.BeginRecordingAtFixedBoundary();
+        }
+
+        _runtime.ConsumeNudgeAction();
         _runtime.CaptureRecordingFrame();
     }
 }
