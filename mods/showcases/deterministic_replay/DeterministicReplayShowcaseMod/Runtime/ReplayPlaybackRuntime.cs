@@ -69,6 +69,8 @@ public sealed class ReplayPlaybackRuntime
     private string? _recordedEndDigest;
     private string? _playbackEndDigest;
     private string? _recordedEndDigestForArchive;
+    private bool _endDigestPending;
+    private System.Collections.Generic.IReadOnlyList<string>? _recordedEndRows;
     private string? _liveRejectedSample;
     private long _nextSequence = 0;
 
@@ -137,6 +139,7 @@ public sealed class ReplayPlaybackRuntime
         _recorder = null;
         _recordedEndDigest = WorldDigest();
         _recordedEndDigestForArchive = _recordedEndDigest;
+        _recordedEndRows = SaveWorldStateDigest.CaptureRows(_engine);
         Log($"Stopped: {_archive.Frames.Count} frames; end digest {_recordedEndDigest}.");
         Phase = "Step 3 — [Play replay]: frames drive the world from the recorded checkpoint";
     }
@@ -281,6 +284,29 @@ public sealed class ReplayPlaybackRuntime
         pos = Ludots.Core.Components.WorldPositionCm.FromCm(xCm, yCm);
     }
 
+    public void SettleEndDigestIfPending()
+    {
+        if (!_endDigestPending) return;
+        _endDigestPending = false;
+        string digest = WorldDigest();
+        _playbackEndDigest = digest;
+        bool matches = _recordedEndDigest != null && digest == _recordedEndDigest;
+        Verdict = matches ? "Matched" : "Mismatched";
+        VerdictHint = matches
+            ? "the replay reproduced the recorded end state"
+            : "the replay diverged from the recorded end state (see trace + #1311)";
+        Log($"Replay proof settled after the final tail: digest {digest} " +
+            (matches ? "== recorded end — deterministic." : $"!= recorded end {_recordedEndDigest}."));
+
+        if (!matches && _recordedEndRows != null)
+        {
+            foreach (string line in SaveWorldStateDigest.DiffRows(_recordedEndRows, SaveWorldStateDigest.CaptureRows(_engine)))
+            {
+                Log($"DIFF {line[..System.Math.Min(line.Length, 150)]}");
+            }
+        }
+    }
+
     public void CaptureRecordingFrame()
     {
         if (_recorder == null || _replayPlaying) return;
@@ -343,15 +369,13 @@ public sealed class ReplayPlaybackRuntime
                 endedInput.SetReplayInputIsolation(false);
             }
 
-            string digest = WorldDigest();
-            _playbackEndDigest = digest;
-            bool matches = _recordedEndDigest != null && digest == _recordedEndDigest;
-            Verdict = matches ? "Matched" : "Mismatched";
-            VerdictHint = matches
-                ? "the replay reproduced the recorded end state"
-                : "the replay diverged from the recorded end state (known engine gap, #1311)";
-            Log($"Replay finished {_replayFrames}/{_archive?.Frames.Count ?? 0} frames; digest {digest} " +
-                (matches ? "== recorded end — deterministic" : $"MISMATCH vs {_recordedEndDigest}"));
+            // Defer the end digest to the NEXT pass's InputCollection: sampling here would run
+            // mid-tail of the final tick while the recording-side end digest samples after a full
+            // tail — a one-phase asymmetry that reads as MISMATCH whenever the last tick's tail
+            // mutates any persisted component. Mirrors FinishRecordingAtFixedBoundary.
+            _endDigestPending = true;
+            _replayPlaying = false;
+            Log($"Replay finished {_replayFrames}/{_archive?.Frames.Count ?? 0} frames; proof settles next tick.");
             return;
         }
 

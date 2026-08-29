@@ -28,6 +28,75 @@ namespace Ludots.Core.Persistence
             return ComputeRows(canonical);
         }
 
+        public static System.Collections.Generic.IReadOnlyList<string> CaptureRows(GameEngine engine)
+        {
+            LudotsBinaryWorldSerializer serializer = LudotsPersistenceSerializerFactory.Create(engine);
+            byte[] worldBytes = serializer.Serialize(engine.World);
+            using World canonical = serializer.Deserialize(worldBytes);
+            SaveEntityWorldIdNormalizer.Normalize(canonical, 0);
+            var rows = new List<string>();
+            CollectRows(canonical, rows);
+            return rows;
+        }
+
+        /// <summary>Row-level diff: names the exact entity/component pairs that diverged.</summary>
+        public static System.Collections.Generic.IReadOnlyList<string> DiffRows(
+            System.Collections.Generic.IReadOnlyList<string> recorded, System.Collections.Generic.IReadOnlyList<string> playback)
+        {
+            var recordedSet = new System.Collections.Generic.HashSet<string>(recorded);
+            var playbackSet = new System.Collections.Generic.HashSet<string>(playback);
+            var diffs = new List<string>();
+            foreach (string row in recorded)
+            {
+                if (!playbackSet.Contains(row)) diffs.Add("only-in-recorded: " + TruncateRow(row));
+            }
+            foreach (string row in playback)
+            {
+                if (!recordedSet.Contains(row)) diffs.Add("only-in-playback: " + TruncateRow(row));
+            }
+            return diffs;
+        }
+
+        private static string TruncateRow(string row)
+        {
+            return row[..Math.Min(row.Length, 400)];
+        }
+
+        private static void CollectRows(World world, List<string> rows)
+        {
+            MessagePackSerializerOptions options = MessagePackSerializerOptions.Standard.WithResolver(
+                CompositeResolver.Create(
+                    LudotsCorePersistenceFormatters.CreateFormatters(),
+                    new IFormatterResolver[]
+                    {
+                        BuiltinResolver.Instance,
+                        ContractlessStandardResolverAllowPrivate.Instance
+                    }));
+            world.Query(in QueryDescription.Null, entity =>
+            {
+                Signature signature = world.GetSignature(entity);
+                var componentRows = new List<string>(signature.Components.Length);
+                foreach (ComponentType componentType in signature.Components)
+                {
+                    Type type = componentType.Type;
+                    // Volatile perf markers flip per render frame purely from diagnostics bookkeeping;
+                    // their presence/absence is not simulation state.
+                    if (type.Name.StartsWith("PerfHas", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    object? component = world.Get(entity, componentType);
+                    componentRows.Add(component == null
+                        ? $"{type.FullName ?? type.Name}=<null>"
+                        : $"{type.FullName ?? type.Name}={Convert.ToHexString(MessagePackSerializer.Serialize(type, component, options))}");
+                }
+                componentRows.Sort(StringComparer.Ordinal);
+                rows.Add($"{entity.Id}:{entity.Version}|{string.Join("|", componentRows)}");
+            });
+            rows.Sort(StringComparer.Ordinal);
+        }
+
         public static string ComputeRows(World canonicalWorld)
         {
             MessagePackSerializerOptions options = MessagePackSerializerOptions.Standard.WithResolver(

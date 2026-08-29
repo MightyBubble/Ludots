@@ -91,6 +91,9 @@ namespace Ludots.Core.Persistence
             AddComponentFormatter(formatters, new PresentationFrameStateFormatter());
             AddComponentFormatter(formatters, new Physics2DRuntimeStateFormatter());
             AddAutoDiscoveredUnmanagedFormatters(formatters, candidateAssemblies);
+            // Hand-written pruners (e.g. Physics2D perf, discovered from its own assembly) must
+            // come after unmanaged discovery and overwrite the raw-bytes default: their whole
+            // purpose is to keep volatile fields out of the persisted payload.
             AddDiscoveredComponentFormatters(formatters, candidateAssemblies);
             return formatters.Values.ToArray();
         }
@@ -257,15 +260,14 @@ namespace Ludots.Core.Persistence
                     }
 
                     var instance = (ILudotsPersistenceComponentFormatter)Activator.CreateInstance(type)!;
-                    if (formatters.ContainsKey(instance.ComponentType))
+                    if (instance is not IMessagePackFormatter typed)
                     {
                         continue;
                     }
 
-                    if (instance is IMessagePackFormatter typed)
-                    {
-                        formatters[instance.ComponentType] = typed;
-                    }
+                    // Discovered hand-written formatters intentionally overwrite the auto-registered
+                    // raw-bytes default — that overwrite is how volatile-field pruning takes effect.
+                    formatters[instance.ComponentType] = typed;
                 }
             }
         }
