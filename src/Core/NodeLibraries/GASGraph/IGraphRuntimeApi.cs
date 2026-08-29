@@ -87,8 +87,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
         }
 
+        /// <summary>
+        /// Overrides a panel type's audience with one seat (hotseat turn handoff), or
+        /// clears the override when seatKeyId is 0 — the template's declared audience
+        /// rules again. Fail-closed on key ids that do not resolve to registered names.
+        /// </summary>
+        void SetPanelAudience(int panelTypeId, int seatKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
         /// <summary>Sets an entity's world position in centimeters (int, matches LoadTargetPosX/Y).</summary>
         void SetWorldPosition(Entity target, int xCm, int yCm);
+
+        /// <summary>
+        /// Sets an entity's interaction mode (#1306): writes the sparse InteractionMode component,
+        /// or removes it when the mode is the reserved normal default. Fail-closed on dead targets
+        /// and mode key ids that do not resolve to an installed interaction mode.
+        /// </summary>
+        void SetInteractionMode(Entity target, int modeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionModeMapUnavailable");
+        }
 
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
@@ -111,6 +131,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void PushPresentationText(GraphPresentationTextSurface surface, ReadOnlySpan<char> text)
         {
             throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
+        }
+
+        /// <summary>Start a DialogueRuntime session by dialogue definition id (config key).</summary>
+        void StartDialogue(int dialogueKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueRuntimeUnavailable");
         }
 
         /// <summary>

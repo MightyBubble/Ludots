@@ -96,7 +96,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphEntryPayloadTable? entryPayload = null,
             GraphEntryPayloadTable? invokeArgs = null)
         {
-            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
+            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script or GraphKind.TriggerGraph))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph frame requires an explicit supported kind.");
             }

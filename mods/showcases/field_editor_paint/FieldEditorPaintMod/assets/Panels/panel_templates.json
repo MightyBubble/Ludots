@@ -1,0 +1,32 @@
+[
+  {
+    "id": "panel.field_editor_paint.progress",
+    "graph": "Graph.FieldEditorPaint.Panel.Values",
+    "pins": [
+      {
+        "name": "stage",
+        "key": "field.paint.panel.stage",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "regionCode",
+        "key": "field.paint.panel.regionCode",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "enterCount",
+        "key": "field.paint.panel.enterCount",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "exitCount",
+        "key": "field.paint.panel.exitCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ]
+  }
+]

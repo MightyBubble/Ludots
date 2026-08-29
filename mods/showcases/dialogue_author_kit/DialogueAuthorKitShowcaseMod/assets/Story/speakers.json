@@ -1,0 +1,12 @@
+[
+  {
+    "id": "speaker.guard",
+    "displayNameToken": "story.author_kit.speaker.guard",
+    "portraitImageId": "portrait.speaker.guard"
+  },
+  {
+    "id": "speaker.traveler",
+    "displayNameToken": "story.author_kit.speaker.traveler",
+    "portraitImageId": "portrait.speaker.traveler"
+  }
+]

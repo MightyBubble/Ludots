@@ -16,6 +16,7 @@ namespace Ludots.Core.Presentation.Hud
         public bool DrawCombatText { get; set; } = true;
         public bool DrawNavMesh { get; set; }
         public bool DrawShadows { get; set; } = true;
+        public bool DrawNavWalkabilityTexture { get; set; }
         public float AcceptanceScaleMultiplier { get; set; } = 1f;
     }
 }

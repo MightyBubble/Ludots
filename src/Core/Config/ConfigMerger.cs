@@ -117,6 +117,7 @@ namespace Ludots.Core.Config
         {
             var orderedIds = new List<string>(capacity: 256);
             var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
+            var _firstSourceById = new Dictionary<string, string>(StringComparer.Ordinal);
 
             for (int i = 0; i < fragments.Count; i++)
             {
@@ -161,8 +162,14 @@ namespace Ludots.Core.Config
                     {
                         mergedNodes[id] = obj.DeepClone();
                         orderedIds.Add(id);
+                        _firstSourceById[id] = src;
                         report?.RecordWinner(entry.RelativePath, id, src);
                         continue;
+                    }
+
+                    if (!string.Equals(_firstSourceById.GetValueOrDefault(id), src, StringComparison.Ordinal))
+                    {
+                        report?.RecordDuplicateId(entry.RelativePath, id, _firstSourceById.GetValueOrDefault(id) ?? string.Empty, src);
                     }
 
                     MergeObject(existing, obj, entry.ArrayAppendFields);

@@ -12,16 +12,17 @@
     │
 [Seat]     玩家席位
     │       ControlScheme 定位当前设备布局
-    │       InteractionContextStack 管理输入上下文
+    │       输入上下文由投影从实体交互状态派生
     │
 [Device]   手柄 B 键
     │       Input Action Mapping: 设备参数→语义 Action:Jump
     │       （灵敏度/按压时长在 Device→Action 层消亡）
     │
     ▼
-CommandIntentProfile + Arbiter
+CommandIntentProfile + Arbiter + CommandPref
     │       依当前状态选择意图
     │       （蜘蛛侠同键不同技；按/抬/蓄/超时 = 不同意图）
+    │       玩家下单偏好挂 representative 的 CommandPref（换 scheme 不动偏好）
     ▼
 ControlPlaneView
     │       从唯一 Representative 出发

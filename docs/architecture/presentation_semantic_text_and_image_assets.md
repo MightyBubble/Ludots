@@ -73,7 +73,7 @@
 }
 ```
 
-`DialogueView` 暴露 `ResolvedSpeakerName`、`PortraitImageSrc`、`StandingImageSrc`。展示层禁止再维护 `speakerLabels` 明文表。半屏全身立绘 profile（`story.standing_portrait`）必须解析 `standingImageId`，禁止用 bust 肖像顶替。
+`DialogueView` 暴露 `ResolvedSpeakerName`、`PortraitImageId`、`StandingImageId`（资源 id，不是文件系统路径）。路径解析发生在 NarrativeFrontend 边界。展示层禁止再维护 `speakerLabels` 明文表。半屏全身立绘 profile（`story.standing_portrait`）必须带上 `standingImageId`，禁止用 bust 肖像顶替。
 
 ### 3.4 换肤（故事表面）
 

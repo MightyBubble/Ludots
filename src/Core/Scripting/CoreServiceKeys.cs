@@ -115,6 +115,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
         public static readonly ServiceKey<Ludots.Platform.Abstractions.ISaveStorage> SaveStorage = new("SaveStorage");
         public static readonly ServiceKey<CheckpointCoordinator> CheckpointCoordinator = new("CheckpointCoordinator");
+        public static readonly ServiceKey<Ludots.Core.Fields.FieldLayerRegistry> FieldLayerRegistry = new("FieldLayerRegistry");
         public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem> AttachmentPositionSync = new("AttachmentPositionSync");
 
@@ -155,6 +156,7 @@ namespace Ludots.Core.Scripting
         // --- Input ---
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");
         public static readonly ServiceKey<IInputActionReader> AuthoritativeInput = new("AuthoritativeInput");
+        public static readonly ServiceKey<Ludots.Core.Input.Runtime.AuthoritativeInputAccumulator> AuthoritativeInputAccumulator = new("AuthoritativeInputAccumulator");
         public static readonly ServiceKey<AuthoritativePointerButtonSnapshot> AuthoritativePointerButtons = new("AuthoritativePointerButtons");
         public static readonly ServiceKey<AuthoritativeGroundPointerOverride> AuthoritativeGroundPointerOverride = new("AuthoritativeGroundPointerOverride");
         public static readonly ServiceKey<IInputBackend> InputBackend = new("InputBackend");
@@ -198,6 +200,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TaskRuntimeService> TaskRuntimeService = new("TaskRuntimeService");
         public static readonly ServiceKey<TaskPresentationBuffer> TaskPresentationBuffer = new("TaskPresentationBuffer");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Story.StoryDefinitionRegistry> StoryDefinitions = new("StoryDefinitions");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Story.StoryPresentationProjector> StoryPresentationProjector = new("StoryPresentationProjector");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Dialogue.DialogueDefinitionRegistry> DialogueDefinitions = new("DialogueDefinitions");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Sequencer.SequenceDefinitionRegistry> SequenceDefinitions = new("SequenceDefinitions");
         public static readonly ServiceKey<Ludots.Core.Gameplay.Dialogue.DialogueRuntime> DialogueRuntime = new("DialogueRuntime");
@@ -308,7 +311,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<DomainRoutedCollectionWriter> DomainRoutedCollectionWriter = new("DomainRoutedCollectionWriter");
         public static readonly ServiceKey<ControlPlaneView> ControlPlaneView = new("ControlPlaneView");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
-        public static readonly ServiceKey<InteractionContextStack> InteractionContextStack = new("InteractionContextStack");
         public static readonly ServiceKey<FilterProfileRegistry> FilterProfileRegistry = new("FilterProfileRegistry");
         public static readonly ServiceKey<CommandIntentProfileRegistry> CommandIntentProfileRegistry = new("CommandIntentProfileRegistry");
         public static readonly ServiceKey<CastDispatchProfileRegistry> CastDispatchProfileRegistry = new("CastDispatchProfileRegistry");
@@ -316,6 +318,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CastCommitProfileRegistry> CastCommitProfileRegistry = new("CastCommitProfileRegistry");
         public static readonly ServiceKey<ClientCastPreferenceStore> ClientCastPreferenceStore = new("ClientCastPreferenceStore");
         public static readonly ServiceKey<ControlSchemeRuntime> ControlSchemeRuntime = new("ControlSchemeRuntime");
+        public static readonly ServiceKey<Ludots.Core.Input.Interaction.InteractionModeMap> InteractionModeMap = new("InteractionModeMap");
         public static readonly ServiceKey<Ludots.Core.UI.EntityCommandPanels.AbilityAggregationProfileRegistry> AbilityAggregationProfileRegistry = new("AbilityAggregationProfileRegistry");
         public static readonly ServiceKey<Ludots.Core.UI.CommandDeck.CommandDeckProfileRegistry> CommandDeckProfileRegistry = new("CommandDeckProfileRegistry");
         public static readonly ServiceKey<Ludots.Core.UI.CommandDeck.CommandDeckRouteResolver> CommandDeckRouteResolver = new("CommandDeckRouteResolver");
@@ -436,6 +439,7 @@ namespace Ludots.Core.Scripting
         // --- Client local seats & logical vision (Epic #896) ---
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatRegistry> ClientLocalSeatRegistry = new("ClientLocalSeatRegistry");
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatDeviceBinding> ClientLocalSeatDeviceBinding = new("ClientLocalSeatDeviceBinding");
+        public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatInputRuntime> ClientLocalSeatInputRuntime = new("ClientLocalSeatInputRuntime");
         public static readonly ServiceKey<Ludots.Core.Client.LogicViewRegistry> LogicViewRegistry = new("LogicViewRegistry");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
 

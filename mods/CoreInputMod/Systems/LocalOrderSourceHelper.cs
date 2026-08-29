@@ -277,10 +277,8 @@ namespace CoreInputMod.Systems
 
         private void RequireConfigureCommandIntentRouting(InputOrderMappingSystem mapping)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) ||
-                stackObj is not InteractionContextStack stack ||
-                !_globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out var schemeObj) ||
-                schemeObj is not ControlSchemeRuntime schemes ||
+            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out var contextProfilesObj) ||
+                contextProfilesObj is not InteractionContextProfileRegistry contextProfiles ||
                 !_globals.TryGetValue(CoreServiceKeys.CommandIntentProfileRegistry.Name, out var intentsObj) ||
                 intentsObj is not CommandIntentProfileRegistry intents ||
                 !_globals.TryGetValue(CoreServiceKeys.CastDispatchProfileRegistry.Name, out var dispatchObj) ||
@@ -294,12 +292,28 @@ namespace CoreInputMod.Systems
 
             mapping.SetCommandIntentRouting(
                 _world,
-                stack,
-                schemes,
+                contextProfiles,
                 intents,
                 dispatch,
                 collections,
-                TryGetCommandSourceOwner);
+                TryGetCommandSourceOwner,
+                TryGetPlayerRepresentative);
+        }
+
+        /// <summary>
+        /// Player id → representative entity through the map-binding player lookup — the entity
+        /// that carries the player's CommandPref. The bound sole possessed actor may be a
+        /// controlled unit, so order routing preferences resolve through the player instead.
+        /// </summary>
+        private bool TryGetPlayerRepresentative(int playerId, out Entity rep)
+        {
+            rep = Entity.Null;
+            return playerId > 0 &&
+                _globals.TryGetValue(CoreServiceKeys.PlayerEntityLookup.Name, out object? lookupObj) &&
+                lookupObj is PlayerEntityLookup players &&
+                players.TryGet(playerId, out rep) &&
+                rep != Entity.Null &&
+                _world.IsAlive(rep);
         }
 
         public bool TryGetSolePossessedPlayerId(out int playerId)
@@ -339,24 +353,26 @@ namespace CoreInputMod.Systems
             return service;
         }
 
+        /// <summary>
+        /// The active interaction context's carrier entity, read from the sole possessed rep's
+        /// mounted <see cref="ActiveInteractionContext"/>; false in steady state (the mapping
+        /// system then falls back to the sole possessed rep) and while a dead carrier is still
+        /// mounted in the pre-reclaim window (no silent fallback).
+        /// </summary>
         private bool TryGetCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out object? stackObj) &&
-                stackObj is InteractionContextStack stack &&
-                stack.TryPeek(out InteractionContextFrame frame) &&
-                HasEntityValue(frame.ContextEntity))
+            if (!_context.TryResolveLocalCommandSourceOwner(out Entity subject) ||
+                !_world.IsAlive(subject) ||
+                !_world.TryGet<ActiveInteractionContext>(subject, out ActiveInteractionContext context) ||
+                !HasEntityValue(context.ContextEntity) ||
+                !_world.IsAlive(context.ContextEntity))
             {
-                if (!_world.IsAlive(frame.ContextEntity))
-                {
-                    return false;
-                }
-
-                owner = frame.ContextEntity;
-                return true;
+                return false;
             }
 
-            return false;
+            owner = context.ContextEntity;
+            return true;
         }
 
         private bool TryResolveCommandIntentTargetFacts(InputOrderMapping mapping, out CommandIntentTargetFacts facts)

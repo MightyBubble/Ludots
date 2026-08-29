@@ -37,6 +37,34 @@ namespace Ludots.Tool
             return LoadMergedMap(root, mods, loadOrder, mapId);
         }
 
+        public static string ResolveModRoot(string repoRoot, string modId)
+        {
+            if (string.IsNullOrWhiteSpace(repoRoot))
+            {
+                throw new InvalidOperationException("Mod root resolution requires a repo root.");
+            }
+
+            if (string.IsNullOrWhiteSpace(modId))
+            {
+                throw new InvalidOperationException("Mod root resolution requires a mod id.");
+            }
+
+            List<ModInfo> matches = DiscoverMods(Path.GetFullPath(repoRoot))
+                .Where(mod => string.Equals(mod.Id, modId, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (matches.Count == 0)
+            {
+                throw new InvalidOperationException($"Unknown mod '{modId}'.");
+            }
+
+            if (matches.Count > 1)
+            {
+                throw new InvalidOperationException($"Mod id '{modId}' resolves to multiple roots.");
+            }
+
+            return matches[0].RootPath;
+        }
+
         public static BoardConfig ResolvePrimaryNavigationBoard(MapConfig map)
         {
             if (map == null) throw new ArgumentNullException(nameof(map));

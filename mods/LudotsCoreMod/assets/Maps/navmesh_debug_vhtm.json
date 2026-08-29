@@ -16,7 +16,15 @@
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,
-      "NavigationEnabled": true
+      "NavigationEnabled": true,
+      "NavTileGrid": {
+        "widthChunks": 4,
+        "heightChunks": 4,
+        "chunkSizeCells": 64,
+        "cellSizeCm": 100,
+        "originXcm": 0,
+        "originZcm": 0
+      }
     }
   ],
   "Entities": [],

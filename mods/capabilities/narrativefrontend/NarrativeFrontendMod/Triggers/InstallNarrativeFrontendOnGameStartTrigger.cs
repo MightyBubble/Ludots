@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -37,9 +38,12 @@ internal sealed class InstallNarrativeFrontendOnGameStartTrigger : Trigger
 
         var service = new NarrativeFrontendService();
         engine.SetService(NarrativeFrontendServiceKeys.Service, service);
+
+        // Project active DialogueRuntime views; content mods start dialogue via TriggerGraph StartDialogue.
+        engine.RegisterPresentationSystem(new NarrativeStoryBridgeSystem(engine, service));
         engine.RegisterPresentationSystem(new NarrativeFrontendPresentationSystem(engine, service));
 
-        _context.Log("[NarrativeFrontendMod] Service and presentation system registered.");
+        _context.Log("[NarrativeFrontendMod] Service, story bridge, and presentation system registered.");
         return Task.CompletedTask;
     }
 }

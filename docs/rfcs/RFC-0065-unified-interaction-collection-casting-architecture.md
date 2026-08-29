@@ -246,10 +246,11 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
 - **唯一胜出是显式全序，胜出即终局**：同一 profile 内 rule priority 互不相等，加载期 fail-fast；A∩B 目标由 priority 决定唯一 winner。**胜出 rule 的 route 解析失败（如 `byAbilityTag` 找不到 slot）= 该 actor 本次无 order，不落穿下一条 rule**（禁止 fallback）。需要评分式动态选择时，route 显式委托 `contextGroupId`（复用 ContextScored 评分）——静态全序与评分委托二选一，都在数据里。
 - **route 的 slot 定位是 selector 表达式**（DEC-11 registry）：语义路由一律用 `byAbilityTag:...` / `contextGroup:...`；`bySlotIndex:N` 保留为注册 kind 但**禁止用于语义路由**（"普攻"由 `ability.catalog.weapon` 之类的 catalog tag 定位，不是裸 slot 0——否则形态切换/Granted 覆盖后路由错位，且重蹈 slot=面板=语义的耦合）。
 - **混合框选 = per-actor 解析 + 显式群体策略**：每个 actor 独立跑规则表（有驻扎能力的进驻、没有的攻击）；`groupPolicy` 声明一致性策略：`independent`，或 `bySelector`（复用 DSP 的 selector/scorer registry 选出决策 actor，其胜出 rule 决定全组——不引入未定义的 "leader" 概念）。groupPolicy 为 profile 顶层唯一（一次 pointer intent 一种群体语义，有意约束，不支持 per-rule 覆盖）。
-- **与 frameActions 的仲裁（确定性规则）**：栈顶 frame 先做 `frameActions` 精确匹配拦截；未被拦截的 pointer command action 落入**栈顶 frame 自己的** `commandIntentId`；frame 无 commandIntentId 则该 pointer command 不路由、**不向下层 frame 冒泡**（无 fallback）。解析链：frame 显式 commandIntentId > ControlScheme `defaults.commandIntentId`（仅对 default frame 生效）。
+- **与 frameActions 的仲裁（确定性规则）**：栈顶 frame 先做 `frameActions` 精确匹配拦截；未被拦截的 pointer command action 落入**栈顶 frame 自己的** `commandIntentId`；frame 无 commandIntentId 则该 pointer command 不路由、**不向下层 frame 冒泡**（无 fallback）。解析链：frame 显式 commandIntentId > possessed representative 上 `CommandPref` 组件的玩家默认（仅对 default frame 生效）。
 - **与 Dispatch 的两阶段单向组合**：L8 intent 先把 ControlPlaneView **分区为 route groups**（同一胜出 route 的 actors 一组，groupPolicy 在此阶段生效）→ 每个 route group 携带解析出的 orderType/slot 进入 L9 dispatch（selector/scorer/router 在组内生效）；cycle 等 dispatch 状态以 (frame, routeGroupKey) 为 key。两阶段严格单向，dispatch 不回头改路由。
 - **性能预算**（与 DEC-2 同规格）：rule 表加载期预编译为 tag bitset 匹配；actor 侧谓词结果按 archetype/tag signature 缓存；graph 谓词仅在 shorthand 无法表达时使用（数据里显式标注）；数百 actor × 每次 pointer intent 的求值必须在 bitset 快路径完成。
 - **归属层级**：`CommandIntentProfile` 是 context frame 引用的数据（不同 context 可换 profile——默认指挥 vs 超级武器 context 右键语义不同）；`actorOrderRouting` 是它的 actor 侧子集，迁移后退役该字段。
+- **修订（#1306 路线③，2026-08）——下单偏好归玩家实体**：default frame 的 intent 默认与 dispatch profile 默认不再是 scheme 数据，而是挂在玩家 representative 上的稀疏组件 `CommandPref`（玩家级默认 intent + dispatch profile，另有 per-ability-template 覆盖表，覆盖项可只覆盖一项）。粒度对齐原稿：per game instance = `Input/command_prefs.json` 种子（进图绑定期种到每个无组件的 representative，玩家数据不覆盖）；per player = 组件玩家级默认；per ability template = 组件覆盖表。组件随世界存档 round-trip；读取方 fail-fast（无组件 = 接线错误），无任何回退默认。pointer 命令 fan-out 是整组一次解析，无单一 ability 上下文，因此链内消费玩家级默认；ability 级覆盖由持有具体 ability 上下文的消费方读取（组件合同统一，见 arbiter / `CommandPrefResolver`）。
 
 ### DEC-15 设备 → intent 链路分层与运行时重绑定
 
@@ -258,13 +259,14 @@ genre 差异（星际右键指挥 / 红警左键指挥 / 暗黑左键攻击 + WA
 | 层 | 内容 | 载体 | 现状 |
 |----|------|------|------|
 | 物理绑定 | `<Mouse>/rightButton` → action `"Command"` | `default_input.json` bindings（IMC） | ✅ 已数据化；`"Select"/"Command"` 字面量只存在于 `InteractionActionBindings` 默认常量，消费者读可配置 property |
-| 控制方案 | **ControlScheme** = 一组 IMC context + 默认 preference 的命名组合（`scheme.sc2_classic` / `scheme.wasd_move`） | 拟新增 catalog | ❌ 无 |
+| 控制方案 | **ControlScheme** = 一组 IMC context 的命名组合——纯设备键位档案（`scheme.sc2_classic` / `scheme.wasd_move`）；下单偏好见 CommandPref（DEC-14 修订） | 拟新增 catalog | ❌ 无 |
 | action → op | frame 的 `frameActions`（DEC-13） | InteractionContextProfile | 本 Epic 落地 |
 | intent → order | CommandIntentProfile（DEC-14） | 拟新增 | ❌ 无 target 侧 |
 
 - **运行时重绑定**：现状 `PlayerInputHandler` 构造期编译 context、无 rebind API；`InputOrderMappingSystem.Remap()` / `SaveUserPreferences` 存在但**全仓库零调用方、启动链路未接线**。本 Epic 补：物理键 rebind API + per-player preference 持久化接线 + ControlScheme 热切换（= IMC push/pop 组合，玩家局内可切 WASD⇄鼠标移动）。
 - **WASD 直控移动必须走 OrderQueue**：轴 intent → 按 sim tick 节流的 move order（铁律 1；`CameraAcceptanceMod` 直写 `WorldPositionCm` 是 fixture 专用，禁止进生产路径）；方向类 `OrderSelectionType.Direction` 的 backlog（`s3_direction_key_variant.md`）在此收口。
 - "移动"不是 Core 概念：move 只是 intent profile 里一条 route（`moveTo` order type 或 movement ability slot——MobaDemoMod 右键 = `castAbility slot4 Nav.Move` 的先例已证明两种都行）。
+- **修订（#1306 路线③，2026-08）——scheme 收窄为纯键位档案**：`ControlSchemeDefinition` 不再携带 `defaults` 节（command intent / cast dispatch 默认迁往 CommandPref，见 DEC-14 修订）；`ControlSchemeRuntime` 相应删除 default 意图 / dispatch 的编译与查询面。旧配置仍带 `defaults` 字段时加载期点名报错并指明迁移目标（`Input/command_prefs.json`），不静默忽略。scheme 剩余职责：IMC context 组合、axisMove 拓扑声明、allowed-set 与热切换（写本机偏好存储，禁则④侧不变）。
 
 ---
 
@@ -535,30 +537,35 @@ profile 只声明两件事：激活 slot 时执行什么 op 序列；若 push �
 ```json
 {
   "id": "scheme.sc2_classic",
-  "inputContexts": ["imc.pointer.command_on_right"],
-  "defaults": { "commandIntentId": "intent.command.rts_default" }
+  "inputContexts": ["imc.pointer.command_on_right"]
 }
 {
   "id": "scheme.ra_like",
-  "inputContexts": ["imc.pointer.command_on_left"],
-  "defaults": { "commandIntentId": "intent.command.rts_default" }
+  "inputContexts": ["imc.pointer.command_on_left"]
 }
 {
   "id": "scheme.diablo_like",
-  "inputContexts": ["imc.pointer.command_on_left", "imc.movement.wasd"],
-  "defaults": { "commandIntentId": "intent.command.arpg_default" }
+  "inputContexts": ["imc.pointer.command_on_left", "imc.movement.wasd"]
 }
 ```
 
-同一局内玩家可在 mod 允许的 scheme 集内热切换（= IMC push/pop 组合 + preference 写入；栈上非 default frame 保留，default frame 的 intent 引用即时改读新 scheme）；WASD 轴 intent 产生按 sim tick 节流的 move order，走 OrderQueue（DEC-15）。
+玩家级下单偏好种子（`Input/command_prefs.json`，进图绑定期种到 representative 的 `CommandPref` 组件；scheme 只剩键位档案）：
+
+```json
+{
+  "defaults": { "commandIntentId": "intent.command.rts_default", "castDispatchProfileId": "dispatch.all_together" }
+}
+```
+
+同一局内玩家可在 mod 允许的 scheme 集内热切换（= IMC push/pop 组合 + preference 写入；栈上非 default frame 保留）。热切换只换 IMC 绑定：default frame 的 intent / dispatch 引用读的是 representative 上的 CommandPref（DEC-14 修订），换 scheme 不改下单偏好。WASD 轴 intent 产生按 sim tick 节流的 move order，走 OrderQueue（DEC-15）。
 
 **「右键怎么变成 move intent」端到端数据链**（零 Core 语义参与）：
 
 ```text
 <Mouse>/rightButton                        （default_input.json binding，scheme.sc2_classic 的 IMC）
   → InputAction "Command"                  （action id 本身是数据，InteractionActionBindings 可换）
-    → 栈顶 default frame：frameActions 无精确匹配 → 落入 frame 的 commandIntentId
-      → intent.command.rts_default         （frame 未显式声明时读 scheme default）
+    → 栈顶 default frame：frameActions 无精确匹配 → 落入 representative CommandPref 的玩家默认
+      → intent.command.rts_default         （frame 显式声明 commandIntentId 时 frame 值优先）
         → per-actor 规则表：命中 priority=10（target.hasEntity=false）
           → route { orderTypeKey: "moveTo" } → L9 dispatch → OrderQueue
 ```

@@ -1,0 +1,22 @@
+{
+  "op": "StartDialogue",
+  "driver": "script",
+  "title": "进图开一场对话",
+  "beat": "图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。",
+  "detailTemplate": "对话已开。",
+  "assertDetailContains": ["对话"],
+  "featuredNodeId": "featured",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "作者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

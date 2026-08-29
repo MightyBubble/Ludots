@@ -487,6 +487,76 @@
       }
     },
     {
+      "name": "east_asia_playable_terrain",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod"
+      }
+    },
+    {
+      "name": "east_asia_visual_heightmap_runtime",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapRuntimeEntryMod"
+      }
+    },
+    {
+      "name": "east_asia_navmesh_debug",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod"
+      }
+    },
+    {
+      "name": "field_east_asia_admin",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_east_asia_admin/FieldEastAsiaAdminMod"
+      }
+    },
+    {
+      "name": "east_asia_borders_land_sea",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod"
+      }
+    },
+    {
+      "name": "field_east_asia_country",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_east_asia_country/FieldEastAsiaCountryMod"
+      }
+    },
+    {
+      "name": "field_jing_yang_transit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod"
+      }
+    },
+    {
+      "name": "field_layer_table",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_layer_table/FieldLayerTableMod"
+      }
+    },
+    {
+      "name": "field_editor_paint",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_editor_paint/FieldEditorPaintMod"
+      }
+    },
+    {
+      "name": "field_hierarchy_query",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_hierarchy_query/FieldHierarchyQueryMod"
+      }
+    },
+    {
       "name": "capability_standard_ability_graph_sandbox",
       "target": {
         "type": "path",
@@ -1601,6 +1671,14 @@
       }
     },
     {
+      "name": "dual_seat_panels_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dual_seat_panels/DualSeatPanelsShowcaseMod",
+        "projectPath": "DualSeatPanelsShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",
@@ -1844,6 +1922,20 @@
       }
     },
     {
+      "name": "dialogue_author_kit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dialogue_author_kit/DialogueAuthorKitShowcaseMod"
+      }
+    },
+    {
+      "name": "dialogue_author_kit_theme_ink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dialogue_author_kit_theme_ink/DialogueAuthorKitThemeInkMod"
+      }
+    },
+    {
       "name": "narrative_theme_sanguo",
       "target": {
         "type": "path",
@@ -1929,19 +2021,35 @@
       }
     },
     {
-      "name": "activity_dispatch_showcase",
+      "name": "capability_standard_graph_op_StartDialogue",
       "target": {
         "type": "path",
-        "value": "mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod",
-        "projectPath": "ActivityDispatchShowcaseMod.csproj"
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStartDialogueEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStartDialogueEntryMod.csproj"
       }
     },
     {
-      "name": "capability_standard_graph_op_OfferActivity",
+      "name": "capability_standard_graph_op_SetInteractionMode",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
-        "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj"
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetInteractionModeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetInteractionModeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetPanelAudience",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetPanelAudienceEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetPanelAudienceEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ModifyAttributeSet",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpModifyAttributeSetEntryMod",
+        "projectPath": "CapabilityStandardGraphOpModifyAttributeSetEntryMod.csproj"
       }
     }
   ],

@@ -86,20 +86,56 @@ public interface ISaveParticipant
 
 `SaveParticipantRegistry` 要求 domain key 唯一，读档时拒绝未知 domain，也拒绝缺失已注册 domain。Core 引擎初始化时注册这些 domain：
 
-- `activity`
+- `activities`
 - `clock`
+- `dialogue`
+- `fields`
 - `gameSession`
 - `inventory`
 - `mapSessions`
-- `dialogue`
-- `sequencer`
 - `relationships`
 - `rng`
-- `task`
+- `sequencer`
+- `tasks`
 - `teams`
 - `timeFlow`
 
 `inventory` 是空 domain 占位，用来固定存档合同；`relationships` 的 runtime 索引由 world 里的关系实体在 restore 后重建（`RebuildEntityIndexFromWorld`），capture 为空。真正 runtime 状态接入时必须在同一 domain 下深化 participant，不新建平行存档管线。
+
+### 15 分钟接入：最小 ISaveParticipant
+
+```csharp
+// 1) 实现 participant：CaptureState 导出状态，RestoreState 读回（不对称即写错）
+public sealed class MoneySaveParticipant : ISaveParticipant
+{
+    private readonly MoneyRuntimeService _money;
+    public MoneySaveParticipant(MoneyRuntimeService money) => _money = money;
+
+    public string DomainKey => "money";
+    public JsonNode CaptureState() => new JsonObject { ["gold"] = _money.Gold };
+    public void RestoreState(JsonNode state)
+    {
+        if (state["gold"] is not JsonObject && state["gold"] is not JsonValue)
+            throw new SaveContextException("money domain: gold is required.");
+        _money.SetGold(state["gold"]!.GetValue<int>());
+    }
+}
+
+// 2) 注册（引擎初始化后任意时机；domain key 全局唯一，重复注册抛异常）
+engine.GetService(CoreServiceKeys.SaveParticipants)
+       .Register(new MoneySaveParticipant(moneyService));
+
+// 3) 触发一次存/读（槽位落盘走引擎 ISaveStorage，见下文落盘归属）
+var snapshot = new WorldSnapshotService().Capture(engine,
+    SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+new SaveSlotStore(engine.GetService(CoreServiceKeys.SaveStorage)!)
+    .WriteSlot(SaveSlotId.Manual("quickstart"), snapshot);
+var restored = new SaveSlotStore(engine.GetService(CoreServiceKeys.SaveStorage)!)
+    .ReadSlot(SaveSlotId.Manual("quickstart"));
+new WorldRestoreService().Restore(engine, restored);
+```
+
+验证：`SaveParticipantRegistryTests`（domain 唯一/未知/缺失 fail-fast）与 `SaveSystemUatTests` 是现成的参照测试；跑起来看用 `preset:save_load_showcase_raylib`。
 
 ## 容器、槽位与平台边界
 

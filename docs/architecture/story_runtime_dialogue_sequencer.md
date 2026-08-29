@@ -174,12 +174,35 @@ Task 字段：`on_enter_dialogue_id` 保留；`on_enter_cinematic_id` 改为 `on
 
 前端仍发布到既有 NarrativeFrontend surface kinds（屏幕组合合同已通用化），由 profile 选择 kind 与锚点策略，而不是 showcase 硬编码「有选项就 overlay」。
 
+### 3.6 表现前后端分离（字符串袋 + 流句柄）
+
+对话 / 字幕 / 选项的权威内容与屏幕皮彻底拆开：
+
+```text
+DialogueRuntime / SequencerRuntime
+  → DialogueView / SequenceView（已解析文案 + imageId；选项无 Graph/next）
+  → StoryPresentationProjector（profile → surfaceKind；产出 StoryPresentationFrame）
+  → NarrativeFrontend（解析 imageId → 可绘路径；套 layout / eyebrow / footer）
+  → Skia Overlay
+```
+
+| 层 | 持有 | 禁止 |
+|----|------|------|
+| DialogueView | `ResolvedText`、`PortraitImageId` / `StandingImageId`、选项 `ChoiceId`+文案 | 绝对路径、`conditionGraphId` / `nextNode` |
+| `StoryPresentationStreamHandle` | `StreamId` + `Generation`（一帧对话流实例句柄） | 业务逻辑 |
+| `StoryPresentationFrame` | 句柄 + 字符串袋（Title/Body/Subtitle/Footer）+ `ImageId` + 选项标签 | 文件系统路径、图 id |
+| NarrativeFrontend / Showcase chrome | 眉题、页脚、选项标题（TextToken）、九宫格框、`imageId→src` | 写几何/色——几何与色归 profile 单一写入者 |
+
+Showcase 只负责：世界投影坐标补给、HUD（任务/回顾/提示）、把前端 chrome 叠到字符串袋上。不再手写「对话表面 / 选项表面 / 字幕表面」三套硬编码路由。
+
 ## 4. 场景
 
 - 玩家靠近守望者并交互 → 打开 `dialogue.briefing` → 看到 overlay 对话与条件过滤后的选项
 - 地图变量 `trial_phase==0` 时「接受试炼」可用；选择后 TriggerGraph 写入 `trial_phase=1` 并发任务信号
 - 走进神殿触发 `sequence.trial_reveal` → 镜头与字幕同步 → 信号点刷出试炼单位
 - 加载仍含 `NarrativeConditionKind` / 旧 `Narrative/variables.json` 的包 → 启动失败并指出迁移目标
+- 表现层只拿到句柄与字符串袋：换皮 / 换锚点不改 Dialogue 配置；换台词不改 Frontend 布局表
+- 作者入门可玩案例：[关口口令](../../gitbook/architecture/dialogue-author-kit.md)（`dialogue_author_kit`）
 
 ## 5. 边界
 
@@ -187,13 +210,38 @@ Task 字段：`on_enter_dialogue_id` 保留；`on_enter_cinematic_id` 改为 `on
 - Query 只读；TriggerGraph 才写
 - TextToken 是用户可见文案唯一出口；禁止 String 地图变量拼台词
 - MapVariable 仅 Int/Float；离散结局用 Int 枚举，不用 Narrative String 变量
-- WebUI Panel Kit 本阶段不接入故事对话
-- 肖像与说话者名走 #128 Presentation 图像/语义合同；禁止 showcase 私有明文 speakerLabels
-- `story.world_bubble` 禁止静默退回固定屏幕角落；投影失败必须抛错
-- `story.standing_portrait` 禁止用 bust 肖像顶替全身立绘；缺 `standingImageId` 必须抛错
-- Sequencer ADR S1 已由负责人过评通过；实现红线不变（不复用 GAS AbilityExec、不复用 graph yieldable、channel 插值长在 Tweening、演出轨直写 Presenter）。Graph 基建合入跟 #1239（TriggerGraph night-raid）等 PR，不在本 Story 交付里自卡“等过评”
+- DialogueRuntime 不解析图像路径；路径只在 Frontend 边界解析
+- 选项视图不携带 Graph / next；跳转仍只在 DialogueRuntime 内
+- 全部玩家可见文本走 TextToken（PresentationTextCatalog/locales）；解析单一权威 `StoryTextResolution`，无 resolver / 未注册 token / 未注册 speaker 一律抛错，禁止明文 speakerLabels 或 token id 兜底上屏
+- 表现几何（宽/锚/偏移/zIndex/图尺寸/遮罩色）与颜色唯一来源是 `presentation_profiles.json`；前端 chrome 只供皮肤文字；`theme.css` 只管视觉皮肤——同属性禁止双源
+- 故事输入（Advance/Choice1-3/Skip）统一由 `StoryRuntimeSystem`（InputCollection 组）分发：序列优先、对话次之；域 runtime 只暴露纯 API，不轮询输入
+- Story line/speaker/profile/dialogue/sequence id 跨 mod 必须唯一（命名空间化，如 `author_kit.*`）；装载期重复 id fail-closed
 
 ## 6. UAT
+
+```gherkin
+Feature: 对话表现前后端分离
+
+  Scenario: 前端只吃字符串与图片 id
+    Given 对话节点已进入且台词与说话者肖像已就绪
+    When 投影器产出一帧 StoryPresentationFrame
+    Then 帧上只有句柄、文案字符串与 imageId
+    And 不含文件系统路径
+    And 选项行不含图 id 或下一节点
+
+  Scenario: 立绘眉题来自前端皮
+    Given 节点使用 presentationProfile story.standing_portrait
+    And 前端配置 standingPortrait.eyebrow 为「立绘」
+    When 玩家看到立绘对话
+    Then 画面上出现眉题「立绘」
+    And 立绘图来自 standingImageId 解析结果
+
+  Scenario: 世界气泡布局宽来自前端、坐标来自投影
+    Given 节点使用 story.world_bubble
+    When 对话气泡发布
+    Then 气泡宽度取前端 DialogueBubble 配置
+    And 屏幕偏移取说话者头顶投影
+```
 
 ```gherkin
 Feature: Dialogue 使用统一 Graph 基建
@@ -270,6 +318,7 @@ Feature: 地图变量作者面
 | VirtualCameraRequest | CameraTrack / 对话镜头 |
 | PresentationTextCatalog | TextToken |
 | NarrativeFrontendService | 屏幕 surface 发布 |
+| StoryPresentationProjector | View → 字符串袋帧 |
 | IScreenProjector | 世界气泡 |
 | Tweening | 可选通道插值 |
 | CoreSaveParticipants | 存档域迁移 |
@@ -279,6 +328,7 @@ Feature: 地图变量作者面
 1. 本文档 + Dialogue runtime + 旧 Narrative 失败关闭/拆除 + Graph invoker — 完成
 2. Sequencer runtime（独立 commit）— 完成
 3. Showcase / Frontend 投影 / 测试与 UAT — 完成
+4. StoryPresentationProjector 字符串袋前后端分离 — 进行中
 
 ## 9. 交付状态（Story 线）
 
@@ -288,3 +338,10 @@ Feature: 地图变量作者面
 - #1217 / #1109 MapVariable 作者面（Bridge + Graph 变量面板）：已合入
 - Epic #1083 剩余 Graph 子树（#1113–#1126）：跟 TriggerGraph PR #1239，不在 Story 交付内自卡
 
+## 10. 其它边界备注
+
+- WebUI Panel Kit 本阶段不接入故事对话
+- 肖像与说话者名走 #128 Presentation 图像/语义合同；禁止 showcase 私有明文 speakerLabels
+- `story.world_bubble` 禁止静默退回固定屏幕角落；投影失败必须抛错
+- `story.standing_portrait` 禁止用 bust 肖像顶替全身立绘；缺 `standingImageId` 必须抛错
+- Sequencer ADR S1 已由负责人过评通过；实现红线不变（不复用 GAS AbilityExec、不复用 graph yieldable、channel 插值长在 Tweening、演出轨直写 Presenter）。Graph 基建合入跟 #1239（TriggerGraph night-raid）等 PR，不在本 Story 交付里自卡“等过评”

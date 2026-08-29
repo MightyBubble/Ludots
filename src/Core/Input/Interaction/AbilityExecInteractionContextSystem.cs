@@ -3,56 +3,73 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// RFC-0065 CTX-6: binds ability exec lifecycles to interaction context frames (DEC-13 post-order
-    /// targeting sessions). The exec instance component (<see cref="AbilityExecInstance"/>) is the
-    /// single sim-side lifecycle carrier: while an exec of an ability declaring
-    /// <c>interactionContextProfile</c> runs, the profile's frame sits on the stack with the exec
-    /// carrier entity as <c>ContextEntity</c>; when the exec ends for any reason — finish, interrupt,
-    /// fail, order cancel, or caster death — the frame is reclaimed via
-    /// <see cref="InteractionContextStack.RemoveByContextEntity"/>. Reconciliation is polling over
-    /// component existence (no new event kinds, deterministic across every exec teardown path).
-    /// Steady state is allocation free.
+    /// RFC-0065 CTX-6: binds ability exec lifecycles to the entity-mounted active interaction
+    /// context (DEC-13 post-order targeting sessions). The exec instance component
+    /// (<see cref="AbilityExecInstance"/>) is the single sim-side lifecycle carrier: while an
+    /// exec of an ability declaring <c>interactionContextProfile</c> runs, the profile is
+    /// mounted as an <see cref="ActiveInteractionContext"/> on the carrier's control-domain
+    /// representative; when the exec ends for any reason — finish, interrupt, fail, order
+    /// cancel, or caster death — the mount is reclaimed in the next update. Reconciliation is
+    /// polling over component existence (no new event kinds, deterministic across every exec
+    /// teardown path) and per control domain the latest-activated carrier wins (LIFO). A
+    /// mount whose carrier dies stays mounted until this system's next update so entity-side
+    /// readers fail closed instead of silently falling back to the steady state. Steady state
+    /// is allocation free.
+    /// <para>
+    /// This system manages only <see cref="ActiveInteractionContextSource.ExecLifecycle"/>
+    /// mounts; cast commit <c>pushFrame</c> op mounts live and die with their own ops.
+    /// </para>
     /// </summary>
     public sealed class AbilityExecInteractionContextSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _execQuery = new QueryDescription().WithAll<AbilityExecInstance>();
+        private static readonly QueryDescription _activeContextQuery = new QueryDescription().WithAll<ActiveInteractionContext>();
 
-        private readonly InteractionContextStack _contextStack;
         private readonly InteractionContextProfileRegistry _contextProfiles;
         private readonly AbilityDefinitionRegistry _abilityDefinitions;
+        private readonly ControlDomainQuery _controlDomains;
 
         private Entity[] _trackedEntities = new Entity[16];
         private int[] _trackedAbilityIds = new int[16];
+        private int[] _trackedProfileIds = new int[16];
         private int _trackedCount;
         private Entity[] _scratch = new Entity[64];
+        private Entity[] _mountedScratch = new Entity[8];
+        private Entity[] _desiredReps = new Entity[8];
+        private ActiveInteractionContext[] _desiredStates = new ActiveInteractionContext[8];
+        private bool[] _desiredMounted = new bool[8];
+        private int _desiredCount;
 
         public AbilityExecInteractionContextSystem(
             World world,
-            InteractionContextStack contextStack,
             InteractionContextProfileRegistry contextProfiles,
-            AbilityDefinitionRegistry abilityDefinitions)
+            AbilityDefinitionRegistry abilityDefinitions,
+            ControlDomainQuery controlDomains)
             : base(world)
         {
-            _contextStack = contextStack ?? throw new ArgumentNullException(nameof(contextStack));
             _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
             _abilityDefinitions = abilityDefinitions ?? throw new ArgumentNullException(nameof(abilityDefinitions));
+            _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
         }
 
         public override void Update(in float dt)
         {
-            ReclaimEndedExecFrames();
-            PushStartedExecFrames();
+            ReclaimEndedExecContexts();
+            TrackStartedExecContexts();
+            ReconcileActiveContextState();
         }
 
         /// <summary>
-        /// Remove frames whose exec ended: carrier dead, exec component removed, or the slot now
-        /// executes a different ability. Token-free removal by context entity covers abort/death.
+        /// Drop tracking for execs that ended: carrier dead, exec component removed, or the
+        /// slot now executes a different ability. The carrier's mounted context (if any) is
+        /// released by the reconciliation below in the same update.
         /// </summary>
-        private void ReclaimEndedExecFrames()
+        private void ReclaimEndedExecContexts()
         {
             for (int i = _trackedCount - 1; i >= 0; i--)
             {
@@ -66,15 +83,15 @@ namespace Ludots.Core.Input.Interaction
                     }
                 }
 
-                _contextStack.RemoveByContextEntity(carrier);
                 int last = _trackedCount - 1;
                 _trackedEntities[i] = _trackedEntities[last];
                 _trackedAbilityIds[i] = _trackedAbilityIds[last];
+                _trackedProfileIds[i] = _trackedProfileIds[last];
                 _trackedCount = last;
             }
         }
 
-        private void PushStartedExecFrames()
+        private void TrackStartedExecContexts()
         {
             int execCount = World.CountEntities(in _execQuery);
             if (execCount == 0)
@@ -104,15 +121,163 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 int profileId = _contextProfiles.ProfileIdRegistry.GetId(profileName);
-                if (!_contextProfiles.TryCreateFrameDescriptor(profileId, carrier, out InteractionContextFrameDescriptor descriptor))
+                if (!_contextProfiles.IsInstalled(profileId))
                 {
                     throw new InvalidOperationException(
                         $"Ability id {abilityId} declares interaction context profile '{profileName}' which is not installed.");
                 }
 
-                _contextStack.Push(in descriptor);
-                Track(carrier, abilityId);
+                Track(carrier, abilityId, profileId);
             }
+        }
+
+        /// <summary>
+        /// Project the exec lifecycles onto entity-mounted interaction state: per control
+        /// domain, the latest-activated tracked carrier resolving to the domain representative
+        /// wins (LIFO). Mounts this system no longer desires are released back to the steady
+        /// state; cast commit op mounts are foreign and stay untouched.
+        /// </summary>
+        private void ReconcileActiveContextState()
+        {
+            CollectDesiredContexts();
+            RefreshMountedContexts();
+            MountMissingContexts();
+        }
+
+        private void CollectDesiredContexts()
+        {
+            _desiredCount = 0;
+            for (int i = _trackedCount - 1; i >= 0; i--)
+            {
+                Entity carrier = _trackedEntities[i];
+                if (!_controlDomains.TryResolveControlDomain(carrier, out Entity domainRep) ||
+                    domainRep == default)
+                {
+                    continue;
+                }
+
+                if (ContainsDesiredRep(domainRep))
+                {
+                    continue;
+                }
+
+                if (!_contextProfiles.TryCreateActiveContext(
+                        _trackedProfileIds[i],
+                        carrier,
+                        ActiveInteractionContextSource.ExecLifecycle,
+                        out ActiveInteractionContext state))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability exec carrier {carrier} declares interaction context profile id {_trackedProfileIds[i]} which is not installed.");
+                }
+
+                if (_desiredCount == _desiredReps.Length)
+                {
+                    Array.Resize(ref _desiredReps, _desiredCount * 2);
+                    Array.Resize(ref _desiredStates, _desiredCount * 2);
+                    Array.Resize(ref _desiredMounted, _desiredCount * 2);
+                }
+
+                _desiredReps[_desiredCount] = domainRep;
+                _desiredStates[_desiredCount] = state;
+                _desiredMounted[_desiredCount] = false;
+                _desiredCount++;
+            }
+        }
+
+        private void RefreshMountedContexts()
+        {
+            int mountedCount = World.CountEntities(in _activeContextQuery);
+            if (mountedCount == 0)
+            {
+                return;
+            }
+
+            if (mountedCount > _mountedScratch.Length)
+            {
+                _mountedScratch = new Entity[mountedCount * 2];
+            }
+
+            World.GetEntities(in _activeContextQuery, _mountedScratch);
+            for (int i = 0; i < mountedCount; i++)
+            {
+                Entity holder = _mountedScratch[i];
+                if (!World.IsAlive(holder))
+                {
+                    continue;
+                }
+
+                if (TryFindDesired(holder, out int desiredIndex))
+                {
+                    ref ActiveInteractionContext mounted = ref World.Get<ActiveInteractionContext>(holder);
+                    if (!Equals(mounted, _desiredStates[desiredIndex]))
+                    {
+                        mounted = _desiredStates[desiredIndex];
+                    }
+
+                    _desiredMounted[desiredIndex] = true;
+                    continue;
+                }
+
+                if (World.Get<ActiveInteractionContext>(holder).Source == ActiveInteractionContextSource.CastCommitOp)
+                {
+                    continue;
+                }
+
+                World.Remove<ActiveInteractionContext>(holder);
+            }
+        }
+
+        private void MountMissingContexts()
+        {
+            for (int i = 0; i < _desiredCount; i++)
+            {
+                if (_desiredMounted[i] || !World.IsAlive(_desiredReps[i]))
+                {
+                    continue;
+                }
+
+                World.Add(_desiredReps[i], _desiredStates[i]);
+            }
+        }
+
+        private static bool Equals(in ActiveInteractionContext left, in ActiveInteractionContext right)
+        {
+            return left.ContextId == right.ContextId &&
+                left.ContextEntity == right.ContextEntity &&
+                left.CommandIntentProfileId == right.CommandIntentProfileId &&
+                left.ActiveCollectionKeyId == right.ActiveCollectionKeyId &&
+                left.FilterProfileId == right.FilterProfileId &&
+                left.InputContextId == right.InputContextId &&
+                left.Source == right.Source;
+        }
+
+        private bool ContainsDesiredRep(Entity rep)
+        {
+            for (int i = 0; i < _desiredCount; i++)
+            {
+                if (_desiredReps[i] == rep)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryFindDesired(Entity rep, out int index)
+        {
+            for (int i = 0; i < _desiredCount; i++)
+            {
+                if (_desiredReps[i] == rep)
+                {
+                    index = i;
+                    return true;
+                }
+            }
+
+            index = -1;
+            return false;
         }
 
         private bool IsTracked(Entity carrier)
@@ -128,16 +293,18 @@ namespace Ludots.Core.Input.Interaction
             return false;
         }
 
-        private void Track(Entity carrier, int abilityId)
+        private void Track(Entity carrier, int abilityId, int profileId)
         {
             if (_trackedCount == _trackedEntities.Length)
             {
                 Array.Resize(ref _trackedEntities, _trackedCount * 2);
                 Array.Resize(ref _trackedAbilityIds, _trackedCount * 2);
+                Array.Resize(ref _trackedProfileIds, _trackedCount * 2);
             }
 
             _trackedEntities[_trackedCount] = carrier;
             _trackedAbilityIds[_trackedCount] = abilityId;
+            _trackedProfileIds[_trackedCount] = profileId;
             _trackedCount++;
         }
     }

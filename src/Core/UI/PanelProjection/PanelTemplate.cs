@@ -22,7 +22,9 @@ namespace Ludots.Core.UI.PanelProjection
             string? skin = null,
             IReadOnlyList<PanelCollectionBinding>? collections = null,
             PanelLayout? layout = null,
-            PanelSubjectKind subject = PanelSubjectKind.None)
+            PanelSubjectKind subject = PanelSubjectKind.None,
+            PanelOwnerKind ownerKind = PanelOwnerKind.Seat,
+            PanelAudience? audience = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -127,6 +129,8 @@ namespace Ludots.Core.UI.PanelProjection
             Collections = safeCollections;
             Layout = layout;
             Subject = subject;
+            OwnerKind = ownerKind;
+            Audience = audience ?? PanelAudience.AllSeats;
         }
 
         public string Id { get; }
@@ -151,6 +155,12 @@ namespace Ludots.Core.UI.PanelProjection
 
         /// <summary>Per-template default skin; instance op param wins, then game.json default.</summary>
         public string? Skin { get; }
+
+        /// <summary>Owner axis: the semantic subject of the panel's variables.</summary>
+        public PanelOwnerKind OwnerKind { get; }
+
+        /// <summary>Audience axis: which seats may see and operate the panel.</summary>
+        public PanelAudience Audience { get; }
 
         /// <summary>Graph program id, resolved once at load; -1 until the loader binds it.</summary>
         public int GraphId { get; internal set; } = -1;

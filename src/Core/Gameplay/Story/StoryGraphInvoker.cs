@@ -109,7 +109,7 @@ namespace Ludots.Core.Gameplay.Story
                 _callStack,
                 ref cursor,
                 GraphVmLimits.MaxInstructionsPerExecution,
-                GraphKind.Script,
+                GraphKind.TriggerGraph,
                 mapScope: mapScope);
 
             if (!result.Halted)

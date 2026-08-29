@@ -156,6 +156,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.ModifyAttributeAdd:
+                case GraphNodeOp.ModifyAttributeSet:
                     RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
@@ -273,6 +274,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.SetWorldPosition:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SetInteractionMode:
+                    RequireNonEmpty(node.Mode, "mode", node, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    break;
+
+                case GraphNodeOp.SetPanelAudience:
+                    RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ReadMapVarInt:
@@ -495,6 +509,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.OfferActivity:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.ActivityId, "activityId", node, graphId, diagnostics);
+                case GraphNodeOp.StartDialogue:
+                    RequireNonEmpty(node.DialogueId, "dialogueId", node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ConcatText:
@@ -876,6 +892,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.ModifyAttributeAdd:
+                case GraphNodeOp.ModifyAttributeSet:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Target, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
@@ -1077,6 +1094,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.C = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SetInteractionMode:
+                    instruction.Imm = RequireSymbol(node.Mode, "mode", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.SetPanelAudience:
+                    instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = EncodeByteSymbol(node.PanelSeat, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
 
                 case GraphNodeOp.ReadMapVarInt:
@@ -1397,6 +1428,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.ActivityId, "activityId", node, symbolToIndex, symbols, graphId, diagnostics);
+                case GraphNodeOp.StartDialogue:
+                    instruction.Imm = RequireSymbol(node.DialogueId, "dialogueId", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ConcatText:

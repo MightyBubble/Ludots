@@ -571,6 +571,85 @@
       "buildMode": "auto"
     },
     {
+      "id": "east_asia_navmesh_debug_raylib",
+      "name": "East Asia NavMesh Debug Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "mod:NavMeshDebugLaunchMod",
+        "$east_asia_navmesh_debug",
+        "$field_east_asia_country"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "east_asia_borders_land_sea_raylib",
+      "name": "East Asia Borders Land Sea Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "mod:NavMeshDebugLaunchMod",
+        "$east_asia_borders_land_sea"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_east_asia_country_raylib",
+      "name": "Field East Asia Country Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "$field_east_asia_country"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_east_asia_admin_raylib",
+      "name": "Field East Asia Admin Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "$field_east_asia_admin"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_jing_yang_transit_raylib",
+      "name": "Field Jing Yang Transit Raylib",
+      "selectors": [
+        "$field_jing_yang_transit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_layer_table_raylib",
+      "name": "Field Layer Table Raylib",
+      "selectors": [
+        "$field_layer_table"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_editor_paint_raylib",
+      "name": "Field Editor Paint Raylib",
+      "selectors": [
+        "$field_editor_paint"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_hierarchy_query_raylib",
+      "name": "Field Hierarchy Query Raylib",
+      "selectors": [
+        "$field_hierarchy_query"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_ability_graph_sandbox_raylib",
       "name": "Capability Standard Ability Graph Sandbox Raylib",
       "selectors": [
@@ -2221,6 +2300,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "dual_seat_panels_raylib",
+      "name": "Dual Seat Panels Raylib",
+      "selectors": [
+        "$dual_seat_panels_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_skin_markup_raylib",
       "name": "Panel Markup Skin Raylib",
       "selectors": [
@@ -2485,6 +2573,24 @@
       "buildMode": "auto"
     },
     {
+      "id": "dialogue_author_kit_raylib",
+      "name": "Dialogue Author Kit Raylib",
+      "selectors": [
+        "$dialogue_author_kit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "dialogue_author_kit_theme_ink_raylib",
+      "name": "Dialogue Author Kit Ink Theme Raylib",
+      "selectors": [
+        "$dialogue_author_kit_theme_ink"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "narrative_theme_sanguo_raylib",
       "name": "Narrative Theme 三国 Raylib",
       "selectors": [
@@ -2584,25 +2690,37 @@
       "buildMode": "auto"
     },
     {
-      "id": "activity_dispatch_cef_raylib",
-      "name": "Activity Dispatch Showcase CEF Raylib",
+      "id": "capability_standard_graph_op_StartDialogue_raylib",
+      "name": "Graph Op StartDialogue Raylib",
       "selectors": [
-        "$activity_dispatch_showcase",
-        "$agent_bridge"
+        "$capability_standard_graph_op_StartDialogue"
       ],
       "adapterId": "raylib",
-      "buildMode": "auto",
-      "browserRuntime": {
-        "enabled": true,
-        "required": true,
-        "provider": "cef"
-      }
+      "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_OfferActivity_raylib",
-      "name": "Graph Op OfferActivity Raylib",
+      "id": "capability_standard_graph_op_SetInteractionMode_raylib",
+      "name": "Graph Op SetInteractionMode Raylib",
       "selectors": [
-        "$capability_standard_graph_op_OfferActivity"
+        "$capability_standard_graph_op_SetInteractionMode"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetPanelAudience_raylib",
+      "name": "Graph Op SetPanelAudience Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetPanelAudience"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ModifyAttributeSet_raylib",
+      "name": "Graph Op ModifyAttributeSet Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ModifyAttributeSet"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

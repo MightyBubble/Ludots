@@ -87,6 +87,7 @@ public sealed class SaveParticipantRegistryTests
             "activities",
             "clock",
             "dialogue",
+            "fields",
             "gameSession",
             "inventory",
             "mapSessions",
@@ -378,7 +379,10 @@ public sealed class SaveParticipantRegistryTests
             Id = "story.dialogue_overlay",
             Backend = StoryPresentationBackend.ScreenOverlay,
             SurfaceKind = "OverlayDialogue",
-            Anchor = "BottomCenter"
+            Anchor = "BottomCenter",
+            Width = 760f,
+            ImageSize = 112f,
+            ZIndex = 60
         });
         dialogues.Register(new DialogueDefinition
         {

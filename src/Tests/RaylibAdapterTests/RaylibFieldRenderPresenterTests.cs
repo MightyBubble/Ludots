@@ -51,6 +51,136 @@ public sealed class RaylibFieldRenderPresenterTests
     }
 
     [Test]
+    public void BuildTexturePlan_StagesDiscreteOwnershipBytePaletteWithoutFogFallback()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.DiscreteOwnership,
+            scopeKeyId: 1,
+            layerKeyId: 3,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 2, 1),
+            GlobalFieldVisualValueKind.Byte,
+            paletteId: 3);
+        GlobalFieldVisualCell[] cells =
+        {
+            new(new FieldCell2D(0, 0), byteValue: 7),
+        };
+        IntRect[] dirty = { new(0, 0, 2, 1) };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, dirty);
+
+        var presenter = new RaylibFieldRenderPresenter();
+        ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
+
+        Assert.That(plans.Length, Is.EqualTo(1));
+        Assert.That(plans[0].Id.Kind, Is.EqualTo(GlobalFieldVisualKind.DiscreteOwnership));
+        Assert.That(presenter.LastUnsupportedFieldCount, Is.Zero);
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color color), Is.True);
+        Assert.That(color, Is.EqualTo(RaylibFieldRenderPresenter.ResolveDiscreteOwnershipColor(7, 3)));
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(1, 0), out Color empty), Is.True);
+        Assert.That(empty.a, Is.Zero);
+    }
+
+    [Test]
+    public void BuildTexturePlan_StagesDiscreteOwnershipVectorPalette()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.DiscreteOwnership,
+            scopeKeyId: 1,
+            layerKeyId: 1,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 1, 1),
+            GlobalFieldVisualValueKind.Vector4);
+        GlobalFieldVisualCell[] cells =
+        {
+            new(new FieldCell2D(0, 0), new System.Numerics.Vector4(0.2f, 0.4f, 0.6f, 0.5f)),
+        };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, new[] { new IntRect(0, 0, 1, 1) });
+
+        var presenter = new RaylibFieldRenderPresenter();
+        presenter.BuildTexturePlan(buffer);
+
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color color), Is.True);
+        Assert.That(color, Is.EqualTo(new Color(51, 102, 153, 128)));
+    }
+
+    [Test]
+    public void ShouldDrapeDiscreteOwnership_UsesTexturePlaneForContinentalCellSizes()
+    {
+        Assert.That(
+            RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
+                cellSizeCm: 250,
+                drapeMaxCellSizeCm: 5_000),
+            Is.True);
+        Assert.That(
+            RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
+                cellSizeCm: 5_000,
+                drapeMaxCellSizeCm: 5_000),
+            Is.False);
+        Assert.That(
+            RaylibFieldRenderPresenter.ShouldDrapeDiscreteOwnership(
+                cellSizeCm: 7_142,
+                drapeMaxCellSizeCm: 5_000),
+            Is.False);
+    }
+
+    [Test]
+    public void TryResolveDiscreteOwnershipDrape_MapsTexelCenterAndScalesSampledHeight()
+    {
+        var heightmap = new RecordingHeightmap(sampleResult: true, heightCm: 320f);
+
+        bool resolved = RaylibFieldRenderPresenter.TryResolveDiscreteOwnershipDrape(
+            heightmap,
+            new IntRect(-3, 4, 8, 8),
+            cellSizeCm: 250,
+            textureX: 2,
+            textureY: 3,
+            heightSampleDisplayScale: 1.5f,
+            drapeOffsetMeters: 2f,
+            out System.Numerics.Vector3 centerMeters);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(resolved, Is.True);
+            Assert.That(heightmap.LastWorldXCm, Is.EqualTo(-125f));
+            Assert.That(heightmap.LastWorldYCm, Is.EqualTo(1_875f));
+            Assert.That(centerMeters.X, Is.EqualTo(-1.25f).Within(0.0001f));
+            Assert.That(centerMeters.Y, Is.EqualTo(6.8f).Within(0.0001f));
+            Assert.That(centerMeters.Z, Is.EqualTo(18.75f).Within(0.0001f));
+        });
+    }
+
+    [Test]
+    public void TryResolveDiscreteOwnershipDrape_SkipsCellWhenHeightCannotBeSampled()
+    {
+        var heightmap = new RecordingHeightmap(sampleResult: false, heightCm: 0f);
+
+        bool resolved = RaylibFieldRenderPresenter.TryResolveDiscreteOwnershipDrape(
+            heightmap,
+            new IntRect(0, 0, 1, 1),
+            cellSizeCm: 100,
+            textureX: 0,
+            textureY: 0,
+            heightSampleDisplayScale: 1f,
+            drapeOffsetMeters: 2f,
+            out System.Numerics.Vector3 centerMeters);
+
+        Assert.That(resolved, Is.False);
+        Assert.That(centerMeters, Is.EqualTo(System.Numerics.Vector3.Zero));
+    }
+
+    [Test]
     public void BuildTexturePlan_ReusesScratchAndAllocatesZeroAfterWarmup()
     {
         GlobalFieldVisualBuffer buffer = CreateBuffer(out _, out FogField field);
@@ -198,5 +328,68 @@ public sealed class RaylibFieldRenderPresenterTests
         GC.WaitForPendingFinalizers();
         GC.Collect();
         GC.GetAllocatedBytesForCurrentThread();
+    }
+
+    private sealed class RecordingHeightmap : IVisualHeightmap
+    {
+        private readonly bool _sampleResult;
+        private readonly float _heightCm;
+
+        public RecordingHeightmap(bool sampleResult, float heightCm)
+        {
+            _sampleResult = sampleResult;
+            _heightCm = heightCm;
+        }
+
+        public float LastWorldXCm { get; private set; }
+        public float LastWorldYCm { get; private set; }
+
+        public bool TrySampleHeightCm(
+            float worldXCm,
+            float worldYCm,
+            out float heightCm,
+            int layerIndex = -1)
+        {
+            LastWorldXCm = worldXCm;
+            LastWorldYCm = worldYCm;
+            heightCm = _heightCm;
+            return _sampleResult;
+        }
+
+        public bool SampleHeightsCm(
+            ReadOnlySpan<float> worldXCm,
+            ReadOnlySpan<float> worldYCm,
+            Span<float> outHeightCm,
+            int layerIndex = -1)
+        {
+            throw new NotSupportedException();
+        }
+
+        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
+        {
+            hit = default;
+            return false;
+        }
+
+        public bool RaycastGroundBatch(
+            ReadOnlySpan<float> originXMeters,
+            ReadOnlySpan<float> originYMeters,
+            ReadOnlySpan<float> originZMeters,
+            ReadOnlySpan<float> directionX,
+            ReadOnlySpan<float> directionY,
+            ReadOnlySpan<float> directionZ,
+            Span<float> outWorldXCm,
+            Span<float> outWorldYCm,
+            Span<float> outHeightCm,
+            Span<float> outDistanceMeters,
+            Span<float> outNormalX,
+            Span<float> outNormalY,
+            Span<float> outNormalZ,
+            Span<int> outLayerIndex,
+            Span<byte> outHitMask,
+            int layerIndex = -1)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

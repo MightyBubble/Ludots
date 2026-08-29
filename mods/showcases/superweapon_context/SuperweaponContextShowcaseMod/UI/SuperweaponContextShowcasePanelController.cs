@@ -205,14 +205,17 @@ namespace SuperweaponContextShowcaseMod.UI
 
         private bool HasActiveSuperweaponFrame(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not Ludots.Core.Input.Interaction.InteractionContextStack stack ||
-                !stack.TryPeek(out Ludots.Core.Input.Interaction.InteractionContextFrame frame))
+            var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            if (contextProfiles == null ||
+                !ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep) ||
+                !engine.World.IsAlive(rep) ||
+                !engine.World.TryGet<Ludots.Core.Input.Interaction.ActiveInteractionContext>(rep, out var context))
             {
                 return false;
             }
 
-            return frame.ContextEntity == _runtimeState.Commander &&
-                   frame.ContextId == stack.ContextIdRegistry.GetId(SuperweaponContextShowcaseIds.ContextProfileId);
+            return context.ContextEntity == _runtimeState.Commander &&
+                   context.ContextId == contextProfiles.ProfileIdRegistry.GetId(SuperweaponContextShowcaseIds.ContextProfileId);
         }
 
         private static string ResolveName(GameEngine engine, Entity entity)

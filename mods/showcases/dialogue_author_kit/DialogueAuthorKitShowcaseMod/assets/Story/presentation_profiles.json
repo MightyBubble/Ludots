@@ -1,0 +1,24 @@
+[
+  {
+    "id": "author_kit.dialogue_overlay",
+    "backend": "ScreenOverlay",
+    "surfaceKind": "OverlayDialogue",
+    "anchor": "BottomCenter",
+    "width": 760,
+    "offsetY": 28,
+    "waitForInput": true,
+    "dimBackdrop": true,
+    "accentHex": "#F6C56B",
+    "backgroundHex": "#08111BEF",
+    "borderHex": "#5AD7E9FF",
+    "foregroundHex": "#F8FAFC",
+    "mutedHex": "#C6D3DE",
+    "zIndex": 60,
+    "imageSize": 112,
+    "backdropHex": "#00000099",
+    "choiceAnchor": "BottomRight",
+    "choiceWidth": 440,
+    "choiceOffsetY": 12,
+    "choiceZIndex": 61
+  }
+]

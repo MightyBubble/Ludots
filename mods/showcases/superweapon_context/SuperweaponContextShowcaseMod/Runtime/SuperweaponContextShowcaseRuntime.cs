@@ -113,9 +113,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 return;
             }
 
-            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack)
-                ?? throw new InvalidOperationException("Superweapon context showcase requires InteractionContextStack.");
-            if (!TryGetActiveSuperweaponFrame(stack, out _))
+            if (!TryGetActiveSuperweaponContext(engine))
             {
                 return;
             }
@@ -147,9 +145,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 return;
             }
 
-            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack)
-                ?? throw new InvalidOperationException("Superweapon context showcase requires InteractionContextStack.");
-            if (!TryGetActiveSuperweaponFrame(stack, out _))
+            if (!TryGetActiveSuperweaponContext(engine))
             {
                 return;
             }
@@ -412,15 +408,24 @@ namespace SuperweaponContextShowcaseMod.Runtime
             _markerDescriptorsReady = true;
         }
 
-        private bool TryGetActiveSuperweaponFrame(InteractionContextStack stack, out InteractionContextFrame frame)
+        /// <summary>
+        /// The superweapon confirmation context's identity, read from the entity-mounted active
+        /// interaction state on the sole possessed rep; the profile registry supplies the context
+        /// id space the profile id resolves in.
+        /// </summary>
+        private bool TryGetActiveSuperweaponContext(GameEngine engine)
         {
-            if (!stack.TryPeek(out frame))
+            var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("Superweapon context showcase requires InteractionContextProfileRegistry.");
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep) ||
+                !engine.World.IsAlive(rep) ||
+                !engine.World.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext context))
             {
                 return false;
             }
 
-            return frame.ContextEntity == State.Commander &&
-                   frame.ContextId == stack.ContextIdRegistry.GetId(SuperweaponContextShowcaseIds.ContextProfileId);
+            return context.ContextEntity == State.Commander &&
+                   context.ContextId == contextProfiles.ProfileIdRegistry.GetId(SuperweaponContextShowcaseIds.ContextProfileId);
         }
 
         private static int ResolveOrderTypeId(GameEngine engine, string orderTypeName)

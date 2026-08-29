@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardGraphOpSetPanelAudienceEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for GraphNodeOp SetPanelAudience player gallery.",
+  "main": "bin/net9.0/CapabilityStandardGraphOpSetPanelAudienceEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ]
+}

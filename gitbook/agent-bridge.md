@@ -52,20 +52,20 @@ Inspector（浏览器面板）：`cd src/Tools/Ludots.Inspector.React && npm run
 
 | 你想做什么 | 用什么 | 关键参数/要领 |
 |-----------|--------|---------------|
-| 确认游戏活着、-loaded 了哪些 mod | `ludots.session.info` | 无参；tick 在涨=循环活着 |
+| 确认游戏活着、-loaded 了哪些 mod、有哪些本地座位 | `ludots.session.info` | 无参；tick 在涨=循环活着；`seats` 列出每个 seat（id/playerId/schemeId/possessed/present rect），分屏时顶层 `camera` 是座位序首个 binding 的相机 |
 | 找一个实体（敌人/英雄/召唤物） | `ludots.entities.query` | `nameFilter`（大小写不敏感子串）、`onScreenOnly:true` 只看镜头内的；返回 `screenCoverage`（占屏比）判断"看得清吗" |
-| 屏幕某点下面是哪个实体 | `ludots.entities.pick` | `{x, y, radiusPixels?=24}`；与点击选中同一条生产解析链（selectable + 知识门控），未命中返回 `hit:false` |
+| 屏幕某点下面是哪个实体 | `ludots.entities.pick` | `{x, y, radiusPixels?=24, seatId?}`；与点击选中同一条生产解析链（selectable + 知识门控），未命中返回 `hit:false`。x/y 是窗口像素；分屏时不传 `seatId` 会按 rect 自动路由到所属 binding，传了就用该 seat 的 possessed rep 做知识门控 owner；单 seat 走原有全局链 |
 | 一片区域里有谁（半径/扇形/直线） | `ludots.spatial.query` | `shape: radius/aabb/cone/rect/line` + 中心与尺寸参数；直走生产空间查询服务（技能/自动索敌同层），带 `distanceCmToCenter` 与 `dropped` 诊断 |
 | 某点可不可走 / A→B 怎么走 | `ludots.nav.project` / `ludots.nav.findPath` | project 命中可行走三角形；findPath 返回 `status`（NotReady=瓦片未就绪）+ 路径点 + `travelCostCm` |
 | 看某实体的血量/属性/技能槽 | `ludots.gas.entity` | `{entityId}`；tags 名称已解析、attributes 只列非零 |
 | 看面板/按钮长什么样 | `ludots.ui.tree` / `ludots.ui.query` | tree 全量；query 用 CSS 选择器——**实测注意**：选择器按 tag/`#id`/`.class` 匹配，本仓 UI 多用 tag（`selector:"button"` 命中 10 个，`.button` 命中 0 个，因为节点没有 class） |
 | 点一个按钮 | `ludots.ui.click` | `{elementId}` 或裸坐标 `{x,y}`；返回 `handled:true/false` + 命中节点的 rect/pseudoState——点到容器会 `handled:false`，换 elementId |
 | 让实体做一件事（移动/施法/攻击） | `ludots.orders.issue` | `orderType` 是**字符串键或数字 id**；合法键在 `mods/LudotsCoreMod/assets/GAS/order_types.json`：实测 `castAbility` / `moveTo` / `attackTarget` / `stop` / `chainPass` 等；`targetEntityId` 或 `worldXCm/worldYCm` 按订单类型二选一 |
-| 模拟按键（放技能） | `ludots.input.inject` | `{actionId, mode:"press"|"release"|"set"}`——语义层，走游戏输入绑定表；**press 后记得 release** |
+| 模拟按键（放技能） | `ludots.input.inject` | `{actionId, mode:"press"|"release"|"set", seatId?}`——语义层，走游戏输入绑定表；分屏时 `seatId` 路由到该 seat 自己的输入通道（不传=全局链，多 seat 下全局链按设计 dormant）；**press 后记得 release** |
 | 模拟真实鼠标键盘（验证 UI 交互） | `ludots.input.raw` | `{op:"pointerMove"|...,"x","y"}`——窗口层，UI 命中/指针捕获全生效；下一帧才应用 |
 | 查输入管线状态 | `ludots.input.state` | 看 `uiCaptured`（UI 是否吃掉了输入）再决定用哪层注入 |
 | 冻结世界逐步看 | `ludots.time.control` | `pause` → `step {steps:N}`（响应带 `targetTick`）→ `resume`；pause 后 screenshot 依然可用 |
-| 把镜头对准目标 | `ludots.camera.control` | `follow {entityId}` 实体跟随；`set {yaw,pitch,distanceCm}` 部分姿态（持久）；`unfollow` 解除 |
+| 把镜头对准目标 | `ludots.camera.control` | `follow {entityId, seatId?}` 实体跟随；`set {yaw,pitch,distanceCm, seatId?}` 部分姿态（持久）；`unfollow` 解除。`seatId` 操作该 seat 的 PresentBinding 相机（分屏）；缺省=sole/座位序首个 binding |
 | 截一张图做证据 | `ludots.screenshot` | `{name?}`；PNG 落 `artifacts/agent-bridge/shots/`；帧末履行，pause 时也能截 |
 | 录一段过程 | `ludots.recording.start` / `.stop` | PNG 序列 + manifest.json 落 `artifacts/agent-bridge/recordings/<时间戳>/`，agent 可抽帧阅读 |
 | 看引擎日志 | `ludots.logs.tail` | `count/minLevel/channel/contains` 过滤；**只捕获桥激活之后的日志**；`totalWritten/capacity` 看旋转 |

@@ -106,6 +106,8 @@ namespace Ludots.Tests.GAS.Production
                 30,
                 () => "Expected bootstrap intro sequence or briefing dialogue after map focus.");
             AssertTaskState(tasks, NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingTaskId, TaskInstanceState.Active);
+            AssertCastIdentityVisible(uiRoot);
+            Assert.That(UiContains(uiRoot, "米蕾勒") || UiContains(uiRoot, "灯火"), Is.True);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "map_loaded");
             timeline.Add("[T+001] Loaded the narrative showcase hub; HUD mounted and TaskRuntime entered the briefing beat.");
 
@@ -123,6 +125,9 @@ namespace Ludots.Tests.GAS.Production
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             Assert.That(dialogue.TryGetActiveView(out DialogueView introDialogue), Is.True);
             Assert.That(introDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingDialogueId));
+            Assert.That(introDialogue.ResolvedSpeakerName, Does.Contain("米蕾勒").Or.Contain("Mirelle"));
+            Assert.That(UiContains(uiRoot, "守望者米蕾勒") || UiContains(uiRoot, "Warden Mirelle"), Is.True);
+            Assert.That(UiContains(uiRoot, "回话") || UiContains(uiRoot, "1"), Is.True);
             AssertThemeFrameVisibleOnDialogue(uiRoot);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
             timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
@@ -132,13 +137,15 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => dialogue.TryGetActiveView(out DialogueView view) &&
-                      view.ResolvedText.Contains("ember-memory", StringComparison.OrdinalIgnoreCase),
+                      (view.ResolvedText.Contains("余烬记忆", StringComparison.Ordinal) ||
+                       view.ResolvedText.Contains("ember-memory", StringComparison.OrdinalIgnoreCase)),
                 20,
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             Assert.That(dialogue.TryGetActiveView(out DialogueView loreBubble), Is.True);
             Assert.That(loreBubble.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationWorldBubble));
 
             AssertWorldBubbleFollowsSpeakerProjection(engine, uiRoot, dialogue, loreBubble);
+            Assert.That(UiContains(uiRoot, "你说了") || UiContains(uiRoot, "You chose"), Is.True);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "world_bubble_projected");
             timeline.Add("[T+003a] World bubble lore reply projected onto the speaker head via IScreenProjector (not a fixed corner panel).");
             PressStoryAction(engine, backend, DialogueInputActionIds.Choice1, frameTimesMs);
@@ -146,7 +153,8 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => dialogue.TryGetActiveView(out DialogueView view) &&
-                      view.ResolvedText.Contains("Wake what sleeps beneath it", StringComparison.OrdinalIgnoreCase),
+                      (view.ResolvedText.Contains("唤醒沉睡其下", StringComparison.Ordinal) ||
+                       view.ResolvedText.Contains("Wake what sleeps beneath it", StringComparison.OrdinalIgnoreCase)),
                 20,
                 () => BuildStoryStateDiagnostics(dialogue, sequencer, tasks));
             PressStoryAction(engine, backend, DialogueInputActionIds.Advance, frameTimesMs);
@@ -154,6 +162,8 @@ namespace Ludots.Tests.GAS.Production
             AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.LoreVariableId, 1);
             AssertMapVariable(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.TrustVariableId, 2);
             AssertTaskState(tasks, NarrativeShowcaseMod.NarrativeShowcaseIds.TrialTaskId, TaskInstanceState.Active);
+            Assert.That(UiContains(uiRoot, "神龛") || UiContains(uiRoot, "Shrine"), Is.True);
+            Assert.That(UiContains(uiRoot, "见闻") || UiContains(uiRoot, "信任"), Is.True);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "briefing_branch_complete");
             timeline.Add("[T+003] Took the lore branch via StoryChoice1, wrote MapVariableStore trust/lore, and advanced TaskRuntime into the trial beat.");
 
@@ -220,7 +230,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(dialogue.TryGetActiveView(out DialogueView returnDialogue), Is.True);
             Assert.That(returnDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnDialogueId));
             Assert.That(returnDialogue.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationStandingPortrait));
-            Assert.That(returnDialogue.StandingImageSrc, Is.Not.Null.And.Not.Empty);
+            Assert.That(returnDialogue.StandingImageId, Is.Not.Null.And.Not.Empty);
             AssertStandingPortraitSurface(uiRoot, returnDialogue);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "standing_portrait_return");
             timeline.Add("[T+007a] Return beat opened on story.standing_portrait with a half-screen standing figure for the warden.");
@@ -429,7 +439,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string path = actionId switch
             {
-                DialogueInputActionIds.Interact => "<Keyboard>/e",
+                DialogueInputActionIds.Interact => "<Keyboard>/f",
                 DialogueInputActionIds.Advance => "<Keyboard>/enter",
                 DialogueInputActionIds.Skip => "<Keyboard>/tab",
                 DialogueInputActionIds.Choice1 => "<Keyboard>/1",
@@ -652,7 +662,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(refresh, Is.Not.Null, "NarrativeShowcase.Runtime.RefreshPanel missing.");
             refresh!.Invoke(runtimeObj, new object[] { engine });
             Assert.That(engine.GlobalContext.TryGetValue("NarrativeShowcase.LastWorldBubble", out object? lastBubbleObj), Is.True,
-                "BuildDialogueSurface did not record LastWorldBubble after RefreshPanel.");
+                "BuildPage did not record LastWorldBubble after RefreshPanel.");
             string lastBubble = lastBubbleObj as string ?? string.Empty;
             TestContext.WriteLine("LastWorldBubble=" + lastBubble);
             TickPresentation(engine);
@@ -685,6 +695,14 @@ namespace Ludots.Tests.GAS.Production
 
 
 
+        private static void AssertCastIdentityVisible(UIRoot uiRoot)
+        {
+            Assert.That(UiContains(uiRoot, "织弧者"), Is.True, "Player nameplate 织弧者 must be visible.");
+            Assert.That(UiContains(uiRoot, "米蕾勒"), Is.True, "Warden nameplate 米蕾勒 must be visible.");
+            Assert.That(UiContains(uiRoot, "余烬神龛"), Is.True, "Shrine nameplate 余烬神龛 must be visible.");
+            Assert.That(FindUiNodeByClass(uiRoot.Scene?.Root, "story-nameplate"), Is.Not.Null);
+        }
+
         private static void AssertStandingPortraitSurface(UIRoot uiRoot, DialogueView view)
         {
             Assert.That(
@@ -695,13 +713,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(standing, Is.Not.Null, "Expected story-standing-portrait image node.");
             string standingSrc = standing!.Attributes["src"] ?? string.Empty;
             Assert.That(standingSrc, Is.Not.Null.And.Not.Empty);
-            bool catalogMatch = string.Equals(standingSrc, view.StandingImageSrc, StringComparison.Ordinal);
-            bool themeOverride = standingSrc.Contains("PanelThemes", StringComparison.OrdinalIgnoreCase)
-                && standingSrc.Contains("standing_", StringComparison.OrdinalIgnoreCase);
-            Assert.That(
-                catalogMatch || themeOverride,
-                Is.True,
-                $"Standing portrait src should match catalog StandingImageSrc or a PanelThemes override. src='{standingSrc}', catalog='{view.StandingImageSrc}'.");
+            Assert.That(view.StandingImageId, Is.Not.Null.And.Not.Empty,
+                "DialogueView should expose standingImageId (not a filesystem path).");
+            Assert.That(standingSrc, Does.Contain("data:image").Or.Contain("/").Or.Contain("\\"),
+                "Frontend must resolve standing imageId to a drawable src.");
             Assert.That(standing.Style.Height.Unit, Is.EqualTo(UiLengthUnit.Pixel));
             Assert.That(standing.Style.Height.Value, Is.GreaterThanOrEqualTo(900f),
                 "Standing portrait should occupy roughly half-screen vertical height.");

@@ -32,6 +32,13 @@ namespace Ludots.Core.Input.Orders
     public delegate bool ActiveActorCollectionOwnerProvider(out Entity owner);
 
     /// <summary>
+    /// Delegate for resolving a player's representative entity — the entity that carries the
+    /// player's <see cref="Interaction.CommandPref"/>. The bound sole possessed actor may be a
+    /// controlled unit, so order routing preferences must be read through the player id instead.
+    /// </summary>
+    public delegate bool PlayerRepresentativeProvider(int playerId, out Entity rep);
+
+    /// <summary>
     /// Delegate for resolving command-click target facts frozen for the current input mapping trigger.
     /// </summary>
     public delegate bool CommandIntentTargetFactsProvider(InputOrderMapping mapping, out CommandIntentTargetFacts facts);
@@ -275,17 +282,19 @@ namespace Ludots.Core.Input.Orders
         private ActorOrderRoutingResolver? _actorOrderRoutingResolver;
 
         // Pointer command intent routing. Production wiring injects these services; non-command
-        // mappings continue through the direct order path.
+        // mappings continue through the direct order path. Order routing preferences come from
+        // the possessed representative's CommandPref — never from the active control scheme.
         private World? _commandIntentWorld;
-        private InteractionContextStack? _interactionContextStack;
-        private ControlSchemeRuntime? _controlSchemeRuntime;
+        private InteractionContextProfileRegistry? _contextProfiles;
         private CommandIntentProfileRegistry? _commandIntentProfiles;
         private CastDispatchProfileRegistry? _castDispatchProfiles;
         private ICommandActorExpander? _commandActorExpander;
         private EntityCollectionStore? _entityCollections;
         private ActiveActorCollectionOwnerProvider? _activeActorCollectionOwnerProvider;
+        private PlayerRepresentativeProvider? _playerRepresentativeProvider;
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
         private OrderIdentityAssigner? _orderIdentityAssigner;
+        private int _steadyStateCollectionKeyId;
 
         // Context
         private Entity _solePossessedRep;
@@ -497,20 +506,27 @@ namespace Ludots.Core.Input.Orders
 
         public void SetCommandIntentRouting(
             World world,
-            InteractionContextStack stack,
-            ControlSchemeRuntime controlSchemeRuntime,
+            InteractionContextProfileRegistry contextProfiles,
             CommandIntentProfileRegistry commandIntentProfiles,
             CastDispatchProfileRegistry castDispatchProfiles,
             EntityCollectionStore entityCollections,
-            ActiveActorCollectionOwnerProvider? activeActorCollectionOwnerProvider = null)
+            ActiveActorCollectionOwnerProvider? activeActorCollectionOwnerProvider = null,
+            PlayerRepresentativeProvider? playerRepresentativeProvider = null)
         {
             _commandIntentWorld = world ?? throw new ArgumentNullException(nameof(world));
-            _interactionContextStack = stack ?? throw new ArgumentNullException(nameof(stack));
-            _controlSchemeRuntime = controlSchemeRuntime ?? throw new ArgumentNullException(nameof(controlSchemeRuntime));
+            _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
             _commandIntentProfiles = commandIntentProfiles ?? throw new ArgumentNullException(nameof(commandIntentProfiles));
             _castDispatchProfiles = castDispatchProfiles ?? throw new ArgumentNullException(nameof(castDispatchProfiles));
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             _activeActorCollectionOwnerProvider = activeActorCollectionOwnerProvider;
+            _playerRepresentativeProvider = playerRepresentativeProvider;
+            if (!contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"Command intent routing requires the steady-state interaction context profile '{InteractionContextIds.Default}' to be installed.");
+            }
+
+            _steadyStateCollectionKeyId = steadyStateCollectionKeyId;
         }
 
         public void SetOrderIdentityAssigner(OrderIdentityAssigner assigner) =>
@@ -1636,8 +1652,7 @@ namespace Ludots.Core.Input.Orders
         private OrderSubmitResult SubmitCommandIntentOrder(InputOrderMapping mapping)
         {
             if (_commandIntentWorld == null ||
-                _interactionContextStack == null ||
-                _controlSchemeRuntime == null ||
+                _contextProfiles == null ||
                 _commandIntentProfiles == null ||
                 _castDispatchProfiles == null ||
                 _entityCollections == null ||
@@ -1647,26 +1662,16 @@ namespace Ludots.Core.Input.Orders
                     "Command intent routing is partially configured; Command actions must not fall back to legacy input-order mappings.");
             }
 
-            int activeStackIntentId = CommandIntentArbiter.ResolveActiveCommandIntent(
-                _interactionContextStack,
-                _controlSchemeRuntime);
-            if (activeStackIntentId == 0)
+            int commandIntentProfileId = ResolveActiveCommandIntentForCommand();
+            if (commandIntentProfileId == 0)
             {
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedByRule);
             }
 
-            if (!_interactionContextStack.TryPeek(out InteractionContextFrame frame))
+            if (!_commandIntentProfiles.IsInstalled(commandIntentProfileId))
             {
                 throw new InvalidOperationException(
-                    "Command intent routing requires a non-empty interaction context stack.");
-            }
-
-            string intentName = _interactionContextStack.CommandIntentProfileIdRegistry.GetName(activeStackIntentId);
-            if (!_commandIntentProfiles.ProfileIdRegistry.TryGetId(intentName, out int commandIntentProfileId) ||
-                !_commandIntentProfiles.IsInstalled(commandIntentProfileId))
-            {
-                throw new InvalidOperationException(
-                    $"Active command intent '{intentName}' is not installed in the command intent registry.");
+                    $"Active command intent profile id {commandIntentProfileId} is not installed in the command intent registry.");
             }
 
             if (!HasExplicitSolePossessedActor())
@@ -1685,6 +1690,10 @@ namespace Ludots.Core.Input.Orders
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
             }
 
+            Entity actingRep = RequireActingPlayerRepresentative();
+            bool hasActiveContext = _commandIntentWorld.TryGet<ActiveInteractionContext>(actingRep, out ActiveInteractionContext activeContext);
+            int activeCollectionKeyId = hasActiveContext ? activeContext.ActiveCollectionKeyId : _steadyStateCollectionKeyId;
+
             int actorCount;
             if (_hasExplicitActivationContext)
             {
@@ -1693,7 +1702,7 @@ namespace Ludots.Core.Input.Orders
             }
             else
             {
-                if (!_entityCollections.TryGet(actorCollectionOwner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle))
+                if (!_entityCollections.TryGet(actorCollectionOwner, activeCollectionKeyId, out EntityCollectionHandle handle))
                 {
                     return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
                 }
@@ -1733,17 +1742,17 @@ namespace Ludots.Core.Input.Orders
 
             Span<Entity> routedActors = _commandIntentRoutedActorsScratch.AsSpan(0, routedCount);
             Span<CommandIntentRoute> routedRoutes = _commandIntentRoutedRoutesScratch.AsSpan(0, routedCount);
-            int dispatchProfileId = _controlSchemeRuntime.ActiveDefaultCastDispatchProfileId;
+            int dispatchProfileId = RequireActingPlayerCommandPref().ResolveCastDispatchProfile(abilityTemplateId: 0);
             if (dispatchProfileId == 0)
             {
                 throw new InvalidOperationException(
-                    "Command intent routing requires the active control scheme to declare defaults.castDispatchProfileId.");
+                    "Command intent routing requires the possessed representative's CommandPref to declare a default cast dispatch profile.");
             }
 
             int dispatchCount = _castDispatchProfiles.SelectDispatchTargets(
                 dispatchProfileId,
                 routedActors,
-                new CastDispatchContext(_commandIntentWorld, groundWorldCm, frame.OwnerToken),
+                new CastDispatchContext(_commandIntentWorld, groundWorldCm, ResolveCastDispatchGroupKey(hasActiveContext, activeContext)),
                 _commandIntentDispatchActorsScratch.AsSpan(0, routedCount),
                 out CastDispatchRouting routing);
 
@@ -1899,6 +1908,93 @@ namespace Ludots.Core.Input.Orders
                 }
             }
             return OrderSubmitResult.Activated;
+        }
+
+        /// <summary>
+        /// Cast dispatch cycle group key for one command trigger, derived from the entity-side
+        /// interaction state: the active context's carrier entity identifies the routing group
+        /// (stable across repeated triggers of the same context, distinct across contexts), and
+        /// the steady state uses the reserved 0. The dispatch kernel treats the key as opaque.
+        /// </summary>
+        private static long ResolveCastDispatchGroupKey(
+            bool hasActiveContext,
+            in ActiveInteractionContext activeContext)
+        {
+            if (!hasActiveContext || activeContext.ContextEntity == default)
+            {
+                return 0;
+            }
+
+            return ((long)(uint)activeContext.ContextEntity.Id << 32) | (uint)activeContext.ContextEntity.Version;
+        }
+
+        /// <summary>
+        /// Intent resolution with lazy preference read: an active context's explicit intent
+        /// resolves without a CommandPref; only when the steady state actually needs the player
+        /// default does the possessed representative's component become required (fail fast — see
+        /// <see cref="RequireActingPlayerCommandPref"/>). The chain itself is the arbiter's:
+        /// active context explicit > player default > 0 (no bubbling). An active context that
+        /// declares no intent rejects without touching the preference at all.
+        /// </summary>
+        private int ResolveActiveCommandIntentForCommand()
+        {
+            Entity rep = RequireActingPlayerRepresentative();
+            if (_commandIntentWorld!.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext context) &&
+                context.CommandIntentProfileId == 0)
+            {
+                return 0;
+            }
+
+            CommandPref playerPref = RequireActingPlayerCommandPref();
+            return CommandIntentArbiter.ResolveActiveCommandIntent(_commandIntentWorld, rep, in playerPref);
+        }
+
+        /// <summary>
+        /// The acting player's representative through the map-binding player lookup — the entity
+        /// carrying the interaction state (<see cref="ActiveInteractionContext"/>) and
+        /// <see cref="CommandPref"/>. An unresolvable representative is a wiring error: map
+        /// binding publishes player representatives alongside the CommandPref seed.
+        /// </summary>
+        private Entity RequireActingPlayerRepresentative()
+        {
+            if (_playerRepresentativeProvider == null)
+            {
+                throw new InvalidOperationException(
+                    "Command intent routing requires a player representative provider; wire it with SetCommandIntentRouting.");
+            }
+
+            int playerId = CurrentActivationPlayerId;
+            if (playerId <= 0 ||
+                !_playerRepresentativeProvider(playerId, out Entity rep) ||
+                rep == Entity.Null ||
+                !_commandIntentWorld!.IsAlive(rep))
+            {
+                throw new InvalidOperationException(
+                    $"Command intent routing requires a living representative for the acting player {playerId}; " +
+                    "map binding publishes player representatives alongside the CommandPref seed.");
+            }
+
+            return rep;
+        }
+
+        /// <summary>
+        /// The acting player's representative CommandPref. Map binding seeds the game-instance
+        /// player default onto every bound player representative, so a missing component is a
+        /// wiring error, not a fallback case. The bound sole possessed actor may be a controlled
+        /// unit — the preference is always read through the acting player id.
+        /// </summary>
+        private CommandPref RequireActingPlayerCommandPref()
+        {
+            Entity rep = RequireActingPlayerRepresentative();
+
+            if (!_commandIntentWorld.TryGet<CommandPref>(rep, out CommandPref pref))
+            {
+                throw new InvalidOperationException(
+                    $"Command intent routing requires a CommandPref on player {CurrentActivationPlayerId}'s representative '{rep}'; " +
+                    "map binding seeds the player default from Input/command_prefs.json and a missing component is a wiring error.");
+            }
+
+            return pref;
         }
 
         private Entity ResolveActiveActorCollectionOwner()

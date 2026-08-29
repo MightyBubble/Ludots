@@ -74,6 +74,9 @@ public sealed class RaylibNavMeshPresentationContractTests
         int terrainDraw = frameRendererSource.IndexOf("_terrainRenderer.Render(TerrainSource(), frame.ActiveCamera)", StringComparison.Ordinal);
         int navMeshDraw = frameRendererSource.IndexOf("_navMeshPresentationRenderer.Draw(_navMeshPresentationBuffer)", StringComparison.Ordinal);
         int entityDraw = frameRendererSource.IndexOf("_primitiveRenderer.Draw", navMeshDraw, StringComparison.Ordinal);
+        int terrainDraw = hostSource.IndexOf("terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), viewportCamera)", StringComparison.Ordinal);
+        int navMeshDraw = hostSource.IndexOf("navMeshPresentationRenderer.Draw(navMeshPresentationBuffer)", StringComparison.Ordinal);
+        int entityDraw = hostSource.IndexOf("primitiveRenderer.Draw", navMeshDraw, StringComparison.Ordinal);
         Assert.That(terrainDraw, Is.GreaterThanOrEqualTo(0));
         Assert.That(navMeshDraw, Is.GreaterThan(terrainDraw));
         Assert.That(entityDraw, Is.GreaterThan(navMeshDraw));

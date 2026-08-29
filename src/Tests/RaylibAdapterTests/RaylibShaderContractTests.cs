@@ -61,6 +61,38 @@ public sealed class RaylibShaderContractTests
     }
 
     [Test]
+    public void TerrainNavWalkability_UsesDedicatedSamplerAfterBaseAlbedo()
+    {
+        string repoRoot = FindRepoRoot();
+        string terrain = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "terrain.fs"));
+        string renderer = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Client",
+            "Ludots.Raylib.Render",
+            "Rendering",
+            "RaylibVisualHeightmapRenderer.cs"));
+
+        Assert.That(terrain, Does.Contain("uniform sampler2D uNavWalkabilityMap"));
+        Assert.That(terrain, Does.Contain("uniform int uUseNavWalkability"));
+        Assert.That(terrain, Does.Contain("uniform vec4 uNavWalkabilityBounds"));
+        Assert.That(terrain, Does.Contain("vec2 worldCm = fragPos.xz * 100.0"));
+        Assert.That(terrain, Does.Contain("uv.y = 1.0 - uv.y"));
+        Assert.That(terrain, Does.Contain("albedo = mix(albedo, navTint.rgb"));
+        Assert.That(
+            terrain.IndexOf("if (uUseNavWalkability != 0)", StringComparison.Ordinal),
+            Is.GreaterThan(terrain.IndexOf("if (uUseTerrainAlbedo != 0)", StringComparison.Ordinal)));
+        Assert.That(
+            terrain.IndexOf("if (uUseNavWalkability != 0)", StringComparison.Ordinal),
+            Is.LessThan(terrain.IndexOf("vec3 N = normalize(fragNormal)", StringComparison.Ordinal)));
+        Assert.That(terrain, Does.Contain("uniform sampler2D uControlMap"));
+        Assert.That(renderer, Does.Contain("\"uNavWalkabilityMap\""));
+        Assert.That(renderer, Does.Contain("\"uUseNavWalkability\""));
+        Assert.That(renderer, Does.Contain("\"uNavWalkabilityBounds\""));
+        Assert.That(renderer, Does.Contain("NavWalkabilityMaterialSlot"));
+    }
+
+    [Test]
     public void ProceduralSkybox_ShaderContractRemainsSeparateFromDayNightSky()
     {
         string repoRoot = FindRepoRoot();

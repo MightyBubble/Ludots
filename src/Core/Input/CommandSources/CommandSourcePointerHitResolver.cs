@@ -26,12 +26,34 @@ namespace Ludots.Core.Input.CommandSources
             Vector2 pointer,
             float radiusPixels)
         {
+            if (globals == null) throw new ArgumentNullException(nameof(globals));
+            if (!globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) ||
+                projectorObj is not IScreenProjector projector)
+            {
+                return Entity.Null;
+            }
+
+            return FindNearestInspectableEntity(world, globals, owner, pointer, radiusPixels, projector);
+        }
+
+        /// <summary>
+        /// Explicit-projector variant for consumers that answer under one seat's PresentBinding
+        /// (split-screen pick): the pointer/radius are binding-local, the projector must carry that
+        /// binding's camera and surface metrics. Knowledge gating semantics are identical.
+        /// </summary>
+        public static Entity FindNearestInspectableEntity(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            Vector2 pointer,
+            float radiusPixels,
+            IScreenProjector projector)
+        {
             if (world == null) throw new ArgumentNullException(nameof(world));
             if (globals == null) throw new ArgumentNullException(nameof(globals));
+            if (projector == null) throw new ArgumentNullException(nameof(projector));
 
-            if (owner == Entity.Null ||
-                !globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) ||
-                projectorObj is not IScreenProjector projector)
+            if (owner == Entity.Null)
             {
                 return Entity.Null;
             }

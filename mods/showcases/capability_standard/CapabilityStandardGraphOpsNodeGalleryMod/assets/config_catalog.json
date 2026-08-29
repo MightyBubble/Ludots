@@ -1,36 +1,12 @@
 [
-  {
-    "Path": "Activities/activities.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "Entities/templates.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "Presentation/presenters.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "Presentation/text_tokens.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "Presentation/text_locales.json",
-    "Policy": "DeepObject"
-  },
-  {
-    "Path": "GAS/effects.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "GAS/tag_rules.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  }
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/presenters.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/text_tokens.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/text_locales.json", "Policy": "DeepObject" },
+  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/tag_rules.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Dialogue/dialogues.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Story/lines.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Story/speakers.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Story/presentation_profiles.json", "Policy": "ArrayById", "IdField": "id" }
 ]

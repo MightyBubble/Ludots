@@ -88,7 +88,13 @@ namespace Ludots.Core.Persistence
             AddComponentFormatter(formatters, new RelationshipComponentFormatter<InRelationship>());
             AddComponentFormatter(formatters, new NameFormatter());
             AddComponentFormatter(formatters, new MapEntityFormatter());
+            AddComponentFormatter(formatters, new PresentationFrameStateFormatter());
+            AddComponentFormatter(formatters, new Physics2DRuntimeStateFormatter());
             AddAutoDiscoveredUnmanagedFormatters(formatters, candidateAssemblies);
+            // Hand-written pruners (e.g. Physics2D perf, discovered from its own assembly) must
+            // come after unmanaged discovery and overwrite the raw-bytes default: their whole
+            // purpose is to keep volatile fields out of the persisted payload.
+            AddDiscoveredComponentFormatters(formatters, candidateAssemblies);
             return formatters.Values.ToArray();
         }
 
@@ -232,6 +238,38 @@ namespace Ludots.Core.Persistence
                 new(() => new ArchBinarySerializer(Formatters), trackAllValues: false);
 
             public ArchBinarySerializer Serializer => _serializer.Value!;
+        }
+
+        private static void AddDiscoveredComponentFormatters(
+            Dictionary<Type, IMessagePackFormatter> formatters,
+            IEnumerable<Assembly> candidateAssemblies)
+        {
+            foreach (Assembly assembly in candidateAssemblies)
+            {
+                Type[] types;
+                try { types = assembly.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { types = Array.FindAll(ex.Types, t => t != null); }
+
+                foreach (Type type in types)
+                {
+                    if (!typeof(ILudotsPersistenceComponentFormatter).IsAssignableFrom(type) ||
+                        type.IsAbstract || !type.IsClass || type.ContainsGenericParameters ||
+                        type.GetConstructor(Type.EmptyTypes) == null)
+                    {
+                        continue;
+                    }
+
+                    var instance = (ILudotsPersistenceComponentFormatter)Activator.CreateInstance(type)!;
+                    if (instance is not IMessagePackFormatter typed)
+                    {
+                        continue;
+                    }
+
+                    // Discovered hand-written formatters intentionally overwrite the auto-registered
+                    // raw-bytes default — that overwrite is how volatile-field pruning takes effect.
+                    formatters[instance.ComponentType] = typed;
+                }
+            }
         }
     }
 }

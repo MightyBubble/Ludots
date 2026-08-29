@@ -11,7 +11,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -642,7 +641,7 @@ namespace InteractionShowcaseMod.UI
         private static bool TryResolveCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity local) ||
+            if (!InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity local) ||
                 local == Entity.Null ||
                 !engine.World.IsAlive(local))
             {
@@ -781,14 +780,24 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveActiveCommandIntentLabel(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not Ludots.Core.Input.Interaction.InteractionContextStack stack ||
-                engine.GetService(CoreServiceKeys.ControlSchemeRuntime) is not Ludots.Core.Input.Interaction.ControlSchemeRuntime schemes)
+            if (engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry) is not Ludots.Core.Input.Interaction.CommandIntentProfileRegistry intents)
             {
                 return "missing";
             }
 
-            int intentId = Ludots.Core.Input.Interaction.CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes);
-            return intentId == 0 ? "none" : ResolveIntentDisplayName(stack.CommandIntentProfileIdRegistry.GetName(intentId));
+            if (!Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
+            {
+                return "no-pref";
+            }
+
+            Ludots.Core.Input.Interaction.CommandPref pref = default;
+            if (!engine.World.IsAlive(rep) || !engine.World.TryGet<Ludots.Core.Input.Interaction.CommandPref>(rep, out pref))
+            {
+                return "no-pref";
+            }
+
+            int intentId = Ludots.Core.Input.Interaction.CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, rep, in pref);
+            return intentId == 0 ? "none" : ResolveIntentDisplayName(intents.ProfileIdRegistry.GetName(intentId));
         }
 
         private static string ResolvePointerTargetFactsLabel(GameEngine engine)
@@ -813,27 +822,22 @@ namespace InteractionShowcaseMod.UI
                 return $"Command group: {blinkEvidence.ActorCount} mixed hero(es): {blinkEvidence.ActorNames}.";
             }
 
-            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not Ludots.Core.Input.Interaction.InteractionContextStack stack ||
-                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not Ludots.Core.EntityCollections.EntityCollectionStore collections ||
-                !stack.TryPeek(out Ludots.Core.Input.Interaction.InteractionContextFrame frame))
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not Ludots.Core.EntityCollections.EntityCollectionStore collections ||
+                !TryResolveActiveCommandRouting(engine, out Entity owner, out int collectionKeyId))
             {
                 return "Command group is not ready.";
             }
 
-            Entity owner = Entity.Null;
-            if (frame.ContextEntity != Entity.Null &&
-                engine.World.IsAlive(frame.ContextEntity) &&
-                collections.TryGet(frame.ContextEntity, frame.ActiveCollectionKeyId, out Ludots.Core.EntityCollections.EntityCollectionHandle contextHandle) &&
+            if (collections.TryGet(owner, collectionKeyId, out Ludots.Core.EntityCollections.EntityCollectionHandle contextHandle) &&
                 collections.TryGetView(contextHandle, out Ludots.Core.EntityCollections.EntityCollectionView contextView))
             {
-                owner = frame.ContextEntity;
                 return $"Command group: {contextView.Count} hero(es).";
             }
 
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer) &&
+            if (InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity localPlayer) &&
                 localPlayer != Entity.Null &&
                 engine.World.IsAlive(localPlayer) &&
-                collections.TryGet(localPlayer, frame.ActiveCollectionKeyId, out Ludots.Core.EntityCollections.EntityCollectionHandle localHandle) &&
+                collections.TryGet(localPlayer, collectionKeyId, out Ludots.Core.EntityCollections.EntityCollectionHandle localHandle) &&
                 collections.TryGetView(localHandle, out Ludots.Core.EntityCollections.EntityCollectionView localView))
             {
                 return $"Command group: {localView.Count} hero(es).";
@@ -947,27 +951,14 @@ namespace InteractionShowcaseMod.UI
         private static bool TrySnapshotCommandSourceActors(GameEngine engine, out Entity[] actors)
         {
             actors = Array.Empty<Entity>();
-            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not InteractionContextStack stack ||
-                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
-                !stack.TryPeek(out InteractionContextFrame frame))
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
+                !TryResolveActiveCommandRouting(engine, out Entity owner, out int collectionKeyId))
             {
                 return false;
             }
 
-            Entity owner = Entity.Null;
-            if (frame.ContextEntity != Entity.Null && engine.World.IsAlive(frame.ContextEntity))
-            {
-                owner = frame.ContextEntity;
-            }
-            else if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer) &&
-                     localPlayer != Entity.Null &&
-                     engine.World.IsAlive(localPlayer))
-            {
-                owner = localPlayer;
-            }
-
             if (owner == Entity.Null ||
-                !collections.TryGet(owner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
+                !collections.TryGet(owner, collectionKeyId, out EntityCollectionHandle handle) ||
                 !collections.TryGetView(handle, out EntityCollectionView view) ||
                 view.Count <= 0)
             {
@@ -983,6 +974,38 @@ namespace InteractionShowcaseMod.UI
 
             Array.Resize(ref actors, copied);
             return copied > 0;
+        }
+
+        /// <summary>
+        /// Owner + collection key paired read for command group evidence: the local player rep's
+        /// mounted active context wins (owner = its carrier while alive), and the steady state
+        /// routes through the default profile's collection key.
+        /// </summary>
+        private static bool TryResolveActiveCommandRouting(GameEngine engine, out Entity owner, out int collectionKeyId)
+        {
+            owner = Entity.Null;
+            collectionKeyId = 0;
+            if (engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry) is not InteractionContextProfileRegistry contextProfiles ||
+                !contextProfiles.TryGetSteadyStateRouting(out int steadyStateKeyId, out _) ||
+                !InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity localPlayer) ||
+                localPlayer == Entity.Null ||
+                !engine.World.IsAlive(localPlayer))
+            {
+                return false;
+            }
+
+            owner = localPlayer;
+            collectionKeyId = steadyStateKeyId;
+            if (engine.World.TryGet<ActiveInteractionContext>(localPlayer, out ActiveInteractionContext context))
+            {
+                collectionKeyId = context.ActiveCollectionKeyId;
+                if (context.ContextEntity != Entity.Null && engine.World.IsAlive(context.ContextEntity))
+                {
+                    owner = context.ContextEntity;
+                }
+            }
+
+            return true;
         }
 
         private static string FormatEntityNames(World world, ReadOnlySpan<Entity> entities)

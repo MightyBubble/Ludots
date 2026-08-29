@@ -1,0 +1,35 @@
+{
+  "Id": "east_asia_visual_heightmap",
+  "Fields": {
+    "Layers": [
+      "ownership.east_asia.country"
+    ]
+  },
+  "Variables": [
+    {
+      "name": "mapmode",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "stage",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "region_code",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "enter_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "last_enter_code",
+      "type": "int",
+      "initial": 0
+    }
+  ]
+}

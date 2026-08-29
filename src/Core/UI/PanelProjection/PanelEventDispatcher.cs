@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.UI.PanelActivation;
 
 namespace Ludots.Core.UI.PanelProjection
 {
@@ -11,16 +12,30 @@ namespace Ludots.Core.UI.PanelProjection
     /// the registered sink routes validated payloads (graph consumption via the event
     /// bus, signal bridge into orchestration blackboard — order admission downstream).
     /// The dispatcher never mutates gameplay itself.
+    /// Seat-attributed fires go through <see cref="FireFromSeat"/>: the firing seat's
+    /// input channel is the attribution source, and audience admission runs before
+    /// payload validation — rejections return a reason for the UI to show instead of
+    /// throwing (constitution §4: admission rejections must flow the reason back).
     /// </summary>
     public sealed class PanelEventDispatcher
     {
         private readonly PanelTemplate _template;
         private readonly Action<string, IReadOnlyDictionary<string, object?>> _sink;
+        private readonly UiPanelActivationStore? _activation;
 
         public PanelEventDispatcher(PanelTemplate template, Action<string, IReadOnlyDictionary<string, object?>> sink)
+            : this(template, sink, activation: null)
+        {
+        }
+
+        public PanelEventDispatcher(
+            PanelTemplate template,
+            Action<string, IReadOnlyDictionary<string, object?>> sink,
+            UiPanelActivationStore? activation)
         {
             _template = template ?? throw new ArgumentNullException(nameof(template));
             _sink = sink ?? throw new ArgumentNullException(nameof(sink));
+            _activation = activation;
         }
 
         public void Fire(string eventId, JsonObject args)
@@ -28,6 +43,34 @@ namespace Ludots.Core.UI.PanelProjection
             PanelTemplateEvent declaration = RequireEvent(eventId);
             IReadOnlyDictionary<string, object?> payload = ValidatePayload(declaration, args);
             _sink(declaration.EventId, payload);
+        }
+
+        /// <summary>
+        /// Seat-attributed fire: attributes the event to the seat whose input channel
+        /// produced it and admits it against the panel's effective audience (declared
+        /// audience, or the runtime override when hotseat rotation set one). Audience
+        /// rejection is a game outcome, not an authoring bug — the reason names the
+        /// panel, the seat, and the audience so the UI can show it.
+        /// </summary>
+        public PanelEventFireResult FireFromSeat(string eventId, JsonObject args, string seatId)
+        {
+            if (string.IsNullOrWhiteSpace(seatId))
+            {
+                throw new ArgumentException(
+                    $"Panel '{_template.Id}' event '{eventId}' requires the firing seat's input channel for attribution.",
+                    nameof(seatId));
+            }
+
+            PanelAudience audience = PanelAudienceResolution.Effective(_template, _activation);
+            string trimmedSeatId = seatId.Trim();
+            if (!audience.Contains(trimmedSeatId))
+            {
+                return PanelEventFireResult.Refuse(
+                    $"Panel '{_template.Id}' audience [{audience}] does not include seat '{trimmedSeatId}'; the operation was refused.");
+            }
+
+            Fire(eventId, args);
+            return PanelEventFireResult.Admit();
         }
 
         private PanelTemplateEvent RequireEvent(string eventId)
@@ -113,6 +156,14 @@ namespace Ludots.Core.UI.PanelProjection
         }
     }
 
+    /// <summary>Outcome of a seat-attributed fire: admitted, or refused with a UI-showable reason.</summary>
+    public readonly record struct PanelEventFireResult(bool Admitted, string? Reason)
+    {
+        public static PanelEventFireResult Admit() => new(true, null);
+
+        public static PanelEventFireResult Refuse(string reason) => new(false, reason);
+    }
+
     /// <summary>
     /// Resolves intent-map entries against a validated payload plus seat/command-source
     /// attribution context (#1013). Produces PanelIntent records for admission —
@@ -136,10 +187,15 @@ namespace Ludots.Core.UI.PanelProjection
                     continue;
                 }
 
-                if (!string.Equals(entry.PlayerSource, "seat", StringComparison.Ordinal))
+                PanelOwnerKind playerSource = PanelOwnerKinds.Parse(
+                    entry.PlayerSource,
+                    $"Panel '{_template.Id}' intent '{entry.Intent}'");
+
+                if (playerSource != PanelOwnerKind.Seat)
                 {
                     throw new InvalidOperationException(
-                        $"Panel '{_template.Id}' intent '{entry.Intent}' declares unsupported playerSource '{entry.PlayerSource}' (only 'seat').");
+                        $"Panel '{_template.Id}' intent '{entry.Intent}' declares playerSource '{entry.PlayerSource}'; " +
+                        "only 'seat' attribution resolves at runtime in this slice (participant/team/world resolve on the panel-event line).");
                 }
 
                 if (!string.Equals(entry.ActorSource, "commandSource.primary", StringComparison.Ordinal))

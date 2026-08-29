@@ -34,6 +34,14 @@ namespace Ludots.Core.Fields
         public int[] DirtyLocals { get; }
         public int DirtyCount { get; private set; }
 
+        /// <summary>Monotonic stamp of the last value change in this chunk; 0 = never changed.</summary>
+        public long ChangeStamp { get; private set; }
+
+        internal void MarkChanged(long stamp)
+        {
+            ChangeStamp = stamp;
+        }
+
         public T Get(int localIndex)
         {
             ValidateLocalIndex(localIndex);

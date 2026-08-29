@@ -128,6 +128,9 @@ namespace Ludots.Core.Engine
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
 
+        /// <summary>Game-instance CommandPref seed resolved at boot; map binding plants it on player representatives.</summary>
+        private Ludots.Core.Input.Interaction.CommandPrefSeed _commandPrefSeed;
+
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
 
@@ -915,6 +918,9 @@ namespace Ludots.Core.Engine
             var visionFogCellMap = new FogCellMap();
             new VisionFogLayerConfigLoader(ConfigPipeline, visionFogLayerRegistry)
                 .Load(ConfigCatalog, ConfigConflictReport);
+            var fieldLayerRegistry = new Ludots.Core.Fields.FieldLayerRegistry();
+            new Ludots.Core.Fields.Config.FieldLayerConfigLoader(ConfigPipeline, fieldLayerRegistry)
+                .Load(ConfigCatalog, ConfigConflictReport);
             var fogKnowledgeProjector = new FogKnowledgeProjector(knowledgeProjectionStore, visionFogCellMap);
             var visionResolver = new VisionResolver(
                 visionFogLayerRegistry,
@@ -930,6 +936,7 @@ namespace Ludots.Core.Engine
                 fogKnowledgeProjector);
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.ScopeKeyRegistry, progressionScopeKeys);
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.VisionFogLayerRegistry, visionFogLayerRegistry);
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.FieldLayerRegistry, fieldLayerRegistry);
             // Lookup TextToken columns resolve against PresentationTextCatalog; load catalog before graphs.
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var rngStreams = new Randomization.RngStreamService();
@@ -1152,26 +1159,14 @@ namespace Ludots.Core.Engine
             var commandSourceConfig = config.CommandSource
                 ?? throw new InvalidOperationException("game.json commandSource must be explicitly configured.");
             var interactionActionBindings = new InteractionActionBindings();
-            var interactionContextStack = new InteractionContextStack(entityCollectionKeyRegistry);
-            interactionContextStack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                EntityViewKeys.ControlPlaneCommand));
-            interactionContextStack.AddTransitionListener(new InteractionContextInputContextBridge(
-                interactionContextStack,
-                () => GetService(CoreServiceKeys.InputHandler)));
-            var filterProfileRegistry = new FilterProfileRegistry(interactionContextStack.FilterProfileIdRegistry, World, tagOps);
+            var filterProfileIdRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var filterProfileRegistry = new FilterProfileRegistry(filterProfileIdRegistry, World, tagOps);
             // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
             filterProfileRegistry.RegisterExpander(
                 FilterAssociationExpandKinds.Controls,
                 controlDomainQuery.CollectControlled,
                 () => controlDomainQuery.Revision);
             filterProfileRegistry.Install(new FilterProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
-            var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
-                interactionContextStack,
-                filterProfileRegistry,
-                domainRoutedCollectionWriter,
-                entityCollectionStore);
             var presentationConfig = config.Presentation
                 ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(presentationConfig.RuntimeEntitySpawnQueueCapacity);
@@ -1504,6 +1499,7 @@ namespace Ludots.Core.Engine
             var sessionSystem = new GameSessionSystem(GameSession);
             var authoritativeInput = new FrozenInputActionReader();
             var authoritativeInputAccumulator = new AuthoritativeInputAccumulator();
+            SetService(CoreServiceKeys.AuthoritativeInputAccumulator, authoritativeInputAccumulator);
             var authoritativePointerButtons = new AuthoritativePointerButtonSnapshot();
             var authoritativePointerButtonsAccumulator = new AuthoritativePointerButtonAccumulator();
             var authoritativeGroundPointerOverride = new AuthoritativeGroundPointerOverride();
@@ -1563,9 +1559,40 @@ namespace Ludots.Core.Engine
             commandIntentProfileRegistry.Install(new CommandIntentProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
             // Interaction context profiles + cast commit profiles (RFC-0065 CTX-6/CTX-7, DEC-13).
+            // Id fields resolve at install: collection keys into the store's key space, filter and
+            // command intent names against their kernel registries (installed above), so unknown
+            // references fail fast at startup. The engine-reserved steady-state profile (never
+            // mounted; absence of the mounted component is the steady state) installs first — an
+            // asset declaring the reserved id fails fast below.
             var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var interactionContextProfileRegistry = new InteractionContextProfileRegistry(interactionContextProfileIds);
-            interactionContextProfileRegistry.Install(new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+            interactionContextProfileRegistry.Install(
+                new InteractionContextProfilesConfig
+                {
+                    Profiles = new List<InteractionContextProfileDefinition>
+                    {
+                        new()
+                        {
+                            Id = InteractionContextIds.Default,
+                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                            ActiveEntityViewKey = EntityViewKeys.ControlPlaneCommand,
+                        },
+                    },
+                },
+                entityCollectionKeyRegistry,
+                filterProfileIdRegistry,
+                commandIntentProfileIds);
+            interactionContextProfileRegistry.Install(
+                new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                entityCollectionKeyRegistry,
+                filterProfileIdRegistry,
+                commandIntentProfileIds);
+            var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
+                World,
+                interactionContextProfileRegistry,
+                filterProfileRegistry,
+                domainRoutedCollectionWriter,
+                entityCollectionStore);
             var castCommitProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castCommitProfileRegistry = new CastCommitProfileRegistry(castCommitProfileIds, castCommitActionIds, interactionContextProfileRegistry);
@@ -1587,19 +1614,49 @@ namespace Ludots.Core.Engine
             var castDispatchProfileRegistry = new CastDispatchProfileRegistry(castDispatchProfileIds, castDispatchAdvanceEventIds);
             castDispatchProfileRegistry.Install(new CastDispatchProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). The player input
-            // handler is adapter-bound after engine init, so it is resolved per switch (null tolerated).
+            // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). Schemes are pure
+            // device binding profiles; order routing preferences are player data (CommandPref below).
+            // The player input handler is adapter-bound after engine init, so it is resolved per
+            // switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var controlSchemeRuntime = new ControlSchemeRuntime(
                 controlSchemeIds,
-                interactionContextStack,
-                commandIntentProfileRegistry,
-                castDispatchProfileRegistry,
                 orderTypeRegistry,
                 () => GetService(CoreServiceKeys.InputHandler),
                 clientCastPreferences,
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Game-instance CommandPref seed (#1306 route ③): the player-level default intent +
+            // dispatch pair map binding plants on every bound player representative lacking the
+            // component. Seed ids are the kernel registries' own id spaces — the spaces the
+            // arbiter and mounted contexts resolve in.
+            _commandPrefSeed = CommandPrefConfigLoader.ResolveSeed(
+                new CommandPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                commandIntentProfileRegistry,
+                castDispatchProfileRegistry);
+
+
+            // Per-seat input interpretation channels: zero channels for sole-seat clients (their
+            // stack is the global handler/snapshot chain above); one channel per seat on
+            // multi-seat tables, with scheme activation mirroring the shared catalog above.
+            var clientLocalSeatInputRuntime = new Client.ClientLocalSeatInputRuntime(
+                GlobalContext,
+                controlSchemeRuntime,
+                inputConfigRoot,
+                MergedConfig.StartupInputContexts);
+
+
+            // Interaction mode catalog (#1306): simulation-side modes projected onto handler IMC
+            // contexts by InputContextProjectionSystem; the SetInteractionMode graph op writes the
+            // sparse component against this map (unknown modes and undefined contexts fail fast).
+            var interactionModeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var interactionModeMap = new InteractionModeMap(interactionModeIds);
+            interactionModeMap.Install(
+                new InteractionModeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                inputConfigRoot);
+            gasGraphApi.BindInteractionModeMap(interactionModeMap);
+
 
             // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
             // so catalog tag prefixes compile against the loaded definitions.
@@ -1715,6 +1772,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ClientLocalSeatRegistry, clientLocalSeatRegistry);
             SetService(CoreServiceKeys.LogicViewRegistry, logicViewRegistry);
             SetService(CoreServiceKeys.ClientLocalSeatDeviceBinding, new Client.ClientLocalSeatDeviceBinding(clientLocalSeatRegistry));
+            SetService(CoreServiceKeys.ClientLocalSeatInputRuntime, clientLocalSeatInputRuntime);
             SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
             SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
@@ -1724,11 +1782,11 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.VisionFogFieldStore, visionFogFieldStore);
             SetService(CoreServiceKeys.VisionFogSnapshotStore, visionFogSnapshotStore);
             SetService(CoreServiceKeys.VisionFogCellMap, visionFogCellMap);
+            SetService(CoreServiceKeys.FieldLayerRegistry, fieldLayerRegistry);
             SetService(CoreServiceKeys.VisionResolver, visionResolver);
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.KnowledgeAreaRevealRuntime, knowledgeAreaRevealRuntime);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
-            SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
             SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
             SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
             SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
@@ -1736,6 +1794,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CastCommitProfileRegistry, castCommitProfileRegistry);
             SetService(CoreServiceKeys.ClientCastPreferenceStore, clientCastPreferences);
             SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
+            SetService(CoreServiceKeys.InteractionModeMap, interactionModeMap);
             SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
             SetService(CoreServiceKeys.CommandDeckProfileRegistry, commandDeckProfileRegistry);
             SetService(CoreServiceKeys.CommandDeckRouteResolver, commandDeckRouteResolver);
@@ -1894,7 +1953,9 @@ namespace Ludots.Core.Engine
                 World,
                 taskDefinitions,
                 providerServices,
-                taskPresentation);
+                taskPresentation,
+                GetService(CoreServiceKeys.PresentationTextCatalog),
+                GetService(CoreServiceKeys.PresentationDisplayResolver));
             TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
@@ -1942,10 +2003,14 @@ namespace Ludots.Core.Engine
                 taskRuntime,
                 textCatalog,
                 displayResolver);
-            var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog);
+            var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog, displayResolver);
             SetService(CoreServiceKeys.StoryGraphInvoker, storyGraphs);
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
             SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
+            _gasGraphRuntimeApi?.BindStartDialogue(dialogueId => dialogueRuntime.StartDialogue(dialogueId));
+            SetService(
+                CoreServiceKeys.StoryPresentationProjector,
+                new StoryPresentationProjector(storyDefinitions));
             AttributeRegistry.Freeze();
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
@@ -1957,9 +2022,24 @@ namespace Ludots.Core.Engine
 
             // Phase 1: InputCollection
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
-            RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
+            RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
+            // Local IMC projection (#1306): mode components on possessed reps and the mounted
+            // active interaction context diff into per-seat (seatId, contextId, op) commands;
+            // handler resolution mirrors scheme activation — per-seat channel handler where one
+            // exists, the sole-seat global handler otherwise. Runs after possession sync so the
+            // same tick's possession is what gets projected.
+            RegisterSystem(
+                new Ludots.Core.Input.Systems.InputContextProjectionSystem(
+                    World,
+                    GlobalContext,
+                    interactionModeMap,
+                    interactionContextProfileRegistry,
+                    seatId => clientLocalSeatInputRuntime.TryGetChannel(seatId, out Client.ClientLocalSeatInputChannel channel)
+                        ? channel.Handler
+                        : GetService(CoreServiceKeys.InputHandler)),
+                SystemGroup.InputCollection);
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).
@@ -1967,7 +2047,7 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
-            RegisterSystem(new StoryRuntimeSystem(dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
+            RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
@@ -2025,8 +2105,8 @@ namespace Ludots.Core.Engine
             RegisterSystem(instantCompleteOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
-            // RFC-0065 CTX-6: exec lifecycle push/pop of interaction context frames.
-            RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextStack, interactionContextProfileRegistry, abilityDefinitions), SystemGroup.AbilityActivation);
+            // RFC-0065 CTX-6: exec lifecycle mount/reclaim of the entity-mounted active context.
+            RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextProfileRegistry, abilityDefinitions, controlDomainQuery), SystemGroup.AbilityActivation);
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(relationshipProcessingSystem, SystemGroup.AbilityActivation);
 
@@ -2133,6 +2213,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new ModTriggerResumeClockSystem(TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new Ludots.Core.Gameplay.FieldRegions.FieldRegionMembershipSystem(World, () => MapSessions, entityCollectionStore, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
             var inputTriggerActions = new Ludots.Core.Gameplay.MapTriggers.InputTriggerActionCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -2491,6 +2572,7 @@ namespace Ludots.Core.Engine
                 session.VisualHeightmap = visualHeightmap;
                 BindStructureCollisionSession(session, visualHeightmap, structureCollision);
                 CreateBoardsForSession(session, mapConfig);
+                CreateFieldsForSession(session, mapConfig);
                 if (previousFocused != null)
                 {
                     CancelPendingMapResume(previousFocused.MapId, $"Map resume canceled because '{mid.Value}' became focused.", markFailed: true);
@@ -2661,6 +2743,7 @@ namespace Ludots.Core.Engine
             }
 
             CreateBoardsForSession(session, mapConfig);
+            CreateFieldsForSession(session, mapConfig);
             if (outerSession != null)
             {
                 CancelPendingMapResume(outerSession.MapId, $"Map resume canceled because '{inner.Value}' was pushed on top.", markFailed: true);
@@ -2998,6 +3081,20 @@ namespace Ludots.Core.Engine
             TriggerManager.RegisterGlobalTriggers(mapId, globalTriggers);
         }
 
+        private void CreateFieldsForSession(MapSession session, MapConfig mapConfig)
+        {
+            var registry = GetService(CoreServiceKeys.FieldLayerRegistry);
+            if (registry == null) return;
+
+            var cellsLoader = new Ludots.Core.Fields.Config.FieldCellsConfigLoader(ConfigPipeline);
+            session.Fields = Ludots.Core.Fields.FieldSessionStore.Create(
+                registry, mapConfig?.Fields?.Layers, cellsLoader);
+            session.RegionIndex = Ludots.Core.Gameplay.FieldRegions.FieldRegionMaterializer.Materialize(World, session);
+            var rosters = new Ludots.Core.Fields.Config.FieldHierarchyConfigLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            session.RegionGroups = Ludots.Core.Gameplay.FieldRegions.RegionHierarchyBuilder.Build(World, session, rosters);
+        }
+
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
         {
             // Same suspension boundary drives global-scope subscriptions (#1123): a
@@ -3159,12 +3256,17 @@ namespace Ludots.Core.Engine
                             heightCells,
                             boardConfig.GridCellSizeCm,
                             board.Name,
-                            boardConfig);
+                            boardConfig,
+                            out int projectedOriginXcm,
+                            out int projectedOriginZcm);
                         gridBoard.LogicTerrain = projected ?? new FlatGridLogicTerrainField(
                             widthCells,
                             heightCells,
                             boardConfig.GridCellSizeCm,
-                            boardConfig.ChunkSizeCells);
+                            boardConfig.ChunkSizeCells,
+                            default,
+                            projectedOriginXcm,
+                            projectedOriginZcm);
                         if (LogicTerrain == null)
                         {
                             LogicTerrain = gridBoard.LogicTerrain;
@@ -3200,26 +3302,69 @@ namespace Ludots.Core.Engine
             int heightCells,
             int cellSizeCm,
             string boardName,
-            BoardConfig boardConfig)
+            BoardConfig boardConfig,
+            out int originXcm,
+            out int originZcm)
         {
             Ludots.Platform.Abstractions.IVisualHeightmap? heightmap = session.VisualHeightmap;
             if (heightmap == null)
             {
+                originXcm = 0;
+                originZcm = 0;
                 return null;
             }
 
-            float widthCm = checked(widthCells * cellSizeCm);
-            float heightCm = checked(heightCells * cellSizeCm);
-            bool covers =
-                heightmap.TrySampleHeightCm(0f, 0f, out _) &&
-                heightmap.TrySampleHeightCm(widthCm, 0f, out _) &&
-                heightmap.TrySampleHeightCm(0f, heightCm, out _) &&
-                heightmap.TrySampleHeightCm(widthCm, heightCm, out _);
+            int widthCm = checked(widthCells * cellSizeCm);
+            int heightCm = checked(heightCells * cellSizeCm);
+
+            // The origin-aware bounds contract (exact extent match + authored WorldWidthCm
+            // remap + TerrainBlockedAtOrBelow) is opt-in via the map's VisualHeightmap
+            // binding. Boards declared through the legacy VisualHeightmapAsset field keep
+            // the origin-0 positive-quadrant behavior they were authored against — their
+            // flat fallback must stay origin-0 or origin-naive consumers miss by the
+            // board's half extent (the 64km massnav relief is the canonical case).
+            bool authoredBounds = session.MapConfig?.VisualHeightmap?.WorldWidthCm > 0;
+            originXcm = 0;
+            originZcm = 0;
+            if (authoredBounds && heightmap is IVisualHeightmapRenderSource renderSource)
+            {
+                WorldAabbCm bounds = renderSource.Bounds;
+                if (bounds.Width != widthCm || bounds.Height != heightCm)
+                {
+                    throw new InvalidOperationException(
+                        $"VisualHeightmap bounds {bounds.Width}x{bounds.Height}cm do not match board '{boardName}' extent {widthCm}x{heightCm}cm.");
+                }
+
+                originXcm = bounds.Left;
+                originZcm = bounds.Top;
+            }
+
+            bool covers = authoredBounds
+                ? heightmap.TrySampleHeightCm(originXcm, originZcm, out _) &&
+                  heightmap.TrySampleHeightCm(checked(originXcm + widthCm), originZcm, out _) &&
+                  heightmap.TrySampleHeightCm(originXcm, checked(originZcm + heightCm), out _) &&
+                  heightmap.TrySampleHeightCm(checked(originXcm + widthCm), checked(originZcm + heightCm), out _)
+                : heightmap.TrySampleHeightCm(0f, 0f, out _) &&
+                  heightmap.TrySampleHeightCm(widthCm, 0f, out _) &&
+                  heightmap.TrySampleHeightCm(0f, heightCm, out _) &&
+                  heightmap.TrySampleHeightCm(widthCm, heightCm, out _);
             if (!covers)
             {
                 Diagnostics.Log.Info(
                     in LogChannels.Engine,
                     $"VisualHeightmap does not cover board '{boardName}' extent {widthCm}x{heightCm}cm; keeping flat grid terrain.");
+                return null;
+            }
+
+            // Origin-offset boards (e.g. a 64km center-symmetric heightmap) can demand
+            // billions of logic cells; a flat dense array cannot back that scale, so the
+            // projection degrades to flat grid terrain instead of overflowing.
+            const long MaxProjectedLogicCells = 100_000_000;
+            if ((long)widthCells * heightCells > MaxProjectedLogicCells)
+            {
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"VisualHeightmap projection for board '{boardName}' needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); keeping flat grid terrain.");
                 return null;
             }
 
@@ -3231,7 +3376,11 @@ namespace Ludots.Core.Engine
                 widthCells,
                 heightCells,
                 cellSizeCm,
-                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(heightStepCm));
+                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
+                    heightStepCm,
+                    blockedAtOrBelowHeightCm: authoredBounds ? boardConfig.TerrainBlockedAtOrBelowHeightCm : null,
+                    originXcm: originXcm,
+                    originZcm: originZcm));
         }
 
         private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)
@@ -3571,8 +3720,6 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
-            if (LogicTerrain == null) throw new InvalidOperationException($"NavMesh enabled but LogicTerrainField is not loaded for map '{mapId}'.");
-
             var bakeConfig = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
 
@@ -3584,8 +3731,24 @@ namespace Ludots.Core.Engine
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
-            int widthChunks = LogicTerrain.WidthChunks;
-            int heightChunks = LogicTerrain.HeightChunks;
+
+            // Nav tiles are enumerated against the map's explicitly declared nav tile
+            // grid (authored with the bake). Runtime never derives it from boards or
+            // terrain objects; an undeclared grid is a map-authoring error.
+            var tileGrids = mapConfig.Boards
+                .Select(b => b.NavTileGrid)
+                .ToList();
+            if (tileGrids.Any(g => g == null))
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has boards without NavTileGrid declarations; author each board's nav tile grid in the map config.");
+            if (tileGrids.Any(g => g!.WidthChunks <= 0 || g!.HeightChunks <= 0 ||
+                g!.ChunkSizeCells <= 0 || g!.CellSizeCm <= 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has a board whose NavTileGrid declares non-positive dimensions.");
+            }
+            int widthChunks = tileGrids.Max(g => g!.WidthChunks);
+            int heightChunks = tileGrids.Max(g => g!.HeightChunks);
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -3619,7 +3782,8 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, LogicTerrain.ChunkWidthCm, LogicTerrain.ChunkHeightCm);
+            var chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, chunkWidthCm, chunkWidthCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {

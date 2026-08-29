@@ -212,6 +212,16 @@
     "IdField": "id"
   },
   {
+    "Path": "Fields/layers.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Fields/hierarchies.json",
+    "Policy": "ArrayById",
+    "IdField": "parent"
+  },
+  {
     "Path": "Progression/scopes.json",
     "Policy": "ArrayById",
     "IdField": "id"
@@ -429,7 +439,15 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Input/interaction_modes.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Input/control_schemes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/command_prefs.json",
     "Policy": "DeepObject"
   },
   {

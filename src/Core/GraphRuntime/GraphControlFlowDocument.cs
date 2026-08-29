@@ -196,6 +196,8 @@ namespace Ludots.Core.GraphRuntime
         public string? PanelSkin { get; set; }
         /// <summary>Viewport Z-order for CreatePanel; maps to surface lease priority. Default 100.</summary>
         public float? PanelZOrder { get; set; }
+        /// <summary>Seat id symbol for SetPanelAudience; omitted clears the override back to the declared audience.</summary>
+        public string? PanelSeat { get; set; }
         /// <summary>Map variable name symbol for ReadMapVarInt/ReadMapVarFloat/WriteMapVarInt/WriteMapVarFloat.</summary>
         public string? Var { get; set; }
         public string? RelationshipType { get; set; }
@@ -220,10 +222,14 @@ namespace Ludots.Core.GraphRuntime
         public string? Text { get; set; }
         /// <summary>Presentation TextToken key for LoadTextKey; patched to token id at load.</summary>
         public string? TextKey { get; set; }
+        /// <summary>Dialogue definition id for StartDialogue; patched to config key id at load.</summary>
+        public string? DialogueId { get; set; }
         /// <summary>Presentation surface for SinkPresentationText: "Subtitle" or "Dialogue".</summary>
         public string? PresentationSurface { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>
         public string? ArgKey { get; set; }
+        /// <summary>Interaction mode id symbol for SetInteractionMode; resolved against the installed interaction mode map at run time.</summary>
+        public string? Mode { get; set; }
         public string? QueryCapacityPolicy { get; set; }
         public string? DroppedOutput { get; set; }
         public string? ValidOutput { get; set; }

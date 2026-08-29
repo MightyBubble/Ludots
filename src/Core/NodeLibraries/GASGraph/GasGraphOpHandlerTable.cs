@@ -166,6 +166,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.FanOutDispatchEffect or
                 GraphNodeOp.FanOutDispatchEffectDynamic or
                 GraphNodeOp.ModifyAttributeAdd or
+                GraphNodeOp.ModifyAttributeSet or
                 GraphNodeOp.SendEvent or
                 GraphNodeOp.WriteBlackboardFloat or
                 GraphNodeOp.WriteBlackboardInt or
@@ -305,6 +306,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.WriteMapVarFloat or
                 GraphNodeOp.SpawnTemplate or
                 GraphNodeOp.SetWorldPosition or
+                GraphNodeOp.SetInteractionMode or
+                GraphNodeOp.SetPanelAudience or
                 GraphNodeOp.InvokeGraph or
                 GraphNodeOp.StoreArgInt or
                 GraphNodeOp.StoreArgFloat or
@@ -317,7 +320,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.IntToText or
                 GraphNodeOp.FloatToText or
                 GraphNodeOp.SinkPresentationText or
-                GraphNodeOp.LoadTextKey
+                GraphNodeOp.LoadTextKey or
+                GraphNodeOp.StartDialogue
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -756,6 +760,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.FanOutApplyEffect, HandleFanOutApplyEffect, "FanOutApplyEffect graph opcode.");
             Register(GraphNodeOp.RemoveEffectTemplate, HandleRemoveEffectTemplate, "RemoveEffectTemplate graph opcode.");
             Register(GraphNodeOp.ModifyAttributeAdd, HandleModifyAttributeAdd, "ModifyAttributeAdd graph opcode.");
+            Register(GraphNodeOp.ModifyAttributeSet, HandleModifyAttributeSet, "ModifyAttributeSet graph opcode.");
             Register(GraphNodeOp.SendEvent, HandleSendEvent, "SendEvent graph opcode.");
             Register(GraphNodeOp.RelationshipEnsureLink, HandleRelationshipEnsureLink, "RelationshipEnsureLink graph opcode.");
             Register(GraphNodeOp.RelationshipRemoveLink, HandleRelationshipRemoveLink, "RelationshipRemoveLink graph opcode.");
@@ -860,6 +865,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
         Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
+        Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
+        Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
             Register(GraphNodeOp.ReadMapVarInt, HandleReadMapVarInt, "ReadMapVarInt graph opcode.");
@@ -879,6 +886,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.FloatToText, HandleFloatToText, "FloatToText graph opcode.");
             Register(GraphNodeOp.SinkPresentationText, HandleSinkPresentationText, "SinkPresentationText graph opcode.");
             Register(GraphNodeOp.LoadTextKey, HandleLoadTextKey, "LoadTextKey graph opcode.");
+            Register(GraphNodeOp.StartDialogue, HandleStartDialogue, "StartDialogue graph opcode.");
         }
 
         // ── Value Ops ──
@@ -961,6 +969,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleLoadTextKey(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             RequireTextHeap(ref s).Write(ins.Dst, s.Api.ResolvePresentationTextKey(ins.Imm));
+        }
+
+        private static void HandleStartDialogue(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.StartDialogue(ins.Imm);
         }
 
         private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)
@@ -1404,6 +1417,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.SetWorldPosition(target, s.I[ins.B], s.I[ins.C]);
         }
 
+        private static void HandleSetInteractionMode(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.SetInteractionMode(target, ins.Imm);
+        }
+
+        private static void HandleSetPanelAudience(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SetPanelAudience(
+                UI.PanelHosting.PanelOpEncoding.UnpackTemplate(ins.Imm),
+                UI.PanelHosting.PanelOpEncoding.UnpackAudienceSeat(ins.Imm));
+        }
+
         private static void HandleSpawnTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             Entity source = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
@@ -1641,6 +1667,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 s.Api.ModifyAttributeAdd(s.Caster, target, ins.Imm, s.F[ins.B]);
             }
+        }
+
+        private static void HandleModifyAttributeSet(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = s.E[ins.A];
+            if (!s.World.IsAlive(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ModifyAttributeSetTargetDead: target entity {target} is not alive.");
+            }
+
+            if (!s.World.Has<AttributeBuffer>(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ModifyAttributeSetTargetMissingAttributes: target entity {target} has no AttributeBuffer.");
+            }
+
+            s.Api.ModifyAttributeSet(s.Caster, target, ins.Imm, s.F[ins.B]);
         }
 
         private static void HandleRemoveEffectTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

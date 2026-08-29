@@ -1,0 +1,16 @@
+{
+  "name": "FieldEastAsiaCountryMod",
+  "version": "1.0.0",
+  "description": "Natural Earth admin_0 national borders rasterized onto the East Asia VisualHeightmap as DiscreteOwnership.",
+  "priority": 0,
+  "dependencies": {
+    "EastAsiaPlayableTerrainMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "east-asia",
+    "mapfield",
+    "borders",
+    "showcase"
+  ]
+}

@@ -84,16 +84,26 @@ namespace Ludots.Tests.GAS.Production
             int schemeId = schemes.SchemeIdRegistry.GetId(DefaultSchemeId);
             Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemeId), "SHOW-6 requires scheme.default to be active from production startup.");
 
-            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack)
-                ?? throw new InvalidOperationException("InteractionContextStack service is missing.");
-            Assert.That(stack.TryPeek(out InteractionContextFrame frame), Is.True);
-            Assert.That(stack.CollectionKeyRegistry.GetName(frame.ActiveCollectionKeyId), Is.EqualTo(EntityCollectionKeys.CommandSource));
+            var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry service is missing.");
             Assert.That(
-                stack.CommandIntentProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes)),
-                Is.EqualTo(DefaultIntentId));
-
+                contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _),
+                Is.True,
+                "the engine must install the reserved steady-state context profile.");
+            var collectionsService = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+            Assert.That(
+                collectionsService.KeyRegistry.GetName(steadyStateCollectionKeyId),
+                Is.EqualTo(EntityCollectionKeys.CommandSource));
+            Assert.That(engine.World.Has<ActiveInteractionContext>(localPlayer), Is.False,
+                "steady state is the absence of mounted interaction state on the local rep.");
+            Assert.That(engine.World.TryGet<CommandPref>(localPlayer, out CommandPref localPlayerPref), Is.True,
+                "map binding must seed the player CommandPref from Input/command_prefs.json.");
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
                 ?? throw new InvalidOperationException("CommandIntentProfileRegistry service is missing.");
+            Assert.That(
+                intents.ProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, localPlayer, in localPlayerPref)),
+                Is.EqualTo(DefaultIntentId));
             int intentProfileId = intents.ProfileIdRegistry.GetId(DefaultIntentId);
             Assert.That(intents.IsInstalled(intentProfileId), Is.True);
 
@@ -748,6 +758,10 @@ namespace Ludots.Tests.GAS.Production
                 builder.Append(mapping.CommandActionId);
                 builder.Append(" aiming=");
                 builder.Append(mapping.IsAiming.ToString(CultureInfo.InvariantCulture));
+                builder.Append(" lastActivation=");
+                builder.Append(mapping.LastActivationResult.State);
+                builder.Append("/");
+                builder.Append(mapping.LastActivationResult.Rejection);
                 if (mapping.GetMapping("Command") is InputOrderMapping commandMapping)
                 {
                     builder.Append(" commandMapping=");
@@ -772,7 +786,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AppendCommandRouteDiagnostics(GameEngine engine, Entity[] fallbackActors, StringBuilder builder)
         {
-            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not InteractionContextStack stack ||
+            if (engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry) is not InteractionContextProfileRegistry contextProfiles ||
                 engine.GetService(CoreServiceKeys.ControlSchemeRuntime) is not ControlSchemeRuntime schemes ||
                 engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry) is not CommandIntentProfileRegistry intents ||
                 engine.GetService(CoreServiceKeys.CastDispatchProfileRegistry) is not CastDispatchProfileRegistry dispatch ||
@@ -783,42 +797,54 @@ namespace Ludots.Tests.GAS.Production
             }
 
             builder.Append(" commandRoute=");
-            if (!stack.TryPeek(out InteractionContextFrame frame))
+            if (!contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _))
             {
-                builder.Append("no-frame");
+                builder.Append("no-steady-state-profile");
                 return;
             }
 
-            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes);
+            CommandPref repPref = default;
+            bool hasPref = ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity repEntity) &&
+                engine.World.TryGet<CommandPref>(repEntity, out repPref);
+            builder.Append("pref=");
+            builder.Append(hasPref ? "seeded" : "missing");
+            if (!hasPref)
+            {
+                return;
+            }
+
+            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, repEntity, in repPref);
             builder.Append("intent=");
-            builder.Append(stack.CommandIntentProfileIdRegistry.GetName(intentId));
+            builder.Append(intents.ProfileIdRegistry.GetName(intentId));
             builder.Append("(");
             builder.Append(intentId.ToString(CultureInfo.InvariantCulture));
             builder.Append(")");
             builder.Append(" dispatch=");
-            builder.Append(schemes.ActiveDefaultCastDispatchProfileId.ToString(CultureInfo.InvariantCulture));
+            builder.Append(repPref.ResolveCastDispatchProfile(abilityTemplateId: 0).ToString(CultureInfo.InvariantCulture));
 
             Entity owner = Entity.Null;
-            if (frame.ContextEntity != Entity.Null && engine.World.IsAlive(frame.ContextEntity))
+            if (engine.World.TryGet<ActiveInteractionContext>(repEntity, out ActiveInteractionContext activeContext) &&
+                engine.World.IsAlive(activeContext.ContextEntity))
             {
-                owner = frame.ContextEntity;
+                owner = activeContext.ContextEntity;
             }
-            else if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer))
+            else
             {
-                owner = localPlayer;
+                owner = repEntity;
             }
 
             builder.Append(" owner=");
             builder.Append(owner);
-            builder.Append(" frameContext=");
-            builder.Append(frame.ContextEntity);
 
             if (owner == Entity.Null || intentId == 0)
             {
                 return;
             }
 
-            if (!collections.TryGet(owner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
+            int activeCollectionKeyId = engine.World.TryGet<ActiveInteractionContext>(repEntity, out ActiveInteractionContext routeContext)
+                ? routeContext.ActiveCollectionKeyId
+                : steadyStateCollectionKeyId;
+            if (!collections.TryGet(owner, activeCollectionKeyId, out EntityCollectionHandle handle) ||
                 !collections.TryGetView(handle, out EntityCollectionView view))
             {
                 builder.Append(" collection=missing");
@@ -863,7 +889,7 @@ namespace Ludots.Tests.GAS.Production
             builder.Append(" routeType=");
             builder.Append(firstRouteOrderTypeId.ToString(CultureInfo.InvariantCulture));
 
-            if (hasRouteCount <= 0 || schemes.ActiveDefaultCastDispatchProfileId == 0)
+            if (hasRouteCount <= 0)
             {
                 return;
             }
@@ -880,9 +906,9 @@ namespace Ludots.Tests.GAS.Production
 
             var selected = new Entity[hasRouteCount];
             int dispatchCount = dispatch.SelectDispatchTargets(
-                schemes.ActiveDefaultCastDispatchProfileId,
+                repPref.ResolveCastDispatchProfile(abilityTemplateId: 0),
                 routedActors,
-                new CastDispatchContext(engine.World, Vector3.Zero, frame.OwnerToken),
+                new CastDispatchContext(engine.World, Vector3.Zero, groupKey: 0),
                 selected,
                 out CastDispatchRouting routing);
             builder.Append(" selected=");

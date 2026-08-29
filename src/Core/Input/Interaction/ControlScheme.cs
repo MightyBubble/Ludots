@@ -16,9 +16,10 @@ namespace Ludots.Core.Input.Interaction
     }
 
     /// <summary>
-    /// One control scheme (DEC-15): a named combination of IMC input contexts plus default command
-    /// preferences that pointer commands on the default frame route through. Scheme ids like
-    /// <c>scheme.sc2_classic</c> are mod data, never Core concepts.
+    /// One control scheme (DEC-15): a named combination of IMC input contexts — a pure device
+    /// binding profile. Order routing preferences are player data on the representative
+    /// (<see cref="CommandPref"/>), never scheme data. Scheme ids like <c>scheme.sc2_classic</c>
+    /// are mod data, never Core concepts.
     /// </summary>
     public sealed class ControlSchemeDefinition
     {
@@ -26,8 +27,6 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>IMC context ids pushed onto the <c>PlayerInputHandler</c> while the scheme is active.</summary>
         public List<string> InputContexts { get; set; }
-
-        public ControlSchemeDefaults Defaults { get; set; }
 
         /// <summary>
         /// Optional WASD-style axis move declaration (RFC-0065 INT-6, DEC-15). Null means the scheme
@@ -54,15 +53,5 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Distance in world centimeters from the actor's position to the order target.</summary>
         public int StepDistanceCm { get; set; }
-    }
-
-    /// <summary>Scheme defaults consumed when the top interaction frame declares no explicit override.</summary>
-    public sealed class ControlSchemeDefaults
-    {
-        /// <summary>Command intent profile the default frame routes pointer commands through (DEC-14).</summary>
-        public string CommandIntentId { get; set; } = string.Empty;
-
-        /// <summary>Cast dispatch profile used after command-intent routing picks a route group (DEC-11/DEC-15).</summary>
-        public string CastDispatchProfileId { get; set; } = string.Empty;
     }
 }

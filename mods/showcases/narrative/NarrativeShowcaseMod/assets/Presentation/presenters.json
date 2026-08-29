@@ -1,0 +1,74 @@
+[
+  {
+    "id": "narrative.character.warden",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [1.7, 2.4, 1.7]
+        },
+        "style": {
+          "color": [0.96, 0.77, 0.42, 1]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "narrative_warden" },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "narrative.character.warden"
+        },
+        "condition": { "inline": "SourceHasVisualTransform" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "narrative_warden" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "narrative.prop.shrine",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [1.3, 3.4, 1.3]
+        },
+        "style": {
+          "color": [0.86, 0.38, 0.14, 1]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "narrative_shrine" },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "narrative.prop.shrine"
+        },
+        "condition": { "inline": "SourceHasVisualTransform" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "narrative_shrine" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  }
+]

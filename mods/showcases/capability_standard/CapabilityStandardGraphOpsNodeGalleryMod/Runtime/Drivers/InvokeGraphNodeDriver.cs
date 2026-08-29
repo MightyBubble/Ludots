@@ -89,7 +89,7 @@ public sealed class InvokeGraphNodeDriver : IGraphOpsNodeDriver
                 _callStack,
                 ref _cursor,
                 SliceBudget,
-                GraphKind.Script,
+                GraphKind.TriggerGraph,
                 invokeArgs: _invokeArgs);
             if (!result.Halted)
             {

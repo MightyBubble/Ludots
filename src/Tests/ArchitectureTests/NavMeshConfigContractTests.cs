@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
@@ -197,7 +198,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void GameEngine_NavBootstrap_PassesGridTerrainTileDimensionsToQueryRegistry()
+        public void GameEngine_NavBootstrap_PassesDeclaredTileGridDimensionsToQueryRegistry()
         {
             string repoRoot = FindRepoRoot();
             string mapId = "nav_bootstrap_grid_tile_dims_contract";
@@ -322,8 +323,38 @@ namespace Ludots.Tests.Architecture
             return tempRoot;
         }
 
+        [Test]
+        public void BoardConfig_Clone_DoesNotAliasNavTileGrid()
+        {
+            var board = new BoardConfig
+            {
+                Name = "default",
+                NavTileGrid = new NavTileGridConfig
+                {
+                    WidthChunks = 4,
+                    HeightChunks = 3,
+                    ChunkSizeCells = 64,
+                    CellSizeCm = 250,
+                    OriginXcm = 12_000,
+                    OriginZcm = -3_400
+                }
+            };
+
+            BoardConfig clone = board.Clone();
+            clone.NavTileGrid!.WidthChunks = 99;
+            clone.NavTileGrid.OriginXcm = -1;
+
+            Assert.That(board.NavTileGrid.WidthChunks, Is.EqualTo(4), "mutating the clone's tile grid must not leak into the source board");
+            Assert.That(board.NavTileGrid.OriginXcm, Is.EqualTo(12_000));
+        }
+
         private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId, LogicTerrainField? terrain = null)
         {
+            var effectiveTerrain = terrain ?? new FlatGridLogicTerrainField(
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.TerrainChunkCells,
+                chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells);
+
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
@@ -335,17 +366,30 @@ namespace Ludots.Tests.Architecture
 
             typeof(GameEngine)
                 .GetProperty(nameof(GameEngine.LogicTerrain), BindingFlags.Instance | BindingFlags.Public)!
-                .SetValue(engine, terrain ?? new FlatGridLogicTerrainField(
-                    SpatialScaleDefaults.TerrainChunkCells,
-                    SpatialScaleDefaults.TerrainChunkCells,
-                    chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells));
+                .SetValue(engine, effectiveTerrain);
 
             engine.LoadNavForMapForTests(
                 mapId,
                 new MapConfig
                 {
                     Id = mapId,
-                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name }
+                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
+                    Boards = new List<BoardConfig>
+                    {
+                        new BoardConfig
+                        {
+                            Name = "default",
+                            // The declared grid must match the tile geometry written by
+                            // WriteAllChunkTileFiles: 64-cell chunks at 250 cm per cell.
+                            NavTileGrid = new NavTileGridConfig
+                            {
+                                WidthChunks = effectiveTerrain.WidthChunks,
+                                HeightChunks = effectiveTerrain.HeightChunks,
+                                ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
+                                CellSizeCm = 250
+                            }
+                        }
+                    }
                 });
 
             return engine;

@@ -6,10 +6,11 @@ using Ludots.Core.Config;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/interaction_context_profiles.json</c> (RFC-0065 CTX-6, §5.3). Follows the
-    /// <c>FilterProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge through
-    /// the shared <see cref="ConfigPipeline"/>, structural validation fails fast. Referenced
-    /// filter/intent/input-context ids resolve at frame push, not here.
+    /// Loader for <c>Input/interaction_context_profiles.json</c> (RFC-0065 CTX-6, §5.3). Catalog-
+    /// declared DeepObject merge through the shared <see cref="ConfigPipeline"/> (a mod fragment's
+    /// profiles array replaces the root's, matching the filter profile family); structural
+    /// validation fails fast. Referenced filter/intent ids resolve at registry install, not here.
+    /// The engine-reserved steady-state profile installs programmatically in GameEngine, not here.
     /// </summary>
     public sealed class InteractionContextProfileConfigLoader
     {

@@ -1476,14 +1476,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             SetGroundCommandTargetFactsProvider(system);
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                "interaction.context.ability.test",
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
+            world.Add(localPlayer, new ActiveInteractionContext
+            {
+                ContextEntity = actor,
+                CommandIntentProfileId = 0,
+            });
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
-            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
             var dispatch = new CastDispatchProfileRegistry(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
@@ -1493,12 +1492,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandIntents,
-                dispatch,
-                orderTypes);
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.CommandSource,
@@ -1507,8 +1500,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandIntents,
                 dispatch,
                 collections,
@@ -1516,6 +1508,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -1598,11 +1595,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
             }));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -1614,28 +1607,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.capacity",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.capacity", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(
                 collectionKeys,
@@ -1648,8 +1620,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, actors, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1657,6 +1628,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
             system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
             {
@@ -1749,11 +1725,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
             }));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -1765,28 +1737,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.programmatic",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.programmatic", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1796,8 +1747,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1805,6 +1755,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.SetActivationActorValidator((actor, _) => world.IsAlive(actor));
@@ -1899,11 +1854,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
             }));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -1915,28 +1866,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.atomic_batch",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1946,8 +1876,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { firstSource, secondSource }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1955,6 +1884,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             Assert.DoesNotThrow(() => system.Update(0f));
@@ -2034,11 +1968,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             }));
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -2055,28 +1985,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.routed_only",
-                            CastDispatchProfileId = "dispatch.nearest_one",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2086,8 +1995,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { unroutedNearActor, routedFarActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2095,6 +2003,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -2170,11 +2083,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             }));
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -2186,28 +2095,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.atomic_authorization",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.atomic_authorization",
-                            CastDispatchProfileId = "dispatch.atomic_authorization",
-                        },
-                    },
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2217,8 +2105,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { authorizedActor, foreignActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2226,6 +2113,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -2291,11 +2183,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             });
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 1 });
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
@@ -2308,28 +2196,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.test",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.test", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2339,8 +2206,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2348,6 +2214,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -2365,6 +2236,50 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
                 return false;
             });
+        }
+
+        /// <summary>
+        /// Plant the player-level CommandPref on the possessed representative, mirroring the
+        /// production map-binding seed (game-instance defaults from Input/command_prefs.json).
+        /// </summary>
+        private static void PlantPlayerCommandPref(
+            World world,
+            Entity rep,
+            CommandIntentProfileRegistry intents,
+            CastDispatchProfileRegistry dispatch,
+            string intentId,
+            string dispatchProfileId)
+        {
+            CommandPref pref = default;
+            pref.SetPlayerDefault(
+                intents.ProfileIdRegistry.Register(intentId),
+                dispatch.ProfileIdRegistry.GetId(dispatchProfileId));
+            world.Add(rep, pref);
+        }
+
+        /// <summary>
+        /// Standalone interaction context profile registry carrying the steady-state default
+        /// profile (command.source anchor), mirroring the engine's root asset wiring.
+        /// </summary>
+        private static InteractionContextProfileRegistry NewSteadyStateProfiles(StringIntRegistry collectionKeys)
+        {
+            var contextProfiles = new InteractionContextProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            contextProfiles.Install(new InteractionContextProfilesConfig
+            {
+                Profiles = new List<InteractionContextProfileDefinition>
+                {
+                    new()
+                    {
+                        Id = InteractionContextIds.Default,
+                        ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                        ActiveEntityViewKey = "view.test.command",
+                    },
+                },
+            }, collectionKeys,
+               new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+               new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            return contextProfiles;
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()

@@ -18,6 +18,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         Cdt = 1
     }
 
+    /// <summary>
+    /// How terrain geometry reaches the Recast solid heightfield: re-meshed per-cell
+    /// triangles (the legacy path) or direct voxel-column spans (the direct feed).
+    /// </summary>
+    public enum NavTerrainFeedKind : byte
+    {
+        Triangles = 0,
+        Direct = 1
+    }
+
     public readonly struct NavBakeTileCoord : IEquatable<NavBakeTileCoord>
     {
         public NavBakeTileCoord(int chunkX, int chunkY)
@@ -241,6 +251,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public const string ModeRuntimeIncremental = "runtime-incremental";
         public const string AlgorithmRecast = "recast";
         public const string AlgorithmCdt = "cdt";
+        public const string TerrainFeedTriangles = "triangles";
+        public const string TerrainFeedDirect = "direct";
 
         public static NavBakeMode ParseMode(string text, string path)
         {
@@ -254,6 +266,13 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (string.Equals(text, AlgorithmRecast, StringComparison.Ordinal)) return NavBakeAlgorithmKind.Recast;
             if (string.Equals(text, AlgorithmCdt, StringComparison.Ordinal)) return NavBakeAlgorithmKind.Cdt;
             throw new InvalidOperationException($"{path} must be '{AlgorithmRecast}' or '{AlgorithmCdt}'.");
+        }
+
+        public static NavTerrainFeedKind ParseTerrainFeed(string text, string path)
+        {
+            if (string.Equals(text, TerrainFeedTriangles, StringComparison.Ordinal)) return NavTerrainFeedKind.Triangles;
+            if (string.Equals(text, TerrainFeedDirect, StringComparison.Ordinal)) return NavTerrainFeedKind.Direct;
+            throw new InvalidOperationException($"{path} must be '{TerrainFeedTriangles}' or '{TerrainFeedDirect}'.");
         }
 
         public static string FormatAlgorithm(NavBakeAlgorithmKind algorithm)

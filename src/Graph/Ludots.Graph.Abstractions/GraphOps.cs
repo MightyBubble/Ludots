@@ -278,6 +278,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// graph compilation, so this cannot be a compile-time symbol patch).
         /// </summary>
         OfferActivity = 462,
+
+        /// Start DialogueRuntime session. Imm = dialogueId config key (patched from dialogueId symbol).
+        /// TriggerGraph / Script only; MapLoaded entry is the data-driven auto-start path.
+        /// </summary>
+        StartDialogue = 462,
+
+
+        /// Set the target entity's interaction mode (#1306): add/replace the sparse
+        /// InteractionMode component, or remove it when the mode is the reserved mode.normal.
+        /// E[A] = target entity (A=0xFF → caster); Imm = mode id symbol, patched to a
+        /// ConfigKeyRegistry id and resolved against the installed interaction mode map —
+        /// dead targets and unknown mode ids fail closed by name.
+        /// </summary>
+        SetInteractionMode = 463,
+
+        /// <summary>
+        /// Override a panel type's audience with one seat (hotseat turn handoff), or
+        /// clear the override when no seat symbol is declared — the template's declared
+        /// audience rules again. Imm packs the panelType and seat key ids (seat 0 = clear);
+        /// event admission and surface placement both consume the recorded override.
+        /// </summary>
+        SetPanelAudience = 464,
+
+        /// <summary>
+        /// Set the selected target entity's current attribute value through the
+        /// AttributeMutationOps authority. E[A] = target entity; F[B] = value;
+        /// Imm = attribute symbol patched at load time.
+        /// </summary>
+        ModifyAttributeSet = 465,
+
     }
 
     public static class GraphNodeOpParser

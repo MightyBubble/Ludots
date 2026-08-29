@@ -816,14 +816,27 @@ public sealed class MassNavigationRouteExecutionSink
         Vector2 position = simulation.GetAgentWorldPositionCm(state.AgentIndex);
         float threshold = ResolveWaypointAdvanceThresholdCm(simulation, state.AgentIndex);
         float thresholdSq = threshold * threshold;
+        bool settledHopAvailable = simulation.IsAgentSettled(state.AgentIndex);
         while (state.CurrentWaypointIndex < state.PointCount - 1)
         {
             Vector2 waypoint = state.CurrentWaypointWorldCm;
             float dx = waypoint.X - position.X;
             float dy = waypoint.Y - position.Y;
-            if ((dx * dx) + (dy * dy) > thresholdSq)
+            bool insideAdvanceCircle = (dx * dx) + (dy * dy) <= thresholdSq;
+            if (!insideAdvanceCircle)
             {
-                return;
+                // The arrival settle radius is bounded by the advance threshold (route semantics
+                // enforce the scale >= 1), but the stuck-timeout settle parks a yielding agent
+                // at an arbitrary distance from its waypoint. Without a hop the parked agent can
+                // never clear that waypoint: the target it cannot reach stays applied without
+                // recovery reset and the cursor is dead. Allow exactly one hop per apply from a
+                // settled agent so a jam re-targets forward without skipping the route ahead.
+                if (!settledHopAvailable)
+                {
+                    return;
+                }
+
+                settledHopAvailable = false;
             }
 
             state.CurrentWaypointIndex++;

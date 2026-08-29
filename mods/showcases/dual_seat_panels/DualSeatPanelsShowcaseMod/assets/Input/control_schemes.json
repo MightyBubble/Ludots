@@ -1,0 +1,21 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": []
+    },
+    {
+      "id": "scheme.dsp.left",
+      "inputContexts": ["DSP.Controls.Left"]
+    },
+    {
+      "id": "scheme.dsp.right",
+      "inputContexts": ["DSP.Controls.Right"]
+    }
+  ],
+  "allowedSchemes": [
+    "scheme.default",
+    "scheme.dsp.left",
+    "scheme.dsp.right"
+  ]
+}

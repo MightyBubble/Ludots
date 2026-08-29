@@ -138,6 +138,12 @@ namespace Ludots.Core.Presentation
                 $"Presentation image asset '{imageId}' could not be resolved.");
         }
 
+        // Placeholder glyph chrome for assets authored with glyphFallback only — infra placeholder,
+        // not player-content skin; single definition here.
+        private const string GlyphBackdropHex = "#121A24";
+        private const string GlyphBorderHex = "#F6C56B";
+        private const string GlyphTextHex = "#F8FAFC";
+
         private string BuildGlyphDataUri(string glyph)
         {
             string normalized = glyph.Trim();
@@ -148,8 +154,8 @@ namespace Ludots.Core.Presentation
 
             string svg =
                 "<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'>" +
-                "<rect x='4' y='4' width='88' height='88' rx='22' fill='#121A24' stroke='#F6C56B' stroke-width='3'/>" +
-                $"<text x='48' y='56' text-anchor='middle' font-family='Segoe UI, sans-serif' font-size='28' font-weight='700' fill='#F8FAFC'>{EscapeXml(normalized)}</text>" +
+                $"<rect x='4' y='4' width='88' height='88' rx='22' fill='{GlyphBackdropHex}' stroke='{GlyphBorderHex}' stroke-width='3'/>" +
+                $"<text x='48' y='56' text-anchor='middle' font-family='Segoe UI, sans-serif' font-size='28' font-weight='700' fill='{GlyphTextHex}'>{EscapeXml(normalized)}</text>" +
                 "</svg>";
             string uri = "data:image/svg+xml;utf8," + Uri.EscapeDataString(svg);
             _glyphCache[normalized] = uri;

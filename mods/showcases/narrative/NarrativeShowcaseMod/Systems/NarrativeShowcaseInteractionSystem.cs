@@ -69,7 +69,7 @@ namespace NarrativeShowcaseMod.Systems
         {
             if (!dialogue.TryResolveEntity(NarrativeShowcaseIds.ElderAlias, out Entity elder) ||
                 !_engine.World.TryGet(elder, out WorldPositionCm elderPos) ||
-                !IsNear(playerPos, elderPos, 420f))
+                !IsNear(playerPos, elderPos, _runtime.WardenInteractRangeCm))
             {
                 return false;
             }
@@ -110,7 +110,7 @@ namespace NarrativeShowcaseMod.Systems
 
             if (!dialogue.TryResolveEntity(NarrativeShowcaseIds.ShrineAlias, out Entity shrine) ||
                 !_engine.World.TryGet(shrine, out WorldPositionCm shrinePos) ||
-                !IsNear(playerPos, shrinePos, 360f))
+                !IsNear(playerPos, shrinePos, _runtime.ShrineInteractRangeCm))
             {
                 return;
             }

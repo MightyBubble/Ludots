@@ -37,6 +37,7 @@ namespace Ludots.Core.Gameplay.Story
         {
             var entry = ConfigPipeline.RequireEntry(catalog, LinesPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            ThrowOnDuplicateIds(report, LinesPath, "Story line");
             for (int i = 0; i < merged.Count; i++)
             {
                 var definition = JsonSerializer.Deserialize<StoryLineDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)
@@ -49,6 +50,7 @@ namespace Ludots.Core.Gameplay.Story
         {
             var entry = ConfigPipeline.RequireEntry(catalog, ProfilesPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            ThrowOnDuplicateIds(report, ProfilesPath, "Story presentation profile");
             for (int i = 0; i < merged.Count; i++)
             {
                 var definition = JsonSerializer.Deserialize<StoryPresentationProfileDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)
@@ -61,12 +63,36 @@ namespace Ludots.Core.Gameplay.Story
         {
             var entry = ConfigPipeline.RequireEntry(catalog, SpeakersPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            ThrowOnDuplicateIds(report, SpeakersPath, "Story speaker");
             for (int i = 0; i < merged.Count; i++)
             {
                 var definition = JsonSerializer.Deserialize<StorySpeakerDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)
                     ?? throw new InvalidOperationException($"Failed to deserialize story speaker at '{SpeakersPath}' index {i}.");
                 _registry.Register(definition);
             }
+        }
+
+        private static void ThrowOnDuplicateIds(ConfigConflictReport? report, string relativePath, string label)
+        {
+            if (report == null)
+            {
+                return;
+            }
+
+            var duplicates = report.GetDuplicateIds(relativePath);
+            if (duplicates.Count == 0)
+            {
+                return;
+            }
+
+            var lines = new List<string>();
+            for (int i = 0; i < duplicates.Count; i++)
+            {
+                lines.Add($"  {label} '{duplicates[i].Id}' defined by both '{duplicates[i].FirstSource}' and '{duplicates[i].SecondSource}'");
+            }
+
+            throw new InvalidOperationException(
+                $"{label} ids must be unique across mods (namespaced ids, e.g. 'author_kit.*'):{Environment.NewLine}{string.Join(Environment.NewLine, lines)}");
         }
     }
 }

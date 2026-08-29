@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
@@ -38,6 +39,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly UiStyleSheet? _themeSheet;
     private readonly IUiTextMeasurer _textMeasurer;
     private readonly IUiImageSizeProvider _imageSizeProvider;
+    private readonly ClientLocalSeatRegistry? _seats;
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -51,7 +53,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
         string? globalSkin,
         UiStyleSheet? themeSheet = null,
         IUiTextMeasurer? textMeasurer = null,
-        IUiImageSizeProvider? imageSizeProvider = null)
+        IUiImageSizeProvider? imageSizeProvider = null,
+        ClientLocalSeatRegistry? seats = null)
     {
         _panelHost = panelHost ?? throw new ArgumentNullException(nameof(panelHost));
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
@@ -62,6 +65,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _themeSheet = themeSheet;
         _textMeasurer = textMeasurer ?? new NullTextMeasurer();
         _imageSizeProvider = imageSizeProvider ?? new NullImageSizeProvider();
+        _seats = seats;
     }
 
     public void Initialize() { }
@@ -77,8 +81,16 @@ public sealed class PanelPresentationSystem : ISystem<float>
             return;
         }
 
+        List<(string SeatId, PresentBinding Binding)>? bindings = null;
+        if (_seats is { PresentBindingCount: > 0 })
+        {
+            bindings = new List<(string SeatId, PresentBinding Binding)>();
+            _seats.CopyPresentBindings(bindings);
+        }
+
         var liveKeys = new List<string>();
         var anchorStack = new Dictionary<string, int>(StringComparer.Ordinal);
+        var seatSurfaces = new List<PanelSeatSurface>();
         foreach (PanelHostInstanceInfo info in _panelHost.SnapshotInstances())
         {
             if (!_activation.IsVisible(info.TemplateId))
@@ -92,66 +104,28 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 continue;
             }
 
-            string anchorKey = NormalizeAnchor(info.Anchor);
-            int stackIndex = anchorStack.TryGetValue(anchorKey, out int count) ? count : 0;
-            anchorStack[anchorKey] = stackIndex + 1;
-
-            string key = $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}";
             PanelTemplate template = _templates.Require(info.TemplateId);
-            bool declaredLayout = template.Layout != null;
-            bool virtualized = PanelListProjector.TemplateUsesVirtualizedList(template);
-            UiRect rect = ResolvePanelRect(info.Handle, anchorKey, stackIndex, template);
-            if (!_mounted.TryGetValue(key, out MountedPanel? mounted))
+            PanelAudience audience = PanelAudienceResolution.Effective(template, _activation);
+            bool perSeat = bindings != null &&
+                PanelSeatSurfacePlacement.TryResolveSeatSurfaces(audience, bindings, _root.Width, _root.Height, seatSurfaces);
+            if (perSeat)
             {
-                UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
-                    $"panel-skin:{key}",
-                    UiSurfaceSegment.Main,
-                    priority: info.ZOrder));
-                if (virtualized)
+                for (int i = 0; i < seatSurfaces.Count; i++)
                 {
-                    var page = CreateVirtualListPage(info.Handle, rect, skin, info.Revision);
-                    _surfaceHost.Publish(lease, UiSurfaceContribution.FromReactivePage(page));
-                    mounted = new MountedPanel(lease, declaredLayout, page, info.Revision);
+                    PanelSeatSurface surface = seatSurfaces[i];
+                    MountInstance(
+                        info, skin, template, surface.SeatId,
+                        surface.X, surface.Y, surface.Width, surface.Height,
+                        anchorStack, liveKeys);
                 }
-                else
-                {
-                    _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
-                        () => BuildPanel(info.Handle, rect, skin),
-                        styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
-                    mounted = new MountedPanel(lease, declaredLayout, page: null, info.Revision);
-                }
-
-                _mounted[key] = mounted;
-            }
-            else if (mounted.Page != null)
-            {
-                // Virtualized lists window-project on compose. Member pin changes and seed
-                // tags do not bump the host revision, and headless hosts never Render() to
-                // flush a pending Invalidate — republish each tick like declared layouts.
-                PanelSkinDescriptor skinCapture = skin;
-                PanelInstanceHandle handleCapture = info.Handle;
-                uint revisionCapture = info.Revision;
-                mounted.Page.SetState(_ => new PanelUiState(handleCapture, rect, skinCapture, revisionCapture));
-                _surfaceHost.Publish(
-                    mounted.Lease,
-                    UiSurfaceContribution.FromReactivePage(mounted.Page));
-                mounted.LastRevision = info.Revision;
-            }
-            else if (mounted.DeclaredLayout)
-            {
-                // Declared list layouts change row/badge structure when projections move.
-                // Invalidate alone only marks dirty; headless hosts never Render(), so
-                // republish to rebuild the retained scene from current projections.
-                _surfaceHost.Publish(mounted.Lease, UiSurfaceContribution.FromBuilder(
-                    () => BuildPanel(info.Handle, rect, skin),
-                    styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
             }
             else
             {
-                _surfaceHost.Invalidate(mounted.Lease);
+                MountInstance(
+                    info, skin, template, seatId: null,
+                    0f, 0f, _root.Width, _root.Height,
+                    anchorStack, liveKeys);
             }
-
-            liveKeys.Add(key);
         }
 
         List<string>? staleKeys = null;
@@ -173,6 +147,87 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 _mounted.Remove(key);
             }
         }
+    }
+
+    /// <summary>
+    /// Mounts one panel instance on one seat surface (or the legacy full-window surface when
+    /// the seat is null). The data stays the single instance — every mount reads through the
+    /// same handle, so a shared panel drawn on N seats still evaluates one state.
+    /// </summary>
+    private void MountInstance(
+        PanelHostInstanceInfo info,
+        PanelSkinDescriptor skin,
+        PanelTemplate template,
+        string? seatId,
+        float surfaceX,
+        float surfaceY,
+        float surfaceWidth,
+        float surfaceHeight,
+        Dictionary<string, int> anchorStack,
+        List<string> liveKeys)
+    {
+        string anchorKey = NormalizeAnchor(info.Anchor);
+        string stackKey = seatId == null ? anchorKey : $"{anchorKey}@{seatId}";
+        int stackIndex = anchorStack.TryGetValue(stackKey, out int count) ? count : 0;
+        anchorStack[stackKey] = stackIndex + 1;
+
+        string key = seatId == null
+            ? $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}"
+            : $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}@{seatId}";
+        bool declaredLayout = template.Layout != null;
+        bool virtualized = PanelListProjector.TemplateUsesVirtualizedList(template);
+        UiRect rect = ResolvePanelRect(info.Handle, anchorKey, stackIndex, template, surfaceX, surfaceY, surfaceWidth, surfaceHeight);
+        if (!_mounted.TryGetValue(key, out MountedPanel? mounted))
+        {
+            UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+                $"panel-skin:{key}",
+                UiSurfaceSegment.Main,
+                priority: info.ZOrder));
+            if (virtualized)
+            {
+                var page = CreateVirtualListPage(info.Handle, rect, skin, info.Revision);
+                _surfaceHost.Publish(lease, UiSurfaceContribution.FromReactivePage(page));
+                mounted = new MountedPanel(lease, declaredLayout, page, info.Revision);
+            }
+            else
+            {
+                _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
+                    () => BuildPanel(info.Handle, rect, skin),
+                    styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
+                mounted = new MountedPanel(lease, declaredLayout, page: null, info.Revision);
+            }
+
+            _mounted[key] = mounted;
+        }
+        else if (mounted.Page != null)
+        {
+            // Virtualized lists window-project on compose. Member pin changes and seed
+            // tags do not bump the host revision, and headless hosts never Render() to
+            // flush a pending Invalidate — republish each tick like declared layouts.
+            PanelSkinDescriptor skinCapture = skin;
+            PanelInstanceHandle handleCapture = info.Handle;
+            uint revisionCapture = info.Revision;
+            mounted.Page.SetState(_ => new PanelUiState(handleCapture, rect, skinCapture, revisionCapture));
+            _surfaceHost.Publish(
+                mounted.Lease,
+                UiSurfaceContribution.FromReactivePage(mounted.Page));
+            mounted.LastRevision = info.Revision;
+        }
+        else if (mounted.DeclaredLayout)
+        {
+            // Declared list layouts change row/badge structure when projections move.
+            // Invalidate alone only marks dirty; headless hosts never Render(), so
+            // republish to rebuild the retained scene from current projections.
+            _surfaceHost.Publish(mounted.Lease, UiSurfaceContribution.FromBuilder(
+                () => BuildPanel(info.Handle, rect, skin),
+                styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
+        }
+        else
+        {
+            _surfaceHost.Invalidate(mounted.Lease);
+        }
+
+        liveKeys.Add(key);
     }
 
     public void Dispose()
@@ -695,7 +750,15 @@ public sealed class PanelPresentationSystem : ISystem<float>
             : trimmed;
     }
 
-    private UiRect ResolvePanelRect(PanelInstanceHandle handle, string anchorKey, int stackIndex, PanelTemplate template)
+    private UiRect ResolvePanelRect(
+        PanelInstanceHandle handle,
+        string anchorKey,
+        int stackIndex,
+        PanelTemplate template,
+        float surfaceX,
+        float surfaceY,
+        float surfaceWidth,
+        float surfaceHeight)
     {
         bool left = anchorKey.Contains("left", StringComparison.OrdinalIgnoreCase);
         bool right = !left && anchorKey.Contains("right", StringComparison.OrdinalIgnoreCase);
@@ -745,12 +808,14 @@ public sealed class PanelPresentationSystem : ISystem<float>
 
         bool top = anchorKey.Contains("top", StringComparison.OrdinalIgnoreCase);
         float x = left
-            ? AnchorMargin
+            ? surfaceX + AnchorMargin
             : right
-                ? MathF.Max(AnchorMargin, _root.Width - PanelWidth - AnchorMargin)
-                : MathF.Max(AnchorMargin, (_root.Width - PanelWidth) * 0.5f);
+                ? MathF.Max(surfaceX + AnchorMargin, surfaceX + surfaceWidth - PanelWidth - AnchorMargin)
+                : MathF.Max(surfaceX + AnchorMargin, surfaceX + (surfaceWidth - PanelWidth) * 0.5f);
         float stackOffset = stackIndex * (contentHeight + PanelStackGap);
-        float y = top ? AnchorMargin + stackOffset : MathF.Max(AnchorMargin, _root.Height - contentHeight - AnchorMargin - stackOffset);
+        float y = top
+            ? surfaceY + AnchorMargin + stackOffset
+            : MathF.Max(surfaceY + AnchorMargin, surfaceY + surfaceHeight - contentHeight - AnchorMargin - stackOffset);
         return new UiRect(x, y, PanelWidth, contentHeight);
     }
 

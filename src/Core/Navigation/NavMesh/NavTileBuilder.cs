@@ -176,7 +176,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 }
             }
 
-            if (triA.Count == 0)
+            if (triA.Count == 0 || walkableTriCount == 0)
             {
                 artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, 0), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.NoWalkableDomain, "No walkable triangles.", 0, 0, 0, 0);
                 return false;
@@ -271,6 +271,11 @@ namespace Ludots.Core.Navigation.NavMesh
             List<byte> triAreaIds,
             ref int walkableTriCount)
         {
+            if (p1.IsBlocked || p2.IsBlocked || p3.IsBlocked)
+            {
+                return;
+            }
+
             byte minH = Math.Min(p1.H, Math.Min(p2.H, p3.H));
             byte maxH = Math.Max(p1.H, Math.Max(p2.H, p3.H));
             byte areaId = ResolveAreaId(p1.AreaId, p2.AreaId, p3.AreaId);
@@ -775,7 +780,7 @@ namespace Ludots.Core.Navigation.NavMesh
             dst.Add(new NavBorderPortal(side, su0, v, su1, v, x0cm, z0cm, x1cm, z1cm, clearance));
         }
 
-        private static bool IsCellAnyTriangleWalkable(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)
+        internal static bool IsCellAnyTriangleWalkable(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)
         {
             if (r < 0 || c < 0 || r >= mapHeight - 1 || c >= mapWidth - 1) return false;
             bool isOdd = terrain.Topology == LogicTerrainTopology.Hex && (r & 1) == 1;

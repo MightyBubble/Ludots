@@ -3,7 +3,7 @@
 ## Header
 - scenario: `narrative-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-08-26T03:02:10.8477416+00:00`
+- execution_timestamp_utc: `2026-08-29T03:34:02.2041584+00:00`
 - map: `narrative_showcase_hub`
 - clock: `fixed 1/60s`
 
@@ -64,12 +64,12 @@
 - success: yes
 - final task: `Task.Narrative.AshenOath.Return:Completed,Task.Narrative.AshenOath.Trial:Completed,Task.Narrative.AshenOath.Briefing:Completed`
 - final variables: `trust=4,lore=1,ending=2,trial_phase=1`
-- final dialogue card: `Dialogue.Narrative.Return/return_mercy_outro:Then the valley keeps a memory instead of a scar.`
+- final dialogue card: `Dialogue.Narrative.Return/return_mercy_outro:那么山谷留下的是记忆，而不是伤疤。`
 - reason: the showcase stayed on `ConfigPipeline`, `DialogueRuntime`, `SequencerRuntime`, `TaskRuntimeService`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.
 
 ## Summary Stats
 - total_actions: `10`
 - snapshots captured: `10`
-- median headless tick: `0.388ms`
-- max headless tick: `198.574ms`
-- final_ui_excerpt: `灰烬谷 | 试炼结束了：回到守望者米蕾勒身边，选一个结局。 | 附近 | Warden Mirelle`
+- median headless tick: `1.052ms`
+- max headless tick: `174.577ms`
+- final_ui_excerpt: `你 | 织弧者 | 守望者 | 米蕾勒`

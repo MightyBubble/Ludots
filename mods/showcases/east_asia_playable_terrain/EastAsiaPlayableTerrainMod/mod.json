@@ -1,0 +1,11 @@
+{
+  "name": "EastAsiaPlayableTerrainMod",
+  "version": "1.0.0",
+  "description": "Playable East Asia terrain assets for Grid, HexGrid, and continuous VisualHeightmap maps.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["east_asia", "terrain", "grid", "hex", "visual-heightmap", "showcase"]
+}

@@ -126,5 +126,325 @@
   {
     "id": "story.demo.audience.mercy_end",
     "argCount": 0
+  },
+  {
+    "id": "story.sequence.narrative.intro",
+    "argCount": 0
+  },
+  {
+    "id": "story.sequence.narrative.trial_reveal",
+    "argCount": 0
+  },
+  {
+    "id": "story.sequence.demo.overture",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.briefing.display",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.briefing.summary",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.briefing.obj0.title",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.briefing.obj0.hint",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.trial.display",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.trial.summary",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.trial.obj0.title",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.trial.obj0.hint",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.return.display",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.return.summary",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.return.obj0.title",
+    "argCount": 0
+  },
+  {
+    "id": "story.task.return.obj0.hint",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.promptribbon_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.objectivetracker_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.objectivetracker_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.objectivetracker_footer",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.historyjournal_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.historyjournal_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.historyjournal_footer",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.variablespanel_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.variablespanel_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.variablespanel_footer",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.notificationstack_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.notificationstack_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.overlaydialogue_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.overlaydialogue_footer",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.dialoguebubble_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.dialoguebubble_footer",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.standingportrait_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.standingportrait_footer",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.subtitlebubble_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.subtitlebubble_footer",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.choicelist_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.choicelist_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.choicelist_footer",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.transmissionoverlay_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.nameplate_eyebrow",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_prompttitle",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_introprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_explorewardenprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_explorewardennearprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_exploreshrineprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_exploreshrinenearprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_choiceprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_continueprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_combatprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_returnprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_returnnearprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_skipprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.hints_autoadvanceprompt",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.templates_taskcompleted",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.templates_beastspawned",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.templates_rewardapplied",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.endinglabels_0",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.endinglabels_1",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.endinglabels_2",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.notification.now",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.notification.earlier",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.objective.empty",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.cast_0_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.cast_0_role",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.cast_1_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.cast_1_role",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.cast_2_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.cast_2_role",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.cast_3_title",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.cast_3_role",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.variables_0_label",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.variables_1_label",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.variables_2_label",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.variables_3_label",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.templates.taskactivated.prefix",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.templates.dialoguechoicecommitted.prefix",
+    "argCount": 0
+  },
+  {
+    "id": "story.ui.punct.colon",
+    "argCount": 0
+  },
+  {
+    "id": "story.dialogue.briefing.display",
+    "argCount": 0
+  },
+  {
+    "id": "story.dialogue.return.display",
+    "argCount": 0
+  },
+  {
+    "id": "story.dialogue.audience.display",
+    "argCount": 0
   }
 ]

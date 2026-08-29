@@ -5,7 +5,7 @@
 - seed: control_plane_projection map plus deterministic headless referee/foreign fixture rows
 - map: control_plane_projection
 - clock: immediate ControlPlaneView reads after RelationshipRuntime edge mutations
-- execution timestamp UTC: 2026-08-17T05:54:16.7813259+00:00
+- execution timestamp UTC: 2026-08-25T18:20:57.4816494+00:00
 
 ## Scenario Card
 - Player goal: referee observes one owned marker plus two proxied control domains, then revokes one proxied domain.

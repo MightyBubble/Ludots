@@ -29,6 +29,7 @@ namespace Ludots.Core.Scripting
         public const string GroundXCm = "MapTrigger.GroundXCm";                  // float
         public const string GroundYCm = "MapTrigger.GroundYCm";                  // float
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
+        public const string FieldLayer = "MapTrigger.FieldLayer";                // string (field layer key)
 
         /// <summary>
         /// Whether a string is one of the constants above (reflection-built once); the

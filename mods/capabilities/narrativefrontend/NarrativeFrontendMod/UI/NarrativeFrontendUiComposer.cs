@@ -17,6 +17,39 @@ internal static class NarrativeFrontendUiComposer
     private const float CanvasHeight = 1080f;
     private const float Margin = 24f;
 
+        // Layout design constants for the fixed 1920x1080 design canvas — the frontend's own
+        // layout vocabulary, single definition; content geometry comes from surfaces/profiles.
+        // Typography & spacing scale — the frontend's design vocabulary, single definition.
+        private const float FontEyebrow = 11f;
+        private const float FontMicro = 10f;
+        private const float FontMeta = 12f;
+        private const float FontHint = 13f;
+        private const float FontBody = 15f;
+        private const float FontBodyLarge = 16f;
+        private const float FontHeading = 22f;
+        private const float FontTitle = 24f;
+        private const float GapHairline = 2f;
+        private const float GapTight = 4f;
+        private const float GapSmall = 6f;
+        private const float GapMedium = 8f;
+        private const float GapWide = 10f;
+        private const float GapSection = 12f;
+        private const float GapPanel = 16f;
+        private const float GapScene = 28f;
+        private const float PillRadius = 999f;
+        private const float ProgressTrackWidth = 18f;
+        private const float ProgressTrackHeight = 6f;
+        private const string ProgressTrackHex = "#1E2A35";
+
+        private const float StandingPortraitFallbackHeight = 980f;
+        private const float StandingPortraitAspectWidth = 1024f;
+        private const float StandingPortraitAspectHeight = 1536f;
+        private const float StandingCardMinWidth = 420f;
+        private const float StandingCardSideGap = 32f;
+        private const float CenterAnchorLiftPx = 170f;
+        private const float BottomAnchorInsetPx = 280f;
+        private const float StandingFullHeightPx = 1000f;
+
     public static UiElementBuilder BuildRoot(ReactiveContext<NarrativeFrontendRenderState> context)
     {
         NarrativeFrontendRenderState state = context.State;
@@ -65,6 +98,7 @@ internal static class NarrativeFrontendUiComposer
             NarrativeFrontendSurfaceKind.FlowReview => BuildCard(surface, "story-flow-review"),
             NarrativeFrontendSurfaceKind.TransmissionOverlay => BuildTransmission(surface),
             NarrativeFrontendSurfaceKind.StandingPortrait => BuildStandingPortrait(surface),
+            NarrativeFrontendSurfaceKind.WorldNameplate => BuildWorldNameplate(surface),
             _ => BuildCard(surface, "story-card"),
         };
 
@@ -89,9 +123,21 @@ internal static class NarrativeFrontendUiComposer
                         BuildBody(surface),
                         BuildMetaRow(surface))
                     .Classes(surfaceClass, "story-card")
-                    .Gap(8f)
+                    .Gap(GapMedium)
                     .Align(subtitle ? UiAlignItems.End : UiAlignItems.Start),
                 surface);
+    }
+
+    private static UiElementBuilder BuildWorldNameplate(NarrativeFrontendSurfaceModel surface)
+    {
+        return ApplyAuthorChrome(
+            Ui.Column(
+                    BuildEyebrow(surface),
+                    BuildTitle(surface, fontSize: 16f))
+                .Classes("story-nameplate", "story-card")
+                .Gap(GapHairline)
+                .Align(UiAlignItems.Center),
+            surface);
     }
 
     private static UiElementBuilder BuildStandingPortrait(NarrativeFrontendSurfaceModel surface)
@@ -102,8 +148,8 @@ internal static class NarrativeFrontendUiComposer
                 $"StandingPortrait surface '{surface.SurfaceId}' requires PortraitSrc (standing image). Author standingImageId on the speaker.");
         }
 
-        float standingHeight = surface.PortraitSize > 0f ? surface.PortraitSize : 980f;
-        float standingWidth = standingHeight * (1024f / 1536f);
+        float standingHeight = surface.PortraitSize > 0f ? surface.PortraitSize : StandingPortraitFallbackHeight;
+        float standingWidth = standingHeight * (StandingPortraitAspectWidth / StandingPortraitAspectHeight);
 
         var dialogueCard = ApplyAuthorChrome(
             Ui.Column(
@@ -113,8 +159,8 @@ internal static class NarrativeFrontendUiComposer
                     BuildItemsColumn(surface),
                     BuildMetaRow(surface))
                 .Classes("story-standing-dialogue", "story-card")
-                .Gap(12f)
-                .Width(Math.Max(420f, surface.Width - standingWidth - 32f)),
+                .Gap(GapSection)
+                .Width(Math.Max(StandingCardMinWidth, surface.Width - standingWidth - StandingCardSideGap)),
             surface);
 
         return Ui.Row(
@@ -124,7 +170,7 @@ internal static class NarrativeFrontendUiComposer
                     .Height(standingHeight),
                 dialogueCard)
             .Class("story-standing-portrait-row")
-            .Gap(28f)
+            .Gap(GapScene)
             .Align(UiAlignItems.End);
     }
 
@@ -138,13 +184,13 @@ internal static class NarrativeFrontendUiComposer
                     BuildItemsColumn(surface),
                     BuildMetaRow(surface))
                 .Classes("story-overlay-dialogue", "story-card")
-                .Gap(12f),
+                .Gap(GapSection),
             surface);
     }
 
     private static UiElementBuilder BuildPortraitTitleRow(NarrativeFrontendSurfaceModel surface)
     {
-        var titleColumn = Ui.Column(BuildTitle(surface, fontSize: 22f)).Gap(4f);
+        var titleColumn = Ui.Column(BuildTitle(surface, fontSize: 22f)).Gap(GapTight);
         if (string.IsNullOrWhiteSpace(surface.PortraitSrc))
         {
             return titleColumn;
@@ -158,7 +204,7 @@ internal static class NarrativeFrontendUiComposer
                     .Height(size),
                 titleColumn)
             .Class("story-portrait-row")
-            .Gap(16f)
+            .Gap(GapPanel)
             .Align(UiAlignItems.Center);
     }
 
@@ -174,7 +220,7 @@ internal static class NarrativeFrontendUiComposer
                     BuildItemsColumn(surface),
                     BuildFooter(surface))
                 .Classes("story-card", extraClass)
-                .Gap(8f),
+                .Gap(GapMedium),
             surface);
     }
 
@@ -192,20 +238,20 @@ internal static class NarrativeFrontendUiComposer
             items.Add(Ui.Row(
                     Ui.Text(string.IsNullOrWhiteSpace(item.Shortcut) ? "?" : item.Shortcut)
                         .Class("story-eyebrow")
-                        .FontSize(12f)
+                        .FontSize(FontMeta)
                         .Bold(),
                     Ui.Column(
                             ApplyOptionalColor(
-                                Ui.Text(item.Label).Class("story-title").FontSize(13f).Bold().WhiteSpace(UiWhiteSpace.Normal),
+                                Ui.Text(item.Label).Class("story-title").FontSize(FontHint).Bold().WhiteSpace(UiWhiteSpace.Normal),
                                 surface.ForegroundHex),
                             string.IsNullOrWhiteSpace(item.Caption)
                                 ? Ui.Column()
                                 : ApplyOptionalColor(
-                                    Ui.Text(item.Caption).Class("story-muted").FontSize(11f).WhiteSpace(UiWhiteSpace.Normal),
+                                    Ui.Text(item.Caption).Class("story-muted").FontSize(FontEyebrow).WhiteSpace(UiWhiteSpace.Normal),
                                     surface.MutedHex))
-                        .Gap(4f))
+                        .Gap(GapTight))
                 .Class(itemClass)
-                .Gap(10f));
+                .Gap(GapWide));
         }
 
         items.Add(BuildMetaRow(surface));
@@ -213,7 +259,7 @@ internal static class NarrativeFrontendUiComposer
         return ApplyAuthorChrome(
             Ui.Column(items.ToArray())
                 .Classes("story-choice-list", "story-card")
-                .Gap(8f),
+                .Gap(GapMedium),
             surface);
     }
 
@@ -223,22 +269,22 @@ internal static class NarrativeFrontendUiComposer
         foreach (NarrativeFrontendSurfaceItem item in surface.Items ?? Array.Empty<NarrativeFrontendSurfaceItem>())
         {
             items.Add(Ui.Row(
-                    Ui.Text(item.Label).Class("story-eyebrow").FontSize(11f).Bold(),
+                    Ui.Text(item.Label).Class("story-eyebrow").FontSize(FontEyebrow).Bold(),
                     Ui.Column(
                             ApplyOptionalColor(
-                                Ui.Text(item.Value).Class("story-title").FontSize(12f).Bold().WhiteSpace(UiWhiteSpace.Normal),
+                                Ui.Text(item.Value).Class("story-title").FontSize(FontMeta).Bold().WhiteSpace(UiWhiteSpace.Normal),
                                 surface.ForegroundHex),
                             string.IsNullOrWhiteSpace(item.Caption)
                                 ? Ui.Column()
                                 : ApplyOptionalColor(
-                                    Ui.Text(item.Caption).Class("story-muted").FontSize(11f).WhiteSpace(UiWhiteSpace.Normal),
+                                    Ui.Text(item.Caption).Class("story-muted").FontSize(FontEyebrow).WhiteSpace(UiWhiteSpace.Normal),
                                     surface.MutedHex))
-                        .Gap(2f))
+                        .Gap(GapHairline))
                 .Classes("story-notification", "story-card")
-                .Gap(8f));
+                .Gap(GapMedium));
         }
 
-        return Ui.Column(items.ToArray()).Gap(8f).Align(UiAlignItems.Stretch);
+        return Ui.Column(items.ToArray()).Gap(GapMedium).Align(UiAlignItems.Stretch);
     }
 
     private static UiElementBuilder BuildEventCard(NarrativeFrontendSurfaceModel surface)
@@ -251,7 +297,7 @@ internal static class NarrativeFrontendUiComposer
                     BuildItemsColumn(surface),
                     BuildMetaRow(surface))
                 .Classes("story-event-card", "story-card")
-                .Gap(8f),
+                .Gap(GapMedium),
             surface);
     }
 
@@ -259,10 +305,10 @@ internal static class NarrativeFrontendUiComposer
     {
         return ApplyAuthorChrome(
             Ui.Row(
-                    Ui.Text(surface.Title).Class("story-eyebrow").FontSize(11f).Bold(),
+                    Ui.Text(surface.Title).Class("story-eyebrow").FontSize(FontEyebrow).Bold(),
                     BuildBody(surface, fontSize: 12f))
                 .Class("story-prompt-ribbon")
-                .Gap(10f),
+                .Gap(GapWide),
             surface);
     }
 
@@ -275,7 +321,7 @@ internal static class NarrativeFrontendUiComposer
                     BuildBody(surface, fontSize: 13f),
                     BuildFooter(surface))
                 .Classes("story-threat-banner", "story-card")
-                .Gap(6f),
+                .Gap(GapSmall),
             surface);
     }
 
@@ -288,7 +334,7 @@ internal static class NarrativeFrontendUiComposer
                     BuildBody(surface, fontSize: 12f),
                     BuildFooter(surface))
                 .Classes("story-transmission", "story-card")
-                .Gap(6f),
+                .Gap(GapSmall),
             surface);
     }
 
@@ -308,39 +354,39 @@ internal static class NarrativeFrontendUiComposer
                     Ui.Row(
                             string.IsNullOrWhiteSpace(item.Shortcut)
                                 ? Ui.Column()
-                                : Ui.Text(item.Shortcut).Class("story-eyebrow").FontSize(10f).Bold(),
+                                : Ui.Text(item.Shortcut).Class("story-eyebrow").FontSize(FontMicro).Bold(),
                             ApplyOptionalColor(
-                                Ui.Text(item.Label).Class("story-title").FontSize(12f).Bold().WhiteSpace(UiWhiteSpace.Normal),
+                                Ui.Text(item.Label).Class("story-title").FontSize(FontMeta).Bold().WhiteSpace(UiWhiteSpace.Normal),
                                 surface.ForegroundHex),
                             string.IsNullOrWhiteSpace(item.Value)
                                 ? Ui.Column()
                                 : ApplyOptionalColor(
-                                    Ui.Text(item.Value).Class(item.Muted ? "story-muted" : "story-body").FontSize(12f).WhiteSpace(UiWhiteSpace.Normal),
+                                    Ui.Text(item.Value).Class(item.Muted ? "story-muted" : "story-body").FontSize(FontMeta).WhiteSpace(UiWhiteSpace.Normal),
                                     item.Muted ? surface.MutedHex : surface.ForegroundHex))
-                        .Gap(8f)
+                        .Gap(GapMedium)
                         .Justify(UiJustifyContent.SpaceBetween),
                     string.IsNullOrWhiteSpace(item.Caption)
                         ? Ui.Column()
                         : ApplyOptionalColor(
-                            Ui.Text(item.Caption).Class("story-muted").FontSize(11f).WhiteSpace(UiWhiteSpace.Normal),
+                            Ui.Text(item.Caption).Class("story-muted").FontSize(FontEyebrow).WhiteSpace(UiWhiteSpace.Normal),
                             surface.MutedHex),
                     item.Progress01 >= 0f
                         ? BuildProgressBar(item.Progress01, FirstNonEmpty(item.AccentHex, surface.AccentHex))
                         : Ui.Column())
                 .Class(rowClass)
-                .Gap(4f));
+                .Gap(GapTight));
         }
 
-        return Ui.Column(rows.ToArray()).Gap(6f);
+        return Ui.Column(rows.ToArray()).Gap(GapSmall);
     }
 
     private static UiElementBuilder BuildProgressBar(float progress01, string accentHex)
     {
         float clamped = Math.Clamp(progress01, 0f, 1f);
         var fill = Ui.Text(" ")
-            .Height(6f)
+            .Height(ProgressTrackHeight)
             .WidthPercent(Math.Max(4f, clamped * 100f))
-            .Radius(999f);
+            .Radius(PillRadius);
         if (!string.IsNullOrWhiteSpace(accentHex))
         {
             fill = fill.Background(accentHex);
@@ -348,10 +394,10 @@ internal static class NarrativeFrontendUiComposer
 
         return Ui.Column(fill)
             .Class("story-progress")
-            .Height(6f)
+            .Height(ProgressTrackHeight)
             .WidthPercent(100f)
-            .Background("#1E2A35")
-            .Radius(999f)
+            .Background(ProgressTrackHex)
+            .Radius(PillRadius)
             .Overflow(UiOverflow.Hidden);
     }
 
@@ -359,7 +405,7 @@ internal static class NarrativeFrontendUiComposer
     {
         var tail = Ui.Text(" ")
             .Class("story-bubble-tail")
-            .Width(18f)
+            .Width(ProgressTrackWidth)
             .Height(18f)
             .Rotate(45f)
             .Margin(24f, -8f);
@@ -382,18 +428,18 @@ internal static class NarrativeFrontendUiComposer
         if (surface.CountdownSeconds > 0f)
         {
             parts.Add(ApplyOptionalColor(
-                Ui.Text($"{surface.CountdownSeconds:0.0}s").Class("story-muted").FontSize(11f),
+                Ui.Text($"{surface.CountdownSeconds:0.0}s").Class("story-muted").FontSize(FontEyebrow),
                 surface.MutedHex));
         }
 
         if (!string.IsNullOrWhiteSpace(surface.Footer))
         {
             parts.Add(ApplyOptionalColor(
-                Ui.Text(surface.Footer).Class("story-muted").FontSize(11f).WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text(surface.Footer).Class("story-muted").FontSize(FontEyebrow).WhiteSpace(UiWhiteSpace.Normal),
                 surface.MutedHex));
         }
 
-        return Ui.Row(parts.ToArray()).Gap(10f).Align(UiAlignItems.Center);
+        return Ui.Row(parts.ToArray()).Gap(GapWide).Align(UiAlignItems.Center);
     }
 
     private static UiElementBuilder BuildFooter(NarrativeFrontendSurfaceModel surface)
@@ -401,7 +447,7 @@ internal static class NarrativeFrontendUiComposer
         return string.IsNullOrWhiteSpace(surface.Footer)
             ? Ui.Column()
             : ApplyOptionalColor(
-                Ui.Text(surface.Footer).Class("story-muted").FontSize(11f).WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text(surface.Footer).Class("story-muted").FontSize(FontEyebrow).WhiteSpace(UiWhiteSpace.Normal),
                 surface.MutedHex);
     }
 
@@ -414,7 +460,7 @@ internal static class NarrativeFrontendUiComposer
 
         var text = Ui.Text(surface.Subtitle)
             .Class("story-eyebrow")
-            .FontSize(10f)
+            .FontSize(FontMicro)
             .Bold();
         if (!string.IsNullOrWhiteSpace(surface.AccentHex))
         {
@@ -506,8 +552,8 @@ internal static class NarrativeFrontendUiComposer
         float top = surface.Anchor switch
         {
             NarrativeFrontendAnchor.TopLeft or NarrativeFrontendAnchor.TopCenter or NarrativeFrontendAnchor.TopRight => Margin,
-            NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight * 0.5f) - 170f,
-            _ => CanvasHeight - 280f,
+            NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight * 0.5f) - CenterAnchorLiftPx,
+            _ => CanvasHeight - BottomAnchorInsetPx,
         };
 
         if (surface.Kind == NarrativeFrontendSurfaceKind.StandingPortrait)
@@ -515,8 +561,8 @@ internal static class NarrativeFrontendUiComposer
             top = surface.Anchor switch
             {
                 NarrativeFrontendAnchor.TopLeft or NarrativeFrontendAnchor.TopCenter or NarrativeFrontendAnchor.TopRight => Margin,
-                NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight - 980f) * 0.5f,
-                _ => CanvasHeight - 1000f,
+                NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight - StandingPortraitFallbackHeight) * 0.5f,
+                _ => CanvasHeight - StandingFullHeightPx,
             };
         }
 

@@ -36,6 +36,11 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private readonly Entity[] _projectedEntitiesByAgentIndex;
     private readonly Entity[] _projectedDomainsByAgentIndex;
     private readonly byte[] _projectedDomainValidByAgentIndex;
+    private readonly int[] _registrationOrderScratch;
+    private readonly int[] _registrationKeyScratch;
+    private readonly Entity[] _registrationEntityScratch;
+    private readonly MassNavigationAgentSeed[] _registrationSeedScratch;
+    private readonly bool[] _registrationControllableScratch;
     private MassNavigationSimulationRuntime? _lastSimulation;
     private long _lastAuthoringSignature;
     private uint _projectedRelationshipRevision = uint.MaxValue;
@@ -63,6 +68,11 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         _projectedEntitiesByAgentIndex = new Entity[_agentCapacity];
         _projectedDomainsByAgentIndex = new Entity[_agentCapacity];
         _projectedDomainValidByAgentIndex = new byte[_agentCapacity];
+        _registrationOrderScratch = new int[_agentCapacity];
+        _registrationKeyScratch = new int[_agentCapacity];
+        _registrationEntityScratch = new Entity[_agentCapacity];
+        _registrationSeedScratch = new MassNavigationAgentSeed[_agentCapacity];
+        _registrationControllableScratch = new bool[_agentCapacity];
     }
 
     public void Initialize() { }
@@ -187,6 +197,8 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         {
             return false;
         }
+
+        SortCollectedAgentsByEntityId();
 
         simulation.AppendAuthoredAgents(
             _engine.World,
@@ -372,6 +384,8 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             }
         }
 
+        SortCollectedAgentsByEntityId();
+
         simulation.RebuildFromAuthoredAgents(
             _engine.World,
             CollectionsMarshal.AsSpan(_entities),
@@ -379,6 +393,43 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             CollectionsMarshal.AsSpan(_controllableFlags));
         ClearProjectedDomains();
         StoreProjectedDomainsForBoundEntities(_entities, _seeds);
+    }
+
+    /// <summary>
+    /// 代理索引是引擎可见状态（实体上的 <see cref="MassNavigationAgentIndex"/>、求解器右行序、
+    /// 路由与命令组的成员键）。查询顺序随 archetype 拓扑变化——对代理实体挂任何组件都会把它
+    /// 挪到新 archetype、落到迭代末尾——因此注册顺序必须锚定在实体 id 上，让与 massnav 无关的
+    /// 结构变更无法重排代理索引。
+    /// </summary>
+    private void SortCollectedAgentsByEntityId()
+    {
+        int count = _entities.Count;
+        if (count <= 1)
+        {
+            return;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            _registrationOrderScratch[i] = i;
+            _registrationKeyScratch[i] = _entities[i].Id;
+        }
+
+        Array.Sort(_registrationKeyScratch, _registrationOrderScratch, 0, count);
+        for (int i = 0; i < count; i++)
+        {
+            _registrationEntityScratch[i] = _entities[i];
+            _registrationSeedScratch[i] = _seeds[i];
+            _registrationControllableScratch[i] = _controllableFlags[i];
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            int sourceIndex = _registrationOrderScratch[i];
+            _entities[i] = _registrationEntityScratch[sourceIndex];
+            _seeds[i] = _registrationSeedScratch[sourceIndex];
+            _controllableFlags[i] = _registrationControllableScratch[sourceIndex];
+        }
     }
 
     private MassNavigationAgentSeed CreateSeed(

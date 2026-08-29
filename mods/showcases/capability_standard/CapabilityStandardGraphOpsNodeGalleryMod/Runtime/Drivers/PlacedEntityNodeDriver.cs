@@ -103,7 +103,7 @@ public sealed class PlacedEntityNodeDriver : IGraphOpsNodeDriver
             _callStack,
             ref cursor,
             SliceBudget,
-            GraphKind.Script,
+            GraphKind.TriggerGraph,
             mapScope: RequireMapId(ctx));
         if (!result.Halted)
         {

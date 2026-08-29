@@ -1,7 +1,6 @@
 [
   {
     "id": "Dialogue.Narrative.Briefing",
-    "displayName": "Ashen Oath Briefing",
     "entryNode": "briefing_intro",
     "nodes": [
       {
@@ -41,11 +40,11 @@
         "presentationProfile": "story.world_bubble",
         "onEnterActionGraphId": "Graph.Narrative.Action.AcceptBriefing"
       }
-    ]
+    ],
+    "display_token": "story.dialogue.briefing.display"
   },
   {
     "id": "Dialogue.Narrative.Return",
-    "displayName": "Ashen Oath Return",
     "entryNode": "return_intro",
     "nodes": [
       {
@@ -79,11 +78,11 @@
         "lineId": "line.warden.return.mercy_outro",
         "presentationProfile": "story.world_bubble"
       }
-    ]
+    ],
+    "display_token": "story.dialogue.return.display"
   },
   {
     "id": "Dialogue.Demo.Audience",
-    "displayName": "纯对话：守望者接见",
     "entryNode": "open",
     "nodes": [
       {
@@ -156,6 +155,7 @@
         "lineId": "line.demo.audience.mercy_end",
         "presentationProfile": "story.dialogue_overlay"
       }
-    ]
+    ],
+    "display_token": "story.dialogue.audience.display"
   }
 ]

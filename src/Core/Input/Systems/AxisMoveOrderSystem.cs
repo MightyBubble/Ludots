@@ -21,6 +21,11 @@ namespace Ludots.Core.Input.Systems
     /// input snapshot and submits throttled <see cref="OrderQueue"/> move orders targeting
     /// <c>current position + direction * stepDistanceCm</c>. Movement always goes through the order
     /// pipeline; this system never writes <see cref="WorldPositionCm"/>.
+    ///
+    /// Multi-seat tables route per seat instead: each seat's channel carries its own scheme
+    /// declaration and frozen axis snapshot, and orders submit with that seat's possessed rep —
+    /// two seats' axis inputs drive their own reps without merging. The sole-seat path below is
+    /// the global consumption chain and stays byte-identical for single-seat clients.
     /// </summary>
     public sealed class AxisMoveOrderSystem : ISystem<float>
     {
@@ -30,6 +35,7 @@ namespace Ludots.Core.Input.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly ControlSchemeRuntime _schemes;
         private readonly OrderQueue _orderQueue;
+        private readonly Dictionary<string, int> _throttleTicksBySeat = new(StringComparer.Ordinal);
 
         private uint _cachedSchemeRevision;
         private bool _hasBinding;
@@ -55,6 +61,76 @@ namespace Ludots.Core.Input.Systems
         public void Dispose() { }
 
         public void Update(in float dt)
+        {
+            if (_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) &&
+                seatsObj is ClientLocalSeatRegistry seats &&
+                seats.Count > 1)
+            {
+                UpdatePerSeat(seats);
+                return;
+            }
+
+            UpdateSoleSeat();
+        }
+
+        private void UpdatePerSeat(ClientLocalSeatRegistry seats)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatInputRuntime.Name, out object? runtimeObj) ||
+                runtimeObj is not ClientLocalSeatInputRuntime seatInput)
+            {
+                return;
+            }
+
+            IReadOnlyList<string> ids = seats.SeatIds;
+            for (int i = 0; i < ids.Count; i++)
+            {
+                ClientLocalSeat seat = seats.Require(ids[i]);
+                if (!seat.HasPossession ||
+                    !_world.IsAlive(seat.PossessedRep) ||
+                    !_world.Has<WorldPositionCm>(seat.PossessedRep) ||
+                    !seatInput.TryGetChannel(seat.SeatId, out ClientLocalSeatInputChannel channel) ||
+                    !channel.TryGetActiveAxisMove(out ControlSchemeAxisMoveBinding binding))
+                {
+                    continue;
+                }
+
+                Vector2 axis = channel.Reader.ReadAction<Vector2>(binding.ActionId);
+                if (axis.LengthSquared() <= AxisDeadzoneSquared)
+                {
+                    _throttleTicksBySeat[seat.SeatId] = 0;
+                    continue;
+                }
+
+                if (_throttleTicksBySeat.TryGetValue(seat.SeatId, out int remaining) && remaining > 0)
+                {
+                    _throttleTicksBySeat[seat.SeatId] = remaining - 1;
+                    continue;
+                }
+
+                Entity actor = seat.PossessedRep;
+                Vector2 current = _world.Get<WorldPositionCm>(actor).Value.ToVector2();
+                Vector2 direction = Vector2.Normalize(axis);
+                Vector2 target = current + (direction * binding.StepDistanceCm);
+
+                var order = new Order
+                {
+                    OrderTypeId = binding.OrderTypeId,
+                    PlayerId = seat.PossessedPlayerId,
+                    Actor = actor,
+                    SubmitMode = OrderSubmitMode.Immediate,
+                };
+                order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
+                order.Args.Spatial.Mode = OrderCollectionMode.Single;
+                order.Args.Spatial.WorldCm = new Vector3(target.X, target.Y, 0f);
+
+                if (_orderQueue.TryEnqueue(in order))
+                {
+                    _throttleTicksBySeat[seat.SeatId] = binding.ThrottleTicks - 1;
+                }
+            }
+        }
+
+        private void UpdateSoleSeat()
         {
             if (_cachedSchemeRevision != _schemes.Revision)
             {

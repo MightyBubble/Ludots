@@ -1,0 +1,18 @@
+[
+  {
+    "id": "east_asia_playable_terrain.terrain_albedo",
+    "backendId": "raylib",
+    "enabled": true,
+    "mapIds": [
+      "east_asia_visual_heightmap"
+    ],
+    "tileScale": 0.045,
+    "controlMapUri": "EastAsiaPlayableTerrainMod:assets/Textures/terrain_control_weights.png",
+    "layerUris": [
+      "EastAsiaPlayableTerrainMod:assets/Textures/terrain_sand.png",
+      "EastAsiaPlayableTerrainMod:assets/Textures/terrain_grass.png",
+      "EastAsiaPlayableTerrainMod:assets/Textures/terrain_dirt.png",
+      "EastAsiaPlayableTerrainMod:assets/Textures/terrain_rock.png"
+    ]
+  }
+]

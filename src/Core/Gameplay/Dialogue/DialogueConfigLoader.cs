@@ -31,6 +31,7 @@ namespace Ludots.Core.Gameplay.Dialogue
             _registry.Clear();
             var entry = ConfigPipeline.RequireEntry(catalog, DialoguesPath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            ThrowOnDuplicateIds(report, DialoguesPath, "Dialogue definition");
             for (int i = 0; i < merged.Count; i++)
             {
                 JsonObject node = merged[i].Node;
@@ -88,6 +89,28 @@ namespace Ludots.Core.Gameplay.Dialogue
                     }
                 }
             }
+        }
+        private static void ThrowOnDuplicateIds(ConfigConflictReport? report, string relativePath, string label)
+        {
+            if (report == null)
+            {
+                return;
+            }
+
+            var duplicates = report.GetDuplicateIds(relativePath);
+            if (duplicates.Count == 0)
+            {
+                return;
+            }
+
+            var lines = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < duplicates.Count; i++)
+            {
+                lines.Add($"  {label} '{duplicates[i].Id}' defined by both '{duplicates[i].FirstSource}' and '{duplicates[i].SecondSource}'");
+            }
+
+            throw new InvalidOperationException(
+                $"{label} ids must be unique across mods (namespaced ids, e.g. 'author_kit.*'):{System.Environment.NewLine}{string.Join(System.Environment.NewLine, lines)}");
         }
     }
 }

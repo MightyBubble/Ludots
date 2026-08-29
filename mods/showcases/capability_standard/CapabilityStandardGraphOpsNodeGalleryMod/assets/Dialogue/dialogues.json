@@ -1,0 +1,14 @@
+[
+  {
+    "id": "Dialogue.Gallery.StartDialogue",
+    "displayName": "画廊开聊",
+    "entryNode": "open",
+    "nodes": [
+      {
+        "id": "open",
+        "lineId": "line.gallery.start_dialogue.open",
+        "presentationProfile": "gallery.dialogue_overlay"
+      }
+    ]
+  }
+]
