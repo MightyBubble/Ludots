@@ -1,0 +1,9 @@
+flowchart LR
+  A[StrategicHudPanelsMod/assets/game.json] --> B[strategic_hud_panels map]
+  B --> C[Graph.StrategicHud.OpenAll]
+  C --> D[PanelHost]
+  D --> E[PanelProjectionReader]
+  E --> F[Graph.StrategicHud.Values]
+  F --> G[UiSurfaceHost / UIRoot]
+  G --> H[8 anchored panels]
+  H --> I[Raylib screenshot]

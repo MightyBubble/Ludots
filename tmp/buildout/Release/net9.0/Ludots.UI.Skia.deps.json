@@ -1,0 +1,131 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "Ludots.UI.Skia/1.0.0": {
+        "dependencies": {
+          "Ludots.UI": "1.0.0",
+          "SkiaSharp": "1.0.0",
+          "Svg.Skia": "1.0.0"
+        },
+        "runtime": {
+          "Ludots.UI.Skia.dll": {}
+        }
+      },
+      "ExCSS/1.0.0": {
+        "runtime": {
+          "ExCSS.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "Ludots.UI/1.0.0": {
+        "runtime": {
+          "Ludots.UI.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "ShimSkiaSharp/1.0.0": {
+        "runtime": {
+          "ShimSkiaSharp.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "SkiaSharp/1.0.0": {
+        "runtime": {
+          "SkiaSharp.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "Svg.Custom/1.0.0": {
+        "dependencies": {
+          "ExCSS": "1.0.0"
+        },
+        "runtime": {
+          "Svg.Custom.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Svg.Model/1.0.0": {
+        "dependencies": {
+          "ShimSkiaSharp": "1.0.0",
+          "Svg.Custom": "1.0.0"
+        },
+        "runtime": {
+          "Svg.Model.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Svg.Skia/1.0.0": {
+        "dependencies": {
+          "SkiaSharp": "1.0.0",
+          "Svg.Custom": "1.0.0",
+          "Svg.Model": "1.0.0"
+        },
+        "runtime": {
+          "Svg.Skia.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Ludots.UI.Skia/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ExCSS/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Ludots.UI/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ShimSkiaSharp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SkiaSharp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Svg.Custom/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Svg.Model/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Svg.Skia/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

@@ -1,0 +1,61 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.UI -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI\bin\Debug\net9.0\Ludots.UI.dll
+  ExCSS -> C:\001_AI\LudotsProd\src\Libraries\ExCSS\bin\Debug\net8.0\ExCSS.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd\src\Platform\Ludots.Platform.Abstractions\bin\Debug\net9.0\Ludots.Platform.Abstractions.dll
+  Raylib-cs -> C:\001_AI\LudotsProd\src\Libraries\Raylib-cs\bin\Debug\net9.0\Raylib-cs.dll
+  Ludots.Contracts -> C:\001_AI\LudotsProd\src\Contracts\bin\Debug\net9.0\Ludots.Contracts.dll
+  SkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\SkiaSharp\SkiaSharp\bin\Debug\net8.0\SkiaSharp.dll
+  Ludots.UI.Browser -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser\bin\Debug\net9.0\Ludots.UI.Browser.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net8.0\Arch.dll
+  ShimSkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Debug\net8.0\ShimSkiaSharp.dll
+  Ludots.Platform.Desktop -> C:\001_AI\LudotsProd\src\Platform\Ludots.Platform.Desktop\bin\Debug\net9.0\Ludots.Platform.Desktop.dll
+  Svg.Generators -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Debug\netstandard2.0\Svg.Generators.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\LudotsProd\src\Graph\Ludots.Graph.Abstractions\bin\Debug\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.Raylib.Render -> C:\001_AI\LudotsProd\src\Client\Ludots.Raylib.Render\bin\Debug\net9.0\Ludots.Raylib.Render.dll
+  Arch.System -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.System\bin\Debug\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net6.0\Arch.dll
+  Svg.Custom -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Custom\bin\Debug\net8.0\Svg.Custom.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Relationships\bin\Debug\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Persistence\bin\Debug\net7.0\Arch.Persistence.dll
+  Svg.Model -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Model\bin\Debug\net8.0\Svg.Model.dll
+  Ludots.App.RaylibEngineGallery -> C:\001_AI\LudotsProd\src\Apps\Raylib\Ludots.App.RaylibEngineGallery\bin\Debug\net9.0\Ludots.App.RaylibEngineGallery.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Core\bin\Debug\net9.0\DotRecast.Core.dll
+  DotRecast.Recast -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Debug\net9.0\DotRecast.Recast.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Debug\net9.0\DotRecast.Detour.dll
+  Svg.Skia -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Skia\bin\Debug\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Skia\bin\Debug\net9.0\Ludots.UI.Skia.dll
+  Ludots.Core -> C:\001_AI\LudotsProd\src\Core\bin\Debug\net9.0\Ludots.Core.dll
+  Ludots.Client.Raylib -> C:\001_AI\LudotsProd\src\Client\Ludots.Client.Raylib\bin\Debug\net9.0\Ludots.Client.Raylib.dll
+  InstancedBatchDemoMod -> C:\001_AI\LudotsProd\mods\fixtures\instanced_batch\InstancedBatchDemoMod\bin\net9.0\InstancedBatchDemoMod.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.DataPlane\bin\Debug\net9.0\Ludots.WebUI.DataPlane.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.HtmlEngine\bin\Debug\net9.0\Ludots.UI.HtmlEngine.dll
+  CoreInputMod -> C:\001_AI\LudotsProd\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  LudotsCoreMod -> C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  Ludots.Presentation.Skia -> C:\001_AI\LudotsProd\src\Libraries\Ludots.Presentation.Skia\bin\Debug\net9.0\Ludots.Presentation.Skia.dll
+  Ludots.UI.Panels -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Panels\bin\Debug\net9.0\Ludots.UI.Panels.dll
+  Ludots.WebUI.Browser -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.Browser\bin\Debug\net9.0\Ludots.WebUI.Browser.dll
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs(36,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(29,65): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(30,63): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(31,93): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibScreenshotEvidenceRecorder.cs(219,25): error CS0103: 当前上下文中不存在名称“ColorDistance” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibScreenshotEvidenceRecorder.cs(226,20): error CS0103: 当前上下文中不存在名称“ColorDistance” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(181,63): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(182,65): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(183,13): error CS0246: 未能找到类型或命名空间名“PrimitiveDrawBuffer”(是否缺少 using 指令或程序集引用?) [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(183,65): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(184,13): error CS0246: 未能找到类型或命名空间名“PresenterEntityRuntime”(是否缺少 using 指令或程序集引用?) [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(184,68): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(185,68): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(186,66): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(187,67): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(189,13): error CS0246: 未能找到类型或命名空间名“IBenchmarkSceneController”(是否缺少 using 指令或程序集引用?) [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(189,80): error CS0103: 当前上下文中不存在名称“CoreServiceKeys” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(190,41): error CS0103: 当前上下文中不存在名称“IsCleanPerformanceScene” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Services\RaylibSoundConsumer.cs(283,51): warning CS8604: “Sound IRaylibSoundBackend.LoadFromFile(string path)”中的形参“path”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs(551,68): error CS0103: 当前上下文中不存在名称“BuildTimingDiagnostic” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs(566,76): error CS0103: 当前上下文中不存在名称“BuildTimingDiagnostic” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs(581,68): error CS0103: 当前上下文中不存在名称“BuildTimingDiagnostic” [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

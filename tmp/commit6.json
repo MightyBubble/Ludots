@@ -1,0 +1,1 @@
+{"message": "fix(showcase): registry 补 tier/category 必填字段；presets 字节级插入避免全文件重排", "tree": "2d659221b13fe3106fe8e3b8421581c07ad32f22", "parents": ["41922b470a267975b7538367f1754d71f9b510b5"]}

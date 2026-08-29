@@ -1,0 +1,29 @@
+
+已成功生成�?
+    950 个警�?
+    0 个错�?
+
+已用时间 00:00:15.40
+
+有可用的工作负载更新。有关详细信息，请运�?`dotnet workload list`�?
+adapter=raylib
+buildMode=never
+selectors=$activity_dispatch_showcase, $agent_bridge
+rootMods=ActivityDispatchShowcaseMod, AgentBridgeMod
+orderedMods=LudotsCoreMod, ActivityDispatchShowcaseMod, AgentBridgeMod
+bootstrap=C:\001_AI\LudotsProd\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\launcher.runtime.json
+startup:
+  defaultCoreMod=LudotsCoreMod @ assets/game.json
+  startupMapId=activity_dispatch @ mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> entry
+    * mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod/assets/game.json -> activity_dispatch
+  startupInputContexts=[Default_Gameplay] @ mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> [Default_Gameplay]
+    * mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod/assets/game.json -> [Default_Gameplay]
+  browserRuntime=(unset) @ (unset)
+warnings:
+  - Selected 2 root mods (ActivityDispatchShowcaseMod, AgentBridgeMod). Runtime still boots a single startupMapId; inspect the effective startup settings below.
+
+- LudotsCoreMod | BuildableSource | Succeeded | C:\001_AI\LudotsProd\mods\LudotsCoreMod
+- ActivityDispatchShowcaseMod | BuildableSource | Succeeded | C:\001_AI\LudotsProd\mods\showcases\activity_dispatch\ActivityDispatchShowcaseMod bindings=[activity_dispatch_showcase]
+- AgentBridgeMod | BuildableSource | Succeeded | C:\001_AI\LudotsProd\mods\AgentBridgeMod bindings=[agent_bridge]

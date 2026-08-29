@@ -1,0 +1,10 @@
+{"tick":1,"type":"event","kind":"PresenterCreated","unit":"A","presenter_stable_id":1}
+{"tick":1,"type":"event","kind":"PresenterCreated","unit":"B","presenter_stable_id":2}
+{"tick":2,"type":"command","kind":"TimerSet","unit":"A","timer":"accept.flash","duration_seconds":0.6}
+{"tick":2,"type":"command","kind":"SetParam","unit":"A","param":"accept.flash.yellow","value":1}
+{"tick":2,"type":"command","kind":"TimerSet","unit":"B","timer":"accept.flash","duration_seconds":0.6}
+{"tick":2,"type":"command","kind":"SetParam","unit":"B","param":"accept.flash.yellow","value":1}
+{"tick":4,"type":"command","kind":"TimerKill","unit":"B","timer":"*"}
+{"tick":4,"type":"command","kind":"SetParam","unit":"B","param":"accept.flash.yellow","value":0}
+{"tick":7,"type":"event","kind":"TimerExpired","unit":"A","timer":"accept.flash","presenter_stable_id":1}
+{"tick":7,"type":"command","kind":"SetParam","unit":"A","param":"accept.flash.yellow","value":0}

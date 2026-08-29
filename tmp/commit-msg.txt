@@ -1,0 +1,15 @@
+feat(bridge): 存档五工具 save.slots/capture/write/read/restore
+
+- 全走正式链路：SaveSlotStore（引擎 ISaveStorage 服务）、干净步边界捕获、
+  WorldRestoreService 读档；无存储服务 fail-closed（service.unavailable）
+- worldDigest 行排序哈希镜头：序列化进临时世界→实体引用 WorldId 归一为 0→
+  逐实体逐组件排序哈希；blob 字节哈希跨调用不稳定（实测同一快照两次不同），
+  行排序口径与 PersistenceTests 确定性续跑一致，跨引擎/跨进程可比
+- 域异常包装可读 AgentToolException；注册进 BuiltinAgentTools.RegisterAll
+  （对齐 main 的 28 工具注册重构）
+- 合同测试 5 条：跨引擎实例 roundtrip digest 一致、capture 不落盘、篡改
+  fail-closed、缺服务 fail-closed、非法 kind 拒绝
+- LudotsPersistenceSerializerFactory 转 public；DesktopSaveStorage 暴露
+  RootDirectory
+
+Closes #1203

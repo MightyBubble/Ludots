@@ -1,0 +1,190 @@
+  正在确定要还原的项目…
+  已还原 C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj (用时 266 毫秒)。
+  已还原 C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj (用时 267 毫秒)。
+  已还原 C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\ArchitectureTests.csproj (用时 266 毫秒)。
+  已还原 C:\001_AI\LudotsProd\src\Analyzers\Ludots.Analyzers.Layering\Ludots.Analyzers.Layering.csproj (用时 266 毫秒)。
+  44 个项目(共 48 个)是最新的，无法还原。
+  Ludots.Contracts -> C:\001_AI\LudotsProd\src\Contracts\bin\Debug\net9.0\Ludots.Contracts.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd\src\Platform\Ludots.Platform.Abstractions\bin\Debug\net9.0\Ludots.Platform.Abstractions.dll
+  SkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\SkiaSharp\SkiaSharp\bin\Debug\net8.0\SkiaSharp.dll
+  Ludots.UI -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI\bin\Debug\net9.0\Ludots.UI.dll
+  ExCSS -> C:\001_AI\LudotsProd\src\Libraries\ExCSS\bin\Debug\net8.0\ExCSS.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net8.0\Arch.dll
+C:\001_AI\LudotsProd\src\Analyzers\Ludots.Analyzers.Layering\WriteOwnerAnalyzer.cs(15,9): warning RS2008: 为包含规则“LDTS014”的分析器项目启用分析器发布跟踪 (https://github.com/dotnet/roslyn-analyzers/blob/main/src/Microsoft.CodeAnalysis.Analyzers/ReleaseTrackingAnalyzers.Help.md) [C:\001_AI\LudotsProd\src\Analyzers\Ludots.Analyzers.Layering\Ludots.Analyzers.Layering.csproj]
+  ShimSkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Debug\net8.0\ShimSkiaSharp.dll
+  Ludots.Analyzers.Layering -> C:\001_AI\LudotsProd\src\Analyzers\Ludots.Analyzers.Layering\bin\Debug\netstandard2.0\Ludots.Analyzers.Layering.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\LudotsProd\src\Graph\Ludots.Graph.Abstractions\bin\Debug\net9.0\Ludots.Graph.Abstractions.dll
+  Svg.Generators -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Debug\netstandard2.0\Svg.Generators.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net6.0\Arch.dll
+  Arch.System -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.System\bin\Debug\net7.0\Arch.System.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Relationships\bin\Debug\net7.0\Arch.Relationships.dll
+  Svg.Custom -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Custom\bin\Debug\net8.0\Svg.Custom.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Persistence\bin\Debug\net7.0\Arch.Persistence.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Core\bin\Debug\net9.0\DotRecast.Core.dll
+  Svg.Model -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Model\bin\Debug\net8.0\Svg.Model.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Debug\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Debug\net9.0\DotRecast.Recast.dll
+  Svg.Skia -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Skia\bin\Debug\net8.0\Svg.Skia.dll
+  Ludots.Core -> C:\001_AI\LudotsProd\src\Core\bin\Debug\net9.0\Ludots.Core.dll
+  Ludots.Graph.Codegen -> C:\001_AI\LudotsProd\src\Graph\Ludots.Graph.Codegen\bin\Debug\net9.0\Ludots.Graph.Codegen.dll
+  FourXAssociationShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fourx_association\FourXAssociationShowcaseMod\bin\net9.0\FourXAssociationShowcaseMod.dll
+  ItemSystemShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\item_system\ItemSystemShowcaseMod\bin\net9.0\ItemSystemShowcaseMod.dll
+  UiPlayerAggregateGraphMvpShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\ui_player_aggregate_graph_mvp\UiPlayerAggregateGraphMvpShowcaseMod\bin\net9.0\UiPlayerAggregateGraphMvpShowcaseMod.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.HtmlEngine\bin\Debug\net9.0\Ludots.UI.HtmlEngine.dll
+  CapabilityStandardGraphBehaviorCommon -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorCommon\bin\net9.0\CapabilityStandardGraphBehaviorCommon.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\LudotsProd\src\Core\Ludots.Physics.Broadphase\bin\Debug\net9.0\Ludots.Physics.Broadphase.dll
+  GoldMarketShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\gold_market\GoldMarketShowcaseMod\bin\net9.0\GoldMarketShowcaseMod.dll
+  MassNavigationMod -> C:\001_AI\LudotsProd\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+  Ludots.UI.Skia -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Skia\bin\Debug\net9.0\Ludots.UI.Skia.dll
+  CoreInputMod -> C:\001_AI\LudotsProd\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  Ludots.Launcher.Backend -> C:\001_AI\LudotsProd\src\Tools\Ludots.Launcher.Backend\bin\Debug\net9.0\Ludots.Launcher.Backend.dll
+  GasBenchmarkMod -> C:\001_AI\LudotsProd\mods\GasBenchmarkMod\bin\net9.0\GasBenchmarkMod.dll
+  DiagnosticsOverlayMod -> C:\001_AI\LudotsProd\mods\DiagnosticsOverlayMod\bin\net9.0\DiagnosticsOverlayMod.dll
+  LudotsCoreMod -> C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  EntityInfoPanelsMod -> C:\001_AI\LudotsProd\mods\capabilities\entityinfo\EntityInfoPanelsMod\bin\net9.0\EntityInfoPanelsMod.dll
+  EntityCommandPanelMod -> C:\001_AI\LudotsProd\mods\EntityCommandPanelMod\bin\net9.0\EntityCommandPanelMod.dll
+  CapabilityStandardGraphOpsNodeGalleryMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardGraphOpsNodeGalleryMod\bin\net9.0\CapabilityStandardGraphOpsNodeGalleryMod.dll
+  CameraAcceptanceMod -> C:\001_AI\LudotsProd\mods\fixtures\camera\CameraAcceptanceMod\bin\net9.0\CameraAcceptanceMod.dll
+  CameraProfilesMod -> C:\001_AI\LudotsProd\mods\capabilities\camera\CameraProfilesMod\bin\net9.0\CameraProfilesMod.dll
+  Ludots.Physics2D -> C:\001_AI\LudotsProd\src\Core\Ludots.Physics2D\bin\Debug\net9.0\Ludots.Physics2D.dll
+  ChampionSkillSandboxMod -> C:\001_AI\LudotsProd\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\bin\net9.0\ChampionSkillSandboxMod.dll
+C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\Triggers\InstallGenreInfoShowcaseOnGameStartTrigger.cs(25,34): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj]
+C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\Runtime\GenreInfoShowcaseRuntime.cs(68,34): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj]
+C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\Runtime\GenreInfoShowcaseRuntime.cs(91,34): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj]
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\LudotsProd\src\Core\Ludots.Movement.Physics2DBridge\bin\Debug\net9.0\Ludots.Movement.Physics2DBridge.dll
+  PerformanceVisualizationMod -> C:\001_AI\LudotsProd\mods\PerformanceVisualizationMod\bin\net9.0\PerformanceVisualizationMod.dll
+  GenreInfoShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\bin\net9.0\GenreInfoShowcaseMod.dll
+  CapabilityStandardLiveSkillWorkbenchShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\bin\net9.0\CapabilityStandardLiveSkillWorkbenchShowcaseMod.dll
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(45,25): warning CS8604: “void Program.InitMod(string modId, string dir, string template)”中的形参“modId”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(45,29): warning CS8604: “void Program.InitMod(string modId, string dir, string template)”中的形参“dir”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(76,47): warning CS8604: “int Program.ImportReactMap(string inputPath, string? outDir, string? name, bool force)”中的形参“inputPath”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(109,45): warning CS8604: “void MapVtxmGenerator.GenerateV2(string outFile, int widthChunks, int heightChunks, int chunkSize, Preset preset, bool overwrite)”中的形参“outFile”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(134,41): warning CS8604: “void Program.GenerateReactMapDataBin(string outFile, int widthChunks, int heightChunks, string preset, bool overwrite)”中的形参“outFile”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(134,56): warning CS8604: “void Program.GenerateReactMapDataBin(string outFile, int widthChunks, int heightChunks, string preset, bool overwrite)”中的形参“preset”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(176,40): warning CS8604: “int Program.BakeNav(string inputVtxmPath, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion)”中的形参“inputVtxmPath”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(208,49): warning CS8604: “int Program.BakeNavFromReact(string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion)”中的形参“inputReactBinPath”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(247,55): warning CS8604: “int Program.BakeNavFromReactRecast(string mapId, string? modId, string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion, bool largeBakeApproved, string? acceptedEstimateHash)”中的形参“mapId”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(247,69): warning CS8604: “int Program.BakeNavFromReactRecast(string mapId, string? modId, string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion, bool largeBakeApproved, string? acceptedEstimateHash)”中的形参“inputReactBinPath”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(286,48): warning CS8604: “int Program.BakeNavFromVhtm(string mapId, string? modId, string inputVhtmPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, int heightStep, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion, bool largeBakeApproved, string? acceptedEstimateHash)”中的形参“mapId”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(286,62): warning CS8604: “int Program.BakeNavFromVhtm(string mapId, string? modId, string inputVhtmPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, int heightStep, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion, bool largeBakeApproved, string? acceptedEstimateHash)”中的形参“inputVhtmPath”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(317,59): warning CS8604: “int Program.EstimateNavFromReactRecast(string mapId, string? modId, string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool parallel, int maxDegree, int tileVersion)”中的形参“mapId”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(317,73): warning CS8604: “int Program.EstimateNavFromReactRecast(string mapId, string? modId, string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool parallel, int maxDegree, int tileVersion)”中的形参“inputReactBinPath”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Program.cs(543,20): warning CS8603: 可能返回 null 引用。 [C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\Ludots.Tool.csproj]
+  Ludots.Tool -> C:\001_AI\LudotsProd\src\Tools\Ludots.Tool\bin\Debug\net9.0\Ludots.Tool.dll
+C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\NavBakeServiceContractTests.cs(1143,40): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\ArchitectureTests.csproj]
+C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\NavBakeServiceContractTests.cs(88,23): warning CS0219: 变量“tileSizeCm”已被赋值，但从未使用过它的值 [C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\ArchitectureTests.csproj]
+C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Governance\ArchitectureGuardTests.cs(441,24): warning CS0618: “ContextKeys”已过时:“Use CoreServiceKeys with ServiceKey<T> for type-safe access. This class will be removed in a future release.” [C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\ArchitectureTests.csproj]
+  ArchitectureTests -> C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\bin\Debug\net9.0\ArchitectureTests.dll
+C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\bin\Debug\net9.0\ArchitectureTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+  失败 Mods_DoNotReference_SkiaSharp_UnlessWhitelisted [2 s]
+  错误消息:
+     Mods must not reference Ludots.UI.Skia or SkiaSharp directly (use engine-injected services). Whitelisted: UiShowcaseCoreMod, PerformanceVisualizationMod, UxPrototypeMod. Violations:
+UiNineSlicePanelShowcaseMod: ..\..\..\..\src\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj
+Assert.That(violations, Is.Empty)
+  Expected: <empty>
+  But was:  < "UiNineSlicePanelShowcaseMod: ..\..\..\..\src\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" >
+
+  堆栈跟踪:
+     at Ludots.Tests.Architecture.CoreBoundaryTests.Mods_DoNotReference_SkiaSharp_UnlessWhitelisted() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\CoreBoundaryTests.cs:line 86
+
+1)    at Ludots.Tests.Architecture.CoreBoundaryTests.Mods_DoNotReference_SkiaSharp_UnlessWhitelisted() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\CoreBoundaryTests.cs:line 86
+
+
+  失败 BehaviorKind_AllowlistMatchesEpicInventory [1 ms]
+  错误消息:
+     BehaviorKind allowlist is frozen by Epic #924 P0. Adding a kind requires updating that Epic inventory first. BehaviorKind has 16 values [None, AssetBinding, AttributeBinding, TagBinding, Animator, Attachment, Sound, Material, Spline, Grounding, MinimapMarker, WorldText, SurfaceSource, InstancedBatch, TrailMesh, Extension] but the frozen allowlist has 15 [None, AssetBinding, AttributeBinding, TagBinding, Animator, Attachment, Sound, Material, Spline, Grounding, MinimapMarker, WorldText, SurfaceSource, InstancedBatch, Extension].
+Assert.That(actual.Length, Is.EqualTo(expected.Length))
+  Expected: 15
+  But was:  16
+
+  堆栈跟踪:
+     at Ludots.Tests.Architecture.Governance.PresenterKindInventoryGuardTests.AssertKindAllowlist(Type enumType, String[] expected, String failMessage) in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Governance\PresenterKindInventoryGuardTests.cs:line 260
+   at Ludots.Tests.Architecture.Governance.PresenterKindInventoryGuardTests.BehaviorKind_AllowlistMatchesEpicInventory() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Governance\PresenterKindInventoryGuardTests.cs:line 73
+
+1)    at Ludots.Tests.Architecture.Governance.PresenterKindInventoryGuardTests.AssertKindAllowlist(Type enumType, String[] expected, String failMessage) in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Governance\PresenterKindInventoryGuardTests.cs:line 260
+   at Ludots.Tests.Architecture.Governance.PresenterKindInventoryGuardTests.BehaviorKind_AllowlistMatchesEpicInventory() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Governance\PresenterKindInventoryGuardTests.cs:line 73
+
+
+  失败 Adapters_DoNotRegisterDeviceServicesIntoAppLevelContainer [14 ms]
+  错误消息:
+     Terminology rule 2 (#902 3.5): device instances are held by Seat; Adapters must not register device services into the App-level container. The allowlist below is shrink-only (P3 collapses it to zero, see #1058); new device-service registrations are forbidden:
+src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs: CoreServiceKeys.InputDeviceWatcher
+Assert.That(hits, Is.Empty)
+  Expected: <empty>
+  But was:  < "src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs: CoreServiceKeys.InputDeviceWatcher" >
+
+  堆栈跟踪:
+     at Ludots.Tests.Architecture.Governance.TerminologyGovernanceTests.Adapters_DoNotRegisterDeviceServicesIntoAppLevelContainer() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Governance\TerminologyGovernanceTests.cs:line 73
+
+1)    at Ludots.Tests.Architecture.Governance.TerminologyGovernanceTests.Adapters_DoNotRegisterDeviceServicesIntoAppLevelContainer() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Governance\TerminologyGovernanceTests.cs:line 73
+
+
+  失败 FormalGraphsJson_MustNotUseNodesNext [36 s]
+  错误消息:
+     Formal graphs.json must not use nodes[].next (issue #861). Offenders:
+C:\001_AI\LudotsProd\.worktrees\audit-pr660-merge\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource
+C:\001_AI\LudotsProd\.worktrees\fable-main-check\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource
+C:\001_AI\LudotsProd\.worktrees\fix-pr660-test-evidence\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource
+C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource
+C:\001_AI\LudotsProd\.worktrees\universal-graph-editor\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource
+C:\001_AI\LudotsProd\.worktrees\wpk-9-10-cursor\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource
+C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\FourXDemoMod\assets\GAS\graphs.json :: fourx.graph.cityEconomyQuery
+C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\FourXDemoMod\assets\GAS\graphs.json :: fourx.graph.tradePartnersQuery
+C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\ThreeKingdomsTacticsMod\assets\GAS\graphs.json :: tk.graph.skillScore
+C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\ThreeKingdomsTacticsMod\assets\GAS\graphs.json :: tk.graph.supplyPressure
+C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\ThreeKingdomsTacticsMod\assets\GAS\graphs.json :: tk.graph.moraleBreak
+C:\001_AI\LudotsProd\.worktrees\wpk-9-10-cursor\mods\FourXDemoMod\assets\GAS\graphs.json :: fourx.graph.cityEconomyQuery
+C:\001_AI\LudotsProd\.worktrees\wpk-9-10-cursor\mods\FourXDemoMod\assets\GAS\graphs.json :: fourx.graph.tradePartnersQuery
+C:\001_AI\LudotsProd\.worktrees\audit-pr660-merge\mods\GasBenchmarkMod\assets\Configs\GAS\graphs.json :: GasBenchmarkMod.Graphs.ModifyHealth
+C:\001_AI\LudotsProd\.worktrees\audit-pr660-merge\mods\GasBenchmarkMod\assets\Configs\GAS\graphs.json :: GameplayStandard.Graphs.ApplyForce2D
+C:\001_AI\LudotsProd\.worktrees\fable-main-check\mods\GasBenchmarkMod\assets\Configs\GAS\graphs.json :: GasBenchmarkMod.Graphs.ModifyHealth
+C:\001_AI\LudotsProd\.worktrees\fable-main-check\mods\GasBenchmarkMod\assets\Configs\GAS\graphs.json :: GameplayStandard.Graphs.ApplyForce2D
+C:\001_AI\LudotsProd\.worktrees\fix-pr660-test-evidence\mods\GasBenchmarkMod\assets\Configs\GAS\graphs.json :: GasBenchmarkMod.Graphs.ModifyHealth
+C:\001_AI\LudotsProd\.worktrees\fix-pr660-test-evidence\mods\GasBenchmarkMod\assets\Configs\GAS\graphs.json :: GameplayStandard.Graphs.ApplyForce2D
+C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\GasBenchmarkMod\assets\Configs\GAS\graphs.json :: GasBenchmarkMod.Graphs.ModifyHealth
+Assert.That(offenders, Is.Empty)
+  Expected: <empty>
+  But was:  < "C:\001_AI\LudotsProd\.worktrees\audit-pr660-merge\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource", "C:\001_AI\LudotsProd\.worktrees\fable-main-check\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource", "C:\001_AI\LudotsProd\.worktrees\fix-pr660-test-evidence\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource", "C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource", "C:\001_AI\LudotsProd\.worktrees\universal-graph-editor\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource", "C:\001_AI\LudotsProd\.worktrees\wpk-9-10-cursor\assets\Configs\GAS\graphs.json :: Graph.Lifecycle.DeployConsumeSource", "C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\FourXDemoMod\assets\GAS\graphs.json :: fourx.graph.cityEconomyQuery", "C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\FourXDemoMod\assets\GAS\graphs.json :: fourx.graph.tradePartnersQuery", "C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\ThreeKingdomsTacticsMod\assets\GAS\graphs.json :: tk.graph.skillScore", "C:\001_AI\LudotsProd\.worktrees\sg11-like-playable-mod\mods\ThreeKingdomsTacticsMod\assets\GAS\graphs.json :: tk.graph.supplyPressure"... >
+
+  堆栈跟踪:
+     at Ludots.Tests.Architecture.GraphRuntime.GraphAuthoringSsotGuardTests.FormalGraphsJson_MustNotUseNodesNext() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\GraphRuntime\GraphAuthoringSsotGuardTests.cs:line 43
+
+1)    at Ludots.Tests.Architecture.GraphRuntime.GraphAuthoringSsotGuardTests.FormalGraphsJson_MustNotUseNodesNext() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\GraphRuntime\GraphAuthoringSsotGuardTests.cs:line 43
+
+
+  失败 AuthoredMapTeamComponents_HaveExplicitParticipantTeamBindings [300 ms]
+  错误消息:
+     Team-authored map data must be migrated into explicit participant bindings so relationship-domain MemberOf edges can be built without runtime fallback:
+mods/showcases/info_panels/GenreInfoShowcaseMod/assets/Maps/genre_info_showcase.json: authored Team 1 has no Teams binding.
+Assert.That(failures, Is.Empty)
+  Expected: <empty>
+  But was:  < "mods/showcases/info_panels/GenreInfoShowcaseMod/assets/Maps/genre_info_showcase.json: authored Team 1 has no Teams binding." >
+
+  堆栈跟踪:
+     at Ludots.Tests.Architecture.ParticipantRelationshipDataContractTests.AuthoredMapTeamComponents_HaveExplicitParticipantTeamBindings() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\ParticipantRelationshipDataContractTests.cs:line 88
+
+1)    at Ludots.Tests.Architecture.ParticipantRelationshipDataContractTests.AuthoredMapTeamComponents_HaveExplicitParticipantTeamBindings() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\ParticipantRelationshipDataContractTests.cs:line 88
+
+
+  失败 RelationshipRuntimeCollectIncoming_UsesReverseIndexWithoutWorldScan [2 ms]
+  错误消息:
+     CollectIncoming must read the reverse adjacency index.
+Assert.That(collectIncomingBody, Does.Contain("_reverseIndex.CopyIncoming"))
+  Expected: String containing "_reverseIndex.CopyIncoming"
+  But was:  "{
+            return CollectIncoming(target, typeId, buffer, out _);
+        }"
+
+  堆栈跟踪:
+     at Ludots.Tests.Architecture.Rfc0065InteractionCastingBoundaryContractTests.RelationshipRuntimeCollectIncoming_UsesReverseIndexWithoutWorldScan() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Rfc0065InteractionCastingBoundaryContractTests.cs:line 761
+
+1)    at Ludots.Tests.Architecture.Rfc0065InteractionCastingBoundaryContractTests.<>c__DisplayClass20_0.<RelationshipRuntimeCollectIncoming_UsesReverseIndexWithoutWorldScan>b__0() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Rfc0065InteractionCastingBoundaryContractTests.cs:line 769
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at Ludots.Tests.Architecture.Rfc0065InteractionCastingBoundaryContractTests.RelationshipRuntimeCollectIncoming_UsesReverseIndexWithoutWorldScan() in C:\001_AI\LudotsProd\src\Tests\ArchitectureTests\Rfc0065InteractionCastingBoundaryContractTests.cs:line 761
+
+
+
+失败!  - 失败:     6，通过:   269，已跳过:     0，总计:   275，持续时间: 17 m 44 s - ArchitectureTests.dll (net9.0)
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

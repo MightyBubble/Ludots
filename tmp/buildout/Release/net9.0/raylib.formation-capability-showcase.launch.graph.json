@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-05-10T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "CameraProfilesMod",
+    "MassNavigationMod",
+    "FormationCapabilityShowcaseMod"
+  ],
+  "plannedMods": [
+    {
+      "id": "LudotsCoreMod",
+      "rootPath": "../../../../../../../mods/LudotsCoreMod"
+    },
+    {
+      "id": "CoreInputMod",
+      "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "CameraProfilesMod",
+      "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod"
+    },
+    {
+      "id": "MassNavigationMod",
+      "rootPath": "../../../../../../../mods/capabilities/navigation/MassNavigationMod"
+    },
+    {
+      "id": "FormationCapabilityShowcaseMod",
+      "rootPath": "../../../../../../../mods/showcases/formation_capability/FormationCapabilityShowcaseMod"
+    }
+  ]
+}

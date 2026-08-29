@@ -1,0 +1,11 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine — Moba Demo",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/showcases/moba_demo/MobaDemoMod"
+  ]
+}

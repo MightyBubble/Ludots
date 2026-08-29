@@ -1,0 +1,224 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd\src\Platform\Ludots.Platform.Abstractions\bin\Debug\net9.0\Ludots.Platform.Abstractions.dll
+  Ludots.UI -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI\bin\Debug\net9.0\Ludots.UI.dll
+  Raylib-cs -> C:\001_AI\LudotsProd\src\Libraries\Raylib-cs\bin\Debug\net9.0\Raylib-cs.dll
+  SkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\SkiaSharp\SkiaSharp\bin\Debug\net8.0\SkiaSharp.dll
+  ExCSS -> C:\001_AI\LudotsProd\src\Libraries\ExCSS\bin\Debug\net8.0\ExCSS.dll
+  Ludots.Contracts -> C:\001_AI\LudotsProd\src\Contracts\bin\Debug\net9.0\Ludots.Contracts.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net8.0\Arch.dll
+  Ludots.UI.Browser -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser\bin\Debug\net9.0\Ludots.UI.Browser.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\LudotsProd\src\Graph\Ludots.Graph.Abstractions\bin\Debug\net9.0\Ludots.Graph.Abstractions.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net6.0\Arch.dll
+  Svg.Generators -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Debug\netstandard2.0\Svg.Generators.dll
+  ShimSkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Debug\net8.0\ShimSkiaSharp.dll
+  Arch.System -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.System\bin\Debug\net7.0\Arch.System.dll
+  Ludots.Raylib.Render -> C:\001_AI\LudotsProd\src\Client\Ludots.Raylib.Render\bin\Debug\net9.0\Ludots.Raylib.Render.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Relationships\bin\Debug\net7.0\Arch.Relationships.dll
+  Svg.Custom -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Custom\bin\Debug\net8.0\Svg.Custom.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Persistence\bin\Debug\net7.0\Arch.Persistence.dll
+  Svg.Model -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Model\bin\Debug\net8.0\Svg.Model.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Core\bin\Debug\net9.0\DotRecast.Core.dll
+  Svg.Skia -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Skia\bin\Debug\net8.0\Svg.Skia.dll
+  DotRecast.Recast -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Debug\net9.0\DotRecast.Recast.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Debug\net9.0\DotRecast.Detour.dll
+  Ludots.UI.Skia -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Skia\bin\Debug\net9.0\Ludots.UI.Skia.dll
+  Ludots.Core -> C:\001_AI\LudotsProd\src\Core\bin\Debug\net9.0\Ludots.Core.dll
+  CapabilityStandardPresenterCommandShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardPresenterCommandShowcaseMod\bin\net9.0\CapabilityStandardPresenterCommandShowcaseMod.dll
+  EntityCommandPanelMod -> C:\001_AI\LudotsProd\mods\EntityCommandPanelMod\bin\net9.0\EntityCommandPanelMod.dll
+  AnimationAcceptanceMod -> C:\001_AI\LudotsProd\mods\fixtures\animation\AnimationAcceptanceMod\bin\net9.0\AnimationAcceptanceMod.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.DataPlane\bin\Debug\net9.0\Ludots.WebUI.DataPlane.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\LudotsProd\src\Core\Ludots.Physics.Broadphase\bin\Debug\net9.0\Ludots.Physics.Broadphase.dll
+  EntityInfoPanelsMod -> C:\001_AI\LudotsProd\mods\capabilities\entityinfo\EntityInfoPanelsMod\bin\net9.0\EntityInfoPanelsMod.dll
+  FourXDemoMod -> C:\001_AI\LudotsProd\mods\showcases\fourx_demo\FourXDemoMod\bin\net9.0\FourXDemoMod.dll
+  RaylibIsmBenchmarkShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\raylib_ism_benchmark\RaylibIsmBenchmarkShowcaseMod\bin\net9.0\RaylibIsmBenchmarkShowcaseMod.dll
+  RaylibVisualAtmosphereShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\raylib_visual_atmosphere\RaylibVisualAtmosphereShowcaseMod\bin\net9.0\RaylibVisualAtmosphereShowcaseMod.dll
+  CoreInputMod -> C:\001_AI\LudotsProd\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  PresenterBlacksmithShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\bin\net9.0\PresenterBlacksmithShowcaseMod.dll
+  Ludots.Presentation.Skia -> C:\001_AI\LudotsProd\src\Libraries\Ludots.Presentation.Skia\bin\Debug\net9.0\Ludots.Presentation.Skia.dll
+  MassNavigationMod -> C:\001_AI\LudotsProd\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.HtmlEngine\bin\Debug\net9.0\Ludots.UI.HtmlEngine.dll
+  LudotsCoreMod -> C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  VisualTerrainEditorMod -> C:\001_AI\LudotsProd\mods\showcases\visual_terrain_editor\VisualTerrainEditorMod\bin\net9.0\VisualTerrainEditorMod.dll
+  MobaDemoMod -> C:\001_AI\LudotsProd\mods\showcases\moba_demo\MobaDemoMod\bin\net9.0\MobaDemoMod.dll
+  RtsDemoMod -> C:\001_AI\LudotsProd\mods\showcases\rts_demo\RtsDemoMod\bin\net9.0\RtsDemoMod.dll
+  FormationCapabilityShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\formation_capability\FormationCapabilityShowcaseMod\bin\net9.0\FormationCapabilityShowcaseMod.dll
+  GenreInfoShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\info_panels\GenreInfoShowcaseMod\bin\net9.0\GenreInfoShowcaseMod.dll
+  Ludots.UI.Panels -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Panels\bin\Debug\net9.0\Ludots.UI.Panels.dll
+  Ludots.Client.Raylib -> C:\001_AI\LudotsProd\src\Client\Ludots.Client.Raylib\bin\Debug\net9.0\Ludots.Client.Raylib.dll
+  InteractionShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\interaction\InteractionShowcaseMod\bin\net9.0\InteractionShowcaseMod.dll
+  CameraProfilesMod -> C:\001_AI\LudotsProd\mods\capabilities\camera\CameraProfilesMod\bin\net9.0\CameraProfilesMod.dll
+  CameraAcceptanceMod -> C:\001_AI\LudotsProd\mods\fixtures\camera\CameraAcceptanceMod\bin\net9.0\CameraAcceptanceMod.dll
+  Ludots.Physics2D -> C:\001_AI\LudotsProd\src\Core\Ludots.Physics2D\bin\Debug\net9.0\Ludots.Physics2D.dll
+  CapabilityStandardMassNavigationLargeWorld10kMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\LudotsProd\src\Core\Ludots.Movement.Physics2DBridge\bin\Debug\net9.0\Ludots.Movement.Physics2DBridge.dll
+  Ludots.WebUI.Browser -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.Browser\bin\Debug\net9.0\Ludots.WebUI.Browser.dll
+  CapabilityStandardCrowdPhysicsArenaMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardCrowdPhysicsArenaMod\bin\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+  EntityCommandPanelShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\bin\net9.0\EntityCommandPanelShowcaseMod.dll
+  PresentationTests -> C:\001_AI\LudotsProd\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll
+C:\001_AI\LudotsProd\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+  失败 SoundShowcase_EventDrivenSoundBehaviors_ProduceAndStopBufferRequests [136 ms]
+  错误消息:
+   System.IO.FileNotFoundException : Mod 'CapabilityStandardSoundShowcaseMod' declares main assembly but the DLL was not found.
+  堆栈跟踪:
+     at Ludots.Core.Modding.ModLoader.LoadModAssembly(ModManifest manifest) in C:\001_AI\LudotsProd\src\Core\Modding\ModLoader.cs:line 406
+   at Ludots.Core.Modding.ModLoader.LoadResolvedPlan(IReadOnlyList`1 orderedMods) in C:\001_AI\LudotsProd\src\Core\Modding\ModLoader.cs:line 218
+   at Ludots.Core.Modding.ModLoader.LoadMods(IEnumerable`1 modDirectories) in C:\001_AI\LudotsProd\src\Core\Modding\ModLoader.cs:line 129
+   at Ludots.Core.Engine.GameEngine.InitializeWithConfigPipelineInternal(List`1 modPaths, ResolvedModLoadPlan modPlan, String assetsRoot) in C:\001_AI\LudotsProd\src\Core\Engine\GameEngine.cs:line 476
+   at Ludots.Core.Engine.GameEngine.InitializeWithConfigPipeline(List`1 modPaths, String assetsRoot) in C:\001_AI\LudotsProd\src\Core\Engine\GameEngine.cs:line 379
+   at Ludots.Tests.Presentation.SoundShowcaseAcceptanceTests.SoundShowcase_EventDrivenSoundBehaviors_ProduceAndStopBufferRequests() in C:\001_AI\LudotsProd\src\Tests\PresentationTests\Showcases\SoundShowcaseAcceptanceTests.cs:line 42
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+  标准输出消息:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=2
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CapabilityStandardSoundShowcaseMod (P:-2000)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CapabilityStandardSoundShowcaseMod (P:-2000)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][Engine] Unloading ModLoader contexts...
+
+
+  失败 MapLoad_WiresQuarksParticleAssetsIntoRaylibVfxPresenterPath [1 s]
+  错误消息:
+     The player-facing scene should emit all nine VFX presenter visuals.
+Assert.That(visibleVfxCount, Is.GreaterThanOrEqualTo(ParticleVfxKeys.Length))
+  Expected: greater than or equal to 9
+  But was:  0
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.VfxForgeRaylibShowcaseAcceptanceTests.MapLoad_WiresQuarksParticleAssetsIntoRaylibVfxPresenterPath() in C:\001_AI\LudotsProd\src\Tests\PresentationTests\Showcases\VfxForgeRaylibShowcaseAcceptanceTests.cs:line 213
+
+1)    at Ludots.Tests.Presentation.VfxForgeRaylibShowcaseAcceptanceTests.MapLoad_WiresQuarksParticleAssetsIntoRaylibVfxPresenterPath() in C:\001_AI\LudotsProd\src\Tests\PresentationTests\Showcases\VfxForgeRaylibShowcaseAcceptanceTests.cs:line 213
+
+
+  标准输出消息:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=2
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - VfxForgeRaylibShowcaseMod (P:0)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - VfxForgeRaylibShowcaseMod (P:0)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Skip code load for VfxForgeRaylibShowcaseMod: manifest has no 'main' (asset-only mod).
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: VfxForgeRaylibShowcaseMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=vfx_forge_raylib_showcase, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: VfxForgeRaylibShowcaseMod:assets/Entities/templates.json
+ [INF][Config] Loaded 5 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: VfxForgeRaylibShowcaseMod:assets/Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: VfxForgeRaylibShowcaseMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: VfxForgeRaylibShowcaseMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Engine] Loading Map: vfx_forge_raylib_showcase
+ [INF][Map] Loading Map: vfx_forge_raylib_showcase
+ [INF][Config] Merged fragment from: VfxForgeRaylibShowcaseMod:assets/Maps/vfx_forge_raylib_showcase.json
+ [INF][Map] Map 'vfx_forge_raylib_showcase' loaded.
+ [INF][Map] Creating GridBoard 'default' (1x1 macroTiles, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'vfx_forge_raylib_showcase'
+ [INF][Map] Map 'vfx_forge_raylib_showcase' pushed to focus (stack depth=1).
+ [INF][Engine] Created flat grid LogicTerrainField 256x256 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Engine] Pathing bootstrap skipped for map 'vfx_forge_raylib_showcase': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=180 pitch=54 dist=5600cm fov=55
+ [INF][Engine] Firing MapLoaded event for vfx_forge_raylib_showcase...
+ [WRN][Presentation] Terrain height sync requested VisualHeightmap, but none is registered; undeclared static pending may resolve flat while declared heightmap pending stays unresolved.
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+
+失败!  - 失败:     2，通过:     1，已跳过:     0，总计:     3，持续时间: 1 s - PresentationTests.dll (net9.0)
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

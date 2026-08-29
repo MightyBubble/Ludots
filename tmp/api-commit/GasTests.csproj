@@ -1,0 +1,185 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`Linux`))' == 'true'">linux-x64</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">osx</SkiaNativeRid>
+    <!-- Tests resolve mod assets from repo mods/ via RepoModPaths; referenced mods share assets/* TargetPaths and race under -m. -->
+    <GasTestsReferencedModAssetPathRegex>[/\\]mods[/\\]</GasTestsReferencedModAssetPathRegex>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
+    <Compile Include="..\TestCommon\BehaviorTreeFactory.cs" Link="BehaviorTreeFactory.cs" />
+    <Compile Include="..\TestCommon\PresentationTestConstants.cs" Link="PresentationTestConstants.cs" />
+    <Compile Include="..\TestCommon\EntityCollectionTestAccess.cs" Link="EntityCollectionTestAccess.cs" />
+    <Compile Include="..\TestCommon\ClientLocalSeatTestBindings.cs" Link="ClientLocalSeatTestBindings.cs" />
+    <Compile Include="..\TestCommon\AuthorityCameraAccess.cs" Link="AuthorityCameraAccess.cs" />
+    <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Graph\Ludots.Graph.Codegen\Ludots.Graph.Codegen.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj" />
+    <ProjectReference Include="..\..\Platform\Ludots.Platform.Desktop\Ludots.Platform.Desktop.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Movement.Physics2DBridge\Ludots.Movement.Physics2DBridge.csproj" />
+    <ProjectReference Include="..\..\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj" />
+    <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\moba_demo\MobaDemoMod\MobaDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\dep_api\DepApiMod\DepApiMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\dep_consumer\DepConsumerMod\DepConsumerMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\cycle_a\CycleAMod\CycleAMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\cycle_b\CycleBMod\CycleBMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\ExampleMod\ExampleMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\GasBenchmarkMod\GasBenchmarkMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\html_test\HtmlTestMod\HtmlTestMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\missing_dep\MissingDepMod\MissingDepMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\PerformanceMod\PerformanceMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\reactive_test\ReactiveTestMod\ReactiveTestMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\UiTestMod\UiTestMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraBootstrapMod\CameraBootstrapMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraProfilesMod\CameraProfilesMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\camera\VirtualCameraShotsMod\VirtualCameraShotsMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\participant_view\ParticipantViewCapabilityMod\ParticipantViewCapabilityMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\version_mismatch\VersionMismatchMod\VersionMismatchMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fourx_demo\FourXDemoMod\FourXDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\tcg_demo\TcgDemoMod\TcgDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\arpg_demo\ArpgDemoMod\ArpgDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_demo\RtsDemoMod\RtsDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\ai_demo\AIDemoMod\AIDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\CombatStanceBehaviorMod\CombatStanceBehaviorMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceHotpathEntryMod\CameraAcceptanceHotpathEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_composited_overlay\BrowserMinimapCompositedOverlayShowcaseMod\BrowserMinimapCompositedOverlayShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\EntityCommandPanelShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\superweapon_context\SuperweaponContextShowcaseMod\SuperweaponContextShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\relationship\RelationshipShowcaseMod\RelationshipShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\entity_query_tactics\EntityQueryTacticsShowcaseMod\EntityQueryTacticsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\minimap\MinimapShowcaseMod\MinimapShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\chunk_streaming\ChunkStreamingShowcaseMod\ChunkStreamingShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\road_network\RoadNetworkShowcaseMod\RoadNetworkShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\spline_surface_uat\SplineSurfaceUatMod\SplineSurfaceUatMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\ux_prototype\UxPrototypeMod\UxPrototypeMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\item_system\ItemSystemShowcaseMod\ItemSystemShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\item_system\ItemLoadoutShowcaseMod\ItemLoadoutShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\item_system\WeaponBenchShowcaseMod\WeaponBenchShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\item_system\ForgeSocketShowcaseMod\ForgeSocketShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\item_system\RaidLoopShowcaseMod\RaidLoopShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_training_war3\RtsWar3TrainingShowcaseMod\RtsWar3TrainingShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_training_cnc\RtsCncTrainingShowcaseMod\RtsCncTrainingShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_training_sc2\RtsSc2TrainingShowcaseMod\RtsSc2TrainingShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\static_obstacle_physics\StaticObstaclePhysicsShowcaseMod\StaticObstaclePhysicsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardParticipantViewsMod\CapabilityStandardParticipantViewsMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DMod\CapabilityStandardPhysics2DMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\CapabilityStandardPhysics2DStressMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\CapabilityStandardPhysics2DShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\CapabilityStandardTimeFlowShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorCommon\CapabilityStandardGraphBehaviorCommon.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsNodeGalleryMod\CapabilityStandardGraphOpsNodeGalleryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardBehaviorTreeArenaMod\CapabilityStandardBehaviorTreeArenaMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardHfsmSentryArenaMod\CapabilityStandardHfsmSentryArenaMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardAbilityGraphSandboxMod\CapabilityStandardAbilityGraphSandboxMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardScriptFlowSandboxMod\CapabilityStandardScriptFlowSandboxMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorIntegrationMod\CapabilityStandardGraphBehaviorIntegrationMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardModExtensibleRuntimeShowcaseShared\CapabilityStandardModExtensibleRuntimeShowcaseShared.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardConfigShardsShowcaseMod\CapabilityStandardConfigShardsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardEffectPresetTypeCodeShowcaseMod\CapabilityStandardEffectPresetTypeCodeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterBehaviorExtensionShowcaseMod\CapabilityStandardPresenterBehaviorExtensionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterCommandExtensionShowcaseMod\CapabilityStandardPresenterCommandExtensionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\CapabilityStandardVirtualCameraShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\association_stress\AssociationStressShowcaseMod\AssociationStressShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\scope_switch\ScopeSwitchShowcaseMod\ScopeSwitchShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_vision_decay\FogVisionDecayShowcaseMod\FogVisionDecayShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\team_research\TeamResearchShowcaseMod\TeamResearchShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\ownership_cascade\OwnershipCascadeShowcaseMod\OwnershipCascadeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\diplomacy_trade_gate\DiplomacyTradeGateShowcaseMod\DiplomacyTradeGateShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\gold_market\GoldMarketShowcaseMod\GoldMarketShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fourx_association\FourXAssociationShowcaseMod\FourXAssociationShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\MultiLayerFogFieldShowcaseMod\MultiLayerFogFieldShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\VisionConeHighGroundShowcaseMod\VisionConeHighGroundShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\LineOfSightBrushShowcaseMod\LineOfSightBrushShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\ExploredMemoryShowcaseMod\ExploredMemoryShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\GapGeneratorShowcaseMod\GapGeneratorShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\StealthDetectionShowcaseMod\StealthDetectionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\SharedVisionSnapshotShowcaseMod\SharedVisionSnapshotShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\FogOfWarShowcaseMod\FogOfWarShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\utility_autocast\UtilityAutocastShowcaseMod\UtilityAutocastShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphScoreShowcaseMod\CapabilityStandardGraphScoreShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphFormalTextShowcaseMod\CapabilityStandardGraphFormalTextShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\ui_player_aggregate_graph_mvp\UiPlayerAggregateGraphMvpShowcaseMod\UiPlayerAggregateGraphMvpShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\ControlPlaneProjectionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_entity_list\PanelEntityListShowcaseMod\PanelEntityListShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.Panels\Ludots.UI.Panels.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*"
+          Exclude="..\..\Libraries\SkiaSharp\runtimes\*\native\libSkiaSharp.*"
+          Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SkiaNativeRid)' != ''">
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dll"
+          Link="libSkiaSharp.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dll')" />
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.so"
+          Link="libSkiaSharp.so"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.so')" />
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib"
+          Link="libSkiaSharp.dylib"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib')" />
+  </ItemGroup>
+
+  <Target Name="GasTests_ExcludeReferencedModAssetsFromOutputCopy"
+          AfterTargets="GetCopyToOutputDirectoryItems"
+          BeforeTargets="_CopyOutOfDateSourceItemsToOutputDirectory;_CopyOutOfDateSourceItemsToOutputDirectoryAlways;_CopyDifferingSourceItemsToOutputDirectory">
+    <ItemGroup>
+      <_SourceItemsToCopyToOutputDirectory Remove="@(_SourceItemsToCopyToOutputDirectory)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(GasTestsReferencedModAssetPathRegex)'))" />
+      <_SourceItemsToCopyToOutputDirectoryAlways Remove="@(_SourceItemsToCopyToOutputDirectoryAlways)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(GasTestsReferencedModAssetPathRegex)'))" />
+      <_SourceItemsToCopyToOutputDirectoryIfDifferent Remove="@(_SourceItemsToCopyToOutputDirectoryIfDifferent)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(GasTestsReferencedModAssetPathRegex)'))" />
+      <AllItemsFullPathWithTargetPath Remove="@(AllItemsFullPathWithTargetPath)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(GasTestsReferencedModAssetPathRegex)'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>
+

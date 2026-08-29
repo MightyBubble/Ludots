@@ -1,0 +1,163 @@
+base lines 378 work lines 367
+corrupted lines: 198 auto: 145 manual: 53
+FFFD left: 168
+
+== W L8 (base L12)
+W: T3 PresenterCommand 扩展�? �?CommandKind�?
+C: T3 PerformerCommand 扩展（7 种 CommandKind）
+== W L11 (base L17)
+W:     �?      �?
+C:     │               │
+== W L12 (base L16)
+W:     �?      └──�?T5 PresenterInstanceBuffer 重写（树形操�?+ blackboard 集成�?
+C:     │       └──→ T5 PerformerInstanceBuffer 重写（树形操作 + blackboard 集成）
+== W L13 (base L17)
+W:     �?              �?
+C:     │               │
+== W L14 (base L18)
+W:     �?              ├──�?T7 PresenterRuntimeSystem 重写（CreatePresenter �?parentHandle、递归销毁、scope 销毁、behavior mask�?
+C:     │               ├──→ T7 PerformerRuntimeSystem 重写（CreatePerformer 含 parentHandle、递归销毁、scope 销毁、behavior mask）
+== W L15 (base L19)
+W:     �?              �?      �?
+C:     │               │       │
+== W L16 (base L20)
+W:     �?              �?      ├──�?T9 PresenterBehaviorSystem（AttributeBinding + TagBinding + Material + Sound�?
+C:     │               │       ├──→ T9 PerformerBehaviorSystem（AttributeBinding + TagBinding + Material + Sound）
+== W L17 (base L29)
+W:     �?              �?      �?      �?
+C:     │               │               │
+== W L18 (base L22)
+W:     �?              �?      �?      └──�?T11 PresenterEmitSystem 重写（只处理 AssetBinding emit�?
+C:     │               │       │       └──→ T11 PerformerEmitSystem 重写（只处理 AssetBinding emit）
+== W L19 (base L29)
+W:     �?              �?      �?              �?
+C:     │               │               │
+== W L20 (base L24)
+W:     �?              �?      �?              └──�?T13 Raylib UAT Layer 1（�?AssetKind�?
+C:     │               │       │               └──→ T13 Raylib UAT Layer 1（逐 AssetKind）
+== W L21 (base L29)
+W:     �?              �?      �?                      �?
+C:     │               │               │
+== W L22 (base L26)
+W:     �?              �?      �?                      └──�?T15 Raylib UAT Layer 3（铁匠铺完整�?
+C:     │               │       │                       └──→ T15 Raylib UAT Layer 3（铁匠铺完整）
+== W L23 (base L19)
+W:     �?              �?      �?
+C:     │               │       │
+== W L24 (base L28)
+W:     �?              �?      └──�?T10 Animator 参数统一（AnimatorRuntimeSystem 改读 blackboard�?
+C:     │               │       └──→ T10 Animator 参数统一（AnimatorRuntimeSystem 改读 blackboard）
+== W L25 (base L29)
+W:     �?              �?              �?
+C:     │               │               │
+== W L26 (base L30)
+W:     �?              �?              └──�?T14 Raylib UAT Layer 2（�?BehaviorKind�?
+C:     │               │               └──→ T14 Raylib UAT Layer 2（逐 BehaviorKind）
+== W L27 (base L29)
+W:     �?              �?                      �?
+C:     │               │               │
+== W L28 (base L32)
+W:     �?              �?                      └──�?T15
+C:     │               │                       └──→ T15
+== W L29 (base L17)
+W:     �?              �?
+C:     │               │
+== W L30 (base L34)
+W:     �?              └──�?T8 PresenterGroundingUtility + Transform 计算
+C:     │               └──→ T8 PerformerGroundingUtility + Transform 计算
+== W L42 (base L54)
+W: ### Wave 1 �?基础类型（无依赖，可并行�?
+C: ### Wave 1 — 基础类型（无依赖，可并行）
+== W L58 (base L70)
+W: - `ScopeSource` �?`ParamGraphProgramId` 保留�?PresenterCommand 中（Rule 系统运行时需要），需补进架构文档
+C: - `ScopeSource` 和 `ParamGraphProgramId` 保留在 PerformerCommand 中（Rule 系统运行时需要），需补进架构文档
+== W L62 (base L74)
+W: ### Wave 2 �?实例与定义（依赖 Wave 1�?
+C: ### Wave 2 — 实例与定义（依赖 Wave 1）
+== W L67 (base L79)
+W: | T5 | PresenterInstanceBuffer 重写 | T2, T4 | `Presenters/PresenterInstanceBuffer.cs` | 单元测试：Allocate �?parentHandle �?树形链表正确；Release 递归销毁子树；ReleaseScope �?tag 销毁；blackboard 集成 | L |
+C: | T5 | PerformerInstanceBuffer 重写 | T2, T4 | `Performers/PerformerInstanceBuffer.cs` | 单元测试：Allocate 含 parentHandle → 树形链表正确；Release 递归销毁子树；ReleaseScope 按 tag 销毁；blackboard 集成 | L |
+== W L68 (base L80)
+W: | T6 | PresenterDefinition + ConfigLoader | T1, T3 | `Presenters/PresenterDefinition.cs`, `Config/PresenterDefinitionConfigLoader.cs` | 加载铁匠�?JSON �?定义正确解析；children 展开�?Rule；extends 继承链展开；无效字段报错不崩溃 | L |
+C: | T6 | PerformerDefinition + ConfigLoader | T1, T3 | `Performers/PerformerDefinition.cs`, `Config/PerformerDefinitionConfigLoader.cs` | 加载铁匠铺 JSON → 定义正确解析；children 展开为 Rule；extends 继承链展开；无效字段报错不崩溃 | L |
+== W L80 (base L92)
+W: - Allocate(parentHandle) �?树形链表正确（FirstChildHandle/NextSiblingHandle 头插�?+ blackboard SetParent�?
+C: - Allocate(parentHandle) → 树形链表正确（FirstChildHandle/NextSiblingHandle 头插法 + blackboard SetParent）
+== W L83 (base L95)
+W: - Blackboard 集成：SetParam �?lane 分发、ResolveFloat/Int/Vector 父→子继承链、SetParamDefault 应用定义默认�?
+C: - Blackboard 集成：SetParam 三 lane 分发、ResolveFloat/Int/Vector 父→子继承链、SetParamDefault 应用定义默认值
+== W L90 (base L102)
+W: - 8 �?BehaviorKind 全部�?Parse 方法 �?
+C: - 8 种 BehaviorKind 全部有 Parse 方法 ✓
+== W L95 (base L107)
+W: - T6-F3 修复 ✓：新增 7 �?ConfigLoader 专项单元测试（children/extends/behaviors/legacy/cycle/alias rejection�?
+C: - T6-F3 修复 ✓：新增 7 个 ConfigLoader 专项单元测试（children/extends/behaviors/legacy/cycle/alias rejection）
+== W L103 (base L115)
+W: | T6-F1 | HIGH | ConfigLoader 8+ �?fallback 别名 | 全部删除，ParseLegacyIntValue/NormalizeParamDefaultLane 方法已移�?|
+C: | T6-F1 | HIGH | ConfigLoader 8+ 处 fallback 别名 | 全部删除，ParseLegacyIntValue/NormalizeParamDefaultLane 方法已移除 |
+== W L141 (base L153)
+W: - T6：ConfigLoader �?JSON schema 解析正确，children/extends/behaviors/rules 全链路验证，别名全部清除�? 个专项测�?
+C: - T6：ConfigLoader 新 JSON schema 解析正确，children/extends/behaviors/rules 全链路验证，别名全部清除，7 个专项测试
+== W L152 (base L164)
+W: | T8 | PresenterGroundingUtility + Transform 计算 | T5 | `Presenters/PresenterGroundingUtility.cs` | 单元测试�? �?TransformSource 的位�?旋转/缩放计算正确；SnapToGround/AlignToSurface/None 三种 grounding 模式；BoneAttached 跳过 grounding | M |
+C: | T8 | PerformerGroundingUtility + Transform 计算 | T5 | `Performers/PerformerGroundingUtility.cs` | 单元测试：5 种 TransformSource 的位置/旋转/缩放计算正确；SnapToGround/AlignToSurface/None 三种 grounding 模式；BoneAttached 跳过 grounding | M |
+== W L160 (base L172)
+W: - DestroyPresenterScope �?ScopeTag<=0 �?throw ✓（T7-F1 已修复）
+C: - DestroyPerformerScope 在 ScopeTag<=0 时 throw ✓（T7-F1 已修复）
+== W L168 (base L180)
+W: - 5 �?TransformSource 全部有实现和测试 �?
+C: - 5 种 TransformSource 全部有实现和测试 ✓
+== W L177 (base L189)
+W: ### Wave 4 �?行为与发射（依赖 Wave 3�?
+C: ### Wave 4 — 行为与发射（依赖 Wave 3）
+== W L184 (base L196)
+W: | T10 | Animator 参数统一 | T7 | 修改 `Systems/AnimatorRuntimeSystem.cs` | 单元测试：Animator �?blackboard �?speed/trigger；AnimatorFeedback 写回 blackboard；删�?AnimatorParameterBuffer �?build 通过 | M |
+C: | T10 | Animator 参数统一 | T7 | 修改 `Systems/AnimatorRuntimeSystem.cs` | 单元测试：Animator 从 blackboard 读 speed/trigger；AnimatorFeedback 写回 blackboard；删除 AnimatorParameterBuffer 后 build 通过 | M |
+== W L200 (base L212)
+W: - Animator �?blackboard �?speed/trigger �?
+C: - Animator 从 blackboard 读 speed/trigger ✓
+== W L210 (base L222)
+W: - �?GasTests 回归已修�?✓（T11-F5 已修复）
+C: - 旧 GasTests 回归已修复 ✓（T11-F5 已修复）
+== W L219 (base L231)
+W: ### Wave 5 �?Raylib UAT（依�?Wave 4�?
+C: ### Wave 5 — Raylib UAT（依赖 Wave 4）
+== W L233 (base L245)
+W: - 7 �?AssetKind 全部有独立测�?✓（Mesh/SkinnedMesh/Decal/VFX/Spline/WorldHud/WorldText�?
+C: - 7 种 AssetKind 全部有独立测试 ✓（Mesh/SkinnedMesh/Decal/VFX/Spline/WorldHud/WorldText）
+== W L234 (base L246)
+W: - 额外覆盖 Sound �?GroundOverlay（共 9 种）�?
+C: - 额外覆盖 Sound 和 GroundOverlay（共 9 种）✓
+== W L241 (base L253)
+W: - AttributeBinding 含阈值映�?✓，TagBinding �?tag-off + InvertLogic �?
+C: - AttributeBinding 含阈值映射 ✓，TagBinding 含 tag-off + InvertLogic ✓
+== W L242 (base L254)
+W: - Animator �?blackboard→packed state ✓，Attachment �?bone offset + inheritScale �?
+C: - Animator 含 blackboard→packed state ✓，Attachment 含 bone offset + inheritScale ✓
+== W L243 (base L255)
+W: - Sound �?Play + Stop ✓，Material �?swapTable ✓，Spline �?patrol progress �?
+C: - Sound 含 Play + Stop ✓，Material 含 swapTable ✓，Spline 含 patrol progress ✓
+== W L248 (base L260)
+W: - 9 �?§13 铁匠铺场景全部覆�?✓（出现/开�?停工/日夜/北方/南方/耐久度下�?归零/销毁）
+C: - 9 个 §13 铁匠铺场景全部覆盖 ✓（出现/开工/停工/日夜/北方/南方/耐久度下降/归零/销毁）
+== W L264 (base L276)
+W: ### Wave 6 �?整合与清理（依赖 Wave 5�?
+C: ### Wave 6 — 整合与清理（依赖 Wave 5）
+== W L298 (base L310)
+W: | T17-F2 | �?已完�?| VisualTemplate 系统 5 文件全部删除（Definition/Registry/Ref/ConfigLoader/PresentationAuthoringContext），6 �?mod �?`visual_templates.json` 全部删除�? �?mod 全部迁移�?`presenters.json` |
+C: | T17-F2 | ✓ 已完成 | VisualTemplate 系统 5 文件全部删除（Definition/Registry/Ref/ConfigLoader/PresentationAuthoringContext），6 个 mod 的 `visual_templates.json` 全部删除，8 个 mod 全部迁移到 `performers.json` |
+== W L336 (base L346)
+W: | T20 | Dirty-Driven Behavior | T19 | 修改 `PresenterBehaviorSystem` | 直接�?owner entity �?`GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`；只�?dirty entity �?presenter 求�?behavior；稳态下 behavior eval ~0；不自建 DirtyMask，复�?GAS 已有信号 | L | 基建就绪（`DirtyFlags.IsAnyAttributeDirty`、`GameplayTagEffectiveChangedBits.IsAnyBitSet` 已实现），验收标准待验证 |
+C: | T20 | Dirty-Driven Behavior | T19 | 修改 `PerformerBehaviorSystem` | 直接读 owner entity 的 `GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`；只对 dirty entity 的 performer 求值 behavior；稳态下 behavior eval ~0；不自建 DirtyMask，复用 GAS 已有信号 | L |
+== W L337 (base L347)
+W: | T21 | LOD Children Pruning | T20 | 修改 `PresenterRuntimeSystem` | �?`CullState.LOD` 控制 children 激活数量；Close=5/Medium=3/Far=2；通过 ActivateBehavior/DeactivateBehavior 控制�?50K �?~74K active instances | M |
+C: | T21 | LOD Children Pruning | T20 | 修改 `PerformerRuntimeSystem` | 读 `CullState.LOD` 控制 children 激活数量；Close=5/Medium=3/Far=2；通过 ActivateBehavior/DeactivateBehavior 控制；150K → ~74K active instances | M |
+== W L340 (base L350)
+W: | T24 | LOD-Aware Behavior Ticking | T21 | 修改 `PresenterBehaviorSystem` | �?LOD 分档执行；Medium=Animator 15fps；Far=�?AssetBinding | M |
+C: | T24 | LOD-Aware Behavior Ticking | T21 | 修改 `PerformerBehaviorSystem` | 按 LOD 分档执行；Medium=Animator 15fps；Far=只 AssetBinding | M |
+== W L354 (base L365)
+W: 4. 验收通过 �?标记完成，解锁下游任�?
+C: 4. 验收通过 → 标记完成，解锁下游任务
+== W L355 (base L366)
+W: 5. 验收不通过 �?反馈具体问题，Codex 修复后重新提�?
+C: 5. 验收不通过 → 反馈具体问题，Codex 修复后重新提交

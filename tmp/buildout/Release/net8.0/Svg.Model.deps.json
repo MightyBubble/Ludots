@@ -1,0 +1,69 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "Svg.Model/1.0.0": {
+        "dependencies": {
+          "ShimSkiaSharp": "1.0.0",
+          "Svg.Custom": "1.0.0"
+        },
+        "runtime": {
+          "Svg.Model.dll": {}
+        }
+      },
+      "ExCSS/1.0.0": {
+        "runtime": {
+          "ExCSS.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "ShimSkiaSharp/1.0.0": {
+        "runtime": {
+          "ShimSkiaSharp.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Svg.Custom/1.0.0": {
+        "dependencies": {
+          "ExCSS": "1.0.0"
+        },
+        "runtime": {
+          "Svg.Custom.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Svg.Model/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ExCSS/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ShimSkiaSharp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Svg.Custom/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

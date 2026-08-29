@@ -1,0 +1,1 @@
+{"message": "fix(registry): save_panel binding 走注册表豁免；launcher.config 保持 generator 字节格式", "tree": "3057b45d5306800ce83bd5d834e63d4a8578e679", "parents": ["12c6320625c21d4820206cbbf445ac353d604cb9"]}

@@ -1,0 +1,134 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v7.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v7.0": {
+      "Arch.Relationships/2.1.0": {
+        "dependencies": {
+          "Arch": "2.1.0"
+        },
+        "runtime": {
+          "Arch.Relationships.dll": {}
+        }
+      },
+      "Arch.LowLevel/1.1.5": {
+        "dependencies": {
+          "CommunityToolkit.HighPerformance": "8.2.2",
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
+        },
+        "runtime": {
+          "lib/net7.0/Arch.LowLevel.dll": {
+            "assemblyVersion": "1.1.5.0",
+            "fileVersion": "1.1.5.0"
+          }
+        }
+      },
+      "Collections.Pooled/2.0.0-preview.27": {
+        "runtime": {
+          "lib/netcoreapp3.0/Collections.Pooled.dll": {
+            "assemblyVersion": "2.0.0.0",
+            "fileVersion": "2.0.0.0"
+          }
+        }
+      },
+      "CommunityToolkit.HighPerformance/8.2.2": {
+        "runtime": {
+          "lib/net7.0/CommunityToolkit.HighPerformance.dll": {
+            "assemblyVersion": "8.2.0.0",
+            "fileVersion": "8.2.2.1"
+          }
+        }
+      },
+      "Microsoft.Extensions.ObjectPool/7.0.0": {
+        "runtime": {
+          "lib/net7.0/Microsoft.Extensions.ObjectPool.dll": {
+            "assemblyVersion": "7.0.0.0",
+            "fileVersion": "7.0.22.51819"
+          }
+        }
+      },
+      "System.Runtime.CompilerServices.Unsafe/6.0.0": {},
+      "ZeroAllocJobScheduler/1.1.2": {
+        "runtime": {
+          "lib/netstandard2.1/Schedulers.dll": {
+            "assemblyVersion": "1.1.2.0",
+            "fileVersion": "1.1.2.0"
+          }
+        }
+      },
+      "Arch/2.1.0": {
+        "dependencies": {
+          "Arch.LowLevel": "1.1.5",
+          "Collections.Pooled": "2.0.0-preview.27",
+          "CommunityToolkit.HighPerformance": "8.2.2",
+          "Microsoft.Extensions.ObjectPool": "7.0.0",
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0",
+          "ZeroAllocJobScheduler": "1.1.2"
+        },
+        "runtime": {
+          "Arch.dll": {
+            "assemblyVersion": "2.1.0.0",
+            "fileVersion": "2.1.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Arch.Relationships/2.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Arch.LowLevel/1.1.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-kc6T2qAsgzdb5RV+RIqVQ33LROhgXmA5fZRUhXRK+AJ1J58NML1i2M6XTKIj1ISirCwuqgYnM4qYkhqGcngG1g==",
+      "path": "arch.lowlevel/1.1.5",
+      "hashPath": "arch.lowlevel.1.1.5.nupkg.sha512"
+    },
+    "Collections.Pooled/2.0.0-preview.27": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-VS3uHc1GNamanS1i1hQ3PoZUddIagCswVMWvucAgqWwY2KVwgL2Q7raGu0hTqP/CWuROoq0RiNbIvu4ST1bMzg==",
+      "path": "collections.pooled/2.0.0-preview.27",
+      "hashPath": "collections.pooled.2.0.0-preview.27.nupkg.sha512"
+    },
+    "CommunityToolkit.HighPerformance/8.2.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-+zIp8d3sbtYaRbM6hqDs4Ui/z34j7DcUmleruZlYLE4CVxXq+MO8XJyIs42vzeTYFX+k0Iq1dEbBUnQ4z/Gnrw==",
+      "path": "communitytoolkit.highperformance/8.2.2",
+      "hashPath": "communitytoolkit.highperformance.8.2.2.nupkg.sha512"
+    },
+    "Microsoft.Extensions.ObjectPool/7.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-udvKco0sAVgYGTBnHUb0tY9JQzJ/nPDiv/8PIyz69wl1AibeCDZOLVVI+6156dPfHmJH7ws5oUJRiW4ZmAvuuA==",
+      "path": "microsoft.extensions.objectpool/7.0.0",
+      "hashPath": "microsoft.extensions.objectpool.7.0.0.nupkg.sha512"
+    },
+    "System.Runtime.CompilerServices.Unsafe/6.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-/iUeP3tq1S0XdNNoMz5C9twLSrM/TH+qElHkXWaPvuNOt+99G75NrV0OS2EqHx5wMN7popYjpc8oTjC1y16DLg==",
+      "path": "system.runtime.compilerservices.unsafe/6.0.0",
+      "hashPath": "system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512"
+    },
+    "ZeroAllocJobScheduler/1.1.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-PKu/zSvwV1fWxt8+CEW15O9OlQ2zB9UoeAaor/aJJ0QeTKxxSjigczYLoVPKjYLAQu3ddZQd7Z3zplVTtUgigQ==",
+      "path": "zeroallocjobscheduler/1.1.2",
+      "hashPath": "zeroallocjobscheduler.1.1.2.nupkg.sha512"
+    },
+    "Arch/2.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

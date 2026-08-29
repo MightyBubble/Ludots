@@ -1,0 +1,39 @@
+[
+  {
+    "id": "strategic_hud_state",
+    "components": {
+      "Name": { "Value": "Strategic HUD State" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "AttributeBuffer": {
+        "base": {
+          "StrategicHud.TimeDay": 184,
+          "StrategicHud.Speed": 1,
+          "StrategicHud.ViewMode": 0,
+          "StrategicHud.CameraX": 0,
+          "StrategicHud.CameraY": 0,
+          "StrategicHud.Zoom": 1,
+          "StrategicHud.SelectedHealth": 82,
+          "StrategicHud.SelectedAttack": 64,
+          "StrategicHud.SelectedCount": 1,
+          "StrategicHud.EntityCount": 24,
+          "StrategicHud.AllyCount": 12,
+          "StrategicHud.HostileCount": 4,
+          "StrategicHud.EventCount": 7,
+          "StrategicHud.AlertLevel": 1,
+          "StrategicHud.LastEventCode": 3,
+          "StrategicHud.CommandReady": 1,
+          "StrategicHud.SelectedUnits": 3,
+          "StrategicHud.ActionPoints": 5,
+          "StrategicHud.Diplomacy": 72,
+          "StrategicHud.Research": 46,
+          "StrategicHud.Logistics": 88
+        }
+      },
+      "GameplayTagContainer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardEntityBuffer": {}
+    }
+  }
+]

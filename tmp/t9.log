@@ -1,0 +1,190 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  SkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\SkiaSharp\SkiaSharp\bin\Debug\net8.0\SkiaSharp.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd\src\Platform\Ludots.Platform.Abstractions\bin\Debug\net9.0\Ludots.Platform.Abstractions.dll
+  Ludots.Contracts -> C:\001_AI\LudotsProd\src\Contracts\bin\Debug\net9.0\Ludots.Contracts.dll
+  Ludots.UI -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI\bin\Debug\net9.0\Ludots.UI.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net8.0\Arch.dll
+  ExCSS -> C:\001_AI\LudotsProd\src\Libraries\ExCSS\bin\Debug\net8.0\ExCSS.dll
+  ShimSkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Debug\net8.0\ShimSkiaSharp.dll
+  Svg.Generators -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Debug\netstandard2.0\Svg.Generators.dll
+  Arch.System -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.System\bin\Debug\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net6.0\Arch.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\LudotsProd\src\Graph\Ludots.Graph.Abstractions\bin\Debug\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.Platform.Desktop -> C:\001_AI\LudotsProd\src\Platform\Ludots.Platform.Desktop\bin\Debug\net9.0\Ludots.Platform.Desktop.dll
+  Ludots.UI.Browser -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser\bin\Debug\net9.0\Ludots.UI.Browser.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Relationships\bin\Debug\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Persistence\bin\Debug\net7.0\Arch.Persistence.dll
+  Svg.Custom -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Custom\bin\Debug\net8.0\Svg.Custom.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Core\bin\Debug\net9.0\DotRecast.Core.dll
+  Svg.Model -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Model\bin\Debug\net8.0\Svg.Model.dll
+  DotRecast.Recast -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Debug\net9.0\DotRecast.Recast.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Debug\net9.0\DotRecast.Detour.dll
+  Svg.Skia -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Skia\bin\Debug\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Skia\bin\Debug\net9.0\Ludots.UI.Skia.dll
+  Ludots.Core -> C:\001_AI\LudotsProd\src\Core\bin\Debug\net9.0\Ludots.Core.dll
+  ExampleMod -> C:\001_AI\LudotsProd\mods\ExampleMod\bin\net9.0\ExampleMod.dll
+  AIDemoMod -> C:\001_AI\LudotsProd\mods\showcases\ai_demo\AIDemoMod\bin\net9.0\AIDemoMod.dll
+  FourXDemoMod -> C:\001_AI\LudotsProd\mods\showcases\fourx_demo\FourXDemoMod\bin\net9.0\FourXDemoMod.dll
+  VersionMismatchMod -> C:\001_AI\LudotsProd\mods\fixtures\version_mismatch\VersionMismatchMod\bin\net9.0\VersionMismatchMod.dll
+  VisionConeHighGroundShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_of_war\VisionConeHighGroundShowcaseMod\bin\net9.0\VisionConeHighGroundShowcaseMod.dll
+  ScopeSwitchShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\scope_switch\ScopeSwitchShowcaseMod\bin\net9.0\ScopeSwitchShowcaseMod.dll
+  ProgressionScopeShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\bin\net9.0\ProgressionScopeShowcaseMod.dll
+  OwnershipCascadeShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\ownership_cascade\OwnershipCascadeShowcaseMod\bin\net9.0\OwnershipCascadeShowcaseMod.dll
+  LineOfSightBrushShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_of_war\LineOfSightBrushShowcaseMod\bin\net9.0\LineOfSightBrushShowcaseMod.dll
+  DepApiMod -> C:\001_AI\LudotsProd\mods\fixtures\dep_api\DepApiMod\bin\net9.0\DepApiMod.dll
+  SharedVisionSnapshotShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_of_war\SharedVisionSnapshotShowcaseMod\bin\net9.0\SharedVisionSnapshotShowcaseMod.dll
+  CameraBootstrapMod -> C:\001_AI\LudotsProd\mods\capabilities\camera\CameraBootstrapMod\bin\net9.0\CameraBootstrapMod.dll
+  FogVisionDecayShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_vision_decay\FogVisionDecayShowcaseMod\bin\net9.0\FogVisionDecayShowcaseMod.dll
+  CycleAMod -> C:\001_AI\LudotsProd\mods\fixtures\cycle_a\CycleAMod\bin\net9.0\CycleAMod.dll
+  UiPlayerAggregateGraphMvpShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\ui_player_aggregate_graph_mvp\UiPlayerAggregateGraphMvpShowcaseMod\bin\net9.0\UiPlayerAggregateGraphMvpShowcaseMod.dll
+  DiagnosticsOverlayMod -> C:\001_AI\LudotsProd\mods\DiagnosticsOverlayMod\bin\net9.0\DiagnosticsOverlayMod.dll
+  TerrainBenchmarkMod -> C:\001_AI\LudotsProd\mods\TerrainBenchmarkMod\bin\net9.0\TerrainBenchmarkMod.dll
+  DiplomacyTradeGateShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\diplomacy_trade_gate\DiplomacyTradeGateShowcaseMod\bin\net9.0\DiplomacyTradeGateShowcaseMod.dll
+  StealthDetectionShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_of_war\StealthDetectionShowcaseMod\bin\net9.0\StealthDetectionShowcaseMod.dll
+  LudotsCoreMod -> C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  CombatStanceBehaviorMod -> C:\001_AI\LudotsProd\mods\CombatStanceBehaviorMod\bin\net9.0\CombatStanceBehaviorMod.dll
+  UtilityAutocastShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\utility_autocast\UtilityAutocastShowcaseMod\bin\net9.0\UtilityAutocastShowcaseMod.dll
+  TcgDemoMod -> C:\001_AI\LudotsProd\mods\showcases\tcg_demo\TcgDemoMod\bin\net9.0\TcgDemoMod.dll
+  FogOfWarShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_of_war\FogOfWarShowcaseMod\bin\net9.0\FogOfWarShowcaseMod.dll
+  GapGeneratorShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_of_war\GapGeneratorShowcaseMod\bin\net9.0\GapGeneratorShowcaseMod.dll
+  MultiLayerFogFieldShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_of_war\MultiLayerFogFieldShowcaseMod\bin\net9.0\MultiLayerFogFieldShowcaseMod.dll
+  MissingDepMod -> C:\001_AI\LudotsProd\mods\fixtures\missing_dep\MissingDepMod\bin\net9.0\MissingDepMod.dll
+  FourXAssociationShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fourx_association\FourXAssociationShowcaseMod\bin\net9.0\FourXAssociationShowcaseMod.dll
+  ItemSystemShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\item_system\ItemSystemShowcaseMod\bin\net9.0\ItemSystemShowcaseMod.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.DataPlane\bin\Debug\net9.0\Ludots.WebUI.DataPlane.dll
+  RoadNetworkShowcaseData -> C:\001_AI\LudotsProd\mods\showcases\shared\RoadNetworkShowcaseData\bin\net9.0\RoadNetworkShowcaseData.dll
+  Ludots.Graph.Codegen -> C:\001_AI\LudotsProd\src\Graph\Ludots.Graph.Codegen\bin\Debug\net9.0\Ludots.Graph.Codegen.dll
+  SplineSurfaceUatMod -> C:\001_AI\LudotsProd\mods\showcases\spline_surface_uat\SplineSurfaceUatMod\bin\net9.0\SplineSurfaceUatMod.dll
+  EntityInfoPanelsMod -> C:\001_AI\LudotsProd\mods\capabilities\entityinfo\EntityInfoPanelsMod\bin\net9.0\EntityInfoPanelsMod.dll
+  GoldMarketShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\gold_market\GoldMarketShowcaseMod\bin\net9.0\GoldMarketShowcaseMod.dll
+  RtsWar3TrainingShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\rts_training_war3\RtsWar3TrainingShowcaseMod\bin\net9.0\RtsWar3TrainingShowcaseMod.dll
+  CapabilityStandardModExtensibleRuntimeShowcaseShared -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardModExtensibleRuntimeShowcaseShared\bin\net9.0\CapabilityStandardModExtensibleRuntimeShowcaseShared.dll
+  StaticObstaclePhysicsShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\static_obstacle_physics\StaticObstaclePhysicsShowcaseMod\bin\net9.0\StaticObstaclePhysicsShowcaseMod.dll
+  ParticipantViewCapabilityMod -> C:\001_AI\LudotsProd\mods\capabilities\participant_view\ParticipantViewCapabilityMod\bin\net9.0\ParticipantViewCapabilityMod.dll
+  RtsSc2TrainingShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\rts_training_sc2\RtsSc2TrainingShowcaseMod\bin\net9.0\RtsSc2TrainingShowcaseMod.dll
+  CombatStanceShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\combat_stance\CombatStanceShowcaseMod\bin\net9.0\CombatStanceShowcaseMod.dll
+  CapabilityStandardTransportNetworkMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\bin\net9.0\CapabilityStandardTransportNetworkMod.dll
+  Ludots.Launcher.Backend -> C:\001_AI\LudotsProd\src\Tools\Ludots.Launcher.Backend\bin\Debug\net9.0\Ludots.Launcher.Backend.dll
+  MassNavigationMod -> C:\001_AI\LudotsProd\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+  PanelEntityListShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\panel_entity_list\PanelEntityListShowcaseMod\bin\net9.0\PanelEntityListShowcaseMod.dll
+  RtsCncTrainingShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\rts_training_cnc\RtsCncTrainingShowcaseMod\bin\net9.0\RtsCncTrainingShowcaseMod.dll
+  Ludots.AgentBridge -> C:\001_AI\LudotsProd\src\Libraries\Ludots.AgentBridge\bin\Debug\net9.0\Ludots.AgentBridge.dll
+  ChunkStreamingShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\chunk_streaming\ChunkStreamingShowcaseMod\bin\net9.0\ChunkStreamingShowcaseMod.dll
+  CapabilityStandardGraphBehaviorCommon -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorCommon\bin\net9.0\CapabilityStandardGraphBehaviorCommon.dll
+  TeamResearchShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\team_research\TeamResearchShowcaseMod\bin\net9.0\TeamResearchShowcaseMod.dll
+  HtmlTestMod -> C:\001_AI\LudotsProd\mods\showcases\html_test\HtmlTestMod\bin\net9.0\HtmlTestMod.dll
+  ExploredMemoryShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\fog_of_war\ExploredMemoryShowcaseMod\bin\net9.0\ExploredMemoryShowcaseMod.dll
+  DepConsumerMod -> C:\001_AI\LudotsProd\mods\fixtures\dep_consumer\DepConsumerMod\bin\net9.0\DepConsumerMod.dll
+  ForgeSocketShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\item_system\ForgeSocketShowcaseMod\bin\net9.0\ForgeSocketShowcaseMod.dll
+  ItemLoadoutShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\item_system\ItemLoadoutShowcaseMod\bin\net9.0\ItemLoadoutShowcaseMod.dll
+  CapabilityStandardParticipantViewsMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardParticipantViewsMod\bin\net9.0\CapabilityStandardParticipantViewsMod.dll
+  RaidLoopShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\item_system\RaidLoopShowcaseMod\bin\net9.0\RaidLoopShowcaseMod.dll
+  CoreInputMod -> C:\001_AI\LudotsProd\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\LudotsProd\src\Core\Ludots.Physics.Broadphase\bin\Debug\net9.0\Ludots.Physics.Broadphase.dll
+  WeaponBenchShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\item_system\WeaponBenchShowcaseMod\bin\net9.0\WeaponBenchShowcaseMod.dll
+  CameraAcceptanceHotpathEntryMod -> C:\001_AI\LudotsProd\mods\fixtures\camera\CameraAcceptanceHotpathEntryMod\bin\net9.0\CameraAcceptanceHotpathEntryMod.dll
+  CycleBMod -> C:\001_AI\LudotsProd\mods\fixtures\cycle_b\CycleBMod\bin\net9.0\CycleBMod.dll
+  CapabilityStandardPresenterBehaviorExtensionShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardPresenterBehaviorExtensionShowcaseMod\bin\net9.0\CapabilityStandardPresenterBehaviorExtensionShowcaseMod.dll
+  CapabilityStandardEffectPresetTypeCodeShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardEffectPresetTypeCodeShowcaseMod\bin\net9.0\CapabilityStandardEffectPresetTypeCodeShowcaseMod.dll
+  CapabilityStandardPresenterCommandExtensionShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardPresenterCommandExtensionShowcaseMod\bin\net9.0\CapabilityStandardPresenterCommandExtensionShowcaseMod.dll
+  EntityCommandPanelMod -> C:\001_AI\LudotsProd\mods\EntityCommandPanelMod\bin\net9.0\EntityCommandPanelMod.dll
+  Ludots.WebUI.PanelKit -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.PanelKit\bin\Debug\net9.0\Ludots.WebUI.PanelKit.dll
+  RtsDemoMod -> C:\001_AI\LudotsProd\mods\showcases\rts_demo\RtsDemoMod\bin\net9.0\RtsDemoMod.dll
+  CameraShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\camera\CameraShowcaseMod\bin\net9.0\CameraShowcaseMod.dll
+  RoadNetworkShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\road_network\RoadNetworkShowcaseMod\bin\net9.0\RoadNetworkShowcaseMod.dll
+  CapabilityStandardVirtualCameraShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\bin\net9.0\CapabilityStandardVirtualCameraShowcaseMod.dll
+  ArpgDemoMod -> C:\001_AI\LudotsProd\mods\showcases\arpg_demo\ArpgDemoMod\bin\net9.0\ArpgDemoMod.dll
+  CapabilityStandardConfigShardsShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardConfigShardsShowcaseMod\bin\net9.0\CapabilityStandardConfigShardsShowcaseMod.dll
+  MobaDemoMod -> C:\001_AI\LudotsProd\mods\showcases\moba_demo\MobaDemoMod\bin\net9.0\MobaDemoMod.dll
+  VirtualCameraShotsMod -> C:\001_AI\LudotsProd\mods\capabilities\camera\VirtualCameraShotsMod\bin\net9.0\VirtualCameraShotsMod.dll
+  Ludots.Physics2D -> C:\001_AI\LudotsProd\src\Core\Ludots.Physics2D\bin\Debug\net9.0\Ludots.Physics2D.dll
+  MinimapShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\minimap\MinimapShowcaseMod\bin\net9.0\MinimapShowcaseMod.dll
+  CameraProfilesMod -> C:\001_AI\LudotsProd\mods\capabilities\camera\CameraProfilesMod\bin\net9.0\CameraProfilesMod.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.HtmlEngine\bin\Debug\net9.0\Ludots.UI.HtmlEngine.dll
+  CameraAcceptanceMod -> C:\001_AI\LudotsProd\mods\fixtures\camera\CameraAcceptanceMod\bin\net9.0\CameraAcceptanceMod.dll
+  CapabilityStandardBehaviorTreeArenaMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardBehaviorTreeArenaMod\bin\net9.0\CapabilityStandardBehaviorTreeArenaMod.dll
+  CapabilityStandardHfsmSentryArenaMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardHfsmSentryArenaMod\bin\net9.0\CapabilityStandardHfsmSentryArenaMod.dll
+  CapabilityStandardScriptFlowSandboxMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardScriptFlowSandboxMod\bin\net9.0\CapabilityStandardScriptFlowSandboxMod.dll
+  CapabilityStandardAbilityGraphSandboxMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardAbilityGraphSandboxMod\bin\net9.0\CapabilityStandardAbilityGraphSandboxMod.dll
+  CapabilityStandardGraphFormalTextShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardGraphFormalTextShowcaseMod\bin\net9.0\CapabilityStandardGraphFormalTextShowcaseMod.dll
+  CapabilityStandardGraphBehaviorIntegrationMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorIntegrationMod\bin\net9.0\CapabilityStandardGraphBehaviorIntegrationMod.dll
+  CapabilityStandardTimeFlowShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\bin\net9.0\CapabilityStandardTimeFlowShowcaseMod.dll
+  CapabilityStandardPhysics2DStressMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\bin\net9.0\CapabilityStandardPhysics2DStressMod.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\LudotsProd\src\Core\Ludots.Movement.Physics2DBridge\bin\Debug\net9.0\Ludots.Movement.Physics2DBridge.dll
+  CapabilityStandardPhysics2DMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardPhysics2DMod\bin\net9.0\CapabilityStandardPhysics2DMod.dll
+  AIInspectorMod -> C:\001_AI\LudotsProd\mods\AIInspectorMod\bin\net9.0\AIInspectorMod.dll
+  CapabilityStandardPhysics2DShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\bin\net9.0\CapabilityStandardPhysics2DShowcaseMod.dll
+  CapabilityStandardGraphScoreShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardGraphScoreShowcaseMod\bin\net9.0\CapabilityStandardGraphScoreShowcaseMod.dll
+  InteractionShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\interaction\InteractionShowcaseMod\bin\net9.0\InteractionShowcaseMod.dll
+  ChampionSkillSandboxMod -> C:\001_AI\LudotsProd\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\bin\net9.0\ChampionSkillSandboxMod.dll
+  AssociationStressShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\association_stress\AssociationStressShowcaseMod\bin\net9.0\AssociationStressShowcaseMod.dll
+  CapabilityStandardGraphOpsNodeGalleryMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardGraphOpsNodeGalleryMod\bin\net9.0\CapabilityStandardGraphOpsNodeGalleryMod.dll
+  CapabilityStandardLiveSkillWorkbenchShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\bin\net9.0\CapabilityStandardLiveSkillWorkbenchShowcaseMod.dll
+  UiTestMod -> C:\001_AI\LudotsProd\mods\UiTestMod\bin\net9.0\UiTestMod.dll
+  GasBenchmarkMod -> C:\001_AI\LudotsProd\mods\GasBenchmarkMod\bin\net9.0\GasBenchmarkMod.dll
+  PerformanceMod -> C:\001_AI\LudotsProd\mods\PerformanceMod\bin\net9.0\PerformanceMod.dll
+  ReactiveTestMod -> C:\001_AI\LudotsProd\mods\fixtures\reactive_test\ReactiveTestMod\bin\net9.0\ReactiveTestMod.dll
+  UxPrototypeMod -> C:\001_AI\LudotsProd\mods\showcases\ux_prototype\UxPrototypeMod\bin\net9.0\UxPrototypeMod.dll
+  PerformanceVisualizationMod -> C:\001_AI\LudotsProd\mods\PerformanceVisualizationMod\bin\net9.0\PerformanceVisualizationMod.dll
+  Ludots.UI.Panels -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Panels\bin\Debug\net9.0\Ludots.UI.Panels.dll
+  SuperweaponContextShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\superweapon_context\SuperweaponContextShowcaseMod\bin\net9.0\SuperweaponContextShowcaseMod.dll
+  NarrativeFrontendMod -> C:\001_AI\LudotsProd\mods\capabilities\narrativefrontend\NarrativeFrontendMod\bin\net9.0\NarrativeFrontendMod.dll
+  Ludots.WebUI.Browser -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.Browser\bin\Debug\net9.0\Ludots.WebUI.Browser.dll
+  EntityQueryTacticsShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\entity_query_tactics\EntityQueryTacticsShowcaseMod\bin\net9.0\EntityQueryTacticsShowcaseMod.dll
+  RelationshipShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\relationship\RelationshipShowcaseMod\bin\net9.0\RelationshipShowcaseMod.dll
+  BrowserMinimapCompositedOverlayShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\browser_minimap_composited_overlay\BrowserMinimapCompositedOverlayShowcaseMod\bin\net9.0\BrowserMinimapCompositedOverlayShowcaseMod.dll
+  NarrativeShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\narrative\NarrativeShowcaseMod\bin\net9.0\NarrativeShowcaseMod.dll
+  ControlPlaneProjectionShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\bin\net9.0\ControlPlaneProjectionShowcaseMod.dll
+  EntityCommandPanelShowcaseMod -> C:\001_AI\LudotsProd\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\bin\net9.0\EntityCommandPanelShowcaseMod.dll
+  GasTests -> C:\001_AI\LudotsProd\src\Tests\GasTests\bin\Debug\net9.0\GasTests.dll
+C:\001_AI\LudotsProd\src\Tests\GasTests\bin\Debug\net9.0\GasTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+  失败 OfferActivity_RollCallOffersGalleryActivityEachWave [23 ms]
+  错误消息:
+     wave one must offer the gallery activity to the placed caster
+Assert.That(activities.CaptureViews().Count(v => v.ActivityId == "gallery.op.offer_activity"), Is.EqualTo(1))
+  Expected: 1
+  But was:  2
+
+  堆栈跟踪:
+     at Ludots.Tests.Gas.Production.GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_RollCallOffersGalleryActivityEachWave() in C:\001_AI\LudotsProd\src\Tests\GasTests\Production\GraphOpsNodeGalleryOfferActivityAcceptanceTests.cs:line 37
+
+1)    at Ludots.Tests.Gas.Production.GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_RollCallOffersGalleryActivityEachWave() in C:\001_AI\LudotsProd\src\Tests\GasTests\Production\GraphOpsNodeGalleryOfferActivityAcceptanceTests.cs:line 37
+
+
+  标准输出消息:
+ [INF][Map] Cleaning up map 'capability_standard_graph_op_WriteMapVarInt'...
+ [INF][Map] Destroyed 2 map entities (MapId=capability_standard_graph_op_WriteMapVarInt).
+ [INF][Map] Map 'capability_standard_graph_op_WriteMapVarInt' unloaded.
+ [INF][Engine] Loading Map: capability_standard_graph_op_OfferActivity
+ [INF][Map] Loading Map: capability_standard_graph_op_OfferActivity
+ [INF][Config] Merged fragment from: CapabilityStandardGraphOpsNodeGalleryMod:assets/Maps/capability_standard_graph_op_OfferActivity.json
+ [INF][Map] Map 'capability_standard_graph_op_OfferActivity' loaded.
+ [INF][Map] Map 'capability_standard_graph_op_OfferActivity' pushed to focus (stack depth=1).
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Engine] Pathing bootstrap skipped for map 'capability_standard_graph_op_OfferActivity': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=180 pitch=75 dist=2600cm fov=50
+ [INF][Engine] Firing MapLoaded event for capability_standard_graph_op_OfferActivity...
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+
+
+  失败 WikiPages_QuoteCurrentVignetteCopy [28 ms]
+  错误消息:
+     Wiki/vignette copy drift:
+OfferActivity: wiki page missing: C:\001_AI\LudotsProd\gitbook\reference\graph-node-op-wiki\OfferActivity.md
+Assert.That(failures, Is.Empty)
+  Expected: <empty>
+  But was:  < "OfferActivity: wiki page missing: C:\001_AI\LudotsProd\gitbook\reference\graph-node-op-wiki\OfferActivity.md" >
+
+  堆栈跟踪:
+     at Ludots.Tests.Gas.Production.GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy() in C:\001_AI\LudotsProd\src\Tests\GasTests\Production\GraphOpsNodeGallerySyncGateTests.cs:line 70
+
+1)    at Ludots.Tests.Gas.Production.GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy() in C:\001_AI\LudotsProd\src\Tests\GasTests\Production\GraphOpsNodeGallerySyncGateTests.cs:line 70
+
+
+
+失败!  - 失败:     2，通过:   206，已跳过:     0，总计:   208，持续时间: 9 s - GasTests.dll (net9.0)
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

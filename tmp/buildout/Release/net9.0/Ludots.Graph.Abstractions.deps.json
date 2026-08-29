@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "Ludots.Graph.Abstractions/1.0.0": {
+        "dependencies": {
+          "Ludots.Contracts": "1.0.0"
+        },
+        "runtime": {
+          "Ludots.Graph.Abstractions.dll": {}
+        }
+      },
+      "Ludots.Contracts/1.0.0": {
+        "runtime": {
+          "Ludots.Contracts.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Ludots.Graph.Abstractions/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Ludots.Contracts/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

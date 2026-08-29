@@ -1,0 +1,1367 @@
+你是独立复核人。下面有两段 C# 源码：第一段【旧】是迁移前宿主循环的内联帧序（原 560-965 行），第二段【新】是迁移后的唯一帧执行者 RaylibFrameRenderer。任务：逐 pass 对照，列出行为差异（搬丢、顺序变化、条件变化、遗漏的清理），输出阻断/应改/通过三档，最多 12 条，每条给行号。不要跑命令不要访问网络。用中文。
+
+=====【旧】迁移前宿主内联帧序=====
+                        if (globalFieldVisualBuffer != null)
+                        {
+                            globalFieldVisualBuffer.BeginFrame();
+                            if (engine.TryGetService(CoreServiceKeys.VisionFogFieldStore, out FogFieldStore fogFieldsForProjection))
+                            {
+                                fogFieldProjector.Project(fogFieldsForProjection, globalFieldVisualBuffer);
+                            }
+                        }
+
+                        if (overlaySceneBuilder != null && overlayScene != null)
+                        {
+                            long overlayBuildStart = Stopwatch.GetTimestamp();
+                            overlaySceneBuilder.Build(overlayScene);
+                            presentationTiming?.ObserveScreenOverlayBuild(
+                                ElapsedMs(overlayBuildStart),
+                                overlayScene.DirtyLaneCount,
+                                overlayScene.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveScreenOverlayBuild(0d, 0, 0);
+                        }
+                        presentationTiming?.ObserveHostPostTick(ElapsedMs(postTickStart));
+
+                        long beginDrawingStart = Stopwatch.GetTimestamp();
+                        Rl.BeginDrawing();
+                        presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
+                        Restore3DDepthState();
+                        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+                        skyEnvironment.EnsureActiveForMap(activeMapId);
+                        waterPass.EnsureActiveForMap(activeMapId);
+                        visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
+                        Color frameClearColor = skyEnvironment.IsActive
+                            ? skyEnvironment.ResolveClearColor()
+                            : (activeMapRequestsDeepBackground
+                                ? new Raylib_cs.Color(6, 10, 16, 255)
+                                : new Raylib_cs.Color(0, 0, 0, 255));
+
+                        var activeCamera = cameraAdapter.Camera;
+                        CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
+
+                        if (skyEnvironment.HasDayPhase)
+                        {
+                            frameLighting.SetDayPhase(skyEnvironment.DayPhase01);
+                        }
+                        else
+                        {
+                            frameLighting.Evaluate();
+                        }
+
+                        terrainRenderer.ApplyFrameLighting(frameLighting);
+                        visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
+                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position);
+                        primitiveRenderer.DrawSurfaceWireBoxes = drawDebugDraw;
+
+                        bool waterOnVisualHeightmap = waterPass.IsActive &&
+                                                      drawTerrain &&
+                                                      drawVisualHeightmap &&
+                                                      hasVisualHeightmap;
+                        bool waterOnVertexMap = waterPass.IsActive &&
+                                                drawTerrain &&
+                                                !waterOnVisualHeightmap &&
+                                                engine.VertexMap != null;
+                        bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
+                        bool postProcessWorldFrame = !waterFboEnabled;
+                        if (postProcessWorldFrame)
+                        {
+                            environmentRenderer.BeginWorldFrame(lastW, lastH, frameClearColor);
+                        }
+                        else
+                        {
+                            Rl.ClearBackground(frameClearColor);
+                        }
+                        if (waterFboEnabled)
+                        {
+                            waterPass.EnsureRenderTargets(lastW, lastH);
+                            waterPass.Advance(dt);
+
+                            Camera3D reflectionCamera = waterPass.BuildReflectionCamera(in activeCamera);
+                            waterPass.BeginReflectionPass(frameClearColor);
+                            Restore3DDepthState();
+                            BeginCoreMode3D(reflectionCamera, in activeCameraState);
+                            Restore3DDepthState();
+                            if (skyEnvironment.IsActive)
+                            {
+                                skyEnvironment.Draw(in reflectionCamera, in activeCameraState);
+                                Restore3DDepthState();
+                            }
+
+                            if (waterOnVisualHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
+                                vhReflect is IVisualHeightmapRenderSource reflectSource)
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine.VertexMap), reflectionCamera);
+                            }
+
+                            EndCoreMode3D();
+                            waterPass.EndPass();
+
+                            waterPass.BeginRefractionPass(frameClearColor);
+                            Restore3DDepthState();
+                            BeginCoreMode3D(activeCamera, in activeCameraState);
+                            Restore3DDepthState();
+                            if (skyEnvironment.IsActive)
+                            {
+                                skyEnvironment.Draw(in activeCamera, in activeCameraState);
+                                Restore3DDepthState();
+                            }
+
+                            if (waterOnVisualHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhRefract) &&
+                                vhRefract is IVisualHeightmapRenderSource refractSource)
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                visualHeightmapRenderer.Render(refractSource, activeCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine.VertexMap), activeCamera);
+                            }
+
+                            EndCoreMode3D();
+                            waterPass.EndPass();
+                        }
+
+                        long mode3DStart = Stopwatch.GetTimestamp();
+                        Restore3DDepthState();
+                        BeginCoreMode3D(activeCamera, in activeCameraState);
+                        Restore3DDepthState();
+
+                        if (skyEnvironment.IsActive)
+                        {
+                            skyEnvironment.Draw(in activeCamera, in activeCameraState);
+                            Restore3DDepthState();
+                        }
+
+                        if (drawDebugDraw &&
+                            !(drawVisualHeightmap && hasVisualHeightmap) &&
+                            !hostDebugGuidesSuppressed)
+                        {
+                            DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
+
+                            var target = activeCamera.target;
+                            Rl.DrawLine3D(target, target + new Vector3(2.0f, 0, 0), Color.RED);
+                            Rl.DrawLine3D(target, target + new Vector3(0, 0, 2.0f), Color.BLUE);
+                            Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
+                        }
+
+                        if (drawVisualHeightmap &&
+                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
+                            visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
+                        {
+                            long terrainStart = Stopwatch.GetTimestamp();
+                            if (waterOnVisualHeightmap)
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                            }
+                            else
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
+                            }
+
+                            visualHeightmapRenderer.Render(visualTerrainSource, activeCamera);
+
+                            if (waterOnVisualHeightmap)
+                            {
+                                terrainRenderer.EnsureWaterShadersReady();
+                                terrainRenderer.BindReflectiveWater(waterPass);
+                                // Half-extent covers the island board (~1.28km); plane follows camera target XZ.
+                                terrainRenderer.DrawReflectiveOceanPlane(
+                                    waterPass.WaterPlaneY,
+                                    halfExtentMeters: 900f,
+                                    in activeCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.ClearReflectiveWater();
+                            }
+
+                            presentationTiming?.ObserveTerrain(
+                                ElapsedMs(terrainStart),
+                                visualHeightmapRenderer.ChunkBuildMsLastFrame,
+                                visualHeightmapRenderer.DrawnChunkCountLastFrame,
+                                visualHeightmapRenderer.BuiltChunkCountLastFrame);
+                        }
+                        else if (drawTerrain)
+                        {
+                            long terrainStart = Stopwatch.GetTimestamp();
+                            if (waterOnVertexMap)
+                            {
+                                terrainRenderer.BindReflectiveWater(waterPass);
+                            }
+                            else
+                            {
+                                terrainRenderer.ClearReflectiveWater();
+                            }
+
+                            terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), activeCamera);
+                            presentationTiming?.ObserveTerrain(
+                                ElapsedMs(terrainStart),
+                                terrainRenderer.ChunkBuildMsLastFrame,
+                                terrainRenderer.DrawnChunkCountLastFrame,
+                                terrainRenderer.BuiltChunkCountLastFrame);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
+                        }
+
+                        if (drawNavMeshOverlay)
+                        {
+                            navMeshPresentationRenderer.Draw(navMeshPresentationBuffer);
+                            screenOverlayBuffer?.AddText(
+                                10,
+                                40,
+                                navMeshPresentationBuffer.FormatMetadataLine(),
+                                14,
+                                new Vector4(1f, 0.92f, 0.5f, 1f));
+                        }
+
+                        if (drawFieldOverlays && globalFieldVisualBuffer != null)
+                        {
+                            long fieldRenderStart = Stopwatch.GetTimestamp();
+                            fieldRenderPresenter.Draw(globalFieldVisualBuffer);
+                            presentationTiming?.ObserveGlobalFieldRender(
+                                ElapsedMs(fieldRenderStart),
+                                fieldRenderPresenter.LastFieldTextureCount,
+                                fieldRenderPresenter.LastDirtyUploadCount,
+                                fieldRenderPresenter.LastDirtyUploadArea,
+                                fieldRenderPresenter.LastDrawCount);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
+                        }
+
+                        // Benchmark ISM bridge and performer primitive/skinned lanes are independent.
+                        // Drawing the benchmark scene must not skip GpuSkinnedInstance / host material / VFX.
+                        if (benchmarkRenderer != null)
+                        {
+                            _ = benchmarkRenderer.Draw(activeCamera);
+                        }
+
+                        if (drawPrimitives &&
+                            engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
+                            engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
+                        {
+                            if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
+                            {
+                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D presenters emitting?");
+                                _emptyBufferWarned = true;
+                            }
+                            long primitiveStart = Stopwatch.GetTimestamp();
+                            PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
+                            SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
+                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
+                            if (visualHeightmap != null)
+                            {
+                                visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
+                                terrainRenderer.BindStampHeightSampleSource(visualHeightmap);
+                            }
+
+                            primitiveRenderer.Draw(
+                                draw,
+                                activeCamera,
+                                snapshot,
+                                skinnedBatch,
+                                meshes,
+                                renderDebug.AcceptanceScaleMultiplier,
+                                visualHeightmap,
+                                runtimeStopwatch.Elapsed.TotalSeconds);
+                            presentationTiming?.ObservePrimitiveRender(
+                                ElapsedMs(primitiveStart),
+                                primitiveRenderer.LastInstancedInstances,
+                                primitiveRenderer.LastInstancedBatches,
+                                primitiveRenderer.LastInstancedMatrixBuildMs,
+                                primitiveRenderer.LastInstancedMeshDrawMs,
+                                primitiveRenderer.LastInstancedMatrixCacheHits,
+                                primitiveRenderer.LastInstancedMatrixCacheMisses,
+                                primitiveRenderer.LastPersistentSyncMs,
+                                primitiveRenderer.LastPersistentBucketDrawMs,
+                                primitiveRenderer.LastImmediateDrawMs,
+                                primitiveRenderer.LastImmediateSkippedCount,
+                                skinnedBatch?.Count ?? 0,
+                                primitiveRenderer.LastGpuSkinnedInstances,
+                                primitiveRenderer.LastGpuSkinnedBatches,
+                                primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
+                                primitiveRenderer.LastGpuSkinnedMeshDrawMs);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObservePrimitiveRender(0d, 0, 0);
+                        }
+
+                        // Draw ground overlays (range circles, cones, etc.)
+                        if (!cleanPerformanceMode &&
+                            engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
+                            overlays.Count > 0)
+                        {
+                            long groundOverlayStart = Stopwatch.GetTimestamp();
+                            RaylibWorldOverlayRenderer.DrawGroundOverlays(overlays);
+                            presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveGroundOverlayRender(0d, 0);
+                        }
+
+                        if (!cleanPerformanceMode &&
+                            engine.GlobalContext.TryGetValue(CoreServiceKeys.SplineRibbonBuffer.Name, out var splineObj) &&
+                            splineObj is SplineRibbonBuffer splineRibbons && splineRibbons.Count > 0)
+                        {
+                            long splineRibbonStart = Stopwatch.GetTimestamp();
+                            RaylibWorldOverlayRenderer.DrawSplineRibbons(splineRibbons);
+                            presentationTiming?.ObserveSplineRibbonRender(ElapsedMs(splineRibbonStart), splineRibbons.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveSplineRibbonRender(0d, 0);
+                        }
+
+                        if (drawDebugDraw &&
+                            engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
+                        {
+                            long debugDrawStart = Stopwatch.GetTimestamp();
+                            debugDrawRenderer.Draw(dd);
+                            presentationTiming?.ObserveDebugDrawRender(
+                                ElapsedMs(debugDrawStart),
+                                dd.Lines.Count + dd.Circles.Count + dd.Boxes.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveDebugDrawRender(0d, 0);
+                        }
+
+                        EndCoreMode3D();
+                        presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
+                        if (postProcessWorldFrame)
+                        {
+                            environmentRenderer.EndWorldFrame(runtimeStopwatch.Elapsed.TotalSeconds);
+                        }
+
+                        if (drawSkiaUi)
+                        {
+                            browserLayerRenderer.Render(uiRoot.Scene, lastW, lastH);
+                        }
+
+                        long overlayStart = Stopwatch.GetTimestamp();
+                        OverlayCompositeResult overlayResult = overlayCompositor.Render(
+                            overlayScene,
+                            uiRoot,
+                            skiaRenderer,
+                            drawSkiaUi,
+                            hostDiagnosticUiSuppressed);
+                        presentationTiming?.ObserveUiRender(overlayResult.UiRenderMs);
+                        presentationTiming?.ObserveUiUpload(overlayResult.UploadMs);
+                        presentationTiming?.ObserveCompositeSkip(!overlayResult.RefreshComposite);
+                        screenOverlayBuffer?.Clear();
+                        presentationTiming?.ObserveScreenOverlayDraw(
+                            ElapsedMs(overlayStart),
+                            overlayResult.PaintMs,
+                            overlayResult.CompositeMs,
+                            overlayResult.UploadMs,
+                            overlayResult.FinalDrawMs,
+                            overlayCompositor.OverlayRenderer.RebuiltLaneCountLastFrame,
+                            overlayCompositor.OverlayRenderer.CachedTextLayoutCount);
+                        if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
+                        {
+                            SkiaOverlayRenderer overlaySkiaRenderer = overlayCompositor.OverlayRenderer;
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} barBuckets={overlaySkiaRenderer.LastBarBatchBucketCount} barCache={overlaySkiaRenderer.LastBarSpriteCacheHits}/{overlaySkiaRenderer.LastBarSpriteCacheMisses}/clear{overlaySkiaRenderer.LastBarSpriteCacheClears}/size{overlaySkiaRenderer.BarSpriteCacheCount} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} textBuckets={overlaySkiaRenderer.LastTextSpriteBatchBucketCount} markerBuild={overlaySkiaRenderer.LastMinimapMarkerBatchBuildMs:F2} markerDraw={overlaySkiaRenderer.LastMinimapMarkerBatchDrawMs:F2} markerBuckets={overlaySkiaRenderer.LastMinimapMarkerBatchBucketCount}/{overlaySkiaRenderer.LastMinimapMarkerOrientationBatchBucketCount} markerSpriteCache={overlaySkiaRenderer.LastMinimapMarkerSpriteCacheHits}/{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheMisses}/clear{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheClears}/size{overlaySkiaRenderer.MarkerSpriteCacheCount} textSpriteCache={overlaySkiaRenderer.LastTextSpriteCacheHits}/{overlaySkiaRenderer.LastTextSpriteCacheMisses}/clear{overlaySkiaRenderer.LastTextSpriteCacheClears}/size{overlaySkiaRenderer.TextSpriteCacheCount} textLayout={overlaySkiaRenderer.LastTextLayoutCacheHits}/{overlaySkiaRenderer.LastTextLayoutCacheMisses}/clear{overlaySkiaRenderer.LastTextLayoutCacheClears}/size{overlaySkiaRenderer.CachedTextLayoutCount}");
+                        }
+
+                        bool drawLightweightDiagnosticHud = lightweightDiagnosticHudEnabled;
+                        if (drawLightweightDiagnosticHud)
+                        {
+                            long nativeDiagnosticStart = Stopwatch.GetTimestamp();
+                            DrawLightweightDiagnosticHud(engine, presentationTiming);
+                            presentationTiming?.ObserveNativeDiagnosticHud(ElapsedMs(nativeDiagnosticStart));
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveNativeDiagnosticHud(0d);
+                        }
+
+                        long endDrawingStart = Stopwatch.GetTimestamp();
+                        Rl.EndDrawing();
+                        windowRepaintGuard.AfterPresent();
+                        if (frameCapture is RaylibFrameCaptureService frameCaptureDriver)
+                        {
+                            frameCaptureDriver.OnFramePresented();
+                        }
+                        presentationTiming?.ObserveEndDrawing(ElapsedMs(endDrawingStart));
+                        presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
+                        previousLoopEnd = Stopwatch.GetTimestamp();
+
+                        frameIndex++;
+
+=====【新】RaylibFrameRenderer=====
+using System;
+using System.Diagnostics;
+using System.Numerics;
+using Ludots.Adapter.Raylib.Services;
+using Ludots.Client.Raylib.Rendering;
+using Ludots.Core.Diagnostics;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Scripting;
+using Ludots.UI;
+using Ludots.UI.Skia;
+using Raylib_cs;
+using Rl = Raylib_cs.Raylib;
+using Ludots.Raylib.Render;
+using Ludots.Core.Presentation.Rendering;
+
+namespace Ludots.Adapter.Raylib
+{
+    internal enum RaylibFramePass
+    {
+        Clear,
+        BeginWorldTexture,
+        WaterReflection,
+        WaterRefraction,
+        BeginWorld3D,
+        Skybox,
+        DebugGuides,
+        Terrain,
+        NavMeshOverlay,
+        GlobalField,
+        BenchmarkScene,
+        PrimitiveVisuals,
+        GroundOverlay,
+        SplineRibbon,
+        TrailMeshes,
+        DebugDraw,
+        EndWorld3D,
+        PostProcessComposite,
+        BrowserLayer,
+        OverlayComposite,
+    }
+
+    internal readonly record struct RaylibFramePassPlanInput(
+        bool DrawDebugGuides,
+        bool DrawTerrain,
+        bool DrawVisualHeightmap,
+        bool WaterEnabled,
+        bool HasGlobalFieldBuffer,
+        bool DrawFieldOverlays,
+        bool HasBenchmarkRenderer,
+        bool DrawPrimitives,
+        bool HasGroundOverlays,
+        bool HasSplineRibbons,
+        bool HasTrailMeshes,
+        bool DrawNavMeshOverlay,
+        bool DrawDebugDraw,
+        bool DrawSkiaUi,
+        bool DrawEnvironment,
+        bool UsePostProcess);
+
+    internal readonly record struct RaylibRenderFrame(
+        Camera3D ActiveCamera,
+        CameraRenderState3D ActiveCameraState,
+        RenderDebugState RenderDebug,
+        PresentationOverlayScene? OverlayScene,
+        int Width,
+        int Height,
+        double TimeSeconds,
+        float DeltaSeconds,
+        bool ActiveMapRequestsDeepBackground,
+        bool HostDebugGuidesSuppressed,
+        bool DrawTerrain,
+        bool DrawVisualHeightmap,
+        bool HasVisualHeightmap,
+        bool DrawPrimitives,
+        bool DrawDebugDraw,
+        bool DrawFieldOverlays,
+        bool DrawSkiaUi,
+        bool DrawNavMeshOverlay,
+        bool CleanPerformanceMode,
+        bool HostDiagnosticUiSuppressed,
+        bool EmptyBufferWarned);
+
+    internal readonly record struct RaylibRenderFrameResult(bool EmptyBufferWarned);
+
+    /// <summary>
+    /// 唯一生产帧执行者：RaylibHostLoop 构建一帧输入后由本类执行 BeginDrawing..覆盖层合成的完整 pass 序列。
+    /// 执行方式是先经 BuildPassPlan 声明本帧 pass，再按声明顺序逐项执行——声明顺序与执行顺序由结构保证一致；
+    /// LastExecutedPasses 在 RenderFrame 入口清零、按"已进入"记录（进入后抛错的 pass 也在轨迹内），供诊断与漂移测试消费。
+    /// EndDrawing 及其后的截图取证仍归宿主循环（ENG-1c）。
+    /// </summary>
+    internal sealed class RaylibFrameRenderer : IDisposable
+    {
+        private const int MaxPassesPerFrame = 32;
+
+        private readonly GameEngine _engine;
+        private readonly UIRoot _uiRoot;
+        private readonly SkiaUiRenderer _skiaRenderer;
+        private readonly RaylibOverlayCompositor _overlayCompositor;
+        private readonly RaylibBrowserLayerRenderer _browserLayerRenderer;
+        private readonly RaylibRenderEnvironmentRenderer _environmentRenderer;
+        private readonly RaylibSkyEnvironment _skyEnvironment;
+        private readonly RaylibWaterPass _waterPass;
+        private readonly RaylibFrameLighting _frameLighting;
+        private readonly RaylibTerrainRenderer _terrainRenderer;
+        private readonly RaylibVisualHeightmapRenderer _visualHeightmapRenderer;
+        private readonly RaylibFieldRenderPresenter _fieldRenderPresenter;
+        private readonly RaylibNavMeshPresentationRenderer _navMeshPresentationRenderer;
+        private readonly Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer _navMeshPresentationBuffer;
+        private readonly RaylibPrimitiveRenderer _primitiveRenderer;
+        private readonly RaylibDebugDrawRenderer _debugDrawRenderer;
+        private readonly RaylibBenchmarkRenderService? _benchmarkRenderer;
+        private readonly GlobalFieldVisualBuffer? _globalFieldVisualBuffer;
+        private readonly ScreenOverlayBuffer? _screenOverlayBuffer;
+        private readonly PresentationTimingDiagnostics? _presentationTiming;
+
+        private readonly RaylibFramePass[] _lastExecutedPasses = new RaylibFramePass[MaxPassesPerFrame];
+        private int _lastExecutedPassCount;
+        private long _mode3DStartTicks;
+
+        public RaylibFrameRenderer(
+            GameEngine engine,
+            UIRoot uiRoot,
+            SkiaUiRenderer skiaRenderer,
+            RaylibOverlayCompositor overlayCompositor,
+            RaylibBrowserLayerRenderer browserLayerRenderer,
+            RaylibRenderEnvironmentRenderer environmentRenderer,
+            RaylibSkyEnvironment skyEnvironment,
+            RaylibWaterPass waterPass,
+            RaylibFrameLighting frameLighting,
+            RaylibTerrainRenderer terrainRenderer,
+            RaylibVisualHeightmapRenderer visualHeightmapRenderer,
+            RaylibFieldRenderPresenter fieldRenderPresenter,
+            RaylibNavMeshPresentationRenderer navMeshPresentationRenderer,
+            Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer navMeshPresentationBuffer,
+            RaylibPrimitiveRenderer primitiveRenderer,
+            RaylibDebugDrawRenderer debugDrawRenderer,
+            RaylibBenchmarkRenderService? benchmarkRenderer,
+            GlobalFieldVisualBuffer? globalFieldVisualBuffer,
+            ScreenOverlayBuffer? screenOverlayBuffer,
+            PresentationTimingDiagnostics? presentationTiming)
+        {
+            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            _uiRoot = uiRoot ?? throw new ArgumentNullException(nameof(uiRoot));
+            _skiaRenderer = skiaRenderer ?? throw new ArgumentNullException(nameof(skiaRenderer));
+            _overlayCompositor = overlayCompositor ?? throw new ArgumentNullException(nameof(overlayCompositor));
+            _browserLayerRenderer = browserLayerRenderer ?? throw new ArgumentNullException(nameof(browserLayerRenderer));
+            _environmentRenderer = environmentRenderer ?? throw new ArgumentNullException(nameof(environmentRenderer));
+            _skyEnvironment = skyEnvironment ?? throw new ArgumentNullException(nameof(skyEnvironment));
+            _waterPass = waterPass ?? throw new ArgumentNullException(nameof(waterPass));
+            _frameLighting = frameLighting ?? throw new ArgumentNullException(nameof(frameLighting));
+            _terrainRenderer = terrainRenderer ?? throw new ArgumentNullException(nameof(terrainRenderer));
+            _visualHeightmapRenderer = visualHeightmapRenderer ?? throw new ArgumentNullException(nameof(visualHeightmapRenderer));
+            _fieldRenderPresenter = fieldRenderPresenter ?? throw new ArgumentNullException(nameof(fieldRenderPresenter));
+            _navMeshPresentationRenderer = navMeshPresentationRenderer ?? throw new ArgumentNullException(nameof(navMeshPresentationRenderer));
+            _navMeshPresentationBuffer = navMeshPresentationBuffer ?? throw new ArgumentNullException(nameof(navMeshPresentationBuffer));
+            _primitiveRenderer = primitiveRenderer ?? throw new ArgumentNullException(nameof(primitiveRenderer));
+            _debugDrawRenderer = debugDrawRenderer ?? throw new ArgumentNullException(nameof(debugDrawRenderer));
+            _benchmarkRenderer = benchmarkRenderer;
+            _globalFieldVisualBuffer = globalFieldVisualBuffer;
+            _screenOverlayBuffer = screenOverlayBuffer;
+            _presentationTiming = presentationTiming;
+        }
+
+        public int LastExecutedPassCount => _lastExecutedPassCount;
+
+        internal ReadOnlySpan<RaylibFramePass> LastExecutedPasses => _lastExecutedPasses.AsSpan(0, _lastExecutedPassCount);
+
+        public RaylibRenderFrameResult RenderFrame(in RaylibRenderFrame frame)
+        {
+            bool emptyBufferWarned = frame.EmptyBufferWarned;
+            bool drawingActive = false;
+            bool worldFrameActive = false;
+            bool mode3DActive = false;
+            bool frameCompleted = false;
+            _lastExecutedPassCount = 0;
+
+            try
+            {
+                long beginDrawingStart = Stopwatch.GetTimestamp();
+                Rl.BeginDrawing();
+                drawingActive = true;
+                _presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
+                Restore3DDepthState();
+
+                RaylibFrameWaterFrame waterFrame = PrepareFrameEnvironment(in frame);
+                Span<RaylibFramePass> plan = stackalloc RaylibFramePass[MaxPassesPerFrame];
+                int passCount = BuildPassPlan(BuildPlanInput(in frame, waterFrame), plan);
+
+                for (int i = 0; i < passCount; i++)
+                {
+                    RaylibFramePass pass = plan[i];
+                    _lastExecutedPasses[_lastExecutedPassCount++] = pass;
+                    switch (pass)
+                    {
+                        case RaylibFramePass.Clear:
+                            if (!waterFrame.PostProcessWorldFrame)
+                            {
+                                Rl.ClearBackground(waterFrame.ClearColor);
+                            }
+
+                            break;
+                        case RaylibFramePass.BeginWorldTexture:
+                            _environmentRenderer.BeginWorldFrame(frame.Width, frame.Height, waterFrame.ClearColor);
+                            worldFrameActive = true;
+                            break;
+                        case RaylibFramePass.WaterReflection:
+                            RenderWaterReflection(in frame, in waterFrame);
+                            break;
+                        case RaylibFramePass.WaterRefraction:
+                            RenderWaterRefraction(in frame, in waterFrame);
+                            break;
+                        case RaylibFramePass.BeginWorld3D:
+                        {
+                            long mode3DStart = Stopwatch.GetTimestamp();
+                            Restore3DDepthState();
+                            CameraRenderState3D activeCameraState = frame.ActiveCameraState;
+                            BeginCoreMode3D(frame.ActiveCamera, in activeCameraState);
+                            Restore3DDepthState();
+                            mode3DActive = true;
+                            _mode3DStartTicks = mode3DStart;
+                            break;
+                        }
+
+                        case RaylibFramePass.Skybox:
+                            _skyEnvironment.Draw(frame.ActiveCamera, frame.ActiveCameraState);
+                            Restore3DDepthState();
+                            break;
+                        case RaylibFramePass.DebugGuides:
+                            DrawDebugGuides(in frame);
+                            break;
+                        case RaylibFramePass.Terrain:
+                            DrawTerrain(in frame, in waterFrame);
+                            break;
+                        case RaylibFramePass.NavMeshOverlay:
+                            DrawNavMeshOverlay();
+                            break;
+                        case RaylibFramePass.GlobalField:
+                            DrawGlobalFields(in frame);
+                            break;
+                        case RaylibFramePass.BenchmarkScene:
+                            _ = _benchmarkRenderer!.Draw(frame.ActiveCamera);
+                            break;
+                        case RaylibFramePass.PrimitiveVisuals:
+                            emptyBufferWarned = DrawPrimitiveVisuals(in frame, emptyBufferWarned);
+                            break;
+                        case RaylibFramePass.GroundOverlay:
+                            DrawGroundOverlays(frame.CleanPerformanceMode);
+                            break;
+                        case RaylibFramePass.SplineRibbon:
+                            DrawSplineRibbons(frame.CleanPerformanceMode);
+                            break;
+                        case RaylibFramePass.TrailMeshes:
+                            DrawTrailMeshes(frame.CleanPerformanceMode);
+                            break;
+                        case RaylibFramePass.DebugDraw:
+                            DrawDebugCommands(in frame);
+                            break;
+                        case RaylibFramePass.EndWorld3D:
+                        {
+                            EndCoreMode3D();
+                            mode3DActive = false;
+                            _presentationTiming?.ObserveMode3D(ElapsedMs(_mode3DStartTicks));
+                            break;
+                        }
+
+                        case RaylibFramePass.PostProcessComposite:
+                            _environmentRenderer.EndWorldFrame(frame.TimeSeconds);
+                            worldFrameActive = false;
+                            break;
+                        case RaylibFramePass.BrowserLayer:
+                            _browserLayerRenderer.Render(_uiRoot.Scene, frame.Width, frame.Height);
+                            break;
+                        case RaylibFramePass.OverlayComposite:
+                            DrawUiLayers(in frame);
+                            break;
+                        default:
+                            throw new InvalidOperationException($"Unhandled Raylib frame pass {pass}.");
+                    }
+                }
+
+                ObserveSkippedPassTimings(plan, passCount);
+                frameCompleted = true;
+                return new RaylibRenderFrameResult(emptyBufferWarned);
+            }
+            finally
+            {
+                if (!frameCompleted)
+                {
+                    if (mode3DActive)
+                    {
+                        EndCoreMode3D();
+                    }
+
+                    if (worldFrameActive)
+                    {
+                        _environmentRenderer.AbortWorldFrame();
+                    }
+
+                    if (drawingActive)
+                    {
+                        Rl.EndDrawing();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 计划层省略的可选 pass 与旧宿主一样每帧补零观测，避免诊断序列保留上一帧数值。
+        /// </summary>
+        private void ObserveSkippedPassTimings(Span<RaylibFramePass> plan, int passCount)
+        {
+            if (_presentationTiming == null)
+            {
+                return;
+            }
+
+            if (!WasPlanned(plan, passCount, RaylibFramePass.Terrain))
+            {
+                _presentationTiming.ObserveTerrain(0d, 0d, 0, 0);
+            }
+
+            if (!WasPlanned(plan, passCount, RaylibFramePass.GlobalField))
+            {
+                _presentationTiming.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
+            }
+
+            if (!WasPlanned(plan, passCount, RaylibFramePass.PrimitiveVisuals))
+            {
+                _presentationTiming.ObservePrimitiveRender(0d, 0, 0);
+            }
+
+            if (!WasPlanned(plan, passCount, RaylibFramePass.DebugDraw))
+            {
+                _presentationTiming.ObserveDebugDrawRender(0d, 0);
+            }
+        }
+
+        private static bool WasPlanned(Span<RaylibFramePass> plan, int count, RaylibFramePass pass)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (plan[i] == pass)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public void Dispose()
+        {
+            // 组合渲染器均由宿主持有；本类不拥有可释放资源。
+        }
+
+        private readonly record struct RaylibFrameWaterFrame(
+            bool WaterOnVisualHeightmap,
+            bool WaterOnVertexMap,
+            bool WaterFboEnabled,
+            bool PostProcessWorldFrame,
+            Color ClearColor);
+
+        private RaylibFrameWaterFrame PrepareFrameEnvironment(in RaylibRenderFrame frame)
+        {
+            string? activeMapId = _engine.CurrentMapSession?.MapId.Value;
+            _skyEnvironment.EnsureActiveForMap(activeMapId);
+            _waterPass.EnsureActiveForMap(activeMapId);
+            _visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
+            Color clearColor = _skyEnvironment.IsActive
+                ? _skyEnvironment.ResolveClearColor()
+                : (frame.ActiveMapRequestsDeepBackground
+                    ? new Color(6, 10, 16, 255)
+                    : new Color(0, 0, 0, 255));
+
+            if (_skyEnvironment.HasDayPhase)
+            {
+                _frameLighting.SetDayPhase(_skyEnvironment.DayPhase01);
+            }
+            else
+            {
+                _frameLighting.Evaluate();
+            }
+
+            _terrainRenderer.ApplyFrameLighting(_frameLighting);
+            _visualHeightmapRenderer.ApplyFrameLighting(_frameLighting);
+            _primitiveRenderer.ApplyFrameLighting(_frameLighting, frame.ActiveCamera.position);
+            _primitiveRenderer.DrawSurfaceWireBoxes = frame.DrawDebugDraw;
+
+            bool waterOnVisualHeightmap = _waterPass.IsActive &&
+                                          frame.DrawTerrain &&
+                                          frame.DrawVisualHeightmap &&
+                                          frame.HasVisualHeightmap;
+            bool waterOnVertexMap = _waterPass.IsActive &&
+                                    frame.DrawTerrain &&
+                                    !waterOnVisualHeightmap &&
+                                    _engine.VertexMap != null;
+            bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
+            return new RaylibFrameWaterFrame(
+                waterOnVisualHeightmap,
+                waterOnVertexMap,
+                waterFboEnabled,
+                !waterFboEnabled,
+                clearColor);
+        }
+
+        private RaylibFramePassPlanInput BuildPlanInput(in RaylibRenderFrame frame, in RaylibFrameWaterFrame waterFrame)
+        {
+            return new RaylibFramePassPlanInput(
+                DrawDebugGuides: frame.DrawDebugDraw &&
+                    !(frame.DrawVisualHeightmap && frame.HasVisualHeightmap) &&
+                    !frame.HostDebugGuidesSuppressed,
+                DrawTerrain: frame.DrawTerrain,
+                DrawVisualHeightmap: frame.DrawVisualHeightmap,
+                WaterEnabled: waterFrame.WaterFboEnabled,
+                HasGlobalFieldBuffer: _globalFieldVisualBuffer != null,
+                DrawFieldOverlays: frame.DrawFieldOverlays,
+                HasBenchmarkRenderer: _benchmarkRenderer != null,
+                DrawPrimitives: frame.DrawPrimitives,
+                HasGroundOverlays: true,
+                HasSplineRibbons: true,
+                HasTrailMeshes: true,
+                DrawNavMeshOverlay: frame.DrawNavMeshOverlay,
+                DrawDebugDraw: frame.DrawDebugDraw,
+                DrawSkiaUi: frame.DrawSkiaUi,
+                DrawEnvironment: _skyEnvironment.IsActive,
+                UsePostProcess: waterFrame.PostProcessWorldFrame);
+        }
+
+        public static int BuildPassPlan(in RaylibFramePassPlanInput input, Span<RaylibFramePass> output)
+        {
+            int count = 0;
+            Add(output, ref count, RaylibFramePass.Clear);
+            if (input.UsePostProcess)
+            {
+                Add(output, ref count, RaylibFramePass.BeginWorldTexture);
+            }
+
+            if (input.WaterEnabled)
+            {
+                Add(output, ref count, RaylibFramePass.WaterReflection);
+                Add(output, ref count, RaylibFramePass.WaterRefraction);
+            }
+
+            Add(output, ref count, RaylibFramePass.BeginWorld3D);
+            if (input.DrawEnvironment)
+            {
+                Add(output, ref count, RaylibFramePass.Skybox);
+            }
+
+            if (input.DrawDebugGuides)
+            {
+                Add(output, ref count, RaylibFramePass.DebugGuides);
+            }
+
+            if (input.DrawTerrain || input.DrawVisualHeightmap)
+            {
+                Add(output, ref count, RaylibFramePass.Terrain);
+            }
+
+            if (input.DrawNavMeshOverlay)
+            {
+                Add(output, ref count, RaylibFramePass.NavMeshOverlay);
+            }
+
+            if (input.DrawFieldOverlays && input.HasGlobalFieldBuffer)
+            {
+                Add(output, ref count, RaylibFramePass.GlobalField);
+            }
+
+            if (input.HasBenchmarkRenderer)
+            {
+                Add(output, ref count, RaylibFramePass.BenchmarkScene);
+            }
+
+            if (input.DrawPrimitives)
+            {
+                Add(output, ref count, RaylibFramePass.PrimitiveVisuals);
+            }
+
+            if (input.HasGroundOverlays)
+            {
+                Add(output, ref count, RaylibFramePass.GroundOverlay);
+            }
+
+            if (input.HasSplineRibbons)
+            {
+                Add(output, ref count, RaylibFramePass.SplineRibbon);
+            }
+
+            if (input.HasTrailMeshes)
+            {
+                Add(output, ref count, RaylibFramePass.TrailMeshes);
+            }
+
+            if (input.DrawDebugDraw)
+            {
+                Add(output, ref count, RaylibFramePass.DebugDraw);
+            }
+
+            Add(output, ref count, RaylibFramePass.EndWorld3D);
+            if (input.UsePostProcess)
+            {
+                Add(output, ref count, RaylibFramePass.PostProcessComposite);
+            }
+
+            if (input.DrawSkiaUi)
+            {
+                Add(output, ref count, RaylibFramePass.BrowserLayer);
+            }
+
+            Add(output, ref count, RaylibFramePass.OverlayComposite);
+            return count;
+        }
+
+        private static void Add(Span<RaylibFramePass> output, ref int count, RaylibFramePass pass)
+        {
+            if (count >= output.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib frame pass output capacity {output.Length} is too small.");
+            }
+
+            output[count++] = pass;
+        }
+
+        private void RenderWaterReflection(in RaylibRenderFrame frame, in RaylibFrameWaterFrame waterFrame)
+        {
+            _waterPass.EnsureRenderTargets(frame.Width, frame.Height);
+            _waterPass.Advance(frame.DeltaSeconds);
+
+            Camera3D reflectionCamera = _waterPass.BuildReflectionCamera(frame.ActiveCamera);
+            _waterPass.BeginReflectionPass(waterFrame.ClearColor);
+            Restore3DDepthState();
+            BeginCoreMode3D(reflectionCamera, frame.ActiveCameraState);
+            Restore3DDepthState();
+            try
+            {
+                if (_skyEnvironment.IsActive)
+                {
+                    _skyEnvironment.Draw(reflectionCamera, frame.ActiveCameraState);
+                    Restore3DDepthState();
+                }
+
+                if (waterFrame.WaterOnVisualHeightmap &&
+                    _engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
+                    vhReflect is IVisualHeightmapRenderSource reflectSource)
+                {
+                    _visualHeightmapRenderer.AbsoluteColorSeaLevelCm = _waterPass.WaterPlaneY * 100f;
+                    _visualHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                    _visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
+                }
+                else
+                {
+                    _terrainRenderer.RenderTerrainOnly(TerrainSource(), reflectionCamera);
+                }
+            }
+            finally
+            {
+                EndCoreMode3D();
+                _waterPass.EndPass();
+            }
+        }
+
+        private void RenderWaterRefraction(in RaylibRenderFrame frame, in RaylibFrameWaterFrame waterFrame)
+        {
+            _waterPass.BeginRefractionPass(waterFrame.ClearColor);
+            Restore3DDepthState();
+            BeginCoreMode3D(frame.ActiveCamera, frame.ActiveCameraState);
+            Restore3DDepthState();
+            try
+            {
+                if (_skyEnvironment.IsActive)
+                {
+                    _skyEnvironment.Draw(frame.ActiveCamera, frame.ActiveCameraState);
+                    Restore3DDepthState();
+                }
+
+                if (waterFrame.WaterOnVisualHeightmap &&
+                    _engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhRefract) &&
+                    vhRefract is IVisualHeightmapRenderSource refractSource)
+                {
+                    _visualHeightmapRenderer.AbsoluteColorSeaLevelCm = _waterPass.WaterPlaneY * 100f;
+                    _visualHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                    _visualHeightmapRenderer.Render(refractSource, frame.ActiveCamera);
+                }
+                else
+                {
+                    _terrainRenderer.RenderTerrainOnly(TerrainSource(), frame.ActiveCamera);
+                }
+            }
+            finally
+            {
+                EndCoreMode3D();
+                _waterPass.EndPass();
+            }
+        }
+
+        private VertexMapTerrainChunkMeshSource? _terrainSource;
+
+        private Ludots.Platform.Abstractions.ITerrainChunkMeshSource TerrainSource()
+        {
+            _terrainSource ??= new VertexMapTerrainChunkMeshSource(null);
+            if (!ReferenceEquals(_terrainSource.Map, _engine.VertexMap))
+            {
+                _terrainSource = new VertexMapTerrainChunkMeshSource(_engine.VertexMap);
+            }
+
+            return _terrainSource;
+        }
+
+        private void DrawDebugGuides(in RaylibRenderFrame frame)
+        {
+            DrawInfiniteGrid(frame.ActiveCamera.target, 300, 1.0f, 10);
+
+            Vector3 target = frame.ActiveCamera.target;
+            Rl.DrawLine3D(target, target + new Vector3(2.0f, 0, 0), Color.RED);
+            Rl.DrawLine3D(target, target + new Vector3(0, 0, 2.0f), Color.BLUE);
+            Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
+        }
+
+        private void DrawTerrain(in RaylibRenderFrame frame, in RaylibFrameWaterFrame waterFrame)
+        {
+            if (frame.DrawVisualHeightmap &&
+                _engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
+                visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
+            {
+                long terrainStart = Stopwatch.GetTimestamp();
+                if (waterFrame.WaterOnVisualHeightmap)
+                {
+                    _visualHeightmapRenderer.AbsoluteColorSeaLevelCm = _waterPass.WaterPlaneY * 100f;
+                    _visualHeightmapRenderer.AbsoluteColorPeakSpanCm = visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                }
+                else
+                {
+                    _visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
+                }
+
+                _visualHeightmapRenderer.Render(visualTerrainSource, frame.ActiveCamera);
+
+                if (waterFrame.WaterOnVisualHeightmap)
+                {
+                    _terrainRenderer.EnsureWaterShadersReady();
+                    _terrainRenderer.BindReflectiveWater(_waterPass);
+                    // Half-extent covers the island board (~1.28km); plane follows camera target XZ.
+                    _terrainRenderer.DrawReflectiveOceanPlane(
+                        _waterPass.WaterPlaneY,
+                        halfExtentMeters: 900f,
+                        frame.ActiveCamera);
+                }
+                else
+                {
+                    _terrainRenderer.ClearReflectiveWater();
+                }
+
+                _presentationTiming?.ObserveTerrain(
+                    ElapsedMs(terrainStart),
+                    _visualHeightmapRenderer.ChunkBuildMsLastFrame,
+                    _visualHeightmapRenderer.DrawnChunkCountLastFrame,
+                    _visualHeightmapRenderer.BuiltChunkCountLastFrame);
+                return;
+            }
+
+            if (frame.DrawTerrain)
+            {
+                long terrainStart = Stopwatch.GetTimestamp();
+                if (waterFrame.WaterOnVertexMap)
+                {
+                    _terrainRenderer.BindReflectiveWater(_waterPass);
+                }
+                else
+                {
+                    _terrainRenderer.ClearReflectiveWater();
+                }
+
+                _terrainRenderer.Render(TerrainSource(), frame.ActiveCamera);
+                _presentationTiming?.ObserveTerrain(
+                    ElapsedMs(terrainStart),
+                    _terrainRenderer.ChunkBuildMsLastFrame,
+                    _terrainRenderer.DrawnChunkCountLastFrame,
+                    _terrainRenderer.BuiltChunkCountLastFrame);
+                return;
+            }
+
+            _presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
+        }
+
+        private void DrawNavMeshOverlay()
+        {
+            _navMeshPresentationRenderer.Draw(_navMeshPresentationBuffer);
+            _screenOverlayBuffer?.AddText(
+                10,
+                40,
+                _navMeshPresentationBuffer.FormatMetadataLine(),
+                14,
+                new Vector4(1f, 0.92f, 0.5f, 1f));
+        }
+
+        private void DrawGlobalFields(in RaylibRenderFrame frame)
+        {
+            if (frame.DrawFieldOverlays && _globalFieldVisualBuffer != null)
+            {
+                long fieldRenderStart = Stopwatch.GetTimestamp();
+                _fieldRenderPresenter.Draw(_globalFieldVisualBuffer);
+                _presentationTiming?.ObserveGlobalFieldRender(
+                    ElapsedMs(fieldRenderStart),
+                    _fieldRenderPresenter.LastFieldTextureCount,
+                    _fieldRenderPresenter.LastDirtyUploadCount,
+                    _fieldRenderPresenter.LastDirtyUploadArea,
+                    _fieldRenderPresenter.LastDrawCount);
+                return;
+            }
+
+            _presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
+        }
+
+        private bool DrawPrimitiveVisuals(in RaylibRenderFrame frame, bool emptyBufferWarned)
+        {
+            if (frame.DrawPrimitives &&
+                _engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
+                _engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
+            {
+                if (!emptyBufferWarned && draw.GetSpan().Length == 0)
+                {
+                    Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D presenters emitting?");
+                    emptyBufferWarned = true;
+                }
+
+                long primitiveStart = Stopwatch.GetTimestamp();
+                PrimitiveDrawBuffer? snapshot = _engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
+                SkinnedVisualBatchBuffer? skinnedBatch = _engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
+                if (_engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap) &&
+                    visualHeightmap != null)
+                {
+                    _visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
+                    _terrainRenderer.BindStampHeightSampleSource(visualHeightmap);
+                }
+
+                _primitiveRenderer.Draw(
+                    draw,
+                    frame.ActiveCamera,
+                    snapshot,
+                    skinnedBatch,
+                    meshes,
+                    frame.RenderDebug.AcceptanceScaleMultiplier,
+                    visualHeightmap,
+                    frame.TimeSeconds);
+                _presentationTiming?.ObservePrimitiveRender(
+                    ElapsedMs(primitiveStart),
+                    _primitiveRenderer.LastInstancedInstances,
+                    _primitiveRenderer.LastInstancedBatches,
+                    _primitiveRenderer.LastInstancedMatrixBuildMs,
+                    _primitiveRenderer.LastInstancedMeshDrawMs,
+                    _primitiveRenderer.LastInstancedMatrixCacheHits,
+                    _primitiveRenderer.LastInstancedMatrixCacheMisses,
+                    _primitiveRenderer.LastPersistentSyncMs,
+                    _primitiveRenderer.LastPersistentBucketDrawMs,
+                    _primitiveRenderer.LastImmediateDrawMs,
+                    _primitiveRenderer.LastImmediateSkippedCount,
+                    skinnedBatch?.Count ?? 0,
+                    _primitiveRenderer.LastGpuSkinnedInstances,
+                    _primitiveRenderer.LastGpuSkinnedBatches,
+                    _primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
+                    _primitiveRenderer.LastGpuSkinnedMeshDrawMs);
+                return emptyBufferWarned;
+            }
+
+            _presentationTiming?.ObservePrimitiveRender(0d, 0, 0);
+            return emptyBufferWarned;
+        }
+
+        private void DrawGroundOverlays(bool cleanPerformanceMode)
+        {
+            if (!cleanPerformanceMode &&
+                _engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
+                overlays.Count > 0)
+            {
+                long groundOverlayStart = Stopwatch.GetTimestamp();
+                RaylibWorldOverlayRenderer.DrawGroundOverlays(overlays);
+                _presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
+                return;
+            }
+
+            _presentationTiming?.ObserveGroundOverlayRender(0d, 0);
+        }
+
+        private void DrawSplineRibbons(bool cleanPerformanceMode)
+        {
+            if (!cleanPerformanceMode &&
+                _engine.GlobalContext.TryGetValue(CoreServiceKeys.SplineRibbonBuffer.Name, out object? splineObj) &&
+                splineObj is SplineRibbonBuffer splineRibbons &&
+                splineRibbons.Count > 0)
+            {
+                long splineRibbonStart = Stopwatch.GetTimestamp();
+                RaylibWorldOverlayRenderer.DrawSplineRibbons(splineRibbons);
+                _presentationTiming?.ObserveSplineRibbonRender(ElapsedMs(splineRibbonStart), splineRibbons.Count);
+                return;
+            }
+
+            _presentationTiming?.ObserveSplineRibbonRender(0d, 0);
+        }
+
+        private void DrawTrailMeshes(bool cleanPerformanceMode)
+        {
+            if (!cleanPerformanceMode &&
+                _engine.TryGetService(CoreServiceKeys.TrailMeshBuffer, out TrailMeshBuffer trails) &&
+                trails.Count > 0)
+            {
+                RaylibTrailMeshRenderer.DrawTrailMeshes(trails);
+            }
+        }
+
+        private void DrawDebugCommands(in RaylibRenderFrame frame)
+        {
+            if (frame.DrawDebugDraw &&
+                _engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
+            {
+                long debugDrawStart = Stopwatch.GetTimestamp();
+                _debugDrawRenderer.Draw(dd);
+                _presentationTiming?.ObserveDebugDrawRender(
+                    ElapsedMs(debugDrawStart),
+                    dd.Lines.Count + dd.Circles.Count + dd.Boxes.Count);
+                return;
+            }
+
+            _presentationTiming?.ObserveDebugDrawRender(0d, 0);
+        }
+
+        private void DrawUiLayers(in RaylibRenderFrame frame)
+        {
+            long overlayStart = Stopwatch.GetTimestamp();
+            OverlayCompositeResult overlayResult = _overlayCompositor.Render(
+                frame.OverlayScene,
+                _uiRoot,
+                _skiaRenderer,
+                frame.DrawSkiaUi,
+                frame.HostDiagnosticUiSuppressed);
+            _presentationTiming?.ObserveUiRender(overlayResult.UiRenderMs);
+            _presentationTiming?.ObserveUiUpload(overlayResult.UploadMs);
+            _presentationTiming?.ObserveCompositeSkip(!overlayResult.RefreshComposite);
+            _screenOverlayBuffer?.Clear();
+            _presentationTiming?.ObserveScreenOverlayDraw(
+                ElapsedMs(overlayStart),
+                overlayResult.PaintMs,
+                overlayResult.CompositeMs,
+                overlayResult.UploadMs,
+                overlayResult.FinalDrawMs,
+                _overlayCompositor.OverlayRenderer.RebuiltLaneCountLastFrame,
+                _overlayCompositor.OverlayRenderer.CachedTextLayoutCount);
+        }
+
+        internal static void Restore3DDepthState()
+        {
+            Rl.rlEnableDepthTest();
+            Rl.rlEnableDepthMask();
+            Rl.rlEnableBackfaceCulling();
+        }
+
+        internal static unsafe void BeginCoreMode3D(in Camera3D camera, in CameraRenderState3D cameraState)
+        {
+            Rl.rlDrawRenderBatchActive();
+            Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
+            Rl.rlPushMatrix();
+            Rl.rlLoadIdentity();
+
+            CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in cameraState);
+            float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
+            if (camera.projection == CameraProjection.CAMERA_ORTHOGRAPHIC)
+            {
+                double top = camera.fovy / 2.0;
+                double right = top * aspect;
+                Rl.rlOrtho(-right, right, -top, top, clipPlanes.NearMeters, clipPlanes.FarMeters);
+            }
+            else
+            {
+                double top = clipPlanes.NearMeters * Math.Tan(WorldPlane2D.DegToRadValue(camera.fovy) * 0.5);
+                double right = top * aspect;
+                Rl.rlFrustum(-right, right, -top, top, clipPlanes.NearMeters, clipPlanes.FarMeters);
+            }
+
+            Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
+            Rl.rlLoadIdentity();
+            Matrix4x4 view = Matrix4x4.CreateLookAt(camera.position, camera.target, camera.up);
+            RaylibMatrix raylibView = RaylibMatrix.FromSystemNumerics(in view);
+            MultMatrix(in raylibView);
+            Rl.rlEnableDepthTest();
+        }
+
+        internal static void EndCoreMode3D()
+        {
+            Rl.rlDrawRenderBatchActive();
+            Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
+            Rl.rlPopMatrix();
+            Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
+            Rl.rlLoadIdentity();
+            Rl.rlDisableDepthTest();
+        }
+
+        private static unsafe void MultMatrix(in RaylibMatrix matrix)
+        {
+            float* values = stackalloc float[16]
+            {
+                matrix.m0, matrix.m1, matrix.m2, matrix.m3,
+                matrix.m4, matrix.m5, matrix.m6, matrix.m7,
+                matrix.m8, matrix.m9, matrix.m10, matrix.m11,
+                matrix.m12, matrix.m13, matrix.m14, matrix.m15,
+            };
+            Rl.rlMultMatrixf(values);
+        }
+
+        private static void DrawInfiniteGrid(Vector3 anchor, int halfCount, float spacing, int majorEvery)
+        {
+            float y = -0.05f;
+            float extent = halfCount * spacing;
+
+            float minX = anchor.X - extent;
+            float minZ = anchor.Z - extent;
+
+            float startX = MathF.Floor(minX / spacing) * spacing;
+            float startZ = MathF.Floor(minZ / spacing) * spacing;
+
+            float endX = startX + 2f * extent;
+            float endZ = startZ + 2f * extent;
+
+            var minor = new Color(80, 80, 80, 255);
+            var major = new Color(130, 130, 130, 255);
+
+            int lineCount = halfCount * 2;
+            for (int i = 0; i <= lineCount; i++)
+            {
+                float x = startX + i * spacing;
+                float z = startZ + i * spacing;
+
+                int xi = (int)MathF.Round(x / spacing);
+                int zi = (int)MathF.Round(z / spacing);
+
+                Color xCol = majorEvery > 0 && (xi % majorEvery) == 0 ? major : minor;
+                Color zCol = majorEvery > 0 && (zi % majorEvery) == 0 ? major : minor;
+
+                Rl.DrawLine3D(new Vector3(x, y, startZ), new Vector3(x, y, endZ), xCol);
+                Rl.DrawLine3D(new Vector3(startX, y, z), new Vector3(endX, y, z), zCol);
+            }
+        }
+
+        private static double ElapsedMs(long startTicks)
+        {
+            return (Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency;
+        }
+    }
+}

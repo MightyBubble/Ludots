@@ -1,0 +1,1 @@
+{"message": "fix(mods): SavePanelMod 与三个存档 showcase TFM 对齐 net9.0\n\nmain 的 TFM 迁移（Core/UI/Platform→net9.0）后，这四个 net8.0 mod 项目无法被\n构建（NU1201）。CI verify 只构建 src/Tests 图谱，mods/ 是构建盲区所以没拦住——\n盲区另开 issue 跟踪。", "tree": "a62d7e66e7b8b37467e8279f56f37574ed26e8bf", "parents": ["6cb4ca49133f78a3caf9cb2e5c0b919bc620bb39"]}

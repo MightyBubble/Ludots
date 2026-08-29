@@ -1,0 +1,127 @@
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=12425f32ea982074b8ade00fcff206a034e5fb432573348d8d7d45406a5cd709, schema=1, mods=3
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - ActivityDispatchShowcaseMod (P:193)
+[INF][ModLoader] - AgentBridgeMod (P:950)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for ActivityDispatchShowcaseMod at C:\001_AI\LudotsProd\mods\showcases\activity_dispatch\ActivityDispatchShowcaseMod\bin\net9.0\ActivityDispatchShowcaseMod.dll
+[INF][ModLoader] Scanning 11 types in assembly...
+[INF][ModLoader] Instantiated entry for ActivityDispatchShowcaseMod. Calling OnLoad...
+[INF][Mod.ActivityDispatchShowcaseMod] [ActivityDispatchShowcaseMod] Loaded.
+[INF][ModLoader] ActivityDispatchShowcaseMod OnLoad completed.
+[INF][ModLoader] Loaded ActivityDispatchShowcaseMod
+[INF][ModLoader] Loading DLL for AgentBridgeMod at C:\001_AI\LudotsProd\mods\AgentBridgeMod\bin\net9.0\AgentBridgeMod.dll
+[INF][ModLoader] Scanning 3 types in assembly...
+[INF][ModLoader] Instantiated entry for AgentBridgeMod. Calling OnLoad...
+[INF][ModLoader] AgentBridgeMod OnLoad completed.
+[INF][ModLoader] Loaded AgentBridgeMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=activity_dispatch, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/Entities/templates.json
+[INF][Config] Loaded 5 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/Events/custom_events.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/Rng/distributions.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/Tasks/tasks.json
+[INF][Config] Merged fragment from: ActivityDispatchShowcaseMod:assets/Activities/activities.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+System.BadImageFormatException: Could not load file or assembly 'CefSharp.Core.Runtime, Version=148.0.90.0, Culture=neutral, PublicKeyToken=40c4b6fc221f4138'. 试图加载格式不正确的程序。
+File name: 'CefSharp.Core.Runtime, Version=148.0.90.0, Culture=neutral, PublicKeyToken=40c4b6fc221f4138' ---> System.BadImageFormatException: Cannot load a mixed assembly into a collectible AssemblyLoadContext. The format of the file 'C:\Users\sietg\AppData\Local\Ludots\BrowserRuntimeProviders\cef\Ludots.UI.Browser.Cef-21a2549a822d4563\CefSharp.Core.Runtime.dll' is invalid.
+   at System.Runtime.Loader.AssemblyLoadContext.LoadFromAssemblyPath(String assemblyPath)
+   at Ludots.UI.Browser.BrowserRuntimeProviderAssemblyLoadContext.Load(AssemblyName assemblyName) in C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser\BrowserRuntimeProviderAssemblyLoadContext.cs:line 79
+   at System.Runtime.Loader.AssemblyLoadContext.ResolveUsingLoad(AssemblyName assemblyName)
+   at System.Runtime.Loader.AssemblyLoadContext.Resolve(IntPtr gchManagedAssemblyLoadContext, AssemblyName assemblyName)
+   at CefSharp.Cef.get_IsShutdown()
+   at Ludots.UI.Browser.Cef.CefProcessRuntime.AcquireRuntimeOwner(CefBrowserRuntimeOptions options) in C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser.Cef\CefProcessRuntime.cs:line 58
+   at Ludots.UI.Browser.Cef.CefBrowserRuntime..ctor(CefBrowserRuntimeOptions options) in C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser.Cef\CefBrowserRuntime.cs:line 23
+   at Ludots.UI.Browser.Cef.CefBrowserRuntimeHost.Install(IDictionary`2 services, String runtimeRootPath, String cacheRootPath) in C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser.Cef\CefBrowserRuntimeHost.cs:line 39
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+--- End of stack trace from previous location ---
+   at Ludots.UI.Browser.BrowserRuntimeProviderLoader.InvokeInstallMethod(MethodInfo installMethod, Object[] arguments) in C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser\BrowserRuntimeProviderLoader.cs:line 329
+   at Ludots.UI.Browser.BrowserRuntimeProviderLoader.Install(BrowserRuntimeProviderLoadOptions options) in C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser\BrowserRuntimeProviderLoader.cs:line 262
+   at Ludots.Adapter.Raylib.RaylibBrowserRuntimeInstaller.InstallProvider(IDictionary`2 services, String providerId, String providerAssemblyPath, String providerHostTypeName, Boolean useCollectibleLoadContext, String[] processSharedAssemblyNamePrefixes, String runtimeRootPath, String cacheRootPath) in C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibBrowserRuntimeInstaller.cs:line 129
+   at Ludots.Adapter.Raylib.RaylibBrowserRuntimeInstaller.InstallIfConfigured(GameEngine engine, GameConfig config, String baseDirectory) in C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibBrowserRuntimeInstaller.cs:line 42
+   at Ludots.Adapter.Raylib.RaylibHostComposer.Compose(String baseDir, String gameConfigFile) in C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostComposer.cs:line 47
+   at Ludots.Adapter.Raylib.RaylibAppHost.Initialize(AppInitContext context) in C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibAppHost.cs:line 55
+   at Program.<Main>$(String[] args) in C:\001_AI\LudotsProd\src\Apps\Raylib\Ludots.App.Raylib\Program.cs:line 10

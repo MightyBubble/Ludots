@@ -1,0 +1,32 @@
+/* Shared visual contract for the eight-anchor strategic HUD. */
+.panel {
+  background-color: rgba(8, 15, 26, 238);
+  border: 1px solid rgba(92, 117, 143, 220);
+  border-radius: 3px;
+  padding: 10px;
+}
+
+.panel .title {
+  color: rgb(237, 196, 103);
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  letter-spacing: 3px;
+}
+
+.row {
+  color: rgb(220, 230, 240);
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+}
+
+.rows {
+  background-color: rgba(16, 28, 44, 160);
+  border-radius: 2px;
+  padding: 4px;
+}
+
+.hint {
+  color: rgb(116, 143, 169);
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 10px;
+}

@@ -1,0 +1,11 @@
+fix(providers): ProviderKey 域白名单补 condition——修复 main 上 raylib 启动全断
+
+PR850 port 的 ActivityBridgeProviders 注册 condition.subject_attribute（含完整
+参数校验逻辑），但 AllowedDomains 白名单漏了 condition 域，导致 GameEngine
+初始化即抛 provider_domain_not_allowed——当前 main 的 raylib host 对所有
+showcase 无法启动（Web host 因旧构建产物未触发）。
+
+真机验证：修复后 save_load showcase raylib 实例正常启动并完成 #1205 五时序
+真机验收（冷启动闭环 + UI 闭环）。
+
+附 #1205 验收证据（battle-report + bridge-trace）。

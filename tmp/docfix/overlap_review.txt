@@ -1,0 +1,66 @@
+==================== W L12  (base L12)
+W: - 参数黑板限制 8 �?override，无父→子继�?
+C: - 参数黑板限制 8 个 override，无父→子继承
+==================== W L13  (base L13)
+W: - `PresenterEmitSystem` �?732 行的 God System，承�?10+ 个独立职�?
+C: - `PerformerEmitSystem` 是 732 行的 God System，承担 10+ 个独立职责
+==================== W L47  (base L47)
+W: 2. "working" tag ON �?`TagBinding` 写入 param / 激活位 �?smoke 可见、worker 进入工作�?
+C: 2. "working" tag ON → `TagBinding` 写入 param / 激活位 → smoke 可见、worker 进入工作态
+==================== W L48  (base L48)
+W: 3. "working" tag OFF �?`TagBinding` 写入 param / 停用�?�?smoke 隐藏、worker 退出工作态，但节点仍常驻
+C: 3. "working" tag OFF → `TagBinding` 写入 param / 停用位 → smoke 隐藏、worker 退出工作态，但节点仍常驻
+==================== W L49  (base L49)
+W: 4. 日夜切换 �?`GlobalDayNight` �?Rule �?`SetParam(lampKey)` �?Material behavior 切灯光材�?
+C: 4. 日夜切换 → `GlobalDayNight` → Rule → `SetParam(lampKey)` → Material behavior 切灯光材质
+==================== W L50  (base L50)
+W: 5. 区域参数 �?root param=0(北方) �?�?presenter blackboard 继承 �?Material behavior 查表 �?黑砖
+C: 5. 区域参数 → root param=0(北方) → 子 performer blackboard 继承 → Material behavior 查表 → 黑砖
+==================== W L105  (base L105)
+W:     // �?Kind 解释的配置数据（union 风格�?
+C:     // 按 Kind 解释的配置数据（union 风格）
+==================== W L191  (base L191)
+W:     // Animator �?SetFloat/SetInt/SetBool 直接映射�?blackboard 的对�?lane
+C:     // Animator 的 SetFloat/SetInt/SetBool 直接映射到 blackboard 的对应 lane
+==================== W L388  (base L330)
+W:       �?                      �?
+C:       │                       │
+==================== W L389  (base L330)
+W:       �?                      �?
+C:       │                       │
+==================== W L403  (base L345)
+W:       �?                          - AttributeBinding: 属性→param + 阈值映�?
+C:       │                           - AttributeBinding: 属性→param + 阈值映射
+==================== W L406  (base L348)
+W:       �?                          - Animator: 动画状态推�?
+C:       │                           - Animator: 动画状态推进
+==================== W L575  (base L520)
+W: - [现有基建收尾整合](presenter-legacy-consolidation.md) �?Animator/VisualTemplate/Prefab/渲染类型的迁移方�?
+C: - [现有基建收尾整合](performer-legacy-consolidation.md) — Animator/VisualTemplate/Prefab/渲染类型的迁移方案
+==================== W L593  (base L538)
+W: ### 9.1 Presenter �?Entity 的关�?
+C: ### 9.1 Performer 与 Entity 的关系
+==================== W L598  (base L543)
+W: - presenter 不能�?owner entity 活得更久，除�?owner �?null（世界固�?presenter�?
+C: - performer 不能比 owner entity 活得更久，除非 owner 为 null（世界固定 performer）
+==================== W L635  (base L580)
+W: Presenter �?LOD �?entity 仿真 LOD（`entity-simulation-layering.md`）协调：
+C: Performer 的 LOD 与 entity 仿真 LOD（`entity-simulation-layering.md`）协调：
+==================== W L644  (base L589)
+W: `PresenterBehaviorSystem` 读取 entity �?`SimulationLodState`，按档位跳过非必�?behavior�?
+C: `PerformerBehaviorSystem` 读取 entity 的 `SimulationLodState`，按档位跳过非必要 behavior。
+==================== W L649  (base L594)
+W: - **Dirty-Driven Behavior**：直接读 owner entity �?GAS dirty 信号（`GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`），只对有变化的 entity 求�?behavior，稳态下开销 �?0
+C: - **Dirty-Driven Behavior**：直接读 owner entity 的 GAS dirty 信号（`GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`），只对有变化的 entity 求值 behavior，稳态下开销 ≈ 0
+==================== W L655  (base L600)
+W: `PresenterInstanceBuffer` 已经是固定容量槽�?+ 自由列表的设计，天然支持池化。StableId �?`Release()` 时回收到自由列表，下�?`Allocate()` 复用。Blackboard �?per-handle 段在 `ClearAll()` 时归零但不释放内存�?
+C: `PerformerInstanceBuffer` 已经是固定容量槽位 + 自由列表的设计，天然支持池化。StableId 在 `Release()` 时回收到自由列表，下次 `Allocate()` 复用。Blackboard 的 per-handle 段在 `ClearAll()` 时归零但不释放内存。
+==================== W L679  (base L624)
+W: | 投射物视�?| �?| 投射�?entity �?presenter，AssetBinding(Mesh/VFX) + Spline(Patrol) |
+C: | 投射物视觉 | 是 | 投射物 entity 的 performer，AssetBinding(Mesh/VFX) + Spline(Patrol) |
+==================== W L739  (base L684)
+W: 2. **Compiled Binding Table** �?注册时编译：pre-resolved attribute/tag ID、threshold table、material swap table。消除运行时 resolve 开销�?
+C: 2. **Compiled Binding Table** — 注册时编译：pre-resolved attribute/tag ID、threshold table、material swap table。消除运行时 resolve 开销。
+==================== W L741  (base L686)
+W: 4. **Execution Lanes** �?Lifecycle lane（命令驱动）、Dirty Sync lane（attribute/tag/param 变化时）、Continuous Tick lane（Animator）、Visible Projection lane（emit to draw buffer）�?
+C: 4. **Execution Lanes** — Lifecycle lane（命令驱动）、Dirty Sync lane（attribute/tag/param 变化时）、Continuous Tick lane（Animator）、Visible Projection lane（emit to draw buffer）。

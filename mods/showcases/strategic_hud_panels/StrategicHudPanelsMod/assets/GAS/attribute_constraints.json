@@ -1,0 +1,23 @@
+{
+  "StrategicHud.TimeDay": { "min": 0 },
+  "StrategicHud.Speed": { "min": 0 },
+  "StrategicHud.ViewMode": { "min": 0 },
+  "StrategicHud.CameraX": {},
+  "StrategicHud.CameraY": {},
+  "StrategicHud.Zoom": { "min": 0 },
+  "StrategicHud.SelectedHealth": { "min": 0 },
+  "StrategicHud.SelectedAttack": { "min": 0 },
+  "StrategicHud.SelectedCount": { "min": 0 },
+  "StrategicHud.EntityCount": { "min": 0 },
+  "StrategicHud.AllyCount": { "min": 0 },
+  "StrategicHud.HostileCount": { "min": 0 },
+  "StrategicHud.EventCount": { "min": 0 },
+  "StrategicHud.AlertLevel": { "min": 0 },
+  "StrategicHud.LastEventCode": { "min": 0 },
+  "StrategicHud.CommandReady": { "min": 0 },
+  "StrategicHud.SelectedUnits": { "min": 0 },
+  "StrategicHud.ActionPoints": { "min": 0 },
+  "StrategicHud.Diplomacy": { "min": 0 },
+  "StrategicHud.Research": { "min": 0 },
+  "StrategicHud.Logistics": { "min": 0 }
+}

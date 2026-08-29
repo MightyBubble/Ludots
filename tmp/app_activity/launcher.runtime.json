@@ -1,0 +1,25 @@
+{
+  "LaunchGraphPath": "C:/001_AI/LudotsProd/artifacts/launcher/raylib.launch.graph.json",
+  "PlanSelectors": [
+    "$activity_dispatch_showcase",
+    "$agent_bridge"
+  ],
+  "PlanRootModIds": [
+    "ActivityDispatchShowcaseMod",
+    "AgentBridgeMod"
+  ],
+  "PlanOrderedModIds": [
+    "LudotsCoreMod",
+    "ActivityDispatchShowcaseMod",
+    "AgentBridgeMod"
+  ],
+  "PlanSchemaVersion": 1,
+  "BrowserRuntime": {
+    "Enabled": true,
+    "Required": true,
+    "Provider": "cef",
+    "ProviderAssemblyPath": "C:/001_AI/LudotsProd/BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll",
+    "ProviderHostTypeName": "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost",
+    "RuntimeRootPath": "C:/001_AI/LudotsProd/BrowserRuntime/cef"
+  }
+}

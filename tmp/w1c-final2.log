@@ -1,0 +1,59 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.UI -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI\bin\Debug\net9.0\Ludots.UI.dll
+  ExCSS -> C:\001_AI\LudotsProd\src\Libraries\ExCSS\bin\Debug\net8.0\ExCSS.dll
+  Ludots.Contracts -> C:\001_AI\LudotsProd\src\Contracts\bin\Debug\net9.0\Ludots.Contracts.dll
+  Raylib-cs -> C:\001_AI\LudotsProd\src\Libraries\Raylib-cs\bin\Debug\net9.0\Raylib-cs.dll
+  Ludots.UI.Browser -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Browser\bin\Debug\net9.0\Ludots.UI.Browser.dll
+  SkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\SkiaSharp\SkiaSharp\bin\Debug\net8.0\SkiaSharp.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd\src\Platform\Ludots.Platform.Abstractions\bin\Debug\net9.0\Ludots.Platform.Abstractions.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net8.0\Arch.dll
+  ShimSkiaSharp -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Debug\net8.0\ShimSkiaSharp.dll
+  Arch.System -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.System\bin\Debug\net7.0\Arch.System.dll
+  Svg.Generators -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Debug\netstandard2.0\Svg.Generators.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\LudotsProd\src\Graph\Ludots.Graph.Abstractions\bin\Debug\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.Platform.Desktop -> C:\001_AI\LudotsProd\src\Platform\Ludots.Platform.Desktop\bin\Debug\net9.0\Ludots.Platform.Desktop.dll
+  Arch -> C:\001_AI\LudotsProd\src\Libraries\Arch\src\Arch\bin\Debug\net6.0\Arch.dll
+  Ludots.Raylib.Render -> C:\001_AI\LudotsProd\src\Client\Ludots.Raylib.Render\bin\Debug\net9.0\Ludots.Raylib.Render.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Persistence\bin\Debug\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd\src\Libraries\Arch.Extended\Arch.Relationships\bin\Debug\net7.0\Arch.Relationships.dll
+  Svg.Custom -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Custom\bin\Debug\net8.0\Svg.Custom.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Core\bin\Debug\net9.0\DotRecast.Core.dll
+  DotRecast.Recast -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Debug\net9.0\DotRecast.Recast.dll
+  Svg.Model -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Model\bin\Debug\net8.0\Svg.Model.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Debug\net9.0\DotRecast.Detour.dll
+  Svg.Skia -> C:\001_AI\LudotsProd\src\Libraries\Svg.Skia\Svg.Skia\bin\Debug\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Skia\bin\Debug\net9.0\Ludots.UI.Skia.dll
+  Ludots.App.RaylibEngineGallery -> C:\001_AI\LudotsProd\src\Apps\Raylib\Ludots.App.RaylibEngineGallery\bin\Debug\net9.0\Ludots.App.RaylibEngineGallery.dll
+  Ludots.Core -> C:\001_AI\LudotsProd\src\Core\bin\Debug\net9.0\Ludots.Core.dll
+  Ludots.Client.Raylib -> C:\001_AI\LudotsProd\src\Client\Ludots.Client.Raylib\bin\Debug\net9.0\Ludots.Client.Raylib.dll
+  InstancedBatchDemoMod -> C:\001_AI\LudotsProd\mods\fixtures\instanced_batch\InstancedBatchDemoMod\bin\net9.0\InstancedBatchDemoMod.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.DataPlane\bin\Debug\net9.0\Ludots.WebUI.DataPlane.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.HtmlEngine\bin\Debug\net9.0\Ludots.UI.HtmlEngine.dll
+  Ludots.Presentation.Skia -> C:\001_AI\LudotsProd\src\Libraries\Ludots.Presentation.Skia\bin\Debug\net9.0\Ludots.Presentation.Skia.dll
+C:\001_AI\LudotsProd\mods\CoreInputMod\Triggers\InstallCoreInputOnGameStartTrigger.cs(41,26): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\LudotsProd\mods\CoreInputMod\CoreInputMod.csproj]
+C:\001_AI\LudotsProd\mods\CoreInputMod\Systems\LocalOrderSourceHelper.cs(598,54): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\LudotsProd\mods\CoreInputMod\CoreInputMod.csproj]
+  CoreInputMod -> C:\001_AI\LudotsProd\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  LudotsCoreMod -> C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  Ludots.UI.Panels -> C:\001_AI\LudotsProd\src\Libraries\Ludots.UI.Panels\bin\Debug\net9.0\Ludots.UI.Panels.dll
+  Ludots.WebUI.Browser -> C:\001_AI\LudotsProd\src\Libraries\Ludots.WebUI.Browser\bin\Debug\net9.0\Ludots.WebUI.Browser.dll
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs(36,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Services\RaylibSoundConsumer.cs(283,51): warning CS8604: “Sound IRaylibSoundBackend.LoadFromFile(string path)”中的形参“path”可能传入 null 引用实参。 [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+  Ludots.Adapter.Raylib -> C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\bin\Debug\net9.0\Ludots.Adapter.Raylib.dll
+C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibInstancedBatchDemoIntegrationTests.cs(131,52): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibScreenshotEvidenceTests.cs(13,27): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibScreenshotEvidenceTests.cs(29,27): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibScreenshotEvidenceTests.cs(44,31): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibScreenshotEvidenceTests.cs(45,37): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibSoundNativeDeviceTests.cs(136,25): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+  RaylibAdapterTests -> C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\bin\Debug\net9.0\Ludots.Adapter.Raylib.Tests.dll
+C:\001_AI\LudotsProd\src\Tests\RaylibAdapterTests\bin\Debug\net9.0\Ludots.Adapter.Raylib.Tests.dll (.NETCoreApp,Version=v9.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+GROUND.CAPTURE.FAILED pointer=<0, 0>
+GROUND.CAPTURE.FAILED pointer=<0, 0>
+GROUND.CAPTURE.FAILED pointer=<0, 0>
+GROUND.CAPTURE.FAILED pointer=<0, 0>
+
+已通过! - 失败:     0，通过:   207，已跳过:     0，总计:   207，持续时间: 3 m 32 s - Ludots.Adapter.Raylib.Tests.dll (net9.0)
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

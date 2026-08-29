@@ -1,0 +1,11 @@
+{
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/capabilities/camera/CameraProfilesMod",
+    "../../../../../../../mods/capabilities/entityinfo/EntityInfoPanelsMod",
+    "../../../../../../../mods/showcases/interaction/InteractionShowcaseMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod"
+  ]
+}

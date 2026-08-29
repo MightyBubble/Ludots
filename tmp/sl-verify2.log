@@ -1,0 +1,17 @@
+C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibDiagnosticHud.cs(206,63): error CS0246: 未能找到类型或命名空间名“ServiceKey<>�?是否缺少 using 指令或程序集引用?) [C:\001_AI\LudotsProd\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+
+生成失败�?
+    1 个警�?
+    1 个错�?
+
+已用时间 00:00:16.37
+
+有可用的工作负载更新。有关详细信息，请运�?`dotnet workload list`�?
+dotnet build failed: C:\001_AI\LudotsProd\src\Tools\Ludots.Launcher.Cli\Ludots.Launcher.Cli.csproj
+����λ�� C:\001_AI\LudotsProd\scripts\dotnet-host.ps1:48 �ַ�: 9
++         throw "dotnet build failed: $ProjectPath"
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (dotnet build fa...cher.Cli.csproj:String) [], RuntimeException
+    + FullyQualifiedErrorId : dotnet build failed: C:\001_AI\LudotsProd\src\Tools\Ludots.Launcher.Cli\Ludots.Launcher. 
+   Cli.csproj
+ 

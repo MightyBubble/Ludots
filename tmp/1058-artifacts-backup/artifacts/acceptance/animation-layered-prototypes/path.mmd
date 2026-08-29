@@ -1,0 +1,14 @@
+flowchart TD
+    A[start animation acceptance map] --> B[tick prototype driver system]
+    B --> C[tank base locomotion updates packed state]
+    B --> D[humanoid base locomotion updates packed state]
+    C --> E[tank profile resolves packed state clip assets]
+    D --> F[humanoid profile resolves packed state clip assets]
+    E --> G[snapshot emits skinned tank prototype item]
+    F --> H[snapshot emits skinned humanoid prototype item]
+    A --> I[static baseline remains on static lane]
+    B --> M[named overlay channels locomotion / aim_yaw / recoil]
+    E --> J{clip locator exists for raylib and ue5}
+    F --> K{clip locator exists for raylib and ue5}
+    J -->|no| L[fail acceptance]
+    K -->|no| L

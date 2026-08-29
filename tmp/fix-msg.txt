@@ -1,0 +1,26 @@
+fix(persistence): 消除确定性测量假象——墙钟字段出档 + canonical digest + 回放 showcase 五项修复（#1311 P0）
+
+引擎侧：
+- 诊断单例的墙钟字段不再进入序列化：PresentationFrameState 只保留
+  Enabled/FixedDeltaTime（剔除 InterpolationAlpha/RenderDeltaTime/FrameId/
+  FixedUpdatesThisFrame）；Physics2DPerfStats 只保留四个配置回显（剔除
+  PhysicsUpdateMs 与全部运行统计）；Physics2DRuntimeState 剔除
+  LastPhysicsStepTime。静止世界同 tick 重复 capture 的 digest 从此稳定
+  （WorldDigestStabilityTests 守卫，防 #1311 测量假象复发）
+- 手写组件 formatter 反射发现机制（AddDiscoveredComponentFormatters，
+  跳过开放泛型）——跨程序集 formatter（如 Physics2D）有正门注册
+- SaveWorldStateDigest：行排序 canonical digest 提取为 Core 公共 API
+  （blob 字节跨调用不稳定，行排序是唯一可比口径；三处重复实现收敛）
+- AuthoritativeInputAccumulator 暴露为服务（权威输入注入正门）
+
+showcase（deterministic_replay）：
+- Nudge 改走权威输入闭环：accumulator.CaptureAction 自定义动作 →
+  快照 → 帧录制 → 回放重放 → showcase 系统消费执行位移（此前直写
+  frozen reader 被每 tick 快照清洗，动作从不进帧也从不驱动世界）
+- 录制生命周期对齐 fixed-step 边界（意图标志），消除 RPC 线程竞态；
+  _nextSequence 复位（二次录制不再炸引擎循环）；录制中面板帧数实时
+- digest 采样对称化（录/放都在 InputCollection 阶段）+ 缓存比较基准
+  （不再每帧现算活动目标）+ canonical 口径
+
+真机复验：静止世界同 tick capture 稳定；录放闭环英雄位移由权威帧驱动。
+残余 MISMATCH 为真分叉源（S3/S4/G2/G3，restore 完整性缺口），#1311 P1 跟踪。

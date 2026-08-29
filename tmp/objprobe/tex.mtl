@@ -1,0 +1,4 @@
+newmtl tex_surface
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+map_Kd checker.tga

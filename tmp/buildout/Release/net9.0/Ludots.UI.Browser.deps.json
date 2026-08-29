@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "Ludots.UI.Browser/1.0.0": {
+        "dependencies": {
+          "Ludots.UI": "1.0.0"
+        },
+        "runtime": {
+          "Ludots.UI.Browser.dll": {}
+        }
+      },
+      "Ludots.UI/1.0.0": {
+        "runtime": {
+          "Ludots.UI.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Ludots.UI.Browser/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Ludots.UI/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
