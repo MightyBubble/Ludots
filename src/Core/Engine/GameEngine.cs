@@ -1947,7 +1947,9 @@ namespace Ludots.Core.Engine
                 World,
                 taskDefinitions,
                 providerServices,
-                taskPresentation);
+                taskPresentation,
+                GetService(CoreServiceKeys.PresentationTextCatalog),
+                GetService(CoreServiceKeys.PresentationDisplayResolver));
             TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
@@ -1974,14 +1976,14 @@ namespace Ludots.Core.Engine
                 taskRuntime,
                 textCatalog,
                 displayResolver);
-            var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog);
+            var sequencerRuntime = new SequencerRuntime(this, sequenceDefinitions, storyDefinitions, storyGraphs, taskRuntime, textCatalog, displayResolver);
             SetService(CoreServiceKeys.StoryGraphInvoker, storyGraphs);
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
             SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
             _gasGraphRuntimeApi?.BindStartDialogue(dialogueId => dialogueRuntime.StartDialogue(dialogueId));
             SetService(
                 CoreServiceKeys.StoryPresentationProjector,
-                new StoryPresentationProjector(storyDefinitions, displayResolver));
+                new StoryPresentationProjector(storyDefinitions));
             AttributeRegistry.Freeze();
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
@@ -2019,7 +2021,7 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
-            RegisterSystem(new StoryRuntimeSystem(dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
+            RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);

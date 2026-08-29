@@ -21,12 +21,10 @@
 | `story.world_bubble` | 说话者世界坐标 → `IScreenProjector` |
 | `story.immersive_subtitle` | 屏幕字幕轨 |
 | `story.standing_portrait` | 半屏立绘 |
+| `story.transmission` | 传讯（surfaceKind=TransmissionOverlay） |
 
-## 表现前后端
-
-- 运行时产出 `DialogueView` / `SequenceView`（已解析文案 + `imageId`）
-- `StoryPresentationProjector` 投影为带 `StoryPresentationStreamHandle` 的字符串袋帧
-- NarrativeFrontend 解析 `imageId`、套布局与眉题；不读 Graph / 下一节点
+表现前后端分离、输入分发（StoryRuntimeSystem）、全量 TextToken 合同与跨 mod id 唯一性规则，
+以 SSOT 文档为准（上方链接），本页不复述。
 
 ## 相关页面
 

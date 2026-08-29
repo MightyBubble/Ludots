@@ -9,6 +9,7 @@ namespace Ludots.Core.Config
         private readonly Dictionary<string, List<string>> _fragmentsByPath = new(StringComparer.Ordinal);
         private readonly Dictionary<(string Path, string Id), string> _winnerById = new();
         private readonly HashSet<(string Path, string Id)> _deleted = new();
+        private readonly Dictionary<(string Path, string Id), (string First, string Second)> _duplicates = new();
 
         public void RecordFragment(string relativePath, string sourceUri)
         {
@@ -31,6 +32,28 @@ namespace Ludots.Core.Config
             _winnerById.Remove((relativePath, id));
             _deleted.Add((relativePath, id));
             RecordFragment(relativePath, sourceUri);
+        }
+
+        public void RecordDuplicateId(string relativePath, string id, string firstSource, string secondSource)
+        {
+            var key = (relativePath, id);
+            if (!_duplicates.TryGetValue(key, out var existing))
+            {
+                _duplicates[key] = (firstSource, secondSource);
+            }
+        }
+
+        public IReadOnlyList<(string Id, string FirstSource, string SecondSource)> GetDuplicateIds(string relativePath)
+        {
+            var result = new List<(string, string, string)>();
+            foreach (KeyValuePair<(string Path, string Id), (string First, string Second)> pair in _duplicates)
+            {
+                if (string.Equals(pair.Key.Path, relativePath, StringComparison.Ordinal))
+                {
+                    result.Add((pair.Key.Id, pair.Value.First, pair.Value.Second));
+                }
+            }
+            return result;
         }
 
         public bool TryGetWinner(string relativePath, string id, out string sourceUri)

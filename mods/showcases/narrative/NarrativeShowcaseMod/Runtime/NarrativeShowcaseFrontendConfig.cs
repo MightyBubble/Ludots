@@ -32,7 +32,6 @@ namespace NarrativeShowcaseMod.Runtime
         public NarrativeShowcaseCastMemberConfig[] Cast { get; set; } = Array.Empty<NarrativeShowcaseCastMemberConfig>();
         public NarrativeShowcaseVariableConfig[] Variables { get; set; } = Array.Empty<NarrativeShowcaseVariableConfig>();
         public Dictionary<string, string> EndingLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-        public Dictionary<string, string> SpeakerLabels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         public static NarrativeShowcaseFrontendConfig Load(Stream stream)
         {
@@ -50,27 +49,13 @@ namespace NarrativeShowcaseMod.Runtime
             return config;
         }
 
-        public string ResolveSpeakerLabel(string speakerId)
-        {
-            if (!string.IsNullOrWhiteSpace(speakerId) &&
-                SpeakerLabels.TryGetValue(speakerId, out string? label) &&
-                !string.IsNullOrWhiteSpace(label))
-            {
-                return label;
-            }
-
-            return speakerId ?? string.Empty;
-        }
-
         public string ResolveEndingLabel(int ending)
         {
-            if (EndingLabels.TryGetValue(ending.ToString(), out string? label) &&
-                !string.IsNullOrWhiteSpace(label))
-            {
-                return label;
-            }
-
-            return ending.ToString();
+            return EndingLabels.TryGetValue(ending.ToString(), out string? label) &&
+                   !string.IsNullOrWhiteSpace(label)
+                ? label
+                : throw new InvalidOperationException(
+                    $"Narrative frontend config has no endingLabels entry for ending '{ending}'.");
         }
 
         public IReadOnlyList<string> ResolveChoiceSignals(string choiceId)
@@ -113,7 +98,7 @@ namespace NarrativeShowcaseMod.Runtime
         {
             return Enum.TryParse(Anchor, ignoreCase: true, out NarrativeFrontendAnchor anchor)
                 ? anchor
-                : NarrativeFrontendAnchor.TopLeft;
+                : throw new InvalidOperationException($"Narrative frontend surface anchor '{Anchor}' is not a known anchor name.");
         }
     }
 
@@ -150,23 +135,23 @@ namespace NarrativeShowcaseMod.Runtime
         public float HeadOffsetYCm { get; set; } = 160f;
     }
 
+    /// <summary>Template tokens: words live in the text catalog; composition shape (order/punctuation) stays in code.</summary>
+    internal static class NarrativeShowcaseCastDefaults
+    {
+        public const float HeadOffsetYCm = 140f;
+    }
+
     internal sealed class NarrativeShowcaseTemplateConfig
     {
-        public string ObjectiveTitleFormat { get; set; } = "{task}";
-        public string VariableCaptionFormat { get; set; } = "{label}: {value}";
-        public string TaskActivated { get; set; } = string.Empty;
-        public string DialogueEntered { get; set; } = string.Empty;
-        public string DialogueChoiceCommitted { get; set; } = string.Empty;
-        public string SequenceEntered { get; set; } = string.Empty;
+        public string TaskActivatedPrefix { get; set; } = string.Empty;
+        public string DialogueChoiceCommittedPrefix { get; set; } = string.Empty;
         public string TaskCompleted { get; set; } = string.Empty;
-        public string Signal { get; set; } = string.Empty;
         public string BeastSpawned { get; set; } = string.Empty;
         public string RewardApplied { get; set; } = string.Empty;
     }
 
     internal sealed class NarrativeShowcaseRoutingConfig
     {
-        public string[] TransmissionSequenceIds { get; set; } = Array.Empty<string>();
         public string[] SubtitleSequenceIds { get; set; } = Array.Empty<string>();
         public NarrativeShowcaseChoiceSignalRoute[] ChoiceSignals { get; set; } = Array.Empty<NarrativeShowcaseChoiceSignalRoute>();
     }
@@ -206,6 +191,10 @@ namespace NarrativeShowcaseMod.Runtime
         public bool PureStoryLane { get; set; }
 
         public string PureIntroSequenceId { get; set; } = "Sequence.Demo.Overture";
+        public int BeastSpawnXcm { get; set; } = 1960;
+        public int BeastSpawnYcm { get; set; } = 940;
+        public float BeastSpawnFacingRad { get; set; } = 3.14159f;
+        public int HistoryCapacity { get; set; } = 14;
         public string PureBriefingDialogueId { get; set; } = "Dialogue.Demo.Audience";
     }
 }

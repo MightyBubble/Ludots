@@ -13,7 +13,7 @@
       "name": "Narrative Showcase Controls",
       "priority": 110,
       "bindings": [
-        { "actionId": "StoryInteract", "path": "<Keyboard>/e" },
+        { "actionId": "StoryInteract", "path": "<Keyboard>/f" },
         { "actionId": "StoryAdvance", "path": "<Keyboard>/enter" },
         { "actionId": "StorySkip", "path": "<Keyboard>/tab" },
         { "actionId": "StoryChoice1", "path": "<Keyboard>/1" },

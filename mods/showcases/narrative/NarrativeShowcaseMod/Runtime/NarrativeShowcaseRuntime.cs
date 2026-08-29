@@ -38,6 +38,7 @@ namespace NarrativeShowcaseMod.Runtime
     {
         private const int ShowcaseLocalPlayerId = 1;
         private const float UiMargin = 24f;
+        private const float NameplateLiftPx = 52f;
         private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private readonly IModContext _context;
@@ -46,6 +47,7 @@ namespace NarrativeShowcaseMod.Runtime
         private bool _narrativeInputActive;
         private bool _interactionInputActive;
         private bool _taskHookInstalled;
+        private readonly NarrativeShowcaseWorldEffects _worldEffects;
         private int _historySerial;
         private string _panelFrameSrc = string.Empty;
         private string _choiceFrameSrc = string.Empty;
@@ -55,6 +57,7 @@ namespace NarrativeShowcaseMod.Runtime
             _context = context;
             using var stream = context.GetResource($"{context.ModId}:assets/Frontend/narrative_frontend.json");
             _frontendConfig = NarrativeShowcaseFrontendConfig.Load(stream);
+            _worldEffects = new NarrativeShowcaseWorldEffects(_frontendConfig, (eng, text) => AppendHistory(text));
             if (ReferenceEquals(_frontendConfig.DialogueBubble, _frontendConfig.OverlayDialogue) ||
                 ReferenceEquals(_frontendConfig.DialogueBubble, _frontendConfig.StandingPortrait))
             {
@@ -147,11 +150,8 @@ namespace NarrativeShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            AppendHistory(_frontendConfig.Templates.DialogueEntered, new Dictionary<string, string>
-            {
-                ["speaker"] = ResolveSpeakerDisplay(engine, context.Get(DialogueServiceKeys.SpeakerId) ?? string.Empty),
-                ["bodyText"] = context.Get(DialogueServiceKeys.BodyText) ?? string.Empty,
-            });
+            AppendHistory(
+                $"{ResolveSpeakerDisplay(engine, context.Get(DialogueServiceKeys.SpeakerId) ?? string.Empty)}{Tr(engine, "story.ui.punct.colon")}{context.Get(DialogueServiceKeys.BodyText) ?? string.Empty}");
             RefreshPanel(engine);
             return Task.CompletedTask;
         }
@@ -163,10 +163,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            AppendHistory(_frontendConfig.Templates.DialogueChoiceCommitted, new Dictionary<string, string>
-            {
-                ["bodyText"] = context.Get(DialogueServiceKeys.BodyText) ?? string.Empty,
-            });
+            AppendHistory($"{Tr(engine, _frontendConfig.Templates.DialogueChoiceCommittedPrefix)}{context.Get(DialogueServiceKeys.BodyText) ?? string.Empty}");
 
             string choiceId = context.Get(DialogueServiceKeys.DialogueChoiceId) ?? string.Empty;
             if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService tasks)
@@ -195,11 +192,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            AppendHistory(_frontendConfig.Templates.SequenceEntered, new Dictionary<string, string>
-            {
-                ["speaker"] = string.Empty,
-                ["bodyText"] = context.Get(SequencerServiceKeys.BodyText) ?? string.Empty,
-            });
+            AppendHistory($"{context.Get(SequencerServiceKeys.BodyText) ?? string.Empty}");
             RefreshPanel(engine);
             return Task.CompletedTask;
         }
@@ -212,10 +205,7 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             string eventId = context.Get(SequencerServiceKeys.EventId) ?? string.Empty;
-            AppendHistory(_frontendConfig.Templates.Signal, new Dictionary<string, string>
-            {
-                ["signalId"] = eventId,
-            });
+            AppendHistory(eventId);
             RefreshPanel(engine);
             return Task.CompletedTask;
         }
@@ -369,18 +359,15 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             tasks.EmitSignal(signalId);
-            AppendHistory(_frontendConfig.Templates.Signal, new Dictionary<string, string>
-            {
-                ["signalId"] = signalId,
-            });
+            AppendHistory(signalId);
 
             if (string.Equals(signalId, NarrativeShowcaseIds.SpawnBeastSignal, StringComparison.OrdinalIgnoreCase))
             {
-                SpawnBeast(engine);
+                _worldEffects.SpawnBeast(engine);
             }
             else if (string.Equals(signalId, NarrativeShowcaseIds.RewardSignal, StringComparison.OrdinalIgnoreCase))
             {
-                ApplyReward(engine);
+                _worldEffects.ApplyReward(engine);
             }
         }
 
@@ -403,12 +390,12 @@ namespace NarrativeShowcaseMod.Runtime
                 && (!sequenceActive || hud.ShowObjectiveWithSequence);
             if (showObjective)
             {
-                surfaces.Add(BuildObjectiveSurface(tasks));
+                surfaces.Add(BuildObjectiveSurface(engine, tasks));
             }
 
             if (hud.ShowHistoryAlways)
             {
-                surfaces.Add(BuildHistorySurface());
+                surfaces.Add(BuildHistorySurface(engine));
             }
 
             if (hud.ShowVariablesAlways || (hud.ShowVariablesWhenNonZero && HasNonZeroStoryVariable(engine)))
@@ -418,7 +405,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             if (_history.Count > 0)
             {
-                surfaces.Add(BuildNotificationSurface());
+                surfaces.Add(BuildNotificationSurface(engine));
             }
 
             bool standingPortrait = dialogueActive &&
@@ -434,9 +421,8 @@ namespace NarrativeShowcaseMod.Runtime
             if (sequenceActive)
             {
                 StoryPresentationProjector projector = RequireProjector(engine);
-                bool transmission = ContainsId(_frontendConfig.Routing.TransmissionSequenceIds, sequence.SequenceId);
-                StoryPresentationFrame frame = projector.ProjectSequence(sequence, transmission);
-                AppendStoryFrame(engine, surfaces, frame, worldProjected: false);
+                StoryPresentationFrame frame = projector.ProjectSequence(sequence);
+                AppendStoryFrame(engine, surfaces, frame);
             }
 
             if (dialogueActive)
@@ -456,13 +442,12 @@ namespace NarrativeShowcaseMod.Runtime
 
                     worldX = screenX - UiMargin;
                     worldY = screenY - UiMargin;
-                    NarrativeShowcaseSurfaceConfig bubbleChrome = _frontendConfig.DialogueBubble;
                     engine.GlobalContext["NarrativeShowcase.LastWorldBubble"] =
-                        $"DialogueBubble|{bubbleChrome.Width}|TopLeft|{worldX:0.###}|{worldY - 96f:0.###}|{bubbleChrome.Eyebrow}";
+                        $"DialogueBubble|{profile.Width}|TopLeft|{worldX:0.###}|{worldY - profile.WorldScreenHeadOffsetPx:0.###}|{_frontendConfig.DialogueBubble.Eyebrow}";
                 }
 
                 StoryPresentationFrame frame = projector.ProjectDialogue(dialogueView, worldX, worldY);
-                AppendStoryFrame(engine, surfaces, frame, worldProjected: worldX.HasValue);
+                AppendStoryFrame(engine, surfaces, frame);
             }
 
             surfaces.RemoveAll(static surface => !surface.Visible);
@@ -485,8 +470,7 @@ namespace NarrativeShowcaseMod.Runtime
         private void AppendStoryFrame(
             GameEngine engine,
             List<NarrativeFrontendSurfaceModel> surfaces,
-            StoryPresentationFrame frame,
-            bool worldProjected)
+            StoryPresentationFrame frame)
         {
             PresentationDisplayResolver? display = engine.GetService(CoreServiceKeys.PresentationDisplayResolver);
             NarrativeFrontendPageState page = StoryPresentationFrontendAdapter.ToPage(
@@ -501,7 +485,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             for (int i = 0; i < page.Surfaces.Count; i++)
             {
-                surfaces.Add(ApplyFrontendChrome(page.Surfaces[i], worldProjected));
+                surfaces.Add(ApplyFrontendChrome(engine, page.Surfaces[i]));
             }
         }
 
@@ -510,9 +494,11 @@ namespace NarrativeShowcaseMod.Runtime
         /// World-projected bubbles keep projected TopLeft offsets and only take width/chrome from config.
         /// </summary>
         private NarrativeFrontendSurfaceModel ApplyFrontendChrome(
-            NarrativeFrontendSurfaceModel surface,
-            bool worldProjected)
+            GameEngine engine,
+            NarrativeFrontendSurfaceModel surface)
         {
+            // Geometry and colors are profile-owned (single writer, Core projector).
+            // Chrome contributes skin text only: eyebrow / footer / choice title.
             NarrativeShowcaseSurfaceConfig? config = ResolveChromeConfig(surface.Kind);
             if (config == null)
             {
@@ -524,24 +510,21 @@ namespace NarrativeShowcaseMod.Runtime
                 };
             }
 
-            bool keepProjectedPlacement =
-                worldProjected && surface.Kind == NarrativeFrontendSurfaceKind.DialogueBubble;
-
             string title = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList &&
                            !string.IsNullOrWhiteSpace(config.Title)
-                ? config.Title
+                ? Tr(engine, config.Title)
                 : surface.Title;
 
             string footer;
             if (surface.Kind is NarrativeFrontendSurfaceKind.SubtitleBubble
                 or NarrativeFrontendSurfaceKind.TransmissionOverlay)
             {
-                footer = _frontendConfig.Hints.SkipPrompt;
+                footer = Tr(engine, _frontendConfig.Hints.SkipPrompt);
             }
             else if (surface.CountdownSeconds > 0f &&
                      !string.IsNullOrWhiteSpace(_frontendConfig.Hints.AutoAdvancePrompt))
             {
-                footer = _frontendConfig.Hints.AutoAdvancePrompt;
+                footer = Tr(engine, _frontendConfig.Hints.AutoAdvancePrompt);
             }
             else if (!string.IsNullOrWhiteSpace(surface.Footer))
             {
@@ -549,28 +532,14 @@ namespace NarrativeShowcaseMod.Runtime
             }
             else
             {
-                footer = config.Footer;
+                footer = Tr(engine, config.Footer);
             }
-
-            bool skippable = surface.Kind is NarrativeFrontendSurfaceKind.SubtitleBubble
-                or NarrativeFrontendSurfaceKind.TransmissionOverlay;
 
             return surface with
             {
                 Title = title,
-                Subtitle = string.IsNullOrWhiteSpace(surface.Subtitle) ? config.Eyebrow : surface.Subtitle,
+                Subtitle = string.IsNullOrWhiteSpace(surface.Subtitle) ? Tr(engine, config.Eyebrow) : surface.Subtitle,
                 Footer = footer,
-                Anchor = keepProjectedPlacement ? surface.Anchor : config.ResolveAnchor(),
-                Width = config.Width > 0f ? config.Width : surface.Width,
-                OffsetX = keepProjectedPlacement ? surface.OffsetX : config.OffsetX,
-                OffsetY = keepProjectedPlacement ? surface.OffsetY : config.OffsetY,
-                ZIndex = config.ZIndex > 0 ? config.ZIndex : surface.ZIndex,
-                Skippable = skippable || surface.Skippable,
-                AccentHex = FirstNonEmpty(surface.AccentHex, config.AccentHex),
-                BackgroundHex = FirstNonEmpty(surface.BackgroundHex, config.BackgroundHex),
-                BorderHex = FirstNonEmpty(surface.BorderHex, config.BorderHex),
-                ForegroundHex = FirstNonEmpty(surface.ForegroundHex, config.ForegroundHex),
-                MutedHex = FirstNonEmpty(surface.MutedHex, config.MutedHex),
                 FrameImageSrc = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
                     ? _choiceFrameSrc
                     : _panelFrameSrc
@@ -591,6 +560,20 @@ namespace NarrativeShowcaseMod.Runtime
             };
         }
 
+        /// <summary>Frontend config text fields are TextToken ids — resolve through the catalog at use sites.</summary>
+        private string Tr(GameEngine engine, string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return string.Empty;
+            }
+
+            return StoryTextResolution.FormatToken(
+                engine.GetService(CoreServiceKeys.PresentationTextCatalog),
+                engine.GetService(CoreServiceKeys.PresentationDisplayResolver),
+                token);
+        }
+
         private static string FirstNonEmpty(string primary, string fallback) =>
             string.IsNullOrWhiteSpace(primary) ? fallback ?? string.Empty : primary;
 
@@ -601,17 +584,17 @@ namespace NarrativeShowcaseMod.Runtime
         {
             string body = ResolvePromptBody(engine, dialogue, sequencer);
             string footer = sequencer.HasActiveSequence
-                ? _frontendConfig.Hints.SkipPrompt
+                ? Tr(engine, _frontendConfig.Hints.SkipPrompt)
                 : string.Empty;
             return CreateSurface(
                 _frontendConfig.PromptRibbon,
                 NarrativeFrontendSurfaceKind.PromptRibbon,
-                _frontendConfig.Hints.PromptTitle,
+                Tr(engine, _frontendConfig.Hints.PromptTitle),
                 body,
                 footer);
         }
 
-        private NarrativeFrontendSurfaceModel BuildObjectiveSurface(TaskRuntimeService tasks)
+        private NarrativeFrontendSurfaceModel BuildObjectiveSurface(GameEngine engine, TaskRuntimeService tasks)
         {
             IReadOnlyList<TaskView> taskViews = tasks.CaptureViews();
             TaskView? activeTask = null;
@@ -629,15 +612,12 @@ namespace NarrativeShowcaseMod.Runtime
                 return CreateSurface(
                     _frontendConfig.ObjectiveTracker,
                     NarrativeFrontendSurfaceKind.ObjectiveTracker,
-                    _frontendConfig.ObjectiveTracker.Title,
-                    BuildObjectiveSummary(taskViews));
+                    Tr(engine, _frontendConfig.ObjectiveTracker.Title),
+                    BuildObjectiveSummary(engine, taskViews));
             }
 
             TaskObjectiveProgressView objective = ResolveCurrentObjective(activeTask.Value);
-            string title = ReplaceTokens(_frontendConfig.Templates.ObjectiveTitleFormat, new Dictionary<string, string>
-            {
-                ["task"] = activeTask.Value.DisplayName,
-            });
+            string title = activeTask.Value.DisplayName;
             return CreateSurface(
                 _frontendConfig.ObjectiveTracker,
                 NarrativeFrontendSurfaceKind.ObjectiveTracker,
@@ -659,7 +639,7 @@ namespace NarrativeShowcaseMod.Runtime
             return task.Objectives.Count > 0 ? task.Objectives[0] : default;
         }
 
-        private NarrativeFrontendSurfaceModel BuildHistorySurface()
+        private NarrativeFrontendSurfaceModel BuildHistorySurface(GameEngine engine)
         {
             var items = new List<NarrativeFrontendSurfaceItem>(_history.Count);
             for (int i = _history.Count - 1; i >= 0; i--)
@@ -672,9 +652,9 @@ namespace NarrativeShowcaseMod.Runtime
             return CreateSurface(
                 _frontendConfig.HistoryJournal,
                 NarrativeFrontendSurfaceKind.HistoryJournal,
-                _frontendConfig.HistoryJournal.Title,
+                Tr(engine, _frontendConfig.HistoryJournal.Title),
                 string.Empty,
-                _frontendConfig.HistoryJournal.Footer,
+                Tr(engine, _frontendConfig.HistoryJournal.Footer),
                 items);
         }
 
@@ -685,15 +665,11 @@ namespace NarrativeShowcaseMod.Runtime
             for (int i = 0; i < _frontendConfig.Variables.Length; i++)
             {
                 NarrativeShowcaseVariableConfig variable = _frontendConfig.Variables[i];
-                string display = FormatVariable(variables, variable.VariableId);
+                string display = FormatVariable(engine, variables, variable.VariableId);
                 items.Add(new NarrativeFrontendSurfaceItem(
-                    Label: variable.Label,
+                    Label: Tr(engine, variable.Label),
                     Value: display,
-                    Caption: ReplaceTokens(_frontendConfig.Templates.VariableCaptionFormat, new Dictionary<string, string>
-                    {
-                        ["label"] = variable.Label,
-                        ["value"] = display,
-                    }),
+                    Caption: $"{Tr(engine, variable.Label)}{Tr(engine, "story.ui.punct.colon")}{display}",
                     AccentHex: variable.AccentHex,
                     Active: !string.IsNullOrWhiteSpace(display)));
             }
@@ -701,9 +677,9 @@ namespace NarrativeShowcaseMod.Runtime
             return CreateSurface(
                 _frontendConfig.VariablesPanel,
                 NarrativeFrontendSurfaceKind.StatusPanel,
-                _frontendConfig.VariablesPanel.Title,
+                Tr(engine, _frontendConfig.VariablesPanel.Title),
                 string.Empty,
-                _frontendConfig.VariablesPanel.Footer,
+                Tr(engine, _frontendConfig.VariablesPanel.Footer),
                 items);
         }
 
@@ -714,14 +690,13 @@ namespace NarrativeShowcaseMod.Runtime
                 return string.Empty;
             }
 
-            if (engine.GetService(CoreServiceKeys.PresentationDisplayResolver) is PresentationDisplayResolver display &&
-                engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
-                story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
-            {
-                return display.FormatTokenOrThrow(speaker.DisplayNameToken);
-            }
-
-            return _frontendConfig.ResolveSpeakerLabel(speakerId);
+            var story = engine.GetService(CoreServiceKeys.StoryDefinitions) as StoryDefinitionRegistry
+                ?? throw new InvalidOperationException("Narrative showcase requires StoryDefinitionRegistry for speaker names.");
+            return StoryTextResolution.ResolveSpeakerDisplayName(
+                story,
+                engine.GetService(CoreServiceKeys.PresentationTextCatalog),
+                engine.GetService(CoreServiceKeys.PresentationDisplayResolver),
+                speakerId);
         }
 
         private NarrativeFrontendSurfaceModel CreateSurface(
@@ -837,70 +812,14 @@ namespace NarrativeShowcaseMod.Runtime
                     objectiveText = definition.Objectives[0].Title;
                 }
 
-                AppendHistory(_frontendConfig.Templates.TaskActivated, new Dictionary<string, string>
-                {
-                    ["bodyText"] = objectiveText,
-                });
+                AppendHistory($"{Tr(engine, _frontendConfig.Templates.TaskActivatedPrefix)}{objectiveText}");
             }
             else if (change.State == TaskInstanceState.Completed)
             {
-                AppendHistory(_frontendConfig.Templates.TaskCompleted, new Dictionary<string, string>
-                {
-                    ["taskId"] = change.TaskId,
-                });
+                AppendHistory(Tr(engine, _frontendConfig.Templates.TaskCompleted));
             }
 
             RefreshPanel(engine);
-        }
-
-        private void SpawnBeast(GameEngine engine)
-        {
-            if (BeastSpawned(engine) || engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue queue)
-            {
-                return;
-            }
-
-            queue.TryEnqueue(new RuntimeEntitySpawnRequest
-            {
-                Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "interaction_enemy_bruiser",
-                MapId = new Ludots.Core.Map.MapId(NarrativeShowcaseIds.MapId),
-                HasWorldPosition = 1,
-                WorldPositionCm = Fix64Vec2.FromInt(1960, 940),
-                HasFacing = 1,
-                FacingAngleRad = 3.14159f
-            });
-            engine.GlobalContext[NarrativeShowcaseIds.BeastSpawnedKey] = true;
-            AppendHistory(_frontendConfig.Templates.BeastSpawned, null);
-        }
-
-        private void ApplyReward(GameEngine engine)
-        {
-            if (engine.GlobalContext.TryGetValue(NarrativeShowcaseIds.RewardAppliedKey, out var rewardObj) && rewardObj is bool rewardApplied && rewardApplied)
-            {
-                return;
-            }
-
-            if (engine.GetService(CoreServiceKeys.EffectRequestQueue) is not EffectRequestQueue queue ||
-                !TryFindEntityByName(engine.World, NarrativeShowcaseIds.PlayerName, out Entity player))
-            {
-                return;
-            }
-
-            int healEffectId = EffectTemplateIdRegistry.GetId("Effect.Narrative.BlessingHeal");
-            int speedEffectId = EffectTemplateIdRegistry.GetId("Effect.Narrative.BlessingSpeed");
-            if (healEffectId > 0)
-            {
-                queue.Publish(new EffectRequest { Source = player, Target = player, TemplateId = healEffectId });
-            }
-
-            if (speedEffectId > 0)
-            {
-                queue.Publish(new EffectRequest { Source = player, Target = player, TemplateId = speedEffectId });
-            }
-
-            engine.GlobalContext[NarrativeShowcaseIds.RewardAppliedKey] = true;
-            AppendHistory(_frontendConfig.Templates.RewardApplied, null);
         }
 
         private void ActivateInputContexts(Ludots.Core.Input.Runtime.PlayerInputHandler input)
@@ -1031,7 +950,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return false;
             }
 
-            if (TryFindEntityByName(engine.World, NarrativeShowcaseIds.SpawnedBeastTemplateName, out Entity entity) && engine.World.TryGet(entity, out Name name))
+            if (TryFindEntityByName(engine.World, NarrativeShowcaseIds.SpawnedBeastEntityName, out Entity entity) && engine.World.TryGet(entity, out Name name))
             {
                 name.Value = NarrativeShowcaseIds.BeastName;
                 engine.World.Set(entity, name);
@@ -1047,16 +966,16 @@ namespace NarrativeShowcaseMod.Runtime
             _historySerial = 0;
         }
 
-        private void AppendHistory(string template, IReadOnlyDictionary<string, string>? values)
+        private void AppendHistory(string text)
         {
-            if (string.IsNullOrWhiteSpace(template))
+            if (string.IsNullOrWhiteSpace(text))
             {
                 return;
             }
 
             _historySerial++;
-            _history.Add($"[{_historySerial:00}] {ReplaceTokens(template, values)}");
-            if (_history.Count > 14)
+            _history.Add($"[{_historySerial:00}] {text}");
+            if (_history.Count > _frontendConfig.Bootstrap.HistoryCapacity)
             {
                 _history.RemoveAt(0);
             }
@@ -1087,7 +1006,7 @@ namespace NarrativeShowcaseMod.Runtime
                 BuildCastSignature(engine));
         }
 
-        private string FormatVariable(MapVariableStore? variables, string variableId)
+        private string FormatVariable(GameEngine engine, MapVariableStore? variables, string variableId)
         {
             if (variables == null || !variables.Contains(variableId))
             {
@@ -1097,7 +1016,7 @@ namespace NarrativeShowcaseMod.Runtime
             int value = variables.ReadInt(variableId);
             if (string.Equals(variableId, NarrativeShowcaseIds.EndingVariableId, StringComparison.OrdinalIgnoreCase))
             {
-                return _frontendConfig.ResolveEndingLabel(value);
+                return Tr(engine, _frontendConfig.ResolveEndingLabel(value));
             }
 
             return value.ToString();
@@ -1115,7 +1034,7 @@ namespace NarrativeShowcaseMod.Runtime
             return string.Join(",", parts);
         }
 
-        private static string BuildObjectiveSummary(IReadOnlyList<TaskView> views)
+        private string BuildObjectiveSummary(GameEngine engine, IReadOnlyList<TaskView> views)
         {
             for (int i = 0; i < views.Count; i++)
             {
@@ -1125,7 +1044,7 @@ namespace NarrativeShowcaseMod.Runtime
                 }
             }
 
-            return "No active objective.";
+            return Tr(engine, "story.ui.objective.empty");
         }
 
         private string BuildVariableSummary(GameEngine engine)
@@ -1166,7 +1085,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return false;
             }
 
-            float headOffsetYCm = 140f;
+            float headOffsetYCm = NarrativeShowcaseCastDefaults.HeadOffsetYCm;
             if (engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
                 story.TryGetProfile(NarrativeShowcaseIds.PresentationWorldBubble, out StoryPresentationProfileDefinition profile))
             {
@@ -1242,10 +1161,10 @@ namespace NarrativeShowcaseMod.Runtime
                 if (sequencer.TryGetActiveView(out SequenceView sequence) &&
                     string.Equals(sequence.SequenceId, NarrativeShowcaseIds.TrialRevealSequenceId, StringComparison.OrdinalIgnoreCase))
                 {
-                    return FirstNonEmpty(hints.SkipPrompt, hints.IntroPrompt);
+                    return Tr(engine, FirstNonEmpty(hints.SkipPrompt, hints.IntroPrompt));
                 }
 
-                return FirstNonEmpty(hints.IntroPrompt, hints.SkipPrompt);
+                return Tr(engine, FirstNonEmpty(hints.IntroPrompt, hints.SkipPrompt));
             }
 
             if (dialogue.TryGetActiveView(out DialogueView activeDialogue))
@@ -1257,7 +1176,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             if (BeastSpawned(engine) && !BeastDefeated(engine))
             {
-                return hints.CombatPrompt;
+                return Tr(engine, hints.CombatPrompt);
             }
 
             bool nearWarden = IsNearNamed(engine, NarrativeShowcaseIds.ElderName, WardenInteractRangeCm);
@@ -1266,8 +1185,8 @@ namespace NarrativeShowcaseMod.Runtime
             if (BeastDefeated(engine))
             {
                 return nearWarden
-                    ? FirstNonEmpty(hints.ReturnNearPrompt, hints.ReturnPrompt)
-                    : hints.ReturnPrompt;
+                    ? Tr(engine, FirstNonEmpty(hints.ReturnNearPrompt, hints.ReturnPrompt))
+                    : Tr(engine, hints.ReturnPrompt);
             }
 
             if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService tasks)
@@ -1276,23 +1195,23 @@ namespace NarrativeShowcaseMod.Runtime
                     trialState == TaskInstanceState.Active)
                 {
                     return nearShrine
-                        ? FirstNonEmpty(hints.ExploreShrineNearPrompt, hints.ExploreShrinePrompt)
-                        : FirstNonEmpty(hints.ExploreShrinePrompt, hints.ExplorePrompt);
+                        ? Tr(engine, FirstNonEmpty(hints.ExploreShrineNearPrompt, hints.ExploreShrinePrompt))
+                        : Tr(engine, FirstNonEmpty(hints.ExploreShrinePrompt, hints.ExplorePrompt));
                 }
 
                 if (tasks.TryGetState(NarrativeShowcaseIds.BriefingTaskId, out TaskInstanceState briefingState) &&
                     briefingState == TaskInstanceState.Active)
                 {
                     return nearWarden
-                        ? FirstNonEmpty(hints.ExploreWardenNearPrompt, hints.ExploreWardenPrompt)
-                        : FirstNonEmpty(hints.ExploreWardenPrompt, hints.ExplorePrompt);
+                        ? Tr(engine, FirstNonEmpty(hints.ExploreWardenNearPrompt, hints.ExploreWardenPrompt))
+                        : Tr(engine, FirstNonEmpty(hints.ExploreWardenPrompt, hints.ExplorePrompt));
                 }
             }
 
-            return FirstNonEmpty(hints.ExploreWardenPrompt, hints.ExplorePrompt);
+            return Tr(engine, FirstNonEmpty(hints.ExploreWardenPrompt, hints.ExplorePrompt));
         }
 
-        private NarrativeFrontendSurfaceModel BuildNotificationSurface()
+        private NarrativeFrontendSurfaceModel BuildNotificationSurface(GameEngine engine)
         {
             int take = Math.Min(2, _history.Count);
             var items = new List<NarrativeFrontendSurfaceItem>(take);
@@ -1300,7 +1219,7 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 string line = _history[_history.Count - 1 - i];
                 items.Add(new NarrativeFrontendSurfaceItem(
-                    Label: i == 0 ? "刚才" : "之前",
+                    Label: i == 0 ? Tr(engine, "story.ui.notification.now") : Tr(engine, "story.ui.notification.earlier"),
                     Value: line,
                     Active: i == 0));
             }
@@ -1331,11 +1250,11 @@ namespace NarrativeShowcaseMod.Runtime
                     SurfaceId: $"{_frontendConfig.OwnerId}.nameplate.{member.EntityName}",
                     Kind: NarrativeFrontendSurfaceKind.WorldNameplate,
                     Anchor: NarrativeFrontendAnchor.TopLeft,
-                    Title: member.Title,
-                    Subtitle: member.Role,
+                    Title: Tr(engine, member.Title),
+                    Subtitle: Tr(engine, member.Role),
                     Width: plate.Width,
                     OffsetX: screenX - UiMargin - (plate.Width * 0.5f),
-                    OffsetY: screenY - UiMargin - 52f,
+                    OffsetY: screenY - UiMargin - NameplateLiftPx,
                     ZIndex: plate.ZIndex,
                     AccentHex: FirstNonEmpty(member.AccentHex, plate.AccentHex),
                     BackgroundHex: plate.BackgroundHex,

@@ -116,12 +116,12 @@ public static class StoryPresentationFrontendAdapter
     {
         return surfaceKind.Trim() switch
         {
-            "OverlayDialogue" => NarrativeFrontendSurfaceKind.OverlayDialogue,
-            "DialogueBubble" => NarrativeFrontendSurfaceKind.DialogueBubble,
-            "StandingPortrait" => NarrativeFrontendSurfaceKind.StandingPortrait,
-            "SubtitleBubble" => NarrativeFrontendSurfaceKind.SubtitleBubble,
-            "ChoiceList" => NarrativeFrontendSurfaceKind.ChoiceList,
-            "TransmissionOverlay" => NarrativeFrontendSurfaceKind.TransmissionOverlay,
+            Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.OverlayDialogue => NarrativeFrontendSurfaceKind.OverlayDialogue,
+            Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.DialogueBubble => NarrativeFrontendSurfaceKind.DialogueBubble,
+            Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.StandingPortrait => NarrativeFrontendSurfaceKind.StandingPortrait,
+            Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.SubtitleBubble => NarrativeFrontendSurfaceKind.SubtitleBubble,
+            Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.ChoiceList => NarrativeFrontendSurfaceKind.ChoiceList,
+            Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.TransmissionOverlay => NarrativeFrontendSurfaceKind.TransmissionOverlay,
             _ => throw new InvalidOperationException(
                 $"Unknown story surfaceKind '{surfaceKind}' for NarrativeFrontend."),
         };
