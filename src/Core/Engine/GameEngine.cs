@@ -1159,23 +1159,14 @@ namespace Ludots.Core.Engine
             var commandSourceConfig = config.CommandSource
                 ?? throw new InvalidOperationException("game.json commandSource must be explicitly configured.");
             var interactionActionBindings = new InteractionActionBindings();
-            var interactionContextStack = new InteractionContextStack(entityCollectionKeyRegistry);
-            interactionContextStack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                EntityViewKeys.ControlPlaneCommand));
-            var filterProfileRegistry = new FilterProfileRegistry(interactionContextStack.FilterProfileIdRegistry, World, tagOps);
+            var filterProfileIdRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var filterProfileRegistry = new FilterProfileRegistry(filterProfileIdRegistry, World, tagOps);
             // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
             filterProfileRegistry.RegisterExpander(
                 FilterAssociationExpandKinds.Controls,
                 controlDomainQuery.CollectControlled,
                 () => controlDomainQuery.Revision);
             filterProfileRegistry.Install(new FilterProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
-            var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
-                interactionContextStack,
-                filterProfileRegistry,
-                domainRoutedCollectionWriter,
-                entityCollectionStore);
             var presentationConfig = config.Presentation
                 ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(presentationConfig.RuntimeEntitySpawnQueueCapacity);
@@ -1568,9 +1559,40 @@ namespace Ludots.Core.Engine
             commandIntentProfileRegistry.Install(new CommandIntentProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
             // Interaction context profiles + cast commit profiles (RFC-0065 CTX-6/CTX-7, DEC-13).
+            // Id fields resolve at install: collection keys into the store's key space, filter and
+            // command intent names against their kernel registries (installed above), so unknown
+            // references fail fast at startup. The engine-reserved steady-state profile (never
+            // mounted; absence of the mounted component is the steady state) installs first — an
+            // asset declaring the reserved id fails fast below.
             var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var interactionContextProfileRegistry = new InteractionContextProfileRegistry(interactionContextProfileIds);
-            interactionContextProfileRegistry.Install(new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+            interactionContextProfileRegistry.Install(
+                new InteractionContextProfilesConfig
+                {
+                    Profiles = new List<InteractionContextProfileDefinition>
+                    {
+                        new()
+                        {
+                            Id = InteractionContextIds.Default,
+                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                            ActiveEntityViewKey = EntityViewKeys.ControlPlaneCommand,
+                        },
+                    },
+                },
+                entityCollectionKeyRegistry,
+                filterProfileIdRegistry,
+                commandIntentProfileIds);
+            interactionContextProfileRegistry.Install(
+                new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                entityCollectionKeyRegistry,
+                filterProfileIdRegistry,
+                commandIntentProfileIds);
+            var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
+                World,
+                interactionContextProfileRegistry,
+                filterProfileRegistry,
+                domainRoutedCollectionWriter,
+                entityCollectionStore);
             var castCommitProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castCommitProfileRegistry = new CastCommitProfileRegistry(castCommitProfileIds, castCommitActionIds, interactionContextProfileRegistry);
@@ -1607,13 +1629,12 @@ namespace Ludots.Core.Engine
 
             // Game-instance CommandPref seed (#1306 route ③): the player-level default intent +
             // dispatch pair map binding plants on every bound player representative lacking the
-            // component. Intent ids register into the stack's id space — the space the arbiter
-            // and frames resolve in.
+            // component. Seed ids are the kernel registries' own id spaces — the spaces the
+            // arbiter and mounted contexts resolve in.
             _commandPrefSeed = CommandPrefConfigLoader.ResolveSeed(
                 new CommandPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 commandIntentProfileRegistry,
-                castDispatchProfileRegistry,
-                interactionContextStack.CommandIntentProfileIdRegistry);
+                castDispatchProfileRegistry);
 
 
             // Per-seat input interpretation channels: zero channels for sole-seat clients (their
@@ -1766,7 +1787,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.KnowledgeAreaRevealRuntime, knowledgeAreaRevealRuntime);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
-            SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
             SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
             SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
             SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
@@ -1999,18 +2019,17 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
-            // Local IMC projection (#1306): mode components on possessed reps and interaction
-            // frames attributed through the control domain diff into per-seat (seatId, contextId,
-            // op) commands; handler resolution mirrors scheme activation — per-seat channel
-            // handler where one exists, the sole-seat global handler otherwise. Runs after
-            // possession sync so the same tick's possession is what gets projected.
+            // Local IMC projection (#1306): mode components on possessed reps and the mounted
+            // active interaction context diff into per-seat (seatId, contextId, op) commands;
+            // handler resolution mirrors scheme activation — per-seat channel handler where one
+            // exists, the sole-seat global handler otherwise. Runs after possession sync so the
+            // same tick's possession is what gets projected.
             RegisterSystem(
                 new Ludots.Core.Input.Systems.InputContextProjectionSystem(
                     World,
                     GlobalContext,
                     interactionModeMap,
-                    interactionContextStack,
-                    controlDomainQuery,
+                    interactionContextProfileRegistry,
                     seatId => clientLocalSeatInputRuntime.TryGetChannel(seatId, out Client.ClientLocalSeatInputChannel channel)
                         ? channel.Handler
                         : GetService(CoreServiceKeys.InputHandler)),
@@ -2080,8 +2099,8 @@ namespace Ludots.Core.Engine
             RegisterSystem(instantCompleteOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
-            // RFC-0065 CTX-6: exec lifecycle push/pop of interaction context frames.
-            RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextStack, interactionContextProfileRegistry, abilityDefinitions, controlDomainQuery), SystemGroup.AbilityActivation);
+            // RFC-0065 CTX-6: exec lifecycle mount/reclaim of the entity-mounted active context.
+            RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextProfileRegistry, abilityDefinitions, controlDomainQuery), SystemGroup.AbilityActivation);
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(relationshipProcessingSystem, SystemGroup.AbilityActivation);
 

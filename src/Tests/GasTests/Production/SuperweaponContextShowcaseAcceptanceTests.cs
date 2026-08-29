@@ -85,46 +85,47 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(state.Arcweaver, Is.Not.EqualTo(Entity.Null));
             Assert.That(state.Vanguard, Is.Not.EqualTo(Entity.Null));
 
-            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack)
-                ?? throw new InvalidOperationException("InteractionContextStack service is missing.");
-            Assert.That(stack.TryPeek(out InteractionContextFrame frame), Is.True);
-            Assert.That(
-                stack.ContextIdRegistry.GetName(frame.ContextId),
-                Is.EqualTo(SuperweaponContextShowcaseIds.ContextProfileId));
-            Assert.That(
-                stack.CollectionKeyRegistry.GetName(frame.ActiveCollectionKeyId),
-                Is.EqualTo(SuperweaponContextShowcaseIds.TargetsCollectionKey));
-            Assert.That(
-                stack.EntityViewKeyRegistry.GetName(frame.ActiveEntityViewKeyId),
-                Is.EqualTo(SuperweaponContextShowcaseIds.TargetsViewKey));
-            Assert.That(
-                stack.FilterProfileIdRegistry.GetName(frame.FilterProfileId),
-                Is.EqualTo(SuperweaponContextShowcaseIds.FilterProfileId));
-            Assert.That(
-                stack.InputContextIdRegistry.GetName(frame.InputContextId),
-                Is.EqualTo(SuperweaponContextShowcaseIds.ConfirmInputContextId));
-            Assert.That(frame.ContextEntity, Is.EqualTo(state.Commander));
-
+            var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+            var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry service is missing.");
+            var filters = engine.GetService(CoreServiceKeys.FilterProfileRegistry)
+                ?? throw new InvalidOperationException("FilterProfileRegistry service is missing.");
             Assert.That(
                 engine.World.TryGet<ActiveInteractionContext>(state.SolePossessedRep, out ActiveInteractionContext mountedContext),
                 Is.True,
                 "the ability-owned context must be mounted on the sole possessed rep as entity interaction state.");
+            Assert.That(
+                contextProfiles.ProfileIdRegistry.GetName(mountedContext.ContextId),
+                Is.EqualTo(SuperweaponContextShowcaseIds.ContextProfileId));
+            Assert.That(
+                mountedContext.Source,
+                Is.EqualTo(ActiveInteractionContextSource.ExecLifecycle));
             Assert.That(mountedContext.ContextEntity, Is.EqualTo(state.Commander));
             Assert.That(
-                stack.ContextIdRegistry.GetName(mountedContext.ContextId),
-                Is.EqualTo(SuperweaponContextShowcaseIds.ContextProfileId));
+                store.KeyRegistry.GetName(mountedContext.ActiveCollectionKeyId),
+                Is.EqualTo(SuperweaponContextShowcaseIds.TargetsCollectionKey));
+            Assert.That(
+                filters.ProfileIdRegistry.GetName(mountedContext.FilterProfileId),
+                Is.EqualTo(SuperweaponContextShowcaseIds.FilterProfileId));
+            Assert.That(
+                contextProfiles.InputContextIdRegistry.GetName(mountedContext.InputContextId),
+                Is.EqualTo(SuperweaponContextShowcaseIds.ConfirmInputContextId));
+            Assert.That(
+                contextProfiles.TryGetDefinition(mountedContext.ContextId, out var contextDefinition) &&
+                    contextDefinition.ActiveEntityViewKey == SuperweaponContextShowcaseIds.TargetsViewKey,
+                Is.True,
+                "the installed profile row keeps the declared entity view key.");
 
             Assert.That(engine.World.Has<AbilityExecInstance>(state.Commander), Is.True);
             Assert.That(engine.World.Get<AbilityExecInstance>(state.Commander).AbilityId, Is.EqualTo(state.AbilityId));
             Assert.That(state.AbilityId, Is.EqualTo(AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId)));
 
-            var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
-                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-            int abilityTargetsKey = stack.CollectionKeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetsCollectionKey);
-            int commandSourceKey = stack.CollectionKeyRegistry.GetId(EntityCollectionKeys.CommandSource);
-            int rawKey = stack.CollectionKeyRegistry.GetId(EntityCollectionKeys.UiCastRaw);
-            int casterMarkerKey = stack.CollectionKeyRegistry.GetId(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey);
-            int targetMarkerKey = stack.CollectionKeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey);
+            int abilityTargetsKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetsCollectionKey);
+            int commandSourceKey = store.KeyRegistry.GetId(EntityCollectionKeys.CommandSource);
+            int rawKey = store.KeyRegistry.GetId(EntityCollectionKeys.UiCastRaw);
+            int casterMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey);
+            int targetMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey);
 
             Entity[] abilityTargets = CopyCollection(store, state.Commander, abilityTargetsKey);
             Entity[] rawTargets = CopyCollection(store, state.SolePossessedRep, rawKey);
@@ -132,8 +133,8 @@ namespace Ludots.Tests.GAS.Production
             Entity[] targetMarkers = CopyCollection(store, state.Commander, targetMarkerKey);
             Assert.That(abilityTargets, Is.EqualTo(new[] { state.Arcweaver, state.Vanguard }));
             Assert.That(rawTargets, Is.EqualTo(new[] { state.Arcweaver, state.Vanguard }));
-            Assert.That(stack.CollectionKeyRegistry.GetName(casterMarkerKey), Is.EqualTo(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey));
-            Assert.That(stack.CollectionKeyRegistry.GetName(targetMarkerKey), Is.EqualTo(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey));
+            Assert.That(store.KeyRegistry.GetName(casterMarkerKey), Is.EqualTo(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey));
+            Assert.That(store.KeyRegistry.GetName(targetMarkerKey), Is.EqualTo(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey));
             Assert.That(casterMarkers, Is.EqualTo(new[] { state.Commander }));
             Assert.That(targetMarkers, Is.EqualTo(new[] { state.Arcweaver, state.Vanguard }));
             Entity[] commandSourceDuringAbility = CopyCollectionOrEmpty(store, state.Commander, commandSourceKey);
@@ -151,11 +152,6 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, 24, () => !engine.World.Has<AbilityExecInstance>(state.Commander));
 
             Assert.That(engine.World.Has<AbilityExecInstance>(state.Commander), Is.False);
-            Assert.That(stack.TryPeek(out frame), Is.True);
-            Assert.That(
-                stack.ContextIdRegistry.GetName(frame.ContextId),
-                Is.EqualTo(InteractionContextIds.Default),
-                "confirming the ability must remove the ability-owned context frame.");
             Assert.That(
                 engine.World.Has<ActiveInteractionContext>(state.SolePossessedRep),
                 Is.False,

@@ -12,7 +12,7 @@
     │
 [Seat]     玩家席位
     │       ControlScheme 定位当前设备布局
-    │       InteractionContextStack 管理输入上下文
+    │       输入上下文由投影从实体交互状态派生
     │
 [Device]   手柄 B 键
     │       Input Action Mapping: 设备参数→语义 Action:Jump

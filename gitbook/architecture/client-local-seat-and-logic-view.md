@@ -15,7 +15,7 @@
 | **Participant** | 世界身份（化身 entity）；AI bot 也是 | 无关 |
 | **Possession** | 谁在驾驶该身份（Seat / AI Brain / 空）；可转移 | 无关 |
 | **LogicView** | Participant 持有的纯逻辑视觉（逻辑相机 + 逻辑投影参数） | **无关** |
-| **ClientLocalSeat** | 本机 I/O：设备、ControlScheme、InteractionContextStack | 有设备才有 |
+| **ClientLocalSeat** | 本机 I/O：设备、ControlScheme、per-seat 输入 handler 链 | 有设备才有 |
 | **PresentBinding** | Seat → 某个 LogicView 的呈现绑定（rect / 呈现分辨率） | 仅要画时 |
 
 `EntityCollectionStore` 地址仍是 `(participantRep, collectionKey)`。
@@ -169,7 +169,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 
 - Seat ≠ 「玩家属于 client」
 - `GameConfig.startupLocalSeats` 不是运行时座位真相；进图后以 `ClientLocalSeatRegistry` 为准
-- 不把 InteractionContextStack 的 ownerToken 当成座位表
+- 不把交互上下文的载体实体（`ActiveInteractionContext.ContextEntity`）当成座位表
 - 本页不定义 Cast→Query→WriteCollection 业务图（见交互/蓝图合同）
 - 分屏布局是 PresentBinding.rect 配置，不另起视觉子系统
 - 画面剔除挂 PresentBinding，不挂裸 LogicView；LogicView 只提供镜头权威

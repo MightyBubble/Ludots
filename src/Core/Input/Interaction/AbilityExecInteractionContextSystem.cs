@@ -8,21 +8,21 @@ using Ludots.Core.Gameplay.Relationships;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// RFC-0065 CTX-6: binds ability exec lifecycles to interaction context frames (DEC-13 post-order
-    /// targeting sessions). The exec instance component (<see cref="AbilityExecInstance"/>) is the
-    /// single sim-side lifecycle carrier: while an exec of an ability declaring
-    /// <c>interactionContextProfile</c> runs, the profile's frame sits on the stack with the exec
-    /// carrier entity as <c>ContextEntity</c>; when the exec ends for any reason — finish, interrupt,
-    /// fail, order cancel, or caster death — the frame is reclaimed via
-    /// <see cref="InteractionContextStack.RemoveByContextEntity"/>. Reconciliation is polling over
-    /// component existence (no new event kinds, deterministic across every exec teardown path).
-    /// Steady state is allocation free.
+    /// RFC-0065 CTX-6: binds ability exec lifecycles to the entity-mounted active interaction
+    /// context (DEC-13 post-order targeting sessions). The exec instance component
+    /// (<see cref="AbilityExecInstance"/>) is the single sim-side lifecycle carrier: while an
+    /// exec of an ability declaring <c>interactionContextProfile</c> runs, the profile is
+    /// mounted as an <see cref="ActiveInteractionContext"/> on the carrier's control-domain
+    /// representative; when the exec ends for any reason — finish, interrupt, fail, order
+    /// cancel, or caster death — the mount is reclaimed in the next update. Reconciliation is
+    /// polling over component existence (no new event kinds, deterministic across every exec
+    /// teardown path) and per control domain the latest-activated carrier wins (LIFO). A
+    /// mount whose carrier dies stays mounted until this system's next update so entity-side
+    /// readers fail closed instead of silently falling back to the steady state. Steady state
+    /// is allocation free.
     /// <para>
-    /// The same update also reconciles the entity-mounted read face: per control domain, the
-    /// topmost frame whose carrier resolves to the domain representative is projected onto that
-    /// representative as an <see cref="ActiveInteractionContext"/> component. Entity-side readers
-    /// (DEC-14 arbitration) therefore never read the stack, while the stack keeps the frame
-    /// lifecycle for the projection, collection routing, and IMC projection consumers.
+    /// This system manages only <see cref="ActiveInteractionContextSource.ExecLifecycle"/>
+    /// mounts; cast commit <c>pushFrame</c> op mounts live and die with their own ops.
     /// </para>
     /// </summary>
     public sealed class AbilityExecInteractionContextSystem : BaseSystem<World, float>
@@ -30,13 +30,13 @@ namespace Ludots.Core.Input.Interaction
         private static readonly QueryDescription _execQuery = new QueryDescription().WithAll<AbilityExecInstance>();
         private static readonly QueryDescription _activeContextQuery = new QueryDescription().WithAll<ActiveInteractionContext>();
 
-        private readonly InteractionContextStack _contextStack;
         private readonly InteractionContextProfileRegistry _contextProfiles;
         private readonly AbilityDefinitionRegistry _abilityDefinitions;
         private readonly ControlDomainQuery _controlDomains;
 
         private Entity[] _trackedEntities = new Entity[16];
         private int[] _trackedAbilityIds = new int[16];
+        private int[] _trackedProfileIds = new int[16];
         private int _trackedCount;
         private Entity[] _scratch = new Entity[64];
         private Entity[] _mountedScratch = new Entity[8];
@@ -47,13 +47,11 @@ namespace Ludots.Core.Input.Interaction
 
         public AbilityExecInteractionContextSystem(
             World world,
-            InteractionContextStack contextStack,
             InteractionContextProfileRegistry contextProfiles,
             AbilityDefinitionRegistry abilityDefinitions,
             ControlDomainQuery controlDomains)
             : base(world)
         {
-            _contextStack = contextStack ?? throw new ArgumentNullException(nameof(contextStack));
             _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
             _abilityDefinitions = abilityDefinitions ?? throw new ArgumentNullException(nameof(abilityDefinitions));
             _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
@@ -61,16 +59,17 @@ namespace Ludots.Core.Input.Interaction
 
         public override void Update(in float dt)
         {
-            ReclaimEndedExecFrames();
-            PushStartedExecFrames();
+            ReclaimEndedExecContexts();
+            TrackStartedExecContexts();
             ReconcileActiveContextState();
         }
 
         /// <summary>
-        /// Remove frames whose exec ended: carrier dead, exec component removed, or the slot now
-        /// executes a different ability. Token-free removal by context entity covers abort/death.
+        /// Drop tracking for execs that ended: carrier dead, exec component removed, or the
+        /// slot now executes a different ability. The carrier's mounted context (if any) is
+        /// released by the reconciliation below in the same update.
         /// </summary>
-        private void ReclaimEndedExecFrames()
+        private void ReclaimEndedExecContexts()
         {
             for (int i = _trackedCount - 1; i >= 0; i--)
             {
@@ -84,15 +83,15 @@ namespace Ludots.Core.Input.Interaction
                     }
                 }
 
-                _contextStack.RemoveByContextEntity(carrier);
                 int last = _trackedCount - 1;
                 _trackedEntities[i] = _trackedEntities[last];
                 _trackedAbilityIds[i] = _trackedAbilityIds[last];
+                _trackedProfileIds[i] = _trackedProfileIds[last];
                 _trackedCount = last;
             }
         }
 
-        private void PushStartedExecFrames()
+        private void TrackStartedExecContexts()
         {
             int execCount = World.CountEntities(in _execQuery);
             if (execCount == 0)
@@ -122,24 +121,21 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 int profileId = _contextProfiles.ProfileIdRegistry.GetId(profileName);
-                if (!_contextProfiles.TryCreateFrameDescriptor(profileId, carrier, out InteractionContextFrameDescriptor descriptor))
+                if (!_contextProfiles.IsInstalled(profileId))
                 {
                     throw new InvalidOperationException(
                         $"Ability id {abilityId} declares interaction context profile '{profileName}' which is not installed.");
                 }
 
-                _contextStack.Push(in descriptor);
-                Track(carrier, abilityId);
+                Track(carrier, abilityId, profileId);
             }
         }
 
         /// <summary>
-        /// Project the frame lifecycle onto entity-mounted interaction state: per control domain,
-        /// the topmost frame whose carrier resolves to the domain representative wins (LIFO, the
-        /// stack's top-frame arbitration). A mounted component whose carrier still owns a stack
-        /// frame but no longer resolves (dead or domain-less) stays frozen for the reclaim window
-        /// so entity-side readers fail closed exactly like the retired top-frame read; once the
-        /// carrier leaves the stack, the component is released back to the steady state.
+        /// Project the exec lifecycles onto entity-mounted interaction state: per control
+        /// domain, the latest-activated tracked carrier resolving to the domain representative
+        /// wins (LIFO). Mounts this system no longer desires are released back to the steady
+        /// state; cast commit op mounts are foreign and stay untouched.
         /// </summary>
         private void ReconcileActiveContextState()
         {
@@ -151,19 +147,10 @@ namespace Ludots.Core.Input.Interaction
         private void CollectDesiredContexts()
         {
             _desiredCount = 0;
-            for (int i = _contextStack.Count - 1; i >= 0; i--)
+            for (int i = _trackedCount - 1; i >= 0; i--)
             {
-                if (!_contextStack.TryGetAt(i, out InteractionContextFrame frame))
-                {
-                    continue;
-                }
-
-                if (frame.ContextEntity == default)
-                {
-                    continue;
-                }
-
-                if (!_controlDomains.TryResolveControlDomain(frame.ContextEntity, out Entity domainRep) ||
+                Entity carrier = _trackedEntities[i];
+                if (!_controlDomains.TryResolveControlDomain(carrier, out Entity domainRep) ||
                     domainRep == default)
                 {
                     continue;
@@ -174,6 +161,16 @@ namespace Ludots.Core.Input.Interaction
                     continue;
                 }
 
+                if (!_contextProfiles.TryCreateActiveContext(
+                        _trackedProfileIds[i],
+                        carrier,
+                        ActiveInteractionContextSource.ExecLifecycle,
+                        out ActiveInteractionContext state))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability exec carrier {carrier} declares interaction context profile id {_trackedProfileIds[i]} which is not installed.");
+                }
+
                 if (_desiredCount == _desiredReps.Length)
                 {
                     Array.Resize(ref _desiredReps, _desiredCount * 2);
@@ -182,12 +179,7 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 _desiredReps[_desiredCount] = domainRep;
-                _desiredStates[_desiredCount] = new ActiveInteractionContext
-                {
-                    ContextId = frame.ContextId,
-                    ContextEntity = frame.ContextEntity,
-                    CommandIntentProfileId = frame.CommandIntentProfileId,
-                };
+                _desiredStates[_desiredCount] = state;
                 _desiredMounted[_desiredCount] = false;
                 _desiredCount++;
             }
@@ -218,9 +210,7 @@ namespace Ludots.Core.Input.Interaction
                 if (TryFindDesired(holder, out int desiredIndex))
                 {
                     ref ActiveInteractionContext mounted = ref World.Get<ActiveInteractionContext>(holder);
-                    if (mounted.ContextId != _desiredStates[desiredIndex].ContextId ||
-                        mounted.ContextEntity != _desiredStates[desiredIndex].ContextEntity ||
-                        mounted.CommandIntentProfileId != _desiredStates[desiredIndex].CommandIntentProfileId)
+                    if (!Equals(mounted, _desiredStates[desiredIndex]))
                     {
                         mounted = _desiredStates[desiredIndex];
                     }
@@ -229,7 +219,7 @@ namespace Ludots.Core.Input.Interaction
                     continue;
                 }
 
-                if (CarrierStillOnStack(World.Get<ActiveInteractionContext>(holder).ContextEntity))
+                if (World.Get<ActiveInteractionContext>(holder).Source == ActiveInteractionContextSource.CastCommitOp)
                 {
                     continue;
                 }
@@ -249,6 +239,17 @@ namespace Ludots.Core.Input.Interaction
 
                 World.Add(_desiredReps[i], _desiredStates[i]);
             }
+        }
+
+        private static bool Equals(in ActiveInteractionContext left, in ActiveInteractionContext right)
+        {
+            return left.ContextId == right.ContextId &&
+                left.ContextEntity == right.ContextEntity &&
+                left.CommandIntentProfileId == right.CommandIntentProfileId &&
+                left.ActiveCollectionKeyId == right.ActiveCollectionKeyId &&
+                left.FilterProfileId == right.FilterProfileId &&
+                left.InputContextId == right.InputContextId &&
+                left.Source == right.Source;
         }
 
         private bool ContainsDesiredRep(Entity rep)
@@ -279,20 +280,6 @@ namespace Ludots.Core.Input.Interaction
             return false;
         }
 
-        private bool CarrierStillOnStack(Entity carrier)
-        {
-            for (int i = 0; i < _contextStack.Count; i++)
-            {
-                if (_contextStack.TryGetAt(i, out InteractionContextFrame frame) &&
-                    frame.ContextEntity == carrier)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private bool IsTracked(Entity carrier)
         {
             for (int i = 0; i < _trackedCount; i++)
@@ -306,16 +293,18 @@ namespace Ludots.Core.Input.Interaction
             return false;
         }
 
-        private void Track(Entity carrier, int abilityId)
+        private void Track(Entity carrier, int abilityId, int profileId)
         {
             if (_trackedCount == _trackedEntities.Length)
             {
                 Array.Resize(ref _trackedEntities, _trackedCount * 2);
                 Array.Resize(ref _trackedAbilityIds, _trackedCount * 2);
+                Array.Resize(ref _trackedProfileIds, _trackedCount * 2);
             }
 
             _trackedEntities[_trackedCount] = carrier;
             _trackedAbilityIds[_trackedCount] = abilityId;
+            _trackedProfileIds[_trackedCount] = profileId;
             _trackedCount++;
         }
     }

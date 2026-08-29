@@ -285,7 +285,7 @@ namespace Ludots.Core.Input.Orders
         // mappings continue through the direct order path. Order routing preferences come from
         // the possessed representative's CommandPref — never from the active control scheme.
         private World? _commandIntentWorld;
-        private InteractionContextStack? _interactionContextStack;
+        private InteractionContextProfileRegistry? _contextProfiles;
         private CommandIntentProfileRegistry? _commandIntentProfiles;
         private CastDispatchProfileRegistry? _castDispatchProfiles;
         private ICommandActorExpander? _commandActorExpander;
@@ -294,6 +294,7 @@ namespace Ludots.Core.Input.Orders
         private PlayerRepresentativeProvider? _playerRepresentativeProvider;
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
         private OrderIdentityAssigner? _orderIdentityAssigner;
+        private int _steadyStateCollectionKeyId;
 
         // Context
         private Entity _solePossessedRep;
@@ -505,7 +506,7 @@ namespace Ludots.Core.Input.Orders
 
         public void SetCommandIntentRouting(
             World world,
-            InteractionContextStack stack,
+            InteractionContextProfileRegistry contextProfiles,
             CommandIntentProfileRegistry commandIntentProfiles,
             CastDispatchProfileRegistry castDispatchProfiles,
             EntityCollectionStore entityCollections,
@@ -513,12 +514,19 @@ namespace Ludots.Core.Input.Orders
             PlayerRepresentativeProvider? playerRepresentativeProvider = null)
         {
             _commandIntentWorld = world ?? throw new ArgumentNullException(nameof(world));
-            _interactionContextStack = stack ?? throw new ArgumentNullException(nameof(stack));
+            _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
             _commandIntentProfiles = commandIntentProfiles ?? throw new ArgumentNullException(nameof(commandIntentProfiles));
             _castDispatchProfiles = castDispatchProfiles ?? throw new ArgumentNullException(nameof(castDispatchProfiles));
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             _activeActorCollectionOwnerProvider = activeActorCollectionOwnerProvider;
             _playerRepresentativeProvider = playerRepresentativeProvider;
+            if (!contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"Command intent routing requires the steady-state interaction context profile '{InteractionContextIds.Default}' to be installed.");
+            }
+
+            _steadyStateCollectionKeyId = steadyStateCollectionKeyId;
         }
 
         public void SetOrderIdentityAssigner(OrderIdentityAssigner assigner) =>
@@ -1644,7 +1652,7 @@ namespace Ludots.Core.Input.Orders
         private OrderSubmitResult SubmitCommandIntentOrder(InputOrderMapping mapping)
         {
             if (_commandIntentWorld == null ||
-                _interactionContextStack == null ||
+                _contextProfiles == null ||
                 _commandIntentProfiles == null ||
                 _castDispatchProfiles == null ||
                 _entityCollections == null ||
@@ -1654,24 +1662,16 @@ namespace Ludots.Core.Input.Orders
                     "Command intent routing is partially configured; Command actions must not fall back to legacy input-order mappings.");
             }
 
-            int activeStackIntentId = ResolveActiveCommandIntentForCommand();
-            if (activeStackIntentId == 0)
+            int commandIntentProfileId = ResolveActiveCommandIntentForCommand();
+            if (commandIntentProfileId == 0)
             {
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedByRule);
             }
 
-            if (!_interactionContextStack.TryPeek(out InteractionContextFrame frame))
+            if (!_commandIntentProfiles.IsInstalled(commandIntentProfileId))
             {
                 throw new InvalidOperationException(
-                    "Command intent routing requires a non-empty interaction context stack.");
-            }
-
-            string intentName = _interactionContextStack.CommandIntentProfileIdRegistry.GetName(activeStackIntentId);
-            if (!_commandIntentProfiles.ProfileIdRegistry.TryGetId(intentName, out int commandIntentProfileId) ||
-                !_commandIntentProfiles.IsInstalled(commandIntentProfileId))
-            {
-                throw new InvalidOperationException(
-                    $"Active command intent '{intentName}' is not installed in the command intent registry.");
+                    $"Active command intent profile id {commandIntentProfileId} is not installed in the command intent registry.");
             }
 
             if (!HasExplicitSolePossessedActor())
@@ -1690,6 +1690,10 @@ namespace Ludots.Core.Input.Orders
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
             }
 
+            Entity actingRep = RequireActingPlayerRepresentative();
+            bool hasActiveContext = _commandIntentWorld.TryGet<ActiveInteractionContext>(actingRep, out ActiveInteractionContext activeContext);
+            int activeCollectionKeyId = hasActiveContext ? activeContext.ActiveCollectionKeyId : _steadyStateCollectionKeyId;
+
             int actorCount;
             if (_hasExplicitActivationContext)
             {
@@ -1698,7 +1702,7 @@ namespace Ludots.Core.Input.Orders
             }
             else
             {
-                if (!_entityCollections.TryGet(actorCollectionOwner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle))
+                if (!_entityCollections.TryGet(actorCollectionOwner, activeCollectionKeyId, out EntityCollectionHandle handle))
                 {
                     return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
                 }
@@ -1748,7 +1752,7 @@ namespace Ludots.Core.Input.Orders
             int dispatchCount = _castDispatchProfiles.SelectDispatchTargets(
                 dispatchProfileId,
                 routedActors,
-                new CastDispatchContext(_commandIntentWorld, groundWorldCm, frame.OwnerToken),
+                new CastDispatchContext(_commandIntentWorld, groundWorldCm, ResolveCastDispatchGroupKey(hasActiveContext, activeContext)),
                 _commandIntentDispatchActorsScratch.AsSpan(0, routedCount),
                 out CastDispatchRouting routing);
 
@@ -1904,6 +1908,24 @@ namespace Ludots.Core.Input.Orders
                 }
             }
             return OrderSubmitResult.Activated;
+        }
+
+        /// <summary>
+        /// Cast dispatch cycle group key for one command trigger, derived from the entity-side
+        /// interaction state: the active context's carrier entity identifies the routing group
+        /// (stable across repeated triggers of the same context, distinct across contexts), and
+        /// the steady state uses the reserved 0. The dispatch kernel treats the key as opaque.
+        /// </summary>
+        private static long ResolveCastDispatchGroupKey(
+            bool hasActiveContext,
+            in ActiveInteractionContext activeContext)
+        {
+            if (!hasActiveContext || activeContext.ContextEntity == default)
+            {
+                return 0;
+            }
+
+            return ((long)(uint)activeContext.ContextEntity.Id << 32) | (uint)activeContext.ContextEntity.Version;
         }
 
         /// <summary>

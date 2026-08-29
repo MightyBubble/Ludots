@@ -175,12 +175,10 @@ namespace Ludots.Tests.Architecture
                     "The command-source authority key must remain a first-class EntityCollectionKeys constant.");
                 Assert.That(gameEngine, Does.Contain("registry.Register(EntityCollectionKeys.CommandSource)"),
                     "GameEngine must register the command-source collection key with EntityCollectionStore.");
-                Assert.That(gameEngine, Does.Contain("InteractionContextFrameDescriptor.Create("),
-                    "GameEngine must create a default interaction context frame for command routing.");
                 Assert.That(gameEngine, Does.Contain("EntityCollectionKeys.CommandSource"),
-                    "The default interaction context must use EntityCollectionKeys.CommandSource.");
-                Assert.That(gameEngine, Does.Contain("EntityViewKeys.ControlPlaneCommand"),
-                    "The default interaction context must bind command-source authority to the control-plane command view.");
+                    "The steady-state interaction context must use EntityCollectionKeys.CommandSource.");
+                Assert.That(gameEngine, Does.Contain("InteractionContextIds.Default"),
+                    "GameEngine must install the engine-reserved steady-state interaction context profile (command routing anchor).");
                 Assert.That(contextRuntime, Does.Contain("TryResolveCollection(collections, owner, collectionKey"),
                     "EntityCollectionContextRuntime must resolve the caller-provided collection key, not hard-code command-source authority.");
                 Assert.That(contextRuntime, Does.Contain("collections.TryGet(owner, collectionKey"),

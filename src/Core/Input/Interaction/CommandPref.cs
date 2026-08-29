@@ -6,8 +6,8 @@ namespace Ludots.Core.Input.Interaction
     /// Resolved game-instance seed of <c>Input/command_prefs.json</c>: the player-level default
     /// command intent + cast dispatch profile map binding plants on every bound player
     /// representative that carries no <see cref="CommandPref"/> yet. Intent ids live in the
-    /// <see cref="InteractionContextStack.CommandIntentProfileIdRegistry"/> id space; dispatch
-    /// ids in <see cref="CastDispatchProfileRegistry.ProfileIdRegistry"/>.
+    /// <see cref="CommandIntentProfileRegistry.ProfileIdRegistry"/> id space; dispatch ids in
+    /// <see cref="CastDispatchProfileRegistry.ProfileIdRegistry"/>.
     /// </summary>
     public readonly record struct CommandPrefSeed(int CommandIntentId, int CastDispatchProfileId);
 

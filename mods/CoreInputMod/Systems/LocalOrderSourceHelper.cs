@@ -277,8 +277,8 @@ namespace CoreInputMod.Systems
 
         private void RequireConfigureCommandIntentRouting(InputOrderMappingSystem mapping)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) ||
-                stackObj is not InteractionContextStack stack ||
+            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out var contextProfilesObj) ||
+                contextProfilesObj is not InteractionContextProfileRegistry contextProfiles ||
                 !_globals.TryGetValue(CoreServiceKeys.CommandIntentProfileRegistry.Name, out var intentsObj) ||
                 intentsObj is not CommandIntentProfileRegistry intents ||
                 !_globals.TryGetValue(CoreServiceKeys.CastDispatchProfileRegistry.Name, out var dispatchObj) ||
@@ -292,7 +292,7 @@ namespace CoreInputMod.Systems
 
             mapping.SetCommandIntentRouting(
                 _world,
-                stack,
+                contextProfiles,
                 intents,
                 dispatch,
                 collections,
