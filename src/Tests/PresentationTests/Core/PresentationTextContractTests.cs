@@ -822,6 +822,61 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationTextFormatter_FormatsStringArgsFromCatalogPool()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""story.line.combo"", ""argCount"": 2 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""zh-CN"",
+  ""locales"": {
+    ""zh-CN"": {
+      ""story.line.combo"": ""{0}：{1}""
+    },
+    ""en-US"": {
+      ""story.line.combo"": ""{0}: {1}""
+    }
+  }
+}");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var loader = new PresentationTextCatalogLoader(pipeline);
+            PresentationTextCatalog textCatalog = loader.Load(catalog);
+            int tokenId = textCatalog.GetTokenId("story.line.combo");
+
+            var packet = PresentationTextPacket.FromToken(tokenId);
+            packet.SetArg(0, PresentationTextArg.FromString(textCatalog.StringPool, "守望者"));
+            packet.SetArg(1, PresentationTextArg.FromString(textCatalog.StringPool, "灯还亮着"));
+
+            Assert.That(PresentationTextFormatter.TryFormat(textCatalog, textCatalog.DefaultLocaleId, in packet, out string zhText), Is.True);
+            Assert.That(zhText, Is.EqualTo("守望者：灯还亮着"));
+
+            int enLocaleId = textCatalog.GetLocaleId("en-US");
+            Assert.That(PresentationTextFormatter.TryFormat(textCatalog, enLocaleId, in packet, out string enText), Is.True);
+            Assert.That(enText, Is.EqualTo("守望者: 灯还亮着"));
+        }
+
+        [Test]
+        public void PresentationTextStringPool_Throws_WhenResolvingAcrossPools()
+        {
+            var poolA = new PresentationTextStringPool();
+            var poolB = new PresentationTextStringPool();
+            PresentationTextArg arg = PresentationTextArg.FromString(poolA, "witness");
+
+            Assert.That(poolA.Get(in arg), Is.EqualTo("witness"));
+            Assert.That(
+                () => poolB.Get(in arg),
+                Throws.InvalidOperationException.With.Message.Contains("pool identity"));
+        }
+
+        [Test]
         public void GameEngine_RegistersPresentationTextCatalogServices()
         {
             using var engine = CreateEngine("LudotsCoreMod", "CoreInputMod");

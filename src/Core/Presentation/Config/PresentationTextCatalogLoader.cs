@@ -181,7 +181,13 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"Presentation default locale '{defaultLocale}' is not defined.");
             }
 
-            return new PresentationTextCatalog(tokenIds, tokenDefinitions, localeIds, localeTables, defaultLocaleId);
+            return new PresentationTextCatalog(
+                tokenIds,
+                tokenDefinitions,
+                localeIds,
+                localeTables,
+                defaultLocaleId,
+                stringPool: new PresentationTextStringPool());
         }
 
         private static byte ParseArgCount(JsonNode node, string tokenKey)

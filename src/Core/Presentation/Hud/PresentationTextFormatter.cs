@@ -20,23 +20,27 @@ namespace Ludots.Core.Presentation.Hud
                 return false;
             }
 
-            text = Format(template, in packet);
+            text = Format(template, in packet, catalog.StringPool);
             return true;
         }
 
-        public static string Format(PresentationTextTemplate template, in PresentationTextPacket packet)
+        public static string Format(
+            PresentationTextTemplate template,
+            in PresentationTextPacket packet,
+            PresentationTextStringPool? stringPool = null)
         {
             if (template == null) throw new ArgumentNullException(nameof(template));
 
             var builder = new StringBuilder(Math.Max(template.Source.Length, packet.ArgCount * 8));
-            AppendFormatted(builder, template, in packet);
+            AppendFormatted(builder, template, in packet, stringPool);
             return builder.ToString();
         }
 
         public static void AppendFormatted(
             StringBuilder builder,
             PresentationTextTemplate template,
-            in PresentationTextPacket packet)
+            in PresentationTextPacket packet,
+            PresentationTextStringPool? stringPool = null)
         {
             if (builder == null) throw new ArgumentNullException(nameof(builder));
             if (template == null) throw new ArgumentNullException(nameof(template));
@@ -57,11 +61,14 @@ namespace Ludots.Core.Presentation.Hud
                 }
 
                 PresentationTextArg arg = packet.GetArg(part.ArgIndex);
-                AppendArg(builder, in arg);
+                AppendArg(builder, in arg, stringPool);
             }
         }
 
-        private static void AppendArg(StringBuilder builder, in PresentationTextArg arg)
+        private static void AppendArg(
+            StringBuilder builder,
+            in PresentationTextArg arg,
+            PresentationTextStringPool? stringPool)
         {
             switch (arg.Type)
             {
@@ -71,6 +78,16 @@ namespace Ludots.Core.Presentation.Hud
 
                 case PresentationTextArgType.Float32:
                     AppendFloat(builder, arg.AsFloat32(), arg.Format);
+                    break;
+
+                case PresentationTextArgType.String:
+                    if (stringPool == null)
+                    {
+                        throw new InvalidOperationException(
+                            "Presentation text string arg requires the owning catalog string pool.");
+                    }
+
+                    builder.Append(stringPool.Get(in arg));
                     break;
             }
         }
