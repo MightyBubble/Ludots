@@ -3,7 +3,7 @@
 ## Header
 - scenario: `narrative-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-08-29T17:39:57.9769775+00:00`
+- execution_timestamp_utc: `2026-08-29T18:04:22.6420721+00:00`
 - map: `narrative_showcase_hub`
 - clock: `fixed 1/60s`
 
@@ -70,6 +70,6 @@
 ## Summary Stats
 - total_actions: `10`
 - snapshots captured: `10`
-- median headless tick: `0.471ms`
-- max headless tick: `114.286ms`
+- median headless tick: `0.527ms`
+- max headless tick: `113.707ms`
 - final_ui_excerpt: `你 | 织弧者 | 守望者 | 米蕾勒`

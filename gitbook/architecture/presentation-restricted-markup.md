@@ -36,7 +36,7 @@ text_locales.json 模板值
 
 - `<b>…</b>`：加粗
 - `<i>…</i>`：斜体
-- `<color=#AARRGGBB>…</color>`：行内色；**必须** 8 位十六进制，alpha 在前（与 `UiColor` / Skia 一致），例如 `#FFF6C56B`
+- `<color=#AARRGGBB>…</color>`：行内色；**必须** 8 位十六进制，alpha 在前（与 `UiColor` / Skia 一致），例如 `#FF5AD7E9`
 
 不允许：嵌套、未闭合、未知标签、6 位 `#RRGGBB`、坏色值。
 

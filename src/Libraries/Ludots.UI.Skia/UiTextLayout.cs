@@ -206,7 +206,8 @@ public static class UiTextLayout
 				continue;
 			}
 
-			// Soft-wrap only at whitespace inside a run; never split a style run across lines mid-token.
+			// Prefer whitespace soft-wrap; when a token still overflows (CJK / long Latin),
+			// fall back to the same progressive substring fit used by plain WrapParagraph.
 			string[] tokens = SplitKeepSeparators(text);
 			for (int t = 0; t < tokens.Length; t++)
 			{
@@ -216,16 +217,15 @@ public static class UiTextLayout
 					continue;
 				}
 
-				float tokenWidth = MeasureStyledSegmentWidth(token, run, style, paint);
-				if (current.Count > 0 && currentWidth + tokenWidth > availableWidth && !char.IsWhiteSpace(token[0]))
+				if (char.IsWhiteSpace(token[0]))
 				{
-					lines.Add(CompactStyledLine(current));
-					current = new List<UiStyledTextRun>();
-					currentWidth = 0f;
+					float wsWidth = MeasureStyledSegmentWidth(token, run, style, paint);
+					AppendToStyledLine(current, run with { Text = token });
+					currentWidth += wsWidth;
+					continue;
 				}
 
-				AppendToStyledLine(current, run with { Text = token });
-				currentWidth += tokenWidth;
+				AppendFittingToken(lines, ref current, ref currentWidth, token, run, style, paint, availableWidth);
 			}
 		}
 
@@ -240,6 +240,61 @@ public static class UiTextLayout
 		}
 
 		return lines;
+	}
+
+	private static void AppendFittingToken(
+		List<IReadOnlyList<UiStyledTextRun>> lines,
+		ref List<UiStyledTextRun> current,
+		ref float currentWidth,
+		string token,
+		UiStyledTextRun run,
+		UiStyle style,
+		SKPaint paint,
+		float availableWidth)
+	{
+		int index = 0;
+		while (index < token.Length)
+		{
+			int fitEnd = -1;
+			for (int end = index + 1; end <= token.Length; end++)
+			{
+				string candidate = token.Substring(index, end - index);
+				float candidateWidth = MeasureStyledSegmentWidth(candidate, run, style, paint);
+				if (currentWidth + candidateWidth <= availableWidth)
+				{
+					fitEnd = end;
+					continue;
+				}
+
+				break;
+			}
+
+			if (fitEnd < 0)
+			{
+				if (current.Count > 0)
+				{
+					lines.Add(CompactStyledLine(current));
+					current = new List<UiStyledTextRun>();
+					currentWidth = 0f;
+					continue;
+				}
+
+				fitEnd = Math.Min(token.Length, index + 1);
+			}
+
+			string piece = token.Substring(index, fitEnd - index);
+			float pieceWidth = MeasureStyledSegmentWidth(piece, run, style, paint);
+			AppendToStyledLine(current, run with { Text = piece });
+			currentWidth += pieceWidth;
+			index = fitEnd;
+
+			if (index < token.Length)
+			{
+				lines.Add(CompactStyledLine(current));
+				current = new List<UiStyledTextRun>();
+				currentWidth = 0f;
+			}
+		}
 	}
 
 	private static string[] SplitKeepSeparators(string text)

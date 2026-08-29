@@ -126,6 +126,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(dialogue.TryGetActiveView(out DialogueView introDialogue), Is.True);
             Assert.That(introDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingDialogueId));
             Assert.That(introDialogue.ResolvedSpeakerName, Does.Contain("米蕾勒").Or.Contain("Mirelle"));
+            Assert.That(introDialogue.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationDialogueOverlay));
             Assert.That(introDialogue.BodyRuns, Is.Not.Null.And.Not.Empty);
             Assert.That(introDialogue.BodyRuns!.Any(static run => !run.Style.IsEmpty), Is.True);
             Assert.That(introDialogue.ResolvedText, Does.Contain("余烬神龛").Or.Contain("Ember Shrine"));
@@ -133,6 +134,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(UiContains(uiRoot, "守望者米蕾勒") || UiContains(uiRoot, "Warden Mirelle"), Is.True);
             Assert.That(UiContains(uiRoot, "回话") || UiContains(uiRoot, "1"), Is.True);
             AssertThemeFrameVisibleOnDialogue(uiRoot);
+            // Match CaptureSnapshot layout path so viewport asserts see painted geometry.
+            uiRoot.Scene?.Layout(uiRoot.Width > 0 ? uiRoot.Width : 1920f, uiRoot.Height > 0 ? uiRoot.Height : 1080f);
+            AssertDialogueBodyRunsVisibleOnUi(uiRoot, introDialogue);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
             timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
 
@@ -745,6 +749,81 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(framed, Is.Not.Null);
             UiNode? body = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
             Assert.That(body, Is.Not.Null, "Framed dialogue content must use story-framed-body inset.");
+        }
+
+        private static void AssertDialogueBodyRunsVisibleOnUi(UIRoot uiRoot, DialogueView dialogueView)
+        {
+            var bodies = new List<UiNode>();
+            CollectUiNodesByClass(uiRoot.Scene?.Root, "story-body", bodies);
+            var dump = new List<string>(bodies.Count);
+            UiNode? richBody = null;
+            for (int i = 0; i < bodies.Count; i++)
+            {
+                UiNode node = bodies[i];
+                string text = node.TextContent ?? string.Empty;
+                int runCount = node.TextRuns?.Count ?? 0;
+                bool styled = node.TextRuns != null && node.TextRuns.Any(static r => r.Bold || r.Italic || r.HasColor);
+                dump.Add(
+                    $"[{i}] text='{TrimForDiag(text, 48)}' runs={runCount} styled={styled} " +
+                    $"rect=({node.LayoutRect.X:0},{node.LayoutRect.Y:0},{node.LayoutRect.Width:0}x{node.LayoutRect.Height:0})");
+                if (styled &&
+                    (text.Contains("余烬神龛", StringComparison.Ordinal) ||
+                     text.Contains("Ember Shrine", StringComparison.OrdinalIgnoreCase)))
+                {
+                    richBody = node;
+                }
+            }
+
+            Assert.That(
+                richBody,
+                Is.Not.Null,
+                "Active briefing body must land on a story-body UiNode with TextRuns. Dump: " + string.Join(" || ", dump));
+            Assert.That(richBody!.LayoutRect.Width, Is.GreaterThan(8f), "Rich story-body width collapsed. Dump: " + string.Join(" || ", dump));
+            Assert.That(richBody.LayoutRect.Height, Is.GreaterThan(8f), "Rich story-body height collapsed. Dump: " + string.Join(" || ", dump));
+            Assert.That(
+                richBody.LayoutRect.Y,
+                Is.GreaterThan(500f).And.LessThan(1000f),
+                "Rich story-body must sit inside the on-screen dialogue frame. Dump: " + string.Join(" || ", dump));
+            Assert.That(
+                richBody.LayoutRect.Y + richBody.LayoutRect.Height,
+                Is.LessThanOrEqualTo(1080f),
+                "Rich story-body must not fall below the 1080 canvas. Dump: " + string.Join(" || ", dump));
+            Assert.That(
+                richBody.TextRuns!.Any(static r => r.HasColor),
+                Is.True,
+                "Briefing BodyRuns must carry an inline color for player-visible highlight.");
+            Assert.That(
+                dialogueView.ResolvedText,
+                Does.Contain(richBody.TextContent ?? string.Empty).IgnoreCase
+                    .Or.Contain("余烬神龛").Or.Contain("Ember Shrine"));
+        }
+
+        private static void CollectUiNodesByClass(UiNode? root, string className, List<UiNode> sink)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            if (root.HasClass(className))
+            {
+                sink.Add(root);
+            }
+
+            for (int i = 0; i < root.Children.Count; i++)
+            {
+                CollectUiNodesByClass(root.Children[i], className, sink);
+            }
+        }
+
+        private static string TrimForDiag(string value, int max)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length <= max)
+            {
+                return value ?? string.Empty;
+            }
+
+            return value.Substring(0, max) + "…";
         }
 
         private static UiNode? FindAncestorByClass(UiNode? node, string className)
