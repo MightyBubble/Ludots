@@ -88,7 +88,10 @@ namespace Ludots.Core.Persistence
             AddComponentFormatter(formatters, new RelationshipComponentFormatter<InRelationship>());
             AddComponentFormatter(formatters, new NameFormatter());
             AddComponentFormatter(formatters, new MapEntityFormatter());
+            AddComponentFormatter(formatters, new PresentationFrameStateFormatter());
+            AddComponentFormatter(formatters, new Physics2DRuntimeStateFormatter());
             AddAutoDiscoveredUnmanagedFormatters(formatters, candidateAssemblies);
+            AddDiscoveredComponentFormatters(formatters, candidateAssemblies);
             return formatters.Values.ToArray();
         }
 
@@ -232,6 +235,39 @@ namespace Ludots.Core.Persistence
                 new(() => new ArchBinarySerializer(Formatters), trackAllValues: false);
 
             public ArchBinarySerializer Serializer => _serializer.Value!;
+        }
+
+        private static void AddDiscoveredComponentFormatters(
+            Dictionary<Type, IMessagePackFormatter> formatters,
+            IEnumerable<Assembly> candidateAssemblies)
+        {
+            foreach (Assembly assembly in candidateAssemblies)
+            {
+                Type[] types;
+                try { types = assembly.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { types = Array.FindAll(ex.Types, t => t != null); }
+
+                foreach (Type type in types)
+                {
+                    if (!typeof(ILudotsPersistenceComponentFormatter).IsAssignableFrom(type) ||
+                        type.IsAbstract || !type.IsClass || type.ContainsGenericParameters ||
+                        type.GetConstructor(Type.EmptyTypes) == null)
+                    {
+                        continue;
+                    }
+
+                    var instance = (ILudotsPersistenceComponentFormatter)Activator.CreateInstance(type)!;
+                    if (formatters.ContainsKey(instance.ComponentType))
+                    {
+                        continue;
+                    }
+
+                    if (instance is IMessagePackFormatter typed)
+                    {
+                        formatters[instance.ComponentType] = typed;
+                    }
+                }
+            }
         }
     }
 }

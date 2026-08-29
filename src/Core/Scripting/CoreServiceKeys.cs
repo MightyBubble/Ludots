@@ -156,6 +156,7 @@ namespace Ludots.Core.Scripting
         // --- Input ---
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");
         public static readonly ServiceKey<IInputActionReader> AuthoritativeInput = new("AuthoritativeInput");
+        public static readonly ServiceKey<Ludots.Core.Input.Runtime.AuthoritativeInputAccumulator> AuthoritativeInputAccumulator = new("AuthoritativeInputAccumulator");
         public static readonly ServiceKey<AuthoritativePointerButtonSnapshot> AuthoritativePointerButtons = new("AuthoritativePointerButtons");
         public static readonly ServiceKey<AuthoritativeGroundPointerOverride> AuthoritativeGroundPointerOverride = new("AuthoritativeGroundPointerOverride");
         public static readonly ServiceKey<IInputBackend> InputBackend = new("InputBackend");

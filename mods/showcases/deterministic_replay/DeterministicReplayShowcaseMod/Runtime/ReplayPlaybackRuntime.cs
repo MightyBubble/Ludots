@@ -63,6 +63,7 @@ public sealed class ReplayPlaybackRuntime
     private int _replayIndex;
     private int _replayFrames;
     private string? _recordedEndDigest;
+    private string? _playbackEndDigest;
     private string? _liveRejectedSample;
     private long _nextSequence = 0;
 
@@ -75,25 +76,37 @@ public sealed class ReplayPlaybackRuntime
     public bool IsRecording => _recorder != null;
     public bool IsReplaying => _replayPlaying;
 
+    public const string NudgeActionId = "DeterministicReplayShowcase.Nudge";
+
     public void NudgeHero()
     {
-        if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is not FrozenInputActionReader input) return;
+        if (_engine.GetService(CoreServiceKeys.AuthoritativeInputAccumulator) is not Ludots.Core.Input.Runtime.AuthoritativeInputAccumulator accumulator) return;
         if (_replayPlaying)
         {
-            input.SetActionState("Command", new Vector3(RandomShared(-800, 800), 0, RandomShared(-800, 800)), true, true, false);
-            _liveRejectedSample = "Command (live)";
+            _liveRejectedSample = NudgeActionId;
             Log("Live input during replay: isolated — playback frames stay authoritative.");
             return;
         }
 
-        input.SetActionState("Command", new Vector3(6400 + RandomShared(-800, 800), 0, 6400 + RandomShared(-800, 800)), true, true, false);
-        Log("Command order issued — the hero moves and the frame is being recorded.");
+        accumulator.CaptureAction(NudgeActionId, new Vector3(6400 + RandomShared(-800, 800), 0, 6400 + RandomShared(-800, 800)), true, true, false);
+        Log("Nudge captured as an authoritative action — it enters the frame stream and drives the hero on the next fixed step.");
     }
+
+    internal bool StartRequested { get; set; }
+    internal bool StopRequested { get; set; }
 
     public void StartRecording()
     {
         if (_replayPlaying) { Log("Stop the replay before recording."); return; }
+        StartRequested = true;
+        Log("Recording requested — starts at the next fixed-step boundary.");
+    }
+
+    internal void BeginRecordingAtFixedBoundary()
+    {
+        StartRequested = false;
         if (_recorder != null) return;
+        _nextSequence = 0;
         _recorder = new ReplayRecorder();
         _recorder.SetCheckpoint(new WorldSnapshotService().Capture(
             _engine, SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags)));
@@ -104,7 +117,15 @@ public sealed class ReplayPlaybackRuntime
 
     public void StopRecording()
     {
-        if (_recorder == null) { Log("Not recording."); return; }
+        if (_recorder == null && !StopRequested) { Log("Not recording."); return; }
+        StopRequested = true;
+        Log("Stop requested — settles at the next fixed-step boundary.");
+    }
+
+    internal void FinishRecordingAtFixedBoundary()
+    {
+        StopRequested = false;
+        if (_recorder == null) return;
         _archive = _recorder.BuildArchive();
         _recorder = null;
         _recordedEndDigest = WorldDigest();
@@ -123,6 +144,7 @@ public sealed class ReplayPlaybackRuntime
             _replayPaused = false;
             _replayIndex = 0;
             _replayFrames = 0;
+            _playbackEndDigest = null;
             if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader replayInput)
             {
                 replayInput.SetReplayInputIsolation(true);
@@ -196,6 +218,21 @@ public sealed class ReplayPlaybackRuntime
         QueueNextFrame();
     }
 
+    public void ConsumeNudgeAction()
+    {
+        if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is not FrozenInputActionReader input) return;
+        if (!input.PressedThisFrame(NudgeActionId)) return;
+        Vector3 target = input.ReadAction<Vector3>(NudgeActionId);
+        ApplyNudge((int)target.X, (int)target.Z);
+    }
+
+    private void ApplyNudge(int xCm, int yCm)
+    {
+        if (FindHero() is not { } hero) return;
+        ref var pos = ref _engine.World.Get<Ludots.Core.Components.WorldPositionCm>(hero);
+        pos = Ludots.Core.Components.WorldPositionCm.FromCm(xCm, yCm);
+    }
+
     public void CaptureRecordingFrame()
     {
         if (_recorder == null || _replayPlaying) return;
@@ -205,12 +242,7 @@ public sealed class ReplayPlaybackRuntime
         _recorder.Record(new AuthoritativeFrame(_nextSequence++, _engine.GameSession.CurrentTick, _frameActions.ToArray()));
     }
 
-    public string WorldDigest()
-    {
-        byte[] worldBytes = new WorldSnapshotService().Capture(
-            _engine, SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags)).WorldBytes;
-        return Convert.ToHexString(SHA256.HashData(worldBytes))[..12];
-    }
+    public string WorldDigest() => SaveWorldStateDigest.Compute(_engine)[..12];
 
     public string Phase { get; private set; } = "Step 1 — [Nudge hero] a few times, then [Start record] and nudge more";
 
@@ -220,12 +252,12 @@ public sealed class ReplayPlaybackRuntime
         IsRecording = IsRecording,
         IsReplaying = _replayPlaying,
         IsPaused = _replayPaused,
-        Frames = _archive?.Frames.Count ?? 0,
+        Frames = _recorder?.FrameCount ?? _archive?.Frames.Count ?? 0,
         PlaybackIndex = _replayPlaying ? _replayIndex : -1,
         CurrentTick = _engine.GameSession.CurrentTick,
         RecordedEndDigest = _recordedEndDigest ?? "-",
-        PlaybackDigest = !_replayPlaying && _archive != null ? WorldDigest() : WorldDigest(),
-        EndMatches = _recordedEndDigest != null && !_replayPlaying && WorldDigest() == _recordedEndDigest,
+        PlaybackDigest = _playbackEndDigest ?? "-",
+        EndMatches = _recordedEndDigest != null && _playbackEndDigest != null && _playbackEndDigest == _recordedEndDigest,
         ArchiveLine = _archive == null ? "no archive yet" : $"{_archive.Frames.Count} frames",
         IsolationNote = _liveRejectedSample == null
             ? (_replayPlaying ? "try [Nudge hero] now — live input is rejected" : "n/a")
@@ -244,6 +276,7 @@ public sealed class ReplayPlaybackRuntime
             }
 
             string digest = WorldDigest();
+            _playbackEndDigest = digest;
             bool matches = _recordedEndDigest != null && digest == _recordedEndDigest;
             Log($"Replay finished {_replayFrames}/{_archive?.Frames.Count ?? 0} frames; digest {digest} " +
                 (matches ? "== recorded end — deterministic" : $"MISMATCH vs {_recordedEndDigest}"));
@@ -255,6 +288,17 @@ public sealed class ReplayPlaybackRuntime
             input.QueueReplayActions(_archive!.Frames[_replayIndex].Actions);
             _replayFrameQueued = true;
         }
+    }
+
+    private Arch.Core.Entity? FindHero()
+    {
+        Arch.Core.Entity found = Arch.Core.Entity.Null;
+        var query = new Arch.Core.QueryDescription().WithAll<Ludots.Core.Components.Name, Ludots.Core.Components.WorldPositionCm>();
+        _engine.World.Query(in query, (Arch.Core.Entity e, ref Ludots.Core.Components.Name name) =>
+        {
+            if (name.Value == DeterministicReplayShowcaseIds.HeroName) found = e;
+        });
+        return found == Arch.Core.Entity.Null ? null : found;
     }
 
     private static string ArchiveDir => Path.Combine(AppContext.BaseDirectory, "Saves", "replay-showcase");
