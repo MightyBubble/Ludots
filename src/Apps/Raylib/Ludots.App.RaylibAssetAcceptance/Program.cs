@@ -113,7 +113,7 @@ namespace Ludots.App.RaylibAssetAcceptance
             int exitCode = RunLoop(frames, screenshotPath);
 
             UnloadAsset();
-            Rl.UnloadMesh(_refSphere);
+            RaylibNativeResources.UnloadMesh(_refSphere);
             _modelLit.Dispose();
             _propsLit.Dispose();
             _shadowMap.Dispose();
@@ -136,7 +136,7 @@ namespace Ludots.App.RaylibAssetAcceptance
                 Rl.UnloadModelAnimations(_asset.Animations, _asset.AnimCount);
             }
 
-            Rl.UnloadModel(_asset.Model);
+            RaylibNativeResources.UnloadModel(_asset.Model);
             _asset = null;
         }
 
@@ -147,7 +147,7 @@ namespace Ludots.App.RaylibAssetAcceptance
             _shadowMap = new RaylibDirectionalShadowMap();
             _propsLit = new RaylibLitModel();
             _modelLit = new RaylibFileModelLit();
-            _refSphere = Rl.GenMeshSphere(0.5f, 24, 16);
+            _refSphere = RaylibNativeResources.GenMeshSphere(0.5f, 24, 16);
         }
 
         private static int RunLoop(int frames, string? screenshotPath)
@@ -495,7 +495,7 @@ namespace Ludots.App.RaylibAssetAcceptance
                 // native LoadModel 会 AccessViolation，转换失败在此 fail-loud 成错误面板）。
                 string loadablePath = RaylibModelFileLoader.PrepareNativeLoadable(path);
 
-                Model model = Rl.LoadModel(loadablePath);
+                Model model = RaylibNativeResources.LoadModel(loadablePath);
                 attempt = new LoadedAsset { Model = model };
                 if (model.meshCount <= 0)
                 {
@@ -560,7 +560,7 @@ namespace Ludots.App.RaylibAssetAcceptance
                         Rl.UnloadModelAnimations(attempt.Animations, attempt.AnimCount);
                     }
 
-                    Rl.UnloadModel(attempt.Model);
+                    RaylibNativeResources.UnloadModel(attempt.Model);
                 }
 
                 _error = $"装载失败：{ex.Message}";

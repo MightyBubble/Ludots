@@ -39,6 +39,11 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
         EnsureInitialized();
         if (_mapping == null)
         {
+            if (!_loggedNullMapping)
+            {
+                _loggedNullMapping = true;
+                Console.Error.WriteLine("ORDERSRC mapping null");
+            }
             return;
         }
 
@@ -47,7 +52,15 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
         {
             _mapping.Update(dt);
         }
+        else if (!_loggedBindFailure)
+        {
+            _loggedBindFailure = true;
+            Console.Error.WriteLine("ORDERSRC bind failed actor=" + actor.ToString());
+        }
     }
+
+    private bool _loggedNullMapping;
+    private bool _loggedBindFailure;
 
     private void EnsureInitialized()
     {

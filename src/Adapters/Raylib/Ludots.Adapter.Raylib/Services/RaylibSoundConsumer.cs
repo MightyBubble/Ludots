@@ -69,13 +69,13 @@ namespace Ludots.Adapter.Raylib.Services
 
         public bool IsDeviceReady() => Rl.IsAudioDeviceReady();
 
-        public Sound LoadFromFile(string path) => Rl.LoadSound(path);
+        public Sound LoadFromFile(string path) => RaylibNativeResources.LoadSound(path);
 
-        public Sound CreateAlias(Sound source) => Rl.LoadSoundAlias(source);
+        public Sound CreateAlias(Sound source) => RaylibNativeResources.LoadSoundAlias(source);
 
-        public void UnloadAlias(in Sound alias) => Rl.UnloadSoundAlias(alias);
+        public void UnloadAlias(in Sound alias) => RaylibNativeResources.UnloadSoundAlias(alias);
 
-        public void UnloadBase(in Sound sound) => Rl.UnloadSound(sound);
+        public void UnloadBase(in Sound sound) => RaylibNativeResources.UnloadSound(sound);
 
         public bool IsPlaying(in Sound alias) => Rl.IsSoundPlaying(alias);
 

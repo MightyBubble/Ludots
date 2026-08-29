@@ -4,6 +4,7 @@ using Ludots.UI.Browser;
 using Ludots.UI.Runtime;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -158,7 +159,7 @@ namespace Ludots.Adapter.Raylib
             {
                 if (_texture.id != 0)
                 {
-                    Rl.UnloadTexture(_texture);
+                    RaylibNativeResources.UnloadTexture(_texture);
                     _texture = default;
                 }
 
@@ -180,12 +181,12 @@ namespace Ludots.Adapter.Raylib
 
                 if (_texture.id != 0)
                 {
-                    Rl.UnloadTexture(_texture);
+                    RaylibNativeResources.UnloadTexture(_texture);
                     _texture = default;
                 }
 
                 Image img = Rl.GenImageColor(width, height, Color.BLANK);
-                _texture = Rl.LoadTextureFromImage(img);
+                _texture = RaylibNativeResources.LoadTextureFromImage(img);
                 Rl.UnloadImage(img);
                 _width = width;
                 _height = height;

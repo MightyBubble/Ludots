@@ -473,6 +473,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Offers an activity by definition id to the scope host through
+        /// ActivityRuntimeService. Repeat/admission policy decides the outcome;
+        /// policy rejection lands in the presentation buffer, while an unknown
+        /// activity id fails closed with the key in the message. Optional
+        /// bridge — requires a bound ActivityRuntimeService.
+        /// </summary>
+        void OfferActivity(string activityId, Entity scopeHost)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ActivityRuntimeUnavailable");
+        }
+
+        /// <summary>
         /// #1126: register an AwaitCallback waiter (Imm callback type) and park the slice.
         /// Completions resume through GraphCallbackContinuationSystem in registration order.
         /// </summary>
