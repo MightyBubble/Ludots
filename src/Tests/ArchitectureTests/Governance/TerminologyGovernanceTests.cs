@@ -632,7 +632,8 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 if (!Directory.Exists(root))
                 {
-                    continue;
+                    throw new DirectoryNotFoundException(
+                        $"Governance scan root '{root}' does not exist; a missing root must fail the scan, not silently narrow it to nothing.");
                 }
 
                 foreach (string file in Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories)
