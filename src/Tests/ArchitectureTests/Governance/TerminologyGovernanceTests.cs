@@ -54,7 +54,8 @@ namespace Ludots.Tests.Architecture.Governance
         {
             string repoRoot = FindRepoRoot();
             var keySurfaces = FindCoreServiceKeySurfaces(ReadCoreServiceKeysSource(repoRoot));
-            HashSet<string> writableDeviceTypes = FindWritableDeviceTypeNames(EnumerateWritableDeviceTypeSourceTexts(repoRoot));
+            string[] writeFaceMembers = ReadSyntheticInputDeviceWriteFaceMembers(repoRoot);
+            HashSet<string> writableDeviceTypes = FindWritableDeviceTypeNames(EnumerateWritableDeviceTypeSourceTexts(repoRoot), writeFaceMembers);
             var hits = FindObservationPortClassificationViolations(keySurfaces);
 
             foreach (string file in EnumerateAdapterCodeFiles(repoRoot))
@@ -103,17 +104,19 @@ namespace Ludots.Tests.Architecture.Governance
         [Test]
         public void DeviceServiceGuard_DetectsSyntheticDeviceInstanceRegistrations()
         {
-            var writableDeviceTypes = FindWritableDeviceTypeNames(new[]
-            {
-                """
-                public sealed class VirtualProbeGamepad
+            var writableDeviceTypes = FindWritableDeviceTypeNames(
+                new[]
                 {
-                    public void MovePointer(float x, float y) { }
-                    public void PointerDown(int button) { }
-                    public void TypeText(string text) { }
-                }
-                """,
-            });
+                    """
+                    public sealed class VirtualProbeGamepad
+                    {
+                        public void MovePointer(float x, float y) { }
+                        public void PointerDown(int button) { }
+                        public void TypeText(string text) { }
+                    }
+                    """,
+                },
+                ReadSyntheticInputDeviceWriteFaceMembers(FindRepoRoot()));
 
             string observationPortSource = """
                 var deviceWatcher = new RaylibInputDeviceWatcher();
@@ -289,6 +292,44 @@ namespace Ludots.Tests.Architecture.Governance
                 : File.ReadAllText(path);
         }
 
+        private static string[] ReadSyntheticInputDeviceWriteFaceMembers(string repoRoot)
+        {
+            string path = Path.Combine(repoRoot, "src", "Core", "Input", "Runtime", "SyntheticInputDevice.cs");
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException(
+                    "SyntheticInputDevice.cs not found at src/Core/Input/Runtime; the rule 2 guard reads the device write face from its declaration surface.",
+                    path);
+            }
+
+            string source = File.ReadAllText(path);
+            int writeStart = source.IndexOf(DeviceWriteSideMarker, StringComparison.Ordinal);
+            int readStart = source.IndexOf(DeviceReadSideMarker, StringComparison.Ordinal);
+            if (writeStart < 0 || readStart < 0 || readStart <= writeStart)
+            {
+                throw new InvalidOperationException(
+                    $"SyntheticInputDevice.cs must delimit its write face with '{DeviceWriteSideMarker}' before '{DeviceReadSideMarker}'; the rule 2 guard extracts the member set from that slice.");
+            }
+
+            // The slice spans the write side plus the host-loop frame boundary; public instance
+            // methods declared there are the write face — properties and read-only queries live
+            // outside it, and statics never match.
+            string[] members = Regex.Matches(
+                    source[writeStart..readStart],
+                    @"\bpublic\s+(?!static\b)[\w.]+(?:<[^>]+>)?\s+(?<name>\w+)\s*\(",
+                    RegexOptions.CultureInvariant)
+                .Select(match => match.Groups["name"].Value)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            if (members.Length < DeviceWriteFaceQuorum)
+            {
+                throw new InvalidOperationException(
+                    $"Extracted device write face has only {members.Length} members; the declaration-surface extraction is broken.");
+            }
+
+            return members;
+        }
+
         private static IEnumerable<string> EnumerateWritableDeviceTypeSourceTexts(string repoRoot)
         {
             string[] roots = { Path.Combine(repoRoot, "src"), Path.Combine(repoRoot, "mods") };
@@ -338,19 +379,11 @@ namespace Ludots.Tests.Architecture.Governance
             @"\b(?:class|struct|interface|record(?:\s+(?:class|struct))?)\s+(?<name>\w+)[^{;=]*\{",
             RegexOptions.CultureInvariant);
 
-        // The device write face is the interactive-state surface of SyntheticInputDevice;
-        // a type declaring a quorum of these members carries interactive device state,
-        // whatever its name.
-        private static readonly string[] DeviceWriteFaceMembers =
-        {
-            "MovePointer",
-            "PointerDown",
-            "PointerUp",
-            "ClearPointerOverride",
-            "PressKey",
-            "TypeText",
-            "ReleaseAll",
-        };
+        // The device write face is the interactive-state surface of SyntheticInputDevice — read
+        // from its declaration surface, never hand-copied here; a type declaring a quorum of
+        // these members carries interactive device state, whatever its name.
+        private const string DeviceWriteSideMarker = "// ---- write side";
+        private const string DeviceReadSideMarker = "// ---- read side";
 
         private const int DeviceWriteFaceQuorum = 3;
 
@@ -525,14 +558,14 @@ namespace Ludots.Tests.Architecture.Governance
             return candidates;
         }
 
-        private static HashSet<string> FindWritableDeviceTypeNames(IEnumerable<string> sources)
+        private static HashSet<string> FindWritableDeviceTypeNames(IEnumerable<string> sources, IReadOnlyCollection<string> writeFaceMembers)
         {
             var names = new HashSet<string>(StringComparer.Ordinal) { "SyntheticInputDevice" };
             foreach (string source in sources)
             {
                 foreach (TypeDeclarationSegment segment in EnumerateTypeDeclarationSegments(source))
                 {
-                    if (CountDeviceWriteFaceMemberDeclarations(segment.Body) >= DeviceWriteFaceQuorum)
+                    if (CountDeviceWriteFaceMemberDeclarations(segment.Body, writeFaceMembers) >= DeviceWriteFaceQuorum)
                     {
                         names.Add(segment.Name);
                     }
@@ -581,8 +614,8 @@ namespace Ludots.Tests.Architecture.Governance
             return -1;
         }
 
-        private static int CountDeviceWriteFaceMemberDeclarations(string typeBody) =>
-            DeviceWriteFaceMembers.Count(member => Regex.IsMatch(
+        private static int CountDeviceWriteFaceMemberDeclarations(string typeBody, IReadOnlyCollection<string> writeFaceMembers) =>
+            writeFaceMembers.Count(member => Regex.IsMatch(
                 typeBody,
                 $@"\b(?:public|internal|protected|private)\b[^\n;{{}}]*\b{member}\s*\(",
                 RegexOptions.CultureInvariant));
