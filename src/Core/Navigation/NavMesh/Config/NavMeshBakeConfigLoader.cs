@@ -189,8 +189,13 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
             _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
             _ = NavBakeNames.ParseAlgorithm(algorithm, "NavMeshBakeConfig.algorithm");
-            if (root["terrainFeed"] is not null)
+            if (root.TryGetPropertyValue("terrainFeed", out var terrainFeedNode))
             {
+                if (terrainFeedNode is null)
+                {
+                    throw new InvalidOperationException("NavMeshBakeConfig.terrainFeed must be 'triangles' or 'direct', not null.");
+                }
+
                 _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
             }
 
@@ -259,7 +264,13 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 string path = $"NavMeshBakeConfig.areas[{i}]";
                 RequireOnlyProperties(area, path, "id", "areaId", "cost");
                 RequireString(area, "id", path);
-                RequireNumber(area, "areaId", path);
+                int authoredAreaId = RequireInt(area, "areaId", path);
+                if (authoredAreaId >= RecastNavTileBaker.ReservedWalkableAreaId)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.areaId {authoredAreaId} is reserved: ids >= {RecastNavTileBaker.ReservedWalkableAreaId} collide with the Recast walkable marker on the direct terrain feed.");
+                }
+
                 RequireNumber(area, "cost", path);
             }
 

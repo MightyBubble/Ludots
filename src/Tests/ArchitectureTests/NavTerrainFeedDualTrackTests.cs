@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Config;
+using Ludots.Core.Modding;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 
@@ -21,7 +24,7 @@ namespace Ludots.Tests.Architecture
         private const int Cells = 192; // 3×3 chunks @ 64 cells
         private const int ChunkCells = SpatialScaleDefaults.TerrainChunkCells;
 
-        private readonly AgentProfileConfig _agent = new()
+        private static readonly AgentProfileConfig _agent = new()
         {
             Id = "Small",
             RadiusCm = 30,
@@ -31,7 +34,7 @@ namespace Ludots.Tests.Architecture
             Layer = 0
         };
 
-        private readonly NavMeshAgentProfileConfig _nav = new() { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 };
+        private static readonly NavMeshAgentProfileConfig _nav = new() { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 };
 
         [Test]
         public void DirectFeed_MatchesTriangleFeed_OnReliefTerrain()
@@ -129,6 +132,194 @@ namespace Ludots.Tests.Architecture
 
             config.TerrainFeed = "bogus";
             Assert.That(() => _ = config.ParsedTerrainFeed, Throws.InvalidOperationException);
+        }
+
+        [Test]
+        public void DirectFeed_WaterCorner_CutsAtTriangleDiagonal()
+        {
+            var terrain = FlatTerrain();
+            for (int r = 65; r <= 67; r++)
+            {
+                for (int c = 65; c <= 67; c++)
+                {
+                    terrain.SetCell(c, r, new LogicTerrainCell(2, 3, LogicTerrainSurfaceFlags.Water));
+                }
+            }
+
+            AssertFeatureAgreement(terrain, 64f, 68f, 64f, 68f, probes: 17);
+        }
+
+        /// <summary>Blocked 只喂 clearance/portal 掩码,不参与三角形发射(AddFace/AppendWalkableTri
+        /// 不查 Blocked)——直灌轨必须同样不切发射,两轨在被阻挡区一致全覆盖。</summary>
+        [Test]
+        public void DirectFeed_BlockedCells_DoNotCutEmission_BothTracksAgree()
+        {
+            var terrain = FlatTerrain();
+            for (int r = 65; r <= 67; r++)
+            {
+                for (int c = 65; c <= 67; c++)
+                {
+                    terrain.SetCell(c, r, new LogicTerrainCell(2, 0, LogicTerrainSurfaceFlags.Blocked));
+                }
+            }
+
+            AssertFeatureAgreement(terrain, 64f, 68f, 64f, 68f, probes: 17);
+        }
+
+        [Test]
+        public void DirectFeed_CliffSplit_PreservesBothFloors()
+        {
+            var terrain = FlatTerrain();
+            for (int r = 80; r < 120; r++)
+            {
+                for (int c = 80; c < 120; c++)
+                {
+                    terrain.SetCell(c, r, new LogicTerrainCell(8, 0, LogicTerrainSurfaceFlags.None));
+                }
+            }
+
+            AssertFeatureAgreement(terrain, 74f, 126f, 74f, 126f, probes: 21);
+            BakeBoth(terrain, out NavTile tri, out NavTile dir);
+            AssertProbeOn(tri, 100f, 100f, "triangles plateau top");
+            AssertProbeOn(dir, 100f, 100f, "direct plateau top");
+            AssertProbeOn(tri, 70f, 70f, "triangles plain");
+            AssertProbeOn(dir, 70f, 70f, "direct plain");
+        }
+
+        [Test]
+        public void DirectFeed_ObstacleAtQuadCorner_CutsIntersectingTriangles()
+        {
+            var terrain = FlatTerrain();
+            var obstacles = new NavObstacleSet();
+            obstacles.Obstacles.Add(new NavObstacle
+            {
+                Kind = NavObstacleKind.Circle,
+                LayerId = "ground",
+                Center = new NavPointCm(6600, 6600),
+                RadiusCm = 90,
+                Enabled = true
+            });
+
+            BakeBoth(terrain, out NavTile tri, out NavTile dir, obstacles);
+            Assert.That(IsOnMesh(tri, 66f, 66f, out _), Is.False, "triangles: obstacle center must be a hole");
+            Assert.That(IsOnMesh(dir, 66f, 66f, out _), Is.False, "direct: obstacle center must be a hole");
+            AssertProbeOn(tri, 100f, 100f, "triangles far from obstacle");
+            AssertProbeOn(dir, 100f, 100f, "direct far from obstacle");
+        }
+
+        [Test]
+        public void DirectFeed_AuthoredArea63_FailsFast()
+        {
+            var terrain = FlatTerrain();
+            terrain.SetCell(70, 70, new LogicTerrainCell(2, 0, LogicTerrainSurfaceFlags.None, areaId: 63));
+            var legacy = new NavBuildConfig(1.0f, 0.6f, cliffHeightThreshold: 1);
+            bool ok = RecastNavTileBaker.TryBake(terrain, 1, 1, 1, legacy, _agent, _nav, 0, "ground", new NavObstacleSet(), out _, out _, out NavBakeArtifact artifact, NavTerrainFeedKind.Direct);
+            Assert.That(ok, Is.False);
+            Assert.That(artifact.Message, Does.Contain("reserved"));
+        }
+
+        [Test]
+        public void Loader_TerrainFeed_MissingDirectNullAndBogus()
+        {
+            Assert.That(LoadTempNavConfig(null), Is.EqualTo(NavBakeNames.TerrainFeedTriangles));
+            Assert.That(LoadTempNavConfig("\"direct\""), Is.EqualTo(NavBakeNames.TerrainFeedDirect));
+            Assert.Throws<InvalidOperationException>(() => LoadTempNavConfig("null"));
+            Assert.Throws<InvalidOperationException>(() => LoadTempNavConfig("\"bogus\""));
+        }
+
+        [Test]
+        public void Loader_AuthoredArea63_IsRejected()
+        {
+            Assert.Throws<InvalidOperationException>(
+                () => LoadTempNavConfig(null, areasOverride: "\"areas\": [ { \"id\": \"Bad\", \"areaId\": 63, \"cost\": 1 } ]"));
+        }
+
+        private static MutableGridLogicTerrainField FlatTerrain()
+        {
+            var terrain = new MutableGridLogicTerrainField(Cells, Cells, 100, ChunkCells);
+            for (int r = 0; r < Cells; r++)
+            {
+                for (int c = 0; c < Cells; c++)
+                {
+                    terrain.SetCell(c, r, new LogicTerrainCell(2, 0, LogicTerrainSurfaceFlags.None));
+                }
+            }
+
+            return terrain;
+        }
+
+        private static void BakeBoth(MutableGridLogicTerrainField terrain, out NavTile tileTriangles, out NavTile tileDirect, NavObstacleSet? obstacles = null)
+        {
+            var legacy = new NavBuildConfig(1.0f, 0.6f, cliffHeightThreshold: 1);
+            obstacles ??= new NavObstacleSet();
+            bool okA = RecastNavTileBaker.TryBake(terrain, 1, 1, 1, legacy, _agent, _nav, 0, "ground", obstacles, out tileTriangles, out _, out NavBakeArtifact artifactA);
+            bool okB = RecastNavTileBaker.TryBake(terrain, 1, 1, 1, legacy, _agent, _nav, 0, "ground", obstacles, out tileDirect, out _, out NavBakeArtifact artifactB, NavTerrainFeedKind.Direct);
+            Assert.That(okA && okB, Is.True, $"triangles={okA}({artifactA.Message}) direct={okB}({artifactB.Message})");
+        }
+
+        private static void AssertProbeOn(NavTile tile, float xMeters, float zMeters, string label)
+            => Assert.That(IsOnMesh(tile, xMeters, zMeters, out _), Is.True, $"{label}: probe ({xMeters},{zMeters}) must be walkable");
+
+        private void AssertFeatureAgreement(MutableGridLogicTerrainField terrain, float x0, float x1, float z0, float z1, int probes)
+        {
+            BakeBoth(terrain, out NavTile tri, out NavTile dir);
+            var random = new Random(20260829);
+            int mismatched = 0;
+            int total = probes * probes;
+            for (int i = 0; i < total; i++)
+            {
+                float px = x0 + (float)random.NextDouble() * (x1 - x0);
+                float pz = z0 + (float)random.NextDouble() * (z1 - z0);
+                bool onA = IsOnMesh(tri, px, pz, out byte areaA);
+                bool onB = IsOnMesh(dir, px, pz, out byte areaB);
+                if (onA != onB || (onA && areaA != areaB))
+                {
+                    mismatched++;
+                }
+            }
+
+            Assert.That(mismatched, Is.LessThanOrEqualTo(total / 10), $"feature-window disagreement {mismatched}/{total} exceeds 10%");
+        }
+
+        private static string LoadTempNavConfig(string? terrainFeedValue, string? areasOverride = null)
+        {
+            string terrainLine = terrainFeedValue == null ? string.Empty : $"  \"terrainFeed\": {terrainFeedValue},\n";
+            string areasLine = areasOverride ?? "\"areas\": []";
+            string json = "{\n" +
+                "  \"mode\": \"offline\",\n" +
+                "  \"algorithm\": \"recast\",\n" +
+                terrainLine +
+                "  \"profiles\": [ { \"id\": \"Small\", \"maxClimbCm\": 40, \"maxSlopeDeg\": 45 } ],\n" +
+                "  \"layers\": [ { \"id\": \"Ground\", \"layer\": 0 } ],\n" +
+                "  " + areasLine + ",\n" +
+                "  \"runtimeIncremental\": {\n" +
+                "    \"tileBudgetPerFixedTick\": 1,\n" +
+                "    \"includeNeighborTiles\": true,\n" +
+                "    \"heightScaleMeters\": 1,\n" +
+                "    \"minWalkableUpDot\": 0.6,\n" +
+                "    \"cliffHeightThreshold\": 1\n" +
+                "  }\n" +
+                "}";
+            string root = Path.Combine(Path.GetTempPath(), "ludots-nav-feed-loader-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(root, "Navigation"));
+            File.WriteAllText(Path.Combine(root, "config_catalog.json"), "[ { \"Path\": \"Navigation/navmesh.json\", \"Policy\": \"DeepObject\" } ]");
+            File.WriteAllText(Path.Combine(root, "Navigation", "navmesh.json"), json);
+            try
+            {
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+                var profiles = new AgentProfileRegistry(new[]
+                {
+                    new AgentProfileConfig { Id = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 }
+                });
+                return new NavMeshBakeConfigLoader(pipeline, profiles).Load(catalog).TerrainFeed;
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
         }
 
         private static MutableGridLogicTerrainField BuildReliefTerrain()

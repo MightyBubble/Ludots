@@ -63,6 +63,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         /// </summary>
         public const long MaxSolidVoxelColumns = 33_554_432;
 
+        /// <summary>Detour area id 63 doubles as Recast's walkable marker inside the direct
+        /// terrain feed; authored area ids must stay below it so the marker stays unambiguous.</summary>
+        public const int ReservedWalkableAreaId = RcRecast.RC_WALKABLE_AREA;
+
         public static bool TryBake(
             VertexMap map,
             int chunkX,
@@ -120,7 +124,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 ComputeTileFootprintBounds(terrain, chunkX, chunkY, out float tileMinX, out float tileMinZ, out float tileMaxX, out float tileMaxZ);
                 var rcCfg = BuildRcConfig(agentProfile, navProfile, tileMinX, tileMinZ, tileMaxX, tileMaxZ);
 
-                long solidColumns = (long)(rcCfg.TileSizeX + rcCfg.BorderSize * 2) * (rcCfg.TileSizeZ + rcCfg.BorderSize * 2);
+                long widthVoxels = (long)rcCfg.TileSizeX + 2L * rcCfg.BorderSize;
+                long heightVoxels = (long)rcCfg.TileSizeZ + 2L * rcCfg.BorderSize;
+                long solidColumns = widthVoxels * heightVoxels;
                 if (solidColumns > MaxSolidVoxelColumns)
                 {
                     artifact = new NavBakeArtifact(

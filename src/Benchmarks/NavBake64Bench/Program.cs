@@ -7,6 +7,7 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Platform.Abstractions;
 
 // #1355 时间盒基准切片:东亚 .height 连续高度图 64km 板全板 nav 烘焙外推锚点。
@@ -18,6 +19,7 @@ string heightPath = args.Length > 0 && !args[0].StartsWith("--")
     : throw new ArgumentException("pass the east_asia_continuous.height path as the first argument");
 int repeats = 3;
 long worldWidthCm = 6_399_232; // east_asia_visual_heightmap.json VisualHeightmap.WorldWidthCm
+string feedName = NavBakeNames.TerrainFeedTriangles;
 for (int i = 1; i < args.Length - 1; i++)
 {
     if (args[i] == "--repeats")
@@ -33,7 +35,14 @@ for (int i = 1; i < args.Length - 1; i++)
             ? parsedWidth
             : throw new ArgumentException($"--world-width-cm expects an integer, got '{args[i + 1]}'.");
     }
+
+    if (args[i] == "--feed")
+    {
+        feedName = args[i + 1];
+    }
 }
+
+NavTerrainFeedKind feed = NavBakeNames.ParseTerrainFeed(feedName, "--feed");
 
 const int ChunkCells = SpatialScaleDefaults.TerrainChunkCells; // 64
 const int MiniChunksPerSide = 3;
@@ -174,7 +183,7 @@ foreach (int cellSize in cellSizes)
             var sw = Stopwatch.StartNew();
             bool ok = RecastNavTileBaker.TryBake(
                 field, 1, 1, tileVersion: 1, legacyConfig, agentProfile, navProfile,
-                layer: 0, "ground", obstacles, out lastTile, out _, out lastArtifact);
+                layer: 0, "ground", obstacles, out lastTile, out _, out lastArtifact, feed);
             sw.Stop();
             if (!ok)
             {

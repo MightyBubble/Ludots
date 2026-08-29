@@ -36,4 +36,4 @@ dotnet run -c Release --project src/Benchmarks/NavBake64Bench -- <east_asia_cont
 dotnet run -c Release --project src/Benchmarks/NavBake64Bench -- <east_asia_continuous.height> --repeats 5 --feed direct
 ```
 
-(bench 的 --feed 支持在 #1367 基准工程上追加;两轨对照出自同一构建。)
+基准工程随本 PR 入库(`src/Benchmarks/NavBake64Bench`,含 --feed 与理想下界口径);两轨对照出自同一构建、同进程时段。#1367 的基准与本份在合并时取本份(超集)。
