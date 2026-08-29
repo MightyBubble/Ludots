@@ -20,14 +20,18 @@ int repeats = 3;
 long worldWidthCm = 6_399_232; // east_asia_visual_heightmap.json VisualHeightmap.WorldWidthCm
 for (int i = 1; i < args.Length - 1; i++)
 {
-    if (args[i] == "--repeats" && int.TryParse(args[i + 1], out int parsedRepeats))
+    if (args[i] == "--repeats")
     {
-        repeats = Math.Clamp(parsedRepeats, 1, 20);
+        repeats = int.TryParse(args[i + 1], out int parsedRepeats)
+            ? Math.Clamp(parsedRepeats, 1, 20)
+            : throw new ArgumentException($"--repeats expects an integer, got '{args[i + 1]}'.");
     }
 
-    if (args[i] == "--world-width-cm" && long.TryParse(args[i + 1], out long parsedWidth))
+    if (args[i] == "--world-width-cm")
     {
-        worldWidthCm = parsedWidth;
+        worldWidthCm = long.TryParse(args[i + 1], out long parsedWidth)
+            ? parsedWidth
+            : throw new ArgumentException($"--world-width-cm expects an integer, got '{args[i + 1]}'.");
     }
 }
 
@@ -75,7 +79,7 @@ for (int i = 0; i < samples.Length; i += 7)
 var report = new StringBuilder();
 report.AppendLine("# Nav 烘焙 64km 板直灌基准切片(#1355)");
 report.AppendLine();
-report.AppendLine($"- 资产: `{Path.GetFileName(heightPath)}` VHTM Int16cm,源采样 {sampleCols}×{sampleRows}(源幅 {sourceWidthCm / 100000:F0}km × {sourceHeightCm / 100000:F0}km,{sourceWidthCm / (sampleCols - 1) / 100:F0}m/采样)");
+report.AppendLine($"- 资产: `{Path.GetFileName(heightPath)}` VHTM Int16cm,源采样 {sampleCols}×{sampleRows}(源幅 {sourceWidthCm / 100000:F1}km × {sourceHeightCm / 100000:F1}km,{sourceWidthCm / (sampleCols - 1) / 100:F1}m/采样)");
 report.AppendLine($"- 烘焙世界: {worldWidthCm / 100000:F0}km × {worldHeightCm / 100000:F0}km(横向压缩 {sourceWidthCm / worldWidthCm:F0}×);高度范围 {minH:F0}..{maxH:F0}cm;{Environment.ProcessorCount} 逻辑核;.NET {Environment.Version}");
 report.AppendLine($"- 口径: 迷你场 3×3 块({MiniCells}×{MiniCells} 格)烤中心瓦片;Small 单 profile(30cm/40cm/45°);heightScaleMeters={HeightScaleMeters} 对齐 east_asia_navmesh_debug 实配;每格 {repeats} 轮取中位;无障碍");
 report.AppendLine();
@@ -151,6 +155,7 @@ report.AppendLine("| 探区 | 格边(cm) | 瓦片边 | 中位耗时(ms) | 单次
 report.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
 
 var perTileMsByCellSize = new Dictionary<int, List<double>>();
+        var poisonedCellSizes = new HashSet<int>();
 foreach (int cellSize in cellSizes)
 {
     foreach ((string kind, float u, float v) in probes)
@@ -187,6 +192,7 @@ foreach (int cellSize in cellSizes)
             perTileMsByCellSize[cellSize] = list = new List<double>();
         }
 
+        if (median < 0) poisonedCellSizes.Add(cellSize);
         if (median > 0) list.Add(median);
         report.AppendLine($"| {kind} | {cellSize} | {cellSize * ChunkCells / 100}m | {(median > 0 ? median.ToString("F1") : "失败")} | {(median > 0 ? (allocBytes / 1048576.0).ToString("F1") : "-")} | {lastArtifact.WalkableTriangleCount} | {lastArtifact.TriangleCount} | {lastArtifact.VertexCount} | {lastArtifact.PortalCount} | {(median > 0 ? lastArtifact.Stage.ToString() : lastArtifact.ErrorCode + ": " + lastArtifact.Message)} |");
     }
@@ -221,11 +227,17 @@ foreach (int cellSize in cellSizes)
         ? Median(list).ToString("F1")
         : "无成功样本";
     report.AppendLine($"- {cellSize}cm 格: {cellsX:N0}×{cellsZ:N0} = {totalCells / 1e6:F0}M 格({(overBudget ? "**超引擎 100M 投影预算,现行引擎会落平地兜底**" : "预算内")}),{tiles:N0} 瓦片(瓦片边 {cellSize * ChunkCells / 100}m)");
+    if (poisonedCellSizes.Contains(cellSize))
+    {
+        report.AppendLine("  - **该格边存在烤败探区,外推中止——禁止用幸存探区代表全板**");
+        continue;
+    }
+
     if (double.TryParse(perTile, out double ms) && ms > 0)
     {
         double serialMin = ms * tiles / 60000;
-        double parallelMin = serialMin / Environment.ProcessorCount;
-        report.AppendLine($"  - 单瓦片中位 {ms:F1}ms → 串行全板 {serialMin:F1} 分钟,{Environment.ProcessorCount} 核并行 **{parallelMin:F1} 分钟**(B 计划线 10 分钟:{(parallelMin > 10 ? "**触发**" : "未触发")})");
+        double lowerBoundMin = serialMin / Environment.ProcessorCount;
+        report.AppendLine($"  - 单瓦片中位 {ms:F1}ms → 串行全板 {serialMin:F1} 分钟;{Environment.ProcessorCount} 核**理想并行下界 {lowerBoundMin:F1} 分钟**(完美扩展假设,未实测并行;8m 档单瓦 ~9GB 分配下真实并行受内存墙约束会更差)。B 计划线 10 分钟:即便按下界也{(lowerBoundMin > 10 ? "**触发**" : "未触发")}");
     }
 }
 
@@ -243,7 +255,7 @@ string reportPath = Path.Combine(reportDir, "nav-bake-64km-slice.md");
 File.WriteAllText(reportPath, report.ToString(), new UTF8Encoding(false));
 Console.WriteLine(report.ToString());
 Console.WriteLine($"report written: {reportPath}");
-return 0;
+return poisonedCellSizes.Count > 0 ? 2 : 0;
 
 MutableGridLogicTerrainField BuildMiniField(float centerU, float centerV, int cellSizeCm)
 {
