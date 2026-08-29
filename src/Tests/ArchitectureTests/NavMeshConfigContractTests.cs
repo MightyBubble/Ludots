@@ -323,6 +323,31 @@ namespace Ludots.Tests.Architecture
             return tempRoot;
         }
 
+        [Test]
+        public void BoardConfig_Clone_DoesNotAliasNavTileGrid()
+        {
+            var board = new BoardConfig
+            {
+                Name = "default",
+                NavTileGrid = new NavTileGridConfig
+                {
+                    WidthChunks = 4,
+                    HeightChunks = 3,
+                    ChunkSizeCells = 64,
+                    CellSizeCm = 250,
+                    OriginXcm = 12_000,
+                    OriginZcm = -3_400
+                }
+            };
+
+            BoardConfig clone = board.Clone();
+            clone.NavTileGrid!.WidthChunks = 99;
+            clone.NavTileGrid.OriginXcm = -1;
+
+            Assert.That(board.NavTileGrid.WidthChunks, Is.EqualTo(4), "mutating the clone's tile grid must not leak into the source board");
+            Assert.That(board.NavTileGrid.OriginXcm, Is.EqualTo(12_000));
+        }
+
         private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId, LogicTerrainField? terrain = null)
         {
             var effectiveTerrain = terrain ?? new FlatGridLogicTerrainField(

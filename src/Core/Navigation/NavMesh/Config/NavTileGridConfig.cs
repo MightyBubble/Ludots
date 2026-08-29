@@ -20,5 +20,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
 
         public int ChunkHeightCm => checked(CellSizeCm * ChunkSizeCells);
+
+        public NavTileGridConfig Clone() => new()
+        {
+            WidthChunks = WidthChunks,
+            HeightChunks = HeightChunks,
+            ChunkSizeCells = ChunkSizeCells,
+            CellSizeCm = CellSizeCm,
+            OriginXcm = OriginXcm,
+            OriginZcm = OriginZcm
+        };
     }
 }

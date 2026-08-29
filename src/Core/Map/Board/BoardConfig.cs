@@ -81,7 +81,7 @@ namespace Ludots.Core.Map.Board
                 StructureAwareNavigation = StructureAwareNavigation,
                 NavigationEnabled = NavigationEnabled,
                 TerrainHeightStepCm = TerrainHeightStepCm,
-                NavTileGrid = NavTileGrid
+                NavTileGrid = NavTileGrid?.Clone()
             };
         }
     }
