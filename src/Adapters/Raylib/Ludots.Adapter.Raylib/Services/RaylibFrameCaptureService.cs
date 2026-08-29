@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Ludots.Platform.Abstractions;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Adapter.Raylib.Services
 {
