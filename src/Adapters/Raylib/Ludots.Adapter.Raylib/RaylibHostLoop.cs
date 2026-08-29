@@ -1002,7 +1002,7 @@ namespace Ludots.Adapter.Raylib
                 : defaultValue;
         }
 
-        private static float ReadEnvFloatOrDefault(string key, float defaultValue)
+        internal static float ReadEnvFloatOrDefault(string key, float defaultValue)
         {
             return float.TryParse(Environment.GetEnvironmentVariable(key), out float value)
                 ? value
