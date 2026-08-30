@@ -45,7 +45,7 @@ namespace Ludots.Core.Gameplay.Dialogue
         public void Clear()
         {
             _dialogues.Clear();
-            DialogueChoiceIdRegistry.Clear();
+            DialogueChoiceIdRegistry.ResetForReload();
         }
 
         public void Register(DialogueDefinition definition)

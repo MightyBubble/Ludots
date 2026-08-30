@@ -12,13 +12,13 @@ namespace Ludots.Tests.GasTests.Graph
         [SetUp]
         public void SetUp()
         {
-            DialogueChoiceIdRegistry.Clear();
+            DialogueChoiceIdRegistry.ResetForReload();
         }
 
         [TearDown]
         public void TearDown()
         {
-            DialogueChoiceIdRegistry.Clear();
+            DialogueChoiceIdRegistry.ResetForReload();
         }
 
         [Test]

@@ -67,7 +67,7 @@
 同一份效果芯片，换 `present` 就能变成竖列 / 网格 / 横栏；芯片上带剩余时间与层数。
 
 - 合同：[面板开箱布局套件](panel-author-layout-kit.md)
-- 进场：`scripts/run-mod-launcher.cmd cli launch $panel_author_layout_kit --adapter raylib`
+- 进场：仓库根执行 `scripts/run-mod-launcher.cmd`，参数 `cli launch $panel_author_layout_kit --adapter raylib`
 - 照抄资产：`mods/showcases/panel_author_layout_kit/PanelAuthorLayoutKitShowcaseMod/assets/Panels/panel_templates.json`
 
 ## 下一步

@@ -16,7 +16,7 @@ namespace Ludots.Core.Gameplay.Dialogue
 
         public static bool IsFrozen => _ids.IsFrozen;
 
-        public static void Clear()
+        public static void ResetForReload()
         {
             _ids = CreateRegistry();
         }
